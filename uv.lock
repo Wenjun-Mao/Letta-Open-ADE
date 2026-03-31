@@ -521,7 +521,7 @@ wheels = [
 ]
 
 [[package]]
-name = "letta-doubao-standalone"
+name = "letta-lmstudio"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

@@ -1,7 +1,7 @@
 [project]
-name = "letta-doubao-standalone"
+name = "letta-LMStudio"
 version = "0.1.0"
-description = "Standalone Letta + Doubao smoke-test bundle"
+description = "Letta with LMStudio as a backend LLM provider."
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "httpx>=0.28.1",
