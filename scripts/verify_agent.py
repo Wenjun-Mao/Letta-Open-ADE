@@ -1,4 +1,9 @@
 import os
+import sys
+
+# Add project root to sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from pprint import pprint
 from letta_client import Letta
 from prompts.persona import PERSONAS, HUMAN_TEMPLATE
