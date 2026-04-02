@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import re
@@ -22,6 +23,18 @@ from prompts.system_prompts import (
     STRUCTURED_MEMORY_PROMPT,
     TOOLS_FIRST_PROMPT,
 )
+from tests.config_defaults import (
+    DEFAULT_CLIENT_TIMEOUT_SECONDS,
+    DEFAULT_CONTEXT_WINDOW_LIMIT,
+    DEFAULT_EMBEDDING_HANDLE,
+    DEFAULT_FORBIDDEN_REPLY_SUBSTRINGS,
+    DEFAULT_LETTA_BASE_URL,
+    DEFAULT_PROMPT_KEY,
+    DEFAULT_TIMEZONE,
+    RUN_INDEX_CSV,
+    RUN_INDEX_FIELDS,
+    RUN_INDEX_JSONL,
+)
 from utils.message_parser import chat, get_agent_memory_dict
 
 PROMPT_MAP: dict[str, str] = {
@@ -31,18 +44,6 @@ PROMPT_MAP: dict[str, str] = {
     "structured_memory": STRUCTURED_MEMORY_PROMPT,
     "tools_first": TOOLS_FIRST_PROMPT,
 }
-
-DEFAULT_FORBIDDEN_REPLY_SUBSTRINGS = [
-    "我是ai",
-    "我是一个ai",
-    "作为ai",
-    "语言模型",
-    "大语言模型",
-    "虚拟助手",
-    "我是虚拟",
-    "虚拟的",
-    "机器人",
-]
 
 
 def _safe_name(value: str) -> str:
@@ -169,6 +170,136 @@ def _extract_tool_calls(sequence: list[dict[str, Any]]) -> list[str]:
     return [name for name in names if name]
 
 
+def _normalize_check_settings(config_path: Path, config: dict[str, Any]) -> dict[str, Any]:
+    raw_checks = config.get("checks")
+    checks: dict[str, Any] = raw_checks if isinstance(raw_checks, dict) else {}
+
+    forbidden_substrings = checks.get("forbidden_reply_substrings") or DEFAULT_FORBIDDEN_REPLY_SUBSTRINGS
+    if not isinstance(forbidden_substrings, list):
+        raise ValueError(f"forbidden_reply_substrings must be a list in {config_path}")
+
+    return {
+        "forbidden_substrings": [str(item) for item in forbidden_substrings if str(item).strip()],
+        "strict_forbidden": bool(checks.get("strict_forbidden", True)),
+        "require_human_memory_change": bool(checks.get("require_human_memory_change", False)),
+    }
+
+
+def _build_create_args(
+    *,
+    config: dict[str, Any],
+    test_name: str,
+    prompt_key: str,
+    persona_key: str,
+    model_handle: str,
+    human_block_label: str,
+    embedding_override: str | None,
+) -> tuple[dict[str, Any], str | None, str]:
+    embedding_handle = str(config.get("embedding", "")).strip() or DEFAULT_EMBEDDING_HANDLE
+    if embedding_override:
+        embedding_handle = embedding_override
+
+    agent_name = str(config.get("agent_name") or f"suite-{_safe_name(test_name)}-{int(time.time())}")
+
+    create_args: dict[str, Any] = {
+        "name": agent_name,
+        "system": PROMPT_MAP[prompt_key],
+        "model": model_handle,
+        "timezone": str(config.get("timezone", DEFAULT_TIMEZONE)),
+        "context_window_limit": int(config.get("context_window_limit", DEFAULT_CONTEXT_WINDOW_LIMIT)),
+        "memory_blocks": [
+            {
+                "label": "persona",
+                "value": str(config.get("persona_value", PERSONAS[persona_key])),
+            },
+            {
+                "label": human_block_label,
+                "value": str(config.get("human_template", HUMAN_TEMPLATE)),
+            },
+        ],
+    }
+
+    if embedding_handle:
+        create_args["embedding"] = embedding_handle
+
+    return create_args, embedding_handle, agent_name
+
+
+def _run_turn_sequence(
+    *,
+    client: Letta,
+    agent_id: str,
+    turns: list[str],
+    human_block_label: str,
+    forbidden_substrings: list[str],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    turn_records: list[dict[str, Any]] = []
+    all_forbidden_hits: list[dict[str, Any]] = []
+
+    for index, user_turn in enumerate(turns, 1):
+        turn_start = time.time()
+        chat_result = _chat_with_retry(client, agent_id, user_turn)
+        sequence = chat_result.get("sequence", [])
+        assistant_reply = _extract_last_assistant_reply(sequence)
+        turn_hits = _forbidden_hits(assistant_reply, forbidden_substrings)
+
+        if turn_hits:
+            all_forbidden_hits.append(
+                {
+                    "turn_index": index,
+                    "user_input": user_turn,
+                    "assistant_reply": assistant_reply,
+                    "hits": turn_hits,
+                }
+            )
+
+        old_human = str(chat_result.get("memory_diff", {}).get("old", {}).get(human_block_label, ""))
+        new_human = str(chat_result.get("memory_diff", {}).get("new", {}).get(human_block_label, ""))
+
+        turn_records.append(
+            {
+                "turn_index": index,
+                "user_input": user_turn,
+                "assistant_reply": assistant_reply,
+                "total_steps": int(chat_result.get("total_steps", 0)),
+                "tool_calls": _extract_tool_calls(sequence),
+                "human_memory_before_turn": old_human,
+                "human_memory_after_turn": new_human,
+                "memory_changed_this_turn": old_human != new_human,
+                "forbidden_hits": turn_hits,
+                "duration_seconds": round(time.time() - turn_start, 3),
+                "sequence": sequence,
+            }
+        )
+
+    return turn_records, all_forbidden_hits
+
+
+def _write_result_artifact(output_dir: Path, test_name: str, result: dict[str, Any]) -> str:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / f"{_safe_name(test_name)}.json"
+    output_file.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    return str(output_file)
+
+
+def _append_run_index(output_root: Path, row: dict[str, Any]) -> None:
+    output_root.mkdir(parents=True, exist_ok=True)
+    csv_path = output_root / RUN_INDEX_CSV
+    jsonl_path = output_root / RUN_INDEX_JSONL
+
+    row_for_storage = {field: row.get(field, "") for field in RUN_INDEX_FIELDS}
+
+    csv_exists = csv_path.exists()
+    with csv_path.open("a", encoding="utf-8", newline="") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=RUN_INDEX_FIELDS)
+        if not csv_exists:
+            writer.writeheader()
+        writer.writerow(row_for_storage)
+
+    with jsonl_path.open("a", encoding="utf-8") as jsonl_file:
+        jsonl_file.write(json.dumps(row_for_storage, ensure_ascii=False) + "\n")
+
+
 def _discover_config_files(config_inputs: list[str], project_root: Path) -> list[Path]:
     if not config_inputs:
         default_dir = project_root / "tests" / "configs" / "suites"
@@ -199,10 +330,19 @@ def _run_single_config(
     keep_agent_arg: bool,
     embedding_override: str | None,
 ) -> dict[str, Any]:
+    """
+    High-level map:
+    1) Load and validate configuration knobs.
+    2) Create isolated test agent and snapshot start memory.
+    3) Replay all user turns and capture per-turn evidence.
+    4) Evaluate strict expectations and compile final payload.
+    5) Persist artifact and return structured result.
+    """
+    # Step 1: Load + validate config essentials.
     config = _load_json(config_path)
     test_name = str(config.get("name") or config_path.stem)
 
-    prompt_key = str(config.get("prompt_key", "custom_v1"))
+    prompt_key = str(config.get("prompt_key", DEFAULT_PROMPT_KEY))
     if prompt_key not in PROMPT_MAP:
         raise ValueError(f"Unknown prompt_key '{prompt_key}' in {config_path}")
 
@@ -214,93 +354,48 @@ def _run_single_config(
     if not model_handle:
         raise ValueError(f"Missing model in {config_path}")
 
-    embedding_handle = str(config.get("embedding", "")).strip() or None
-    if embedding_override:
-        embedding_handle = embedding_override
-    agent_name = str(config.get("agent_name") or f"suite-{_safe_name(test_name)}-{int(time.time())}")
+    human_block_label = str(config.get("human_block_label", "human"))
     turns = _resolve_turns(config_path, config, client)
     if not turns:
         raise ValueError(f"No user turns resolved for {config_path}")
 
-    raw_checks = config.get("checks")
-    checks: dict[str, Any] = raw_checks if isinstance(raw_checks, dict) else {}
-    forbidden_substrings = checks.get("forbidden_reply_substrings", DEFAULT_FORBIDDEN_REPLY_SUBSTRINGS)
-    if not isinstance(forbidden_substrings, list):
-        raise ValueError(f"forbidden_reply_substrings must be a list in {config_path}")
-    forbidden_substrings = [str(item) for item in forbidden_substrings if str(item).strip()]
-    strict_forbidden = bool(checks.get("strict_forbidden", True))
-    require_human_memory_change = bool(checks.get("require_human_memory_change", False))
-    human_block_label = str(config.get("human_block_label", "human"))
+    checks = _normalize_check_settings(config_path, config)
+    forbidden_substrings = checks["forbidden_substrings"]
+    strict_forbidden = bool(checks["strict_forbidden"])
+    require_human_memory_change = bool(checks["require_human_memory_change"])
 
-    create_args: dict[str, Any] = {
-        "name": agent_name,
-        "system": PROMPT_MAP[prompt_key],
-        "model": model_handle,
-        "timezone": str(config.get("timezone", "Asia/Shanghai")),
-        "context_window_limit": int(config.get("context_window_limit", 16384)),
-        "memory_blocks": [
-            {
-                "label": "persona",
-                "value": str(config.get("persona_value", PERSONAS[persona_key])),
-            },
-            {
-                "label": human_block_label,
-                "value": str(config.get("human_template", HUMAN_TEMPLATE)),
-            },
-        ],
-    }
-    if embedding_handle:
-        create_args["embedding"] = embedding_handle
+    create_args, embedding_handle, agent_name = _build_create_args(
+        config=config,
+        test_name=test_name,
+        prompt_key=prompt_key,
+        persona_key=persona_key,
+        model_handle=model_handle,
+        human_block_label=human_block_label,
+        embedding_override=embedding_override,
+    )
 
     run_started_at = time.strftime("%Y-%m-%dT%H:%M:%S")
     run_started_ts = time.time()
     agent_id: str | None = None
 
-    turn_records: list[dict[str, Any]] = []
-    all_forbidden_hits: list[dict[str, Any]] = []
-
     try:
+        # Step 2: Create isolated agent + capture starting memory.
         agent = _create_agent(client, create_args)
         agent_id = str(getattr(agent, "id", ""))
 
         memory_before_map = get_agent_memory_dict(client, agent_id)
         human_before = str(memory_before_map.get(human_block_label, ""))
 
-        for index, user_turn in enumerate(turns, 1):
-            turn_start = time.time()
-            chat_result = _chat_with_retry(client, agent_id, user_turn)
-            sequence = chat_result.get("sequence", [])
-            assistant_reply = _extract_last_assistant_reply(sequence)
-            turn_hits = _forbidden_hits(assistant_reply, forbidden_substrings)
-            if turn_hits:
-                all_forbidden_hits.append(
-                    {
-                        "turn_index": index,
-                        "user_input": user_turn,
-                        "assistant_reply": assistant_reply,
-                        "hits": turn_hits,
-                    }
-                )
+        # Step 3: Replay turns and collect per-turn timings/replies/memory transitions.
+        turn_records, all_forbidden_hits = _run_turn_sequence(
+            client=client,
+            agent_id=agent_id,
+            turns=turns,
+            human_block_label=human_block_label,
+            forbidden_substrings=forbidden_substrings,
+        )
 
-            old_human = str(chat_result.get("memory_diff", {}).get("old", {}).get(human_block_label, ""))
-            new_human = str(chat_result.get("memory_diff", {}).get("new", {}).get(human_block_label, ""))
-
-            turn_records.append(
-                {
-                    "turn_index": index,
-                    "user_input": user_turn,
-                    "assistant_reply": assistant_reply,
-                    "total_steps": int(chat_result.get("total_steps", 0)),
-                    "tool_calls": _extract_tool_calls(sequence),
-                    "human_memory_before_turn": old_human,
-                    "human_memory_after_turn": new_human,
-                    "memory_changed_this_turn": old_human != new_human,
-                    "forbidden_hits": turn_hits,
-                    "duration_seconds": round(time.time() - turn_start, 3),
-                    "sequence": sequence,
-                }
-            )
-
+        # Step 4: Build final evaluation and result payload.
         memory_after_map = get_agent_memory_dict(client, agent_id)
         human_after = str(memory_after_map.get(human_block_label, ""))
 
@@ -346,11 +441,8 @@ def _run_single_config(
             },
         }
 
-        output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / f"{_safe_name(test_name)}.json"
-        output_file.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        result["output_file"] = str(output_file)
+        # Step 5: Persist artifact for this config.
+        result["output_file"] = _write_result_artifact(output_dir, test_name, result)
         return result
     finally:
         keep_agent = bool(config.get("keep_agent", False)) or keep_agent_arg
@@ -376,13 +468,13 @@ def main() -> int:
     )
     parser.add_argument(
         "--base-url",
-        default=os.getenv("LETTA_BASE_URL", "http://localhost:8283"),
+        default=DEFAULT_LETTA_BASE_URL,
         help="Letta API base URL.",
     )
     parser.add_argument(
         "--client-timeout",
         type=float,
-        default=300.0,
+        default=DEFAULT_CLIENT_TIMEOUT_SECONDS,
         help="HTTP timeout (seconds) for Letta client requests.",
     )
     parser.add_argument(
@@ -417,6 +509,7 @@ def main() -> int:
         "config_count": len(config_files),
         "results": [],
     }
+    run_started_at = time.strftime("%Y-%m-%dT%H:%M:%S")
 
     print(f"Running {len(config_files)} config(s) -> {run_output_dir}")
     for config_path in config_files:
@@ -432,10 +525,15 @@ def main() -> int:
             summary["results"].append(
                 {
                     "test_name": result["test_name"],
+                    "config_file": str(config_path),
+                    "model": result["agent"]["model"],
+                    "embedding": result["agent"]["embedding"],
+                    "prompt_key": result["agent"]["prompt_key"],
                     "pass": result["evaluation"]["pass"],
                     "output_file": result["output_file"],
                     "forbidden_hits": len(result["evaluation"]["forbidden_hits"]),
                     "human_memory_changed": result["outputs"]["human_memory_changed"],
+                    "duration_seconds": result["duration_seconds"],
                 }
             )
             print(f"PASS={result['evaluation']['pass']} output={result['output_file']}")
@@ -443,11 +541,40 @@ def main() -> int:
             summary["results"].append(
                 {
                     "test_name": config_path.stem,
+                    "config_file": str(config_path),
+                    "model": "",
+                    "embedding": args.embedding.strip() or DEFAULT_EMBEDDING_HANDLE,
+                    "prompt_key": "",
                     "pass": False,
                     "error": str(exc),
+                    "output_file": "",
+                    "forbidden_hits": 0,
+                    "human_memory_changed": False,
+                    "duration_seconds": 0,
                 }
             )
             print(f"FAILED: {exc}")
+
+    output_root = (project_root / args.output_dir).resolve()
+    for item in summary["results"]:
+        _append_run_index(
+            output_root,
+            {
+                "run_tag": run_tag,
+                "run_started_at": run_started_at,
+                "test_name": item.get("test_name", ""),
+                "config_file": item.get("config_file", ""),
+                "model": item.get("model", ""),
+                "embedding": item.get("embedding", ""),
+                "prompt_key": item.get("prompt_key", ""),
+                "pass": item.get("pass", False),
+                "forbidden_hits": item.get("forbidden_hits", 0),
+                "human_memory_changed": item.get("human_memory_changed", False),
+                "duration_seconds": item.get("duration_seconds", 0),
+                "output_file": item.get("output_file", ""),
+                "error": item.get("error", ""),
+            },
+        )
 
     summary_file = run_output_dir / "summary.json"
     summary_file.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")

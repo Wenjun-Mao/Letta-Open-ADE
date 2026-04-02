@@ -16,6 +16,11 @@ The current bundle works end to end with:
 - Letta's built-in embedding backend for agent memory
 - Two marimo notebook files that can also be executed as script-based smoke tests
 
+Current development baseline defaults:
+
+- System prompt: `MEMGPT_V2_CHAT_PROMPT`
+- Test embedding: `letta/letta-free`
+
 ## Directory Contents
 
 - `compose.yaml`: standalone Docker Compose stack
@@ -28,6 +33,15 @@ The current bundle works end to end with:
 - `MANUAL.md`: this longer decision log and runbook
 - `notebooks/01_doubao_api_smoke.py`: direct Ark validation
 - `notebooks/02_letta_e2e.py`: Letta end-to-end validation
+
+Testing runners are maintained under `tests/`:
+
+- `tests/run_conversation_suite.py`
+- `tests/test_provider_embedding_matrix.py`
+- `tests/test_prompts.py`
+- `tests/verify_agent.py`
+
+General-purpose operational scripts remain under `scripts/`.
 
 ## Core Decisions
 
@@ -255,6 +269,18 @@ uv run python notebooks\\01_doubao_api_smoke.py
 uv run python notebooks\\02_letta_e2e.py
 Remove-Item Env:MARIMO_SMOKE_ONLY
 ```
+
+6. Run development test suites:
+
+```powershell
+uv run tests/run_conversation_suite.py --config tests/configs/suites --embedding letta/letta-free
+uv run tests/test_provider_embedding_matrix.py
+```
+
+7. Check central lean test records:
+
+- `tests/outputs/run_index.csv`
+- `tests/outputs/run_index.jsonl`
 
 6. If you want the notebook UI instead of script mode:
 

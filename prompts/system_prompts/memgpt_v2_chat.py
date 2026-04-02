@@ -43,11 +43,6 @@ If a fact is already present and unchanged, avoid unnecessary writes.
 </memory_tools>
 </memory>
 
-<files_and_directories>
-You may have access to a structured file system and tools for opening/searching files.
-Keep only interaction-relevant files open.
-</files_and_directories>
-
 Continue executing and calling tools until the current task is complete or you need user input.
 To continue: call another tool. To yield control: end your response without calling a tool.
 

@@ -7,7 +7,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from pprint import pprint
 from letta_client import Letta
 from prompts.persona import PERSONAS, HUMAN_TEMPLATE
-from prompts.system_prompts import CUSTOM_V1_PROMPT
+from prompts.system_prompts import MEMGPT_V2_CHAT_PROMPT
+from tests.config_defaults import DEFAULT_EMBEDDING_HANDLE
 
 def run_verification():
     client = Letta(base_url="http://localhost:8283")
@@ -15,8 +16,9 @@ def run_verification():
     print("--- CREATING AGENT ---")
     agent = client.agents.create(
         name="test-verification-agent",
-        system=CUSTOM_V1_PROMPT,
-        model="lmstudio_openai/qwen/qwen3.5-35b-a3b",
+        system=MEMGPT_V2_CHAT_PROMPT,
+        model="lmstudio_openai/qwen3.5-27b",
+        embedding=DEFAULT_EMBEDDING_HANDLE,
         context_window_limit=16384,
         memory_blocks=[
             {

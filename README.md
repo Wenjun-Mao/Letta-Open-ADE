@@ -102,3 +102,27 @@ curl http://127.0.0.1:8283/openapi.json
 - `MANUAL.md`: detailed decision log and handoff guide
 - `notebooks/01_doubao_api_smoke.py`: direct Ark/Doubao validation
 - `notebooks/02_letta_e2e.py`: Letta end-to-end validation against the running stack
+
+## Developer Testing Workflow
+
+Current baseline assumptions for development tests:
+
+- Default system prompt baseline: `MEMGPT_V2_CHAT_PROMPT`
+- Default test embedding: `letta/letta-free`
+
+Testing runners live under `tests/`:
+
+```bash
+uv run tests/run_conversation_suite.py --config tests/configs/suites --embedding letta/letta-free
+uv run tests/test_provider_embedding_matrix.py
+uv run tests/test_prompts.py
+uv run tests/verify_agent.py
+```
+
+Conversation suite outputs are written to timestamped directories under `tests/outputs/`.
+For quick historical review, a lean central index is appended on each run:
+
+- `tests/outputs/run_index.csv`
+- `tests/outputs/run_index.jsonl`
+
+These index files capture run time, suite/config, pass/fail, durations, and result artifact paths.

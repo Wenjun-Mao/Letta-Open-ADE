@@ -12,7 +12,8 @@ from letta_client import Letta
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from prompts.persona import HUMAN_TEMPLATE, PERSONAS
-from prompts.system_prompts import CUSTOM_V1_PROMPT
+from prompts.system_prompts import MEMGPT_V2_CHAT_PROMPT
+from tests.config_defaults import DEFAULT_EMBEDDING_HANDLE, DEFAULT_PROMPT_KEY
 from utils.message_parser import chat
 
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://localhost:8283")
@@ -25,9 +26,9 @@ def _target_embeddings() -> list[str]:
     Defaults to a single handle to avoid loading local embedding models into VRAM.
     Override with TEST_EMBEDDING_HANDLES="h1,h2" when needed.
     """
-    raw = os.getenv("TEST_EMBEDDING_HANDLES", "letta/letta-free")
+    raw = os.getenv("TEST_EMBEDDING_HANDLES", DEFAULT_EMBEDDING_HANDLE)
     handles = [item.strip() for item in raw.split(",") if item.strip()]
-    return handles or ["letta/letta-free"]
+    return handles or [DEFAULT_EMBEDDING_HANDLE]
 
 
 def _as_json(value: Any) -> str:
@@ -46,7 +47,7 @@ def _safe_delete_agent(client: Letta, agent_id: str | None) -> None:
 def _create_agent(client: Letta, model: str, embedding: str | None, name: str) -> str:
     args: dict[str, Any] = {
         "name": name,
-        "system": CUSTOM_V1_PROMPT,
+        "system": MEMGPT_V2_CHAT_PROMPT,
         "model": model,
         "timezone": "Asia/Shanghai",
         "context_window_limit": 16384,
@@ -83,8 +84,8 @@ def test_ui_options_and_create() -> dict[str, Any]:
             create_payload = {
                 "name": f"ui-test-{int(time.time())}",
                 "model": "lmstudio_openai/qwen3.5-27b",
-                "prompt_key": "custom_v1",
-                "embedding": "lmstudio_openai/text-embedding-qwen3-embedding-0.6b",
+                "prompt_key": DEFAULT_PROMPT_KEY,
+                "embedding": DEFAULT_EMBEDDING_HANDLE,
             }
             created = http.post("/api/agents", json=create_payload)
             created.raise_for_status()
@@ -172,7 +173,7 @@ def test_doubao_model_handle(client: Letta) -> dict[str, Any]:
         agent_id = _create_agent(
             client=client,
             model="openai-proxy/doubao-seed-1-8-251228",
-            embedding="lmstudio_openai/text-embedding-qwen3-embedding-0.6b",
+            embedding=DEFAULT_EMBEDDING_HANDLE,
             name=f"doubao-handle-{int(time.time())}",
         )
         # If create succeeded, try one message.

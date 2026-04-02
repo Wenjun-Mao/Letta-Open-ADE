@@ -40,7 +40,7 @@ class ChatRequest(BaseModel):
 class AgentCreateRequest(BaseModel):
     name: str = "dev-agent"
     model: str = "lmstudio_openai/qwen3.5-27b"
-    prompt_key: str = "custom_v1"
+    prompt_key: str = "memgpt_v2_chat"
     embedding: str | None = None
 
 
@@ -82,14 +82,14 @@ PREFERRED_EMBEDDING_OPTIONS = [
 
 PROMPT_OPTIONS = [
     {
-        "key": "custom_v1",
-        "label": "Custom V1 (Baseline)",
-        "description": "Current stable baseline with Chinese output formatting rules.",
+        "key": "memgpt_v2_chat",
+        "label": "MemGPT V2 Chat (Default)",
+        "description": "Recommended baseline for robust persona adherence and tool-flow behavior.",
     },
     {
-        "key": "memgpt_v2_chat",
-        "label": "MemGPT V2 Chat",
-        "description": "V2-style control-flow and context instructions adapted for this project.",
+        "key": "custom_v1",
+        "label": "Custom V1 (Legacy)",
+        "description": "Legacy baseline kept for A/B testing and regression comparison.",
     },
     {
         "key": "aggressive_memory",
@@ -117,7 +117,7 @@ PROMPT_MAP = {
 }
 
 DEFAULT_MODEL = PREFERRED_MODEL_OPTIONS[0]["key"]
-DEFAULT_PROMPT_KEY = "custom_v1"
+DEFAULT_PROMPT_KEY = "memgpt_v2_chat"
 DEFAULT_EMBEDDING = ""
 
 # Letta Client Initialization

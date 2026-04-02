@@ -1,5 +1,5 @@
 [project]
-name = "letta-LMStudio"
+name = "letta-myADE"
 version = "0.1.0"
 description = "Letta with LMStudio as a backend LLM provider."
 requires-python = ">=3.12,<3.13"
