@@ -1,6 +1,6 @@
 $ErrorActionPreference = 'Stop'
 
-$envFile = if ($args.Count -gt 0 -and $args[0]) { $args[0] } elseif ($env:LETTA_ENV_FILE) { $env:LETTA_ENV_FILE } else { '.env2' }
+$envFile = if ($args.Count -gt 0 -and $args[0]) { $args[0] } elseif ($env:LETTA_ENV_FILE) { $env:LETTA_ENV_FILE } else { '.env3' }
 $env:LETTA_ENV_FILE = $envFile
 
 Write-Host "Using env file: $envFile" -ForegroundColor DarkCyan
