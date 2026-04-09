@@ -48,11 +48,11 @@ services:
       - "${LETTA_ADE_PORT:-8083}:8083"
       - "${LETTA_API_PORT:-8283}:8283"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8283/openapi.json', timeout=5).read()"]
+      test: ["CMD", "python", "-c", "import urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); opener.open('http://127.0.0.1:8283/v1/health/', timeout=5).read(1)"]
       interval: 10s
       timeout: 10s
-      retries: 12
-      start_period: 20s
+      retries: 18
+      start_period: 45s
   dev_ui:
     image: ghcr.io/astral-sh/uv:python3.12-bookworm-slim
     # profiles:
