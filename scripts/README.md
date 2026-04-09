@@ -14,6 +14,7 @@ Wipes all existing Letta memory/agents inside the PostgreSQL volume and fully re
 
 ### Letta Configuration & Tools
 * **`sync_tools.py`**: Connects to the running Letta server, pulls a list of *all* available tools, and generates `utils/letta_tools.py` for full IDE autocomplete and inline documentation. You should run this anytime a new tool is published.
+* **`collect_diagnostics.sh`**: Collects Docker/Compose status, health checks, service logs, and connectivity probes into a timestamped diagnostics bundle. Designed for remote machine troubleshooting.
 
 ### Testing Scripts Location
 All test runners were moved to the `tests/` directory to keep responsibilities clear:
@@ -52,6 +53,17 @@ chmod +x scripts/reset_database.sh
 ```bash
 uv run scripts/sync_tools.py
 ```
+
+**Collect diagnostics bundle (Ubuntu/Linux):**
+```bash
+chmod +x scripts/collect_diagnostics.sh
+./scripts/collect_diagnostics.sh .env3
+```
+
+The script prints and saves the output bundle path, for example:
+
+- `diagnostics/letta_diag_YYYYMMDD_HHMMSS/`
+- `diagnostics/letta_diag_YYYYMMDD_HHMMSS.tar.gz`
 
 **Run Agent Integration / Verification Test:**
 ```bash
