@@ -44,6 +44,13 @@ services:
       LETTA_REDIS_HOST: ${LETTA_REDIS_HOST:-redis}
       LETTA_REDIS_PORT: ${LETTA_REDIS_PORT:-6379}
       LETTA_DEBUG: ${LETTA_DEBUG:-True}
+      PYTHONPATH: ${PYTHONPATH:-/app}
+      NLTK_DATA: ${NLTK_DATA:-/root/nltk_data}
+      LETTA_NLTK_STRICT_LOCAL: ${LETTA_NLTK_STRICT_LOCAL:-true}
+      LETTA_NLTK_DOWNLOAD_TIMEOUT_SECONDS: ${LETTA_NLTK_DOWNLOAD_TIMEOUT_SECONDS:-5}
+    volumes:
+      - ./data/nltk_data:/root/nltk_data:ro
+      - ./docker/sitecustomize.py:/app/sitecustomize.py:ro
     ports:
       - "${LETTA_ADE_PORT:-8083}:8083"
       - "${LETTA_API_PORT:-8283}:8283"

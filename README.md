@@ -90,6 +90,16 @@ If the stack is healthy, the OpenAPI route should respond cleanly:
 curl http://127.0.0.1:8283/openapi.json
 ```
 
+If startup repeatedly stalls around `Checking NLTK data availability...`, pre-seed NLTK once and restart:
+
+```bash
+chmod +x scripts/seed_nltk_data.sh
+./scripts/seed_nltk_data.sh
+docker compose --env-file .env3 up -d --force-recreate letta_server
+```
+
+`compose.yaml` mounts `data/nltk_data` into the Letta container and enables a startup patch that prefers local `punkt_tab` data instead of network download.
+
 ## Files
 
 - `compose.yaml`: standalone Letta + Postgres + Redis stack
