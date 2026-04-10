@@ -173,10 +173,13 @@ uv run tests/checks/agent_bootstrap_check.py
 uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free
 ```
 
-Conversation suite outputs are written to timestamped directories under `tests/outputs/`.
-For quick historical review, a lean central index is appended on each run:
+Test outputs are grouped by runner type under `tests/outputs/`:
 
-- `tests/outputs/run_index.csv`
-- `tests/outputs/run_index.jsonl`
+- Persona guardrail:
+	- Run folders under `tests/outputs/persona_guardrail/<run_tag>/`
+	- Index files: `tests/outputs/persona_guardrail/run_index.csv`, `tests/outputs/persona_guardrail/run_index.jsonl`
+- Memory update:
+	- Run folders under `tests/outputs/memory_update/<run_tag>/`
+	- Index files: `tests/outputs/memory_update/run_index.csv`, `tests/outputs/memory_update/run_index.jsonl`
 
-These index files capture run time, suite/config, pass/fail, durations, and result artifact paths.
+This avoids mixing different test semantics in one shared index.

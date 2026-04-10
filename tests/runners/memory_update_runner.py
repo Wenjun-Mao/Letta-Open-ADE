@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import os
 import re
@@ -30,6 +31,26 @@ from utils.message_parser import chat, get_agent_memory_dict
 
 DEFAULT_TURNS = [
     "你好，我叫张伟",
+]
+
+RUN_INDEX_CSV = "run_index.csv"
+RUN_INDEX_JSONL = "run_index.jsonl"
+RUN_INDEX_FIELDS = [
+    "run_tag",
+    "run_started_at",
+    "rounds_total",
+    "rounds_passed",
+    "rounds_failed",
+    "failed_rounds",
+    "pass_rate",
+    "total_run_duration_seconds",
+    "total_round_duration_seconds",
+    "average_round_duration_seconds",
+    "model",
+    "embedding",
+    "turns_count",
+    "output_file",
+    "error",
 ]
 
 
@@ -265,6 +286,24 @@ def _write_summary(output_dir: Path, payload: dict[str, Any]) -> Path:
     return file_path
 
 
+def _append_run_index(output_root: Path, row: dict[str, Any]) -> None:
+    output_root.mkdir(parents=True, exist_ok=True)
+    csv_path = output_root / RUN_INDEX_CSV
+    jsonl_path = output_root / RUN_INDEX_JSONL
+
+    row_for_storage = {field: row.get(field, "") for field in RUN_INDEX_FIELDS}
+
+    csv_exists = csv_path.exists()
+    with csv_path.open("a", encoding="utf-8", newline="") as csv_file:
+        writer = csv.DictWriter(csv_file, fieldnames=RUN_INDEX_FIELDS)
+        if not csv_exists:
+            writer.writeheader()
+        writer.writerow(row_for_storage)
+
+    with jsonl_path.open("a", encoding="utf-8") as jsonl_file:
+        jsonl_file.write(json.dumps(row_for_storage, ensure_ascii=False) + "\n")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run fresh-agent memory update rounds and verify name persistence.",
@@ -293,7 +332,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--output-dir",
-        default="tests/outputs",
+        default="tests/outputs/memory_update",
         help="Output directory where run artifacts are written.",
     )
     parser.add_argument(
@@ -374,11 +413,13 @@ def main() -> int:
     args.forbidden_reply_substrings = forbidden
 
     run_tag = time.strftime("%Y%m%d_%H%M%S")
-    run_output_dir = (project_root / args.output_dir / f"memory_update_{run_tag}").resolve()
+    output_root = (project_root / args.output_dir).resolve()
+    run_output_dir = (output_root / run_tag).resolve()
 
     client = Letta(base_url=args.base_url, timeout=args.client_timeout)
 
     started = time.time()
+    run_started_at = time.strftime("%Y-%m-%dT%H:%M:%S")
     rounds: list[dict[str, Any]] = []
     for round_index in range(1, args.rounds + 1):
         print(f"Running round {round_index}/{args.rounds}...")
@@ -392,11 +433,16 @@ def main() -> int:
         )
 
     passed_rounds = [item for item in rounds if item.get("pass")]
+    failed_rounds = [int(item.get("round", 0)) for item in rounds if not item.get("pass")]
+    total_round_duration_seconds = round(sum(float(item.get("duration_seconds", 0.0)) for item in rounds), 3)
+    total_run_duration_seconds = round(time.time() - started, 3)
+    average_round_duration_seconds = round(total_round_duration_seconds / len(rounds), 3) if rounds else 0.0
+
     summary: dict[str, Any] = {
         "test_type": "fresh_agent_memory_update",
         "run_tag": run_tag,
-        "run_started_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "duration_seconds": round(time.time() - started, 3),
+        "run_started_at": run_started_at,
+        "duration_seconds": total_run_duration_seconds,
         "config": {
             "rounds": args.rounds,
             "model": args.model,
@@ -417,12 +463,38 @@ def main() -> int:
         "aggregate": {
             "rounds_total": args.rounds,
             "rounds_passed": len(passed_rounds),
-            "rounds_failed": args.rounds - len(passed_rounds),
+            "rounds_failed": len(failed_rounds),
+            "failed_rounds": failed_rounds,
             "pass_rate": round(len(passed_rounds) / args.rounds, 3),
+            "total_run_duration_seconds": total_run_duration_seconds,
+            "total_round_duration_seconds": total_round_duration_seconds,
+            "average_round_duration_seconds": average_round_duration_seconds,
         },
     }
 
     summary_file = _write_summary(run_output_dir, summary)
+
+    _append_run_index(
+        output_root,
+        {
+            "run_tag": run_tag,
+            "run_started_at": summary["run_started_at"],
+            "rounds_total": summary["aggregate"]["rounds_total"],
+            "rounds_passed": summary["aggregate"]["rounds_passed"],
+            "rounds_failed": summary["aggregate"]["rounds_failed"],
+            "failed_rounds": ",".join(str(item) for item in summary["aggregate"]["failed_rounds"]),
+            "pass_rate": summary["aggregate"]["pass_rate"],
+            "total_run_duration_seconds": summary["aggregate"]["total_run_duration_seconds"],
+            "total_round_duration_seconds": summary["aggregate"]["total_round_duration_seconds"],
+            "average_round_duration_seconds": summary["aggregate"]["average_round_duration_seconds"],
+            "model": args.model,
+            "embedding": args.embedding,
+            "turns_count": len(turns),
+            "output_file": str(summary_file),
+            "error": "",
+        },
+    )
+
     print(f"Summary written to: {summary_file}")
     print(
         f"Pass rate: {summary['aggregate']['rounds_passed']}/{summary['aggregate']['rounds_total']}"

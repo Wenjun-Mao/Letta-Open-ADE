@@ -458,7 +458,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--output-dir",
-        default="tests/outputs",
+        default="tests/outputs/persona_guardrail",
         help="Directory where run artifacts are written.",
     )
     parser.add_argument(

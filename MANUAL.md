@@ -333,10 +333,14 @@ uv run tests/checks/provider_embedding_matrix_check.py
 uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free
 ```
 
-7. Check central lean test records:
+7. Check per-runner test records:
 
-- `tests/outputs/run_index.csv`
-- `tests/outputs/run_index.jsonl`
+- Persona guardrail index:
+  - `tests/outputs/persona_guardrail/run_index.csv`
+  - `tests/outputs/persona_guardrail/run_index.jsonl`
+- Memory update index:
+  - `tests/outputs/memory_update/run_index.csv`
+  - `tests/outputs/memory_update/run_index.jsonl`
 
 6. If you want the notebook UI instead of script mode:
 

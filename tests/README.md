@@ -12,10 +12,13 @@ This directory uses a role-based structure:
 
 - tests/runners/persona_guardrail_runner.py
   - Runs suite JSON configs from tests/configs/suites/
-  - Writes per-run artifacts to tests/outputs/
+  - Writes per-run artifacts to tests/outputs/persona_guardrail/
+  - Appends run index to tests/outputs/persona_guardrail/run_index.{csv,jsonl}
 - tests/runners/memory_update_runner.py
   - Runs fresh-agent rounds to validate memory update reliability
   - Validates expected-name persistence and memory mutation
+  - Writes per-run artifacts to tests/outputs/memory_update/
+  - Appends run index to tests/outputs/memory_update/run_index.{csv,jsonl}
 - tests/checks/provider_embedding_matrix_check.py
   - Smoke checks dev_ui options/create and embedding combos
 - tests/checks/prompt_strategy_check.py
@@ -38,6 +41,8 @@ Examples:
 uv run python tests/runners/persona_guardrail_runner.py --config tests/configs/suites/lmstudio_custom_v2.json --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free
 
 uv run python tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free --turn "你好，我叫张伟"
+
+uv run python tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free --turn "你好，我叫张伟" --turn "我喜欢狗狗" --turn "你记得我的名字吗？"
 
 uv run python tests/runners/memory_update_runner.py --rounds 10 --model openai-proxy/doubao-seed-1-8-251228 --embedding letta/letta-free --turn "你好，我叫张伟"
 ```
