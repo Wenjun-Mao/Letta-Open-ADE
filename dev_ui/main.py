@@ -17,11 +17,8 @@ from letta_client import Letta
 from utils.message_parser import chat
 from prompts.persona import PERSONAS, HUMAN_TEMPLATE
 from prompts.system_prompts import (
-    AGGRESSIVE_MEMORY_PROMPT,
     CUSTOM_V1_PROMPT,
-    MEMGPT_V2_CHAT_PROMPT,
-    STRUCTURED_MEMORY_PROMPT,
-    TOOLS_FIRST_PROMPT,
+    CUSTOM_V2_PROMPT,
 )
 
 app = FastAPI(title="Letta Dev UI")
@@ -84,8 +81,8 @@ PREFERRED_EMBEDDING_OPTIONS = [
 
 PROMPT_OPTIONS = [
     {
-        "key": "memgpt_v2_chat",
-        "label": "MemGPT V2 Chat (Default)",
+        "key": "custom_v2",
+        "label": "Custom V2 Chat (Default)",
         "description": "Recommended baseline for robust persona adherence and tool-flow behavior.",
     },
     {
@@ -93,33 +90,15 @@ PROMPT_OPTIONS = [
         "label": "Custom V1 (Legacy)",
         "description": "Legacy baseline kept for A/B testing and regression comparison.",
     },
-    {
-        "key": "aggressive_memory",
-        "label": "V1 Aggressive Memory",
-        "description": "Stronger instruction to persist new user facts.",
-    },
-    {
-        "key": "structured_memory",
-        "label": "V1 Structured Memory",
-        "description": "Numbered operational rules for memory updates.",
-    },
-    {
-        "key": "tools_first",
-        "label": "V1 Tools First",
-        "description": "Tool-call-first variant for weak function-calling adherence.",
-    },
 ]
 
 PROMPT_MAP = {
     "custom_v1": CUSTOM_V1_PROMPT,
-    "memgpt_v2_chat": MEMGPT_V2_CHAT_PROMPT,
-    "aggressive_memory": AGGRESSIVE_MEMORY_PROMPT,
-    "structured_memory": STRUCTURED_MEMORY_PROMPT,
-    "tools_first": TOOLS_FIRST_PROMPT,
+    "custom_v2": CUSTOM_V2_PROMPT,
 }
 
 DEFAULT_MODEL = PREFERRED_MODEL_OPTIONS[0]["key"]
-DEFAULT_PROMPT_KEY = "memgpt_v2_chat"
+DEFAULT_PROMPT_KEY = "custom_v2"
 DEFAULT_EMBEDDING = ""
 
 # Letta Client Initialization
