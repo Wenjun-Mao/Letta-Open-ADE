@@ -9,11 +9,15 @@ from typing import Any
 import httpx
 from letta_client import Letta
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from prompts.persona import HUMAN_TEMPLATE, PERSONAS
-from prompts.system_prompts import MEMGPT_V2_CHAT_PROMPT
-from tests.config_defaults import DEFAULT_EMBEDDING_HANDLE, DEFAULT_PROMPT_KEY
+from prompts.system_prompts import CUSTOM_V2_PROMPT
+from tests.shared.config_defaults import (
+    DEFAULT_EMBEDDING_HANDLE,
+    DEFAULT_PROMPT_KEY,
+    DEFAULT_TEST_MODEL_HANDLE,
+)
 from utils.message_parser import chat
 
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://localhost:8283")
@@ -23,12 +27,9 @@ DEV_UI_BASE_URL = os.getenv("DEV_UI_BASE_URL", "http://127.0.0.1:8284")
 def _target_embeddings() -> list[str]:
     """
     Return embedding handles to test.
-    Defaults to a single handle to avoid loading local embedding models into VRAM.
-    Override with TEST_EMBEDDING_HANDLES="h1,h2" when needed.
+    We intentionally lock to one known embedding for deterministic runs.
     """
-    raw = os.getenv("TEST_EMBEDDING_HANDLES", DEFAULT_EMBEDDING_HANDLE)
-    handles = [item.strip() for item in raw.split(",") if item.strip()]
-    return handles or [DEFAULT_EMBEDDING_HANDLE]
+    return [DEFAULT_EMBEDDING_HANDLE]
 
 
 def _as_json(value: Any) -> str:
@@ -47,7 +48,7 @@ def _safe_delete_agent(client: Letta, agent_id: str | None) -> None:
 def _create_agent(client: Letta, model: str, embedding: str | None, name: str) -> str:
     args: dict[str, Any] = {
         "name": name,
-        "system": MEMGPT_V2_CHAT_PROMPT,
+        "system": CUSTOM_V2_PROMPT,
         "model": model,
         "timezone": "Asia/Shanghai",
         "context_window_limit": 16384,
@@ -83,7 +84,7 @@ def test_ui_options_and_create() -> dict[str, Any]:
 
             create_payload = {
                 "name": f"ui-test-{int(time.time())}",
-                "model": "lmstudio_openai/qwen3.5-27b",
+                "model": DEFAULT_TEST_MODEL_HANDLE,
                 "prompt_key": DEFAULT_PROMPT_KEY,
                 "embedding": DEFAULT_EMBEDDING_HANDLE,
             }
@@ -161,33 +162,6 @@ def test_embedding_combo(client: Letta, model: str, embedding: str) -> dict[str,
     return report
 
 
-def test_doubao_model_handle(client: Letta) -> dict[str, Any]:
-    report: dict[str, Any] = {
-        "name": "doubao_handle_model",
-        "ok": False,
-        "detail": "",
-    }
-    agent_id: str | None = None
-
-    try:
-        agent_id = _create_agent(
-            client=client,
-            model="openai-proxy/doubao-seed-1-8-251228",
-            embedding=DEFAULT_EMBEDDING_HANDLE,
-            name=f"doubao-handle-{int(time.time())}",
-        )
-        # If create succeeded, try one message.
-        chat(client, agent_id, input="你好")
-        report["ok"] = True
-        report["detail"] = "doubao handle works in current server"
-    except Exception as exc:
-        report["detail"] = str(exc)
-    finally:
-        _safe_delete_agent(client, agent_id)
-
-    return report
-
-
 def main() -> None:
     client = Letta(base_url=LETTA_BASE_URL)
 
@@ -197,13 +171,19 @@ def main() -> None:
     reports: list[dict[str, Any]] = []
     reports.append(test_ui_options_and_create())
 
-    # 27B-only matrix as requested (no 35B tests).
-    base_model = "lmstudio_openai/qwen3.5-27b"
-    for embedding in _target_embeddings():
-        if embedding in embedding_handles:
-            reports.append(test_embedding_combo(client, base_model, embedding))
-
-    reports.append(test_doubao_model_handle(client))
+    base_model = DEFAULT_TEST_MODEL_HANDLE
+    if base_model in llm_handles:
+        for embedding in _target_embeddings():
+            if embedding in embedding_handles:
+                reports.append(test_embedding_combo(client, base_model, embedding))
+    else:
+        reports.append(
+            {
+                "name": "target_model_available",
+                "ok": False,
+                "detail": f"Missing model handle: {base_model}",
+            }
+        )
 
     summary = {
         "letta_base_url": LETTA_BASE_URL,

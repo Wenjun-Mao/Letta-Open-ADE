@@ -8,7 +8,8 @@ DEFAULT_DEV_UI_BASE_URL = os.getenv("DEV_UI_BASE_URL", "http://127.0.0.1:8284")
 DEFAULT_TIMEZONE = "Asia/Shanghai"
 DEFAULT_CONTEXT_WINDOW_LIMIT = 16384
 DEFAULT_CLIENT_TIMEOUT_SECONDS = 300.0
-DEFAULT_PROMPT_KEY = "memgpt_v2_chat"
+DEFAULT_PROMPT_KEY = "custom_v2"
+DEFAULT_TEST_MODEL_HANDLE = "lmstudio_openai/gemma-4-31b-it"
 DEFAULT_EMBEDDING_HANDLE = "letta/letta-free"
 
 # Strict phrase checks used to detect persona breaks (AI/virtual self-disclosure).

@@ -33,6 +33,7 @@
 
                     <label class="text-[10px] text-gray-400 uppercase tracking-wider">Model</label>
                     <select v-model="selectedModel" class="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 mb-2">
+                        <option value="">Select a model...</option>
                         <option v-for="model in availableModels" :key="model.key" :value="model.key">{{ modelOptionLabel(model) }}</option>
                     </select>
 
@@ -171,7 +172,10 @@
                 <div v-for="(msg, index) in chatHistory" :key="index" :class="['flex', msg.role === 'user' ? 'justify-end' : 'justify-start']">
                     <div :class="['max-w-[75%] rounded-2xl px-5 py-3 shadow-sm', 
                                 msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white border text-gray-800 rounded-bl-none']">
-                        <div class="text-[10px] opacity-50 mb-1 font-semibold uppercase tracking-wide">{{ msg.role === 'user' ? 'You' : 'Lin Xiao Tang' }}</div>
+                        <div class="text-[10px] opacity-50 mb-1 font-semibold uppercase tracking-wide flex items-center justify-between gap-3">
+                            <span>{{ msg.role === 'user' ? 'You' : 'Lin Xiao Tang' }}</span>
+                            <span v-if="msg.role === 'assistant' && msg.timingMs !== null && msg.timingMs !== undefined" class="normal-case tracking-normal">⏱ {{ formatLatency(msg.timingMs) }}</span>
+                        </div>
                         <div class="whitespace-pre-wrap leading-relaxed cn-readable">{{ msg.content }}</div>
                     </div>
                 </div>

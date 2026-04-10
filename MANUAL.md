@@ -18,7 +18,7 @@ The current bundle works end to end with:
 
 Current development baseline defaults:
 
-- System prompt: `MEMGPT_V2_CHAT_PROMPT`
+- System prompt: `CUSTOM_V2_PROMPT`
 - Test embedding: `letta/letta-free`
 
 ## Directory Contents
@@ -36,10 +36,11 @@ Current development baseline defaults:
 
 Testing runners are maintained under `tests/`:
 
-- `tests/run_conversation_suite.py`
-- `tests/test_provider_embedding_matrix.py`
-- `tests/test_prompts.py`
-- `tests/verify_agent.py`
+- `tests/runners/persona_guardrail_runner.py`
+- `tests/runners/memory_update_runner.py`
+- `tests/checks/provider_embedding_matrix_check.py`
+- `tests/checks/prompt_strategy_check.py`
+- `tests/checks/agent_bootstrap_check.py`
 
 General-purpose operational scripts remain under `scripts/`.
 
@@ -327,8 +328,9 @@ Remove-Item Env:MARIMO_SMOKE_ONLY
 6. Run development test suites:
 
 ```powershell
-uv run tests/run_conversation_suite.py --config tests/configs/suites --embedding letta/letta-free
-uv run tests/test_provider_embedding_matrix.py
+uv run tests/runners/persona_guardrail_runner.py --config tests/configs/suites --embedding letta/letta-free
+uv run tests/checks/provider_embedding_matrix_check.py
+uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free
 ```
 
 7. Check central lean test records:

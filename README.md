@@ -160,16 +160,17 @@ After this, `dev_ui` should start directly with Uvicorn and no startup-time pack
 
 Current baseline assumptions for development tests:
 
-- Default system prompt baseline: `MEMGPT_V2_CHAT_PROMPT`
+- Default system prompt baseline: `CUSTOM_V2_PROMPT`
 - Default test embedding: `letta/letta-free`
 
 Testing runners live under `tests/`:
 
 ```bash
-uv run tests/run_conversation_suite.py --config tests/configs/suites --embedding letta/letta-free
-uv run tests/test_provider_embedding_matrix.py
-uv run tests/test_prompts.py
-uv run tests/verify_agent.py
+uv run tests/runners/persona_guardrail_runner.py --config tests/configs/suites --embedding letta/letta-free
+uv run tests/checks/provider_embedding_matrix_check.py
+uv run tests/checks/prompt_strategy_check.py
+uv run tests/checks/agent_bootstrap_check.py
+uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free
 ```
 
 Conversation suite outputs are written to timestamped directories under `tests/outputs/`.

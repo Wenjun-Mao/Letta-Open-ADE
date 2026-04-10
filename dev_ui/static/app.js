@@ -46,11 +46,6 @@ createApp({
         await this.fetchOptions();
         await this.fetchExistingAgents();
 
-        const storedModel = localStorage.getItem('letta_selected_model');
-        if (storedModel && this.availableModels.some(model => model.key === storedModel)) {
-            this.selectedModel = storedModel;
-        }
-
         const storedPrompt = localStorage.getItem('letta_selected_prompt_key');
         if (storedPrompt && this.availablePrompts.some(prompt => prompt.key === storedPrompt)) {
             this.selectedPromptKey = storedPrompt;
@@ -83,9 +78,6 @@ createApp({
                 this.persistentState = null;
                 this.persistentError = '';
             }
-        },
-        selectedModel(val) {
-            localStorage.setItem('letta_selected_model', val);
         },
         selectedPromptKey(val) {
             localStorage.setItem('letta_selected_prompt_key', val);
@@ -138,6 +130,16 @@ createApp({
                 hour12: false,
             });
         },
+        formatLatency(valueMs) {
+            const n = Number(valueMs);
+            if (!Number.isFinite(n) || n < 0) {
+                return '';
+            }
+            if (n < 1000) {
+                return `${Math.round(n)} ms`;
+            }
+            return `${(n / 1000).toFixed(2)} s`;
+        },
         existingAgentOptionLabel(item) {
             const name = item?.name || '(unnamed)';
             const created = this.formatTimestamp(item?.created_at);
@@ -171,10 +173,6 @@ createApp({
                 this.availableEmbeddings = res.data.embeddings || [];
                 this.availablePrompts = res.data.prompts || [];
                 this.serverDefaultEmbedding = res.data.defaults?.embedding || '';
-
-                if (!this.selectedModel) {
-                    this.selectedModel = res.data.defaults?.model || '';
-                }
                 if (this.selectedEmbedding === '') {
                     this.selectedEmbedding = res.data.defaults?.embedding || '';
                 }
@@ -202,6 +200,10 @@ createApp({
             }
         },
         async createAgent() {
+            if (!this.selectedModel) {
+                alert('Please choose a model before creating an agent.');
+                return;
+            }
             this.isCreating = true;
             try {
                 const res = await axios.post('/api/agents', {
@@ -217,6 +219,8 @@ createApp({
                 this.rawPromptData = null;
                 this.persistentState = null;
                 this.persistentError = '';
+                // Require explicit model choice for every new agent creation.
+                this.selectedModel = '';
                 this.selectedExistingAgentId = this.agentId;
                 await this.fetchExistingAgents();
             } catch (e) {
@@ -269,9 +273,9 @@ createApp({
                 }
 
                 if (messageType === 'user_message') {
-                    hydrated.push({ role: 'user', content });
+                    hydrated.push({ role: 'user', content, timingMs: null });
                 } else if (messageType === 'assistant_message') {
-                    hydrated.push({ role: 'assistant', content });
+                    hydrated.push({ role: 'assistant', content, timingMs: null });
                 }
             }
 
@@ -301,10 +305,11 @@ createApp({
             if (!this.userInput.trim() || !this.agentId || this.isChatting) return;
             
             const messageText = this.userInput.trim();
-            this.chatHistory.push({ role: 'user', content: messageText });
+            this.chatHistory.push({ role: 'user', content: messageText, timingMs: null });
             this.userInput = '';
             this.isChatting = true;
             this.rawPromptData = null; // reset prompt trace
+            const startedAt = performance.now();
 
             this.$nextTick(() => {
                 const container = document.getElementById('chat-container');
@@ -316,13 +321,22 @@ createApp({
                     agent_id: this.agentId,
                     message: messageText
                 });
+                const elapsedMs = Math.max(0, performance.now() - startedAt);
                 
-                this.lastResult = res.data;
+                this.lastResult = {
+                    ...res.data,
+                    ui_timing_ms: elapsedMs,
+                };
                 
                 // Extract assistant message to show in UI
-                const responseMsg = res.data.sequence.find(s => s.type === 'assistant');
+                const assistantMessages = (res.data.sequence || []).filter(s => s.type === 'assistant');
+                const responseMsg = assistantMessages.length > 0 ? assistantMessages[assistantMessages.length - 1] : null;
                 if (responseMsg && String(responseMsg.content || '').trim()) {
-                    this.chatHistory.push({ role: 'assistant', content: responseMsg.content });
+                    this.chatHistory.push({
+                        role: 'assistant',
+                        content: responseMsg.content,
+                        timingMs: elapsedMs,
+                    });
                 }
 
                 // Auto-refresh agent details if memory changed
@@ -335,7 +349,12 @@ createApp({
                 }
 
             } catch (err) {
-                this.chatHistory.push({ role: 'assistant', content: '❌ Error: Failed to communicate with agent backend.' });
+                const elapsedMs = Math.max(0, performance.now() - startedAt);
+                this.chatHistory.push({
+                    role: 'assistant',
+                    content: '❌ Error: Failed to communicate with agent backend.',
+                    timingMs: elapsedMs,
+                });
             } finally {
                 this.isChatting = false;
                 this.$nextTick(() => {

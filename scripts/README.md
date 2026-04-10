@@ -19,10 +19,11 @@ Wipes all existing Letta memory/agents inside the PostgreSQL volume and fully re
 
 ### Testing Scripts Location
 All test runners were moved to the `tests/` directory to keep responsibilities clear:
-* `tests/run_conversation_suite.py`
-* `tests/test_provider_embedding_matrix.py`
-* `tests/test_prompts.py`
-* `tests/verify_agent.py`
+* `tests/runners/persona_guardrail_runner.py`
+* `tests/runners/memory_update_runner.py`
+* `tests/checks/provider_embedding_matrix_check.py`
+* `tests/checks/prompt_strategy_check.py`
+* `tests/checks/agent_bootstrap_check.py`
 
 ---
 
@@ -74,37 +75,42 @@ The script prints and saves the output bundle path, for example:
 
 **Run Agent Integration / Verification Test:**
 ```bash
-uv run tests/verify_agent.py
+uv run tests/checks/agent_bootstrap_check.py
 ```
 
 **Run Provider + Embedding Matrix Test (27B only):**
 ```bash
-uv run tests/test_provider_embedding_matrix.py
+uv run tests/checks/provider_embedding_matrix_check.py
 ```
 
 **Run Provider + Embedding Matrix Test with custom handles:**
 ```bash
-TEST_EMBEDDING_HANDLES="letta/letta-free,lmstudio_openai/text-embedding-qwen3-embedding-0.6b" uv run tests/test_provider_embedding_matrix.py
+TEST_EMBEDDING_HANDLES="letta/letta-free,lmstudio_openai/text-embedding-qwen3-embedding-0.6b" uv run tests/checks/provider_embedding_matrix_check.py
 ```
 
 **Run Conversation Suite (all suite configs):**
 ```bash
-uv run tests/run_conversation_suite.py
+uv run tests/runners/persona_guardrail_runner.py
 ```
 
 **Run Conversation Suite and force one embedding handle for all configs:**
 ```bash
-uv run tests/run_conversation_suite.py --config tests/configs/suites --embedding letta/letta-free
+uv run tests/runners/persona_guardrail_runner.py --config tests/configs/suites --embedding letta/letta-free
 ```
 
 **Run Conversation Suite for a specific config file:**
 ```bash
-uv run tests/run_conversation_suite.py --config tests/configs/suites/qwen27_custom_v1.json
+uv run tests/runners/persona_guardrail_runner.py --config tests/configs/suites/lmstudio_custom_v2.json --embedding letta/letta-free
 ```
 
 **Run Prompt Variant Comparison:**
 ```bash
-uv run tests/test_prompts.py
+uv run tests/checks/prompt_strategy_check.py
+```
+
+**Run Fresh-Agent Memory Update Rounds:**
+```bash
+uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free
 ```
 
 **Start Letta with a specific env profile (example `.env3`):**

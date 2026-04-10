@@ -2,27 +2,24 @@ import os
 import sys
 import time
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from letta_client import Letta
 from prompts.persona import PERSONAS, HUMAN_TEMPLATE
 from prompts.system_prompts import (
-    AGGRESSIVE_MEMORY_PROMPT,
-    CUSTOM_V1_PROMPT,
-    MEMGPT_V2_CHAT_PROMPT,
-    STRUCTURED_MEMORY_PROMPT,
-    TOOLS_FIRST_PROMPT,
+    CUSTOM_V2_PROMPT,
 )
+from tests.shared.config_defaults import DEFAULT_LETTA_BASE_URL, DEFAULT_TEST_MODEL_HANDLE
 from utils.message_parser import chat
 
-DEFAULT_MODEL = os.getenv("TEST_PROMPTS_MODEL", "lmstudio_openai/qwen3.5-27b")
+DEFAULT_MODEL = DEFAULT_TEST_MODEL_HANDLE
 
 def test_prompt(system_prompt, prompt_name):
     print(f"\n{'='*60}")
     print(f"TESTING PROMPT STRATEGY: {prompt_name}")
     print(f"{'='*60}")
     
-    client = Letta(base_url="http://localhost:8283")
+    client = Letta(base_url=DEFAULT_LETTA_BASE_URL)
     
     agent = client.agents.create(
         system=system_prompt,
@@ -78,12 +75,4 @@ if __name__ == "__main__":
     import warnings
     warnings.filterwarnings("ignore")
     
-    test_prompt(MEMGPT_V2_CHAT_PROMPT, "MEMGPT_V2_CHAT_PROMPT")
-    time.sleep(2)
-    test_prompt(CUSTOM_V1_PROMPT, "CUSTOM_V1_PROMPT")
-    time.sleep(2)
-    test_prompt(AGGRESSIVE_MEMORY_PROMPT, "AGGRESSIVE_MEMORY_PROMPT")
-    time.sleep(2)
-    test_prompt(STRUCTURED_MEMORY_PROMPT, "STRUCTURED_MEMORY_PROMPT")
-    time.sleep(2)
-    test_prompt(TOOLS_FIRST_PROMPT, "TOOLS_FIRST_PROMPT")
+    test_prompt(CUSTOM_V2_PROMPT, "CUSTOM_V2_PROMPT")

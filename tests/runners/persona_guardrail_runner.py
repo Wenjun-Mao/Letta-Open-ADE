@@ -13,17 +13,13 @@ from typing import Any
 from letta_client import Letta
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from prompts.persona import HUMAN_TEMPLATE, PERSONAS
 from prompts.system_prompts import (
-    AGGRESSIVE_MEMORY_PROMPT,
-    CUSTOM_V1_PROMPT,
-    MEMGPT_V2_CHAT_PROMPT,
-    STRUCTURED_MEMORY_PROMPT,
-    TOOLS_FIRST_PROMPT,
+    CUSTOM_V2_PROMPT,
 )
-from tests.config_defaults import (
+from tests.shared.config_defaults import (
     DEFAULT_CLIENT_TIMEOUT_SECONDS,
     DEFAULT_CONTEXT_WINDOW_LIMIT,
     DEFAULT_EMBEDDING_HANDLE,
@@ -38,11 +34,7 @@ from tests.config_defaults import (
 from utils.message_parser import chat, get_agent_memory_dict
 
 PROMPT_MAP: dict[str, str] = {
-    "custom_v1": CUSTOM_V1_PROMPT,
-    "memgpt_v2_chat": MEMGPT_V2_CHAT_PROMPT,
-    "aggressive_memory": AGGRESSIVE_MEMORY_PROMPT,
-    "structured_memory": STRUCTURED_MEMORY_PROMPT,
-    "tools_first": TOOLS_FIRST_PROMPT,
+    "custom_v2": CUSTOM_V2_PROMPT,
 }
 
 
@@ -329,6 +321,7 @@ def _run_single_config(
     output_dir: Path,
     keep_agent_arg: bool,
     embedding_override: str | None,
+    model_override: str | None,
 ) -> dict[str, Any]:
     """
     High-level map:
@@ -351,6 +344,8 @@ def _run_single_config(
         raise ValueError(f"Unknown persona_key '{persona_key}' in {config_path}")
 
     model_handle = str(config.get("model", "")).strip()
+    if model_override:
+        model_handle = model_override
     if not model_handle:
         raise ValueError(f"Missing model in {config_path}")
 
@@ -487,9 +482,14 @@ def main() -> int:
         default="",
         help="Override embedding handle for all configs in this run.",
     )
+    parser.add_argument(
+        "--model",
+        default="",
+        help="Override model handle for all configs in this run.",
+    )
     args = parser.parse_args()
 
-    project_root = Path(__file__).resolve().parents[1]
+    project_root = Path(__file__).resolve().parents[2]
     config_files = _discover_config_files(args.config, project_root)
     if not config_files:
         print("No config files found. Provide --config path(s) or add tests/configs/suites/*.json")
@@ -506,6 +506,7 @@ def main() -> int:
         "letta_base_url": args.base_url,
         "client_timeout": args.client_timeout,
         "embedding_override": args.embedding or None,
+        "model_override": args.model or None,
         "config_count": len(config_files),
         "results": [],
     }
@@ -521,6 +522,7 @@ def main() -> int:
                 output_dir=run_output_dir,
                 keep_agent_arg=args.keep_agent,
                 embedding_override=(args.embedding.strip() or None),
+                model_override=(args.model.strip() or None),
             )
             summary["results"].append(
                 {
@@ -542,7 +544,7 @@ def main() -> int:
                 {
                     "test_name": config_path.stem,
                     "config_file": str(config_path),
-                    "model": "",
+                    "model": args.model.strip() or "",
                     "embedding": args.embedding.strip() or DEFAULT_EMBEDDING_HANDLE,
                     "prompt_key": "",
                     "pass": False,

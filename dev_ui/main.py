@@ -6,7 +6,7 @@ from pydantic import BaseModel
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -38,8 +38,8 @@ class ChatRequest(BaseModel):
 
 class AgentCreateRequest(BaseModel):
     name: str = "dev-agent"
-    model: str = "lmstudio_openai/qwen3.5-27b"
-    prompt_key: str = "memgpt_v2_chat"
+    model: str = ""
+    prompt_key: str = "custom_v2"
     embedding: str | None = None
 
 
@@ -97,14 +97,18 @@ PROMPT_MAP = {
     "custom_v2": CUSTOM_V2_PROMPT,
 }
 
-DEFAULT_MODEL = PREFERRED_MODEL_OPTIONS[0]["key"]
+DEFAULT_MODEL = ""
 DEFAULT_PROMPT_KEY = "custom_v2"
 DEFAULT_EMBEDDING = ""
 
 # Letta Client Initialization
 client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"))
 
-_SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
+try:
+    _SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
+except Exception:
+    # Windows environments may not have IANA tzdata available.
+    _SHANGHAI_TZ = timezone(timedelta(hours=8), name="CST")
 _DATETIME_QUERY_TOKENS = (
     "today",
     "date",
@@ -352,9 +356,8 @@ async def read_index():
 async def api_get_options():
     model_options, embedding_options = _runtime_options()
 
-    default_model = DEFAULT_MODEL
-    if not any(option["key"] == default_model for option in model_options):
-        default_model = model_options[0]["key"] if model_options else ""
+    # Force explicit model choice in the UI for every new-agent creation.
+    default_model = ""
 
     default_embedding = os.getenv("LETTA_DEFAULT_EMBEDDING_HANDLE") or os.getenv("LETTA_EMBEDDING_HANDLE") or DEFAULT_EMBEDDING
     if default_embedding and not any(option["key"] == default_embedding for option in embedding_options):
@@ -413,6 +416,9 @@ async def api_create_agent(request: AgentCreateRequest):
     model_options, embedding_options = _runtime_options()
     allowed_models = {option["key"] for option in model_options}
     allowed_embeddings = {option["key"] for option in embedding_options}
+
+    if not request.model.strip():
+        raise HTTPException(status_code=400, detail="Model is required. Please choose one.")
 
     if request.model not in allowed_models:
         raise HTTPException(status_code=400, detail=f"Invalid model: {request.model}")

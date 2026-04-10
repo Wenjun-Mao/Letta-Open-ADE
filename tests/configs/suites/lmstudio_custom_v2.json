@@ -1,9 +1,9 @@
 {
-  "name": "doubao_memgpt_v2_chat_real_chat",
-  "description": "Doubao with MEMGPT_V2_CHAT_PROMPT on recent real user turns.",
-  "model": "openai-proxy/doubao-seed-1-8-251228",
+  "name": "lmstudio_custom_v2_real_chat",
+  "description": "Gemma 4 31B IT with CUSTOM_V2_PROMPT on recent real user turns.",
+  "model": "lmstudio_openai/gemma-4-31b-it",
   "embedding": "letta/letta-free",
-  "prompt_key": "memgpt_v2_chat",
+  "prompt_key": "custom_v2",
   "persona_key": "linxiaotang",
   "turns_file": "../conversations/recent_user_chat_turns.json",
   "checks": {
