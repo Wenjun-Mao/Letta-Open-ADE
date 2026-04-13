@@ -170,6 +170,7 @@ uv run tests/runners/persona_guardrail_runner.py --config tests/configs/suites -
 uv run tests/checks/provider_embedding_matrix_check.py
 uv run tests/checks/prompt_strategy_check.py
 uv run tests/checks/agent_bootstrap_check.py
+uv run tests/checks/migration_flag_rollout_check.py
 uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free
 ```
 
@@ -211,6 +212,17 @@ This avoids mixing different test semantics in one shared index.
 - `POST /api/platform/test-runs/{run_id}/cancel`
 	- Requests cancellation for a running test job.
 
+- `GET /api/platform/migration-status`
+	- Returns migration mode and feature-flag state for legacy/platform route rollout.
+- `GET /api/platform/tools`
+	- Lists available platform tools for ADE Toolbench discovery.
+- `GET /api/platform/metadata/prompts-personas`
+	- Returns prompt and persona metadata for ADE Prompt and Persona Lab selectors.
+- `GET /api/platform/test-runs/{run_id}/artifacts`
+	- Lists discovered artifacts for a test run (logs, summaries).
+- `GET /api/platform/test-runs/{run_id}/artifacts/{artifact_id}`
+	- Reads artifact content with configurable line limits.
+
 Quick capability check:
 
 ```bash
@@ -222,3 +234,67 @@ Platform API end-to-end check:
 ```bash
 uv run tests/checks/platform_api_e2e_check.py
 ```
+
+ADE MVP smoke check:
+
+```bash
+uv run tests/checks/ade_mvp_smoke_e2e_check.py
+```
+
+Dual-run cutover gate (backend E2E + ADE smoke):
+
+```bash
+uv run tests/checks/platform_dual_run_gate.py
+```
+
+If your running `dev_ui` service is on an older image, run checks against a source-backed instance:
+
+```bash
+$env:DEV_UI_BASE_URL="http://127.0.0.1:8285"
+uv run tests/checks/platform_dual_run_gate.py
+```
+
+## OpenAPI And Mintlify Docs Workflow
+
+The repository now includes a committed OpenAPI artifact and docs config for Mintlify.
+
+- OpenAPI artifact path: `docs/openapi/agent-platform-openapi.json`
+- Export script: `scripts/export_openapi.py`
+- Docs config: `docs/docs.json`
+- Docs config validator: `scripts/validate_docs_config.py`
+
+Generate/update the OpenAPI artifact:
+
+```bash
+uv run python scripts/export_openapi.py
+```
+
+Check OpenAPI drift only:
+
+```bash
+uv run python scripts/export_openapi.py --check --output docs/openapi/agent-platform-openapi.json
+```
+
+Validate docs configuration:
+
+```bash
+uv run python scripts/validate_docs_config.py --docs docs/docs.json
+```
+
+## ADE Frontend (Separate Profile)
+
+Current `dev_ui` frontend remains the fallback path. The new Next.js ADE frontend runs as an opt-in compose profile.
+
+Start ADE frontend profile:
+
+```bash
+LETTA_ENV_FILE=.env3 docker compose --profile ade up -d ade_frontend
+```
+
+Stop ADE frontend profile service:
+
+```bash
+LETTA_ENV_FILE=.env3 docker compose --profile ade stop ade_frontend
+```
+
+Open ADE preview at `http://127.0.0.1:3000`.

@@ -1,0 +1,48 @@
+name: Validate Agent Platform OpenAPI And Docs
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - dev_ui/**
+      - utils/**
+      - scripts/export_openapi.py
+      - scripts/validate_docs_config.py
+      - docs/**
+      - .github/workflows/openapi-docs-check.yml
+  push:
+    branches:
+      - main
+    paths:
+      - dev_ui/**
+      - utils/**
+      - scripts/export_openapi.py
+      - scripts/validate_docs_config.py
+      - docs/**
+      - .github/workflows/openapi-docs-check.yml
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install dependencies
+        run: uv sync --frozen --no-dev
+
+      - name: Check OpenAPI artifact drift
+        run: uv run python scripts/export_openapi.py --check --output docs/openapi/agent-platform-openapi.json
+
+      - name: Validate docs.json configuration
+        run: uv run python scripts/validate_docs_config.py --docs docs/docs.json

@@ -1,0 +1,29 @@
+---
+title: ADE Frontend Scope
+---
+
+# ADE Frontend Scope
+
+The new ADE frontend is a separate Next.js + TypeScript app that runs in parallel with the fallback dev_ui frontend.
+
+## MVP modules
+
+- Dashboard
+- Agent Studio
+- Prompt and Persona Lab
+- Toolbench (including tool discovery)
+- Test Center
+- API Docs entry
+
+## Phase-2 modules
+
+- Tool schema explorer and tool test invocation UI
+- Prompt comparison and revision history
+- Rich run artifact explorer and downloads
+- Reliability trend dashboards
+
+## Migration behavior
+
+- Keep fallback frontend enabled during migration window.
+- Use migration status endpoint to expose active mode in ADE UI.
+- Rollback path is route-level, not schema rollback.

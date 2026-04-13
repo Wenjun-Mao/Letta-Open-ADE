@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 import threading
@@ -13,6 +14,10 @@ from tests.shared.config_defaults import DEFAULT_EMBEDDING_HANDLE, DEFAULT_TEST_
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+_SUMMARY_WRITTEN_PATTERN = re.compile(r"Summary written to:\\s*(.+)$")
+_RUNNER_OUTPUT_PATTERN = re.compile(r"\\boutput=(.+\\.json)\\s*$")
 
 
 class PlatformTestOrchestrator:
@@ -45,6 +50,12 @@ class PlatformTestOrchestrator:
             return [python, "tests/checks/prompt_strategy_check.py"]
         if run_type == "platform_api_e2e_check":
             return [python, "tests/checks/platform_api_e2e_check.py"]
+        if run_type == "ade_mvp_smoke_e2e_check":
+            return [python, "tests/checks/ade_mvp_smoke_e2e_check.py"]
+        if run_type == "migration_flag_rollout_check":
+            return [python, "tests/checks/migration_flag_rollout_check.py"]
+        if run_type == "platform_dual_run_gate":
+            return [python, "tests/checks/platform_dual_run_gate.py"]
         if run_type == "persona_guardrail_runner":
             return [
                 python,
@@ -73,6 +84,7 @@ class PlatformTestOrchestrator:
         raise ValueError(f"Unsupported run_type: {run_type}")
 
     def _public_record(self, run: dict[str, Any]) -> dict[str, Any]:
+        artifacts = self._resolve_artifacts(run)
         return {
             "run_id": run["run_id"],
             "run_type": run["run_type"],
@@ -86,7 +98,72 @@ class PlatformTestOrchestrator:
             "cancel_requested": bool(run.get("cancel_requested", False)),
             "output_tail": list(run.get("output_tail", [])),
             "error": run.get("error", ""),
+            "artifacts": artifacts,
         }
+
+    def _summary_paths_from_log(self, log_file: str) -> list[Path]:
+        log_path = Path(log_file).resolve()
+        if not log_path.exists():
+            return []
+
+        summary_paths: list[Path] = []
+        for line in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            summary_match = _SUMMARY_WRITTEN_PATTERN.search(line)
+            if summary_match:
+                raw_path = summary_match.group(1).strip()
+                if raw_path:
+                    candidate = Path(raw_path)
+                    if not candidate.is_absolute():
+                        candidate = (self._project_root / candidate).resolve()
+                    summary_paths.append(candidate)
+
+            output_match = _RUNNER_OUTPUT_PATTERN.search(line)
+            if output_match:
+                raw_path = output_match.group(1).strip()
+                if raw_path:
+                    candidate = Path(raw_path)
+                    if not candidate.is_absolute():
+                        candidate = (self._project_root / candidate).resolve()
+                    summary_paths.append(candidate)
+
+        seen: set[str] = set()
+        unique: list[Path] = []
+        for path in summary_paths:
+            key = str(path)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(path)
+        return unique
+
+    def _resolve_artifacts(self, run: dict[str, Any]) -> list[dict[str, Any]]:
+        artifacts: list[dict[str, Any]] = []
+
+        log_file = str(run.get("log_file", "") or "")
+        if log_file:
+            log_path = Path(log_file).resolve()
+            artifacts.append(
+                {
+                    "artifact_id": "orchestrator_log",
+                    "type": "log",
+                    "path": str(log_path),
+                    "exists": log_path.exists(),
+                    "size_bytes": log_path.stat().st_size if log_path.exists() else 0,
+                }
+            )
+
+            for index, summary_path in enumerate(self._summary_paths_from_log(log_file)):
+                artifacts.append(
+                    {
+                        "artifact_id": f"summary_{index}",
+                        "type": "summary",
+                        "path": str(summary_path),
+                        "exists": summary_path.exists(),
+                        "size_bytes": summary_path.stat().st_size if summary_path.exists() else 0,
+                    }
+                )
+
+        return artifacts
 
     def create_run(
         self,
@@ -221,6 +298,50 @@ class PlatformTestOrchestrator:
             if not run:
                 return None
             return self._public_record(run)
+
+    def list_artifacts(self, run_id: str) -> list[dict[str, Any]] | None:
+        with self._lock:
+            run = self._runs.get(run_id)
+            if not run:
+                return None
+            run_snapshot = {
+                "log_file": str(run.get("log_file", "") or ""),
+            }
+
+        return self._resolve_artifacts(run_snapshot)
+
+    def read_artifact(self, run_id: str, artifact_id: str, *, max_lines: int = 400) -> dict[str, Any] | None:
+        artifacts = self.list_artifacts(run_id)
+        if artifacts is None:
+            return None
+
+        target = next((item for item in artifacts if item.get("artifact_id") == artifact_id), None)
+        if not target:
+            return None
+
+        artifact_path = Path(str(target.get("path", ""))).resolve()
+        if not artifact_path.exists():
+            return {
+                "run_id": run_id,
+                "artifact": target,
+                "content": "",
+                "truncated": False,
+                "line_count": 0,
+            }
+
+        resolved_max_lines = max(1, min(int(max_lines), 2000))
+        lines = artifact_path.read_text(encoding="utf-8", errors="replace").splitlines()
+        truncated = len(lines) > resolved_max_lines
+        if truncated:
+            lines = lines[-resolved_max_lines:]
+
+        return {
+            "run_id": run_id,
+            "artifact": target,
+            "content": "\n".join(lines),
+            "truncated": truncated,
+            "line_count": len(lines),
+        }
 
     def cancel_run(self, run_id: str) -> dict[str, Any] | None:
         with self._lock:

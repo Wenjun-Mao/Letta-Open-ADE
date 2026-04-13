@@ -25,6 +25,43 @@ class AgentPlatformService:
     def _message_create_params(self) -> set[str]:
         return set(inspect.signature(self._client.agents.messages.create).parameters.keys())
 
+    @staticmethod
+    def _is_context_limit_error(exc: Exception) -> bool:
+        text = str(exc).lower()
+        return "context size has been exceeded" in text or "maximum context length" in text
+
+    @retry(**_RETRY_KWARGS)
+    def list_available_tools(self, *, search: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
+        resolved_limit = max(1, min(int(limit), 500))
+        query = (search or "").strip()
+
+        list_kwargs: dict[str, Any] = {
+            "limit": resolved_limit,
+        }
+        if query:
+            list_kwargs["search"] = query
+
+        tools = list(self._client.tools.list(**list_kwargs))
+        results: list[dict[str, Any]] = []
+        for tool in tools:
+            tags_raw = getattr(tool, "tags", None) or []
+            tags = [str(tag) for tag in tags_raw if str(tag).strip()]
+
+            results.append(
+                {
+                    "id": str(getattr(tool, "id", "") or ""),
+                    "name": str(getattr(tool, "name", "") or ""),
+                    "description": str(getattr(tool, "description", "") or ""),
+                    "tool_type": str(getattr(tool, "tool_type", "") or ""),
+                    "source_type": str(getattr(tool, "source_type", "") or ""),
+                    "created_at": str(getattr(tool, "created_at", "") or ""),
+                    "last_updated_at": str(getattr(tool, "last_updated_at", "") or ""),
+                    "tags": tags,
+                }
+            )
+
+        return results
+
     def capabilities(self) -> dict[str, Any]:
         message_params = self._message_create_params()
         update_params = set(inspect.signature(self._client.agents.update).parameters.keys())
@@ -98,6 +135,42 @@ class AgentPlatformService:
             "override_system": override_system,
             "result": result,
         }
+
+    @retry(**_RETRY_KWARGS)
+    def send_legacy_chat_message(
+        self,
+        *,
+        agent_id: str,
+        message: str,
+        datetime_system_hint: str | None = None,
+    ) -> dict[str, Any]:
+        if datetime_system_hint:
+            try:
+                result = chat(
+                    client=self._client,
+                    agent_id=agent_id,
+                    messages=[
+                        {"role": "system", "content": datetime_system_hint},
+                        {"role": "user", "content": message},
+                    ],
+                )
+            except Exception as exc:
+                if not self._is_context_limit_error(exc):
+                    raise
+                result = chat(
+                    client=self._client,
+                    agent_id=agent_id,
+                    input=message,
+                )
+        else:
+            result = chat(
+                client=self._client,
+                agent_id=agent_id,
+                input=message,
+            )
+
+        result.pop("raw_messages", None)
+        return result
 
     @retry(**_RETRY_KWARGS)
     def update_system_prompt(self, *, agent_id: str, system_prompt: str) -> dict[str, Any]:

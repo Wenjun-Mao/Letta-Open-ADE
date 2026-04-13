@@ -15,7 +15,6 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from letta_client import Letta
-from utils.message_parser import chat
 from utils.agent_platform_service import AgentPlatformService
 from utils.platform_test_orchestrator import PlatformTestOrchestrator
 from prompts.persona import PERSONAS, HUMAN_TEMPLATE
@@ -24,7 +23,17 @@ from prompts.system_prompts import (
     CUSTOM_V2_PROMPT,
 )
 
-app = FastAPI(title="Letta Dev UI")
+APP_VERSION = os.getenv("AGENT_PLATFORM_API_VERSION", "0.2.0")
+
+app = FastAPI(
+    title="Agent Platform Dev API",
+    version=APP_VERSION,
+    summary="Runtime and control APIs for local Agent Platform development",
+    description=(
+        "Provides legacy Dev UI routes and Agent Platform runtime/control/test orchestration routes. "
+        "Designed for dual-run migration from legacy UI to ADE frontend."
+    ),
+)
 
 # Allow CORS for development
 app.add_middleware(
@@ -70,6 +79,9 @@ class PlatformTestRunRequest(BaseModel):
         "provider_embedding_matrix_check",
         "prompt_strategy_check",
         "platform_api_e2e_check",
+        "ade_mvp_smoke_e2e_check",
+        "migration_flag_rollout_check",
+        "platform_dual_run_gate",
         "persona_guardrail_runner",
         "memory_update_runner",
     ]
@@ -150,6 +162,39 @@ def _is_truthy(value: str | None) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _platform_api_enabled() -> bool:
+    return _is_truthy(os.getenv("AGENT_PLATFORM_API_ENABLED", "1"))
+
+
+def _legacy_api_enabled() -> bool:
+    return _is_truthy(os.getenv("AGENT_PLATFORM_LEGACY_API_ENABLED", "1"))
+
+
+def _migration_mode() -> str:
+    mode = os.getenv("AGENT_PLATFORM_MIGRATION_MODE", "dual").strip().lower()
+    if mode in {"legacy", "dual", "ade"}:
+        return mode
+    return "dual"
+
+
+def _ensure_platform_api_enabled() -> None:
+    if _platform_api_enabled():
+        return
+    raise HTTPException(
+        status_code=503,
+        detail="Agent Platform API is disabled by AGENT_PLATFORM_API_ENABLED.",
+    )
+
+
+def _ensure_legacy_api_enabled() -> None:
+    if _legacy_api_enabled():
+        return
+    raise HTTPException(
+        status_code=503,
+        detail="Legacy Dev UI API is disabled by AGENT_PLATFORM_LEGACY_API_ENABLED.",
+    )
+
+
 def _missing_platform_capabilities(capabilities: dict[str, Any]) -> list[str]:
     runtime = capabilities.get("runtime", {})
     control = capabilities.get("control", {})
@@ -171,6 +216,9 @@ def _missing_platform_capabilities(capabilities: dict[str, Any]) -> list[str]:
 
 @app.on_event("startup")
 async def _startup_validate_platform_capabilities() -> None:
+    if not _platform_api_enabled():
+        return
+
     strict_mode = _is_truthy(os.getenv("AGENT_PLATFORM_STRICT_CAPABILITIES"))
     capabilities = agent_platform.capabilities()
     missing = _missing_platform_capabilities(capabilities)
@@ -415,9 +463,12 @@ def _runtime_datetime_system_hint() -> str:
     )
 
 
-def _is_context_limit_error(exc: Exception) -> bool:
-    text = str(exc).lower()
-    return "context size has been exceeded" in text or "maximum context length" in text
+def _first_non_empty_line(text: str) -> str:
+    for line in text.splitlines():
+        cleaned = line.strip()
+        if cleaned:
+            return cleaned
+    return ""
 
 @app.get("/", response_class=HTMLResponse)
 async def read_index():
@@ -427,6 +478,8 @@ async def read_index():
 
 @app.get("/api/options")
 async def api_get_options():
+    _ensure_legacy_api_enabled()
+
     model_options, embedding_options = _runtime_options()
 
     # Force explicit model choice in the UI for every new-agent creation.
@@ -454,6 +507,8 @@ async def api_get_options():
 @app.get("/api/agents")
 async def api_list_agents(limit: int = 100):
     """List existing agents so the UI can pull and inspect prior state."""
+    _ensure_legacy_api_enabled()
+
     if limit < 1:
         raise HTTPException(status_code=400, detail="limit must be >= 1")
     if limit > 500:
@@ -486,6 +541,8 @@ async def api_list_agents(limit: int = 100):
 
 @app.post("/api/agents")
 async def api_create_agent(request: AgentCreateRequest):
+    _ensure_legacy_api_enabled()
+
     model_options, embedding_options = _runtime_options()
     allowed_models = {option["key"] for option in model_options}
     allowed_embeddings = {option["key"] for option in embedding_options}
@@ -544,6 +601,8 @@ async def api_create_agent(request: AgentCreateRequest):
 
 @app.get("/api/agents/{agent_id}/details")
 async def api_get_agent_details(agent_id: str):
+    _ensure_legacy_api_enabled()
+
     agent = client.agents.retrieve(agent_id=agent_id)
     tools_raw = list(client.agents.tools.list(agent_id=agent.id))
     tools = {t.name: t.description for t in tools_raw}
@@ -583,6 +642,8 @@ async def api_get_agent_persistent_state(agent_id: str, limit: int = 120, includ
     - attached tools
     - persisted conversation history
     """
+    _ensure_legacy_api_enabled()
+
     if limit < 1:
         raise HTTPException(status_code=400, detail="limit must be >= 1")
     if limit > 500:
@@ -654,6 +715,8 @@ async def api_get_agent_persistent_state(agent_id: str, limit: int = 120, includ
 
 @app.get("/api/agents/{agent_id}/raw_prompt")
 async def api_get_raw_prompt(agent_id: str):
+    _ensure_legacy_api_enabled()
+
     messages = list(client.agents.messages.list(agent_id=agent_id))
     recent_messages = messages[-10:] if len(messages) >= 10 else messages
     
@@ -668,18 +731,123 @@ async def api_get_raw_prompt(agent_id: str):
     return {"messages": formatted_msgs}
 
 
-@app.get("/api/platform/capabilities")
+@app.get(
+    "/api/platform/migration-status",
+    tags=["platform-meta"],
+    summary="Get migration feature-flag status",
+)
+async def api_platform_migration_status():
+    return {
+        "migration_mode": _migration_mode(),
+        "platform_api_enabled": _platform_api_enabled(),
+        "legacy_api_enabled": _legacy_api_enabled(),
+        "strict_capabilities": _is_truthy(os.getenv("AGENT_PLATFORM_STRICT_CAPABILITIES")),
+    }
+
+
+@app.get(
+    "/api/platform/capabilities",
+    tags=["platform-meta"],
+    summary="Get platform capability matrix",
+)
 async def api_platform_capabilities():
     capabilities = agent_platform.capabilities()
     return {
+        "enabled": _platform_api_enabled(),
+        "migration_mode": _migration_mode(),
+        "legacy_api_enabled": _legacy_api_enabled(),
         "strict_mode": _is_truthy(os.getenv("AGENT_PLATFORM_STRICT_CAPABILITIES")),
         "missing_required": _missing_platform_capabilities(capabilities),
         **capabilities,
     }
 
 
-@app.post("/api/platform/agents/{agent_id}/messages")
+@app.get(
+    "/api/platform/tools",
+    tags=["platform-tools"],
+    summary="List tools for Toolbench discovery",
+)
+async def api_platform_list_tools(search: str = "", limit: int = 100, agent_id: str | None = None):
+    _ensure_platform_api_enabled()
+
+    resolved_limit = max(1, min(limit, 500))
+    try:
+        tools = agent_platform.list_available_tools(search=(search or "").strip() or None, limit=resolved_limit)
+
+        attached_ids: set[str] = set()
+        if agent_id:
+            attached_ids = {
+                str(getattr(tool, "id", "") or "")
+                for tool in list(client.agents.tools.list(agent_id=agent_id))
+                if str(getattr(tool, "id", "") or "").strip()
+            }
+
+        for tool in tools:
+            tool_id = str(tool.get("id", "") or "")
+            tool["attached_to_agent"] = bool(agent_id and tool_id in attached_ids)
+
+        return {
+            "total": len(tools),
+            "search": (search or "").strip(),
+            "limit": resolved_limit,
+            "agent_id": agent_id,
+            "items": tools,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get(
+    "/api/platform/metadata/prompts-personas",
+    tags=["platform-meta"],
+    summary="Get prompt and persona metadata",
+)
+async def api_platform_prompt_persona_metadata():
+    _ensure_platform_api_enabled()
+
+    prompts: list[dict[str, Any]] = []
+    for option in PROMPT_OPTIONS:
+        key = str(option.get("key", "") or "")
+        prompt_text = str(PROMPT_MAP.get(key, "") or "")
+        prompts.append(
+            {
+                "key": key,
+                "label": str(option.get("label", "") or ""),
+                "description": str(option.get("description", "") or ""),
+                "preview": _first_non_empty_line(prompt_text)[:180],
+                "length": len(prompt_text),
+            }
+        )
+
+    personas: list[dict[str, Any]] = []
+    for key, value in sorted(PERSONAS.items()):
+        persona_text = str(value or "")
+        personas.append(
+            {
+                "key": key,
+                "preview": _first_non_empty_line(persona_text)[:180],
+                "length": len(persona_text),
+            }
+        )
+
+    return {
+        "defaults": {
+            "prompt_key": DEFAULT_PROMPT_KEY,
+            "persona_key": "linxiaotang",
+        },
+        "prompts": prompts,
+        "personas": personas,
+    }
+
+
+@app.post(
+    "/api/platform/agents/{agent_id}/messages",
+    tags=["platform-runtime"],
+    summary="Send runtime message with optional overrides",
+)
 async def api_platform_send_message(agent_id: str, request: PlatformRuntimeMessageRequest):
+    _ensure_platform_api_enabled()
+
     text = request.input.strip()
     if not text:
         raise HTTPException(status_code=400, detail="input is required")
@@ -695,8 +863,14 @@ async def api_platform_send_message(agent_id: str, request: PlatformRuntimeMessa
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.patch("/api/platform/agents/{agent_id}/system")
+@app.patch(
+    "/api/platform/agents/{agent_id}/system",
+    tags=["platform-control"],
+    summary="Update persisted system prompt",
+)
 async def api_platform_update_system(agent_id: str, request: PlatformSystemUpdateRequest):
+    _ensure_platform_api_enabled()
+
     system_text = request.system.strip()
     if not system_text:
         raise HTTPException(status_code=400, detail="system is required")
@@ -707,8 +881,14 @@ async def api_platform_update_system(agent_id: str, request: PlatformSystemUpdat
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.patch("/api/platform/agents/{agent_id}/model")
+@app.patch(
+    "/api/platform/agents/{agent_id}/model",
+    tags=["platform-control"],
+    summary="Update persisted agent model",
+)
 async def api_platform_update_model(agent_id: str, request: PlatformModelUpdateRequest):
+    _ensure_platform_api_enabled()
+
     model_handle = request.model.strip()
     if not model_handle:
         raise HTTPException(status_code=400, detail="model is required")
@@ -719,12 +899,18 @@ async def api_platform_update_model(agent_id: str, request: PlatformModelUpdateR
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.patch("/api/platform/agents/{agent_id}/core-memory/blocks/{block_label}")
+@app.patch(
+    "/api/platform/agents/{agent_id}/core-memory/blocks/{block_label}",
+    tags=["platform-control"],
+    summary="Update core-memory block value",
+)
 async def api_platform_update_memory_block(
     agent_id: str,
     block_label: str,
     request: PlatformMemoryBlockUpdateRequest,
 ):
+    _ensure_platform_api_enabled()
+
     label = block_label.strip()
     if not label:
         raise HTTPException(status_code=400, detail="block_label is required")
@@ -739,8 +925,14 @@ async def api_platform_update_memory_block(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.patch("/api/platform/agents/{agent_id}/tools/attach/{tool_id}")
+@app.patch(
+    "/api/platform/agents/{agent_id}/tools/attach/{tool_id}",
+    tags=["platform-tools"],
+    summary="Attach tool to agent",
+)
 async def api_platform_attach_tool(agent_id: str, tool_id: str):
+    _ensure_platform_api_enabled()
+
     resolved_tool_id = tool_id.strip()
     if not resolved_tool_id:
         raise HTTPException(status_code=400, detail="tool_id is required")
@@ -751,8 +943,14 @@ async def api_platform_attach_tool(agent_id: str, tool_id: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.patch("/api/platform/agents/{agent_id}/tools/detach/{tool_id}")
+@app.patch(
+    "/api/platform/agents/{agent_id}/tools/detach/{tool_id}",
+    tags=["platform-tools"],
+    summary="Detach tool from agent",
+)
 async def api_platform_detach_tool(agent_id: str, tool_id: str):
+    _ensure_platform_api_enabled()
+
     resolved_tool_id = tool_id.strip()
     if not resolved_tool_id:
         raise HTTPException(status_code=400, detail="tool_id is required")
@@ -763,15 +961,27 @@ async def api_platform_detach_tool(agent_id: str, tool_id: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@app.get("/api/platform/test-runs")
+@app.get(
+    "/api/platform/test-runs",
+    tags=["platform-tests"],
+    summary="List orchestrated test runs",
+)
 async def api_platform_list_test_runs():
+    _ensure_platform_api_enabled()
+
     return {
         "items": test_orchestrator.list_runs(),
     }
 
 
-@app.post("/api/platform/test-runs")
+@app.post(
+    "/api/platform/test-runs",
+    tags=["platform-tests"],
+    summary="Create orchestrated test run",
+)
 async def api_platform_create_test_run(request: PlatformTestRunRequest):
+    _ensure_platform_api_enabled()
+
     try:
         return test_orchestrator.create_run(
             run_type=request.run_type,
@@ -786,60 +996,78 @@ async def api_platform_create_test_run(request: PlatformTestRunRequest):
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-@app.get("/api/platform/test-runs/{run_id}")
+@app.get(
+    "/api/platform/test-runs/{run_id}",
+    tags=["platform-tests"],
+    summary="Get orchestrated test run",
+)
 async def api_platform_get_test_run(run_id: str):
+    _ensure_platform_api_enabled()
+
     run = test_orchestrator.get_run(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="run_id not found")
     return run
 
 
-@app.post("/api/platform/test-runs/{run_id}/cancel")
+@app.post(
+    "/api/platform/test-runs/{run_id}/cancel",
+    tags=["platform-tests"],
+    summary="Cancel orchestrated test run",
+)
 async def api_platform_cancel_test_run(run_id: str):
+    _ensure_platform_api_enabled()
+
     run = test_orchestrator.cancel_run(run_id)
     if not run:
         raise HTTPException(status_code=404, detail="run_id not found")
     return run
 
-@app.post("/api/chat")
-async def api_chat(request: ChatRequest):
-    is_datetime_turn = _is_datetime_query(request.message)
-    chat_kwargs: dict[str, Any] = {
-        "input": request.message,
+
+@app.get(
+    "/api/platform/test-runs/{run_id}/artifacts",
+    tags=["platform-tests"],
+    summary="List test run artifacts",
+)
+async def api_platform_list_test_run_artifacts(run_id: str):
+    _ensure_platform_api_enabled()
+
+    artifacts = test_orchestrator.list_artifacts(run_id)
+    if artifacts is None:
+        raise HTTPException(status_code=404, detail="run_id not found")
+    return {
+        "run_id": run_id,
+        "items": artifacts,
     }
 
-    # Some local models ignore compile-time metadata timestamps unless the turn
-    # explicitly provides a runtime date anchor.
-    if is_datetime_turn:
-        chat_kwargs = {
-            "messages": [
-                {"role": "system", "content": _runtime_datetime_system_hint()},
-                {"role": "user", "content": request.message},
-            ]
-        }
+
+@app.get(
+    "/api/platform/test-runs/{run_id}/artifacts/{artifact_id}",
+    tags=["platform-tests"],
+    summary="Read test run artifact content",
+)
+async def api_platform_read_test_run_artifact(run_id: str, artifact_id: str, max_lines: int = 400):
+    _ensure_platform_api_enabled()
+
+    payload = test_orchestrator.read_artifact(run_id, artifact_id, max_lines=max_lines)
+    if payload is None:
+        raise HTTPException(status_code=404, detail="run_id or artifact_id not found")
+    return payload
+
+@app.post("/api/chat")
+async def api_chat(request: ChatRequest):
+    _ensure_legacy_api_enabled()
+
+    is_datetime_turn = _is_datetime_query(request.message)
 
     try:
-        result = chat(
-            client=client,
+        return agent_platform.send_legacy_chat_message(
             agent_id=request.agent_id,
-            **chat_kwargs,
+            message=request.message,
+            datetime_system_hint=_runtime_datetime_system_hint() if is_datetime_turn else None,
         )
     except Exception as exc:
-        # If hint injection overflows context, retry once with the original input.
-        if is_datetime_turn and _is_context_limit_error(exc):
-            try:
-                result = chat(
-                    client=client,
-                    agent_id=request.agent_id,
-                    input=request.message,
-                )
-            except Exception as retry_exc:
-                raise HTTPException(status_code=400, detail=str(retry_exc)) from retry_exc
-        else:
-            raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    result.pop("raw_messages", None)
-    return result
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 app.mount("/static", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "static")), name="static")
 

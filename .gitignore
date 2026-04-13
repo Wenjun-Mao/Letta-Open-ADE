@@ -19,3 +19,6 @@ letta-souce-code/
 prompts/system_prompts/letta_original/system_prompts
 tests/outputs
 diagnostics
+
+frontend-ade/node_modules/
+frontend-ade/.next/

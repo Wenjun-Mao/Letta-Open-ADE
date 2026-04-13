@@ -75,3 +75,20 @@ services:
     depends_on:
       letta_server:
         condition: service_healthy
+
+  ade_frontend:
+    profiles:
+      - ade
+    build:
+      context: ./frontend-ade
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_DEV_UI_BASE_URL=${ADE_DEV_UI_BASE_URL:-http://127.0.0.1:8284}
+      - NEXT_PUBLIC_MINTLIFY_DOCS_URL=${ADE_DOCS_URL:-/docs}
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      dev_ui:
+        condition: service_started

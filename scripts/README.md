@@ -113,6 +113,21 @@ uv run tests/checks/prompt_strategy_check.py
 uv run tests/checks/platform_api_e2e_check.py
 ```
 
+**Run ADE MVP Smoke E2E Check:**
+```bash
+uv run tests/checks/ade_mvp_smoke_e2e_check.py
+```
+
+**Run Migration Flag Rollout Check:**
+```bash
+uv run tests/checks/migration_flag_rollout_check.py
+```
+
+**Run Dual-Run Cutover Gate (backend E2E + ADE smoke):**
+```bash
+uv run tests/checks/platform_dual_run_gate.py
+```
+
 **Run Fresh-Agent Memory Update Rounds:**
 ```bash
 uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free

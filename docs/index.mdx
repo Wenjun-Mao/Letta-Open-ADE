@@ -1,0 +1,26 @@
+---
+title: Agent Platform API
+---
+
+# Agent Platform API
+
+This documentation tracks the local Agent Platform API used by the ADE migration.
+
+## What this includes
+
+- Runtime endpoints for agent interaction.
+- Control endpoints for prompt, model, memory block, and tool mutations.
+- Test orchestration endpoints for checks and runners.
+- Migration status endpoints for dual-run rollout visibility.
+
+## Source of truth
+
+- OpenAPI artifact: `docs/openapi/agent-platform-openapi.json`
+- Export script: `scripts/export_openapi.py`
+- Validation script: `scripts/validate_docs_config.py`
+
+## Local workflow
+
+1. Regenerate OpenAPI artifact: `uv run python scripts/export_openapi.py`
+2. Validate docs config: `uv run python scripts/validate_docs_config.py --docs docs/docs.json`
+3. Validate drift only: `uv run python scripts/export_openapi.py --check`

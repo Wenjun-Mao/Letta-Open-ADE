@@ -27,6 +27,12 @@ This directory uses a role-based structure:
   - Verifies bootstrap memory block descriptions and defaults
 - tests/checks/platform_api_e2e_check.py
   - Validates Agent Platform runtime/control endpoints and orchestrator flow
+- tests/checks/ade_mvp_smoke_e2e_check.py
+  - Covers ADE MVP user journeys across Dashboard, Agent Studio, Prompt and Persona Lab, Toolbench, and Test Center
+- tests/checks/migration_flag_rollout_check.py
+  - Verifies migration-mode and route-gating behavior across rollout and rollback flag states
+- tests/checks/platform_dual_run_gate.py
+  - Runs backend platform API E2E plus ADE smoke suite as one cutover gate
 
 ## Typical Commands
 
@@ -37,6 +43,16 @@ uv run tests/checks/provider_embedding_matrix_check.py
 uv run tests/checks/prompt_strategy_check.py
 uv run tests/checks/agent_bootstrap_check.py
 uv run tests/checks/platform_api_e2e_check.py
+uv run tests/checks/ade_mvp_smoke_e2e_check.py
+uv run tests/checks/migration_flag_rollout_check.py
+uv run tests/checks/platform_dual_run_gate.py
+```
+
+If `dev_ui` routes in your running container lag behind source changes, point checks at a source-backed dev_ui server:
+
+```bash
+$env:DEV_UI_BASE_URL="http://127.0.0.1:8285"
+uv run tests/checks/platform_dual_run_gate.py
 ```
 
 Examples:
