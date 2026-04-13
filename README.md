@@ -95,13 +95,13 @@ Workflow behavior:
 Remote Ubuntu run sequence (no local build required):
 
 ```bash
-docker compose --env-file .env3 pull letta_server dev_ui
-docker compose --env-file .env3 up -d
+docker compose pull letta_server dev_ui
+docker compose up -d
 ```
 
 For this pull-first model, avoid `--build` on remote unless you intentionally want to rebuild locally.
 
-Set these in `.env3` (or copy from `.env3.example`) for image control:
+Set these in `.env` (or copy from `.env.example`) for image control:
 
 - `LETTA_SERVER_IMAGE=letta/letta:0.16.7`
 - `DEV_UI_IMAGE=ghcr.io/wenjun-mao/letta-doubao-dev-ui:latest`
@@ -129,7 +129,7 @@ If startup repeatedly stalls around `Checking NLTK data availability...`, pre-se
 ```bash
 chmod +x scripts/seed_nltk_data.sh
 ./scripts/seed_nltk_data.sh
-docker compose --env-file .env3 up -d --force-recreate letta_server
+docker compose up -d --force-recreate letta_server
 ```
 
 `compose.yaml` mounts `data/nltk_data` into the Letta container and enables a startup patch that prefers local `punkt_tab` data instead of network download.
@@ -137,8 +137,8 @@ docker compose --env-file .env3 up -d --force-recreate letta_server
 If `dev_ui` logs show runtime dependency install lines like `Creating virtual environment at: /opt/venv` or `Downloading pydantic-core`, pull the latest prebuilt image and recreate `dev_ui`:
 
 ```bash
-docker compose --env-file .env3 pull dev_ui
-docker compose --env-file .env3 up -d --force-recreate dev_ui
+docker compose pull dev_ui
+docker compose up -d --force-recreate dev_ui
 ```
 
 After this, `dev_ui` should start directly with Uvicorn and no startup-time package download.
@@ -170,7 +170,7 @@ uv run tests/runners/persona_guardrail_runner.py --config tests/configs/suites -
 uv run tests/checks/provider_embedding_matrix_check.py
 uv run tests/checks/prompt_strategy_check.py
 uv run tests/checks/agent_bootstrap_check.py
-uv run tests/checks/migration_flag_rollout_check.py
+uv run tests/checks/platform_flag_gate_check.py
 uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free
 ```
 
@@ -187,46 +187,44 @@ This avoids mixing different test semantics in one shared index.
 
 ## Agent Platform API (Initial Slice)
 
-`dev_ui/main.py` now exposes an initial control/runtime surface under `/api/platform`.
+`dev_ui/main.py` now exposes an initial control/runtime surface under `/api/v1/platform`.
 
-- `GET /api/platform/capabilities`
+- `GET /api/v1/platform/capabilities`
 	- Reports whether the connected Letta SDK/server supports key mutable features.
-- `POST /api/platform/agents/{agent_id}/messages`
+- `POST /api/v1/platform/agents/{agent_id}/messages`
 	- Sends a runtime message with optional `override_model` and `override_system`.
-- `PATCH /api/platform/agents/{agent_id}/system`
+- `PATCH /api/v1/platform/agents/{agent_id}/system`
 	- Updates the persisted agent system prompt.
-- `PATCH /api/platform/agents/{agent_id}/model`
+- `PATCH /api/v1/platform/agents/{agent_id}/model`
 	- Updates the persisted default model handle for the agent.
-- `PATCH /api/platform/agents/{agent_id}/core-memory/blocks/{block_label}`
+- `PATCH /api/v1/platform/agents/{agent_id}/core-memory/blocks/{block_label}`
 	- Updates a core-memory block value (for example `persona` or `human`).
-- `PATCH /api/platform/agents/{agent_id}/tools/attach/{tool_id}`
+- `PATCH /api/v1/platform/agents/{agent_id}/tools/attach/{tool_id}`
 	- Attaches a tool to an existing agent.
-- `PATCH /api/platform/agents/{agent_id}/tools/detach/{tool_id}`
+- `PATCH /api/v1/platform/agents/{agent_id}/tools/detach/{tool_id}`
 	- Detaches a tool from an existing agent.
-- `GET /api/platform/test-runs`
+- `GET /api/v1/platform/test-runs`
 	- Lists orchestrated backend test runs.
-- `POST /api/platform/test-runs`
+- `POST /api/v1/platform/test-runs`
 	- Starts one orchestrated check/runner execution.
-- `GET /api/platform/test-runs/{run_id}`
+- `GET /api/v1/platform/test-runs/{run_id}`
 	- Retrieves run status, tail logs, and exit code.
-- `POST /api/platform/test-runs/{run_id}/cancel`
+- `POST /api/v1/platform/test-runs/{run_id}/cancel`
 	- Requests cancellation for a running test job.
 
-- `GET /api/platform/migration-status`
-	- Returns migration mode and feature-flag state for legacy/platform route rollout.
-- `GET /api/platform/tools`
+- `GET /api/v1/platform/tools`
 	- Lists available platform tools for ADE Toolbench discovery.
-- `GET /api/platform/metadata/prompts-personas`
+- `GET /api/v1/platform/metadata/prompts-personas`
 	- Returns prompt and persona metadata for ADE Prompt and Persona Lab selectors.
-- `GET /api/platform/test-runs/{run_id}/artifacts`
+- `GET /api/v1/platform/test-runs/{run_id}/artifacts`
 	- Lists discovered artifacts for a test run (logs, summaries).
-- `GET /api/platform/test-runs/{run_id}/artifacts/{artifact_id}`
+- `GET /api/v1/platform/test-runs/{run_id}/artifacts/{artifact_id}`
 	- Reads artifact content with configurable line limits.
 
 Quick capability check:
 
 ```bash
-curl http://127.0.0.1:8284/api/platform/capabilities
+curl http://127.0.0.1:8284/api/v1/platform/capabilities
 ```
 
 Platform API end-to-end check:
@@ -288,13 +286,13 @@ Current `dev_ui` frontend remains the fallback path. The new Next.js ADE fronten
 Start ADE frontend profile:
 
 ```bash
-LETTA_ENV_FILE=.env3 docker compose --profile ade up -d ade_frontend
+docker compose --profile ade up -d ade_frontend
 ```
 
 Stop ADE frontend profile service:
 
 ```bash
-LETTA_ENV_FILE=.env3 docker compose --profile ade stop ade_frontend
+docker compose --profile ade stop ade_frontend
 ```
 
 Open ADE preview at `http://127.0.0.1:3000`.

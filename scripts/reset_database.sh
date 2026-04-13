@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-ENV_FILE="${1:-${LETTA_ENV_FILE:-.env3}}"
+ENV_FILE="${1:-${LETTA_ENV_FILE:-.env}}"
 export LETTA_ENV_FILE="${ENV_FILE}"
 
 echo -e "\e[36mUsing env file: ${ENV_FILE}\e[0m"

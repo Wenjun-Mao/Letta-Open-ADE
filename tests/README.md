@@ -29,8 +29,8 @@ This directory uses a role-based structure:
   - Validates Agent Platform runtime/control endpoints and orchestrator flow
 - tests/checks/ade_mvp_smoke_e2e_check.py
   - Covers ADE MVP user journeys across Dashboard, Agent Studio, Prompt and Persona Lab, Toolbench, and Test Center
-- tests/checks/migration_flag_rollout_check.py
-  - Verifies migration-mode and route-gating behavior across rollout and rollback flag states
+- tests/checks/platform_flag_gate_check.py
+  - Verifies platform API gate behavior and strict-capability flag state
 - tests/checks/platform_dual_run_gate.py
   - Runs backend platform API E2E plus ADE smoke suite as one cutover gate
 
@@ -44,7 +44,7 @@ uv run tests/checks/prompt_strategy_check.py
 uv run tests/checks/agent_bootstrap_check.py
 uv run tests/checks/platform_api_e2e_check.py
 uv run tests/checks/ade_mvp_smoke_e2e_check.py
-uv run tests/checks/migration_flag_rollout_check.py
+uv run tests/checks/platform_flag_gate_check.py
 uv run tests/checks/platform_dual_run_gate.py
 ```
 

@@ -19,7 +19,7 @@ const RUN_TYPES = [
   "prompt_strategy_check",
   "platform_api_e2e_check",
   "ade_mvp_smoke_e2e_check",
-  "migration_flag_rollout_check",
+  "platform_flag_gate_check",
   "platform_dual_run_gate",
   "persona_guardrail_runner",
   "memory_update_runner",

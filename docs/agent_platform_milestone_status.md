@@ -26,8 +26,8 @@ Deliver a production-ready Agent Platform backbone for a new ADE frontend while 
 - [x] Agent Platform runtime and control endpoints.
 - [x] Orchestrated test-run endpoints.
 - [x] Platform API E2E check.
-- [x] Legacy route bridge completion for all targeted endpoints.
-- [x] Feature-flag rollout and rollback behavior finalized.
+- [x] Versioned route cutover completion for all targeted endpoints.
+- [x] Platform-only feature-flag behavior finalized.
 
 ### ADE Support APIs
 
@@ -62,16 +62,15 @@ Deliver a production-ready Agent Platform backbone for a new ADE frontend while 
 
 ## Current Implementation Delta (This Pass)
 
-- Added migration status endpoint: GET /api/platform/migration-status.
-- Added tool discovery endpoint: GET /api/platform/tools.
-- Added tool test invocation endpoint: POST /api/platform/tools/test-invoke.
-- Added prompt/persona metadata endpoint: GET /api/platform/metadata/prompts-personas.
-- Added prompt/persona revision history endpoint: GET /api/platform/metadata/prompts-personas/revisions.
+- Added tool discovery endpoint: GET /api/v1/platform/tools.
+- Added tool test invocation endpoint: POST /api/v1/platform/tools/test-invoke.
+- Added prompt/persona metadata endpoint: GET /api/v1/platform/metadata/prompts-personas.
+- Added prompt/persona revision history endpoint: GET /api/v1/platform/metadata/prompts-personas/revisions.
 - Added run artifact endpoints:
-  - GET /api/platform/test-runs/{run_id}/artifacts
-  - GET /api/platform/test-runs/{run_id}/artifacts/{artifact_id}
-- Added feature-flag gating for legacy and platform routes.
-- Bridged full legacy chat route through AgentPlatformService shared messaging path.
+  - GET /api/v1/platform/test-runs/{run_id}/artifacts
+  - GET /api/v1/platform/test-runs/{run_id}/artifacts/{artifact_id}
+- Added feature-flag gating for platform routes.
+- Unified runtime chat through AgentPlatformService shared messaging path.
 - Added deterministic OpenAPI export script and committed OpenAPI artifact.
 - Added Mintlify docs.json configuration and overview pages in docs.
 - Added OpenAPI/docs CI validation workflow.
@@ -79,9 +78,9 @@ Deliver a production-ready Agent Platform backbone for a new ADE frontend while 
 - Implemented functional ADE MVP pages for Agent Studio, Prompt and Persona Lab, Toolbench, Test Center, and live dashboard status.
 - Added frontend build validation (`npm run build`) to implementation verification.
 - Added ADE MVP smoke E2E check script (`tests/checks/ade_mvp_smoke_e2e_check.py`).
-- Added migration flag rollout check script (`tests/checks/migration_flag_rollout_check.py`).
+- Added platform flag gate check script (`tests/checks/platform_flag_gate_check.py`).
 - Added combined dual-run cutover gate (`tests/checks/platform_dual_run_gate.py`).
-- Extended orchestrator/Test Center run types to include ADE smoke, flag rollout, and dual-run gate checks.
+- Extended orchestrator/Test Center run types to include ADE smoke, platform-flag gate, and dual-run gate checks.
 - Consolidated Prompt/Persona Lab and Toolbench into Agent Studio wrappers with deep-link redirects.
 - Added Agent Studio phase-2 UX: compact mode, execution trace filtering, tool probe UI, and prompt/persona revision timeline panel.
 - Extended platform API E2E check to validate phase-2 tool probe and revision history endpoints.
@@ -89,8 +88,6 @@ Deliver a production-ready Agent Platform backbone for a new ADE frontend while 
 ## Feature Flags
 
 - AGENT_PLATFORM_API_ENABLED (default: 1)
-- AGENT_PLATFORM_LEGACY_API_ENABLED (default: 1)
-- AGENT_PLATFORM_MIGRATION_MODE (legacy|dual|ade, default: dual)
 - AGENT_PLATFORM_STRICT_CAPABILITIES (default: off)
 
 ## Immediate Next Tasks

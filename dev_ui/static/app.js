@@ -168,7 +168,7 @@ createApp({
         async fetchOptions() {
             this.optionsLoading = true;
             try {
-                const res = await axios.get('/api/options');
+                const res = await axios.get('/api/v1/options');
                 this.availableModels = res.data.models || [];
                 this.availableEmbeddings = res.data.embeddings || [];
                 this.availablePrompts = res.data.prompts || [];
@@ -187,7 +187,7 @@ createApp({
         async fetchExistingAgents() {
             this.existingAgentsLoading = true;
             try {
-                const res = await axios.get('/api/agents?limit=200');
+                const res = await axios.get('/api/v1/agents?limit=200');
                 this.existingAgents = res.data.items || [];
 
                 if (this.agentId && this.existingAgents.some(item => item.id === this.agentId)) {
@@ -206,7 +206,7 @@ createApp({
             }
             this.isCreating = true;
             try {
-                const res = await axios.post('/api/agents', {
+                const res = await axios.post('/api/v1/agents', {
                     name: this.newAgentName.trim() || 'dev-agent',
                     model: this.selectedModel,
                     embedding: this.selectedEmbedding || null,
@@ -233,7 +233,7 @@ createApp({
             if (!this.agentId) return;
             this.isFetchingDetails = true;
             try {
-                const res = await axios.get(`/api/agents/${this.agentId}/details`);
+                const res = await axios.get(`/api/v1/agents/${this.agentId}/details`);
                 this.agentDetails = res.data;
             } catch (e) {
                 console.error("Failed to load details");
@@ -243,7 +243,7 @@ createApp({
         async fetchRawPrompt() {
             if (!this.agentId) return;
             try {
-                const res = await axios.get(`/api/agents/${this.agentId}/raw_prompt`);
+                const res = await axios.get(`/api/v1/agents/${this.agentId}/raw_prompt`);
                 this.rawPromptData = res.data.messages;
             } catch (e) {
                 alert('Could not fetch context');
@@ -289,7 +289,7 @@ createApp({
             this.persistentLoading = true;
             this.persistentError = '';
             try {
-                const url = `/api/agents/${this.agentId}/persistent_state?limit=${this.persistentLimit}`;
+                const url = `/api/v1/agents/${this.agentId}/persistent_state?limit=${this.persistentLimit}`;
                 const res = await axios.get(url);
                 this.persistentState = res.data;
                 if (hydrateChat) {
@@ -317,7 +317,7 @@ createApp({
             });
 
             try {
-                const res = await axios.post('/api/chat', {
+                const res = await axios.post('/api/v1/chat', {
                     agent_id: this.agentId,
                     message: messageText
                 });

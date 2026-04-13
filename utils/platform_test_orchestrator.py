@@ -52,8 +52,8 @@ class PlatformTestOrchestrator:
             return [python, "tests/checks/platform_api_e2e_check.py"]
         if run_type == "ade_mvp_smoke_e2e_check":
             return [python, "tests/checks/ade_mvp_smoke_e2e_check.py"]
-        if run_type == "migration_flag_rollout_check":
-            return [python, "tests/checks/migration_flag_rollout_check.py"]
+        if run_type == "platform_flag_gate_check":
+            return [python, "tests/checks/platform_flag_gate_check.py"]
         if run_type == "platform_dual_run_gate":
             return [python, "tests/checks/platform_dual_run_gate.py"]
         if run_type == "persona_guardrail_runner":

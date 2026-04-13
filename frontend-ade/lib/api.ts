@@ -196,19 +196,19 @@ export function invalidateApiCache(prefixes: string[] = []): void {
 
 function invalidateAgentScope(agentId: string): void {
   if (!agentId.trim()) {
-    invalidateApiCache(["/api/agents", "/api/platform/tools", "/api/platform/agents"]);
+    invalidateApiCache(["/api/v1/agents", "/api/v1/platform/tools", "/api/v1/platform/agents"]);
     return;
   }
 
   const id = agentId.trim();
   invalidateApiCache([
-    "/api/agents",
-    `/api/agents/${id}/details`,
-    `/api/agents/${id}/persistent_state`,
-    `/api/agents/${id}/raw_prompt`,
-    `/api/platform/agents/${id}`,
-    "/api/platform/metadata/prompts-personas/revisions",
-    "/api/platform/tools",
+    "/api/v1/agents",
+    `/api/v1/agents/${id}/details`,
+    `/api/v1/agents/${id}/persistent_state`,
+    `/api/v1/agents/${id}/raw_prompt`,
+    `/api/v1/platform/agents/${id}`,
+    "/api/v1/platform/metadata/prompts-personas/revisions",
+    "/api/v1/platform/tools",
   ]);
 }
 
@@ -252,15 +252,6 @@ async function requestJson<T>(path: string, options: RequestOptions = {}): Promi
   return payload;
 }
 
-export function fetchMigrationStatus() {
-  return requestJson<{
-    migration_mode: string;
-    platform_api_enabled: boolean;
-    legacy_api_enabled: boolean;
-    strict_capabilities: boolean;
-  }>("/api/platform/migration-status", { cacheTtlMs: 15_000 });
-}
-
 export function fetchCapabilities() {
   return requestJson<{
     enabled: boolean;
@@ -268,7 +259,12 @@ export function fetchCapabilities() {
     missing_required: string[];
     runtime: Record<string, boolean>;
     control: Record<string, boolean>;
-  }>("/api/platform/capabilities", { cacheTtlMs: 15_000 });
+    sdk?: {
+      messages_create_params: string[];
+      agents_update_params: string[];
+      blocks_update_params: string[];
+    };
+  }>("/api/v1/platform/capabilities", { cacheTtlMs: 15_000 });
 }
 
 export function fetchOptions() {
@@ -281,7 +277,7 @@ export function fetchOptions() {
       prompt_key: string;
       embedding: string;
     };
-  }>("/api/options", { cacheTtlMs: 60_000 });
+  }>("/api/v1/options", { cacheTtlMs: 60_000 });
 }
 
 export function listAgents(limit = 200, includeLastInteraction = false) {
@@ -294,7 +290,7 @@ export function listAgents(limit = 200, includeLastInteraction = false) {
   return requestJson<{
     total: number;
     items: AgentListItem[];
-  }>(`/api/agents?${params.toString()}`, { cacheTtlMs: 15_000 });
+  }>(`/api/v1/agents?${params.toString()}`, { cacheTtlMs: 15_000 });
 }
 
 export function createAgent(payload: {
@@ -309,31 +305,31 @@ export function createAgent(payload: {
     model: string;
     embedding?: string | null;
     prompt_key: string;
-  }>("/api/agents", {
+  }>("/api/v1/agents", {
     method: "POST",
     body: payload,
   }).then((created) => {
-    invalidateApiCache(["/api/agents", "/api/platform/tools", "/api/options"]);
+    invalidateApiCache(["/api/v1/agents", "/api/v1/platform/tools", "/api/v1/options"]);
     return created;
   });
 }
 
 export function getAgentDetails(agentId: string) {
-  return requestJson<AgentDetails>(`/api/agents/${agentId}/details`, { cacheTtlMs: 20_000 });
+  return requestJson<AgentDetails>(`/api/v1/agents/${agentId}/details`, { cacheTtlMs: 20_000 });
 }
 
 export function getPersistentState(agentId: string, limit = 120) {
-  return requestJson<PersistentState>(`/api/agents/${agentId}/persistent_state?limit=${limit}`, { cacheTtlMs: 20_000 });
+  return requestJson<PersistentState>(`/api/v1/agents/${agentId}/persistent_state?limit=${limit}`, { cacheTtlMs: 20_000 });
 }
 
 export function getRawPrompt(agentId: string) {
-  return requestJson<{ messages: Array<{ role: string; content: string }> }>(`/api/agents/${agentId}/raw_prompt`, {
+  return requestJson<{ messages: Array<{ role: string; content: string }> }>(`/api/v1/agents/${agentId}/raw_prompt`, {
     cacheTtlMs: 20_000,
   });
 }
 
 export function sendChat(agentId: string, message: string) {
-  return requestJson<ChatResult>("/api/chat", {
+  return requestJson<ChatResult>("/api/v1/chat", {
     method: "POST",
     body: {
       agent_id: agentId,
@@ -363,7 +359,7 @@ export function fetchPromptPersonaMetadata() {
       preview: string;
       length: number;
     }>;
-  }>("/api/platform/metadata/prompts-personas", { cacheTtlMs: 60_000 });
+  }>("/api/v1/platform/metadata/prompts-personas", { cacheTtlMs: 60_000 });
 }
 
 export function fetchPromptPersonaRevisions(agentId: string, field = "", limit = 80) {
@@ -381,11 +377,11 @@ export function fetchPromptPersonaRevisions(agentId: string, field = "", limit =
     agent_id: string | null;
     field: string | null;
     items: PromptPersonaRevisionRecord[];
-  }>(`/api/platform/metadata/prompts-personas/revisions?${params.toString()}`, { cacheTtlMs: 10_000 });
+  }>(`/api/v1/platform/metadata/prompts-personas/revisions?${params.toString()}`, { cacheTtlMs: 10_000 });
 }
 
 export function updateSystemPrompt(agentId: string, system: string) {
-  return requestJson<{ system_after: string; system_before: string }>(`/api/platform/agents/${agentId}/system`, {
+  return requestJson<{ system_after: string; system_before: string }>(`/api/v1/platform/agents/${agentId}/system`, {
     method: "PATCH",
     body: { system },
   }).then((payload) => {
@@ -395,7 +391,7 @@ export function updateSystemPrompt(agentId: string, system: string) {
 }
 
 export function updateAgentModel(agentId: string, model: string) {
-  return requestJson<{ model_after: string; model_before: string }>(`/api/platform/agents/${agentId}/model`, {
+  return requestJson<{ model_after: string; model_before: string }>(`/api/v1/platform/agents/${agentId}/model`, {
     method: "PATCH",
     body: { model },
   }).then((payload) => {
@@ -406,7 +402,7 @@ export function updateAgentModel(agentId: string, model: string) {
 
 export function updateCoreMemoryBlock(agentId: string, blockLabel: string, value: string) {
   return requestJson<{ value_before: string; value_after: string }>(
-    `/api/platform/agents/${agentId}/core-memory/blocks/${blockLabel}`,
+    `/api/v1/platform/agents/${agentId}/core-memory/blocks/${blockLabel}`,
     {
       method: "PATCH",
       body: { value },
@@ -430,7 +426,7 @@ export function listTools(search = "", limit = 200, agentId = "") {
   return requestJson<{
     total: number;
     items: PlatformTool[];
-  }>(`/api/platform/tools?${params.toString()}`, { cacheTtlMs: 20_000 });
+  }>(`/api/v1/platform/tools?${params.toString()}`, { cacheTtlMs: 20_000 });
 }
 
 export function testInvokeTool(payload: {
@@ -440,7 +436,7 @@ export function testInvokeTool(payload: {
   override_model?: string;
   override_system?: string;
 }) {
-  return requestJson<PlatformToolTestInvokeResult>("/api/platform/tools/test-invoke", {
+  return requestJson<PlatformToolTestInvokeResult>("/api/v1/platform/tools/test-invoke", {
     method: "POST",
     body: payload,
   }).then((result) => {
@@ -450,7 +446,7 @@ export function testInvokeTool(payload: {
 }
 
 export function attachTool(agentId: string, toolId: string) {
-  return requestJson(`/api/platform/agents/${agentId}/tools/attach/${toolId}`, {
+  return requestJson(`/api/v1/platform/agents/${agentId}/tools/attach/${toolId}`, {
     method: "PATCH",
   }).then((payload) => {
     invalidateAgentScope(agentId);
@@ -459,7 +455,7 @@ export function attachTool(agentId: string, toolId: string) {
 }
 
 export function detachTool(agentId: string, toolId: string) {
-  return requestJson(`/api/platform/agents/${agentId}/tools/detach/${toolId}`, {
+  return requestJson(`/api/v1/platform/agents/${agentId}/tools/detach/${toolId}`, {
     method: "PATCH",
   }).then((payload) => {
     invalidateAgentScope(agentId);
@@ -468,7 +464,7 @@ export function detachTool(agentId: string, toolId: string) {
 }
 
 export function listTestRuns() {
-  return requestJson<{ items: PlatformRunRecord[] }>("/api/platform/test-runs", { cacheTtlMs: 3_000 });
+  return requestJson<{ items: PlatformRunRecord[] }>("/api/v1/platform/test-runs", { cacheTtlMs: 3_000 });
 }
 
 export function createTestRun(payload: {
@@ -478,24 +474,24 @@ export function createTestRun(payload: {
   rounds?: number;
   config_path?: string;
 }) {
-  return requestJson<PlatformRunRecord>("/api/platform/test-runs", {
+  return requestJson<PlatformRunRecord>("/api/v1/platform/test-runs", {
     method: "POST",
     body: payload,
   }).then((record) => {
-    invalidateApiCache(["/api/platform/test-runs"]);
+    invalidateApiCache(["/api/v1/platform/test-runs"]);
     return record;
   });
 }
 
 export function getTestRun(runId: string) {
-  return requestJson<PlatformRunRecord>(`/api/platform/test-runs/${runId}`, { cacheTtlMs: 3_000 });
+  return requestJson<PlatformRunRecord>(`/api/v1/platform/test-runs/${runId}`, { cacheTtlMs: 3_000 });
 }
 
 export function cancelTestRun(runId: string) {
-  return requestJson<PlatformRunRecord>(`/api/platform/test-runs/${runId}/cancel`, {
+  return requestJson<PlatformRunRecord>(`/api/v1/platform/test-runs/${runId}/cancel`, {
     method: "POST",
   }).then((record) => {
-    invalidateApiCache(["/api/platform/test-runs"]);
+    invalidateApiCache(["/api/v1/platform/test-runs"]);
     return record;
   });
 }
@@ -504,7 +500,7 @@ export function listRunArtifacts(runId: string) {
   return requestJson<{
     run_id: string;
     items: PlatformArtifact[];
-  }>(`/api/platform/test-runs/${runId}/artifacts`, { cacheTtlMs: 5_000 });
+  }>(`/api/v1/platform/test-runs/${runId}/artifacts`, { cacheTtlMs: 5_000 });
 }
 
 export function readRunArtifact(runId: string, artifactId: string, maxLines = 400) {
@@ -514,5 +510,5 @@ export function readRunArtifact(runId: string, artifactId: string, maxLines = 40
     content: string;
     truncated: boolean;
     line_count: number;
-  }>(`/api/platform/test-runs/${runId}/artifacts/${artifactId}?max_lines=${maxLines}`, { cacheTtlMs: 5_000 });
+  }>(`/api/v1/platform/test-runs/${runId}/artifacts/${artifactId}?max_lines=${maxLines}`, { cacheTtlMs: 5_000 });
 }

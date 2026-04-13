@@ -37,7 +37,7 @@ def _safe_delete_agent(client: Letta, agent_id: str | None) -> None:
 def _poll_run(http: httpx.Client, run_id: str, timeout_seconds: int = 240) -> dict[str, Any]:
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
-        response = http.get(f"/api/platform/test-runs/{run_id}")
+        response = http.get(f"/api/v1/platform/test-runs/{run_id}")
         response.raise_for_status()
         payload = response.json()
         status = payload.get("status")
@@ -61,7 +61,7 @@ def main() -> None:
 
     try:
         with httpx.Client(base_url=DEV_UI_BASE_URL, timeout=60.0) as http:
-            capabilities_response = http.get("/api/platform/capabilities")
+            capabilities_response = http.get("/api/v1/platform/capabilities")
             capabilities_response.raise_for_status()
             capabilities = capabilities_response.json()
             summary["steps"]["capabilities"] = {
@@ -77,7 +77,7 @@ def main() -> None:
                 "prompt_key": DEFAULT_PROMPT_KEY,
                 "embedding": DEFAULT_EMBEDDING_HANDLE,
             }
-            create_response = http.post("/api/agents", json=create_payload)
+            create_response = http.post("/api/v1/agents", json=create_payload)
             create_response.raise_for_status()
             created = create_response.json()
             agent_id = str(created.get("id", "") or "")
@@ -90,7 +90,7 @@ def main() -> None:
             }
 
             message_response = http.post(
-                f"/api/platform/agents/{agent_id}/messages",
+                f"/api/v1/platform/agents/{agent_id}/messages",
                 json={"input": "你好，我是平台接口E2E测试"},
             )
             message_response.raise_for_status()
@@ -104,7 +104,7 @@ def main() -> None:
             }
 
             tool_probe_response = http.post(
-                "/api/platform/tools/test-invoke",
+                "/api/v1/platform/tools/test-invoke",
                 json={
                     "agent_id": agent_id,
                     "input": "请判断是否需要调用工具，然后返回简短回答。",
@@ -120,7 +120,7 @@ def main() -> None:
 
             system_text = f"E2E system update at {int(time.time())}"
             system_response = http.patch(
-                f"/api/platform/agents/{agent_id}/system",
+                f"/api/v1/platform/agents/{agent_id}/system",
                 json={"system": system_text},
             )
             system_response.raise_for_status()
@@ -132,7 +132,7 @@ def main() -> None:
             }
 
             model_response = http.patch(
-                f"/api/platform/agents/{agent_id}/model",
+                f"/api/v1/platform/agents/{agent_id}/model",
                 json={"model": DEFAULT_TEST_MODEL_HANDLE},
             )
             model_response.raise_for_status()
@@ -143,7 +143,7 @@ def main() -> None:
 
             human_value = "姓名：平台E2E用户\n偏好：测试Agent Platform API"
             block_response = http.patch(
-                f"/api/platform/agents/{agent_id}/core-memory/blocks/human",
+                f"/api/v1/platform/agents/{agent_id}/core-memory/blocks/human",
                 json={"value": human_value},
             )
             block_response.raise_for_status()
@@ -155,7 +155,7 @@ def main() -> None:
             }
 
             revisions_response = http.get(
-                "/api/platform/metadata/prompts-personas/revisions",
+                "/api/v1/platform/metadata/prompts-personas/revisions",
                 params={"agent_id": agent_id, "limit": 40},
             )
             revisions_response.raise_for_status()
@@ -181,10 +181,10 @@ def main() -> None:
             if attached_tools:
                 tool_id = str(getattr(attached_tools[0], "id", "") or "")
                 if tool_id:
-                    detach_response = http.patch(f"/api/platform/agents/{agent_id}/tools/detach/{tool_id}")
+                    detach_response = http.patch(f"/api/v1/platform/agents/{agent_id}/tools/detach/{tool_id}")
                     detach_response.raise_for_status()
 
-                    attach_response = http.patch(f"/api/platform/agents/{agent_id}/tools/attach/{tool_id}")
+                    attach_response = http.patch(f"/api/v1/platform/agents/{agent_id}/tools/attach/{tool_id}")
                     attach_response.raise_for_status()
 
                     summary["steps"]["tool_attach_detach"] = {
@@ -205,7 +205,7 @@ def main() -> None:
                 }
 
             orchestrator_response = http.post(
-                "/api/platform/test-runs",
+                "/api/v1/platform/test-runs",
                 json={"run_type": "agent_bootstrap_check"},
             )
             orchestrator_response.raise_for_status()

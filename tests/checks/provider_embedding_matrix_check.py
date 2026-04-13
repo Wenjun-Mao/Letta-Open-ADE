@@ -93,7 +93,7 @@ def test_ui_options_and_create() -> dict[str, Any]:
 
     with httpx.Client(base_url=DEV_UI_BASE_URL, timeout=30.0) as http:
         try:
-            options = http.get("/api/options")
+            options = http.get("/api/v1/options")
             options.raise_for_status()
             payload = options.json()
             models = payload.get("models", [])
@@ -109,7 +109,7 @@ def test_ui_options_and_create() -> dict[str, Any]:
                 "prompt_key": DEFAULT_PROMPT_KEY,
                 "embedding": DEFAULT_EMBEDDING_HANDLE,
             }
-            created = http.post("/api/agents", json=create_payload)
+            created = http.post("/api/v1/agents", json=create_payload)
             created.raise_for_status()
             created_payload = created.json()
             agent_id = created_payload.get("id")

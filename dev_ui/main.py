@@ -2,11 +2,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import json
 import os
 import sys
 import time
+from contextlib import asynccontextmanager
 from uuid import uuid4
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -27,13 +28,20 @@ from prompts.system_prompts import (
 
 APP_VERSION = os.getenv("AGENT_PLATFORM_API_VERSION", "0.2.0")
 
+
+@asynccontextmanager
+async def _app_lifespan(_: FastAPI):
+    _validate_platform_capabilities_startup()
+    yield
+
 app = FastAPI(
     title="Agent Platform Dev API",
     version=APP_VERSION,
     summary="Runtime and control APIs for local Agent Platform development",
+    lifespan=_app_lifespan,
     description=(
-        "Provides legacy Dev UI routes and Agent Platform runtime/control/test orchestration routes. "
-        "Designed for dual-run migration from legacy UI to ADE frontend."
+        "Provides versioned Dev API routes for Agent Platform runtime/control/test orchestration. "
+        "Designed for backend-first API consumption and ADE frontend integration."
     ),
 )
 
@@ -90,7 +98,7 @@ class PlatformTestRunRequest(BaseModel):
         "prompt_strategy_check",
         "platform_api_e2e_check",
         "ade_mvp_smoke_e2e_check",
-        "migration_flag_rollout_check",
+        "platform_flag_gate_check",
         "platform_dual_run_gate",
         "persona_guardrail_runner",
         "memory_update_runner",
@@ -99,6 +107,323 @@ class PlatformTestRunRequest(BaseModel):
     embedding: str | None = None
     rounds: int | None = None
     config_path: str | None = None
+
+
+class ApiOptionEntryResponse(BaseModel):
+    key: str
+    label: str
+    description: str
+    available: bool | None = None
+    is_default: bool | None = None
+
+
+class ApiOptionsDefaultsResponse(BaseModel):
+    model: str
+    prompt_key: str
+    embedding: str
+
+
+class ApiOptionsResponse(BaseModel):
+    models: list[ApiOptionEntryResponse]
+    embeddings: list[ApiOptionEntryResponse]
+    prompts: list[ApiOptionEntryResponse]
+    defaults: ApiOptionsDefaultsResponse
+
+
+class ApiAgentListItemResponse(BaseModel):
+    id: str
+    name: str
+    model: str
+    created_at: str
+    last_updated_at: str
+    last_interaction_at: str
+
+
+class ApiAgentListResponse(BaseModel):
+    total: int
+    items: list[ApiAgentListItemResponse]
+
+
+class ApiAgentCreateResponse(BaseModel):
+    id: str
+    name: str
+    model: str
+    embedding: str | None = None
+    prompt_key: str
+
+
+class ApiAgentDetailsResponse(BaseModel):
+    id: str
+    name: str
+    agent_type: str
+    model: str
+    embedding: str | None = None
+    llm_config: Any = None
+    embedding_config: Any = None
+    tool_rules: Any = None
+    description: str | None = None
+    created_at: str
+    last_updated_at: str
+    last_interaction_at: str
+    context_window_limit: int | None = None
+    tools: dict[str, str]
+    system: str
+    memory: dict[str, str]
+
+
+class ApiPersistentAgentSummaryResponse(BaseModel):
+    id: str
+    name: str
+    agent_type: str
+    model: str
+    embedding: str | None = None
+    created_at: str
+    last_updated_at: str
+    context_window_limit: int | None = None
+    tool_rules: str
+
+
+class ApiPersistentMemoryBlockResponse(BaseModel):
+    label: str
+    description: str
+    limit: int | None = None
+    value: str
+
+
+class ApiPersistentToolResponse(BaseModel):
+    id: str
+    name: str
+    description: str
+
+
+class ApiConversationHistoryItemResponse(BaseModel):
+    id: str
+    created_at: str
+    message_type: str
+    role: str
+    status: str
+    name: str | None = None
+    tool_arguments: str | None = None
+    content: str
+
+
+class ApiConversationHistoryResponse(BaseModel):
+    total_persisted: int
+    displayed: int
+    limit: int
+    counts_by_type: dict[str, int]
+    items: list[ApiConversationHistoryItemResponse]
+
+
+class ApiPersistentStateResponse(BaseModel):
+    source: str
+    agent: ApiPersistentAgentSummaryResponse
+    memory_blocks: list[ApiPersistentMemoryBlockResponse]
+    tools: list[ApiPersistentToolResponse]
+    conversation_history: ApiConversationHistoryResponse
+
+
+class ApiRawPromptMessageResponse(BaseModel):
+    role: str
+    content: str
+
+
+class ApiRawPromptResponse(BaseModel):
+    messages: list[ApiRawPromptMessageResponse]
+
+
+class ApiPlatformRuntimeCapabilitiesResponse(BaseModel):
+    per_request_model_override: bool
+    per_request_model_override_via_extra_body: bool
+    per_request_system_override: bool
+    per_request_system_override_via_extra_body: bool
+
+
+class ApiPlatformControlCapabilitiesResponse(BaseModel):
+    update_system_prompt: bool
+    update_agent_model: bool
+    update_core_memory_block: bool
+    attach_tool: bool
+    detach_tool: bool
+
+
+class ApiPlatformSdkCapabilitiesResponse(BaseModel):
+    messages_create_params: list[str]
+    agents_update_params: list[str]
+    blocks_update_params: list[str]
+
+
+class ApiPlatformCapabilitiesResponse(BaseModel):
+    enabled: bool
+    strict_mode: bool
+    missing_required: list[str]
+    runtime: ApiPlatformRuntimeCapabilitiesResponse
+    control: ApiPlatformControlCapabilitiesResponse
+    sdk: ApiPlatformSdkCapabilitiesResponse
+
+
+class ApiPlatformToolResponse(BaseModel):
+    id: str
+    name: str
+    description: str
+    tool_type: str
+    source_type: str
+    created_at: str
+    last_updated_at: str
+    tags: list[str]
+    attached_to_agent: bool | None = None
+
+
+class ApiPlatformToolListResponse(BaseModel):
+    total: int
+    search: str
+    limit: int
+    agent_id: str | None = None
+    items: list[ApiPlatformToolResponse]
+
+
+class ApiPlatformToolTestInvokeResponse(BaseModel):
+    agent_id: str
+    input: str
+    expected_tool_name: str | None = None
+    expected_tool_matched: bool | None = None
+    tool_call_count: int
+    tool_return_count: int
+    result: dict[str, Any]
+
+
+class ApiPromptPersonaDefaultResponse(BaseModel):
+    prompt_key: str
+    persona_key: str
+
+
+class ApiPromptMetadataResponse(BaseModel):
+    key: str
+    label: str
+    description: str
+    preview: str
+    length: int
+
+
+class ApiPersonaMetadataResponse(BaseModel):
+    key: str
+    preview: str
+    length: int
+
+
+class ApiPromptPersonaMetadataResponse(BaseModel):
+    defaults: ApiPromptPersonaDefaultResponse
+    prompts: list[ApiPromptMetadataResponse]
+    personas: list[ApiPersonaMetadataResponse]
+
+
+class ApiPromptPersonaRevisionResponse(BaseModel):
+    revision_id: str
+    recorded_at: str
+    agent_id: str
+    field: str
+    source: str
+    before: str
+    after: str
+    before_preview: str
+    after_preview: str
+    before_length: int
+    after_length: int
+    delta_length: int
+
+
+class ApiPromptPersonaRevisionsResponse(BaseModel):
+    total: int
+    limit: int
+    agent_id: str | None = None
+    field: str | None = None
+    items: list[ApiPromptPersonaRevisionResponse]
+
+
+class ApiRuntimeMessageResponse(BaseModel):
+    agent_id: str
+    override_model: str | None = None
+    override_system: str | None = None
+    result: dict[str, Any]
+
+
+class ApiSystemUpdateResponse(BaseModel):
+    agent_id: str
+    model: str
+    system_before: str
+    system_after: str
+
+
+class ApiModelUpdateResponse(BaseModel):
+    agent_id: str
+    model_before: str
+    model_after: str
+    system: str
+
+
+class ApiMemoryBlockUpdateResponse(BaseModel):
+    agent_id: str
+    block_label: str
+    value_before: str
+    value_after: str
+    description: str
+    limit: int | None = None
+
+
+class ApiToolAttachDetachResponse(BaseModel):
+    agent_id: str
+    tool_id: str
+    tool_was_attached: bool
+    tool_is_attached: bool
+    tool_count_before: int
+    tool_count_after: int
+
+
+class ApiTestArtifactResponse(BaseModel):
+    artifact_id: str
+    type: str
+    path: str
+    exists: bool
+    size_bytes: int
+
+
+class ApiTestRunRecordResponse(BaseModel):
+    run_id: str
+    run_type: str
+    status: str
+    command: list[str]
+    created_at: str
+    started_at: str
+    finished_at: str
+    exit_code: int | None = None
+    log_file: str
+    cancel_requested: bool
+    output_tail: list[str] = Field(default_factory=list)
+    error: str
+    artifacts: list[ApiTestArtifactResponse] = Field(default_factory=list)
+
+
+class ApiTestRunListResponse(BaseModel):
+    items: list[ApiTestRunRecordResponse]
+
+
+class ApiTestArtifactListResponse(BaseModel):
+    run_id: str
+    items: list[ApiTestArtifactResponse]
+
+
+class ApiTestArtifactReadResponse(BaseModel):
+    run_id: str
+    artifact: ApiTestArtifactResponse
+    content: str
+    truncated: bool
+    line_count: int
+
+
+class ApiChatResponse(BaseModel):
+    total_steps: int = 0
+    sequence: list[dict[str, Any]] = Field(default_factory=list)
+    memory_diff: dict[str, Any] = Field(default_factory=dict)
 
 
 PREFERRED_MODEL_OPTIONS = [
@@ -145,8 +470,8 @@ PROMPT_OPTIONS = [
     },
     {
         "key": "custom_v1",
-        "label": "Custom V1 (Legacy)",
-        "description": "Legacy baseline kept for A/B testing and regression comparison.",
+        "label": "Custom V1 (Alternate)",
+        "description": "Alternate baseline kept for A/B testing and regression comparison.",
     },
 ]
 
@@ -184,32 +509,12 @@ def _platform_api_enabled() -> bool:
     return _is_truthy(os.getenv("AGENT_PLATFORM_API_ENABLED", "1"))
 
 
-def _legacy_api_enabled() -> bool:
-    return _is_truthy(os.getenv("AGENT_PLATFORM_LEGACY_API_ENABLED", "1"))
-
-
-def _migration_mode() -> str:
-    mode = os.getenv("AGENT_PLATFORM_MIGRATION_MODE", "dual").strip().lower()
-    if mode in {"legacy", "dual", "ade"}:
-        return mode
-    return "dual"
-
-
 def _ensure_platform_api_enabled() -> None:
     if _platform_api_enabled():
         return
     raise HTTPException(
         status_code=503,
         detail="Agent Platform API is disabled by AGENT_PLATFORM_API_ENABLED.",
-    )
-
-
-def _ensure_legacy_api_enabled() -> None:
-    if _legacy_api_enabled():
-        return
-    raise HTTPException(
-        status_code=503,
-        detail="Legacy Dev UI API is disabled by AGENT_PLATFORM_LEGACY_API_ENABLED.",
     )
 
 
@@ -232,8 +537,7 @@ def _missing_platform_capabilities(capabilities: dict[str, Any]) -> list[str]:
     return missing
 
 
-@app.on_event("startup")
-async def _startup_validate_platform_capabilities() -> None:
+def _validate_platform_capabilities_startup() -> None:
     if not _platform_api_enabled():
         return
 
@@ -587,9 +891,9 @@ async def read_index():
         return f.read()
 
 
-@app.get("/api/options")
+@app.get("/api/v1/options", response_model=ApiOptionsResponse)
 async def api_get_options(refresh: bool = False):
-    _ensure_legacy_api_enabled()
+    _ensure_platform_api_enabled()
 
     model_options, embedding_options = _runtime_options(force_refresh=refresh)
 
@@ -615,10 +919,10 @@ async def api_get_options(refresh: bool = False):
     }
 
 
-@app.get("/api/agents")
+@app.get("/api/v1/agents", response_model=ApiAgentListResponse)
 async def api_list_agents(limit: int = 100, include_last_interaction: bool = False):
     """List existing agents so the UI can pull and inspect prior state."""
-    _ensure_legacy_api_enabled()
+    _ensure_platform_api_enabled()
 
     if limit < 1:
         raise HTTPException(status_code=400, detail="limit must be >= 1")
@@ -653,9 +957,9 @@ async def api_list_agents(limit: int = 100, include_last_interaction: bool = Fal
         "items": items[:limit],
     }
 
-@app.post("/api/agents")
+@app.post("/api/v1/agents", response_model=ApiAgentCreateResponse)
 async def api_create_agent(request: AgentCreateRequest):
-    _ensure_legacy_api_enabled()
+    _ensure_platform_api_enabled()
 
     model_options, embedding_options = _runtime_options()
     allowed_models = {option["key"] for option in model_options}
@@ -700,7 +1004,7 @@ async def api_create_agent(request: AgentCreateRequest):
                 status_code=400,
                 detail=(
                     f"{error_text}. This handle is not registered on the current Letta server. "
-                    "If you want LM Studio and Doubao in one server, use a combined env profile (for example .env3)."
+                    "If you want LM Studio and Doubao in one server, use a combined env profile (for example .env)."
                 ),
             ) from exc
         raise HTTPException(status_code=400, detail=error_text) from exc
@@ -713,9 +1017,9 @@ async def api_create_agent(request: AgentCreateRequest):
         "prompt_key": request.prompt_key,
     }
 
-@app.get("/api/agents/{agent_id}/details")
+@app.get("/api/v1/agents/{agent_id}/details", response_model=ApiAgentDetailsResponse)
 async def api_get_agent_details(agent_id: str):
-    _ensure_legacy_api_enabled()
+    _ensure_platform_api_enabled()
 
     agent = client.agents.retrieve(agent_id=agent_id)
     tools_raw = list(client.agents.tools.list(agent_id=agent.id))
@@ -747,7 +1051,7 @@ async def api_get_agent_details(agent_id: str):
     }
 
 
-@app.get("/api/agents/{agent_id}/persistent_state")
+@app.get("/api/v1/agents/{agent_id}/persistent_state", response_model=ApiPersistentStateResponse)
 async def api_get_agent_persistent_state(agent_id: str, limit: int = 120, include_system: bool = False):
     """
     Returns persisted state from Letta backend storage (Postgres/pgvector via Letta API):
@@ -756,7 +1060,7 @@ async def api_get_agent_persistent_state(agent_id: str, limit: int = 120, includ
     - attached tools
     - persisted conversation history
     """
-    _ensure_legacy_api_enabled()
+    _ensure_platform_api_enabled()
 
     if limit < 1:
         raise HTTPException(status_code=400, detail="limit must be >= 1")
@@ -827,9 +1131,9 @@ async def api_get_agent_persistent_state(agent_id: str, limit: int = 120, includ
         },
     }
 
-@app.get("/api/agents/{agent_id}/raw_prompt")
+@app.get("/api/v1/agents/{agent_id}/raw_prompt", response_model=ApiRawPromptResponse)
 async def api_get_raw_prompt(agent_id: str):
-    _ensure_legacy_api_enabled()
+    _ensure_platform_api_enabled()
 
     messages = list(client.agents.messages.list(agent_id=agent_id))
     recent_messages = messages[-10:] if len(messages) >= 10 else messages
@@ -846,21 +1150,8 @@ async def api_get_raw_prompt(agent_id: str):
 
 
 @app.get(
-    "/api/platform/migration-status",
-    tags=["platform-meta"],
-    summary="Get migration feature-flag status",
-)
-async def api_platform_migration_status():
-    return {
-        "migration_mode": _migration_mode(),
-        "platform_api_enabled": _platform_api_enabled(),
-        "legacy_api_enabled": _legacy_api_enabled(),
-        "strict_capabilities": _is_truthy(os.getenv("AGENT_PLATFORM_STRICT_CAPABILITIES")),
-    }
-
-
-@app.get(
-    "/api/platform/capabilities",
+    "/api/v1/platform/capabilities",
+    response_model=ApiPlatformCapabilitiesResponse,
     tags=["platform-meta"],
     summary="Get platform capability matrix",
 )
@@ -868,8 +1159,6 @@ async def api_platform_capabilities():
     capabilities = agent_platform.capabilities()
     return {
         "enabled": _platform_api_enabled(),
-        "migration_mode": _migration_mode(),
-        "legacy_api_enabled": _legacy_api_enabled(),
         "strict_mode": _is_truthy(os.getenv("AGENT_PLATFORM_STRICT_CAPABILITIES")),
         "missing_required": _missing_platform_capabilities(capabilities),
         **capabilities,
@@ -877,7 +1166,8 @@ async def api_platform_capabilities():
 
 
 @app.get(
-    "/api/platform/tools",
+    "/api/v1/platform/tools",
+    response_model=ApiPlatformToolListResponse,
     tags=["platform-tools"],
     summary="List tools for Toolbench discovery",
 )
@@ -912,7 +1202,8 @@ async def api_platform_list_tools(search: str = "", limit: int = 100, agent_id: 
 
 
 @app.post(
-    "/api/platform/tools/test-invoke",
+    "/api/v1/platform/tools/test-invoke",
+    response_model=ApiPlatformToolTestInvokeResponse,
     tags=["platform-tools"],
     summary="Invoke a runtime message to validate tool-call behavior",
 )
@@ -971,7 +1262,8 @@ async def api_platform_tool_test_invoke(request: PlatformToolTestInvokeRequest):
 
 
 @app.get(
-    "/api/platform/metadata/prompts-personas",
+    "/api/v1/platform/metadata/prompts-personas",
+    response_model=ApiPromptPersonaMetadataResponse,
     tags=["platform-meta"],
     summary="Get prompt and persona metadata",
 )
@@ -1014,7 +1306,8 @@ async def api_platform_prompt_persona_metadata():
 
 
 @app.get(
-    "/api/platform/metadata/prompts-personas/revisions",
+    "/api/v1/platform/metadata/prompts-personas/revisions",
+    response_model=ApiPromptPersonaRevisionsResponse,
     tags=["platform-meta"],
     summary="Get prompt/persona revision history timeline",
 )
@@ -1046,7 +1339,8 @@ async def api_platform_prompt_persona_revisions(
 
 
 @app.post(
-    "/api/platform/agents/{agent_id}/messages",
+    "/api/v1/platform/agents/{agent_id}/messages",
+    response_model=ApiRuntimeMessageResponse,
     tags=["platform-runtime"],
     summary="Send runtime message with optional overrides",
 )
@@ -1069,7 +1363,8 @@ async def api_platform_send_message(agent_id: str, request: PlatformRuntimeMessa
 
 
 @app.patch(
-    "/api/platform/agents/{agent_id}/system",
+    "/api/v1/platform/agents/{agent_id}/system",
+    response_model=ApiSystemUpdateResponse,
     tags=["platform-control"],
     summary="Update persisted system prompt",
 )
@@ -1087,7 +1382,7 @@ async def api_platform_update_system(agent_id: str, request: PlatformSystemUpdat
             field="system",
             before=str(payload.get("system_before", "") or ""),
             after=str(payload.get("system_after", "") or ""),
-            source="api/platform/agents/{agent_id}/system",
+            source="api/v1/platform/agents/{agent_id}/system",
         )
         return payload
     except Exception as exc:
@@ -1095,7 +1390,8 @@ async def api_platform_update_system(agent_id: str, request: PlatformSystemUpdat
 
 
 @app.patch(
-    "/api/platform/agents/{agent_id}/model",
+    "/api/v1/platform/agents/{agent_id}/model",
+    response_model=ApiModelUpdateResponse,
     tags=["platform-control"],
     summary="Update persisted agent model",
 )
@@ -1113,7 +1409,8 @@ async def api_platform_update_model(agent_id: str, request: PlatformModelUpdateR
 
 
 @app.patch(
-    "/api/platform/agents/{agent_id}/core-memory/blocks/{block_label}",
+    "/api/v1/platform/agents/{agent_id}/core-memory/blocks/{block_label}",
+    response_model=ApiMemoryBlockUpdateResponse,
     tags=["platform-control"],
     summary="Update core-memory block value",
 )
@@ -1140,7 +1437,7 @@ async def api_platform_update_memory_block(
                 field=label,
                 before=str(payload.get("value_before", "") or ""),
                 after=str(payload.get("value_after", "") or ""),
-                source=f"api/platform/agents/{{agent_id}}/core-memory/blocks/{label}",
+                source=f"api/v1/platform/agents/{{agent_id}}/core-memory/blocks/{label}",
             )
         return payload
     except Exception as exc:
@@ -1148,7 +1445,8 @@ async def api_platform_update_memory_block(
 
 
 @app.patch(
-    "/api/platform/agents/{agent_id}/tools/attach/{tool_id}",
+    "/api/v1/platform/agents/{agent_id}/tools/attach/{tool_id}",
+    response_model=ApiToolAttachDetachResponse,
     tags=["platform-tools"],
     summary="Attach tool to agent",
 )
@@ -1166,7 +1464,8 @@ async def api_platform_attach_tool(agent_id: str, tool_id: str):
 
 
 @app.patch(
-    "/api/platform/agents/{agent_id}/tools/detach/{tool_id}",
+    "/api/v1/platform/agents/{agent_id}/tools/detach/{tool_id}",
+    response_model=ApiToolAttachDetachResponse,
     tags=["platform-tools"],
     summary="Detach tool from agent",
 )
@@ -1184,7 +1483,8 @@ async def api_platform_detach_tool(agent_id: str, tool_id: str):
 
 
 @app.get(
-    "/api/platform/test-runs",
+    "/api/v1/platform/test-runs",
+    response_model=ApiTestRunListResponse,
     tags=["platform-tests"],
     summary="List orchestrated test runs",
 )
@@ -1197,7 +1497,8 @@ async def api_platform_list_test_runs():
 
 
 @app.post(
-    "/api/platform/test-runs",
+    "/api/v1/platform/test-runs",
+    response_model=ApiTestRunRecordResponse,
     tags=["platform-tests"],
     summary="Create orchestrated test run",
 )
@@ -1219,7 +1520,8 @@ async def api_platform_create_test_run(request: PlatformTestRunRequest):
 
 
 @app.get(
-    "/api/platform/test-runs/{run_id}",
+    "/api/v1/platform/test-runs/{run_id}",
+    response_model=ApiTestRunRecordResponse,
     tags=["platform-tests"],
     summary="Get orchestrated test run",
 )
@@ -1233,7 +1535,8 @@ async def api_platform_get_test_run(run_id: str):
 
 
 @app.post(
-    "/api/platform/test-runs/{run_id}/cancel",
+    "/api/v1/platform/test-runs/{run_id}/cancel",
+    response_model=ApiTestRunRecordResponse,
     tags=["platform-tests"],
     summary="Cancel orchestrated test run",
 )
@@ -1247,7 +1550,8 @@ async def api_platform_cancel_test_run(run_id: str):
 
 
 @app.get(
-    "/api/platform/test-runs/{run_id}/artifacts",
+    "/api/v1/platform/test-runs/{run_id}/artifacts",
+    response_model=ApiTestArtifactListResponse,
     tags=["platform-tests"],
     summary="List test run artifacts",
 )
@@ -1264,7 +1568,8 @@ async def api_platform_list_test_run_artifacts(run_id: str):
 
 
 @app.get(
-    "/api/platform/test-runs/{run_id}/artifacts/{artifact_id}",
+    "/api/v1/platform/test-runs/{run_id}/artifacts/{artifact_id}",
+    response_model=ApiTestArtifactReadResponse,
     tags=["platform-tests"],
     summary="Read test run artifact content",
 )
@@ -1276,14 +1581,14 @@ async def api_platform_read_test_run_artifact(run_id: str, artifact_id: str, max
         raise HTTPException(status_code=404, detail="run_id or artifact_id not found")
     return payload
 
-@app.post("/api/chat")
+@app.post("/api/v1/chat", response_model=ApiChatResponse)
 async def api_chat(request: ChatRequest):
-    _ensure_legacy_api_enabled()
+    _ensure_platform_api_enabled()
 
     is_datetime_turn = _is_datetime_query(request.message)
 
     try:
-        return agent_platform.send_legacy_chat_message(
+        return agent_platform.send_chat_message(
             agent_id=request.agent_id,
             message=request.message,
             datetime_system_hint=_runtime_datetime_system_hint() if is_datetime_turn else None,

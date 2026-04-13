@@ -11,8 +11,6 @@ letta-souce-code/
 
 .env*
 !.env.example
-!.env2.example
-!.env3.example
 
 .playwright-mcp/
 

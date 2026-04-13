@@ -7,7 +7,7 @@ You should generally run these scripts from the **project root directory** (e.g.
 ## Scripts Overview
 
 ### Database Resets
-Wipes all existing Letta memory/agents inside the PostgreSQL volume and fully restarts the Docker containers for a clean slate. Supports passing an env file argument (defaults to `.env2`).
+Wipes all existing Letta memory/agents inside the PostgreSQL volume and fully restarts the Docker containers for a clean slate. Supports passing an env file argument (defaults to `.env`).
 
 * **Windows (PowerShell):** `reset_database.ps1`
 * **Linux / Ubuntu (Bash):** `reset_database.sh`
@@ -36,7 +36,7 @@ All test runners were moved to the `tests/` directory to keep responsibilities c
 
 **Reset with a specific env file (Windows - PowerShell):**
 ```powershell
-.\scripts\reset_database.ps1 .env3
+.\scripts\reset_database.ps1 .env
 ```
 
 **Reset the Letta Database (Ubuntu / Linux - Terminal):**
@@ -48,7 +48,7 @@ chmod +x scripts/reset_database.sh
 **Reset with a specific env file (Ubuntu / Linux - Terminal):**
 ```bash
 chmod +x scripts/reset_database.sh
-./scripts/reset_database.sh .env3
+./scripts/reset_database.sh .env
 ```
 
 **Sync Letta Tools for autocomplete:**
@@ -59,7 +59,7 @@ uv run scripts/sync_tools.py
 **Collect diagnostics bundle (Ubuntu/Linux):**
 ```bash
 chmod +x scripts/collect_diagnostics.sh
-./scripts/collect_diagnostics.sh .env3
+./scripts/collect_diagnostics.sh .env
 ```
 
 **Pre-seed NLTK data for startup (Ubuntu/Linux):**
@@ -118,9 +118,9 @@ uv run tests/checks/platform_api_e2e_check.py
 uv run tests/checks/ade_mvp_smoke_e2e_check.py
 ```
 
-**Run Migration Flag Rollout Check:**
+**Run Platform Flag Gate Check:**
 ```bash
-uv run tests/checks/migration_flag_rollout_check.py
+uv run tests/checks/platform_flag_gate_check.py
 ```
 
 **Run Dual-Run Cutover Gate (backend E2E + ADE smoke):**
@@ -133,7 +133,7 @@ uv run tests/checks/platform_dual_run_gate.py
 uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free
 ```
 
-**Start Letta with a specific env profile (example `.env3`):**
+**Start Letta with a specific env profile (example `.env`):**
 ```bash
-LETTA_ENV_FILE=.env3 docker compose --profile ui up -d
+LETTA_ENV_FILE=.env docker compose --profile ui up -d
 ```

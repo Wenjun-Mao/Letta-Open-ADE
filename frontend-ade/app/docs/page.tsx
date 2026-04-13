@@ -1,12 +1,11 @@
 export default function LocalDocsPage() {
   return (
     <section>
-      <div className="kicker">Docs Fallback</div>
+      <div className="kicker">Docs</div>
       <h1 className="section-title">Documentation Entry</h1>
       <div className="card">
         <p className="muted">
-          This local route is a fallback target for API Docs navigation before external Mintlify hosting is
-          configured.
+          This local route provides a direct documentation entry point for operators and developers.
         </p>
         <ul className="list">
           <li>Mintlify config file: docs/docs.json</li>

@@ -137,7 +137,7 @@ class AgentPlatformService:
         }
 
     @retry(**_RETRY_KWARGS)
-    def send_legacy_chat_message(
+    def send_chat_message(
         self,
         *,
         agent_id: str,

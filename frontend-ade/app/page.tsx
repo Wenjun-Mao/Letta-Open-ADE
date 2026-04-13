@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import { fetchCapabilities, fetchMigrationStatus, listAgents, listTestRuns } from "../lib/api";
+import { fetchCapabilities, listAgents, listTestRuns } from "../lib/api";
 
 const DOCS_HREF = process.env.NEXT_PUBLIC_MINTLIFY_DOCS_URL || "/api-docs";
 
@@ -34,9 +34,8 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [agentCount, setAgentCount] = useState(0);
   const [runCount, setRunCount] = useState(0);
-  const [migrationMode, setMigrationMode] = useState("unknown");
   const [platformEnabled, setPlatformEnabled] = useState(false);
-  const [legacyEnabled, setLegacyEnabled] = useState(false);
+  const [strictMode, setStrictMode] = useState(false);
   const [missingCapabilities, setMissingCapabilities] = useState<string[]>([]);
 
   useEffect(() => {
@@ -45,8 +44,7 @@ export default function DashboardPage() {
       setLoading(true);
       setError("");
       try {
-        const [migration, capabilities, agents, runs] = await Promise.all([
-          fetchMigrationStatus(),
+        const [capabilities, agents, runs] = await Promise.all([
           fetchCapabilities(),
           listAgents(200),
           listTestRuns(),
@@ -56,9 +54,8 @@ export default function DashboardPage() {
           return;
         }
 
-        setMigrationMode(migration.migration_mode);
-        setPlatformEnabled(Boolean(migration.platform_api_enabled));
-        setLegacyEnabled(Boolean(migration.legacy_api_enabled));
+        setPlatformEnabled(Boolean(capabilities.enabled));
+        setStrictMode(Boolean(capabilities.strict_mode));
         setMissingCapabilities(Array.isArray(capabilities.missing_required) ? capabilities.missing_required : []);
         setAgentCount(Number(agents.total || 0));
         setRunCount(Array.isArray(runs.items) ? runs.items.length : 0);
@@ -91,10 +88,10 @@ export default function DashboardPage() {
 
   return (
     <section>
-      <div className="kicker">ADE Preview</div>
+      <div className="kicker">ADE</div>
       <h1 className="section-title">Agent Development Environment</h1>
       <p className="muted" style={{ maxWidth: 760 }}>
-        This frontend runs in parallel with fallback dev_ui and validates ADE workflows before migration cutover.
+        This frontend provides the primary operator experience for Agent Platform workflows.
       </p>
 
       <div className="card-grid" style={{ marginTop: 16 }}>
@@ -102,9 +99,8 @@ export default function DashboardPage() {
           <h3>Backend Health</h3>
           <p className="muted">{loading ? "Checking..." : `Status: ${healthLabel}`}</p>
           <ul className="list">
-            <li>Migration mode: {migrationMode}</li>
             <li>Platform API enabled: {platformEnabled ? "yes" : "no"}</li>
-            <li>Legacy API enabled: {legacyEnabled ? "yes" : "no"}</li>
+            <li>Strict capabilities mode: {strictMode ? "on" : "off"}</li>
           </ul>
         </div>
 
@@ -118,10 +114,10 @@ export default function DashboardPage() {
         </div>
 
         <div className="card">
-          <h3>Cutover Gate</h3>
+          <h3>Quality Gate</h3>
           <p className="muted">Backend E2E green plus ADE smoke suite green.</p>
           <p className="muted" style={{ marginTop: 8 }}>
-            Keep fallback frontend active through migration window.
+            Use this signal as the release-readiness baseline.
           </p>
         </div>
       </div>

@@ -33,6 +33,1506 @@
         "title": "AgentCreateRequest",
         "type": "object"
       },
+      "ApiAgentCreateResponse": {
+        "properties": {
+          "embedding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prompt_key": {
+            "title": "Prompt Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "model",
+          "prompt_key"
+        ],
+        "title": "ApiAgentCreateResponse",
+        "type": "object"
+      },
+      "ApiAgentDetailsResponse": {
+        "properties": {
+          "agent_type": {
+            "title": "Agent Type",
+            "type": "string"
+          },
+          "context_window_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Window Limit"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "embedding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding"
+          },
+          "embedding_config": {
+            "title": "Embedding Config"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_interaction_at": {
+            "title": "Last Interaction At",
+            "type": "string"
+          },
+          "last_updated_at": {
+            "title": "Last Updated At",
+            "type": "string"
+          },
+          "llm_config": {
+            "title": "Llm Config"
+          },
+          "memory": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Memory",
+            "type": "object"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "system": {
+            "title": "System",
+            "type": "string"
+          },
+          "tool_rules": {
+            "title": "Tool Rules"
+          },
+          "tools": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Tools",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "agent_type",
+          "model",
+          "created_at",
+          "last_updated_at",
+          "last_interaction_at",
+          "tools",
+          "system",
+          "memory"
+        ],
+        "title": "ApiAgentDetailsResponse",
+        "type": "object"
+      },
+      "ApiAgentListItemResponse": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_interaction_at": {
+            "title": "Last Interaction At",
+            "type": "string"
+          },
+          "last_updated_at": {
+            "title": "Last Updated At",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "model",
+          "created_at",
+          "last_updated_at",
+          "last_interaction_at"
+        ],
+        "title": "ApiAgentListItemResponse",
+        "type": "object"
+      },
+      "ApiAgentListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApiAgentListItemResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "items"
+        ],
+        "title": "ApiAgentListResponse",
+        "type": "object"
+      },
+      "ApiChatResponse": {
+        "properties": {
+          "memory_diff": {
+            "additionalProperties": true,
+            "title": "Memory Diff",
+            "type": "object"
+          },
+          "sequence": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Sequence",
+            "type": "array"
+          },
+          "total_steps": {
+            "default": 0,
+            "title": "Total Steps",
+            "type": "integer"
+          }
+        },
+        "title": "ApiChatResponse",
+        "type": "object"
+      },
+      "ApiConversationHistoryItemResponse": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "message_type": {
+            "title": "Message Type",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tool_arguments": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Arguments"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "message_type",
+          "role",
+          "status",
+          "content"
+        ],
+        "title": "ApiConversationHistoryItemResponse",
+        "type": "object"
+      },
+      "ApiConversationHistoryResponse": {
+        "properties": {
+          "counts_by_type": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts By Type",
+            "type": "object"
+          },
+          "displayed": {
+            "title": "Displayed",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApiConversationHistoryItemResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "total_persisted": {
+            "title": "Total Persisted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_persisted",
+          "displayed",
+          "limit",
+          "counts_by_type",
+          "items"
+        ],
+        "title": "ApiConversationHistoryResponse",
+        "type": "object"
+      },
+      "ApiMemoryBlockUpdateResponse": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "block_label": {
+            "title": "Block Label",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "value_after": {
+            "title": "Value After",
+            "type": "string"
+          },
+          "value_before": {
+            "title": "Value Before",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "block_label",
+          "value_before",
+          "value_after",
+          "description"
+        ],
+        "title": "ApiMemoryBlockUpdateResponse",
+        "type": "object"
+      },
+      "ApiModelUpdateResponse": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "model_after": {
+            "title": "Model After",
+            "type": "string"
+          },
+          "model_before": {
+            "title": "Model Before",
+            "type": "string"
+          },
+          "system": {
+            "title": "System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "model_before",
+          "model_after",
+          "system"
+        ],
+        "title": "ApiModelUpdateResponse",
+        "type": "object"
+      },
+      "ApiOptionEntryResponse": {
+        "properties": {
+          "available": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "is_default": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Default"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "description"
+        ],
+        "title": "ApiOptionEntryResponse",
+        "type": "object"
+      },
+      "ApiOptionsDefaultsResponse": {
+        "properties": {
+          "embedding": {
+            "title": "Embedding",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "prompt_key": {
+            "title": "Prompt Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model",
+          "prompt_key",
+          "embedding"
+        ],
+        "title": "ApiOptionsDefaultsResponse",
+        "type": "object"
+      },
+      "ApiOptionsResponse": {
+        "properties": {
+          "defaults": {
+            "$ref": "#/components/schemas/ApiOptionsDefaultsResponse"
+          },
+          "embeddings": {
+            "items": {
+              "$ref": "#/components/schemas/ApiOptionEntryResponse"
+            },
+            "title": "Embeddings",
+            "type": "array"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ApiOptionEntryResponse"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "prompts": {
+            "items": {
+              "$ref": "#/components/schemas/ApiOptionEntryResponse"
+            },
+            "title": "Prompts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "models",
+          "embeddings",
+          "prompts",
+          "defaults"
+        ],
+        "title": "ApiOptionsResponse",
+        "type": "object"
+      },
+      "ApiPersistentAgentSummaryResponse": {
+        "properties": {
+          "agent_type": {
+            "title": "Agent Type",
+            "type": "string"
+          },
+          "context_window_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Window Limit"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "embedding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_updated_at": {
+            "title": "Last Updated At",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "tool_rules": {
+            "title": "Tool Rules",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "agent_type",
+          "model",
+          "created_at",
+          "last_updated_at",
+          "tool_rules"
+        ],
+        "title": "ApiPersistentAgentSummaryResponse",
+        "type": "object"
+      },
+      "ApiPersistentMemoryBlockResponse": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "description",
+          "value"
+        ],
+        "title": "ApiPersistentMemoryBlockResponse",
+        "type": "object"
+      },
+      "ApiPersistentStateResponse": {
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/ApiPersistentAgentSummaryResponse"
+          },
+          "conversation_history": {
+            "$ref": "#/components/schemas/ApiConversationHistoryResponse"
+          },
+          "memory_blocks": {
+            "items": {
+              "$ref": "#/components/schemas/ApiPersistentMemoryBlockResponse"
+            },
+            "title": "Memory Blocks",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/ApiPersistentToolResponse"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "source",
+          "agent",
+          "memory_blocks",
+          "tools",
+          "conversation_history"
+        ],
+        "title": "ApiPersistentStateResponse",
+        "type": "object"
+      },
+      "ApiPersistentToolResponse": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description"
+        ],
+        "title": "ApiPersistentToolResponse",
+        "type": "object"
+      },
+      "ApiPersonaMetadataResponse": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "length": {
+            "title": "Length",
+            "type": "integer"
+          },
+          "preview": {
+            "title": "Preview",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "preview",
+          "length"
+        ],
+        "title": "ApiPersonaMetadataResponse",
+        "type": "object"
+      },
+      "ApiPlatformCapabilitiesResponse": {
+        "properties": {
+          "control": {
+            "$ref": "#/components/schemas/ApiPlatformControlCapabilitiesResponse"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "missing_required": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Required",
+            "type": "array"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/ApiPlatformRuntimeCapabilitiesResponse"
+          },
+          "sdk": {
+            "$ref": "#/components/schemas/ApiPlatformSdkCapabilitiesResponse"
+          },
+          "strict_mode": {
+            "title": "Strict Mode",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "strict_mode",
+          "missing_required",
+          "runtime",
+          "control",
+          "sdk"
+        ],
+        "title": "ApiPlatformCapabilitiesResponse",
+        "type": "object"
+      },
+      "ApiPlatformControlCapabilitiesResponse": {
+        "properties": {
+          "attach_tool": {
+            "title": "Attach Tool",
+            "type": "boolean"
+          },
+          "detach_tool": {
+            "title": "Detach Tool",
+            "type": "boolean"
+          },
+          "update_agent_model": {
+            "title": "Update Agent Model",
+            "type": "boolean"
+          },
+          "update_core_memory_block": {
+            "title": "Update Core Memory Block",
+            "type": "boolean"
+          },
+          "update_system_prompt": {
+            "title": "Update System Prompt",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "update_system_prompt",
+          "update_agent_model",
+          "update_core_memory_block",
+          "attach_tool",
+          "detach_tool"
+        ],
+        "title": "ApiPlatformControlCapabilitiesResponse",
+        "type": "object"
+      },
+      "ApiPlatformRuntimeCapabilitiesResponse": {
+        "properties": {
+          "per_request_model_override": {
+            "title": "Per Request Model Override",
+            "type": "boolean"
+          },
+          "per_request_model_override_via_extra_body": {
+            "title": "Per Request Model Override Via Extra Body",
+            "type": "boolean"
+          },
+          "per_request_system_override": {
+            "title": "Per Request System Override",
+            "type": "boolean"
+          },
+          "per_request_system_override_via_extra_body": {
+            "title": "Per Request System Override Via Extra Body",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "per_request_model_override",
+          "per_request_model_override_via_extra_body",
+          "per_request_system_override",
+          "per_request_system_override_via_extra_body"
+        ],
+        "title": "ApiPlatformRuntimeCapabilitiesResponse",
+        "type": "object"
+      },
+      "ApiPlatformSdkCapabilitiesResponse": {
+        "properties": {
+          "agents_update_params": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Agents Update Params",
+            "type": "array"
+          },
+          "blocks_update_params": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocks Update Params",
+            "type": "array"
+          },
+          "messages_create_params": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Messages Create Params",
+            "type": "array"
+          }
+        },
+        "required": [
+          "messages_create_params",
+          "agents_update_params",
+          "blocks_update_params"
+        ],
+        "title": "ApiPlatformSdkCapabilitiesResponse",
+        "type": "object"
+      },
+      "ApiPlatformToolListResponse": {
+        "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApiPlatformToolResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "search": {
+            "title": "Search",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "search",
+          "limit",
+          "items"
+        ],
+        "title": "ApiPlatformToolListResponse",
+        "type": "object"
+      },
+      "ApiPlatformToolResponse": {
+        "properties": {
+          "attached_to_agent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attached To Agent"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_updated_at": {
+            "title": "Last Updated At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "tool_type": {
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "tool_type",
+          "source_type",
+          "created_at",
+          "last_updated_at",
+          "tags"
+        ],
+        "title": "ApiPlatformToolResponse",
+        "type": "object"
+      },
+      "ApiPlatformToolTestInvokeResponse": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "expected_tool_matched": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Tool Matched"
+          },
+          "expected_tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Tool Name"
+          },
+          "input": {
+            "title": "Input",
+            "type": "string"
+          },
+          "result": {
+            "additionalProperties": true,
+            "title": "Result",
+            "type": "object"
+          },
+          "tool_call_count": {
+            "title": "Tool Call Count",
+            "type": "integer"
+          },
+          "tool_return_count": {
+            "title": "Tool Return Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agent_id",
+          "input",
+          "tool_call_count",
+          "tool_return_count",
+          "result"
+        ],
+        "title": "ApiPlatformToolTestInvokeResponse",
+        "type": "object"
+      },
+      "ApiPromptMetadataResponse": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "length": {
+            "title": "Length",
+            "type": "integer"
+          },
+          "preview": {
+            "title": "Preview",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "description",
+          "preview",
+          "length"
+        ],
+        "title": "ApiPromptMetadataResponse",
+        "type": "object"
+      },
+      "ApiPromptPersonaDefaultResponse": {
+        "properties": {
+          "persona_key": {
+            "title": "Persona Key",
+            "type": "string"
+          },
+          "prompt_key": {
+            "title": "Prompt Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt_key",
+          "persona_key"
+        ],
+        "title": "ApiPromptPersonaDefaultResponse",
+        "type": "object"
+      },
+      "ApiPromptPersonaMetadataResponse": {
+        "properties": {
+          "defaults": {
+            "$ref": "#/components/schemas/ApiPromptPersonaDefaultResponse"
+          },
+          "personas": {
+            "items": {
+              "$ref": "#/components/schemas/ApiPersonaMetadataResponse"
+            },
+            "title": "Personas",
+            "type": "array"
+          },
+          "prompts": {
+            "items": {
+              "$ref": "#/components/schemas/ApiPromptMetadataResponse"
+            },
+            "title": "Prompts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "defaults",
+          "prompts",
+          "personas"
+        ],
+        "title": "ApiPromptPersonaMetadataResponse",
+        "type": "object"
+      },
+      "ApiPromptPersonaRevisionResponse": {
+        "properties": {
+          "after": {
+            "title": "After",
+            "type": "string"
+          },
+          "after_length": {
+            "title": "After Length",
+            "type": "integer"
+          },
+          "after_preview": {
+            "title": "After Preview",
+            "type": "string"
+          },
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "before": {
+            "title": "Before",
+            "type": "string"
+          },
+          "before_length": {
+            "title": "Before Length",
+            "type": "integer"
+          },
+          "before_preview": {
+            "title": "Before Preview",
+            "type": "string"
+          },
+          "delta_length": {
+            "title": "Delta Length",
+            "type": "integer"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "recorded_at": {
+            "title": "Recorded At",
+            "type": "string"
+          },
+          "revision_id": {
+            "title": "Revision Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "revision_id",
+          "recorded_at",
+          "agent_id",
+          "field",
+          "source",
+          "before",
+          "after",
+          "before_preview",
+          "after_preview",
+          "before_length",
+          "after_length",
+          "delta_length"
+        ],
+        "title": "ApiPromptPersonaRevisionResponse",
+        "type": "object"
+      },
+      "ApiPromptPersonaRevisionsResponse": {
+        "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Id"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApiPromptPersonaRevisionResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "limit",
+          "items"
+        ],
+        "title": "ApiPromptPersonaRevisionsResponse",
+        "type": "object"
+      },
+      "ApiRawPromptMessageResponse": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ],
+        "title": "ApiRawPromptMessageResponse",
+        "type": "object"
+      },
+      "ApiRawPromptResponse": {
+        "properties": {
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ApiRawPromptMessageResponse"
+            },
+            "title": "Messages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "messages"
+        ],
+        "title": "ApiRawPromptResponse",
+        "type": "object"
+      },
+      "ApiRuntimeMessageResponse": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "override_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Model"
+          },
+          "override_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override System"
+          },
+          "result": {
+            "additionalProperties": true,
+            "title": "Result",
+            "type": "object"
+          }
+        },
+        "required": [
+          "agent_id",
+          "result"
+        ],
+        "title": "ApiRuntimeMessageResponse",
+        "type": "object"
+      },
+      "ApiSystemUpdateResponse": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "system_after": {
+            "title": "System After",
+            "type": "string"
+          },
+          "system_before": {
+            "title": "System Before",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_id",
+          "model",
+          "system_before",
+          "system_after"
+        ],
+        "title": "ApiSystemUpdateResponse",
+        "type": "object"
+      },
+      "ApiTestArtifactListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApiTestArtifactResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "items"
+        ],
+        "title": "ApiTestArtifactListResponse",
+        "type": "object"
+      },
+      "ApiTestArtifactReadResponse": {
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/ApiTestArtifactResponse"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "line_count": {
+            "title": "Line Count",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "run_id",
+          "artifact",
+          "content",
+          "truncated",
+          "line_count"
+        ],
+        "title": "ApiTestArtifactReadResponse",
+        "type": "object"
+      },
+      "ApiTestArtifactResponse": {
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "exists": {
+            "title": "Exists",
+            "type": "boolean"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "type",
+          "path",
+          "exists",
+          "size_bytes"
+        ],
+        "title": "ApiTestArtifactResponse",
+        "type": "object"
+      },
+      "ApiTestRunListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApiTestRunRecordResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ApiTestRunListResponse",
+        "type": "object"
+      },
+      "ApiTestRunRecordResponse": {
+        "properties": {
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/ApiTestArtifactResponse"
+            },
+            "title": "Artifacts",
+            "type": "array"
+          },
+          "cancel_requested": {
+            "title": "Cancel Requested",
+            "type": "boolean"
+          },
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Command",
+            "type": "array"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code"
+          },
+          "finished_at": {
+            "title": "Finished At",
+            "type": "string"
+          },
+          "log_file": {
+            "title": "Log File",
+            "type": "string"
+          },
+          "output_tail": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Output Tail",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "run_type": {
+            "title": "Run Type",
+            "type": "string"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "run_type",
+          "status",
+          "command",
+          "created_at",
+          "started_at",
+          "finished_at",
+          "log_file",
+          "cancel_requested",
+          "error"
+        ],
+        "title": "ApiTestRunRecordResponse",
+        "type": "object"
+      },
+      "ApiToolAttachDetachResponse": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "tool_count_after": {
+            "title": "Tool Count After",
+            "type": "integer"
+          },
+          "tool_count_before": {
+            "title": "Tool Count Before",
+            "type": "integer"
+          },
+          "tool_id": {
+            "title": "Tool Id",
+            "type": "string"
+          },
+          "tool_is_attached": {
+            "title": "Tool Is Attached",
+            "type": "boolean"
+          },
+          "tool_was_attached": {
+            "title": "Tool Was Attached",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "agent_id",
+          "tool_id",
+          "tool_was_attached",
+          "tool_is_attached",
+          "tool_count_before",
+          "tool_count_after"
+        ],
+        "title": "ApiToolAttachDetachResponse",
+        "type": "object"
+      },
       "ChatRequest": {
         "properties": {
           "agent_id": {
@@ -191,7 +1691,7 @@
               "prompt_strategy_check",
               "platform_api_e2e_check",
               "ade_mvp_smoke_e2e_check",
-              "migration_flag_rollout_check",
+              "platform_flag_gate_check",
               "platform_dual_run_gate",
               "persona_guardrail_runner",
               "memory_update_runner"
@@ -300,7 +1800,7 @@
     }
   },
   "info": {
-    "description": "Provides legacy Dev UI routes and Agent Platform runtime/control/test orchestration routes. Designed for dual-run migration from legacy UI to ADE frontend.",
+    "description": "Provides versioned Dev API routes for Agent Platform runtime/control/test orchestration. Designed for backend-first API consumption and ADE frontend integration.",
     "summary": "Runtime and control APIs for local Agent Platform development",
     "title": "Agent Platform Dev API",
     "version": "0.2.0"
@@ -325,10 +1825,10 @@
         "summary": "Read Index"
       }
     },
-    "/api/agents": {
+    "/api/v1/agents": {
       "get": {
         "description": "List existing agents so the UI can pull and inspect prior state.",
-        "operationId": "api_list_agents_api_agents_get",
+        "operationId": "api_list_agents_api_v1_agents_get",
         "parameters": [
           {
             "in": "query",
@@ -355,7 +1855,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiAgentListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -374,7 +1876,7 @@
         "summary": "Api List Agents"
       },
       "post": {
-        "operationId": "api_create_agent_api_agents_post",
+        "operationId": "api_create_agent_api_v1_agents_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -389,7 +1891,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiAgentCreateResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -408,9 +1912,9 @@
         "summary": "Api Create Agent"
       }
     },
-    "/api/agents/{agent_id}/details": {
+    "/api/v1/agents/{agent_id}/details": {
       "get": {
-        "operationId": "api_get_agent_details_api_agents__agent_id__details_get",
+        "operationId": "api_get_agent_details_api_v1_agents__agent_id__details_get",
         "parameters": [
           {
             "in": "path",
@@ -426,7 +1930,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiAgentDetailsResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -445,10 +1951,10 @@
         "summary": "Api Get Agent Details"
       }
     },
-    "/api/agents/{agent_id}/persistent_state": {
+    "/api/v1/agents/{agent_id}/persistent_state": {
       "get": {
         "description": "Returns persisted state from Letta backend storage (Postgres/pgvector via Letta API):\n- agent metadata\n- memory blocks\n- attached tools\n- persisted conversation history",
-        "operationId": "api_get_agent_persistent_state_api_agents__agent_id__persistent_state_get",
+        "operationId": "api_get_agent_persistent_state_api_v1_agents__agent_id__persistent_state_get",
         "parameters": [
           {
             "in": "path",
@@ -484,7 +1990,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiPersistentStateResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -503,9 +2011,9 @@
         "summary": "Api Get Agent Persistent State"
       }
     },
-    "/api/agents/{agent_id}/raw_prompt": {
+    "/api/v1/agents/{agent_id}/raw_prompt": {
       "get": {
-        "operationId": "api_get_raw_prompt_api_agents__agent_id__raw_prompt_get",
+        "operationId": "api_get_raw_prompt_api_v1_agents__agent_id__raw_prompt_get",
         "parameters": [
           {
             "in": "path",
@@ -521,7 +2029,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiRawPromptResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -540,9 +2050,9 @@
         "summary": "Api Get Raw Prompt"
       }
     },
-    "/api/chat": {
+    "/api/v1/chat": {
       "post": {
-        "operationId": "api_chat_api_chat_post",
+        "operationId": "api_chat_api_v1_chat_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -557,7 +2067,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiChatResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -576,9 +2088,9 @@
         "summary": "Api Chat"
       }
     },
-    "/api/options": {
+    "/api/v1/options": {
       "get": {
-        "operationId": "api_get_options_api_options_get",
+        "operationId": "api_get_options_api_v1_options_get",
         "parameters": [
           {
             "in": "query",
@@ -595,7 +2107,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiOptionsResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -614,9 +2128,9 @@
         "summary": "Api Get Options"
       }
     },
-    "/api/platform/agents/{agent_id}/core-memory/blocks/{block_label}": {
+    "/api/v1/platform/agents/{agent_id}/core-memory/blocks/{block_label}": {
       "patch": {
-        "operationId": "api_platform_update_memory_block_api_platform_agents__agent_id__core_memory_blocks__block_label__patch",
+        "operationId": "api_platform_update_memory_block_api_v1_platform_agents__agent_id__core_memory_blocks__block_label__patch",
         "parameters": [
           {
             "in": "path",
@@ -651,7 +2165,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiMemoryBlockUpdateResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -673,9 +2189,9 @@
         ]
       }
     },
-    "/api/platform/agents/{agent_id}/messages": {
+    "/api/v1/platform/agents/{agent_id}/messages": {
       "post": {
-        "operationId": "api_platform_send_message_api_platform_agents__agent_id__messages_post",
+        "operationId": "api_platform_send_message_api_v1_platform_agents__agent_id__messages_post",
         "parameters": [
           {
             "in": "path",
@@ -701,7 +2217,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiRuntimeMessageResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -723,9 +2241,9 @@
         ]
       }
     },
-    "/api/platform/agents/{agent_id}/model": {
+    "/api/v1/platform/agents/{agent_id}/model": {
       "patch": {
-        "operationId": "api_platform_update_model_api_platform_agents__agent_id__model_patch",
+        "operationId": "api_platform_update_model_api_v1_platform_agents__agent_id__model_patch",
         "parameters": [
           {
             "in": "path",
@@ -751,7 +2269,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiModelUpdateResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -773,9 +2293,9 @@
         ]
       }
     },
-    "/api/platform/agents/{agent_id}/system": {
+    "/api/v1/platform/agents/{agent_id}/system": {
       "patch": {
-        "operationId": "api_platform_update_system_api_platform_agents__agent_id__system_patch",
+        "operationId": "api_platform_update_system_api_v1_platform_agents__agent_id__system_patch",
         "parameters": [
           {
             "in": "path",
@@ -801,7 +2321,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiSystemUpdateResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -823,9 +2345,9 @@
         ]
       }
     },
-    "/api/platform/agents/{agent_id}/tools/attach/{tool_id}": {
+    "/api/v1/platform/agents/{agent_id}/tools/attach/{tool_id}": {
       "patch": {
-        "operationId": "api_platform_attach_tool_api_platform_agents__agent_id__tools_attach__tool_id__patch",
+        "operationId": "api_platform_attach_tool_api_v1_platform_agents__agent_id__tools_attach__tool_id__patch",
         "parameters": [
           {
             "in": "path",
@@ -850,7 +2372,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiToolAttachDetachResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -872,9 +2396,9 @@
         ]
       }
     },
-    "/api/platform/agents/{agent_id}/tools/detach/{tool_id}": {
+    "/api/v1/platform/agents/{agent_id}/tools/detach/{tool_id}": {
       "patch": {
-        "operationId": "api_platform_detach_tool_api_platform_agents__agent_id__tools_detach__tool_id__patch",
+        "operationId": "api_platform_detach_tool_api_v1_platform_agents__agent_id__tools_detach__tool_id__patch",
         "parameters": [
           {
             "in": "path",
@@ -899,7 +2423,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiToolAttachDetachResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -921,14 +2447,16 @@
         ]
       }
     },
-    "/api/platform/capabilities": {
+    "/api/v1/platform/capabilities": {
       "get": {
-        "operationId": "api_platform_capabilities_api_platform_capabilities_get",
+        "operationId": "api_platform_capabilities_api_v1_platform_capabilities_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiPlatformCapabilitiesResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -940,14 +2468,16 @@
         ]
       }
     },
-    "/api/platform/metadata/prompts-personas": {
+    "/api/v1/platform/metadata/prompts-personas": {
       "get": {
-        "operationId": "api_platform_prompt_persona_metadata_api_platform_metadata_prompts_personas_get",
+        "operationId": "api_platform_prompt_persona_metadata_api_v1_platform_metadata_prompts_personas_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiPromptPersonaMetadataResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -959,9 +2489,9 @@
         ]
       }
     },
-    "/api/platform/metadata/prompts-personas/revisions": {
+    "/api/v1/platform/metadata/prompts-personas/revisions": {
       "get": {
-        "operationId": "api_platform_prompt_persona_revisions_api_platform_metadata_prompts_personas_revisions_get",
+        "operationId": "api_platform_prompt_persona_revisions_api_v1_platform_metadata_prompts_personas_revisions_get",
         "parameters": [
           {
             "in": "query",
@@ -1010,7 +2540,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiPromptPersonaRevisionsResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1032,33 +2564,16 @@
         ]
       }
     },
-    "/api/platform/migration-status": {
+    "/api/v1/platform/test-runs": {
       "get": {
-        "operationId": "api_platform_migration_status_api_platform_migration_status_get",
+        "operationId": "api_platform_list_test_runs_api_v1_platform_test_runs_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Get migration feature-flag status",
-        "tags": [
-          "platform-meta"
-        ]
-      }
-    },
-    "/api/platform/test-runs": {
-      "get": {
-        "operationId": "api_platform_list_test_runs_api_platform_test_runs_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiTestRunListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1070,7 +2585,7 @@
         ]
       },
       "post": {
-        "operationId": "api_platform_create_test_run_api_platform_test_runs_post",
+        "operationId": "api_platform_create_test_run_api_v1_platform_test_runs_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1085,7 +2600,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiTestRunRecordResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1107,9 +2624,9 @@
         ]
       }
     },
-    "/api/platform/test-runs/{run_id}": {
+    "/api/v1/platform/test-runs/{run_id}": {
       "get": {
-        "operationId": "api_platform_get_test_run_api_platform_test_runs__run_id__get",
+        "operationId": "api_platform_get_test_run_api_v1_platform_test_runs__run_id__get",
         "parameters": [
           {
             "in": "path",
@@ -1125,7 +2642,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiTestRunRecordResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1147,9 +2666,9 @@
         ]
       }
     },
-    "/api/platform/test-runs/{run_id}/artifacts": {
+    "/api/v1/platform/test-runs/{run_id}/artifacts": {
       "get": {
-        "operationId": "api_platform_list_test_run_artifacts_api_platform_test_runs__run_id__artifacts_get",
+        "operationId": "api_platform_list_test_run_artifacts_api_v1_platform_test_runs__run_id__artifacts_get",
         "parameters": [
           {
             "in": "path",
@@ -1165,7 +2684,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiTestArtifactListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1187,9 +2708,9 @@
         ]
       }
     },
-    "/api/platform/test-runs/{run_id}/artifacts/{artifact_id}": {
+    "/api/v1/platform/test-runs/{run_id}/artifacts/{artifact_id}": {
       "get": {
-        "operationId": "api_platform_read_test_run_artifact_api_platform_test_runs__run_id__artifacts__artifact_id__get",
+        "operationId": "api_platform_read_test_run_artifact_api_v1_platform_test_runs__run_id__artifacts__artifact_id__get",
         "parameters": [
           {
             "in": "path",
@@ -1224,7 +2745,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiTestArtifactReadResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1246,9 +2769,9 @@
         ]
       }
     },
-    "/api/platform/test-runs/{run_id}/cancel": {
+    "/api/v1/platform/test-runs/{run_id}/cancel": {
       "post": {
-        "operationId": "api_platform_cancel_test_run_api_platform_test_runs__run_id__cancel_post",
+        "operationId": "api_platform_cancel_test_run_api_v1_platform_test_runs__run_id__cancel_post",
         "parameters": [
           {
             "in": "path",
@@ -1264,7 +2787,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiTestRunRecordResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1286,9 +2811,9 @@
         ]
       }
     },
-    "/api/platform/tools": {
+    "/api/v1/platform/tools": {
       "get": {
-        "operationId": "api_platform_list_tools_api_platform_tools_get",
+        "operationId": "api_platform_list_tools_api_v1_platform_tools_get",
         "parameters": [
           {
             "in": "query",
@@ -1331,7 +2856,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiPlatformToolListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1353,9 +2880,9 @@
         ]
       }
     },
-    "/api/platform/tools/test-invoke": {
+    "/api/v1/platform/tools/test-invoke": {
       "post": {
-        "operationId": "api_platform_tool_test_invoke_api_platform_tools_test_invoke_post",
+        "operationId": "api_platform_tool_test_invoke_api_v1_platform_tools_test_invoke_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1370,7 +2897,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ApiPlatformToolTestInvokeResponse"
+                }
               }
             },
             "description": "Successful Response"

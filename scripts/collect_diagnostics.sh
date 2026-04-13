@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${PROJECT_ROOT}"
 
-ENV_FILE="${1:-.env3}"
+ENV_FILE="${1:-.env}"
 TS="$(date '+%Y%m%d_%H%M%S')"
 OUT_ROOT="${PROJECT_ROOT}/diagnostics"
 OUT_DIR="${OUT_ROOT}/letta_diag_${TS}"
