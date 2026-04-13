@@ -183,3 +183,42 @@ Test outputs are grouped by runner type under `tests/outputs/`:
 	- Index files: `tests/outputs/memory_update/run_index.csv`, `tests/outputs/memory_update/run_index.jsonl`
 
 This avoids mixing different test semantics in one shared index.
+
+## Agent Platform API (Initial Slice)
+
+`dev_ui/main.py` now exposes an initial control/runtime surface under `/api/platform`.
+
+- `GET /api/platform/capabilities`
+	- Reports whether the connected Letta SDK/server supports key mutable features.
+- `POST /api/platform/agents/{agent_id}/messages`
+	- Sends a runtime message with optional `override_model` and `override_system`.
+- `PATCH /api/platform/agents/{agent_id}/system`
+	- Updates the persisted agent system prompt.
+- `PATCH /api/platform/agents/{agent_id}/model`
+	- Updates the persisted default model handle for the agent.
+- `PATCH /api/platform/agents/{agent_id}/core-memory/blocks/{block_label}`
+	- Updates a core-memory block value (for example `persona` or `human`).
+- `PATCH /api/platform/agents/{agent_id}/tools/attach/{tool_id}`
+	- Attaches a tool to an existing agent.
+- `PATCH /api/platform/agents/{agent_id}/tools/detach/{tool_id}`
+	- Detaches a tool from an existing agent.
+- `GET /api/platform/test-runs`
+	- Lists orchestrated backend test runs.
+- `POST /api/platform/test-runs`
+	- Starts one orchestrated check/runner execution.
+- `GET /api/platform/test-runs/{run_id}`
+	- Retrieves run status, tail logs, and exit code.
+- `POST /api/platform/test-runs/{run_id}/cancel`
+	- Requests cancellation for a running test job.
+
+Quick capability check:
+
+```bash
+curl http://127.0.0.1:8284/api/platform/capabilities
+```
+
+Platform API end-to-end check:
+
+```bash
+uv run tests/checks/platform_api_e2e_check.py
+```

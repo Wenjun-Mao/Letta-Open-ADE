@@ -25,6 +25,8 @@ This directory uses a role-based structure:
   - Compares prompt strategy behavior on memory updates
 - tests/checks/agent_bootstrap_check.py
   - Verifies bootstrap memory block descriptions and defaults
+- tests/checks/platform_api_e2e_check.py
+  - Validates Agent Platform runtime/control endpoints and orchestrator flow
 
 ## Typical Commands
 
@@ -34,6 +36,7 @@ uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai
 uv run tests/checks/provider_embedding_matrix_check.py
 uv run tests/checks/prompt_strategy_check.py
 uv run tests/checks/agent_bootstrap_check.py
+uv run tests/checks/platform_api_e2e_check.py
 ```
 
 Examples:

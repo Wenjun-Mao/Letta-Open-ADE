@@ -108,6 +108,11 @@ uv run tests/runners/persona_guardrail_runner.py --config tests/configs/suites/l
 uv run tests/checks/prompt_strategy_check.py
 ```
 
+**Run Agent Platform API E2E Check:**
+```bash
+uv run tests/checks/platform_api_e2e_check.py
+```
+
 **Run Fresh-Agent Memory Update Rounds:**
 ```bash
 uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free

@@ -7,7 +7,8 @@ import json
 import os
 import sys
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from pathlib import Path
+from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
 # Add project root to sys.path to resolve imports properly
@@ -15,6 +16,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from letta_client import Letta
 from utils.message_parser import chat
+from utils.agent_platform_service import AgentPlatformService
+from utils.platform_test_orchestrator import PlatformTestOrchestrator
 from prompts.persona import PERSONAS, HUMAN_TEMPLATE
 from prompts.system_prompts import (
     CUSTOM_V1_PROMPT,
@@ -41,6 +44,39 @@ class AgentCreateRequest(BaseModel):
     model: str = ""
     prompt_key: str = "custom_v2"
     embedding: str | None = None
+
+
+class PlatformRuntimeMessageRequest(BaseModel):
+    input: str
+    override_model: str | None = None
+    override_system: str | None = None
+
+
+class PlatformSystemUpdateRequest(BaseModel):
+    system: str
+
+
+class PlatformModelUpdateRequest(BaseModel):
+    model: str
+
+
+class PlatformMemoryBlockUpdateRequest(BaseModel):
+    value: str
+
+
+class PlatformTestRunRequest(BaseModel):
+    run_type: Literal[
+        "agent_bootstrap_check",
+        "provider_embedding_matrix_check",
+        "prompt_strategy_check",
+        "platform_api_e2e_check",
+        "persona_guardrail_runner",
+        "memory_update_runner",
+    ]
+    model: str | None = None
+    embedding: str | None = None
+    rounds: int | None = None
+    config_path: str | None = None
 
 
 PREFERRED_MODEL_OPTIONS = [
@@ -103,6 +139,43 @@ DEFAULT_EMBEDDING = ""
 
 # Letta Client Initialization
 client = Letta(base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"))
+agent_platform = AgentPlatformService(client)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+test_orchestrator = PlatformTestOrchestrator(project_root=PROJECT_ROOT)
+
+
+def _is_truthy(value: str | None) -> bool:
+    if not value:
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _missing_platform_capabilities(capabilities: dict[str, Any]) -> list[str]:
+    runtime = capabilities.get("runtime", {})
+    control = capabilities.get("control", {})
+
+    missing: list[str] = []
+    if not (runtime.get("per_request_model_override") or runtime.get("per_request_model_override_via_extra_body")):
+        missing.append("runtime.per_request_model_override")
+    if not control.get("update_system_prompt"):
+        missing.append("control.update_system_prompt")
+    if not control.get("update_core_memory_block"):
+        missing.append("control.update_core_memory_block")
+    if not control.get("attach_tool"):
+        missing.append("control.attach_tool")
+    if not control.get("detach_tool"):
+        missing.append("control.detach_tool")
+
+    return missing
+
+
+@app.on_event("startup")
+async def _startup_validate_platform_capabilities() -> None:
+    strict_mode = _is_truthy(os.getenv("AGENT_PLATFORM_STRICT_CAPABILITIES"))
+    capabilities = agent_platform.capabilities()
+    missing = _missing_platform_capabilities(capabilities)
+    if strict_mode and missing:
+        raise RuntimeError(f"Missing required Agent Platform capabilities: {', '.join(missing)}")
 
 try:
     _SHANGHAI_TZ = ZoneInfo("Asia/Shanghai")
@@ -593,6 +666,140 @@ async def api_get_raw_prompt(agent_id: str):
         formatted_msgs.append({"role": role, "content": _normalize_text(content)})
         
     return {"messages": formatted_msgs}
+
+
+@app.get("/api/platform/capabilities")
+async def api_platform_capabilities():
+    capabilities = agent_platform.capabilities()
+    return {
+        "strict_mode": _is_truthy(os.getenv("AGENT_PLATFORM_STRICT_CAPABILITIES")),
+        "missing_required": _missing_platform_capabilities(capabilities),
+        **capabilities,
+    }
+
+
+@app.post("/api/platform/agents/{agent_id}/messages")
+async def api_platform_send_message(agent_id: str, request: PlatformRuntimeMessageRequest):
+    text = request.input.strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="input is required")
+
+    try:
+        return agent_platform.send_runtime_message(
+            agent_id=agent_id,
+            message=text,
+            override_model=(request.override_model or "").strip() or None,
+            override_system=(request.override_system or "").strip() or None,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.patch("/api/platform/agents/{agent_id}/system")
+async def api_platform_update_system(agent_id: str, request: PlatformSystemUpdateRequest):
+    system_text = request.system.strip()
+    if not system_text:
+        raise HTTPException(status_code=400, detail="system is required")
+
+    try:
+        return agent_platform.update_system_prompt(agent_id=agent_id, system_prompt=system_text)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.patch("/api/platform/agents/{agent_id}/model")
+async def api_platform_update_model(agent_id: str, request: PlatformModelUpdateRequest):
+    model_handle = request.model.strip()
+    if not model_handle:
+        raise HTTPException(status_code=400, detail="model is required")
+
+    try:
+        return agent_platform.update_agent_model(agent_id=agent_id, model_handle=model_handle)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.patch("/api/platform/agents/{agent_id}/core-memory/blocks/{block_label}")
+async def api_platform_update_memory_block(
+    agent_id: str,
+    block_label: str,
+    request: PlatformMemoryBlockUpdateRequest,
+):
+    label = block_label.strip()
+    if not label:
+        raise HTTPException(status_code=400, detail="block_label is required")
+
+    try:
+        return agent_platform.update_core_memory_block(
+            agent_id=agent_id,
+            block_label=label,
+            value=request.value,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.patch("/api/platform/agents/{agent_id}/tools/attach/{tool_id}")
+async def api_platform_attach_tool(agent_id: str, tool_id: str):
+    resolved_tool_id = tool_id.strip()
+    if not resolved_tool_id:
+        raise HTTPException(status_code=400, detail="tool_id is required")
+
+    try:
+        return agent_platform.attach_tool(agent_id=agent_id, tool_id=resolved_tool_id)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.patch("/api/platform/agents/{agent_id}/tools/detach/{tool_id}")
+async def api_platform_detach_tool(agent_id: str, tool_id: str):
+    resolved_tool_id = tool_id.strip()
+    if not resolved_tool_id:
+        raise HTTPException(status_code=400, detail="tool_id is required")
+
+    try:
+        return agent_platform.detach_tool(agent_id=agent_id, tool_id=resolved_tool_id)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/api/platform/test-runs")
+async def api_platform_list_test_runs():
+    return {
+        "items": test_orchestrator.list_runs(),
+    }
+
+
+@app.post("/api/platform/test-runs")
+async def api_platform_create_test_run(request: PlatformTestRunRequest):
+    try:
+        return test_orchestrator.create_run(
+            run_type=request.run_type,
+            model=request.model,
+            embedding=request.embedding,
+            rounds=request.rounds,
+            config_path=request.config_path,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/platform/test-runs/{run_id}")
+async def api_platform_get_test_run(run_id: str):
+    run = test_orchestrator.get_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="run_id not found")
+    return run
+
+
+@app.post("/api/platform/test-runs/{run_id}/cancel")
+async def api_platform_cancel_test_run(run_id: str):
+    run = test_orchestrator.cancel_run(run_id)
+    if not run:
+        raise HTTPException(status_code=404, detail="run_id not found")
+    return run
 
 @app.post("/api/chat")
 async def api_chat(request: ChatRequest):

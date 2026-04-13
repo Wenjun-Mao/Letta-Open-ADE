@@ -14,5 +14,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY dev_ui ./dev_ui
 COPY utils ./utils
 COPY prompts ./prompts
+COPY tests ./tests
 
 CMD ["/opt/venv/bin/uvicorn", "dev_ui.main:app", "--host", "0.0.0.0", "--port", "8284"]

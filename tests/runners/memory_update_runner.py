@@ -279,6 +279,59 @@ def _run_single_round(
                 print(f"[WARN] Failed to delete test agent {agent_id}: {exc}")
 
 
+def _run_round_with_retries(
+    *,
+    client: Letta,
+    args: argparse.Namespace,
+    turns: list[str],
+    round_index: int,
+) -> dict[str, Any]:
+    attempts: list[dict[str, Any]] = []
+    max_attempts = max(1, int(args.round_retries) + 1)
+    last_result: dict[str, Any] | None = None
+
+    for attempt in range(1, max_attempts + 1):
+        result = _run_single_round(
+            client=client,
+            args=args,
+            turns=turns,
+            round_index=round_index,
+        )
+        last_result = result
+        forbidden_hits_count = len(result.get("evaluation", {}).get("forbidden_hits", []))
+        attempts.append(
+            {
+                "attempt": attempt,
+                "pass": bool(result.get("pass")),
+                "duration_seconds": float(result.get("duration_seconds", 0.0)),
+                "forbidden_hits": forbidden_hits_count,
+                "first_turn_memory_changed": bool(
+                    result.get("outputs", {}).get("first_turn_memory_changed", False)
+                ),
+                "human_memory_changed": bool(result.get("outputs", {}).get("human_memory_changed", False)),
+                "expected_name_recorded": bool(result.get("outputs", {}).get("expected_name_recorded", False)),
+            }
+        )
+
+        result["attempt"] = attempt
+
+        if result.get("pass"):
+            if attempt > 1:
+                result["recovered_after_retry"] = True
+            result["attempts"] = attempts
+            result["attempts_used"] = attempt
+            return result
+
+    if last_result is None:
+        raise RuntimeError("No round attempt result was produced")
+
+    last_result["attempt"] = max_attempts
+    last_result["recovered_after_retry"] = False
+    last_result["attempts"] = attempts
+    last_result["attempts_used"] = max_attempts
+    return last_result
+
+
 def _write_summary(output_dir: Path, payload: dict[str, Any]) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     file_path = output_dir / "memory_update_summary.json"
@@ -396,11 +449,19 @@ def main() -> int:
         action="store_true",
         help="Keep agents after each round for manual inspection.",
     )
+    parser.add_argument(
+        "--round-retries",
+        type=int,
+        default=2,
+        help="How many retries to allow per failed round.",
+    )
 
     args = parser.parse_args()
 
     if args.rounds < 1:
         raise ValueError("--rounds must be >= 1")
+    if args.round_retries < 0:
+        raise ValueError("--round-retries must be >= 0")
 
     if args.persona_key not in PERSONAS:
         raise ValueError(f"Unknown persona key: {args.persona_key}")
@@ -424,7 +485,7 @@ def main() -> int:
     for round_index in range(1, args.rounds + 1):
         print(f"Running round {round_index}/{args.rounds}...")
         rounds.append(
-            _run_single_round(
+            _run_round_with_retries(
                 client=client,
                 args=args,
                 turns=turns,
@@ -455,6 +516,7 @@ def main() -> int:
             "expected_name": args.expected_name,
             "turns": turns,
             "strict_forbidden": args.strict_forbidden,
+            "round_retries": args.round_retries,
             "require_first_turn_change": args.require_first_turn_change,
             "require_memory_change": args.require_memory_change,
             "require_expected_name": args.require_expected_name,
