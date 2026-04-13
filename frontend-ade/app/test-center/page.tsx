@@ -12,6 +12,82 @@ import {
   listTestRuns,
   readRunArtifact,
 } from "../../lib/api";
+import { useI18n } from "../../lib/i18n";
+
+const COPY = {
+  en: {
+    kicker: "MVP Module",
+    title: "Test Center",
+    createRunTitle: "Create Test Run",
+    runType: "Run type",
+    modelOptional: "Model (optional)",
+    embeddingOptional: "Embedding (optional)",
+    roundsOptional: "Rounds (optional)",
+    configPathOptional: "Config path (optional)",
+    submitting: "Submitting...",
+    createRun: "Create Run",
+    refreshRuns: "Refresh Runs",
+    runsTitle: "Runs",
+    selectRun: "Select run",
+    refreshSelectedRun: "Refresh Selected Run",
+    cancelRun: "Cancel Run",
+    artifactsTitle: "Artifacts",
+    refreshArtifacts: "Refresh Artifacts",
+    noArtifacts: "No artifacts discovered yet.",
+    yes: "yes",
+    no: "no",
+    open: "Open",
+    activeArtifact: "Active artifact",
+    noActiveArtifact: "none",
+    artifactContentPlaceholder: "Artifact content appears here.",
+    outputTail: "Run Output Tail",
+    statusTitle: "Status",
+    errorTitle: "Error",
+    createdRun: "Created run",
+    cancelRequested: "Cancel requested for",
+    selectRunPlaceholder: "Select run",
+    id: "ID",
+    type: "Type",
+    exists: "Exists",
+    action: "Action",
+  },
+  zh: {
+    kicker: "MVP 模块",
+    title: "测试中心",
+    createRunTitle: "创建测试运行",
+    runType: "运行类型",
+    modelOptional: "模型（可选）",
+    embeddingOptional: "向量模型（可选）",
+    roundsOptional: "轮数（可选）",
+    configPathOptional: "配置路径（可选）",
+    submitting: "提交中...",
+    createRun: "创建运行",
+    refreshRuns: "刷新运行列表",
+    runsTitle: "运行记录",
+    selectRun: "选择运行",
+    refreshSelectedRun: "刷新当前运行",
+    cancelRun: "取消运行",
+    artifactsTitle: "产物",
+    refreshArtifacts: "刷新产物",
+    noArtifacts: "暂无产物。",
+    yes: "是",
+    no: "否",
+    open: "打开",
+    activeArtifact: "当前产物",
+    noActiveArtifact: "无",
+    artifactContentPlaceholder: "产物内容显示在此。",
+    outputTail: "运行输出尾部",
+    statusTitle: "状态",
+    errorTitle: "错误",
+    createdRun: "已创建运行",
+    cancelRequested: "已请求取消",
+    selectRunPlaceholder: "请选择运行",
+    id: "ID",
+    type: "类型",
+    exists: "存在",
+    action: "操作",
+  },
+} as const;
 
 const RUN_TYPES = [
   "agent_bootstrap_check",
@@ -30,6 +106,9 @@ function toErrorMessage(exc: unknown): string {
 }
 
 export default function TestCenterPage() {
+  const { locale } = useI18n();
+  const copy = COPY[locale];
+
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -128,7 +207,7 @@ export default function TestCenterPage() {
         rounds: Number(rounds) || undefined,
         config_path: configPath.trim() || undefined,
       });
-      setStatus(`Created run ${created.run_id}`);
+      setStatus(`${copy.createdRun} ${created.run_id}`);
       setSelectedRunId(created.run_id);
       await refreshRuns();
       await refreshSelectedRun(created.run_id);
@@ -148,7 +227,7 @@ export default function TestCenterPage() {
     setStatus("");
     try {
       const payload = await cancelTestRun(selectedRunId);
-      setStatus(`Cancel requested for ${payload.run_id}`);
+      setStatus(`${copy.cancelRequested} ${payload.run_id}`);
       await refreshSelectedRun(selectedRunId);
       await refreshRuns();
     } catch (exc) {
@@ -177,14 +256,14 @@ export default function TestCenterPage() {
 
   return (
     <section>
-      <div className="kicker">MVP Module</div>
-      <h1 className="section-title">Test Center</h1>
+      <div className="kicker">{copy.kicker}</div>
+      <h1 className="section-title">{copy.title}</h1>
 
       <div className="card">
-        <h3>Create Test Run</h3>
+        <h3>{copy.createRunTitle}</h3>
         <div className="form-grid">
           <label className="field">
-            <span>Run type</span>
+            <span>{copy.runType}</span>
             <select className="input" value={runType} onChange={(e) => setRunType(e.target.value)}>
               {RUN_TYPES.map((item) => (
                 <option key={item} value={item}>
@@ -194,44 +273,44 @@ export default function TestCenterPage() {
             </select>
           </label>
           <label className="field">
-            <span>Model (optional)</span>
+            <span>{copy.modelOptional}</span>
             <input className="input" value={model} onChange={(e) => setModel(e.target.value)} />
           </label>
           <label className="field">
-            <span>Embedding (optional)</span>
+            <span>{copy.embeddingOptional}</span>
             <input className="input" value={embedding} onChange={(e) => setEmbedding(e.target.value)} />
           </label>
           <label className="field">
-            <span>Rounds (optional)</span>
+            <span>{copy.roundsOptional}</span>
             <input className="input" value={rounds} onChange={(e) => setRounds(e.target.value)} />
           </label>
           <label className="field" style={{ gridColumn: "1 / -1" }}>
-            <span>Config path (optional)</span>
+            <span>{copy.configPathOptional}</span>
             <input className="input" value={configPath} onChange={(e) => setConfigPath(e.target.value)} />
           </label>
         </div>
         <div className="toolbar" style={{ marginTop: 10 }}>
           <button className="button" onClick={() => void onCreateRun()} disabled={busy || loading}>
-            {busy ? "Submitting..." : "Create Run"}
+            {busy ? copy.submitting : copy.createRun}
           </button>
           <button className="button muted" onClick={() => void refreshRuns()} disabled={busy || loading}>
-            Refresh Runs
+            {copy.refreshRuns}
           </button>
         </div>
       </div>
 
       <div className="card-grid" style={{ marginTop: 14 }}>
         <div className="card">
-          <h3>Runs</h3>
+          <h3>{copy.runsTitle}</h3>
           <label className="field">
-            <span>Select run</span>
+            <span>{copy.selectRun}</span>
             <select
               className="input"
               value={selectedRunId}
               onChange={(e) => setSelectedRunId(e.target.value)}
               disabled={runs.length === 0}
             >
-              <option value="">Select run</option>
+              <option value="">{copy.selectRunPlaceholder}</option>
               {runs.map((run) => (
                 <option key={run.run_id} value={run.run_id}>
                   {run.run_type} ({run.status})
@@ -242,10 +321,10 @@ export default function TestCenterPage() {
 
           <div className="toolbar" style={{ marginTop: 10 }}>
             <button className="button muted" onClick={() => void refreshSelectedRun(selectedRunId)} disabled={!selectedRunId}>
-              Refresh Selected Run
+              {copy.refreshSelectedRun}
             </button>
             <button className="button" onClick={() => void onCancelSelected()} disabled={!selectedRunId || busy}>
-              Cancel Run
+              {copy.cancelRun}
             </button>
           </div>
 
@@ -255,28 +334,28 @@ export default function TestCenterPage() {
         </div>
 
         <div className="card">
-          <h3>Artifacts</h3>
+          <h3>{copy.artifactsTitle}</h3>
           <div className="toolbar" style={{ marginBottom: 10 }}>
             <button
               className="button muted"
               onClick={() => (selectedRunId ? void refreshSelectedRun(selectedRunId) : undefined)}
               disabled={!selectedRunId}
             >
-              Refresh Artifacts
+              {copy.refreshArtifacts}
             </button>
           </div>
 
           {artifacts.length === 0 ? (
-            <p className="muted">No artifacts discovered yet.</p>
+            <p className="muted">{copy.noArtifacts}</p>
           ) : (
             <div className="table-wrap">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Type</th>
-                    <th>Exists</th>
-                    <th>Action</th>
+                    <th>{copy.id}</th>
+                    <th>{copy.type}</th>
+                    <th>{copy.exists}</th>
+                    <th>{copy.action}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -284,10 +363,10 @@ export default function TestCenterPage() {
                     <tr key={artifact.artifact_id}>
                       <td>{artifact.artifact_id}</td>
                       <td>{artifact.type}</td>
-                      <td>{artifact.exists ? "yes" : "no"}</td>
+                      <td>{artifact.exists ? copy.yes : copy.no}</td>
                       <td>
                         <button className="button" onClick={() => void onReadArtifact(artifact.artifact_id)}>
-                          Open
+                          {copy.open}
                         </button>
                       </td>
                     </tr>
@@ -298,15 +377,15 @@ export default function TestCenterPage() {
           )}
 
           <p className="muted" style={{ marginTop: 10 }}>
-            Active artifact: {selectedArtifactId || "none"}
+            {copy.activeArtifact}: {selectedArtifactId || copy.noActiveArtifact}
           </p>
-          <div className="code" style={{ minHeight: 180 }}>{artifactContent || "Artifact content appears here."}</div>
+          <div className="code" style={{ minHeight: 180 }}>{artifactContent || copy.artifactContentPlaceholder}</div>
         </div>
       </div>
 
       {selectedRun?.output_tail?.length ? (
         <div className="card" style={{ marginTop: 14 }}>
-          <h3>Run Output Tail</h3>
+          <h3>{copy.outputTail}</h3>
           <div className="code" style={{ minHeight: 180 }}>
             {(selectedRun.output_tail || []).join("\n")}
           </div>
@@ -315,14 +394,14 @@ export default function TestCenterPage() {
 
       {status ? (
         <div className="card" style={{ marginTop: 12, borderColor: "#bbf7d0" }}>
-          <h3>Status</h3>
+          <h3>{copy.statusTitle}</h3>
           <p className="muted">{status}</p>
         </div>
       ) : null}
 
       {error ? (
         <div className="card" style={{ marginTop: 12, borderColor: "#fecaca" }}>
-          <h3>Error</h3>
+          <h3>{copy.errorTitle}</h3>
           <p className="muted">{error}</p>
         </div>
       ) : null}

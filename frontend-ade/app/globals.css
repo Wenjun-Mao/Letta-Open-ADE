@@ -61,6 +61,39 @@ main {
   gap: 8px;
 }
 
+.top-nav-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.locale-switch {
+  display: flex;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  padding: 4px;
+}
+
+.locale-button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.locale-active {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
 .nav-link {
   border: 1px solid var(--border);
   border-radius: 10px;
