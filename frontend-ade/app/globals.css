@@ -69,6 +69,32 @@ main {
   flex-wrap: wrap;
 }
 
+.release-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #f8fafc;
+  padding: 4px 10px;
+  color: var(--muted);
+}
+
+.release-chip-tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #334155;
+}
+
+.release-chip-value {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #1f2937;
+}
+
 .locale-switch {
   display: flex;
   gap: 6px;
@@ -644,6 +670,14 @@ details summary {
 @media (max-width: 940px) {
   main {
     width: min(1460px, calc(100% - 20px));
+  }
+
+  .release-chip {
+    padding: 4px 8px;
+  }
+
+  .release-chip-value {
+    font-size: 10px;
   }
 
   .studio-layout {

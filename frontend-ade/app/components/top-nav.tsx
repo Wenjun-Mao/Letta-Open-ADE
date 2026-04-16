@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import packageJson from "../../package.json";
 import { useI18n } from "../../lib/i18n";
 
 const NAV_ITEMS = [
@@ -17,6 +18,8 @@ const COPY = {
   en: {
     navAriaLabel: "ADE navigation",
     languageAriaLabel: "Language",
+    releaseAriaLabel: "UI release",
+    releaseTag: "UI",
     dashboard: "Dashboard",
     agentStudio: "Agent Studio",
     promptCenter: "Prompt Center",
@@ -27,6 +30,8 @@ const COPY = {
   zh: {
     navAriaLabel: "ADE 导航",
     languageAriaLabel: "语言",
+    releaseAriaLabel: "界面版本",
+    releaseTag: "版本",
     dashboard: "仪表盘",
     agentStudio: "智能体工作台",
     promptCenter: "提示词中心",
@@ -35,6 +40,14 @@ const COPY = {
     apiDocs: "API 文档",
   },
 } as const;
+
+const PACKAGE_VERSION = typeof packageJson.version === "string" ? packageJson.version : "0.0.0";
+
+function resolveReleaseLabel(): string {
+  const version = (process.env.NEXT_PUBLIC_ADE_UI_VERSION || PACKAGE_VERSION).trim();
+  const build = (process.env.NEXT_PUBLIC_ADE_UI_BUILD || "").trim();
+  return build ? `v${version} (${build})` : `v${version}`;
+}
 
 function isActivePath(pathname: string, href: string): boolean {
   if (href === "/") {
@@ -47,6 +60,7 @@ export function TopNav() {
   const { locale, setLocale } = useI18n();
   const copy = COPY[locale];
   const pathname = usePathname() || "/";
+  const releaseLabel = resolveReleaseLabel();
 
   return (
     <div className="top-nav-group">
@@ -60,6 +74,10 @@ export function TopNav() {
           );
         })}
       </nav>
+      <div className="release-chip" role="status" aria-label={copy.releaseAriaLabel} title={releaseLabel}>
+        <span className="release-chip-tag">{copy.releaseTag}</span>
+        <span className="release-chip-value">{releaseLabel}</span>
+      </div>
       <div className="locale-switch" role="group" aria-label={copy.languageAriaLabel}>
         <button
           type="button"

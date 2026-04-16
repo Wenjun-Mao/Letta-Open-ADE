@@ -72,6 +72,9 @@ services:
       - LETTA_BASE_URL=http://letta_server:8283
       - LETTA_DEFAULT_EMBEDDING_HANDLE=${LETTA_DEFAULT_EMBEDDING_HANDLE:-}
       - LETTA_EMBEDDING_HANDLE=${LETTA_EMBEDDING_HANDLE:-}
+    volumes:
+      - ./prompts:/app/prompts
+      - ./tools/custom:/app/tools/custom
     ports:
       - "8284:8284"
     depends_on:
@@ -84,6 +87,9 @@ services:
     build:
       context: ./frontend-ade
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_ADE_UI_VERSION: ${ADE_UI_VERSION:-}
+        NEXT_PUBLIC_ADE_UI_BUILD: ${ADE_UI_BUILD:-}
     restart: unless-stopped
     environment:
       - NEXT_PUBLIC_DEV_UI_BASE_URL=${ADE_DEV_UI_BASE_URL:-http://127.0.0.1:8284}

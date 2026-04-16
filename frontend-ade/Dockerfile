@@ -5,6 +5,10 @@ RUN npm install
 
 FROM node:20-alpine AS builder
 WORKDIR /app
+ARG NEXT_PUBLIC_ADE_UI_VERSION=""
+ARG NEXT_PUBLIC_ADE_UI_BUILD=""
+ENV NEXT_PUBLIC_ADE_UI_VERSION=${NEXT_PUBLIC_ADE_UI_VERSION}
+ENV NEXT_PUBLIC_ADE_UI_BUILD=${NEXT_PUBLIC_ADE_UI_BUILD}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
