@@ -15,6 +15,12 @@ _RETRY_KWARGS = {
     "reraise": True,
 }
 
+DEFAULT_RUNTIME_TIMEOUT_SECONDS = 180.0
+MIN_RUNTIME_TIMEOUT_SECONDS = 5.0
+MAX_RUNTIME_TIMEOUT_SECONDS = 600.0
+DEFAULT_RUNTIME_RETRY_COUNT = 0
+MAX_RUNTIME_RETRY_COUNT = 5
+
 
 class AgentPlatformService:
     """Shared backend service for runtime and control-plane agent operations."""
@@ -22,8 +28,27 @@ class AgentPlatformService:
     def __init__(self, client: Letta):
         self._client = client
 
-    def _message_create_params(self) -> set[str]:
-        return set(inspect.signature(self._client.agents.messages.create).parameters.keys())
+    def _message_create_params(self, client: Letta | None = None) -> set[str]:
+        target_client = client or self._client
+        return set(inspect.signature(target_client.agents.messages.create).parameters.keys())
+
+    @staticmethod
+    def _clamp_timeout_seconds(value: float | None) -> float:
+        if value is None:
+            return DEFAULT_RUNTIME_TIMEOUT_SECONDS
+        return max(MIN_RUNTIME_TIMEOUT_SECONDS, min(MAX_RUNTIME_TIMEOUT_SECONDS, float(value)))
+
+    @staticmethod
+    def _clamp_retry_count(value: int | None) -> int:
+        if value is None:
+            return DEFAULT_RUNTIME_RETRY_COUNT
+        return max(0, min(MAX_RUNTIME_RETRY_COUNT, int(value)))
+
+    def _runtime_client(self, *, timeout_seconds: float | None, retry_count: int | None) -> Letta:
+        return self._client.with_options(
+            timeout=self._clamp_timeout_seconds(timeout_seconds),
+            max_retries=self._clamp_retry_count(retry_count),
+        )
 
     @staticmethod
     def _serialize_tool(tool: Any) -> dict[str, Any]:
@@ -193,7 +218,6 @@ class AgentPlatformService:
             },
         }
 
-    @retry(**_RETRY_KWARGS)
     def send_runtime_message(
         self,
         *,
@@ -201,8 +225,11 @@ class AgentPlatformService:
         message: str,
         override_model: str | None = None,
         override_system: str | None = None,
+        timeout_seconds: float | None = None,
+        retry_count: int | None = None,
     ) -> dict[str, Any]:
-        message_params = self._message_create_params()
+        runtime_client = self._runtime_client(timeout_seconds=timeout_seconds, retry_count=retry_count)
+        message_params = self._message_create_params(runtime_client)
         payload: dict[str, Any] = {
             "input": message,
         }
@@ -228,7 +255,7 @@ class AgentPlatformService:
         if extra_body:
             payload["extra_body"] = extra_body
 
-        result = chat(client=self._client, agent_id=agent_id, **payload)
+        result = chat(client=runtime_client, agent_id=agent_id, **payload)
         result.pop("raw_messages", None)
         return {
             "agent_id": agent_id,
@@ -237,18 +264,20 @@ class AgentPlatformService:
             "result": result,
         }
 
-    @retry(**_RETRY_KWARGS)
     def send_chat_message(
         self,
         *,
         agent_id: str,
         message: str,
         datetime_system_hint: str | None = None,
+        timeout_seconds: float | None = None,
+        retry_count: int | None = None,
     ) -> dict[str, Any]:
+        runtime_client = self._runtime_client(timeout_seconds=timeout_seconds, retry_count=retry_count)
         if datetime_system_hint:
             try:
                 result = chat(
-                    client=self._client,
+                    client=runtime_client,
                     agent_id=agent_id,
                     messages=[
                         {"role": "system", "content": datetime_system_hint},
@@ -259,13 +288,13 @@ class AgentPlatformService:
                 if not self._is_context_limit_error(exc):
                     raise
                 result = chat(
-                    client=self._client,
+                    client=runtime_client,
                     agent_id=agent_id,
                     input=message,
                 )
         else:
             result = chat(
-                client=self._client,
+                client=runtime_client,
                 agent_id=agent_id,
                 input=message,
             )

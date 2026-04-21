@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import httpx
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from utils.commenting_helpers import (
     build_all_in_system_prompt,
@@ -25,21 +25,16 @@ class _RetryableCommentingError(RuntimeError):
     """Raised for provider responses that should be retried."""
 
 
-_RETRY_KWARGS = {
-    "stop": stop_after_attempt(3),
-    "wait": wait_exponential(multiplier=1, min=1, max=8),
-    "retry": retry_if_exception_type(
-        (
-            _RetryableCommentingError,
-            httpx.TimeoutException,
-            httpx.ConnectError,
-            httpx.ReadError,
-            httpx.RemoteProtocolError,
-            httpx.WriteError,
-        )
-    ),
-    "reraise": True,
-}
+DEFAULT_COMMENTING_RETRY_COUNT = 0
+MAX_COMMENTING_RETRY_COUNT = 5
+_RETRYABLE_COMMENTING_EXCEPTIONS = (
+    _RetryableCommentingError,
+    httpx.TimeoutException,
+    httpx.ConnectError,
+    httpx.ReadError,
+    httpx.RemoteProtocolError,
+    httpx.WriteError,
+)
 
 
 class CommentingService:
@@ -91,6 +86,12 @@ class CommentingService:
     def _clamp_timeout_seconds(value: float) -> float:
         return max(5.0, min(600.0, float(value)))
 
+    @staticmethod
+    def _clamp_retry_count(value: int | None) -> int:
+        if value is None:
+            return DEFAULT_COMMENTING_RETRY_COUNT
+        return max(0, min(MAX_COMMENTING_RETRY_COUNT, int(value)))
+
     @classmethod
     def _resolve_task_shape(cls, value: str | None) -> str:
         resolved = str(value or "").strip().lower()
@@ -140,8 +141,7 @@ class CommentingService:
                 return resolved_model[len(prefix):].strip()
         return resolved_model
 
-    @retry(**_RETRY_KWARGS)
-    def _post_chat_completions(self, payload: dict[str, Any], *, timeout_seconds: float) -> dict[str, Any]:
+    def _post_chat_completions_once(self, payload: dict[str, Any], *, timeout_seconds: float) -> dict[str, Any]:
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -165,6 +165,27 @@ class CommentingService:
             raise ValueError("Comment provider returned invalid payload")
         return data
 
+    def _post_chat_completions(
+        self,
+        payload: dict[str, Any],
+        *,
+        timeout_seconds: float,
+        retry_count: int,
+    ) -> dict[str, Any]:
+        retrying = self._build_retrying(retry_count)
+        for attempt in retrying:
+            with attempt:
+                return self._post_chat_completions_once(payload, timeout_seconds=timeout_seconds)
+        raise RuntimeError("Comment provider retry execution did not produce a result")
+
+    def _build_retrying(self, retry_count: int) -> Retrying:
+        return Retrying(
+            stop=stop_after_attempt(1 + self._clamp_retry_count(retry_count)),
+            wait=wait_exponential(multiplier=1, min=1, max=8),
+            retry=retry_if_exception_type(_RETRYABLE_COMMENTING_EXCEPTIONS),
+            reraise=True,
+        )
+
     def generate_comment(
         self,
         *,
@@ -174,6 +195,7 @@ class CommentingService:
         news_input: str,
         max_tokens: int | None = None,
         timeout_seconds: float | None = None,
+        retry_count: int | None = None,
         task_shape: str | None = None,
     ) -> dict[str, Any]:
         resolved_model = self._resolve_provider_model(str(model or ""))
@@ -187,6 +209,7 @@ class CommentingService:
             if timeout_seconds is None
             else self._clamp_timeout_seconds(timeout_seconds)
         )
+        resolved_retry_count = self._clamp_retry_count(retry_count)
         resolved_task_shape = runtime_defaults["task_shape"] if task_shape is None else self._resolve_task_shape(task_shape)
 
         compact_payload = {
@@ -250,7 +273,11 @@ class CommentingService:
             payload.pop("max_tokens", None)
 
         try:
-            data = self._post_chat_completions(payload, timeout_seconds=resolved_timeout_seconds)
+            data = self._post_chat_completions(
+                payload,
+                timeout_seconds=resolved_timeout_seconds,
+                retry_count=resolved_retry_count,
+            )
         except ValueError as exc:
             # Some OpenAI-compatible runtimes reject `response_format` when strict
             # structured decoding is disabled. Fall back to prompt-enforced JSON.
@@ -263,7 +290,11 @@ class CommentingService:
 
             payload = dict(payload)
             payload.pop("response_format", None)
-            data = self._post_chat_completions(payload, timeout_seconds=resolved_timeout_seconds)
+            data = self._post_chat_completions(
+                payload,
+                timeout_seconds=resolved_timeout_seconds,
+                retry_count=resolved_retry_count,
+            )
 
         choices = data.get("choices", [])
         if not isinstance(choices, list) or not choices:

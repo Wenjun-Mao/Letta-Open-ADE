@@ -22,6 +22,8 @@ const COPY = {
     maxTokens: "Max Tokens",
     maxTokensHint: "Set 0 for no max token limit.",
     timeoutSeconds: "Timeout (seconds)",
+    retryCount: "Retry Count",
+    retryCountHint: "Set 0 to disable retries. Maximum 5.",
     taskShape: "Task Shape",
     taskShapeCompact: "Classic (persona in user)",
     taskShapeAllInSystem: "All in system",
@@ -67,6 +69,7 @@ const COPY = {
     inputRequired: "Input text is required.",
     invalidMaxTokens: "Max tokens must be a non-negative integer (0 means no limit).",
     invalidTimeout: "Timeout must be a positive number.",
+    invalidRetryCount: "Retry count must be an integer between 0 and 5.",
     loadingError: "Failed to load commenting options",
     generateError: "Comment generation failed",
   },
@@ -85,6 +88,8 @@ const COPY = {
     maxTokens: "最大 Token",
     maxTokensHint: "设置为 0 表示不限制最大 Token。",
     timeoutSeconds: "超时时间（秒）",
+    retryCount: "重试次数",
+    retryCountHint: "设置为 0 表示禁用重试，最大为 5。",
     taskShape: "任务形状",
     taskShapeCompact: "经典模式（persona 放在 user）",
     taskShapeAllInSystem: "全部放在 system",
@@ -130,6 +135,7 @@ const COPY = {
     inputRequired: "请输入文本。",
     invalidMaxTokens: "最大 Token 必须是非负整数（0 表示不限制）。",
     invalidTimeout: "超时时间必须是正数。",
+    invalidRetryCount: "重试次数必须是 0 到 5 之间的整数。",
     loadingError: "加载评论配置失败",
     generateError: "评论生成失败",
   },
@@ -167,6 +173,14 @@ function parseNonNegativeInt(value: string): number | null {
 function parsePositiveFloat(value: string): number | null {
   const parsed = Number.parseFloat(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+}
+
+function parseRetryCount(value: string): number | null {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 5) {
     return null;
   }
   return parsed;
@@ -321,6 +335,7 @@ export default function CommentLabPage() {
   const [personaKey, setPersonaKey] = useState("");
   const [maxTokens, setMaxTokens] = useState("0");
   const [timeoutSeconds, setTimeoutSeconds] = useState("180");
+  const [retryCount, setRetryCount] = useState("0");
   const [taskShape, setTaskShape] = useState<CommentingTaskShape>("compact");
 
   const [userInput, setUserInput] = useState("");
@@ -406,6 +421,11 @@ export default function CommentLabPage() {
       setError(copy.invalidTimeout);
       return;
     }
+    const parsedRetryCount = parseRetryCount(retryCount);
+    if (parsedRetryCount === null) {
+      setError(copy.invalidRetryCount);
+      return;
+    }
 
     setSubmitting(true);
     const startedAtMs = performance.now();
@@ -417,6 +437,7 @@ export default function CommentLabPage() {
         model,
         max_tokens: parsedMaxTokens,
         timeout_seconds: parsedTimeoutSeconds,
+        retry_count: parsedRetryCount,
         task_shape: taskShape,
       });
       setOutput(payload.content || "");
@@ -550,6 +571,23 @@ export default function CommentLabPage() {
                 onChange={(event) => setTimeoutSeconds(event.target.value)}
                 disabled={submitting}
               />
+            </label>
+
+            <label className="field">
+              <span>{copy.retryCount}</span>
+              <input
+                className="input"
+                type="number"
+                min={0}
+                max={5}
+                step={1}
+                value={retryCount}
+                onChange={(event) => setRetryCount(event.target.value)}
+                disabled={submitting}
+              />
+              <span className="muted" style={{ fontSize: 12 }}>
+                {copy.retryCountHint}
+              </span>
             </label>
 
             <label className="field">

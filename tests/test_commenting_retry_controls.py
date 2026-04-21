@@ -1,0 +1,163 @@
+from __future__ import annotations
+
+import json
+
+import httpx
+import pytest
+from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_none
+
+from utils.commenting_service import (
+    _RETRYABLE_COMMENTING_EXCEPTIONS,
+    CommentingService,
+)
+
+
+def _build_service() -> CommentingService:
+    return CommentingService(
+        base_url="http://127.0.0.1:1234/v1",
+        api_key="test-key",
+        timeout_seconds=180,
+        provider_name="lmstudio-test",
+    )
+
+
+def test_retry_count_zero_makes_single_provider_attempt(monkeypatch) -> None:
+    service = _build_service()
+    attempts = {"count": 0}
+
+    def fake_once(payload, *, timeout_seconds):
+        attempts["count"] += 1
+        raise httpx.TimeoutException("timed out")
+
+    monkeypatch.setattr(service, "_post_chat_completions_once", fake_once)
+    monkeypatch.setattr(
+        service,
+        "_build_retrying",
+        lambda retry_count: Retrying(
+            stop=stop_after_attempt(1 + service._clamp_retry_count(retry_count)),
+            wait=wait_none(),
+            retry=retry_if_exception_type(_RETRYABLE_COMMENTING_EXCEPTIONS),
+            reraise=True,
+        ),
+    )
+
+    with pytest.raises(httpx.TimeoutException):
+        service._post_chat_completions(
+            {"model": "lmstudio_openai/qwen3.5-27b"},
+            timeout_seconds=30,
+            retry_count=0,
+        )
+
+    assert attempts["count"] == 1
+
+
+@pytest.mark.parametrize(
+    ("retry_count", "expected_attempts"),
+    [
+        (1, 2),
+        (2, 3),
+    ],
+)
+def test_retry_count_controls_total_attempts(monkeypatch, retry_count: int, expected_attempts: int) -> None:
+    service = _build_service()
+    attempts = {"count": 0}
+
+    def fake_once(payload, *, timeout_seconds):
+        attempts["count"] += 1
+        if attempts["count"] < expected_attempts:
+            raise httpx.ReadError("temporary read failure")
+        return {"choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}]}
+
+    monkeypatch.setattr(service, "_post_chat_completions_once", fake_once)
+    monkeypatch.setattr(
+        service,
+        "_build_retrying",
+        lambda retry_count: Retrying(
+            stop=stop_after_attempt(1 + service._clamp_retry_count(retry_count)),
+            wait=wait_none(),
+            retry=retry_if_exception_type(_RETRYABLE_COMMENTING_EXCEPTIONS),
+            reraise=True,
+        ),
+    )
+
+    payload = service._post_chat_completions(
+        {"model": "lmstudio_openai/qwen3.5-27b"},
+        timeout_seconds=30,
+        retry_count=retry_count,
+    )
+
+    assert attempts["count"] == expected_attempts
+    assert payload["choices"][0]["message"]["content"] == "ok"
+
+
+def test_non_transient_provider_errors_do_not_retry(monkeypatch) -> None:
+    service = _build_service()
+    attempts = {"count": 0}
+
+    def fake_once(payload, *, timeout_seconds):
+        attempts["count"] += 1
+        raise ValueError("bad request")
+
+    monkeypatch.setattr(service, "_post_chat_completions_once", fake_once)
+    monkeypatch.setattr(
+        service,
+        "_build_retrying",
+        lambda retry_count: Retrying(
+            stop=stop_after_attempt(1 + service._clamp_retry_count(retry_count)),
+            wait=wait_none(),
+            retry=retry_if_exception_type(_RETRYABLE_COMMENTING_EXCEPTIONS),
+            reraise=True,
+        ),
+    )
+
+    with pytest.raises(ValueError):
+        service._post_chat_completions(
+            {"model": "lmstudio_openai/qwen3.5-27b"},
+            timeout_seconds=30,
+            retry_count=5,
+        )
+
+    assert attempts["count"] == 1
+
+
+def test_structured_output_fallback_stays_separate_from_retry_policy(monkeypatch) -> None:
+    service = _build_service()
+    calls: list[dict[str, object]] = []
+
+    def fake_post(payload, *, timeout_seconds, retry_count):
+        calls.append(
+            {
+                "payload": dict(payload),
+                "timeout_seconds": timeout_seconds,
+                "retry_count": retry_count,
+            }
+        )
+        if "response_format" in payload:
+            raise ValueError("response_format json_schema is not supported")
+        return {
+            "choices": [
+                {
+                    "message": {"content": json.dumps({"comment": "Fallback succeeded."})},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {},
+        }
+
+    monkeypatch.setattr(service, "_post_chat_completions", fake_post)
+
+    result = service.generate_comment(
+        model="lmstudio_openai/qwen3.5-27b",
+        system_prompt="System",
+        persona_prompt="Persona",
+        news_input="News input",
+        timeout_seconds=45,
+        retry_count=0,
+        task_shape="structured_output",
+    )
+
+    assert "Fallback succeeded." in result["content"]
+    assert len(calls) == 2
+    assert "response_format" in calls[0]["payload"]
+    assert "response_format" not in calls[1]["payload"]
+    assert all(call["retry_count"] == 0 for call in calls)

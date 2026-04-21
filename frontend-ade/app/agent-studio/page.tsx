@@ -61,6 +61,8 @@ type DiffOp<T> = {
 
 const TOOL_PROBE_DEFAULT_EN = "Decide whether to call a tool for this request, then return a concise answer.";
 const TOOL_PROBE_DEFAULT_ZH = "请根据当前问题决定是否需要调用工具，再回答结果。";
+const AGENT_STUDIO_DEFAULT_TIMEOUT_SECONDS = "180";
+const AGENT_STUDIO_DEFAULT_RETRY_COUNT = "0";
 
 function toErrorMessage(exc: unknown): string {
   return exc instanceof Error ? exc.message : String(exc);
@@ -117,6 +119,22 @@ function summarizeDescription(description: string, fallbackText = "No descriptio
     return normalized;
   }
   return `${normalized.slice(0, maxLength)}...`;
+}
+
+function parsePositiveFloat(value: string): number | null {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+}
+
+function parseRetryCount(value: string): number | null {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 5) {
+    return null;
+  }
+  return parsed;
 }
 
 function parseToolExamples(
@@ -347,6 +365,8 @@ export default function AgentStudioPage() {
   const [modelEditValue, setModelEditValue] = useState("");
 
   const [chatInput, setChatInput] = useState("");
+  const [runtimeTimeoutSeconds, setRuntimeTimeoutSeconds] = useState(AGENT_STUDIO_DEFAULT_TIMEOUT_SECONDS);
+  const [runtimeRetryCount, setRuntimeRetryCount] = useState(AGENT_STUDIO_DEFAULT_RETRY_COUNT);
   const [chatHistory, setChatHistory] = useState<ChatEntry[]>([]);
 
   const [agentDetails, setAgentDetails] = useState<AgentDetails | null>(null);
@@ -895,6 +915,16 @@ export default function AgentStudioPage() {
     if (!text) {
       return;
     }
+    const parsedTimeoutSeconds = parsePositiveFloat(runtimeTimeoutSeconds);
+    if (parsedTimeoutSeconds === null) {
+      setError(t("Timeout must be a positive number.", "超时时间必须是正数。"));
+      return;
+    }
+    const parsedRetryCount = parseRetryCount(runtimeRetryCount);
+    if (parsedRetryCount === null) {
+      setError(t("Retry count must be an integer between 0 and 5.", "重试次数必须是 0 到 5 之间的整数。"));
+      return;
+    }
 
     setChatBusy(true);
     setError("");
@@ -912,7 +942,10 @@ export default function AgentStudioPage() {
     setChatInput("");
 
     try {
-      const result = await sendChat(selectedAgentId, text);
+      const result = await sendChat(selectedAgentId, text, {
+        timeout_seconds: parsedTimeoutSeconds,
+        retry_count: parsedRetryCount,
+      });
       const assistant = extractAssistantReply(result);
       const elapsedMs = Math.max(0, performance.now() - startedAt);
 
@@ -1081,6 +1114,16 @@ export default function AgentStudioPage() {
       setError(t("Tool probe input cannot be empty.", "工具探测输入不能为空。"));
       return;
     }
+    const parsedTimeoutSeconds = parsePositiveFloat(runtimeTimeoutSeconds);
+    if (parsedTimeoutSeconds === null) {
+      setError(t("Timeout must be a positive number.", "超时时间必须是正数。"));
+      return;
+    }
+    const parsedRetryCount = parseRetryCount(runtimeRetryCount);
+    if (parsedRetryCount === null) {
+      setError(t("Retry count must be an integer between 0 and 5.", "重试次数必须是 0 到 5 之间的整数。"));
+      return;
+    }
 
     setToolProbeBusy(true);
     setError("");
@@ -1091,6 +1134,8 @@ export default function AgentStudioPage() {
         agent_id: selectedAgentId,
         input,
         expected_tool_name: toolProbeExpected.trim() || undefined,
+        timeout_seconds: parsedTimeoutSeconds,
+        retry_count: parsedRetryCount,
       });
       setToolProbeResult(payload);
       setLastResult(payload.result || null);
@@ -1438,6 +1483,12 @@ export default function AgentStudioPage() {
                         "发送运行时消息，并输出检测到的工具调用/返回统计。",
                       )}
                     </p>
+                    <p className="muted" style={{ marginTop: 8 }}>
+                      {t(
+                        "Uses the shared Agent Studio timeout and retry controls from the Chat panel.",
+                        "会使用聊天面板中的共享超时与重试控制。",
+                      )}
+                    </p>
                     <label className="field" style={{ marginTop: 8 }}>
                       <span>{t("Probe input", "探测输入")}</span>
                       <textarea
@@ -1505,6 +1556,40 @@ export default function AgentStudioPage() {
             )}
           </div>
 
+          <div className="form-grid" style={{ marginTop: 12 }}>
+            <label className="field">
+              <span>{t("Timeout (seconds)", "超时时间（秒）")}</span>
+              <input
+                className="input"
+                type="number"
+                min={5}
+                max={600}
+                step={1}
+                value={runtimeTimeoutSeconds}
+                onChange={(e) => setRuntimeTimeoutSeconds(e.target.value)}
+                disabled={chatBusy || toolProbeBusy}
+              />
+            </label>
+            <label className="field">
+              <span>{t("Retry Count", "重试次数")}</span>
+              <input
+                className="input"
+                type="number"
+                min={0}
+                max={5}
+                step={1}
+                value={runtimeRetryCount}
+                onChange={(e) => setRuntimeRetryCount(e.target.value)}
+                disabled={chatBusy || toolProbeBusy}
+              />
+            </label>
+          </div>
+          <p className="muted" style={{ marginTop: 8 }}>
+            {t(
+              "These settings apply to Chat and Tool Probe. Set retry count to 0 to disable retries.",
+              "这些设置会同时作用于聊天与工具探测。将重试次数设为 0 即禁用重试。",
+            )}
+          </p>
           <div className="toolbar" style={{ marginTop: 12 }}>
             <textarea
               className="input"

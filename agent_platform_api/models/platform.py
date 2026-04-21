@@ -9,6 +9,8 @@ class PlatformRuntimeMessageRequest(BaseModel):
     input: str
     override_model: str | None = None
     override_system: str | None = None
+    timeout_seconds: float | None = Field(default=None, gt=0, le=600)
+    retry_count: int | None = Field(default=None, ge=0, le=5)
 
 
 class PlatformSystemUpdateRequest(BaseModel):
@@ -29,6 +31,8 @@ class PlatformToolTestInvokeRequest(BaseModel):
     expected_tool_name: str | None = None
     override_model: str | None = None
     override_system: str | None = None
+    timeout_seconds: float | None = Field(default=None, gt=0, le=600)
+    retry_count: int | None = Field(default=None, ge=0, le=5)
 
 
 class PlatformTestRunRequest(BaseModel):

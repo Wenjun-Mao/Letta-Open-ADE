@@ -127,6 +127,8 @@ async def api_platform_tool_test_invoke(request: PlatformToolTestInvokeRequest):
             message=text,
             override_model=(request.override_model or "").strip() or None,
             override_system=(request.override_system or "").strip() or None,
+            timeout_seconds=request.timeout_seconds,
+            retry_count=request.retry_count,
         )
         result = payload.get("result", {}) if isinstance(payload, dict) else {}
         sequence = result.get("sequence", []) if isinstance(result, dict) else []

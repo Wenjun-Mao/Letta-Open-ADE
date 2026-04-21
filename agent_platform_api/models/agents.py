@@ -11,6 +11,8 @@ from .common import ScenarioType
 class ChatRequest(BaseModel):
     agent_id: str
     message: str
+    timeout_seconds: float | None = Field(default=None, gt=0, le=600)
+    retry_count: int | None = Field(default=None, ge=0, le=5)
 
 
 class AgentCreateRequest(BaseModel):

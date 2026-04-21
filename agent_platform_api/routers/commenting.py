@@ -87,6 +87,7 @@ async def api_commenting_generate(request: CommentingGenerateRequest):
             news_input=text,
             max_tokens=request.max_tokens,
             timeout_seconds=request.timeout_seconds,
+            retry_count=request.retry_count,
             task_shape=request.task_shape,
         )
     except Exception as exc:

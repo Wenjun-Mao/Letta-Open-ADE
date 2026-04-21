@@ -21,6 +21,7 @@ class CommentingGenerateRequest(BaseModel):
     model: str | None = None
     max_tokens: int | None = Field(default=None, ge=0)
     timeout_seconds: float | None = Field(default=None, gt=0)
+    retry_count: int | None = Field(default=None, ge=0, le=5)
     task_shape: CommentingTaskShape | None = None
 
 

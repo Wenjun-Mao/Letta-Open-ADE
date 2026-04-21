@@ -76,6 +76,8 @@ async def api_chat(request: ChatRequest):
             agent_id=request.agent_id,
             message=request.message,
             datetime_system_hint=runtime_datetime_system_hint() if is_datetime_query(request.message) else None,
+            timeout_seconds=request.timeout_seconds,
+            retry_count=request.retry_count,
         )
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

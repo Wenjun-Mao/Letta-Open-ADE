@@ -462,12 +462,21 @@ export function getRawPrompt(agentId: string) {
   });
 }
 
-export function sendChat(agentId: string, message: string) {
+export function sendChat(
+  agentId: string,
+  message: string,
+  options?: {
+    timeout_seconds?: number;
+    retry_count?: number;
+  },
+) {
   return requestJson<ChatResult>("/api/v1/chat", {
     method: "POST",
     body: {
       agent_id: agentId,
       message,
+      timeout_seconds: options?.timeout_seconds,
+      retry_count: options?.retry_count,
     },
   }).then((result) => {
     invalidateAgentScope(agentId);
@@ -482,6 +491,7 @@ export function generateComment(payload: {
   model?: string;
   max_tokens?: number;
   timeout_seconds?: number;
+  retry_count?: number;
   task_shape?: CommentingTaskShape;
 }) {
   return requestJson<CommentingGenerateResponse>("/api/v1/commenting/generate", {
@@ -494,6 +504,7 @@ export function generateComment(payload: {
       model: payload.model?.trim() || undefined,
       max_tokens: payload.max_tokens,
       timeout_seconds: payload.timeout_seconds,
+      retry_count: payload.retry_count,
       task_shape: payload.task_shape,
     },
   });
@@ -598,6 +609,8 @@ export function testInvokeTool(payload: {
   expected_tool_name?: string;
   override_model?: string;
   override_system?: string;
+  timeout_seconds?: number;
+  retry_count?: number;
 }) {
   return requestJson<PlatformToolTestInvokeResult>("/api/v1/platform/tools/test-invoke", {
     method: "POST",

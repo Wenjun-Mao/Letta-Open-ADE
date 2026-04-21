@@ -49,6 +49,8 @@ async def api_platform_send_message(agent_id: str, request: PlatformRuntimeMessa
             message=text,
             override_model=(request.override_model or "").strip() or None,
             override_system=(request.override_system or "").strip() or None,
+            timeout_seconds=request.timeout_seconds,
+            retry_count=request.retry_count,
         )
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
