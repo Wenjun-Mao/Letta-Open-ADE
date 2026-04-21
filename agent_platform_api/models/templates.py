@@ -36,7 +36,7 @@ class ApiPromptPersonaMetadataResponse(BaseModel):
 
 
 class PromptTemplateWriteRequest(BaseModel):
-    scenario: ScenarioType = "chat"
+    scenario: ScenarioType | None = None
     key: str
     label: str = ""
     description: str = ""
@@ -50,7 +50,7 @@ class PromptTemplatePatchRequest(BaseModel):
 
 
 class PersonaTemplateWriteRequest(BaseModel):
-    scenario: ScenarioType = "chat"
+    scenario: ScenarioType | None = None
     key: str
     label: str = ""
     description: str = ""

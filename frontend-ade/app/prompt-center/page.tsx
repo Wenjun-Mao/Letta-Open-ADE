@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   PromptTemplateRecord,
+  Scenario,
   archivePersonaTemplate,
   archivePromptTemplate,
   createPersonaTemplate,
@@ -26,6 +27,16 @@ function toErrorMessage(value: unknown): string {
   return value instanceof Error ? value.message : String(value);
 }
 
+function normalizeScenarioKey(key: string, scenario: Scenario): string {
+  const normalized = key.trim().toLowerCase();
+  if (!normalized) {
+    return "";
+  }
+
+  const withoutScenarioPrefix = normalized.replace(/^(chat|comment)_/, "");
+  return `${scenario}_${withoutScenarioPrefix}`;
+}
+
 const COPY = {
   en: {
     kicker: "Template Workspace",
@@ -34,19 +45,23 @@ const COPY = {
       "Manage system prompts and persona templates as workspace files, with archive/restore and immediate availability.",
     promptsTab: "System Prompts",
     personasTab: "Persona Prompts",
+    chatScenario: "Chat",
+    commentScenario: "Comment",
+    scenarioLabel: "Scenario",
     includeArchived: "Include archived",
     refresh: "Refresh",
     createNew: "New",
     key: "Key",
-    label: "Label",
-    description: "Description",
+    label: "Label (optional)",
+    description: "Description (optional)",
     content: "Content",
     saveCreate: "Create",
     saveUpdate: "Update",
     archive: "Archive",
     restore: "Restore",
     purge: "Purge",
-    openInStudio: "Open In Agent Studio",
+    openInAgentStudio: "Open In Agent Studio",
+    openInCommentLab: "Open In Comment Lab",
     noTemplates: "No templates found for current filter.",
     activeList: "Templates",
     editor: "Editor",
@@ -62,19 +77,23 @@ const COPY = {
     subtitle: "将 System Prompt 与 Persona 模板作为工作区文件管理，支持归档恢复并即时生效。",
     promptsTab: "System Prompt",
     personasTab: "Persona Prompt",
+    chatScenario: "Chat",
+    commentScenario: "Comment",
+    scenarioLabel: "场景",
     includeArchived: "包含已归档",
     refresh: "刷新",
     createNew: "新建",
     key: "键名",
-    label: "标题",
-    description: "描述",
+    label: "标题（可选）",
+    description: "描述（可选）",
     content: "内容",
     saveCreate: "创建",
     saveUpdate: "更新",
     archive: "归档",
     restore: "恢复",
     purge: "彻底删除",
-    openInStudio: "在智能体工作台中打开",
+    openInAgentStudio: "在智能体工作台中打开",
+    openInCommentLab: "在评论实验室中打开",
     noTemplates: "当前筛选下没有模板。",
     activeList: "模板列表",
     editor: "编辑器",
@@ -91,6 +110,7 @@ export default function PromptCenterPage() {
   const copy = COPY[locale];
 
   const [tab, setTab] = useState<CenterTab>("prompts");
+  const [scenario, setScenario] = useState<Scenario>("chat");
   const [includeArchived, setIncludeArchived] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -147,8 +167,8 @@ export default function PromptCenterPage() {
     setError("");
     try {
       const [promptPayload, personaPayload] = await Promise.all([
-        listPromptTemplates(includeArchived),
-        listPersonaTemplates(includeArchived),
+        listPromptTemplates(includeArchived, scenario),
+        listPersonaTemplates(includeArchived, scenario),
       ]);
 
       setPromptItems(promptPayload.items || []);
@@ -172,13 +192,13 @@ export default function PromptCenterPage() {
 
   useEffect(() => {
     void refresh();
-  }, [includeArchived]);
+  }, [includeArchived, scenario]);
 
   useEffect(() => {
     resetDraft();
     setError("");
     setStatus("");
-  }, [tab]);
+  }, [tab, scenario]);
 
   const onSave = async () => {
     if (!draftKey.trim()) {
@@ -198,10 +218,14 @@ export default function PromptCenterPage() {
     setError("");
     setStatus("");
     try {
+      const resolvedKey = editingExisting ? draftKey.trim() : normalizeScenarioKey(draftKey, scenario);
+      setDraftKey(resolvedKey);
+
       const payload = {
-        key: draftKey.trim(),
-        label: draftLabel.trim(),
-        description: draftDescription.trim(),
+        scenario,
+        key: resolvedKey,
+        label: draftLabel.trim() || undefined,
+        description: draftDescription.trim() || undefined,
         content: draftContent,
       };
 
@@ -233,9 +257,9 @@ export default function PromptCenterPage() {
     setStatus("");
     try {
       if (tab === "prompts") {
-        await archivePromptTemplate(selected.key);
+        await archivePromptTemplate(selected.key, selected.scenario);
       } else {
-        await archivePersonaTemplate(selected.key);
+        await archivePersonaTemplate(selected.key, selected.scenario);
       }
       setStatus(`${selected.key}: ${copy.archive} OK`);
       await refresh();
@@ -256,8 +280,8 @@ export default function PromptCenterPage() {
     try {
       const result =
         tab === "prompts"
-          ? await restorePromptTemplate(selected.key)
-          : await restorePersonaTemplate(selected.key);
+          ? await restorePromptTemplate(selected.key, selected.scenario)
+          : await restorePersonaTemplate(selected.key, selected.scenario);
       hydrateDraft(result);
       setStatus(`${selected.key}: ${copy.restore} OK`);
       await refresh();
@@ -281,9 +305,9 @@ export default function PromptCenterPage() {
     setStatus("");
     try {
       if (tab === "prompts") {
-        await purgePromptTemplate(selected.key);
+        await purgePromptTemplate(selected.key, selected.scenario);
       } else {
-        await purgePersonaTemplate(selected.key);
+        await purgePersonaTemplate(selected.key, selected.scenario);
       }
       setStatus(`${selected.key}: ${copy.purge} OK`);
       resetDraft();
@@ -295,19 +319,26 @@ export default function PromptCenterPage() {
     }
   };
 
-  const studioHref = useMemo(() => {
+  const selectedScenario = selected?.scenario || scenario;
+
+  const workspaceHref = useMemo(() => {
     const promptKey = tab === "prompts" ? selected?.key || activePromptKeys[0] || "" : activePromptKeys[0] || "";
     const personaKey = tab === "personas" ? selected?.key || activePersonaKeys[0] || "" : activePersonaKeys[0] || "";
     const params = new URLSearchParams();
-    params.set("focus", "model");
     if (promptKey) {
       params.set("promptKey", promptKey);
     }
     if (personaKey) {
       params.set("personaKey", personaKey);
     }
+    if (selectedScenario === "comment") {
+      return `/comment-lab?${params.toString()}`;
+    }
+    params.set("focus", "model");
     return `/agent-studio?${params.toString()}`;
-  }, [activePersonaKeys, activePromptKeys, selected?.key, tab]);
+  }, [activePersonaKeys, activePromptKeys, scenario, selected?.key, selectedScenario, tab]);
+
+  const workspaceLabel = selectedScenario === "comment" ? copy.openInCommentLab : copy.openInAgentStudio;
 
   return (
     <section>
@@ -320,6 +351,12 @@ export default function PromptCenterPage() {
           <div className="toolbar">
             <button className={tab === "prompts" ? "tab-active" : "tab-item"} onClick={() => setTab("prompts")}>{copy.promptsTab}</button>
             <button className={tab === "personas" ? "tab-active" : "tab-item"} onClick={() => setTab("personas")}>{copy.personasTab}</button>
+          </div>
+
+          <div className="toolbar">
+            <span className="muted" style={{ fontSize: 12 }}>{copy.scenarioLabel}</span>
+            <button className={scenario === "chat" ? "tab-active" : "tab-item"} onClick={() => setScenario("chat")}>{copy.chatScenario}</button>
+            <button className={scenario === "comment" ? "tab-active" : "tab-item"} onClick={() => setScenario("comment")}>{copy.commentScenario}</button>
           </div>
 
           <div className="toolbar">
@@ -363,6 +400,7 @@ export default function PromptCenterPage() {
               >
                 <div style={{ fontWeight: 700 }}>{item.label || item.key}</div>
                 <div className="muted" style={{ fontSize: 12 }}>{item.key}</div>
+                <div className="muted" style={{ fontSize: 12 }}>{item.scenario}</div>
                 <div className="muted" style={{ fontSize: 12 }}>{item.archived ? copy.archivedBadge : copy.activeBadge}</div>
               </button>
             ))}
@@ -376,8 +414,22 @@ export default function PromptCenterPage() {
 
           <div className="form-grid" style={{ marginTop: 8 }}>
             <label className="field">
+              <span>{copy.scenarioLabel}</span>
+              <input className="input" value={scenario} disabled />
+            </label>
+            <label className="field">
               <span>{copy.key}</span>
-              <input className="input" value={draftKey} onChange={(e) => setDraftKey(e.target.value)} disabled={editingExisting} />
+              <input
+                className="input"
+                value={draftKey}
+                onChange={(e) => setDraftKey(e.target.value)}
+                onBlur={(e) => {
+                  if (!editingExisting) {
+                    setDraftKey(normalizeScenarioKey(e.target.value, scenario));
+                  }
+                }}
+                disabled={editingExisting}
+              />
             </label>
             <label className="field">
               <span>{copy.label}</span>
@@ -406,7 +458,7 @@ export default function PromptCenterPage() {
             <button className="button danger" onClick={() => void onPurge()} disabled={busy || !selected || !Boolean(selected.archived)}>
               {copy.purge}
             </button>
-            <Link className="button muted" href={studioHref}>{copy.openInStudio}</Link>
+            <Link className="button muted" href={workspaceHref}>{workspaceLabel}</Link>
           </div>
         </div>
       </div>

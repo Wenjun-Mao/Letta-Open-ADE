@@ -374,8 +374,28 @@ export default function CommentLabPage() {
       setPersonas(nextPersonas);
 
       setModel((current) => (current && nextModels.some((option) => option.key === current) ? current : ""));
-      setPromptKey((current) => pickSelectedKey(current, nextPrompts, payload.defaults.prompt_key || ""));
-      setPersonaKey((current) => pickSelectedKey(current, nextPersonas, payload.defaults.persona_key || ""));
+      const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const requestedPromptKey = (params?.get("promptKey") || "").trim();
+      const requestedPersonaKey = (params?.get("personaKey") || "").trim();
+
+      setPromptKey((current) => {
+        if (current && nextPrompts.some((option) => option.key === current)) {
+          return current;
+        }
+        if (requestedPromptKey && nextPrompts.some((option) => option.key === requestedPromptKey)) {
+          return requestedPromptKey;
+        }
+        return pickSelectedKey("", nextPrompts, payload.defaults.prompt_key || "");
+      });
+      setPersonaKey((current) => {
+        if (current && nextPersonas.some((option) => option.key === current)) {
+          return current;
+        }
+        if (requestedPersonaKey && nextPersonas.some((option) => option.key === requestedPersonaKey)) {
+          return requestedPersonaKey;
+        }
+        return pickSelectedKey("", nextPersonas, payload.defaults.persona_key || "");
+      });
       if (payload.commenting) {
         setMaxTokens(`${payload.commenting.max_tokens}`);
         setTimeoutSeconds(`${payload.commenting.timeout_seconds}`);
