@@ -10,9 +10,9 @@
 - Runtime stack is Docker Compose: Postgres + pgvector, Redis, Letta server, FastAPI `agent_platform_api`, and Next.js `frontend-ade`.
 - Backend API surface lives in `agent_platform_api/`; reusable Letta operations live in `utils/`.
 - Prompt and persona assets live in `prompts/system_prompts/` and `prompts/persona/`.
-- Tests are role-based:
-  - `tests/checks/`: focused diagnostics and smoke checks
-  - `tests/runners/`: config/scenario-driven runs with artifacts in `tests/outputs/`
+- Tests are split into:
+  - `tests/test_*.py`: pytest coverage
+  - `tests/checks/`: the two maintained live checks
 
 ## Build and Test
 - Install Python dependencies: `uv sync`
@@ -21,10 +21,9 @@
   - Windows: `./scripts/reset_database.ps1`
   - Linux/macOS: `./scripts/reset_database.sh`
 - Core validations (run based on scope):
-  - `uv run tests/checks/agent_bootstrap_check.py`
-  - `uv run tests/checks/platform_api_e2e_check.py`
-  - `uv run tests/checks/ade_mvp_smoke_e2e_check.py`
-  - `uv run tests/checks/platform_dual_run_gate.py`
+  - `uv run python -m pytest`
+  - `uv run python tests/checks/platform_api_e2e_check.py`
+  - `uv run python tests/checks/ade_mvp_smoke_e2e_check.py`
 - Frontend build validation: `npm --prefix frontend-ade run build`
 
 ## Conventions

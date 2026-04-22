@@ -293,6 +293,10 @@ def model_catalog(force_refresh: bool = False) -> dict[str, Any]:
                 "letta_handle_prefix": source.letta_handle_prefix,
                 "status": source.status,
                 "detail": source.detail,
+                "allowlist_applied": source.allowlist_applied,
+                "allowlist_checked_at": source.allowlist_checked_at,
+                "raw_model_count": source.raw_model_count,
+                "filtered_model_count": source.filtered_model_count,
                 "models": [
                     {
                         "provider_model_id": model.provider_model_id,
@@ -449,9 +453,9 @@ def resolve_comment_model_selection(
 
 def commenting_runtime_defaults() -> ApiCommentingRuntimeDefaultsResponse:
     defaults = commenting_service.runtime_defaults()
-    task_shape = str(defaults.get("task_shape", "compact") or "compact").strip().lower()
-    if task_shape not in {"compact", "all_in_system", "structured_output"}:
-        task_shape = "compact"
+    task_shape = str(defaults.get("task_shape", "classic") or "classic").strip().lower()
+    if task_shape not in {"classic", "all_in_system", "structured_output"}:
+        task_shape = "classic"
     resolved_task_shape = cast(CommentingTaskShape, task_shape)
     return ApiCommentingRuntimeDefaultsResponse(
         max_tokens=int(defaults.get("max_tokens", 0)),

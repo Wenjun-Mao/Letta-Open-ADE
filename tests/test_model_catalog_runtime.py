@@ -6,7 +6,9 @@ import pytest
 
 import agent_platform_api.runtime as runtime
 from agent_platform_api.settings import ModelSourceConfig
+from utils.model_allowlist import SourceAllowlistLoadResult
 from utils.model_catalog import CatalogAuthError, CatalogModelRecord, ModelCatalogService
+import utils.model_catalog as model_catalog_module
 
 
 def _settings_with_sources(*sources: ModelSourceConfig) -> SimpleNamespace:
@@ -49,6 +51,7 @@ def test_model_catalog_service_unions_healthy_sources_and_preserves_source_scope
         api_key_secret="",
     )
     service = ModelCatalogService(settings_factory=lambda: _settings_with_sources(local, ark, blocked))
+    monkeypatch.setattr(model_catalog_module, "load_configured_source_allowlist", lambda source_id: None)
 
     def fake_fetch(source: ModelSourceConfig, *, settings) -> dict[str, object]:
         if source.id == "local":
@@ -161,3 +164,122 @@ def test_extract_model_records_normalizes_windows_path_ids() -> None:
     )
 
     assert records == [CatalogModelRecord(provider_model_id="gemma-4-31b-it", model_type="llm")]
+
+
+def test_model_catalog_service_filters_ark_models_through_allowlist(monkeypatch) -> None:
+    local_unsloth = ModelSourceConfig(
+        id="local_unsloth",
+        label="Local Unsloth",
+        base_url="http://127.0.0.1:2234/v1",
+        kind="openai-compatible",
+        enabled_for=["comment"],
+        letta_handle_prefix="lmstudio_openai",
+    )
+    local_lmstudio = ModelSourceConfig(
+        id="local_lmstudio",
+        label="Local LM Studio",
+        base_url="http://127.0.0.1:1234/v1",
+        kind="openai-compatible",
+        enabled_for=["chat", "comment"],
+        letta_handle_prefix="lmstudio_openai",
+    )
+    ark = ModelSourceConfig(
+        id="ark",
+        label="Ark",
+        base_url="https://ark.example/v3",
+        kind="openai-compatible",
+        enabled_for=["chat", "comment"],
+        letta_handle_prefix="openai-proxy",
+    )
+    service = ModelCatalogService(settings_factory=lambda: _settings_with_sources(local_unsloth, local_lmstudio, ark))
+
+    monkeypatch.setattr(
+        model_catalog_module,
+        "load_configured_source_allowlist",
+        lambda source_id: (
+            SourceAllowlistLoadResult(
+                source_id="ark",
+                path=SimpleNamespace(),
+                applied=True,
+                checked_at="2026-04-22T12:00:00+00:00",
+                probe_mode="chat-probe",
+                raw_model_count=3,
+                usable_models=frozenset({"doubao-seed-1-8-251228"}),
+                detail="ok",
+            )
+            if source_id == "ark"
+            else None
+        ),
+    )
+
+    def fake_fetch(source: ModelSourceConfig, *, settings) -> dict[str, object]:
+        if source.id == "local_unsloth":
+            return {"data": [{"id": "gemma-4-31b-it"}]}
+        if source.id == "local_lmstudio":
+            return {"data": [{"id": "qwen3.5-27b"}]}
+        return {
+            "data": [
+                {"id": "doubao-seed-1-8-251228"},
+                {"id": "deepseek-v3-250324"},
+                {"id": "doubao-embedding-text-240715"},
+            ]
+        }
+
+    monkeypatch.setattr(service, "_fetch_models_payload", fake_fetch)
+
+    snapshot = service.snapshot(force_refresh=True)
+    ark_source = next(source for source in snapshot.sources if source.id == "ark")
+    entries = service.flatten(snapshot)
+
+    assert [entry.model_key for entry in entries] == [
+        "local_unsloth::gemma-4-31b-it",
+        "local_lmstudio::qwen3.5-27b",
+        "ark::doubao-seed-1-8-251228",
+    ]
+    assert ark_source.allowlist_applied is True
+    assert ark_source.raw_model_count == 3
+    assert ark_source.filtered_model_count == 1
+    assert ark_source.models == (
+        CatalogModelRecord(provider_model_id="doubao-seed-1-8-251228", model_type="llm"),
+    )
+
+
+def test_model_catalog_service_fails_closed_when_ark_allowlist_is_missing(monkeypatch) -> None:
+    ark = ModelSourceConfig(
+        id="ark",
+        label="Ark",
+        base_url="https://ark.example/v3",
+        kind="openai-compatible",
+        enabled_for=["chat", "comment"],
+        letta_handle_prefix="openai-proxy",
+    )
+    service = ModelCatalogService(settings_factory=lambda: _settings_with_sources(ark))
+    monkeypatch.setattr(
+        model_catalog_module,
+        "load_configured_source_allowlist",
+        lambda source_id: SourceAllowlistLoadResult(
+            source_id="ark",
+            path=SimpleNamespace(),
+            applied=False,
+            checked_at=None,
+            probe_mode=None,
+            raw_model_count=0,
+            usable_models=frozenset(),
+            detail="Allowlist report missing.",
+        ),
+    )
+    monkeypatch.setattr(
+        service,
+        "_fetch_models_payload",
+        lambda source, *, settings: {"data": [{"id": "doubao-seed-1-8-251228"}, {"id": "deepseek-v3-250324"}]},
+    )
+
+    snapshot = service.snapshot(force_refresh=True)
+    ark_source = snapshot.sources[0]
+
+    assert ark_source.status == "healthy"
+    assert ark_source.allowlist_applied is False
+    assert ark_source.raw_model_count == 2
+    assert ark_source.filtered_model_count == 0
+    assert ark_source.models == ()
+    assert "allowlist unavailable" in ark_source.detail.lower()

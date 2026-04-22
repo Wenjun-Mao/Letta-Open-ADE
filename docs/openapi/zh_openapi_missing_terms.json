@@ -4,6 +4,8 @@
     "Get unified model-catalog diagnostics"
   ],
   "missing_titles": [
+    "Allowlist Applied",
+    "Allowlist Checked At",
     "Base Url",
     "Detail",
     "Displayed",
@@ -27,7 +29,6 @@
     "Recorded At",
     "Refresh",
     "Retry Count",
-    "Rounds",
     "Selected Attempt",
     "Size Bytes",
     "Sources",
@@ -44,6 +45,7 @@
     "Count",
     "Exit",
     "Extra",
+    "Filtered",
     "Is",
     "Lab",
     "Lines",

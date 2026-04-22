@@ -16,7 +16,8 @@ type RequestOptions = {
 };
 
 export type Scenario = "chat" | "comment";
-export type CommentingTaskShape = "compact" | "all_in_system" | "structured_output";
+export type CommentingTaskShape = "classic" | "all_in_system" | "structured_output";
+export type PlatformRunType = "platform_api_e2e_check" | "ade_mvp_smoke_e2e_check";
 
 export type OptionEntry = {
   key: string;
@@ -926,11 +927,7 @@ export function listTestRuns() {
 }
 
 export function createTestRun(payload: {
-  run_type: string;
-  model?: string;
-  embedding?: string;
-  rounds?: number;
-  config_path?: string;
+  run_type: PlatformRunType;
 }) {
   return requestJson<PlatformRunRecord>("/api/v1/platform/test-runs", {
     method: "POST",

@@ -33,6 +33,8 @@ The same key did not expose a usable text embedding model through the tested Ope
 
 1. Review `.env` or copy `.env.example` to `.env` and update values.
    `AGENT_PLATFORM_MODEL_SOURCES` is the shared ADE model catalog used by both Agent Studio and Comment Lab, while the Letta bootstrap variables remain dedicated to the upstream `letta_server`.
+   By default, `2234` is the active Unsloth Studio source for Comment Lab, while `1234` is reserved for optional LM Studio standby and Letta bootstrap compatibility.
+   Unsloth Studio itself remains host-managed: model loading, context window, and similar runtime controls are expected to be set in the Studio UI on the machine running it, not through ADE.
 2. Start the stack:
 
 ```powershell
@@ -154,6 +156,8 @@ After this, `agent_platform_api` should start directly with Uvicorn and no start
 - `uv.lock`: `uv` lockfile
 - `.dockerignore`: future-proof build-context filter
 - `MANUAL.md`: detailed decision log and handoff guide
+- `scripts/probe_provider_models.py`: rerunnable Ark usability probe for regenerating the checked-in allowlist
+- `agent_platform_api/catalog_data/ark_chat_probe_report.json`: persisted Ark chat-usable model allowlist
 - `notebooks/01_doubao_api_smoke.py`: direct Ark/Doubao validation
 - `notebooks/02_letta_e2e.py`: Letta end-to-end validation against the running stack
 
@@ -163,28 +167,19 @@ Current baseline assumptions for development tests:
 
 - Default system prompt baseline: `CHAT_V20260418_PROMPT`
 - Default test embedding: `letta/letta-free`
+- Comment Lab task shape default: `classic`
 
-Testing runners live under `tests/`:
+The maintained verification surface under `tests/` is:
 
 ```bash
-uv run tests/runners/persona_guardrail_runner.py --config tests/configs/suites --embedding letta/letta-free
-uv run tests/checks/provider_embedding_matrix_check.py
-uv run tests/checks/prompt_strategy_check.py
-uv run tests/checks/agent_bootstrap_check.py
-uv run tests/checks/platform_flag_gate_check.py
-uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free
+$env:PYTHONPATH='.'
+uv run python -m pytest
+uv run python scripts/probe_provider_models.py --source-id ark --mode chat-probe --write
+uv run python tests/checks/platform_api_e2e_check.py
+uv run python tests/checks/ade_mvp_smoke_e2e_check.py
 ```
 
-Test outputs are grouped by runner type under `tests/outputs/`:
-
-- Persona guardrail:
-	- Run folders under `tests/outputs/persona_guardrail/<run_tag>/`
-	- Index files: `tests/outputs/persona_guardrail/run_index.csv`, `tests/outputs/persona_guardrail/run_index.jsonl`
-- Memory update:
-	- Run folders under `tests/outputs/memory_update/<run_tag>/`
-	- Index files: `tests/outputs/memory_update/run_index.csv`, `tests/outputs/memory_update/run_index.jsonl`
-
-This avoids mixing different test semantics in one shared index.
+`tests/outputs/platform_orchestrator/` is now treated as transient runtime log storage for Test Center runs and is not part of the committed test surface.
 
 ## Agent Platform API (Initial Slice)
 
@@ -207,7 +202,7 @@ This avoids mixing different test semantics in one shared index.
 - `GET /api/v1/platform/test-runs`
 	- Lists orchestrated backend test runs.
 - `POST /api/v1/platform/test-runs`
-	- Starts one orchestrated check/runner execution.
+	- Starts one orchestrated backend check execution. Supported run types are `platform_api_e2e_check` and `ade_mvp_smoke_e2e_check`.
 - `GET /api/v1/platform/test-runs/{run_id}`
 	- Retrieves run status, tail logs, and exit code.
 - `POST /api/v1/platform/test-runs/{run_id}/cancel`
@@ -240,17 +235,12 @@ ADE MVP smoke check:
 uv run tests/checks/ade_mvp_smoke_e2e_check.py
 ```
 
-Dual-run cutover gate (backend E2E + ADE smoke):
-
-```bash
-uv run tests/checks/platform_dual_run_gate.py
-```
-
 If your running `agent_platform_api` service is on an older image, run checks against a source-backed instance:
 
 ```bash
 $env:AGENT_PLATFORM_API_BASE_URL="http://127.0.0.1:8285"
-uv run tests/checks/platform_dual_run_gate.py
+uv run python tests/checks/platform_api_e2e_check.py
+uv run python tests/checks/ade_mvp_smoke_e2e_check.py
 ```
 
 ## OpenAPI And Self-Hosted Docs Workflow

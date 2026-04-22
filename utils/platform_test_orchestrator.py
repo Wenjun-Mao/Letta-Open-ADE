@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import subprocess
 import sys
 import threading
@@ -9,15 +8,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from tests.shared.config_defaults import DEFAULT_EMBEDDING_HANDLE, DEFAULT_TEST_MODEL_HANDLE
-
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-_SUMMARY_WRITTEN_PATTERN = re.compile(r"Summary written to:\\s*(.+)$")
-_RUNNER_OUTPUT_PATTERN = re.compile(r"\\boutput=(.+\\.json)\\s*$")
 
 
 class PlatformTestOrchestrator:
@@ -35,58 +28,13 @@ class PlatformTestOrchestrator:
         self,
         *,
         run_type: str,
-        model: str,
-        embedding: str,
-        rounds: int,
-        config_path: str,
     ) -> list[str]:
         python = sys.executable
 
-        if run_type == "agent_bootstrap_check":
-            return [
-                python,
-                "tests/checks/agent_bootstrap_check.py",
-                "--model",
-                model,
-                "--embedding",
-                embedding,
-            ]
-        if run_type == "provider_embedding_matrix_check":
-            return [python, "tests/checks/provider_embedding_matrix_check.py"]
-        if run_type == "prompt_strategy_check":
-            return [python, "tests/checks/prompt_strategy_check.py"]
         if run_type == "platform_api_e2e_check":
             return [python, "tests/checks/platform_api_e2e_check.py"]
         if run_type == "ade_mvp_smoke_e2e_check":
             return [python, "tests/checks/ade_mvp_smoke_e2e_check.py"]
-        if run_type == "platform_flag_gate_check":
-            return [python, "tests/checks/platform_flag_gate_check.py"]
-        if run_type == "platform_dual_run_gate":
-            return [python, "tests/checks/platform_dual_run_gate.py"]
-        if run_type == "persona_guardrail_runner":
-            return [
-                python,
-                "tests/runners/persona_guardrail_runner.py",
-                "--config",
-                config_path,
-                "--model",
-                model,
-                "--embedding",
-                embedding,
-            ]
-        if run_type == "memory_update_runner":
-            return [
-                python,
-                "tests/runners/memory_update_runner.py",
-                "--rounds",
-                str(rounds),
-                "--model",
-                model,
-                "--embedding",
-                embedding,
-                "--turn",
-                "你好，我叫张伟",
-            ]
 
         raise ValueError(f"Unsupported run_type: {run_type}")
 
@@ -108,41 +56,6 @@ class PlatformTestOrchestrator:
             "artifacts": artifacts,
         }
 
-    def _summary_paths_from_log(self, log_file: str) -> list[Path]:
-        log_path = Path(log_file).resolve()
-        if not log_path.exists():
-            return []
-
-        summary_paths: list[Path] = []
-        for line in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
-            summary_match = _SUMMARY_WRITTEN_PATTERN.search(line)
-            if summary_match:
-                raw_path = summary_match.group(1).strip()
-                if raw_path:
-                    candidate = Path(raw_path)
-                    if not candidate.is_absolute():
-                        candidate = (self._project_root / candidate).resolve()
-                    summary_paths.append(candidate)
-
-            output_match = _RUNNER_OUTPUT_PATTERN.search(line)
-            if output_match:
-                raw_path = output_match.group(1).strip()
-                if raw_path:
-                    candidate = Path(raw_path)
-                    if not candidate.is_absolute():
-                        candidate = (self._project_root / candidate).resolve()
-                    summary_paths.append(candidate)
-
-        seen: set[str] = set()
-        unique: list[Path] = []
-        for path in summary_paths:
-            key = str(path)
-            if key in seen:
-                continue
-            seen.add(key)
-            unique.append(path)
-        return unique
-
     def _resolve_artifacts(self, run: dict[str, Any]) -> list[dict[str, Any]]:
         artifacts: list[dict[str, Any]] = []
 
@@ -159,39 +72,15 @@ class PlatformTestOrchestrator:
                 }
             )
 
-            for index, summary_path in enumerate(self._summary_paths_from_log(log_file)):
-                artifacts.append(
-                    {
-                        "artifact_id": f"summary_{index}",
-                        "type": "summary",
-                        "path": str(summary_path),
-                        "exists": summary_path.exists(),
-                        "size_bytes": summary_path.stat().st_size if summary_path.exists() else 0,
-                    }
-                )
-
         return artifacts
 
     def create_run(
         self,
         *,
         run_type: str,
-        model: str | None,
-        embedding: str | None,
-        rounds: int | None,
-        config_path: str | None,
     ) -> dict[str, Any]:
-        resolved_model = (model or "").strip() or DEFAULT_TEST_MODEL_HANDLE
-        resolved_embedding = (embedding or "").strip() or DEFAULT_EMBEDDING_HANDLE
-        resolved_rounds = max(1, int(rounds or 10))
-        resolved_config_path = (config_path or "").strip() or "tests/configs/suites/lmstudio_chat_v20260418.json"
-
         command = self._build_command(
             run_type=run_type,
-            model=resolved_model,
-            embedding=resolved_embedding,
-            rounds=resolved_rounds,
-            config_path=resolved_config_path,
         )
 
         run_id = str(uuid.uuid4())

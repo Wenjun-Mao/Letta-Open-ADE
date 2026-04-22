@@ -292,9 +292,7 @@ def main() -> None:
             run_create_response = http.post(
                 "/api/v1/platform/test-runs",
                 json={
-                    "run_type": "agent_bootstrap_check",
-                    "model": create_payload["model"],
-                    "embedding": create_payload.get("embedding") or embedding_handle or DEFAULT_EMBEDDING_HANDLE,
+                    "run_type": "platform_api_e2e_check",
                 },
             )
             run_create_response.raise_for_status()

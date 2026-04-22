@@ -18,7 +18,7 @@ def _build_service() -> CommentingService:
         settings_factory=lambda: SimpleNamespace(
             commenting_timeout_seconds=180,
             commenting_max_tokens=0,
-            commenting_task_shape="compact",
+            commenting_task_shape="classic",
         )
     )
 
@@ -232,7 +232,38 @@ def test_generate_comment_strips_think_tags_from_assistant_content(monkeypatch) 
         news_input="News input",
         timeout_seconds=45,
         retry_count=0,
-        task_shape="compact",
+        task_shape="classic",
     )
 
     assert result["content"] == "Public reply。"
+
+
+def test_generate_comment_rejects_removed_compact_task_shape(monkeypatch) -> None:
+    service = _build_service()
+
+    monkeypatch.setattr(
+        service,
+        "_post_chat_completions",
+        lambda payload, *, base_url, api_key, timeout_seconds, retry_count: {
+            "choices": [
+                {
+                    "message": {"content": "Should not be used."},
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {},
+        },
+    )
+
+    with pytest.raises(ValueError, match="Unsupported task_shape: compact"):
+        service.generate_comment(
+            base_url="http://127.0.0.1:1234/v1",
+            api_key="test-key",
+            model="lmstudio_openai/gemma-4-31b-it",
+            system_prompt="System",
+            persona_prompt="Persona",
+            news_input="News input",
+            timeout_seconds=45,
+            retry_count=0,
+            task_shape="compact",
+        )

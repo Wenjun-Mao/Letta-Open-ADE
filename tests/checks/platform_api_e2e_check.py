@@ -12,7 +12,6 @@ from letta_client import Letta
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from tests.shared.config_defaults import (
-    DEFAULT_EMBEDDING_HANDLE,
     DEFAULT_PROMPT_KEY,
     DEFAULT_TEST_MODEL_HANDLE,
 )
@@ -33,20 +32,6 @@ def _safe_delete_agent(client: Letta, agent_id: str | None) -> None:
         client.agents.delete(agent_id=agent_id)
     except Exception:
         pass
-
-
-def _poll_run(http: httpx.Client, run_id: str, timeout_seconds: int = 240) -> dict[str, Any]:
-    deadline = time.time() + timeout_seconds
-    while time.time() < deadline:
-        response = http.get(f"/api/v1/platform/test-runs/{run_id}")
-        response.raise_for_status()
-        payload = response.json()
-        status = payload.get("status")
-        if status in {"passed", "failed", "cancelled", "error"}:
-            return payload
-        time.sleep(2.0)
-
-    raise RuntimeError(f"Timed out waiting for test run {run_id}")
 
 
 def _resolve_runtime_defaults(http: httpx.Client) -> dict[str, str]:
@@ -278,32 +263,6 @@ def main() -> None:
                     "skipped": True,
                     "reason": "agent has no attached tools",
                 }
-
-            orchestrator_response = http.post(
-                "/api/v1/platform/test-runs",
-                json={
-                    "run_type": "agent_bootstrap_check",
-                    "model": resolved_model,
-                    "embedding": resolved_embedding,
-                },
-            )
-            orchestrator_response.raise_for_status()
-            run_id = str(orchestrator_response.json().get("run_id", "") or "")
-            if not run_id:
-                raise RuntimeError("Platform test-orchestrator did not return run_id")
-
-            run_result = _poll_run(http, run_id=run_id)
-            if run_result.get("status") != "passed":
-                raise RuntimeError(
-                    "Orchestrated test run failed: "
-                    f"status={run_result.get('status')} exit_code={run_result.get('exit_code')}"
-                )
-
-            summary["steps"]["orchestrator"] = {
-                "ok": True,
-                "run_id": run_id,
-                "status": run_result.get("status"),
-            }
 
         summary["ok"] = True
         summary["detail"] = "all platform API checks passed"

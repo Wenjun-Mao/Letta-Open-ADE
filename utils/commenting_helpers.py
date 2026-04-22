@@ -134,7 +134,7 @@ def sanitize_comment(value: str) -> str:
     return text
 
 
-def build_compact_user_payload(*, persona_prompt: str, news_input: str) -> str:
+def build_classic_user_payload(*, persona_prompt: str, news_input: str) -> str:
     return (
         "你正在执行新闻评论生成任务。\n"
         "请严格使用给定persona语气写一条可直接发布的中文评论。\n\n"

@@ -9,6 +9,7 @@ import httpx
 from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from agent_platform_api.settings import AgentPlatformSettings, ModelSourceConfig, get_settings
+from utils.model_allowlist import load_configured_source_allowlist
 
 
 CatalogSourceStatus = Literal["healthy", "auth_error", "unreachable", "empty"]
@@ -51,6 +52,10 @@ class CatalogSourceRecord:
     status: CatalogSourceStatus
     detail: str
     models: tuple[CatalogModelRecord, ...]
+    allowlist_applied: bool | None = None
+    allowlist_checked_at: str | None = None
+    raw_model_count: int = 0
+    filtered_model_count: int = 0
 
 
 @dataclass(frozen=True)
@@ -147,6 +152,9 @@ class ModelCatalogService:
                     self._probe_active_model_records_from_chat_completion(source, settings=settings)
                 )
                 if fallback_records:
+                    filtered_records, allowlist_applied, allowlist_checked_at, raw_model_count, detail = (
+                        self._apply_source_allowlist(source, fallback_records, raw_model_count=0)
+                    )
                     return CatalogSourceRecord(
                         id=source.id,
                         label=source.label,
@@ -155,8 +163,16 @@ class ModelCatalogService:
                         enabled_for=tuple(source.enabled_for),
                         letta_handle_prefix=source.letta_handle_prefix,
                         status="healthy",
-                        detail="Provider catalog empty; active model probed via chat completions fallback.",
-                        models=fallback_records,
+                        detail=(
+                            "Provider catalog empty; active model probed via chat completions fallback."
+                            if detail == "ok"
+                            else f"Provider catalog empty; fallback model probed. {detail}"
+                        ),
+                        models=filtered_records,
+                        allowlist_applied=allowlist_applied,
+                        allowlist_checked_at=allowlist_checked_at,
+                        raw_model_count=raw_model_count,
+                        filtered_model_count=len(filtered_records),
                     )
                 return CatalogSourceRecord(
                     id=source.id,
@@ -168,7 +184,12 @@ class ModelCatalogService:
                     status="empty",
                     detail="No models returned from provider catalog.",
                     models=(),
+                    raw_model_count=0,
+                    filtered_model_count=0,
                 )
+            filtered_records, allowlist_applied, allowlist_checked_at, raw_model_count, detail = (
+                self._apply_source_allowlist(source, records)
+            )
             return CatalogSourceRecord(
                 id=source.id,
                 label=source.label,
@@ -177,8 +198,12 @@ class ModelCatalogService:
                 enabled_for=tuple(source.enabled_for),
                 letta_handle_prefix=source.letta_handle_prefix,
                 status="healthy",
-                detail="ok",
-                models=records,
+                detail=detail,
+                models=filtered_records,
+                allowlist_applied=allowlist_applied,
+                allowlist_checked_at=allowlist_checked_at,
+                raw_model_count=raw_model_count,
+                filtered_model_count=len(filtered_records),
             )
         except CatalogAuthError as exc:
             return CatalogSourceRecord(
@@ -191,6 +216,8 @@ class ModelCatalogService:
                 status="auth_error",
                 detail=f"Authentication failed ({exc.status_code}).",
                 models=(),
+                raw_model_count=0,
+                filtered_model_count=0,
             )
         except Exception as exc:
             return CatalogSourceRecord(
@@ -203,7 +230,50 @@ class ModelCatalogService:
                 status="unreachable",
                 detail=str(exc),
                 models=(),
+                raw_model_count=0,
+                filtered_model_count=0,
             )
+
+    def _apply_source_allowlist(
+        self,
+        source: ModelSourceConfig,
+        records: tuple[CatalogModelRecord, ...],
+        *,
+        raw_model_count: int | None = None,
+    ) -> tuple[tuple[CatalogModelRecord, ...], bool | None, str | None, int, str]:
+        resolved_raw_model_count = len(records) if raw_model_count is None else int(raw_model_count)
+        allowlist = load_configured_source_allowlist(source.id)
+        if allowlist is None:
+            return records, None, None, resolved_raw_model_count, "ok"
+
+        if not allowlist.applied:
+            return (
+                (),
+                False,
+                allowlist.checked_at,
+                resolved_raw_model_count,
+                f"Allowlist unavailable for source '{source.id}': {allowlist.detail}",
+            )
+
+        filtered_records = tuple(
+            record
+            for record in records
+            if record.model_type == "llm" and record.provider_model_id in allowlist.usable_models
+        )
+        return (
+            filtered_records,
+            True,
+            allowlist.checked_at,
+            resolved_raw_model_count,
+            (
+                "ok"
+                if resolved_raw_model_count == len(filtered_records)
+                else (
+                    f"Allowlist applied: {len(filtered_records)} of "
+                    f"{resolved_raw_model_count} catalog entries remain selectable."
+                )
+            ),
+        )
 
     def _probe_active_model_records_from_chat_completion(
         self,

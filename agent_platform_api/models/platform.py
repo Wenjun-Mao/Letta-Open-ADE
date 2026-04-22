@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class PlatformRuntimeMessageRequest(BaseModel):
@@ -36,21 +36,12 @@ class PlatformToolTestInvokeRequest(BaseModel):
 
 
 class PlatformTestRunRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     run_type: Literal[
-        "agent_bootstrap_check",
-        "provider_embedding_matrix_check",
-        "prompt_strategy_check",
         "platform_api_e2e_check",
         "ade_mvp_smoke_e2e_check",
-        "platform_flag_gate_check",
-        "platform_dual_run_gate",
-        "persona_guardrail_runner",
-        "memory_update_runner",
     ]
-    model: str | None = None
-    embedding: str | None = None
-    rounds: int | None = None
-    config_path: str | None = None
 
 
 class ApiPlatformRuntimeCapabilitiesResponse(BaseModel):
@@ -211,6 +202,10 @@ class ApiPlatformModelCatalogSourceResponse(BaseModel):
     letta_handle_prefix: str
     status: str
     detail: str
+    allowlist_applied: bool | None = None
+    allowlist_checked_at: str | None = None
+    raw_model_count: int = 0
+    filtered_model_count: int = 0
     models: list[ApiPlatformModelCatalogSourceModelResponse] = Field(default_factory=list)
 
 

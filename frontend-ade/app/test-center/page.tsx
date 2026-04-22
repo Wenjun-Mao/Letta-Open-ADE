@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   PlatformArtifact,
   PlatformRunRecord,
+  PlatformRunType,
   cancelTestRun,
   createTestRun,
   getTestRun,
@@ -20,10 +21,6 @@ const COPY = {
     title: "Test Center",
     createRunTitle: "Create Test Run",
     runType: "Run type",
-    modelOptional: "Model (optional)",
-    embeddingOptional: "Embedding (optional)",
-    roundsOptional: "Rounds (optional)",
-    configPathOptional: "Config path (optional)",
     submitting: "Submitting...",
     createRun: "Create Run",
     refreshRuns: "Refresh Runs",
@@ -56,10 +53,6 @@ const COPY = {
     title: "测试中心",
     createRunTitle: "创建测试运行",
     runType: "运行类型",
-    modelOptional: "模型（可选）",
-    embeddingOptional: "向量模型（可选）",
-    roundsOptional: "轮数（可选）",
-    configPathOptional: "配置路径（可选）",
     submitting: "提交中...",
     createRun: "创建运行",
     refreshRuns: "刷新运行列表",
@@ -89,16 +82,9 @@ const COPY = {
   },
 } as const;
 
-const RUN_TYPES = [
-  "agent_bootstrap_check",
-  "provider_embedding_matrix_check",
-  "prompt_strategy_check",
+const RUN_TYPES: PlatformRunType[] = [
   "platform_api_e2e_check",
   "ade_mvp_smoke_e2e_check",
-  "platform_flag_gate_check",
-  "platform_dual_run_gate",
-  "persona_guardrail_runner",
-  "memory_update_runner",
 ];
 
 function toErrorMessage(exc: unknown): string {
@@ -118,11 +104,7 @@ export default function TestCenterPage() {
   const [selectedRunId, setSelectedRunId] = useState("");
   const [selectedRun, setSelectedRun] = useState<PlatformRunRecord | null>(null);
 
-  const [runType, setRunType] = useState("platform_api_e2e_check");
-  const [model, setModel] = useState("");
-  const [embedding, setEmbedding] = useState("");
-  const [rounds, setRounds] = useState("10");
-  const [configPath, setConfigPath] = useState("tests/configs/suites/lmstudio_chat_v20260418.json");
+  const [runType, setRunType] = useState<PlatformRunType>("platform_api_e2e_check");
 
   const [artifacts, setArtifacts] = useState<PlatformArtifact[]>([]);
   const [selectedArtifactId, setSelectedArtifactId] = useState("");
@@ -202,10 +184,6 @@ export default function TestCenterPage() {
     try {
       const created = await createTestRun({
         run_type: runType,
-        model: model.trim() || undefined,
-        embedding: embedding.trim() || undefined,
-        rounds: Number(rounds) || undefined,
-        config_path: configPath.trim() || undefined,
       });
       setStatus(`${copy.createdRun} ${created.run_id}`);
       setSelectedRunId(created.run_id);
@@ -264,29 +242,13 @@ export default function TestCenterPage() {
         <div className="form-grid">
           <label className="field">
             <span>{copy.runType}</span>
-            <select className="input" value={runType} onChange={(e) => setRunType(e.target.value)}>
+            <select className="input" value={runType} onChange={(e) => setRunType(e.target.value as PlatformRunType)}>
               {RUN_TYPES.map((item) => (
                 <option key={item} value={item}>
                   {item}
                 </option>
               ))}
             </select>
-          </label>
-          <label className="field">
-            <span>{copy.modelOptional}</span>
-            <input className="input" value={model} onChange={(e) => setModel(e.target.value)} />
-          </label>
-          <label className="field">
-            <span>{copy.embeddingOptional}</span>
-            <input className="input" value={embedding} onChange={(e) => setEmbedding(e.target.value)} />
-          </label>
-          <label className="field">
-            <span>{copy.roundsOptional}</span>
-            <input className="input" value={rounds} onChange={(e) => setRounds(e.target.value)} />
-          </label>
-          <label className="field" style={{ gridColumn: "1 / -1" }}>
-            <span>{copy.configPathOptional}</span>
-            <input className="input" value={configPath} onChange={(e) => setConfigPath(e.target.value)} />
           </label>
         </div>
         <div className="toolbar" style={{ marginTop: 10 }}>

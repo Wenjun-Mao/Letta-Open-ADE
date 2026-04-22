@@ -78,11 +78,10 @@ Deliver a production-ready Agent Platform backbone for ADE, retire the legacy in
 - Implemented functional ADE MVP pages for Agent Studio, Prompt and Persona Lab, Toolbench, Test Center, and live dashboard status.
 - Added frontend build validation (`npm run build`) to implementation verification.
 - Added ADE MVP smoke E2E check script (`tests/checks/ade_mvp_smoke_e2e_check.py`).
-- Added platform flag gate check script (`tests/checks/platform_flag_gate_check.py`).
-- Added combined dual-run cutover gate (`tests/checks/platform_dual_run_gate.py`).
-- Extended orchestrator/Test Center run types to include ADE smoke, platform-flag gate, and dual-run gate checks.
+- Added ADE smoke and backend E2E live checks as the maintained Test Center surface.
+- Simplified orchestrator/Test Center run types to the maintained backend E2E and ADE smoke checks.
 - Consolidated Prompt/Persona Lab and Toolbench into Agent Studio wrappers with deep-link redirects.
-- Added Agent Studio phase-2 UX: compact mode, execution trace filtering, tool probe UI, and prompt/persona revision timeline panel.
+- Added Agent Studio phase-2 UX: classic mode, execution trace filtering, tool probe UI, and prompt/persona revision timeline panel.
 - Extended platform API E2E check to validate phase-2 tool probe and revision history endpoints.
 
 ## Feature Flags

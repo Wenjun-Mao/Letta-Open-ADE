@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: http://100.81.194.12:1234/v1/chat/completions
+  url: http://100.81.194.12:2234/v1/chat/completions
   headers:
     - name: Content-Type
       value: application/json

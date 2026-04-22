@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-CommentingTaskShapeSetting = Literal["compact", "all_in_system", "structured_output"]
+CommentingTaskShapeSetting = Literal["classic", "all_in_system", "structured_output"]
 ModelSourceKind = Literal["openai-compatible"]
 ScenarioName = Literal["chat", "comment"]
 _KNOWN_MODEL_HANDLE_PREFIXES = ("lmstudio_openai/", "openai-proxy/", "openai/", "anthropic/")
@@ -120,7 +120,7 @@ class AgentPlatformSettings(BaseSettings):
     model_sources: list[ModelSourceConfig] = Field(default_factory=list)
     commenting_timeout_seconds: float = 60.0
     commenting_max_tokens: int = 0
-    commenting_task_shape: CommentingTaskShapeSetting = "compact"
+    commenting_task_shape: CommentingTaskShapeSetting = "classic"
     options_cache_ttl_seconds: int = 30
     model_discovery_timeout_seconds: float = 5.0
 

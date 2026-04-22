@@ -11,7 +11,7 @@ from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait
 from agent_platform_api.settings import get_settings
 from utils.commenting_helpers import (
     build_all_in_system_prompt,
-    build_compact_user_payload,
+    build_classic_user_payload,
     build_structured_system_prompt,
     extract_comment_from_reasoning,
     extract_structured_comment,
@@ -48,11 +48,7 @@ class CommentingService:
         "openai/",
         "anthropic/",
     )
-    _TASK_SHAPES = {"compact", "all_in_system", "structured_output"}
-    _TASK_SHAPE_ALIASES = {
-        "auto": "compact",
-        "agent_studio": "all_in_system",
-    }
+    _TASK_SHAPES = {"classic", "all_in_system", "structured_output"}
 
     def __init__(
         self,
@@ -81,9 +77,11 @@ class CommentingService:
     @classmethod
     def _resolve_task_shape(cls, value: str | None) -> str:
         resolved = str(value or "").strip().lower()
+        if not resolved:
+            return "classic"
         if resolved in cls._TASK_SHAPES:
             return resolved
-        return cls._TASK_SHAPE_ALIASES.get(resolved, "compact")
+        raise ValueError(f"Unsupported task_shape: {resolved}")
 
     def runtime_defaults(self) -> dict[str, Any]:
         settings = self._settings_factory()
@@ -204,13 +202,13 @@ class CommentingService:
         resolved_retry_count = self._clamp_retry_count(retry_count)
         resolved_task_shape = runtime_defaults["task_shape"] if task_shape is None else self._resolve_task_shape(task_shape)
 
-        compact_payload = {
+        classic_payload = {
             "model": resolved_model,
             "messages": [
                 {"role": "system", "content": str(system_prompt or "")},
                 {
                     "role": "user",
-                    "content": build_compact_user_payload(
+                    "content": build_classic_user_payload(
                         persona_prompt=persona_prompt,
                         news_input=news_input,
                     ),
@@ -254,12 +252,12 @@ class CommentingService:
         }
 
         payload_by_shape: dict[str, dict[str, Any]] = {
-            "compact": compact_payload,
+            "classic": classic_payload,
             "all_in_system": all_in_system_payload,
             "structured_output": structured_output_payload,
         }
 
-        payload = payload_by_shape.get(resolved_task_shape, compact_payload)
+        payload = payload_by_shape.get(resolved_task_shape, classic_payload)
 
         if resolved_max_tokens == 0:
             payload.pop("max_tokens", None)

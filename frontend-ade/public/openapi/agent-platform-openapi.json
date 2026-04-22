@@ -460,7 +460,7 @@
           },
           "task_shape": {
             "enum": [
-              "compact",
+              "classic",
               "all_in_system",
               "structured_output"
             ],
@@ -504,7 +504,7 @@
           },
           "task_shape": {
             "enum": [
-              "compact",
+              "classic",
               "all_in_system",
               "structured_output"
             ],
@@ -1256,6 +1256,28 @@
       },
       "ApiPlatformModelCatalogSourceResponse": {
         "properties": {
+          "allowlist_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowlist Applied"
+          },
+          "allowlist_checked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowlist Checked At"
+          },
           "base_url": {
             "title": "Base Url",
             "type": "string"
@@ -1270,6 +1292,11 @@
             },
             "title": "Enabled For",
             "type": "array"
+          },
+          "filtered_model_count": {
+            "default": 0,
+            "title": "Filtered Model Count",
+            "type": "integer"
           },
           "id": {
             "title": "Id",
@@ -1293,6 +1320,11 @@
             },
             "title": "Models",
             "type": "array"
+          },
+          "raw_model_count": {
+            "default": 0,
+            "title": "Raw Model Count",
+            "type": "integer"
           },
           "status": {
             "title": "Status",
@@ -2497,7 +2529,7 @@
             "anyOf": [
               {
                 "enum": [
-                  "compact",
+                  "classic",
                   "all_in_system",
                   "structured_output"
                 ],
@@ -2724,62 +2756,12 @@
         "type": "object"
       },
       "PlatformTestRunRequest": {
+        "additionalProperties": false,
         "properties": {
-          "config_path": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config Path"
-          },
-          "embedding": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Embedding"
-          },
-          "model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model"
-          },
-          "rounds": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rounds"
-          },
           "run_type": {
             "enum": [
-              "agent_bootstrap_check",
-              "provider_embedding_matrix_check",
-              "prompt_strategy_check",
               "platform_api_e2e_check",
-              "ade_mvp_smoke_e2e_check",
-              "platform_flag_gate_check",
-              "platform_dual_run_gate",
-              "persona_guardrail_runner",
-              "memory_update_runner"
+              "ade_mvp_smoke_e2e_check"
             ],
             "title": "Run Type",
             "type": "string"

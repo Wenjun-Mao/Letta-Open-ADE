@@ -25,7 +25,7 @@ const COPY = {
     retryCount: "Retry Count",
     retryCountHint: "Set 0 to disable retries. Maximum 5.",
     taskShape: "Task Shape",
-    taskShapeCompact: "Classic (persona in user)",
+    taskShapeClassic: "Classic (persona in user)",
     taskShapeAllInSystem: "All in system",
     taskShapeStructuredOutput: "Structured output (JSON)",
     userInput: "Input Text",
@@ -91,7 +91,7 @@ const COPY = {
     retryCount: "重试次数",
     retryCountHint: "设置为 0 表示禁用重试，最大为 5。",
     taskShape: "任务形状",
-    taskShapeCompact: "经典模式（persona 放在 user）",
+    taskShapeClassic: "经典模式（persona 放在 user）",
     taskShapeAllInSystem: "全部放在 system",
     taskShapeStructuredOutput: "结构化输出（JSON）",
     userInput: "输入文本",
@@ -338,7 +338,7 @@ export default function CommentLabPage() {
   const [maxTokens, setMaxTokens] = useState("0");
   const [timeoutSeconds, setTimeoutSeconds] = useState("180");
   const [retryCount, setRetryCount] = useState("0");
-  const [taskShape, setTaskShape] = useState<CommentingTaskShape>("compact");
+  const [taskShape, setTaskShape] = useState<CommentingTaskShape>("classic");
 
   const [userInput, setUserInput] = useState("");
   const [output, setOutput] = useState("");
@@ -620,7 +620,7 @@ export default function CommentLabPage() {
                 onChange={(event) => setTaskShape(event.target.value as CommentingTaskShape)}
                 disabled={submitting}
               >
-                <option value="compact">{copy.taskShapeCompact}</option>
+                <option value="classic">{copy.taskShapeClassic}</option>
                 <option value="all_in_system">{copy.taskShapeAllInSystem}</option>
                 <option value="structured_output">{copy.taskShapeStructuredOutput}</option>
               </select>

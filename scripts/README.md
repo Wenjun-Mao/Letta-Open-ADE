@@ -16,14 +16,7 @@ Wipes all existing Letta memory/agents inside the PostgreSQL volume and fully re
 * **`sync_tools.py`**: Connects to the running Letta server, pulls a list of *all* available tools, and generates `utils/letta_tools.py` for full IDE autocomplete and inline documentation. You should run this anytime a new tool is published.
 * **`collect_diagnostics.sh`**: Collects Docker/Compose status, health checks, service logs, and connectivity probes into a timestamped diagnostics bundle. Designed for remote machine troubleshooting.
 * **`seed_nltk_data.sh`**: Pre-downloads NLTK `punkt_tab` into `data/nltk_data` so Letta startup can use local NLTK data in restricted/offline networks.
-
-### Testing Scripts Location
-All test runners were moved to the `tests/` directory to keep responsibilities clear:
-* `tests/runners/persona_guardrail_runner.py`
-* `tests/runners/memory_update_runner.py`
-* `tests/checks/provider_embedding_matrix_check.py`
-* `tests/checks/prompt_strategy_check.py`
-* `tests/checks/agent_bootstrap_check.py`
+* **`probe_provider_models.py`**: Re-runs provider chat probes, currently used to regenerate the persisted Ark allowlist at `agent_platform_api/catalog_data/ark_chat_probe_report.json`.
 
 ---
 
@@ -73,64 +66,24 @@ The script prints and saves the output bundle path, for example:
 - `diagnostics/letta_diag_YYYYMMDD_HHMMSS/`
 - `diagnostics/letta_diag_YYYYMMDD_HHMMSS.tar.gz`
 
-**Run Agent Integration / Verification Test:**
-```bash
-uv run tests/checks/agent_bootstrap_check.py
-```
-
-**Run Provider + Embedding Matrix Test (27B only):**
-```bash
-uv run tests/checks/provider_embedding_matrix_check.py
-```
-
-**Run Provider + Embedding Matrix Test with custom handles:**
-```bash
-TEST_EMBEDDING_HANDLES="letta/letta-free,lmstudio_openai/text-embedding-qwen3-embedding-0.6b" uv run tests/checks/provider_embedding_matrix_check.py
-```
-
-**Run Conversation Suite (all suite configs):**
-```bash
-uv run tests/runners/persona_guardrail_runner.py
-```
-
-**Run Conversation Suite and force one embedding handle for all configs:**
-```bash
-uv run tests/runners/persona_guardrail_runner.py --config tests/configs/suites --embedding letta/letta-free
-```
-
-**Run Conversation Suite for a specific config file:**
-```bash
-uv run tests/runners/persona_guardrail_runner.py --config tests/configs/suites/lmstudio_chat_v20260418.json --embedding letta/letta-free
-```
-
-**Run Prompt Variant Comparison:**
-```bash
-uv run tests/checks/prompt_strategy_check.py
-```
-
 **Run Agent Platform API E2E Check:**
 ```bash
-uv run tests/checks/platform_api_e2e_check.py
+uv run python tests/checks/platform_api_e2e_check.py
 ```
 
 **Run ADE MVP Smoke E2E Check:**
 ```bash
-uv run tests/checks/ade_mvp_smoke_e2e_check.py
+uv run python tests/checks/ade_mvp_smoke_e2e_check.py
 ```
 
-**Run Platform Flag Gate Check:**
+**Run full pytest coverage:**
 ```bash
-uv run tests/checks/platform_flag_gate_check.py
+uv run python -m pytest
 ```
 
-**Run Dual-Run Cutover Gate (backend E2E + ADE smoke):**
+**Regenerate the persisted Ark allowlist:**
 ```bash
-uv run tests/checks/platform_dual_run_gate.py
-```
-
-**Run Fresh-Agent Memory Update Rounds:**
-```bash
-uv run tests/runners/memory_update_runner.py --rounds 10 --model lmstudio_openai/gemma-4-31b-it --embedding letta/letta-free
+uv run python scripts/probe_provider_models.py --source-id ark --mode chat-probe --write
 ```
 
 **Start Letta with a specific env profile (example `.env`):**

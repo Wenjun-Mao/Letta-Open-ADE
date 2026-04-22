@@ -11,14 +11,24 @@ def test_settings_parse_model_sources_from_env(monkeypatch) -> None:
         json.dumps(
             [
                 {
-                    "id": "local",
+                    "id": "local_unsloth",
                     "label": "Local Unsloth",
+                    "base_url": "http://127.0.0.1:2234/v1",
+                    "kind": "openai-compatible",
+                    "enabled_for": ["comment"],
+                    "letta_handle_prefix": "lmstudio_openai",
+                    "api_key_env": "UNSLOTH_API_KEY",
+                    "api_key_secret": "unsloth-api-key",
+                },
+                {
+                    "id": "local_lmstudio",
+                    "label": "Local LM Studio",
                     "base_url": "http://127.0.0.1:1234/v1",
                     "kind": "openai-compatible",
                     "enabled_for": ["chat", "comment"],
                     "letta_handle_prefix": "lmstudio_openai",
-                    "api_key_env": "UNSLOTH_API_KEY",
-                    "api_key_secret": "unsloth-api-key",
+                    "api_key_env": "",
+                    "api_key_secret": "",
                 },
                 {
                     "id": "ark",
@@ -36,9 +46,10 @@ def test_settings_parse_model_sources_from_env(monkeypatch) -> None:
     clear_settings_cache()
     try:
         settings = get_settings()
-        assert [source.id for source in settings.model_sources] == ["local", "ark"]
-        assert settings.model_sources[0].enabled_for == ["chat", "comment"]
-        assert settings.model_sources[1].letta_handle_prefix == "openai-proxy"
+        assert [source.id for source in settings.model_sources] == ["local_unsloth", "local_lmstudio", "ark"]
+        assert settings.model_sources[0].enabled_for == ["comment"]
+        assert settings.model_sources[1].enabled_for == ["chat", "comment"]
+        assert settings.model_sources[2].letta_handle_prefix == "openai-proxy"
     finally:
         clear_settings_cache()
 
