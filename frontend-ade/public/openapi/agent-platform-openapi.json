@@ -700,36 +700,6 @@
         "title": "ApiLabelSchemaRecordResponse",
         "type": "object"
       },
-      "ApiLabelSpanResponse": {
-        "properties": {
-          "end": {
-            "minimum": 0.0,
-            "title": "End",
-            "type": "integer"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "start": {
-            "minimum": 0.0,
-            "title": "Start",
-            "type": "integer"
-          },
-          "text": {
-            "title": "Text",
-            "type": "string"
-          }
-        },
-        "required": [
-          "label",
-          "text",
-          "start",
-          "end"
-        ],
-        "title": "ApiLabelSpanResponse",
-        "type": "object"
-      },
       "ApiLabelingGenerateResponse": {
         "properties": {
           "finish_reason": {
@@ -786,7 +756,14 @@
             "title": "Received At"
           },
           "result": {
-            "$ref": "#/components/schemas/ApiLabelingResultResponse"
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Result",
+            "type": "object"
           },
           "scenario": {
             "enum": [
@@ -839,23 +816,9 @@
           "prompt_key",
           "schema_key",
           "output_mode",
-          "selected_attempt",
-          "result"
+          "selected_attempt"
         ],
         "title": "ApiLabelingGenerateResponse",
-        "type": "object"
-      },
-      "ApiLabelingResultResponse": {
-        "properties": {
-          "spans": {
-            "items": {
-              "$ref": "#/components/schemas/ApiLabelSpanResponse"
-            },
-            "title": "Spans",
-            "type": "array"
-          }
-        },
-        "title": "ApiLabelingResultResponse",
         "type": "object"
       },
       "ApiLabelingRuntimeDefaultsResponse": {
@@ -3023,7 +2986,7 @@
             "type": "string"
           },
           "prompt_key": {
-            "default": "label_generic_spans_v1",
+            "default": "label_generic_entities_v1",
             "title": "Prompt Key",
             "type": "string"
           },
@@ -3051,7 +3014,7 @@
             "type": "string"
           },
           "schema_key": {
-            "default": "label_span_annotations_v1",
+            "default": "label_entity_groups_v1",
             "title": "Schema Key",
             "type": "string"
           },
@@ -4091,7 +4054,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Generate stateless span annotations for an input article",
+        "summary": "Generate stateless grouped entity extraction for an input article",
         "tags": [
           "labeling"
         ]

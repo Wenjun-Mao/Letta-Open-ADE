@@ -139,7 +139,7 @@ class AgentPlatformSettings(BaseSettings):
     commenting_max_tokens: int = 0
     commenting_task_shape: CommentingTaskShapeSetting = "classic"
     labeling_timeout_seconds: float = 60.0
-    labeling_max_tokens: int = 512
+    labeling_max_tokens: int = 1024
     labeling_repair_retry_count: int = 1
     options_cache_ttl_seconds: int = 30
     model_discovery_timeout_seconds: float = 5.0

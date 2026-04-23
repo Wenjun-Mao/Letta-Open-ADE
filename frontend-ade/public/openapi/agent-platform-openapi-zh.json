@@ -626,6 +626,80 @@
         "title": "API 会话 历史 响应",
         "type": "object"
       },
+      "ApiLabelSchemaListResponse": {
+        "properties": {
+          "include_archived": {
+            "title": "包含已归档",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApiLabelSchemaRecordResponse"
+            },
+            "title": "条目",
+            "type": "array"
+          },
+          "total": {
+            "title": "总数",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "include_archived"
+        ],
+        "title": "API 标签 Schema 列表 响应",
+        "type": "object"
+      },
+      "ApiLabelSchemaRecordResponse": {
+        "properties": {
+          "archived": {
+            "title": "已归档",
+            "type": "boolean"
+          },
+          "description": {
+            "title": "描述",
+            "type": "string"
+          },
+          "key": {
+            "title": "键",
+            "type": "string"
+          },
+          "label": {
+            "title": "标签",
+            "type": "string"
+          },
+          "preview": {
+            "title": "预览",
+            "type": "string"
+          },
+          "schema": {
+            "additionalProperties": true,
+            "title": "Schema",
+            "type": "object"
+          },
+          "source_path": {
+            "title": "来源路径",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "更新时间",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "description",
+          "schema",
+          "preview",
+          "archived",
+          "source_path",
+          "updated_at"
+        ],
+        "title": "API 标签 Schema 记录 响应",
+        "type": "object"
+      },
       "ApiLabelSpanResponse": {
         "properties": {
           "end": {
@@ -676,6 +750,7 @@
           "output_mode": {
             "enum": [
               "strict_json_schema",
+              "json_schema",
               "best_effort_prompt_json"
             ],
             "title": "Output Mode",
@@ -722,6 +797,10 @@
             "title": "场景",
             "type": "string"
           },
+          "schema_key": {
+            "title": "Schema 键",
+            "type": "string"
+          },
           "selected_attempt": {
             "enum": [
               "primary",
@@ -758,6 +837,7 @@
           "source_label",
           "provider_model_id",
           "prompt_key",
+          "schema_key",
           "output_mode",
           "selected_attempt",
           "result"
@@ -974,6 +1054,7 @@
               {
                 "enum": [
                   "strict_json_schema",
+                  "json_schema",
                   "best_effort_prompt_json"
                 ],
                 "type": "string"
@@ -1018,6 +1099,11 @@
               "label"
             ],
             "title": "场景",
+            "type": "string"
+          },
+          "schema_key": {
+            "default": "",
+            "title": "Schema 键",
             "type": "string"
           }
         },
@@ -1092,6 +1178,13 @@
             ],
             "title": "场景",
             "type": "string"
+          },
+          "schemas": {
+            "items": {
+              "$ref": "#/components/schemas/ApiOptionEntryResponse"
+            },
+            "title": "Schemas",
+            "type": "array"
           }
         },
         "required": [
@@ -1405,6 +1498,11 @@
             "title": "Provider 模型 ID",
             "type": "string"
           },
+          "source_adapter": {
+            "default": "generic_openai",
+            "title": "来源 Adapter",
+            "type": "string"
+          },
           "source_id": {
             "title": "来源 ID",
             "type": "string"
@@ -1422,6 +1520,7 @@
               {
                 "enum": [
                   "strict_json_schema",
+                  "json_schema",
                   "best_effort_prompt_json"
                 ],
                 "type": "string"
@@ -1494,6 +1593,11 @@
       },
       "ApiPlatformModelCatalogSourceResponse": {
         "properties": {
+          "adapter": {
+            "default": "generic_openai",
+            "title": "Adapter",
+            "type": "string"
+          },
           "allowlist_applied": {
             "anyOf": [
               {
@@ -2827,6 +2931,75 @@
         "title": "HTTP 校验错误",
         "type": "object"
       },
+      "LabelSchemaPatchRequest": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "描述"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "标签"
+          },
+          "schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema"
+          }
+        },
+        "title": "标签 Schema Patch 请求",
+        "type": "object"
+      },
+      "LabelSchemaWriteRequest": {
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "描述",
+            "type": "string"
+          },
+          "key": {
+            "title": "键",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "标签",
+            "type": "string"
+          },
+          "schema": {
+            "additionalProperties": true,
+            "title": "Schema",
+            "type": "object"
+          }
+        },
+        "required": [
+          "key",
+          "schema"
+        ],
+        "title": "标签 Schema Write 请求",
+        "type": "object"
+      },
       "LabelingGenerateRequest": {
         "properties": {
           "input": {
@@ -2875,6 +3048,11 @@
               "label"
             ],
             "title": "场景",
+            "type": "string"
+          },
+          "schema_key": {
+            "default": "label_span_annotations_v1",
+            "title": "Schema 键",
             "type": "string"
           },
           "timeout_seconds": {
@@ -5369,6 +5547,314 @@
         "summary": "恢复已归档系统提示词模板",
         "tags": [
           "platform-prompts"
+        ]
+      }
+    },
+    "/api/v1/platform/schema-center/label-schemas": {
+      "get": {
+        "operationId": "api_schema_center_list_label_schemas_api_v1_platform_schema_center_label_schemas_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "include_archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "包含已归档",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiLabelSchemaListResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "summary": "List Label Lab JSON schemas",
+        "tags": [
+          "platform-schemas"
+        ]
+      },
+      "post": {
+        "operationId": "api_schema_center_create_label_schema_api_v1_platform_schema_center_label_schemas_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelSchemaWriteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiLabelSchemaRecordResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "summary": "Create Label Lab JSON schema",
+        "tags": [
+          "platform-schemas"
+        ]
+      }
+    },
+    "/api/v1/platform/schema-center/label-schemas/{key}": {
+      "get": {
+        "operationId": "api_schema_center_get_label_schema_api_v1_platform_schema_center_label_schemas__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "键",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "archived",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "已归档",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiLabelSchemaRecordResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "summary": "Get Label Lab JSON schema",
+        "tags": [
+          "platform-schemas"
+        ]
+      },
+      "patch": {
+        "operationId": "api_schema_center_update_label_schema_api_v1_platform_schema_center_label_schemas__key__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "键",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelSchemaPatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiLabelSchemaRecordResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "summary": "Update Label Lab JSON schema",
+        "tags": [
+          "platform-schemas"
+        ]
+      }
+    },
+    "/api/v1/platform/schema-center/label-schemas/{key}/archive": {
+      "post": {
+        "operationId": "api_schema_center_archive_label_schema_api_v1_platform_schema_center_label_schemas__key__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "键",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiLabelSchemaRecordResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "summary": "Archive Label Lab JSON schema",
+        "tags": [
+          "platform-schemas"
+        ]
+      }
+    },
+    "/api/v1/platform/schema-center/label-schemas/{key}/purge": {
+      "delete": {
+        "operationId": "api_schema_center_purge_label_schema_api_v1_platform_schema_center_label_schemas__key__purge_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "键",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "summary": "Purge archived Label Lab JSON schema",
+        "tags": [
+          "platform-schemas"
+        ]
+      }
+    },
+    "/api/v1/platform/schema-center/label-schemas/{key}/restore": {
+      "post": {
+        "operationId": "api_schema_center_restore_label_schema_api_v1_platform_schema_center_label_schemas__key__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "键",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiLabelSchemaRecordResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "summary": "Restore archived Label Lab JSON schema",
+        "tags": [
+          "platform-schemas"
         ]
       }
     },

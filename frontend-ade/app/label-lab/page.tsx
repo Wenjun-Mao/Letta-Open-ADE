@@ -1,11 +1,11 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import {
+  LabelExtractionResult,
   LabelSchemaRecord,
-  LabelSpan,
   OptionEntry,
   PromptTemplateRecord,
   fetchOptions,
@@ -20,10 +20,10 @@ const COPY = {
     kicker: "Stateless Module",
     title: "Label Lab",
     intro:
-      "Generate one-shot structured span annotations for an article. This route stays stateless and validates exact substrings and character offsets before returning JSON.",
+      "Generate one-shot structured entity extraction for an article. This route stays stateless and validates exact substrings before returning grouped JSON.",
     tuningTitle: "Labeling Settings",
     mainContentTitle: "Article Workspace",
-    outputTitle: "Structured Result",
+    outputTitle: "Extraction Result",
     internalsTitle: "Request Internals",
     defaultsFromRuntime: "Defaults come from backend runtime configuration and can be overridden per request.",
     model: "Model",
@@ -38,17 +38,18 @@ const COPY = {
     timeoutSeconds: "Timeout (seconds)",
     repairRetryCount: "Repair Retry Count",
     articleInput: "Article Text",
-    articleInputPlaceholder: "Paste the article text that you want to annotate...",
+    articleInputPlaceholder: "Paste the article text that you want to extract entities from...",
+    promptPreview: "Prompt Preview",
     schemaPreview: "Schema Preview",
     manageSchemas: "Manage Schemas",
     generate: "Generate Labels",
     generating: "Generating...",
     refreshOptions: "Refresh Options",
     optionsRefreshed: "Labeling options refreshed.",
+    extractedGroupsTitle: "Extracted Groups",
+    extractedGroupsPlaceholder: "Validated grouped extraction will appear here.",
     resultJsonTitle: "Result JSON",
     resultJsonPlaceholder: "Validated structured output will appear here.",
-    highlightedPreviewTitle: "Highlighted Article",
-    highlightedPreviewPlaceholder: "Validated spans will be highlighted here.",
     runtimeMetaTitle: "Runtime",
     tokenMetaTitle: "Token Usage",
     provider: "Provider",
@@ -66,8 +67,8 @@ const COPY = {
     rawReplyTitle: "Raw Reply",
     rawPlaceholder: "Raw JSON will appear here.",
     notesTitle: "Execution Notes",
-    notesOne: "llama-server uses JSON Schema response_format, then ADE validates schema and exact offsets.",
-    notesTwo: "Only exact substrings with end-exclusive Unicode character offsets are accepted.",
+    notesOne: "llama-server uses JSON Schema response_format, then ADE validates schema shape and exact substrings.",
+    notesTwo: "Each top-level key is an entity group whose value is an array of exact substrings from the article.",
     notesThree: "This route is stateless and does not create or update Letta agents.",
     selectRequired: "Please choose a model, prompt, and schema before generating.",
     inputRequired: "Article text is required.",
@@ -76,14 +77,15 @@ const COPY = {
     invalidRepairRetryCount: "Repair retry count must be an integer between 0 and 3.",
     loadingError: "Failed to load labeling options",
     generateError: "Label generation failed",
+    emptyGroup: "No matches returned.",
   },
   zh: {
     kicker: "无状态模块",
     title: "标注实验室",
-    intro: "对文章执行一次性结构化 span 标注。该路径保持无状态，并在返回 JSON 前验证精确子串与字符偏移。",
+    intro: "对文章执行一次性结构化实体提取。该路径保持无状态，并在返回分组 JSON 前验证精确子串。",
     tuningTitle: "标注设置",
     mainContentTitle: "文章工作区",
-    outputTitle: "结构化结果",
+    outputTitle: "提取结果",
     internalsTitle: "请求内部信息",
     defaultsFromRuntime: "默认值来自后端运行配置，可在每次请求中覆盖。",
     model: "模型",
@@ -98,17 +100,18 @@ const COPY = {
     timeoutSeconds: "超时时间（秒）",
     repairRetryCount: "修复重试次数",
     articleInput: "文章文本",
-    articleInputPlaceholder: "粘贴需要标注的文章文本...",
+    articleInputPlaceholder: "粘贴需要提取实体的文章文本...",
+    promptPreview: "Prompt 预览",
     schemaPreview: "Schema 预览",
     manageSchemas: "管理 Schema",
     generate: "生成标注",
     generating: "生成中...",
     refreshOptions: "刷新配置",
     optionsRefreshed: "标注配置已刷新。",
+    extractedGroupsTitle: "提取分组",
+    extractedGroupsPlaceholder: "通过验证的分组结果会显示在这里。",
     resultJsonTitle: "结果 JSON",
     resultJsonPlaceholder: "已验证的结构化结果会显示在这里。",
-    highlightedPreviewTitle: "高亮文章预览",
-    highlightedPreviewPlaceholder: "通过验证的 span 会在这里高亮。",
     runtimeMetaTitle: "运行参数",
     tokenMetaTitle: "Token 使用",
     provider: "Provider",
@@ -126,8 +129,8 @@ const COPY = {
     rawReplyTitle: "原始回复",
     rawPlaceholder: "这里会显示原始 JSON。",
     notesTitle: "执行说明",
-    notesOne: "llama-server 使用 JSON Schema response_format，随后由 ADE 校验 schema 与精确偏移。",
-    notesTwo: "只有精确子串与 end-exclusive 的 Unicode 字符偏移会被接受。",
+    notesOne: "llama-server 使用 JSON Schema response_format，随后由 ADE 校验 schema 结构与精确子串。",
+    notesTwo: "每个顶层字段都是一个实体分组，其值为来自文章原文的精确子串数组。",
     notesThree: "该路径是无状态的，不会创建或更新 Letta 智能体。",
     selectRequired: "生成前请先选择模型、Prompt 与 Schema。",
     inputRequired: "请输入文章文本。",
@@ -136,6 +139,7 @@ const COPY = {
     invalidRepairRetryCount: "修复重试次数必须是 0 到 3 之间的整数。",
     loadingError: "加载标注配置失败",
     generateError: "标注生成失败",
+    emptyGroup: "未返回匹配项。",
   },
 } as const;
 
@@ -213,42 +217,21 @@ function asIntString(value: unknown): string {
   return String(parsed);
 }
 
-function renderHighlightedArticle(article: string, spans: LabelSpan[]) {
-  if (!article.trim()) {
-    return null;
-  }
-  if (!spans.length) {
-    return <span>{article}</span>;
-  }
+function formatGroupLabel(key: string): string {
+  return key
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
 
-  const sorted = [...spans].sort((left, right) => left.start - right.start || left.end - right.end);
-  const nodes: ReactNode[] = [];
-  let cursor = 0;
-  for (const span of sorted) {
-    if (cursor < span.start) {
-      nodes.push(<span key={`text-${cursor}`}>{article.slice(cursor, span.start)}</span>);
-    }
-    nodes.push(
-      <mark
-        key={`${span.label}-${span.start}-${span.end}`}
-        style={{
-          background: "#fde68a",
-          color: "#111827",
-          padding: "0 2px",
-          borderRadius: 4,
-          boxShadow: "inset 0 -1px 0 rgba(17,24,39,0.15)",
-        }}
-        title={`${span.label} [${span.start}, ${span.end})`}
-      >
-        {article.slice(span.start, span.end)}
-      </mark>,
-    );
-    cursor = span.end;
-  }
-  if (cursor < article.length) {
-    nodes.push(<span key={`text-tail-${cursor}`}>{article.slice(cursor)}</span>);
-  }
-  return nodes;
+function normalizeExtractionGroups(value: LabelExtractionResult): Array<{ key: string; items: string[] }> {
+  return Object.entries(value || {})
+    .filter(([key, items]) => key.trim().length > 0 && Array.isArray(items))
+    .map(([key, items]) => ({
+      key,
+      items: items
+        .map((item) => String(item ?? "").trim())
+        .filter((item) => item.length > 0),
+    }));
 }
 
 export default function LabelLabPage() {
@@ -269,13 +252,13 @@ export default function LabelLabPage() {
   const [model, setModel] = useState("");
   const [promptKey, setPromptKey] = useState("");
   const [schemaKey, setSchemaKey] = useState("");
-  const [maxTokens, setMaxTokens] = useState("512");
+  const [maxTokens, setMaxTokens] = useState("1024");
   const [timeoutSeconds, setTimeoutSeconds] = useState("60");
   const [repairRetryCount, setRepairRetryCount] = useState("1");
 
   const [articleInput, setArticleInput] = useState("");
   const [resultJson, setResultJson] = useState("");
-  const [resultSpans, setResultSpans] = useState<LabelSpan[]>([]);
+  const [extractionResult, setExtractionResult] = useState<LabelExtractionResult>({});
   const [provider, setProvider] = useState("");
   const [modelUsed, setModelUsed] = useState("");
   const [outputMode, setOutputMode] = useState("");
@@ -302,6 +285,10 @@ export default function LabelLabPage() {
     () => schemaRecords.find((record) => record.key === schemaKey) || null,
     [schemaKey, schemaRecords],
   );
+  const extractedGroups = useMemo(
+    () => normalizeExtractionGroups(extractionResult),
+    [extractionResult],
+  );
 
   const capabilityLabel =
     selectedModel?.structured_output_mode === "strict_json_schema"
@@ -309,8 +296,8 @@ export default function LabelLabPage() {
       : selectedModel?.structured_output_mode === "json_schema"
         ? copy.capabilityJsonSchema
         : selectedModel?.structured_output_mode === "best_effort_prompt_json"
-        ? copy.capabilityBestEffort
-        : "-";
+          ? copy.capabilityBestEffort
+          : "-";
 
   const loadOptions = async (forceRefresh = false) => {
     setLoadingOptions(true);
@@ -418,8 +405,9 @@ export default function LabelLabPage() {
         timeout_seconds: parsedTimeoutSeconds,
         repair_retry_count: parsedRepairRetryCount,
       });
-      setResultJson(stringifyPretty(payload.result || { spans: [] }));
-      setResultSpans(Array.isArray(payload.result?.spans) ? payload.result.spans : []);
+      const nextResult = asObject(payload.result) as LabelExtractionResult;
+      setResultJson(stringifyPretty(nextResult || {}));
+      setExtractionResult(nextResult || {});
       setProvider(payload.source_label || "");
       setModelUsed(payload.provider_model_id || "");
       setOutputMode(payload.output_mode || "");
@@ -553,16 +541,14 @@ export default function LabelLabPage() {
             />
           </label>
 
+          <h3 style={{ marginTop: 14 }}>{copy.promptPreview}</h3>
+          <div className="code" style={{ marginTop: 10, minHeight: 110, maxHeight: 180, overflowY: "auto", whiteSpace: "pre-wrap" }}>
+            {selectedPrompt?.content || copy.rawPlaceholder}
+          </div>
+
           <h3 style={{ marginTop: 14 }}>{copy.schemaPreview}</h3>
           <div className="code" style={{ marginTop: 10, minHeight: 150, maxHeight: 220, overflowY: "auto" }}>
             {selectedSchema ? stringifyPretty(selectedSchema.schema) : selectedPrompt?.output_schema || copy.rawPlaceholder}
-          </div>
-
-          <h3 style={{ marginTop: 14 }}>{copy.highlightedPreviewTitle}</h3>
-          <div className="code" style={{ marginTop: 10, minHeight: 220, whiteSpace: "pre-wrap" }}>
-            {articleInput.trim()
-              ? renderHighlightedArticle(articleInput, resultSpans)
-              : copy.highlightedPreviewPlaceholder}
           </div>
         </div>
 
@@ -603,8 +589,39 @@ export default function LabelLabPage() {
             </div>
           </div>
 
+          <h3 style={{ marginTop: 14 }}>{copy.extractedGroupsTitle}</h3>
+          {extractedGroups.length ? (
+            <div
+              style={{
+                marginTop: 10,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: 10,
+              }}
+            >
+              {extractedGroups.map((group) => (
+                <div key={group.key} className="card" style={{ margin: 0, padding: "10px 12px" }}>
+                  <div style={{ fontWeight: 700 }}>{formatGroupLabel(group.key)}</div>
+                  {group.items.length ? (
+                    <ul className="list" style={{ marginTop: 8 }}>
+                      {group.items.map((item, index) => (
+                        <li key={`${group.key}-${index}`}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="muted" style={{ marginTop: 8 }}>{copy.emptyGroup}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="code" style={{ marginTop: 10, minHeight: 120, whiteSpace: "pre-wrap" }}>
+              {copy.extractedGroupsPlaceholder}
+            </div>
+          )}
+
           <h3 style={{ marginTop: 14 }}>{copy.resultJsonTitle}</h3>
-          <div className="code" style={{ marginTop: 10, minHeight: 240, whiteSpace: "pre-wrap" }}>
+          <div className="code" style={{ marginTop: 10, minHeight: 220, whiteSpace: "pre-wrap" }}>
             {resultJson || copy.resultJsonPlaceholder}
           </div>
         </div>

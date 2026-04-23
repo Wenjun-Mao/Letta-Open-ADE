@@ -267,7 +267,8 @@ class LabelingService:
         *,
         data: dict[str, Any],
         article_input: str,
-    ) -> tuple[dict[str, Any] | None, str, list[str], str | None]:
+        output_schema: dict[str, Any],
+    ) -> tuple[dict[str, list[str]] | None, str, list[str], str | None]:
         choices = data.get("choices", [])
         if not isinstance(choices, list) or not choices:
             return None, "", ["Response payload did not include any choices."], None
@@ -291,7 +292,7 @@ class LabelingService:
                 validation_errors.append(str(exc))
                 continue
 
-            normalized, errors = validate_label_result(parsed, article_input)
+            normalized, errors = validate_label_result(parsed, article_input, output_schema)
             if normalized is not None:
                 return normalized, candidate, [], finish_reason or None
             validation_errors.extend(errors)
@@ -375,6 +376,7 @@ class LabelingService:
             result, invalid_output, validation_errors, finish_reason = self._extract_validated_result(
                 data=data,
                 article_input=article,
+                output_schema=output_schema,
             )
             last_payload = payload
             last_data = data

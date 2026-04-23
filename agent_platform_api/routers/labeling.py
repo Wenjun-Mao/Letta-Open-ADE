@@ -19,7 +19,7 @@ router = APIRouter()
     "/api/v1/labeling/generate",
     response_model=ApiLabelingGenerateResponse,
     tags=["labeling"],
-    summary="Generate stateless span annotations for an input article",
+    summary="Generate stateless grouped entity extraction for an input article",
 )
 async def api_labeling_generate(request: LabelingGenerateRequest):
     ensure_platform_api_enabled()
@@ -97,7 +97,7 @@ async def api_labeling_generate(request: LabelingGenerateRequest):
         "schema_key": request.schema_key,
         "output_mode": output_mode,
         "selected_attempt": str(generation_result.get("selected_attempt", "") or "primary"),
-        "result": generation_result.get("result", {"spans": []}),
+        "result": generation_result.get("result", {}),
         "finish_reason": str(generation_result.get("finish_reason", "") or "") or None,
         "usage": usage,
         "received_at": str(generation_result.get("received_at", "") or "") or None,

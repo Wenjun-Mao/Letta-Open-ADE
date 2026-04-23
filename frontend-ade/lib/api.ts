@@ -154,12 +154,7 @@ export type CommentingGenerateResponse = {
   raw_reply: Record<string, unknown>;
 };
 
-export type LabelSpan = {
-  label: string;
-  text: string;
-  start: number;
-  end: number;
-};
+export type LabelExtractionResult = Record<string, string[]>;
 
 export type LabelingGenerateResponse = {
   scenario: Scenario;
@@ -171,9 +166,7 @@ export type LabelingGenerateResponse = {
   schema_key: string;
   output_mode: LabelingOutputMode;
   selected_attempt: "primary" | "repair";
-  result: {
-    spans: LabelSpan[];
-  };
+  result: LabelExtractionResult;
   finish_reason?: string | null;
   usage: Record<string, unknown>;
   received_at?: string | null;

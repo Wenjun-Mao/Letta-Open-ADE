@@ -43,7 +43,7 @@ const COPY = {
         "Stateless comment generation workspace with independent model, prompt, and persona controls.",
       labelLabTitle: "Label Lab",
       labelLabDescription:
-        "Stateless structured labeling workspace for article spans, with exact offsets, JSON output, and provider capability hints.",
+        "Stateless structured extraction workspace for grouped article entities, with JSON output and provider capability hints.",
       schemaCenterTitle: "Schema Center",
       schemaCenterDescription: "Manage Label Lab JSON schemas as workspace files with CRUD and archive/restore.",
       promptCenterTitle: "Prompt Center",
@@ -87,7 +87,7 @@ const COPY = {
       commentLabTitle: "评论实验室",
       commentLabDescription: "独立的无状态评论生成空间，可分别控制模型、Prompt 与 Persona。",
       labelLabTitle: "标注实验室",
-      labelLabDescription: "用于文章结构化标注的无状态工作区，支持精确偏移、JSON 输出和模型能力提示。",
+      labelLabDescription: "用于文章结构化实体提取的无状态工作区，支持分组 JSON 输出和模型能力提示。",
       schemaCenterTitle: "Schema 中心",
       schemaCenterDescription: "以工作区文件方式管理 Label Lab JSON Schema，支持 CRUD 与归档恢复。",
       promptCenterTitle: "提示词中心",

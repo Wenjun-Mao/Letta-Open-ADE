@@ -12,7 +12,7 @@ def _build_service() -> LabelingService:
     return LabelingService(
         settings_factory=lambda: SimpleNamespace(
             labeling_timeout_seconds=60,
-            labeling_max_tokens=512,
+            labeling_max_tokens=1024,
             labeling_repair_retry_count=1,
         )
     )
@@ -30,10 +30,8 @@ def test_generate_labels_strict_json_schema_succeeds(monkeypatch) -> None:
                     "message": {
                         "content": json.dumps(
                             {
-                                "spans": [
-                                    {"label": "PLAYER", "text": "Messi", "start": 0, "end": 5},
-                                    {"label": "TEAM", "text": "Inter Miami", "start": 17, "end": 28},
-                                ]
+                                "players": ["Messi"],
+                                "teams": ["Inter Miami"],
                             }
                         )
                     },
@@ -48,14 +46,25 @@ def test_generate_labels_strict_json_schema_succeeds(monkeypatch) -> None:
         base_url="https://ark.example/v3",
         api_key="ark-token",
         model="openai-proxy/doubao-seed-1-8-251228",
-        system_prompt="Return spans.",
+        system_prompt="Return grouped entities.",
         article_input="Messi scored for Inter Miami.",
         output_mode="strict_json_schema",
+        output_schema_raw=json.dumps(
+            {
+                "type": "object",
+                "properties": {
+                    "players": {"type": "array", "items": {"type": "string"}},
+                    "teams": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["players", "teams"],
+                "additionalProperties": False,
+            }
+        ),
     )
 
     assert result["output_mode"] == "strict_json_schema"
     assert result["selected_attempt"] == "primary"
-    assert result["result"]["spans"][0]["text"] == "Messi"
+    assert result["result"]["players"] == ["Messi"]
     assert result["validation_errors"] == []
 
 
@@ -71,9 +80,8 @@ def test_generate_labels_json_schema_sends_llama_server_response_format(monkeypa
                     "message": {
                         "content": json.dumps(
                             {
-                                "spans": [
-                                    {"label": "PLAYER", "text": "Messi", "start": 0, "end": 5},
-                                ]
+                                "players": ["Messi"],
+                                "teams": ["Inter Miami"],
                             }
                         )
                     },
@@ -89,41 +97,35 @@ def test_generate_labels_json_schema_sends_llama_server_response_format(monkeypa
         base_url="http://127.0.0.1:8081/v1",
         api_key="local-token",
         model="gemma4",
-        system_prompt="Return spans.",
-        article_input="Messi scored.",
+        system_prompt="Return grouped entities.",
+        article_input="Messi scored for Inter Miami.",
         output_mode="json_schema",
         output_schema_raw=json.dumps(
             {
                 "type": "object",
                 "properties": {
-                    "spans": {
+                    "players": {
                         "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "label": {"type": "string"},
-                                "text": {"type": "string"},
-                                "start": {"type": "integer"},
-                                "end": {"type": "integer"},
-                            },
-                            "required": ["label", "text", "start", "end"],
-                            "additionalProperties": False,
-                        },
-                    }
+                        "items": {"type": "string"},
+                    },
+                    "teams": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                    },
                 },
-                "required": ["spans"],
+                "required": ["players", "teams"],
                 "additionalProperties": False,
             }
         ),
-        output_schema_name="label_span_annotations_v1",
+        output_schema_name="label_football_entity_groups_v1",
     )
 
     assert result["output_mode"] == "json_schema"
     assert captured["model"] == "gemma4"
     assert captured["response_format"]["type"] == "json_schema"
-    assert captured["response_format"]["json_schema"]["name"] == "label_span_annotations_v1"
+    assert captured["response_format"]["json_schema"]["name"] == "label_football_entity_groups_v1"
     assert captured["response_format"]["json_schema"]["strict"] is True
-    assert captured["response_format"]["json_schema"]["schema"]["required"] == ["spans"]
+    assert captured["response_format"]["json_schema"]["schema"]["required"] == ["players", "teams"]
 
 
 def test_generate_labels_best_effort_strips_think_tags(monkeypatch) -> None:
@@ -138,7 +140,7 @@ def test_generate_labels_best_effort_strips_think_tags(monkeypatch) -> None:
                     "message": {
                         "content": (
                             "<think>private reasoning</think>"
-                            '{"spans":[{"label":"PLAYER","text":"Messi","start":0,"end":5}]}'
+                            '{"players":["Messi"],"teams":["Inter Miami"]}'
                         )
                     },
                     "finish_reason": "stop",
@@ -152,17 +154,29 @@ def test_generate_labels_best_effort_strips_think_tags(monkeypatch) -> None:
         base_url="http://127.0.0.1:2234/v1",
         api_key="local-token",
         model="lmstudio_openai/gemma-4-31b-it",
-        system_prompt="Return spans.",
-        article_input="Messi scored.",
+        system_prompt="Return grouped entities.",
+        article_input="Messi scored for Inter Miami.",
         output_mode="best_effort_prompt_json",
+        output_schema_raw=json.dumps(
+            {
+                "type": "object",
+                "properties": {
+                    "players": {"type": "array", "items": {"type": "string"}},
+                    "teams": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["players", "teams"],
+                "additionalProperties": False,
+            }
+        ),
     )
 
-    assert result["result"]["spans"] == [
-        {"label": "PLAYER", "text": "Messi", "start": 0, "end": 5}
-    ]
+    assert result["result"] == {
+        "players": ["Messi"],
+        "teams": ["Inter Miami"],
+    }
 
 
-def test_generate_labels_normalizes_unique_text_offsets(monkeypatch) -> None:
+def test_generate_labels_trims_whitespace_and_removes_duplicates(monkeypatch) -> None:
     service = _build_service()
 
     monkeypatch.setattr(
@@ -172,7 +186,12 @@ def test_generate_labels_normalizes_unique_text_offsets(monkeypatch) -> None:
             "choices": [
                 {
                     "message": {
-                        "content": '{"spans":[{"label":"TEAM","text":"Orlando City","start":39,"end":51}]}'
+                        "content": json.dumps(
+                            {
+                                "players": ["  Messi  ", "Messi"],
+                                "teams": ["Inter Miami", " Inter Miami ", "Orlando City"],
+                            }
+                        )
                     },
                     "finish_reason": "stop",
                 }
@@ -185,14 +204,26 @@ def test_generate_labels_normalizes_unique_text_offsets(monkeypatch) -> None:
         base_url="http://127.0.0.1:8081/v1",
         api_key="local-token",
         model="gemma4",
-        system_prompt="Return spans.",
+        system_prompt="Return grouped entities.",
         article_input="Messi scored for Inter Miami against Orlando City.",
         output_mode="json_schema",
+        output_schema_raw=json.dumps(
+            {
+                "type": "object",
+                "properties": {
+                    "players": {"type": "array", "items": {"type": "string"}},
+                    "teams": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["players", "teams"],
+                "additionalProperties": False,
+            }
+        ),
     )
 
-    assert result["result"]["spans"] == [
-        {"label": "TEAM", "text": "Orlando City", "start": 37, "end": 49}
-    ]
+    assert result["result"] == {
+        "players": ["Messi"],
+        "teams": ["Inter Miami", "Orlando City"],
+    }
 
 
 def test_generate_labels_uses_repair_attempt_after_validation_failure(monkeypatch) -> None:
@@ -206,7 +237,7 @@ def test_generate_labels_uses_repair_attempt_after_validation_failure(monkeypatc
                 "choices": [
                     {
                         "message": {
-                            "content": '{"spans":[{"label":"PLAYER","text":"Ronaldo","start":0,"end":7}]}'
+                            "content": '{"players":["Ronaldo"],"teams":["Inter Miami"]}'
                         },
                         "finish_reason": "stop",
                     }
@@ -217,7 +248,7 @@ def test_generate_labels_uses_repair_attempt_after_validation_failure(monkeypatc
             "choices": [
                 {
                     "message": {
-                        "content": '{"spans":[{"label":"PLAYER","text":"Messi","start":0,"end":5}]}'
+                        "content": '{"players":["Messi"],"teams":["Inter Miami"]}'
                     },
                     "finish_reason": "stop",
                 }
@@ -231,15 +262,26 @@ def test_generate_labels_uses_repair_attempt_after_validation_failure(monkeypatc
         base_url="http://127.0.0.1:2234/v1",
         api_key="local-token",
         model="lmstudio_openai/gemma-4-31b-it",
-        system_prompt="Return spans.",
-        article_input="Messi scored.",
+        system_prompt="Return grouped entities.",
+        article_input="Messi scored for Inter Miami.",
         output_mode="best_effort_prompt_json",
+        output_schema_raw=json.dumps(
+            {
+                "type": "object",
+                "properties": {
+                    "players": {"type": "array", "items": {"type": "string"}},
+                    "teams": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["players", "teams"],
+                "additionalProperties": False,
+            }
+        ),
         repair_retry_count=1,
     )
 
     assert len(calls) == 2
     assert result["selected_attempt"] == "repair"
-    assert result["result"]["spans"][0]["start"] == 0
+    assert result["result"]["players"] == ["Messi"]
 
 
 def test_generate_labels_raises_validation_error_after_repair_failure(monkeypatch) -> None:
@@ -251,9 +293,9 @@ def test_generate_labels_raises_validation_error_after_repair_failure(monkeypatc
         lambda payload, *, base_url, api_key, timeout_seconds: {
             "choices": [
                 {
-                        "message": {
-                            "content": '{"spans":[{"label":"PLAYER","text":"Ronaldo","start":0,"end":7}]}'
-                        },
+                    "message": {
+                        "content": '{"players":["Ronaldo"],"teams":["Inter Miami"]}'
+                    },
                     "finish_reason": "stop",
                 }
             ],
@@ -266,10 +308,21 @@ def test_generate_labels_raises_validation_error_after_repair_failure(monkeypatc
             base_url="http://127.0.0.1:2234/v1",
             api_key="local-token",
             model="lmstudio_openai/gemma-4-31b-it",
-            system_prompt="Return spans.",
-            article_input="Messi scored.",
+            system_prompt="Return grouped entities.",
+            article_input="Messi scored for Inter Miami.",
             output_mode="best_effort_prompt_json",
+            output_schema_raw=json.dumps(
+                {
+                    "type": "object",
+                    "properties": {
+                        "players": {"type": "array", "items": {"type": "string"}},
+                        "teams": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["players", "teams"],
+                    "additionalProperties": False,
+                }
+            ),
             repair_retry_count=1,
         )
 
-    assert any("input[start:end]" in item for item in exc_info.value.validation_errors)
+    assert any("substring" in item for item in exc_info.value.validation_errors)

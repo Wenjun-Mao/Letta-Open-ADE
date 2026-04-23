@@ -144,8 +144,8 @@ def test_options_api_filters_chat_handles_and_keeps_comment_model_keys(monkeypat
 
     label_payload = asyncio.run(core.api_get_options(refresh=True, scenario="label"))
     assert label_payload["defaults"]["persona_key"] == ""
-    assert label_payload["defaults"]["schema_key"] == "label_span_annotations_v1"
-    assert label_payload["schemas"][0]["key"] == "label_span_annotations_v1"
+    assert label_payload["defaults"]["schema_key"] == "label_entity_groups_v1"
+    assert label_payload["schemas"][0]["key"] == "label_entity_groups_v1"
     assert label_payload["labeling"].repair_retry_count >= 0
     assert [item["key"] for item in label_payload["models"]] == [
         "local_llama_server::gemma4",

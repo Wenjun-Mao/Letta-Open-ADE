@@ -27,13 +27,13 @@ _DEFAULT_PROMPT_META: dict[str, dict[str, str]] = {
         "label": "Comment V20260418",
         "description": "Comment scenario prompt baseline for stateless news and thread responses.",
     },
-    "label_generic_spans_v1": {
-        "label": "Label Generic Spans V1",
-        "description": "Generic span-labeling baseline that returns exact offsets in JSON.",
+    "label_generic_entities_v1": {
+        "label": "Label Generic Entities V1",
+        "description": "Generic extraction baseline that returns grouped entity lists in JSON.",
     },
     "label_football_entities_v1": {
         "label": "Label Football Entities V1",
-        "description": "Football article labeling example for TEAM and PLAYER spans.",
+        "description": "Football article extraction example for player and team lists.",
     },
 }
 

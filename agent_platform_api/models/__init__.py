@@ -27,9 +27,7 @@ from .commenting import (
 )
 from .common import CommentingTaskShape, LabelingOutputMode, ScenarioType
 from .labeling import (
-    ApiLabelSpanResponse,
     ApiLabelingGenerateResponse,
-    ApiLabelingResultResponse,
     ApiLabelingRuntimeDefaultsResponse,
     LabelingGenerateRequest,
 )
@@ -100,9 +98,7 @@ __all__ = [
     "ApiCommentingRuntimeDefaultsResponse",
     "ApiConversationHistoryItemResponse",
     "ApiConversationHistoryResponse",
-    "ApiLabelSpanResponse",
     "ApiLabelingGenerateResponse",
-    "ApiLabelingResultResponse",
     "ApiLabelingRuntimeDefaultsResponse",
     "ApiLabelSchemaListResponse",
     "ApiLabelSchemaRecordResponse",

@@ -21,7 +21,7 @@ Current development baseline defaults:
 - System prompt: `CHAT_V20260418_PROMPT`
 - Test embedding: `letta/letta-free`
 - Comment Lab task shape: `classic`
-- Label Lab schema: `label_span_annotations_v1`
+- Label Lab schema: `label_entity_groups_v1`
 
 ## Directory Contents
 
@@ -280,17 +280,17 @@ Notes:
 ### Label Lab And Schema Center
 
 Important:
-- Label Lab is stateless like Comment Lab, but it produces structured span annotations instead of prose.
+- Label Lab is stateless like Comment Lab, but it produces structured grouped entity extraction instead of prose.
 - Prompts define labeling criteria. Schemas define the JSON output contract.
-- The default label schema is stored at `schemas/label/label_span_annotations_v1.json` and is surfaced through the Label Schema Center.
+- The default label schema is stored at `schemas/label/label_entity_groups_v1.json` and is surfaced through the Label Schema Center.
 
 Notes:
 - Schema Center v1 is label-only. It provides create, edit, archive, restore, and purge operations under `/api/v1/platform/schema-center/label-schemas`.
 - The API container mounts `./schemas:/app/schemas`, so UI edits persist to the host filesystem like Prompt Center edits.
 - `POST /api/v1/labeling/generate` requires a selected `model_key`, `prompt_key`, and `schema_key`.
 - For the `llama_cpp_server` adapter, Label Lab sends `response_format={"type":"json_schema","json_schema":...}` to `/v1/chat/completions`, matching the notebook-proven llama-server pattern.
-- Server-side validation still verifies the parsed shape and exact Unicode character offsets, including `input[start:end] == text` and no overlapping spans.
-- If a provider returns the right unique `text` with wrong offsets, ADE normalizes the offsets before accepting the result; ambiguous or missing text still fails validation.
+- Server-side validation still verifies the parsed shape, trims duplicates, and requires every extracted string to exactly match a substring in the input article.
+- Duplicate values are removed after trimming, but missing or non-exact substrings still fail validation.
 
 ### Ark Usability Allowlist
 

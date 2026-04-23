@@ -169,7 +169,7 @@ Current baseline assumptions for development tests:
 - Default system prompt baseline: `CHAT_V20260418_PROMPT`
 - Default test embedding: `letta/letta-free`
 - Comment Lab task shape default: `classic`
-- Label Lab schema default: `label_span_annotations_v1`
+- Label Lab schema default: `label_entity_groups_v1`
 
 The maintained verification surface under `tests/` is:
 
@@ -223,7 +223,7 @@ curl http://127.0.0.1:8284/api/v1/options?scenario=label
 - `GET /api/v1/platform/schema-center/label-schemas`
 	- Lists file-backed Label Lab JSON schemas.
 - `POST /api/v1/labeling/generate`
-	- Runs stateless span labeling with a selected model, prompt, and schema.
+	- Runs stateless grouped entity extraction with a selected model, prompt, and schema.
 - `GET /api/v1/platform/test-runs/{run_id}/artifacts`
 	- Lists discovered artifacts for a test run (logs, summaries).
 - `GET /api/v1/platform/test-runs/{run_id}/artifacts/{artifact_id}`

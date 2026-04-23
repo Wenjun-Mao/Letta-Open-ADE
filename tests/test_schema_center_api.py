@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 
 from agent_platform_api.routers import schema_center
-from utils.label_schema_registry import LabelSchemaRegistry, default_label_span_schema
+from utils.label_schema_registry import LabelSchemaRegistry, default_label_extraction_schema
 
 
 def test_schema_center_routes_manage_label_schemas(monkeypatch, tmp_path) -> None:
@@ -18,7 +18,7 @@ def test_schema_center_routes_manage_label_schemas(monkeypatch, tmp_path) -> Non
                 key="label_test_schema",
                 label="Test Schema",
                 description="For tests.",
-                schema=default_label_span_schema(),
+                schema=default_label_extraction_schema(),
             )
         )
     )
@@ -26,7 +26,13 @@ def test_schema_center_routes_manage_label_schemas(monkeypatch, tmp_path) -> Non
 
     listed = asyncio.run(schema_center.api_schema_center_list_label_schemas())
     assert listed["total"] == 1
-    assert listed["items"][0]["schema"]["required"] == ["spans"]
+    assert listed["items"][0]["schema"]["required"] == [
+        "people",
+        "organizations",
+        "locations",
+        "dates",
+        "events",
+    ]
 
     updated = asyncio.run(
         schema_center.api_schema_center_update_label_schema(

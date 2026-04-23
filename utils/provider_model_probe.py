@@ -12,7 +12,7 @@ from utils.labeling_helpers import (
     LABEL_PROBE_ARTICLE,
     build_label_probe_system_prompt,
     build_label_user_payload,
-    default_label_output_schema,
+    label_probe_output_schema,
     label_probe_success,
     label_response_format,
     normalize_label_content,
@@ -427,7 +427,7 @@ def _post_label_probe_once(
         "stream": False,
         "max_tokens": 256,
         "temperature": 0,
-        "response_format": label_response_format(default_label_output_schema(), name="label_probe_output"),
+        "response_format": label_response_format(label_probe_output_schema(), name="label_probe_output"),
     }
 
     with httpx.Client(timeout=timeout_seconds) as session:
@@ -642,7 +642,7 @@ def classify_label_probe_payload(
         status="invalid_payload",
         usable=False,
         http_status=200,
-        detail="Structured output probe did not return the expected JSON span result.",
+        detail="Structured output probe did not return the expected grouped JSON result.",
     )
 
 

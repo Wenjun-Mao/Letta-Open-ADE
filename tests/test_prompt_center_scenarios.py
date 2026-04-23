@@ -128,8 +128,8 @@ def test_label_prompt_parses_output_schema_metadata(tmp_path) -> None:
             [
                 '"""Custom label prompt."""',
                 'LABEL = "Label Schema"',
-                'OUTPUT_SCHEMA = "{\\"type\\":\\"object\\",\\"properties\\":{\\"spans\\":{\\"type\\":\\"array\\"}},\\"required\\":[\\"spans\\"],\\"additionalProperties\\":false}"',
-                'PROMPT = "Return spans."',
+                'OUTPUT_SCHEMA = "{\\"type\\":\\"object\\",\\"properties\\":{\\"players\\":{\\"type\\":\\"array\\",\\"items\\":{\\"type\\":\\"string\\"}},\\"teams\\":{\\"type\\":\\"array\\",\\"items\\":{\\"type\\":\\"string\\"}}},\\"required\\":[\\"players\\",\\"teams\\"],\\"additionalProperties\\":false}"',
+                'PROMPT = "Return grouped entities."',
                 "",
             ]
         ),
@@ -142,4 +142,4 @@ def test_label_prompt_parses_output_schema_metadata(tmp_path) -> None:
     assert record is not None
     assert record["scenario"] == "label"
     assert record["output_schema"] is not None
-    assert '"spans"' in record["output_schema"]
+    assert '"players"' in record["output_schema"]
