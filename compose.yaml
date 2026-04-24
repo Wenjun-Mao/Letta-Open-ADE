@@ -84,12 +84,9 @@ services:
       retries: ${LETTA_HEALTHCHECK_RETRIES:-30}
       start_period: ${LETTA_HEALTHCHECK_START_PERIOD:-180s}
   agent_platform_api:
-    image: ${AGENT_PLATFORM_API_IMAGE:-ghcr.io/wenjun-mao/agent-platform-api:latest}
     build:
       context: .
       dockerfile: docker/agent_platform_api.Dockerfile
-    # profiles:
-    #   - ui
     restart: unless-stopped
     env_file:
       - ${LETTA_ENV_FILE:-.env}
@@ -111,8 +108,6 @@ services:
         condition: service_healthy
 
   ade_frontend:
-    # profiles:
-    #   - ade
     build:
       context: ./frontend-ade
       dockerfile: Dockerfile

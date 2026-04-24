@@ -174,23 +174,23 @@ Consequence:
 - `.dockerignore` is part of active CI/CD performance and reproducibility.
 - It reduces build time and accidental context bloat.
 
-### 9. Option A Deployment Model (Pinned Letta + Prebuilt Agent Platform API)
+### 9. Local Build Deployment Model
 
 Decision:
 - Use pinned upstream Letta image for `letta_server`.
-- Use prebuilt GHCR image for `agent_platform_api`.
+- Build first-party ADE services from this checkout for now.
+- Keep GHCR publishing disabled until registry deployment is useful again.
 
 Why:
 - Keeps Letta maintenance burden low (no custom forked server image lifecycle).
-- Delivers deterministic remote startup for the backend API without runtime dependency installs.
-- Supports pull-first deployment on remote Ubuntu (`docker compose pull` + `up -d`).
+- Keeps the active development loop simple while the router/API surfaces are still moving.
+- Avoids publishing transient local-phase images to GHCR.
 
 Consequence:
-- Image controls are environment-driven:
-  - `LETTA_SERVER_IMAGE` (default `letta/letta:0.16.7`)
-  - `AGENT_PLATFORM_API_IMAGE` (default `ghcr.io/wenjun-mao/agent-platform-api:latest`)
-- CI publishes `agent_platform_api` via `.github/workflows/publish-agent-platform-api-ghcr.yml`.
-- Remote operators should avoid `--build` for routine deploys.
+- `LETTA_SERVER_IMAGE` still controls the upstream Letta image.
+- `agent_platform_api`, `model_router`, and `ade_frontend` build locally through Compose.
+- `.github/workflows/publish-agent-platform-api-ghcr.yml` is a disabled stub that only explains the current state.
+- If registry deployment returns later, restore the GHCR workflow and add an `image:` tag back to the publishable service.
 
 ## Verified Findings
 
@@ -251,7 +251,7 @@ Root cause:
 Implemented fix in this bundle:
 - Added `docker/agent_platform_api.Dockerfile`.
 - Moved dependency installation to image build (`uv sync --frozen --no-dev --no-install-project`).
-- Published/pulled `agent_platform_api` as a prebuilt GHCR image in Option A while keeping Uvicorn runtime entrypoint from `/opt/venv/bin/uvicorn`.
+- Kept Uvicorn runtime entrypoint from `/opt/venv/bin/uvicorn` so local Compose builds do not sync dependencies at container startup.
 
 Expected result:
 - After build, `agent_platform_api` boots directly to Uvicorn without startup-time dependency download.

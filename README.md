@@ -10,7 +10,7 @@ This directory is self-contained. You can copy `standalone/letta-doubao` anywher
 - first-party `model_router` service as the single OpenAI-compatible front door
 - Ark, llama-server, LM Studio, and Unsloth Studio as configurable router upstreams
 - Letta's built-in `letta/letta-free` embedding handle for agent memory
-- prebuilt Agent Platform API image from GHCR (`AGENT_PLATFORM_API_IMAGE`)
+- first-party ADE services built locally from this checkout
 
 ## Why Redis Is Explicit In Compose
 
@@ -79,38 +79,24 @@ uv run marimo run notebooks\02_letta_e2e.py --headless
 
 8. Read [MANUAL.md](./MANUAL.md) before making changes or moving this directory. It captures the decisions, verified behavior, rejected paths, and next-step guidance so the setup can be reconstructed later without redoing the same investigation.
 
-## Option A Deployment (GHCR + Pinned Upstream Letta)
+## Local Build Deployment
 
-This repo now supports a pull-first deployment model:
+This repo currently defaults to local builds for first-party ADE services:
 
 - `letta_server` uses a pinned upstream image (`LETTA_SERVER_IMAGE`)
-- `agent_platform_api` uses a prebuilt image (`AGENT_PLATFORM_API_IMAGE`)
+- `model_router`, `agent_platform_api`, and `ade_frontend` build from this checkout
 
-The GitHub Actions workflow that publishes `agent_platform_api` to GHCR is:
+The old GHCR publishing path is intentionally disabled for now:
 
 - `.github/workflows/publish-agent-platform-api-ghcr.yml`
 
-Workflow behavior:
-
-- on push to `main` (for relevant files), it pushes branch and `sha-*` tags
-- on git tag like `v1.2.3`, it pushes a matching version tag
-- it also updates `latest` on the default branch
-
-Remote Ubuntu run sequence (no local build required):
+Local run sequence:
 
 ```bash
-docker compose pull letta_server agent_platform_api
-docker compose up -d
+docker compose up -d --build
 ```
 
-For this pull-first model, avoid `--build` on remote unless you intentionally want to rebuild locally.
-
-Set these in `.env` (or copy from `.env.example`) for image control:
-
-- `LETTA_SERVER_IMAGE=letta/letta:0.16.7`
-- `AGENT_PLATFORM_API_IMAGE=ghcr.io/wenjun-mao/agent-platform-api:latest`
-
-If you keep the GHCR package public, remote hosts can pull without registry credentials.
+If registry deployment becomes useful again later, restore the publish workflow and reintroduce an `image:` tag for the service that should be pushed.
 
 ## Troubleshooting
 
