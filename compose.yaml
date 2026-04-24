@@ -38,6 +38,8 @@ services:
       - ${LETTA_ENV_FILE:-.env}
     environment:
       - PYTHONPATH=/app
+    volumes:
+      - ./config:/app/config:ro
     ports:
       - "8290:8290"
     healthcheck:
@@ -97,6 +99,7 @@ services:
     volumes:
       - ./prompts:/app/prompts
       - ./schemas:/app/schemas
+      - ./config:/app/config:ro
       - ./tools/custom:/app/tools/custom
       - ./data/agent_lifecycle:/app/data/agent_lifecycle
     ports:

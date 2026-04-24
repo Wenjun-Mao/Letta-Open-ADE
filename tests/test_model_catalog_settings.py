@@ -62,6 +62,37 @@ def test_settings_parse_model_sources_from_env(monkeypatch) -> None:
         clear_settings_cache()
 
 
+def test_settings_parse_model_sources_from_file_when_env_sources_absent(monkeypatch, tmp_path) -> None:
+    sources_path = tmp_path / "router_sources.json"
+    sources_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "local_llama_server",
+                    "label": "Local llama-server",
+                    "base_url": "http://127.0.0.1:8081/v1",
+                    "kind": "openai-compatible",
+                    "adapter": "llama_cpp_server",
+                    "enabled_for": ["agent_studio", "comment_lab", "label_lab"],
+                    "letta_handle_prefix": "openai-proxy",
+                    "api_key_env": "LLAMA_SERVER_API_KEY",
+                    "api_key_secret": "llama-server-api-key",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("AGENT_PLATFORM_MODEL_SOURCES", raising=False)
+    monkeypatch.setenv("AGENT_PLATFORM_MODEL_SOURCES_FILE", str(sources_path))
+    clear_settings_cache()
+    try:
+        settings = get_settings()
+        assert [source.id for source in settings.model_sources] == ["local_llama_server"]
+        assert settings.model_sources[0].enabled_for == ["chat", "comment", "label"]
+    finally:
+        clear_settings_cache()
+
+
 def test_model_source_resolve_api_key_prefers_secret_file_over_env(tmp_path) -> None:
     source = ModelSourceConfig(
         id="local",

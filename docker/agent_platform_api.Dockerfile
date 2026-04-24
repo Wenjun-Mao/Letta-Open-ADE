@@ -13,6 +13,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Copy runtime source required by the Agent Platform API service.
 COPY agent_platform_api ./agent_platform_api
 COPY utils ./utils
+COPY config ./config
 COPY prompts ./prompts
 COPY schemas ./schemas
 COPY tests ./tests

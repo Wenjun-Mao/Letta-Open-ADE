@@ -151,12 +151,13 @@ fi
 
 AGENT_API_CID="$(get_service_cid agent_platform_api)"
 if [[ -n "${AGENT_API_CID}" ]]; then
-  run_cmd "agent_platform_api_env_selected" "docker exec '${AGENT_API_CID}' /bin/sh -lc \"env | grep -E '^(AGENT_PLATFORM_MODEL_ROUTER_BASE_URL|AGENT_PLATFORM_MODEL_SOURCES|AGENT_PLATFORM_COMMENTING_TIMEOUT_SECONDS|AGENT_PLATFORM_COMMENTING_MAX_TOKENS|AGENT_PLATFORM_COMMENTING_TASK_SHAPE|LETTA_BASE_URL)='\""
+  run_cmd "agent_platform_api_env_selected" "docker exec '${AGENT_API_CID}' /bin/sh -lc \"env | grep -E '^(AGENT_PLATFORM_MODEL_ROUTER_BASE_URL|AGENT_PLATFORM_COMMENTING_TIMEOUT_SECONDS|AGENT_PLATFORM_COMMENTING_MAX_TOKENS|AGENT_PLATFORM_COMMENTING_TASK_SHAPE|LETTA_BASE_URL)='\""
 fi
 
 MODEL_ROUTER_CID="$(get_service_cid model_router)"
 if [[ -n "${MODEL_ROUTER_CID}" ]]; then
-  run_cmd "model_router_env_selected" "docker exec '${MODEL_ROUTER_CID}' /bin/sh -lc \"env | grep -E '^(MODEL_ROUTER_SOURCES|MODEL_ROUTER_CACHE_TTL_SECONDS|MODEL_ROUTER_DISCOVERY_TIMEOUT_SECONDS|MODEL_ROUTER_REQUEST_TIMEOUT_SECONDS)='\""
+  run_cmd "model_router_env_selected" "docker exec '${MODEL_ROUTER_CID}' /bin/sh -lc \"env | grep -E '^(MODEL_ROUTER_SOURCES_FILE|MODEL_ROUTER_CACHE_TTL_SECONDS|MODEL_ROUTER_DISCOVERY_TIMEOUT_SECONDS|MODEL_ROUTER_REQUEST_TIMEOUT_SECONDS)='\""
+  run_cmd "model_router_sources_file" "docker exec '${MODEL_ROUTER_CID}' /bin/sh -lc \"python -m json.tool \\\"\${MODEL_ROUTER_SOURCES_FILE:-config/model_router_sources.json}\\\"\""
 fi
 
 run_cmd "probe_host_openapi" "python3 -c \"import urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:8283/openapi.json', timeout=5); print('status', getattr(resp, 'status', None)); resp.read(1); print('host_openapi_ok')\""

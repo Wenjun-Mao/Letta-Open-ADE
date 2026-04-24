@@ -6,8 +6,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from utils.settings_file_loader import load_json_config_list
 
 
 CommentingTaskShapeSetting = Literal["classic", "all_in_system", "structured_output"]
@@ -16,6 +18,7 @@ ModelSourceAdapter = Literal["generic_openai", "ark_openai", "llama_cpp_server"]
 ScenarioName = Literal["chat", "comment", "label"]
 _KNOWN_MODEL_HANDLE_PREFIXES = ("lmstudio_openai/", "openai-proxy/", "openai/", "anthropic/")
 _DEFAULT_SECRETS_DIR = Path("/run/secrets")
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _VERSION_PATH_RE = re.compile(r"/v\d+(?:\.\d+)?$", re.IGNORECASE)
 
 
@@ -135,6 +138,7 @@ class ModelSourceConfig(BaseModel):
 
 class AgentPlatformSettings(BaseSettings):
     model_sources: list[ModelSourceConfig] = Field(default_factory=list)
+    model_sources_file: str = "config/model_router_sources.json"
     model_router_base_url: str = ""
     model_router_api_key_env: str = "MODEL_ROUTER_API_KEY"
     model_router_api_key_secret: str = "model-router-api-key"
@@ -182,12 +186,33 @@ class AgentPlatformSettings(BaseSettings):
     @field_validator("model_sources")
     @classmethod
     def _ensure_unique_source_ids(cls, value: list[ModelSourceConfig]) -> list[ModelSourceConfig]:
+        cls._validate_unique_model_sources(value)
+        return value
+
+    @field_validator("model_sources_file")
+    @classmethod
+    def _strip_model_sources_file(cls, value: str) -> str:
+        return str(value or "").strip()
+
+    @model_validator(mode="after")
+    def _load_model_sources_from_file_when_env_is_empty(self) -> "AgentPlatformSettings":
+        if self.model_sources:
+            return self
+        loaded_items = load_json_config_list(self.model_sources_file, project_root=_PROJECT_ROOT)
+        self.model_sources = [
+            ModelSourceConfig.model_validate(_coerce_router_source_to_agent_source(item))
+            for item in loaded_items
+        ]
+        self._validate_unique_model_sources(self.model_sources)
+        return self
+
+    @staticmethod
+    def _validate_unique_model_sources(value: list[ModelSourceConfig]) -> None:
         seen: set[str] = set()
         for source in value:
             if source.id in seen:
                 raise ValueError(f"Duplicate model source id: {source.id}")
             seen.add(source.id)
-        return value
 
     @field_validator("model_router_base_url", "model_router_api_key_env", "model_router_api_key_secret")
     @classmethod
@@ -277,3 +302,38 @@ def get_settings() -> AgentPlatformSettings:
 
 def clear_settings_cache() -> None:
     get_settings.cache_clear()
+
+
+def _coerce_router_source_to_agent_source(item: dict[str, object]) -> dict[str, object]:
+    """Map the router's module tags to the legacy direct-catalog scenario names.
+
+    Agent Platform normally talks to the model router now. This adapter only exists
+    so the old direct-provider fallback can read the same source file instead of
+    maintaining a second, drift-prone configuration.
+    """
+
+    enabled_for = item.get("module_visibility") or item.get("enabled_for") or []
+    if isinstance(enabled_for, str):
+        raw_tags = [part.strip() for part in enabled_for.split(",") if part.strip()]
+    elif isinstance(enabled_for, list):
+        raw_tags = [str(part or "").strip() for part in enabled_for]
+    else:
+        raw_tags = []
+
+    mapped: list[str] = []
+    tag_map = {
+        "agent_studio": "chat",
+        "chat": "chat",
+        "comment_lab": "comment",
+        "comment": "comment",
+        "label_lab": "label",
+        "label": "label",
+    }
+    for tag in raw_tags:
+        scenario = tag_map.get(tag.lower())
+        if scenario and scenario not in mapped:
+            mapped.append(scenario)
+
+    coerced = dict(item)
+    coerced["enabled_for"] = mapped
+    return coerced

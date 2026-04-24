@@ -1,0 +1,50 @@
+[
+  {
+    "id": "local_llama_server",
+    "label": "Local llama-server",
+    "base_url": "http://100.81.194.12:8081/v1",
+    "kind": "openai-compatible",
+    "adapter": "llama_cpp_server",
+    "enabled": true,
+    "enabled_for": ["agent_studio", "comment_lab", "label_lab"],
+    "letta_handle_prefix": "openai-proxy",
+    "api_key_env": "LLAMA_SERVER_API_KEY",
+    "api_key_secret": "llama-server-api-key"
+  },
+  {
+    "id": "local_lmstudio",
+    "label": "Local LM Studio",
+    "base_url": "http://100.81.194.12:1234/v1",
+    "kind": "openai-compatible",
+    "adapter": "generic_openai",
+    "enabled": false,
+    "enabled_for": ["agent_studio", "comment_lab"],
+    "letta_handle_prefix": "openai-proxy",
+    "api_key_env": "",
+    "api_key_secret": ""
+  },
+  {
+    "id": "local_unsloth",
+    "label": "Local Unsloth Studio",
+    "base_url": "http://100.81.194.12:2234/v1",
+    "kind": "openai-compatible",
+    "adapter": "generic_openai",
+    "enabled": false,
+    "enabled_for": ["comment_lab", "label_lab"],
+    "letta_handle_prefix": "openai-proxy",
+    "api_key_env": "UNSLOTH_API_KEY",
+    "api_key_secret": "unsloth-api-key"
+  },
+  {
+    "id": "ark",
+    "label": "Volcengine Ark",
+    "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+    "kind": "openai-compatible",
+    "adapter": "ark_openai",
+    "enabled": true,
+    "enabled_for": ["agent_studio", "comment_lab"],
+    "letta_handle_prefix": "openai-proxy",
+    "api_key_env": "OPENAI_API_KEY",
+    "api_key_secret": "ark-api-key"
+  }
+]

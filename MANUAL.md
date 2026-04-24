@@ -261,9 +261,9 @@ Expected result:
 ### Unified Model Router
 
 Important:
-- `model_router` now uses `MODEL_ROUTER_SOURCES` as the source of truth for Agent Studio, Comment Lab, Label Lab, and future ADE modules.
+- `model_router` now uses `config/model_router_sources.json` as the single source of truth for Agent Studio, Comment Lab, Label Lab, and future ADE modules.
 - Letta is pointed at the router through `OPENAI_API_BASE=http://model_router:8290/v1` in Compose, so it only needs one OpenAI-compatible provider.
-- `agent_platform_api` reads `/v1/router/model-catalog` and calls the router for stateless Comment Lab and Label Lab generation. `AGENT_PLATFORM_MODEL_SOURCES` is only a direct-provider fallback when the router is disabled.
+- `agent_platform_api` reads `/v1/router/model-catalog` and calls the router for stateless Comment Lab and Label Lab generation. Its legacy direct-provider fallback derives `chat/comment/label` scenarios from the same `config/model_router_sources.json` file if the router is intentionally disabled.
 
 Notes:
 - Each source entry declares the upstream base URL, adapter, module visibility, and auth lookup fields.
@@ -277,7 +277,7 @@ Notes:
   - `2234` remains optional Unsloth Studio standby.
   - `1234` remains optional LM Studio standby plus Letta bootstrap compatibility.
 - llama-server runtime settings remain host-side operations. Loaded GGUF, context sizing, GPU offload, and reasoning mode are expected to be adjusted in the launch command on the machine running llama-server, not through ADE.
-- Unsloth Studio and LM Studio may be offline or have no loaded model for long periods. In that state they should either be disabled in `MODEL_ROUTER_SOURCES` or appear only as `unreachable`/`empty` in diagnostics without blocking normal llama-server-first use.
+- Unsloth Studio and LM Studio may be offline or have no loaded model for long periods. In that state they should either be disabled in `config/model_router_sources.json` or appear only as `unreachable`/`empty` in diagnostics without blocking normal llama-server-first use.
 - Ark model visibility is filtered through the checked-in allowlist report at `agent_platform_api/catalog_data/ark_chat_probe_report.json`, which is regenerated with `uv run python scripts/probe_provider_models.py --source-id ark --mode chat-probe --write`.
 - Ark is currently enabled for chat/comment only. Label Lab is centered on llama-server JSON Schema output until a provider is explicitly enabled and verified for label schemas.
 
@@ -405,7 +405,7 @@ uv run marimo run notebooks\\02_letta_e2e.py --headless
 If you change the default Agent Studio model later:
 
 Update both:
-- `MODEL_ROUTER_SOURCES` module visibility for the desired upstream/model
+- `config/model_router_sources.json` `enabled_for` module tags for the desired upstream/model
 - `LETTA_MODEL_HANDLE`
 
 Rule:
@@ -422,8 +422,8 @@ Recommended procedure:
 If you change ADE provider discovery later:
 
 Update:
-- `MODEL_ROUTER_SOURCES`
-- `AGENT_PLATFORM_MODEL_SOURCES` only if intentionally using the direct-provider fallback
+- `config/model_router_sources.json`
+- no second Agent Platform source file is needed; the legacy direct-provider fallback derives its scenario view from `config/model_router_sources.json`
 - any referenced source auth env vars such as `LLAMA_SERVER_API_KEY`, `UNSLOTH_API_KEY`, or `OPENAI_API_KEY`
 
 ## If You Want Pure Doubao Embeddings Later

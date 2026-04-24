@@ -6,8 +6,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+from utils.settings_file_loader import load_json_config_list
 
 
 RouterSourceKind = Literal["openai-compatible"]
@@ -15,6 +17,7 @@ RouterSourceAdapter = Literal["generic_openai", "ark_openai", "llama_cpp_server"
 RouterSourceStatus = Literal["healthy", "auth_error", "unreachable", "empty", "disabled"]
 RouterModelType = Literal["llm", "embedding", "unknown"]
 _DEFAULT_SECRETS_DIR = Path("/run/secrets")
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _VERSION_PATH_RE = re.compile(r"/v\d+(?:\.\d+)?$", re.IGNORECASE)
 _SCENARIO_TO_MODULE = {
     "chat": "agent_studio",
@@ -141,6 +144,7 @@ class RouterSourceConfig(BaseModel):
 
 class ModelRouterSettings(BaseSettings):
     sources: list[RouterSourceConfig] = Field(default_factory=list)
+    sources_file: str = "config/model_router_sources.json"
     api_key: str = ""
     api_key_secret: str = "model-router-api-key"
     cache_ttl_seconds: int = 30
@@ -181,6 +185,25 @@ class ModelRouterSettings(BaseSettings):
     @field_validator("sources")
     @classmethod
     def _ensure_unique_source_ids(cls, value: list[RouterSourceConfig]) -> list[RouterSourceConfig]:
+        cls._validate_sources(value)
+        return value
+
+    @field_validator("sources_file")
+    @classmethod
+    def _strip_sources_file(cls, value: str) -> str:
+        return str(value or "").strip()
+
+    @model_validator(mode="after")
+    def _load_sources_from_file_when_env_is_empty(self) -> "ModelRouterSettings":
+        if self.sources:
+            return self
+        loaded_items = load_json_config_list(self.sources_file, project_root=_PROJECT_ROOT)
+        self.sources = [RouterSourceConfig.model_validate(item) for item in loaded_items]
+        self._validate_sources(self.sources)
+        return self
+
+    @staticmethod
+    def _validate_sources(value: list[RouterSourceConfig]) -> None:
         seen: set[str] = set()
         for source in value:
             if source.id in seen:
@@ -188,7 +211,6 @@ class ModelRouterSettings(BaseSettings):
             if not source.visible_modules():
                 raise ValueError(f"Source '{source.id}' must include module visibility")
             seen.add(source.id)
-        return value
 
     @field_validator("cache_ttl_seconds")
     @classmethod

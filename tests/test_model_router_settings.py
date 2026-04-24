@@ -46,6 +46,34 @@ def test_router_settings_parse_sources_and_module_visibility(monkeypatch) -> Non
         clear_settings_cache()
 
 
+def test_router_settings_load_sources_from_file_when_env_sources_absent(monkeypatch, tmp_path) -> None:
+    sources_path = tmp_path / "router_sources.json"
+    sources_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "local_llama_server",
+                    "label": "Local llama-server",
+                    "base_url": "http://127.0.0.1:8081/v1",
+                    "kind": "openai-compatible",
+                    "adapter": "llama_cpp_server",
+                    "enabled_for": ["agent_studio", "comment_lab"],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("MODEL_ROUTER_SOURCES", raising=False)
+    monkeypatch.setenv("MODEL_ROUTER_SOURCES_FILE", str(sources_path))
+    clear_settings_cache()
+    try:
+        settings = get_settings()
+        assert [source.id for source in settings.sources] == ["local_llama_server"]
+        assert settings.sources[0].visible_modules() == ("agent_studio", "comment_lab")
+    finally:
+        clear_settings_cache()
+
+
 def test_router_source_auth_prefers_secret_file_over_env(tmp_path) -> None:
     source = RouterSourceConfig(
         id="local",
@@ -93,4 +121,3 @@ def test_llama_router_source_falls_back_to_unsloth_key(tmp_path) -> None:
         )
         == "fallback-token"
     )
-

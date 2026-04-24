@@ -33,7 +33,7 @@ The same key did not expose a usable text embedding model through the tested Ope
 ## Quick Start
 
 1. Review `.env` or copy `.env.example` to `.env` and update values.
-   `MODEL_ROUTER_SOURCES` is the canonical ADE model catalog. Letta sees the router as one OpenAI-compatible provider at `http://model_router:8290/v1`, while Agent Studio, Comment Lab, and Label Lab read router diagnostics for module-specific visibility.
+   `config/model_router_sources.json` is the single ADE model-source config. Letta sees the router as one OpenAI-compatible provider at `http://model_router:8290/v1`, while Agent Studio, Comment Lab, and Label Lab read router diagnostics for module-specific visibility.
    By default, `8081` is the active llama-server source for local Agent Studio, Comment Lab, and Label Lab work, while `2234` Unsloth Studio and `1234` LM Studio are disabled standby examples.
    llama-server runtime settings, including loaded GGUF, context window, GPU layers, and reasoning mode, are host-managed on the machine running it rather than controlled by ADE.
 2. Start the stack:

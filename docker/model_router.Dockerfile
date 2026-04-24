@@ -17,6 +17,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY model_router ./model_router
 COPY utils ./utils
+COPY config ./config
 COPY agent_platform_api/catalog_data ./agent_platform_api/catalog_data
 
 EXPOSE 8290
