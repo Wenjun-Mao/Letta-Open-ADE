@@ -3,6 +3,8 @@
 __pycache__/
 data/pgdata/
 data/nltk_data/
+data/personas/*
+!data/personas/personas.sqlite3
 .tmp/nltk_data/
 .marimo/
 *.pyc

@@ -102,6 +102,7 @@ services:
       - ./config:/app/config:ro
       - ./tools/custom:/app/tools/custom
       - ./data/agent_lifecycle:/app/data/agent_lifecycle
+      - ./data/personas:/app/data/personas
     ports:
       - "8284:8284"
     depends_on:

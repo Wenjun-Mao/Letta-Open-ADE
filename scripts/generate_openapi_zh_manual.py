@@ -85,7 +85,7 @@ DESCRIPTION_TRANSLATIONS = {
     "Persistent-agent creation, inspection, and chat operations.": "持久化智能体的创建、检查与对话操作。",
     "Stateless comment generation using router-visible models.": "使用模型路由器可见模型生成无状态评论。",
     "Stateless grouped entity extraction using Label Lab schemas.": "使用 Label Lab Schema 进行无状态分组实体抽取。",
-    "File-backed prompt and persona template management.": "基于文件的提示词与 Persona 模板管理。",
+    "Prompt template and SQLite-backed persona library management.": "提示词模板与 SQLite 后端 Persona 库管理。",
     "File-backed Label Lab JSON schema management.": "基于文件的 Label Lab JSON Schema 管理。",
     "Tool discovery, Tool Center CRUD, and tool attach/detach operations.": "工具发现、工具中心 CRUD，以及工具挂载/卸载操作。",
     "Orchestrated live checks and test-run artifact access.": "编排式实时检查与测试运行产物访问。",

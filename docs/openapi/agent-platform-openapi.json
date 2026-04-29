@@ -4868,6 +4868,16 @@
               ],
               "title": "Scenario"
             }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Search",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -6671,7 +6681,7 @@
       "name": "Label Lab"
     },
     {
-      "description": "File-backed prompt and persona template management.",
+      "description": "Prompt template and SQLite-backed persona library management.",
       "name": "Prompt Center"
     },
     {

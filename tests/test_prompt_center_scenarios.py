@@ -16,8 +16,8 @@ def test_create_comment_persona_infers_comment_scenario_from_key(tmp_path) -> No
 
     assert record["scenario"] == "comment"
     assert record["key"] == "comment_test"
-    assert record["source_path"] == "prompts/persona/comment/comment_test.py"
-    assert (tmp_path / "prompts" / "persona" / "comment" / "comment_test.py").exists()
+    assert record["source_path"] == "data/personas/personas.sqlite3#comment_test"
+    assert (tmp_path / "data" / "personas" / "personas.sqlite3").exists()
 
 
 def test_create_chat_prompt_infers_chat_scenario_from_key(tmp_path) -> None:

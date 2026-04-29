@@ -27,6 +27,8 @@ class AgentPlatformSettings(BaseSettings):
     labeling_repair_retry_count: int = 1
     options_cache_ttl_seconds: int = 30
     model_discovery_timeout_seconds: float = 5.0
+    persona_db_path: str = "data/personas/personas.sqlite3"
+    persona_seed_jsonl_path: str = "agent_platform_api/seed_data/personas.jsonl"
 
     model_config = SettingsConfigDict(
         env_prefix="AGENT_PLATFORM_",
@@ -63,6 +65,11 @@ class AgentPlatformSettings(BaseSettings):
     @field_validator("model_router_base_url", "model_router_api_key_env", "model_router_api_key_secret")
     @classmethod
     def _strip_router_text_fields(cls, value: str) -> str:
+        return str(value or "").strip()
+
+    @field_validator("persona_db_path", "persona_seed_jsonl_path")
+    @classmethod
+    def _strip_path_fields(cls, value: str) -> str:
         return str(value or "").strip()
 
     @field_validator("commenting_timeout_seconds")

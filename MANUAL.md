@@ -293,7 +293,8 @@ Important:
 
 Notes:
 - Schema Center v1 is label-only. It provides create, edit, archive, restore, and purge operations under `/api/v1/platform/schema-center/label-schemas`.
-- The API container mounts `./schemas:/app/schemas`, so UI edits persist to the host filesystem like Prompt Center edits.
+- The API container mounts `./schemas:/app/schemas`, so schema edits persist to the host filesystem.
+- Persona records are stored in SQLite at `data/personas/personas.sqlite3` and seeded from `agent_platform_api/seed_data/personas.jsonl`; system prompts remain file-backed. Use `uv run python scripts/persona_library.py --help` for JSONL/Markdown exchange.
 - `POST /api/v1/labeling/generate` requires a selected `model_key`, `prompt_key`, and `schema_key`.
 - For the `llama_cpp_server` adapter, Label Lab sends `response_format={"type":"json_schema","json_schema":...}` to `/v1/chat/completions`, matching the notebook-proven llama-server pattern.
 - Server-side validation still verifies the parsed shape, trims duplicates, and requires every extracted string to exactly match a substring in the input article.

@@ -12,12 +12,19 @@ from agent_platform_api.registries.prompt_persona_store.types import (
     ScenarioKind,
     TemplateKind,
 )
+from agent_platform_api.registries.persona_sqlite import PersonaSqliteRegistry
 
 
 class PromptPersonaRegistry:
-    """File-backed registry for system prompts and persona templates."""
+    """Registry facade for file-backed system prompts and SQLite-backed personas."""
 
-    def __init__(self, project_root: Path):
+    def __init__(
+        self,
+        project_root: Path,
+        *,
+        persona_db_path: Path | None = None,
+        persona_seed_jsonl_path: Path | None = None,
+    ):
         self.paths = PromptPersonaPaths.from_project_root(project_root)
         self.project_root = self.paths.project_root
         self.prompt_dir = self.paths.prompt_dir
@@ -25,16 +32,26 @@ class PromptPersonaRegistry:
         self.persona_dir = self.paths.persona_dir
         self.persona_archive_dir = self.paths.persona_archive_dir
         self.paths.ensure_dirs()
+        self.persona_registry = PersonaSqliteRegistry(
+            self.project_root,
+            db_path=persona_db_path,
+            seed_jsonl_path=persona_seed_jsonl_path,
+        )
 
     def list_templates(
         self,
         kind: TemplateKind,
         include_archived: bool = False,
         scenario: ScenarioKind | None = None,
+        search: str = "",
     ) -> list[dict[str, Any]]:
+        if kind == "persona":
+            return self.persona_registry.list_personas(
+                include_archived=include_archived,
+                scenario=scenario,
+                search=search,
+            )
         resolved_scenario = self._normalize_scenario(scenario, allow_none=True)
-        if self._is_unsupported_persona_scenario(kind, resolved_scenario):
-            return []
         records = self._list_from_dir(kind=kind, archived=False, scenario=resolved_scenario)
         if include_archived:
             records.extend(self._list_from_dir(kind=kind, archived=True, scenario=resolved_scenario))
@@ -55,10 +72,10 @@ class PromptPersonaRegistry:
         archived: bool = False,
         scenario: ScenarioKind | None = None,
     ) -> dict[str, Any] | None:
+        if kind == "persona":
+            return self.persona_registry.get_persona(key, archived=archived, scenario=scenario)
         normalized = self._normalize_key(key)
         resolved_scenario = self._normalize_scenario(scenario, allow_none=True)
-        if self._is_unsupported_persona_scenario(kind, resolved_scenario):
-            return None
         file_path = self.paths.find_template_path(
             kind=kind,
             key=normalized,
@@ -79,6 +96,14 @@ class PromptPersonaRegistry:
         description: str | None = None,
         scenario: ScenarioKind | None = None,
     ) -> dict[str, Any]:
+        if kind == "persona":
+            return self.persona_registry.create_persona(
+                key=key,
+                content=content,
+                label=label,
+                description=description,
+                scenario=scenario,
+            )
         normalized = self._normalize_key(key)
         resolved_scenario = self._normalize_scenario(scenario, allow_none=True) or self._infer_scenario_from_key(normalized)
         self._ensure_supported_persona_scenario(kind, resolved_scenario)
@@ -116,6 +141,14 @@ class PromptPersonaRegistry:
         description: str | None = None,
         scenario: ScenarioKind | None = None,
     ) -> dict[str, Any]:
+        if kind == "persona":
+            return self.persona_registry.update_persona(
+                key=key,
+                content=content,
+                label=label,
+                description=description,
+                scenario=scenario,
+            )
         normalized = self._normalize_key(key)
         resolved_scenario = self._normalize_scenario(scenario, allow_none=True)
         self._ensure_supported_persona_scenario(kind, resolved_scenario)
@@ -148,6 +181,8 @@ class PromptPersonaRegistry:
         return self._parse_template_file(kind=kind, path=existing_path, archived=False)
 
     def archive_template(self, kind: TemplateKind, key: str, scenario: ScenarioKind | None = None) -> dict[str, Any]:
+        if kind == "persona":
+            return self.persona_registry.archive_persona(key, scenario=scenario)
         normalized = self._normalize_key(key)
         resolved_scenario = self._normalize_scenario(scenario, allow_none=True)
         self._ensure_supported_persona_scenario(kind, resolved_scenario)
@@ -169,6 +204,8 @@ class PromptPersonaRegistry:
         return self._parse_template_file(kind=kind, path=archived_path, archived=True)
 
     def restore_template(self, kind: TemplateKind, key: str, scenario: ScenarioKind | None = None) -> dict[str, Any]:
+        if kind == "persona":
+            return self.persona_registry.restore_persona(key, scenario=scenario)
         normalized = self._normalize_key(key)
         resolved_scenario = self._normalize_scenario(scenario, allow_none=True)
         self._ensure_supported_persona_scenario(kind, resolved_scenario)
@@ -190,6 +227,9 @@ class PromptPersonaRegistry:
         return self._parse_template_file(kind=kind, path=active_path, archived=False)
 
     def purge_template(self, kind: TemplateKind, key: str, scenario: ScenarioKind | None = None) -> None:
+        if kind == "persona":
+            self.persona_registry.purge_persona(key, scenario=scenario)
+            return
         normalized = self._normalize_key(key)
         resolved_scenario = self._normalize_scenario(scenario, allow_none=True)
         self._ensure_supported_persona_scenario(kind, resolved_scenario)

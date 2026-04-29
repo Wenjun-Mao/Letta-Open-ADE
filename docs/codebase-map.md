@@ -23,7 +23,7 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 - `model_router/`: the first-party OpenAI-compatible router. It owns upstream source discovery, source health, Ark allowlist filtering, model id routing, and module visibility.
 - `agent_platform_api/`: the ADE backend API. It owns routes, Pydantic response/request models, feature services, registries, Letta orchestration, and router catalog consumption.
 - `agent_platform_api/services/`: feature services for Agent Studio/Letta operations, Comment Lab, and Label Lab.
-- `agent_platform_api/registries/`: file-backed registries for prompts/personas, label schemas, custom tools, and agent lifecycle metadata.
+- `agent_platform_api/registries/`: registries for file-backed prompts/schemas/tools, SQLite-backed personas, and agent lifecycle metadata.
 - `agent_platform_api/options/`: router-backed model catalog enrichment, UI option building, model selection, and runtime defaults.
 - `agent_platform_api/clients/`: outbound service clients, currently the model router client.
 - `agent_platform_api/llm/`: LLM tooling that belongs to ADE, such as provider probe/report generation.
@@ -46,7 +46,8 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 
 - `config/model_router_sources.json`: the single model-source config file. Edit this to enable, disable, reorder, or retag LLM upstreams.
 - `prompts/system_prompts/`: prompt templates grouped by scenario.
-- `prompts/persona/`: persona templates grouped by scenario.
+- `agent_platform_api/seed_data/personas.jsonl`: checked-in seed personas loaded into SQLite on first startup.
+- `data/personas/`: local SQLite persona library runtime storage.
 - `schemas/label/`: Label Lab JSON schema center storage.
 - `tools/custom/`: file-backed custom tool source storage.
 - `agent_platform_api/catalog_data/`: checked-in model probe reports and allowlists.
@@ -61,7 +62,9 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 | Change Comment Lab generation | `agent_platform_api/services/commenting.py` and `agent_platform_api/routers/commenting.py` |
 | Change Label Lab generation | `agent_platform_api/services/labeling.py`, `agent_platform_api/services/labeling_helpers.py`, and `agent_platform_api/routers/labeling.py` |
 | Change options returned to the UI | `agent_platform_api/options/` |
-| Change Prompt Center behavior | `agent_platform_api/registries/prompt_persona_store/` and `agent_platform_api/routers/prompt_center.py` |
+| Change Prompt Center prompt behavior | `agent_platform_api/registries/prompt_persona_store/` and `agent_platform_api/routers/prompt_center.py` |
+| Change Prompt Center persona storage | `agent_platform_api/registries/persona_sqlite.py` |
+| Import/export the persona library | `uv run python scripts/persona_library.py --help` |
 | Change Schema Center behavior | `agent_platform_api/registries/label_schema.py` and `agent_platform_api/routers/schema_center.py` |
 | Change Agent Studio / Letta orchestration | `agent_platform_api/services/agent_platform.py` and `agent_platform_api/routers/agents.py` |
 | Change frontend page behavior | the matching `frontend-ade/app/<module>/page.tsx` file |

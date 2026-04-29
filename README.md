@@ -141,6 +141,8 @@ After this, `agent_platform_api` should start directly with Uvicorn and no start
 - `MANUAL.md`: detailed decision log and handoff guide
 - `scripts/probe_provider_models.py`: rerunnable Ark usability probe for regenerating the checked-in allowlist
 - `agent_platform_api/catalog_data/ark_chat_probe_report.json`: persisted Ark chat-usable model allowlist
+- `agent_platform_api/seed_data/personas.jsonl`: checked-in seed personas for the SQLite persona library
+- `data/personas/`: local SQLite persona library storage, ignored by git
 - `schemas/label/`: file-backed Label Schema Center storage for Label Lab output schemas
 - `notebooks/01_doubao_api_smoke.py`: direct Ark validation
 - `notebooks/02_letta_e2e.py`: Letta end-to-end validation against the running stack
@@ -153,6 +155,7 @@ Current baseline assumptions for development tests:
 - Default test embedding: `letta/letta-free`
 - Comment Lab task shape default: `classic`
 - Label Lab schema default: `label_entity_groups_v1`
+- Persona library storage: SQLite at `data/personas/personas.sqlite3`, seeded from `agent_platform_api/seed_data/personas.jsonl`
 
 The maintained verification surface under `tests/` is:
 
@@ -203,6 +206,10 @@ curl http://127.0.0.1:8284/api/v1/options?scenario=label
 	- Lists available platform tools for ADE Toolbench discovery.
 - `GET /api/v1/platform/metadata/prompts-personas`
 	- Returns prompt and persona metadata for ADE Prompt and Persona Lab selectors.
+- `GET /api/v1/platform/prompt-center/personas`
+	- Lists SQLite-backed persona records; use the optional `search` query for persona-library search.
+- Persona library exchange
+	- Use `uv run python scripts/persona_library.py --help` to import/export SQLite personas as JSONL or Markdown.
 - `GET /api/v1/platform/schema-center/label-schemas`
 	- Lists file-backed Label Lab JSON schemas.
 - `POST /api/v1/labeling/generate`

@@ -23,20 +23,8 @@ DEFAULT_PROMPT_META: dict[str, dict[str, str]] = {
     },
 }
 
-DEFAULT_PERSONA_META: dict[str, dict[str, str]] = {
-    "chat_linxiaotang": {
-        "label": "Chat Lin Xiao Tang",
-        "description": "Default chat persona profile for warm conversational replies.",
-    },
-    "comment_linxiaotang": {
-        "label": "Comment Lin Xiao Tang",
-        "description": "Default commenting persona profile for concise public discussion.",
-    },
-}
-
-
 def default_meta_for_kind(kind: TemplateKind, key: str) -> dict[str, str]:
-    defaults = DEFAULT_PROMPT_META if kind == "prompt" else DEFAULT_PERSONA_META
+    defaults = DEFAULT_PROMPT_META if kind == "prompt" else {}
     if key in defaults:
         return dict(defaults[key])
     pretty = key.replace("-", " ").replace("_", " ").title()

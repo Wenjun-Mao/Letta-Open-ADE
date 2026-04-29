@@ -4868,6 +4868,16 @@
               ],
               "title": "场景"
             }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "搜索",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -6671,7 +6681,7 @@
       "name": "标注实验室"
     },
     {
-      "description": "基于文件的提示词与 Persona 模板管理。",
+      "description": "提示词模板与 SQLite 后端 Persona 库管理。",
       "name": "提示词中心"
     },
     {

@@ -199,7 +199,11 @@ async def api_prompt_center_purge_prompt(key: str, scenario: str | None = None):
     tags=[TAG_PROMPT_CENTER],
     summary="List persona templates",
 )
-async def api_prompt_center_list_personas(include_archived: bool = False, scenario: str | None = None):
+async def api_prompt_center_list_personas(
+    include_archived: bool = False,
+    scenario: str | None = None,
+    search: str = "",
+):
     ensure_platform_api_enabled()
     resolved_scenario = normalize_scenario(scenario) if scenario else None
     if _is_label_persona_selector(scenario=resolved_scenario):
@@ -215,6 +219,7 @@ async def api_prompt_center_list_personas(include_archived: bool = False, scenar
             "persona",
             include_archived=include_archived,
             scenario=resolved_scenario,
+            search=search,
         )
     except RegistryError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

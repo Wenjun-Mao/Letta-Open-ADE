@@ -5,6 +5,7 @@ __pycache__/
 .marimo/
 data/pgdata/
 data/nltk_data/
+data/personas/
 .tmp/
 diagnostics/
 tests/outputs/

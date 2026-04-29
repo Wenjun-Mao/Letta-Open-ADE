@@ -91,3 +91,30 @@ def test_update_prompt_template_requires_at_least_one_field(monkeypatch, tmp_pat
 
     assert response.status_code == 400
     assert response.json()["detail"] == "At least one field must be provided"
+
+
+def test_list_personas_supports_search_query(monkeypatch, tmp_path) -> None:
+    registry = PromptPersonaRegistry(tmp_path)
+    registry.create_template(
+        "persona",
+        key="comment_search_persona",
+        content="Gentle football fan who likes Messi.",
+        label="Search Persona",
+        scenario="comment",
+    )
+    registry.create_template(
+        "persona",
+        key="comment_other_persona",
+        content="Different voice.",
+        label="Other Persona",
+        scenario="comment",
+    )
+
+    with _client(monkeypatch, registry) as client:
+        response = client.get(
+            "/api/v1/platform/prompt-center/personas?scenario=comment&search=Messi",
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert [item["key"] for item in payload["items"]] == ["comment_search_persona"]

@@ -26,7 +26,7 @@ OPENAPI_TAGS = [
     },
     {
         "name": TAG_PROMPT_CENTER,
-        "description": "File-backed prompt and persona template management.",
+        "description": "Prompt template and SQLite-backed persona library management.",
     },
     {
         "name": TAG_SCHEMA_CENTER,
