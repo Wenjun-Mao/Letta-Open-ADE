@@ -35,6 +35,7 @@ Current development baseline defaults:
 - `README.md`: short run instructions
 - `MANUAL.md`: this longer decision log and runbook
 - `docs/codebase-map.md`: source map for backend services, frontend modules, configs, tests, and diagnostics
+- `docs/development-conventions.md`: repo-specific structure and workflow locality conventions
 - `notebooks/01_doubao_api_smoke.py`: direct Ark validation
 - `notebooks/02_letta_e2e.py`: Letta end-to-end validation
 
@@ -44,7 +45,7 @@ Maintained verification entry points under `tests/`:
 - `tests/checks/platform_api_e2e_check.py`
 - `tests/checks/ade_mvp_smoke_e2e_check.py`
 
-General-purpose operational scripts remain under `scripts/`.
+General-purpose operational scripts remain under `scripts/`. Evaluation/probe workflows with colocated config, inputs, docs, and outputs live under `evals/`.
 
 ## Core Decisions
 
@@ -281,7 +282,7 @@ Notes:
   - `1234` remains optional LM Studio standby plus Letta bootstrap compatibility.
 - llama-server runtime settings remain host-side operations. Loaded GGUF, context sizing, GPU offload, and reasoning mode are expected to be adjusted in the launch command on the machine running llama-server, not through ADE.
 - Unsloth Studio and LM Studio may be offline or have no loaded model for long periods. In that state they should either be disabled in `config/model_router_sources.json` or appear only as `unreachable`/`empty` in diagnostics without blocking normal llama-server-first use.
-- Ark model visibility is filtered through the checked-in allowlist report at `agent_platform_api/catalog_data/ark_chat_probe_report.json`, which is regenerated with `uv run python scripts/probe_provider_models.py --source-id ark --mode chat-probe --write`.
+- Ark model visibility is filtered through the checked-in allowlist report at `agent_platform_api/catalog_data/ark_chat_probe_report.json`, which is regenerated with `uv run python evals/provider_model_probe/run.py --source-id ark --mode chat-probe --write`.
 - Ark is currently enabled for chat/comment only. Label Lab is centered on llama-server JSON Schema output until a provider is explicitly enabled and verified for label schemas.
 
 ### Label Lab And Schema Center
@@ -294,7 +295,7 @@ Important:
 Notes:
 - Schema Center v1 is label-only. It provides create, edit, archive, restore, and purge operations under `/api/v1/platform/schema-center/label-schemas`.
 - The API container mounts `./schemas:/app/schemas`, so schema edits persist to the host filesystem.
-- Persona records are stored in SQLite at `data/personas/personas.sqlite3` and seeded from `agent_platform_api/seed_data/personas.jsonl`; system prompts remain file-backed. Use `uv run python scripts/persona_library.py --help` for JSONL/Markdown exchange.
+- Persona records are stored in the tracked SQLite DB at `data/personas/personas.sqlite3` and seeded from `agent_platform_api/seed_data/personas.jsonl`; system prompts remain file-backed. SQLite sidecars stay ignored. Use `uv run python scripts/persona_library.py --help` for JSONL/Markdown exchange.
 - `POST /api/v1/labeling/generate` requires a selected `model_key`, `prompt_key`, and `schema_key`.
 - For the `llama_cpp_server` adapter, Label Lab sends `response_format={"type":"json_schema","json_schema":...}` to `/v1/chat/completions`, matching the notebook-proven llama-server pattern.
 - Server-side validation still verifies the parsed shape, trims duplicates, and requires every extracted string to exactly match a substring in the input article.

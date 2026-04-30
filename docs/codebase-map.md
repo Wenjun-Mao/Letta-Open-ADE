@@ -30,6 +30,7 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 - `agent_platform_api/letta/`: Letta SDK convenience helpers and generated Letta tool constants.
 - `agent_platform_api/testing/`: Test Center orchestration.
 - `ade_core/`: small shared helpers used by more than one backend service. Keep this intentionally tiny.
+- `evals/`: self-contained evaluation/probe workflows with colocated runner, config, docs, inputs, and ignored outputs.
 
 ## Frontend Modules
 
@@ -47,10 +48,11 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 - `config/model_router_sources.json`: the single model-source config file. Edit this to enable, disable, reorder, or retag LLM upstreams.
 - `prompts/system_prompts/`: prompt templates grouped by scenario.
 - `agent_platform_api/seed_data/personas.jsonl`: checked-in seed personas loaded into SQLite on first startup.
-- `data/personas/`: local SQLite persona library runtime storage.
+- `data/personas/personas.sqlite3`: tracked SQLite persona library; SQLite sidecars remain ignored.
 - `schemas/label/`: Label Lab JSON schema center storage.
 - `tools/custom/`: file-backed custom tool source storage.
 - `agent_platform_api/catalog_data/`: checked-in model probe reports and allowlists.
+- `evals/*/outputs/`: local generated eval/probe outputs, ignored by git.
 - `data/`: runtime data root. Keep committed files here minimal; generated service state should normally stay untracked.
 
 ## Where Do I Change X?
@@ -67,10 +69,12 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 | Import/export the persona library | `uv run python scripts/persona_library.py --help` |
 | Change Schema Center behavior | `agent_platform_api/registries/label_schema.py` and `agent_platform_api/routers/schema_center.py` |
 | Change Agent Studio / Letta orchestration | `agent_platform_api/services/agent_platform.py` and `agent_platform_api/routers/agents.py` |
+| Run Comment Persona Eval | `uv run python evals/comment_persona_eval/run.py --config evals/comment_persona_eval/config.toml` |
 | Change frontend page behavior | the matching `frontend-ade/app/<module>/page.tsx` file |
 | Update OpenAPI artifacts | `uv run python scripts/export_openapi.py` |
-| Re-probe Ark usable models | `uv run python scripts/probe_provider_models.py --source-id ark --mode chat-probe --write` |
+| Re-probe Ark usable models | `uv run python evals/provider_model_probe/run.py --source-id ark --mode chat-probe --write` |
 | Collect runtime diagnostics | `scripts/collect_diagnostics.sh` |
+| Update repo conventions | `docs/development-conventions.md` |
 
 ## Guardrails
 
@@ -78,4 +82,5 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 - Do not add a second Agent Platform model-source config. The router source file is the source of truth.
 - Do not reintroduce Agent Platform direct-provider traversal for normal model discovery or generation.
 - Keep generated build/cache/runtime artifacts out of git.
+- Keep multi-file workflows colocated under `evals/` instead of splitting runner/config/output across root folders.
 - If a historical note becomes misleading, delete it or move the important fact into this map or `MANUAL.md`.

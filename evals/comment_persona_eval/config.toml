@@ -1,0 +1,27 @@
+# Comment Persona Evaluation defaults.
+# Run from the project root:
+#   uv run python evals/comment_persona_eval/run.py --config evals/comment_persona_eval/config.toml
+
+api_base_url = "http://127.0.0.1:8284"
+output_dir = "evals/comment_persona_eval/outputs"
+
+news_path = "evals/comment_persona_eval/inputs/sports_news_demo.txt"
+rounds = 3
+concurrency = 1
+stop_on_error = false
+
+# Optional narrowing for pilot runs.
+persona_keys = []
+persona_search = ""
+limit = 0
+
+# Comment Lab request options.
+model_key = "local_llama_server::gemma4"
+prompt_key = "comment_v20260418"
+max_tokens = 0
+timeout_seconds = 180
+retry_count = 0
+task_shape = "all_in_system"
+
+# Transport retry is separate from Comment Lab provider retry_count.
+api_retry_count = 2

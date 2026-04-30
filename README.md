@@ -139,10 +139,12 @@ After this, `agent_platform_api` should start directly with Uvicorn and no start
 - `uv.lock`: `uv` lockfile
 - `.dockerignore`: future-proof build-context filter
 - `MANUAL.md`: detailed decision log and handoff guide
-- `scripts/probe_provider_models.py`: rerunnable Ark usability probe for regenerating the checked-in allowlist
+- `docs/development-conventions.md`: repo-specific structure and workflow locality conventions
+- `evals/provider_model_probe/`: rerunnable provider usability probe workflow for regenerating checked-in allowlists
+- `evals/comment_persona_eval/`: Comment Lab persona evaluation workflow with colocated config/input/output docs
 - `agent_platform_api/catalog_data/ark_chat_probe_report.json`: persisted Ark chat-usable model allowlist
 - `agent_platform_api/seed_data/personas.jsonl`: checked-in seed personas for the SQLite persona library
-- `data/personas/`: local SQLite persona library storage, ignored by git
+- `data/personas/personas.sqlite3`: tracked local SQLite persona library; SQLite sidecars remain ignored
 - `schemas/label/`: file-backed Label Schema Center storage for Label Lab output schemas
 - `notebooks/01_doubao_api_smoke.py`: direct Ark validation
 - `notebooks/02_letta_e2e.py`: Letta end-to-end validation against the running stack
@@ -162,7 +164,7 @@ The maintained verification surface under `tests/` is:
 ```bash
 $env:PYTHONPATH='.'
 uv run python -m pytest
-uv run python scripts/probe_provider_models.py --source-id ark --mode chat-probe --write
+uv run python evals/provider_model_probe/run.py --source-id ark --mode chat-probe --write
 uv run python tests/checks/platform_api_e2e_check.py
 uv run python tests/checks/ade_mvp_smoke_e2e_check.py
 ```
