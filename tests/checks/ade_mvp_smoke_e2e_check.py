@@ -17,6 +17,7 @@ from tests.shared.config_defaults import (
     DEFAULT_LETTA_BASE_URL,
     DEFAULT_PROMPT_KEY,
     DEFAULT_TEST_MODEL_HANDLE,
+    agent_platform_headers,
 )
 
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", DEFAULT_LETTA_BASE_URL)
@@ -119,7 +120,11 @@ def main() -> None:
     agent_id: str | None = None
 
     try:
-        with httpx.Client(base_url=AGENT_PLATFORM_API_BASE_URL, timeout=120.0) as http:
+        with httpx.Client(
+            base_url=AGENT_PLATFORM_API_BASE_URL,
+            timeout=120.0,
+            headers=agent_platform_headers(),
+        ) as http:
             capabilities_response = http.get("/api/v1/platform/capabilities")
             capabilities_response.raise_for_status()
             capabilities_payload = capabilities_response.json()
@@ -354,4 +359,3 @@ if __name__ == "__main__":
     except Exception as exc:
         print(f"[FAIL] ade_mvp_smoke_e2e_check: {exc}")
         raise
-

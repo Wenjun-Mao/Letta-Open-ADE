@@ -67,7 +67,7 @@ Both files are written incrementally. If a run is stopped early, open the latest
 
 ## Troubleshooting
 
-- If persona listing fails, make sure `agent_platform_api` is rebuilt/restarted and can open `data/personas/personas.sqlite3`.
+- If persona listing fails, make sure `agent_platform_api` is rebuilt/restarted and can open `data/runtime/personas/personas.sqlite3`.
 - If the script says `model_key ... is not available`, copy an exact key from `GET /api/v1/options?scenario=comment`; Ark model ids are exact, including version fragments such as `2-0`.
 - If model calls fail, check `http://127.0.0.1:8290/v1/router/model-catalog` and confirm `dgx_vllm::qwen3.6-35b-a3b-fp8` is healthy.
 - If the run is slow, lower `rounds`, use `--persona-key`, or use `--limit` for a pilot run.

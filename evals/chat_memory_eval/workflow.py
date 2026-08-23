@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import asdict
 from datetime import datetime
@@ -36,6 +37,7 @@ def run_evaluation(config: ChatMemoryEvalConfig, *, now: datetime | None = None)
         base_url=config.api_base_url,
         timeout_seconds=client_timeout,
         retry_count=config.api_retry_count,
+        api_key=os.getenv("AGENT_PLATFORM_API_KEY", ""),
     ) as api:
         validate_chat_options(api.options(), config)
         total = config.rounds

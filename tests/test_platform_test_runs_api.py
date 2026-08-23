@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 import pytest
 from pydantic import ValidationError
@@ -44,7 +45,7 @@ def test_platform_create_test_run_passes_only_run_type(monkeypatch) -> None:
                 "started_at": "",
                 "finished_at": "",
                 "exit_code": None,
-                "log_file": "tests/outputs/platform_orchestrator/run-1.log",
+                "log_file": "data/runtime/test-runs/run-1/orchestrator.log",
                 "cancel_requested": False,
                 "output_tail": [],
                 "error": "",
@@ -97,7 +98,7 @@ def test_platform_chat_memory_eval_create_passes_options(monkeypatch) -> None:
                 "started_at": "",
                 "finished_at": "",
                 "exit_code": None,
-                "log_file": "tests/outputs/platform_orchestrator/run-2/orchestrator.log",
+                "log_file": "data/runtime/test-runs/run-2/orchestrator.log",
                 "cancel_requested": False,
                 "output_tail": [],
                 "error": "",
@@ -129,7 +130,7 @@ def test_platform_orchestrator_discovers_run_output_artifacts(tmp_path) -> None:
     from agent_platform_api.testing.orchestrator import PlatformTestOrchestrator
 
     orchestrator = PlatformTestOrchestrator(project_root=tmp_path)
-    output_dir = tmp_path / "tests" / "outputs" / "platform_orchestrator" / "run-3"
+    output_dir = tmp_path / "data" / "runtime" / "test-runs" / "run-3"
     output_dir.mkdir(parents=True)
     log_file = output_dir / "orchestrator.log"
     csv_file = output_dir / "chat_memory_eval_20260516.csv"
@@ -147,3 +148,73 @@ def test_platform_orchestrator_discovers_run_output_artifacts(tmp_path) -> None:
         "orchestrator_log",
         "chat_memory_eval_20260516.csv",
     ]
+
+
+def test_platform_orchestrator_recovers_completed_runs_from_manifests(tmp_path) -> None:
+    from agent_platform_api.testing.orchestrator import PlatformTestOrchestrator
+
+    state_root = tmp_path / "runtime" / "test-runs"
+    output_dir = state_root / "run-complete"
+    output_dir.mkdir(parents=True)
+    (output_dir / "orchestrator.log").write_text("complete\n", encoding="utf-8")
+    (output_dir / "run.json").write_text(
+        json.dumps(
+            {
+                "run_id": "run-complete",
+                "run_type": "platform_api_e2e_check",
+                "status": "passed",
+                "command": ["python", "tests/checks/platform_api_e2e_check.py"],
+                "created_at": "2026-05-16T16:00:00+00:00",
+                "started_at": "2026-05-16T16:00:01+00:00",
+                "finished_at": "2026-05-16T16:00:02+00:00",
+                "exit_code": 0,
+                "cancel_requested": False,
+                "output_tail": ["complete"],
+                "error": "",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    orchestrator = PlatformTestOrchestrator(project_root=tmp_path, state_root=state_root)
+
+    recovered = orchestrator.get_run("run-complete")
+    assert recovered is not None
+    assert recovered["status"] == "passed"
+    assert recovered["output_tail"] == ["complete"]
+    assert recovered["artifacts"][0]["artifact_id"] == "orchestrator_log"
+
+
+def test_platform_orchestrator_marks_inflight_runs_interrupted_after_restart(tmp_path) -> None:
+    from agent_platform_api.testing.orchestrator import PlatformTestOrchestrator
+
+    state_root = tmp_path / "runtime" / "test-runs"
+    output_dir = state_root / "run-running"
+    output_dir.mkdir(parents=True)
+    manifest_path = output_dir / "run.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "run_id": "run-running",
+                "run_type": "chat_memory_eval",
+                "status": "running",
+                "command": ["python", "evals/chat_memory_eval/run.py"],
+                "created_at": "2026-05-16T16:00:00+00:00",
+                "started_at": "2026-05-16T16:00:01+00:00",
+                "finished_at": "",
+                "exit_code": None,
+                "cancel_requested": False,
+                "output_tail": [],
+                "error": "",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    orchestrator = PlatformTestOrchestrator(project_root=tmp_path, state_root=state_root)
+
+    recovered = orchestrator.get_run("run-running")
+    assert recovered is not None
+    assert recovered["status"] == "interrupted"
+    assert "restarted" in recovered["error"]
+    assert json.loads(manifest_path.read_text(encoding="utf-8"))["status"] == "interrupted"

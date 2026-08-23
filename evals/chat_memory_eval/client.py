@@ -15,13 +15,15 @@ class TransientApiError(ApiRequestError):
 
 
 class AgentPlatformApiClient:
-    def __init__(self, *, base_url: str, timeout_seconds: float, retry_count: int):
+    def __init__(self, *, base_url: str, timeout_seconds: float, retry_count: int, api_key: str = ""):
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
         self._retry_count = retry_count
+        self._api_key = api_key.strip()
 
     def __enter__(self) -> AgentPlatformApiClient:
-        self._client = httpx.Client(base_url=self._base_url, timeout=self._timeout_seconds)
+        headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
+        self._client = httpx.Client(base_url=self._base_url, timeout=self._timeout_seconds, headers=headers)
         return self
 
     def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
@@ -73,4 +75,3 @@ class AgentPlatformApiClient:
                     raise ApiRequestError(f"{method} {path} returned a non-object JSON payload")
                 return payload
         raise ApiRequestError(f"{method} {path} retry execution did not produce a result")
-

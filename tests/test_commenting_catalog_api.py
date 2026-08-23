@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 from pydantic import ValidationError
 
+from agent_platform_api.auth import PlatformPrincipal, PlatformRole
 from agent_platform_api.models.commenting import CommentingGenerateRequest
 from agent_platform_api.routers import commenting
 
@@ -50,8 +49,7 @@ def test_commenting_generate_uses_model_key_and_selected_source_connection(monke
 
     monkeypatch.setattr(commenting.commenting_service, "generate_comment", fake_generate_comment)
 
-    payload = asyncio.run(
-        commenting.api_commenting_generate(
+    payload = commenting.api_commenting_generate(
             CommentingGenerateRequest(
                 input="Need one comment",
                 prompt_key="comment_v20260418",
@@ -66,8 +64,10 @@ def test_commenting_generate_uses_model_key_and_selected_source_connection(monke
                 temperature=0.8,
                 top_p=0.9,
                 top_k=64,
+                include_diagnostics=True,
             )
-        )
+            ,
+            PlatformPrincipal(role=PlatformRole.ADMIN, key_name="test"),
     )
 
     assert captured["base_url"] == "http://127.0.0.1:2234/v1"
@@ -83,6 +83,7 @@ def test_commenting_generate_uses_model_key_and_selected_source_connection(monke
     assert payload["source_label"] == "Local Unsloth"
     assert payload["provider_model_id"] == "qwen3.5-27b"
     assert payload["enable_thinking"] is True
+    assert payload["raw_request"] == {"model": "qwen3.5-27b"}
 
 
 def test_commenting_generate_request_rejects_removed_compact_task_shape() -> None:

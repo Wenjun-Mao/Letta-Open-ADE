@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 
 import {
   LabelSchemaRecord,
@@ -148,8 +148,10 @@ export default function SchemaCenterPage() {
     }
   };
 
+  const refreshEffect = useEffectEvent(refresh);
+
   useEffect(() => {
-    void refresh();
+    void refreshEffect();
   }, [includeArchived]);
 
   const onSave = async () => {

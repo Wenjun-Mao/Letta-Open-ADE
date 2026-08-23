@@ -149,6 +149,7 @@ def test_run_attempt_uses_comment_lab_payload_and_flattens_success() -> None:
         "temperature": 0.7,
         "top_p": 0.95,
         "top_k": 64,
+        "include_diagnostics": True,
     }
     assert row["status"] == "ok"
     assert row["content"] == "这条新闻确实值得继续观察。"

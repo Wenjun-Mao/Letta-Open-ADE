@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
+from agent_platform_api.auth import PlatformPrincipal, PlatformRole
 from agent_platform_api.models.labeling import LabelingGenerateRequest
 from agent_platform_api.routers import labeling
 from agent_platform_api.services.labeling import LabelingValidationError
@@ -78,8 +77,7 @@ def test_labeling_generate_uses_model_key_and_selected_source_connection(monkeyp
 
     monkeypatch.setattr(labeling.labeling_service, "generate_labels", fake_generate_labels)
 
-    payload = asyncio.run(
-        labeling.api_labeling_generate(
+    payload = labeling.api_labeling_generate(
             LabelingGenerateRequest(
                 input="Messi scored.",
                 prompt_key="label_generic_entities_v1",
@@ -90,8 +88,10 @@ def test_labeling_generate_uses_model_key_and_selected_source_connection(monkeyp
                 temperature=0.2,
                 top_p=0.9,
                 top_k=64,
+                include_diagnostics=True,
             )
-        )
+            ,
+            PlatformPrincipal(role=PlatformRole.ADMIN, key_name="test"),
     )
 
     assert captured["base_url"] == "http://127.0.0.1:8081/v1"
@@ -187,14 +187,13 @@ def test_labeling_generate_returns_validation_errors_on_failure(monkeypatch) -> 
     )
 
     with pytest.raises(HTTPException) as exc_info:
-        asyncio.run(
-            labeling.api_labeling_generate(
+        labeling.api_labeling_generate(
                 LabelingGenerateRequest(
                     input="Messi scored.",
                     prompt_key="label_generic_entities_v1",
                     model_key="local_llama_server::gemma4",
-                )
-            )
+                ),
+                PlatformPrincipal(role=PlatformRole.ADMIN, key_name="test"),
         )
 
     assert exc_info.value.status_code == 400

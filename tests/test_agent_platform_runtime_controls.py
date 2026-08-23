@@ -4,6 +4,7 @@ import asyncio
 from types import SimpleNamespace
 
 import agent_platform_api.services.agent_platform as agent_platform_service_module
+import pytest
 from agent_platform_api.models.agents import ChatRequest
 from agent_platform_api.models.platform import PlatformToolTestInvokeRequest
 from agent_platform_api.routers import core, platform_meta
@@ -107,6 +108,25 @@ def test_send_runtime_message_forwards_explicit_timeout_and_retry(monkeypatch) -
         "override_system": "You are concise.",
     }
     assert payload["result"]["sequence"][0]["content"] == "done"
+
+
+def test_control_plane_mutations_are_not_implicitly_retried() -> None:
+    attempts = 0
+
+    class _FailingToolsApi:
+        def create(self, **kwargs):
+            nonlocal attempts
+            attempts += 1
+            raise RuntimeError("provider unavailable")
+
+    client = _FakeLettaClient()
+    client.tools = _FailingToolsApi()
+    service = AgentPlatformService(client)
+
+    with pytest.raises(RuntimeError, match="provider unavailable"):
+        service.create_tool(source_code="def demo():\n    return 'ok'\n")
+
+    assert attempts == 1
 
 
 def test_api_chat_forwards_timeout_and_retry_to_service(monkeypatch) -> None:

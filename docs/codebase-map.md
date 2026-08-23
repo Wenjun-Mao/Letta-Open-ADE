@@ -1,6 +1,7 @@
 # Codebase Map
 
-This is the fast orientation guide for Letta Open ADE. If you are wondering "where is this wired?", start here.
+This is the fast orientation guide for Letta Open ADE. If you are wondering "where is this wired?", start here. For the next cleanup slices, see the
+[maintenance roadmap](maintenance-roadmap.md).
 
 ## Runtime Flow
 
@@ -41,15 +42,21 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 - `frontend-ade/app/schema-center/`: label schema editing.
 - `frontend-ade/app/tool-center/` and `frontend-ade/app/toolbench/`: custom tool management and runtime tool testing.
 - `frontend-ade/app/test-center/`: maintained live checks.
-- `frontend-ade/lib/api.ts`: frontend API client and shared UI-facing types.
+- `frontend-ade/lib/api/`: feature API clients and shared UI-facing types.
+- `frontend-ade/app/api/v1/[...path]/`: same-origin server proxy that adds the
+  server-only Agent Platform credential; browser bundles never receive it.
+- Large feature folders keep local copy, presentation, and component modules next
+  to their route, for example `frontend-ade/app/agent-studio/`.
 
 ## Persistent Content
 
-- `config/model_router_sources.json`: the single model-source config file. Edit this to enable, disable, reorder, or retag LLM upstreams.
+- `config/model_router_sources.json`: portable, reviewed model-source defaults.
+- `config/model_router_sources.local.json`: ignored machine-local endpoint overlay selected through `MODEL_ROUTER_SOURCES_FILE`.
 - `config/model_router_model_profiles.json`: router model intelligence such as recommended sampling defaults, thinking support, and Agent Studio compatibility flags.
 - `prompts/system_prompts/`: prompt templates grouped by scenario.
-- `agent_platform_api/seed_data/personas.jsonl`: checked-in seed personas loaded into SQLite on first startup.
-- `data/personas/personas.sqlite3`: tracked SQLite persona library; SQLite sidecars remain ignored.
+- `agent_platform_api/seed_data/personas.jsonl`: reviewed persona source data.
+- `data/runtime/`: local runtime state, including the SQLite persona projection;
+  generated SQLite files do not belong in git. See [ADR 0003](adr/0003-persona-source-and-runtime-storage.md).
 - `schemas/label/`: Label Lab JSON schema center storage.
 - `tools/custom/`: file-backed custom tool source storage.
 - `agent_platform_api/catalog_data/`: checked-in model probe reports and allowlists.
@@ -60,7 +67,7 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 
 | Task | Start Here |
 | --- | --- |
-| Add or disable an LLM backend | `config/model_router_sources.json` |
+| Add or disable an LLM backend | `config/model_router_sources.json`, or the ignored local overlay for machine-specific endpoints |
 | Add or tune model-specific defaults | `config/model_router_model_profiles.json` |
 | Change model discovery/routing behavior | `model_router/catalog.py` and `model_router/app.py` |
 | Change Comment Lab generation | `agent_platform_api/services/commenting.py` and `agent_platform_api/routers/commenting.py` |
@@ -78,6 +85,7 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 | Re-probe Ark usable models | `uv run python evals/provider_model_probe/run.py --source-id ark --mode chat-probe --write` |
 | Collect runtime diagnostics | `scripts/collect_diagnostics.sh` |
 | Update repo conventions | `docs/development-conventions.md` |
+| Review an architectural direction or its rollout status | `docs/adr/` |
 
 ## Guardrails
 
@@ -86,4 +94,6 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 - Do not reintroduce Agent Platform direct-provider traversal for normal model discovery or generation.
 - Keep generated build/cache/runtime artifacts out of git.
 - Keep multi-file workflows colocated under `evals/` instead of splitting runner/config/output across root folders.
+- Keep provider probes and live evals operator-run; deterministic checks belong in CI.
+- Record durable architecture choices in `docs/adr/` and state clearly when their implementation is pending.
 - If a historical note becomes misleading, delete it or move the important fact into this map or `MANUAL.md`.

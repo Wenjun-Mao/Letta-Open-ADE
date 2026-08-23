@@ -1,303 +1,99 @@
 # Letta Open ADE
 
-This repo runs a local ADE stack around Letta with a first-party model router, an Agent Platform API, and the Next.js ADE frontend.
+Letta Open ADE is a local agent-development environment with three first-party
+components:
 
-## What It Uses
+- `model_router`: one OpenAI-compatible gateway for configured local and cloud models.
+- `agent_platform_api`: the API used by ADE workspaces and operator tooling.
+- `frontend-ade`: the Next.js Agent Development Environment.
 
-- pinned upstream Letta image (`letta/letta:0.16.7` by default, overridable via `LETTA_SERVER_IMAGE`)
-- `pgvector/pgvector:0.8.1-pg15` for Postgres + pgvector
-- `redis:7-alpine` for an explicit external Redis dependency
-- first-party `model_router` service as the single OpenAI-compatible front door
-- Ark, llama-server, DGX/vLLM, LM Studio, and Unsloth Studio as configurable router upstreams
-- Letta's built-in `letta/letta-free` embedding handle for agent memory
-- first-party ADE services built locally from this checkout
+Letta, Postgres + pgvector, and Redis run alongside those components in Docker
+Compose. See [the codebase map](docs/codebase-map.md) for ownership and entrypoints.
 
-## Why Redis Is Explicit In Compose
+## Local Quick Start
 
-Letta can start an internal Redis process when `LETTA_REDIS_HOST` is unset. That is what produces the log line:
+1. Create a local `.env` from `.env.example` with your editor or file manager.
+   Supply non-placeholder API keys and review the enabled model sources before startup.
+2. Start or rebuild the local stack:
 
-- `No external Redis configuration detected, starting internal Redis...`
-
-That line is normal by itself. It does not prove a failure. This standalone bundle now provides Redis as a separate Compose service anyway, because it is easier to debug, makes startup more deterministic across hosts, and avoids relying on the image's in-container Redis bootstrap path.
-
-## Why The Embedding Handle Is Not Ark
-
-The tested Ark key worked for:
-
-- `GET /models`
-- `POST /chat/completions`
-- OpenAI-style tool calling
-
-The same key did not expose a usable text embedding model through the tested OpenAI-compatible `/embeddings` path, so the end-to-end Letta stack uses router-backed chat models and Letta's built-in embedding service for embeddings.
-
-## Quick Start
-
-1. Review `.env` or copy `.env.example` to `.env` and update values.
-   `config/model_router_sources.json` is the single ADE model-source config. `config/model_router_model_profiles.json` stores advisory model-specific defaults such as recommended sampling values and thinking support.
-   Letta sees the router as one OpenAI-compatible provider at `http://model_router:8290/v1`, while Agent Studio, Comment Lab, and Label Lab read router diagnostics for module-specific visibility.
-   By default, `8081` is the active llama-server source for local Agent Studio, Comment Lab, and Label Lab work, `100.64.35.71:8000` is the DGX/vLLM source for Agent Studio, Comment Lab, and Label Lab, while `2234` Unsloth Studio and `1234` LM Studio are disabled standby examples.
-   llama-server runtime settings, including loaded GGUF, context window, GPU layers, and reasoning mode, are host-managed on the machine running it rather than controlled by ADE.
-2. Start the stack:
-
-```powershell
-docker compose up -d
-```
-
-3. Confirm the core services become healthy:
-
-```powershell
-docker compose ps
-```
-
-4. Install the notebook dependencies with `uv`:
-
-```powershell
-uv sync
-```
-
-5. Run the direct Doubao smoke test from the marimo notebook file:
-
-```powershell
-$env:MARIMO_SMOKE_ONLY="1"
-uv run python notebooks\01_doubao_api_smoke.py
-Remove-Item Env:MARIMO_SMOKE_ONLY
-```
-
-6. Run the end-to-end Letta smoke test from the marimo notebook file:
-
-```powershell
-$env:MARIMO_SMOKE_ONLY="1"
-uv run python notebooks\02_letta_e2e.py
-Remove-Item Env:MARIMO_SMOKE_ONLY
-```
-
-7. Open either notebook interactively in marimo if you want the UI:
-
-```powershell
-uv run marimo run notebooks\01_doubao_api_smoke.py --headless
-uv run marimo run notebooks\02_letta_e2e.py --headless
-```
-
-8. Read [docs/codebase-map.md](./docs/codebase-map.md) when you need to find where a feature is wired. Use [MANUAL.md](./MANUAL.md) for longer operational notes and recovery details.
-
-## Local Build Deployment
-
-This repo currently defaults to local builds for first-party ADE services:
-
-- `letta_server` uses a pinned upstream image (`LETTA_SERVER_IMAGE`)
-- `model_router`, `agent_platform_api`, and `ade_frontend` build from this checkout
-
-Local run sequence:
-
-```bash
+```text
 docker compose up -d --build
 ```
 
-## Troubleshooting
+3. Check service status:
 
-If `curl http://127.0.0.1:8283/openapi.json` connects and then resets, check these first:
-
-```powershell
+```text
 docker compose ps
-docker compose logs --tail=200 letta_server
-docker compose logs --tail=100 redis
 ```
 
-If the stack is healthy, the OpenAPI route should respond cleanly:
+4. Open ADE at `http://127.0.0.1:3000`.
 
-```powershell
-curl http://127.0.0.1:8283/openapi.json
-```
+The default configuration binds services to loopback. `8283` is the Letta API,
+`8284` is the Agent Platform API, and `8290` is the model router. Letta does not
+ship a supported UI on `8083` in this stack.
 
-If startup repeatedly stalls around `Checking NLTK data availability...`, pre-seed NLTK once and restart:
+Use `docker compose logs --tail=200 <service>` to investigate a service, and
+`docker compose down` to stop the stack. `scripts/README.md` lists reset,
+diagnostics, and other repository-wide utilities.
 
-```bash
-chmod +x scripts/seed_nltk_data.sh
-./scripts/seed_nltk_data.sh
-docker compose up -d --force-recreate letta_server
-```
+## Deterministic Verification
 
-`compose.yaml` mounts `data/nltk_data` into the Letta container and enables a startup patch that prefers local `punkt_tab` data instead of network download.
+Install the locked development environment and run the checks that do not require
+provider credentials or a running stack:
 
-If `agent_platform_api` logs show runtime dependency install lines like `Creating virtual environment at: /opt/venv` or `Downloading pydantic-core`, rebuild the local image and recreate `agent_platform_api`:
-
-```bash
-docker compose build agent_platform_api
-docker compose up -d --force-recreate agent_platform_api
-```
-
-After this, `agent_platform_api` should start directly with Uvicorn and no startup-time package download.
-
-## Files
-
-- `compose.yaml`: Letta + Postgres + Redis + router + ADE app stack
-- `init.sql`: database bootstrap for the Letta schema and pgvector extension
-- `.env.example`: sanitized config template
-- `.env`: local runtime config
-- `config/model_router_sources.json`: single model-source config for the router and ADE modules
-- `config/model_router_model_profiles.json`: model profile defaults, thinking defaults, and capability notes layered on top of discovered router models
-- `docs/codebase-map.md`: architecture and "where do I change X?" guide
-- `pyproject.toml`: `uv` dependency manifest for backend scripts and tests
-- `uv.lock`: `uv` lockfile
-- `.dockerignore`: future-proof build-context filter
-- `MANUAL.md`: detailed decision log and handoff guide
-- `docs/development-conventions.md`: repo-specific structure and workflow locality conventions
-- `evals/provider_model_probe/`: rerunnable provider usability probe workflow for regenerating checked-in allowlists
-- `evals/comment_persona_eval/`: Comment Lab persona evaluation workflow with colocated config/input/output docs
-- `agent_platform_api/catalog_data/ark_chat_probe_report.json`: persisted Ark chat-usable model allowlist
-- `agent_platform_api/seed_data/personas.jsonl`: checked-in seed personas for the SQLite persona library
-- `data/personas/personas.sqlite3`: tracked local SQLite persona library; SQLite sidecars remain ignored
-- `schemas/label/`: file-backed Label Schema Center storage for Label Lab output schemas
-- `notebooks/01_doubao_api_smoke.py`: direct Ark validation
-- `notebooks/02_letta_e2e.py`: Letta end-to-end validation against the running stack
-
-## Developer Testing Workflow
-
-Current baseline assumptions for development tests:
-
-- Default system prompt baseline: `CHAT_V20260418_PROMPT`
-- Default test embedding: `letta/letta-free`
-- Comment Lab task shape default: `classic`
-- Label Lab schema default: `label_entity_groups_v1`
-- Persona library storage: SQLite at `data/personas/personas.sqlite3`, seeded from `agent_platform_api/seed_data/personas.jsonl`
-
-The maintained verification surface under `tests/` is:
-
-```bash
-$env:PYTHONPATH='.'
+```text
+uv sync --frozen --group dev
+uv run ruff check agent_platform_api model_router ade_core evals scripts tests
 uv run python -m pytest
-uv run python evals/provider_model_probe/run.py --source-id ark --mode chat-probe --write
-uv run python evals/chat_memory_eval/run.py --config evals/chat_memory_eval/config.toml --rounds 1
-uv run python tests/checks/platform_api_e2e_check.py
-uv run python tests/checks/ade_mvp_smoke_e2e_check.py
-```
-
-Optional live Label Lab smoke, when llama-server is running on `8081`:
-
-```bash
-curl http://127.0.0.1:8284/api/v1/options?scenario=label
-```
-
-`tests/outputs/platform_orchestrator/` is now treated as transient runtime log storage for Test Center runs and is not part of the committed test surface.
-
-## Agent Platform API (Initial Slice)
-
-`agent_platform_api/main.py` now exposes the control/runtime surface under `/api/v1/platform`.
-
-- `GET /api/v1/platform/capabilities`
-	- Reports whether the connected Letta SDK/server supports key mutable features.
-- `POST /api/v1/platform/agents/{agent_id}/messages`
-	- Sends a runtime message with optional `override_model` and `override_system`.
-- `PATCH /api/v1/platform/agents/{agent_id}/system`
-	- Updates the persisted agent system prompt.
-- `PATCH /api/v1/platform/agents/{agent_id}/model`
-	- Updates the persisted default model handle for the agent.
-- `PATCH /api/v1/platform/agents/{agent_id}/core-memory/blocks/{block_label}`
-	- Updates a core-memory block value (for example `persona` or `human`).
-- `PATCH /api/v1/platform/agents/{agent_id}/tools/attach/{tool_id}`
-	- Attaches a tool to an existing agent.
-- `PATCH /api/v1/platform/agents/{agent_id}/tools/detach/{tool_id}`
-	- Detaches a tool from an existing agent.
-- `GET /api/v1/platform/test-runs`
-	- Lists orchestrated backend test runs.
-- `POST /api/v1/platform/test-runs`
-	- Starts one orchestrated backend check/eval execution. Supported run types are `platform_api_e2e_check`, `ade_mvp_smoke_e2e_check`, and `chat_memory_eval`.
-- `GET /api/v1/platform/test-runs/{run_id}`
-	- Retrieves run status, tail logs, and exit code.
-- `POST /api/v1/platform/test-runs/{run_id}/cancel`
-	- Requests cancellation for a running test job.
-
-- `GET /api/v1/platform/tools`
-	- Lists available platform tools for ADE Toolbench discovery.
-- `GET /api/v1/platform/metadata/prompts-personas`
-	- Returns prompt and persona metadata for ADE Prompt and Persona Lab selectors.
-- `GET /api/v1/platform/prompt-center/personas`
-	- Lists SQLite-backed persona records; use the optional `search` query for persona-library search.
-- Persona library exchange
-	- Use `uv run python scripts/persona_library.py --help` to import/export SQLite personas as JSONL or Markdown.
-- `GET /api/v1/platform/schema-center/label-schemas`
-	- Lists file-backed Label Lab JSON schemas.
-- `POST /api/v1/labeling/generate`
-	- Runs stateless grouped entity extraction with a selected model, prompt, and schema.
-- `GET /api/v1/platform/test-runs/{run_id}/artifacts`
-	- Lists discovered artifacts for a test run (logs, summaries).
-- `GET /api/v1/platform/test-runs/{run_id}/artifacts/{artifact_id}`
-	- Reads artifact content with configurable line limits.
-
-Quick capability check:
-
-```bash
-curl http://127.0.0.1:8284/api/v1/platform/capabilities
-```
-
-Platform API end-to-end check:
-
-```bash
-uv run tests/checks/platform_api_e2e_check.py
-```
-
-ADE MVP smoke check:
-
-```bash
-uv run tests/checks/ade_mvp_smoke_e2e_check.py
-```
-
-If your running `agent_platform_api` service is on an older image, run checks against a source-backed instance:
-
-```bash
-$env:AGENT_PLATFORM_API_BASE_URL="http://127.0.0.1:8285"
-uv run python tests/checks/platform_api_e2e_check.py
-uv run python tests/checks/ade_mvp_smoke_e2e_check.py
-```
-
-## OpenAPI And Self-Hosted Docs Workflow
-
-The repository now uses a self-hosted documentation workflow inside the ADE frontend.
-
-- OpenAPI source artifact: `docs/openapi/agent-platform-openapi.json`
-- Frontend OpenAPI artifact (served to Scalar): `frontend-ade/public/openapi/agent-platform-openapi.json`
-- Chinese OpenAPI artifact: `docs/openapi/agent-platform-openapi-zh.json`
-- Chinese docs pages: `docs/zh/`
-- OpenAPI export/sync script: `scripts/export_openapi.py`
-- Manual zh OpenAPI script: `scripts/generate_openapi_zh_manual.py`
-- Missing-term report: `docs/openapi/zh_openapi_missing_terms.json`
-
-Generate/update the OpenAPI artifact:
-
-```bash
-uv run python scripts/export_openapi.py
-```
-
-Check OpenAPI drift only:
-
-```bash
-uv run python scripts/export_openapi.py --check --output docs/openapi/agent-platform-openapi.json
-```
-
-Regenerate Chinese OpenAPI artifact (manual curated labels):
-
-```bash
+uv run python scripts/export_openapi.py --check
 uv run python scripts/generate_openapi_zh_manual.py
+git diff --exit-code -- docs/openapi/agent-platform-openapi-zh.json frontend-ade/public/openapi/agent-platform-openapi-zh.json docs/openapi/zh_openapi_missing_terms.json
+npm ci --prefix frontend-ade
+npm --prefix frontend-ade run test
+npm --prefix frontend-ade run lint
+npm audit --prefix frontend-ade --audit-level=high
+npm --prefix frontend-ade run build
+docker compose --env-file .env.example config --quiet
 ```
 
-The script writes `docs/openapi/zh_openapi_missing_terms.json`, so future updates are incremental: add only the newly introduced terms/mappings and rerun.
+The GitHub Actions workflow runs this deterministic suite on pull requests and
+pushes to `main`, including all three first-party service image builds.
 
-Update Chinese docs pages manually under `docs/zh/` when major changes land.
+Provider probes, live E2E checks, browser smoke tests, and eval workflows are
+operator-run checks because they need a configured stack, reachable models, or
+credentials. Run them deliberately from their workflow documentation:
 
-## ADE Frontend (Separate Profile)
+- `tests/checks/`: maintained API and ADE smoke checks.
+- `evals/chat_memory_eval/`: chat memory evaluation.
+- `evals/comment_persona_eval/`: Comment Lab persona evaluation.
+- `evals/provider_model_probe/`: provider capability probing and allowlist refresh.
 
-The old in-package frontend has been removed. The Next.js ADE app is now the active UI and talks to `agent_platform_api` as its backend.
+## Content And Configuration
 
-Start ADE frontend profile:
+- `config/model_router_sources.json`: portable model source defaults and module visibility.
+- `config/model_router_sources.local.json`: ignored machine-local endpoint overrides when needed.
+- `config/model_router_model_profiles.json`: model-specific sampling and capability metadata.
+- `prompts/system_prompts/`: file-backed prompt templates.
+- `schemas/label/`: file-backed Label Schema Center records.
+- `agent_platform_api/seed_data/personas.jsonl`: reviewed persona seed source.
 
-```bash
-docker compose up -d ade_frontend
-```
+Runtime SQLite persona data belongs under `data/runtime/` and is not a reviewed
+source artifact. The migration policy is recorded in
+[ADR 0003](docs/adr/0003-persona-source-and-runtime-storage.md).
 
-Stop ADE frontend profile service:
+## Documentation
 
-```bash
-docker compose stop ade_frontend
-```
+- [Operational manual](MANUAL.md): setup, recovery, and manual verification.
+- [Codebase map](docs/codebase-map.md): where features and responsibilities live.
+- [Development conventions](docs/development-conventions.md): structure, workflow, and decision-record rules.
+- [Architecture decisions](docs/adr/): accepted directions and implementation status.
+- [OpenAPI artifacts](docs/openapi/): English and curated Chinese API specifications.
 
-Open ADE preview at `http://127.0.0.1:3000`.
+## Local-Only Default
+
+This repository is a local development stack, not a hardened public deployment.
+Loopback bindings, role-based bearer authentication, narrow CORS, and server-only
+browser credentials provide the local baseline described in
+[ADR 0001](docs/adr/0001-local-only-access-boundary.md). Exposing the stack outside
+the local machine still requires reviewed ingress, TLS, secret management, rate
+limits, monitoring, and a deployment-specific threat review.

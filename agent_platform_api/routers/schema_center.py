@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
+from agent_platform_api.dependencies import label_schema_registry
+from agent_platform_api.feature_flags import ensure_platform_api_enabled
 from agent_platform_api.mappers import as_label_schema_record
 from agent_platform_api.models.schemas import (
     ApiLabelSchemaListResponse,
@@ -10,7 +12,7 @@ from agent_platform_api.models.schemas import (
     LabelSchemaWriteRequest,
 )
 from agent_platform_api.openapi_metadata import TAG_SCHEMA_CENTER
-from agent_platform_api.runtime import ensure_platform_api_enabled, invalidate_options_cache, label_schema_registry
+from agent_platform_api.options import invalidate_options_cache
 from agent_platform_api.registries.label_schema import LabelSchemaRegistryError
 
 router = APIRouter()

@@ -2,7 +2,7 @@
   {
     "id": "local_llama_server",
     "label": "Local llama-server",
-    "base_url": "http://100.81.194.12:8081/v1",
+    "base_url": "http://host.docker.internal:8081/v1",
     "kind": "openai-compatible",
     "adapter": "llama_cpp_server",
     "enabled": true,
@@ -14,7 +14,7 @@
   {
     "id": "local_lmstudio",
     "label": "Local LM Studio",
-    "base_url": "http://100.81.194.12:1234/v1",
+    "base_url": "http://host.docker.internal:1234/v1",
     "kind": "openai-compatible",
     "adapter": "generic_openai",
     "enabled": false,
@@ -26,10 +26,10 @@
   {
     "id": "dgx_vllm",
     "label": "DGX Spark vLLM",
-    "base_url": "http://100.64.35.71:8000/v1",
+    "base_url": "http://dgx-spark.local:8000/v1",
     "kind": "openai-compatible",
     "adapter": "vllm_openai",
-    "enabled": true,
+    "enabled": false,
     "enabled_for": ["agent_studio", "comment_lab", "label_lab"],
     "letta_handle_prefix": "openai-proxy",
     "api_key_env": "DGX_VLLM_API_KEY",
@@ -38,7 +38,7 @@
   {
     "id": "local_unsloth",
     "label": "Local Unsloth Studio",
-    "base_url": "http://100.81.194.12:2234/v1",
+    "base_url": "http://host.docker.internal:2234/v1",
     "kind": "openai-compatible",
     "adapter": "generic_openai",
     "enabled": false,

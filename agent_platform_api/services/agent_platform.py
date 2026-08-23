@@ -4,16 +4,8 @@ import inspect
 from typing import Any
 
 from letta_client import Letta
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from agent_platform_api.letta.message_parser import chat
-
-_RETRY_KWARGS = {
-    "stop": stop_after_attempt(3),
-    "wait": wait_exponential(multiplier=1, min=1, max=8),
-    "retry": retry_if_exception_type(Exception),
-    "reraise": True,
-}
 
 DEFAULT_RUNTIME_TIMEOUT_SECONDS = 180.0
 MIN_RUNTIME_TIMEOUT_SECONDS = 5.0
@@ -74,7 +66,6 @@ class AgentPlatformService:
         text = str(exc).lower()
         return "context size has been exceeded" in text or "maximum context length" in text
 
-    @retry(**_RETRY_KWARGS)
     def list_available_tools(self, *, search: str | None = None, limit: int = 100) -> list[dict[str, Any]]:
         resolved_limit = max(1, min(int(limit), 500))
         query = (search or "").strip()
@@ -88,14 +79,12 @@ class AgentPlatformService:
         tools = list(self._client.tools.list(**list_kwargs))
         return [self._serialize_tool(tool) for tool in tools]
 
-    @retry(**_RETRY_KWARGS)
     def retrieve_tool(self, *, tool_id: str) -> dict[str, Any]:
         if not str(tool_id or "").strip():
             raise ValueError("tool_id is required")
         tool = self._client.tools.retrieve(tool_id=tool_id)
         return self._serialize_tool(tool)
 
-    @retry(**_RETRY_KWARGS)
     def create_tool(
         self,
         *,
@@ -136,7 +125,6 @@ class AgentPlatformService:
         created = self._client.tools.create(**create_kwargs)
         return self._serialize_tool(created)
 
-    @retry(**_RETRY_KWARGS)
     def update_tool(
         self,
         *,
@@ -181,7 +169,6 @@ class AgentPlatformService:
         updated = self._client.tools.update(tool_id=resolved_tool_id, **update_kwargs)
         return self._serialize_tool(updated)
 
-    @retry(**_RETRY_KWARGS)
     def delete_tool(self, *, tool_id: str) -> None:
         resolved_tool_id = str(tool_id or "").strip()
         if not resolved_tool_id:
@@ -302,14 +289,12 @@ class AgentPlatformService:
         result.pop("raw_messages", None)
         return result
 
-    @retry(**_RETRY_KWARGS)
     def delete_agent(self, *, agent_id: str) -> None:
         resolved_agent_id = str(agent_id or "").strip()
         if not resolved_agent_id:
             raise ValueError("agent_id is required")
         self._client.agents.delete(agent_id=resolved_agent_id)
 
-    @retry(**_RETRY_KWARGS)
     def update_system_prompt(self, *, agent_id: str, system_prompt: str) -> dict[str, Any]:
         before = self._client.agents.retrieve(agent_id=agent_id)
         updated = self._client.agents.update(agent_id=agent_id, system=system_prompt)
@@ -321,7 +306,6 @@ class AgentPlatformService:
             "system_after": str(getattr(updated, "system", "")),
         }
 
-    @retry(**_RETRY_KWARGS)
     def update_agent_model(self, *, agent_id: str, model_handle: str) -> dict[str, Any]:
         before = self._client.agents.retrieve(agent_id=agent_id)
         updated = self._client.agents.update(agent_id=agent_id, model=model_handle)
@@ -333,7 +317,6 @@ class AgentPlatformService:
             "system": str(getattr(updated, "system", "")),
         }
 
-    @retry(**_RETRY_KWARGS)
     def update_core_memory_block(self, *, agent_id: str, block_label: str, value: str) -> dict[str, Any]:
         before = self._client.agents.blocks.retrieve(agent_id=agent_id, block_label=block_label)
         updated = self._client.agents.blocks.update(agent_id=agent_id, block_label=block_label, value=value)
@@ -347,7 +330,6 @@ class AgentPlatformService:
             "limit": getattr(updated, "limit", None),
         }
 
-    @retry(**_RETRY_KWARGS)
     def _list_tool_ids(self, agent_id: str) -> list[str]:
         tools = list(self._client.agents.tools.list(agent_id=agent_id))
         return [
@@ -356,7 +338,6 @@ class AgentPlatformService:
             if str(getattr(tool, "id", "")).strip()
         ]
 
-    @retry(**_RETRY_KWARGS)
     def attach_tool(self, *, agent_id: str, tool_id: str) -> dict[str, Any]:
         before_tool_ids = self._list_tool_ids(agent_id)
         self._client.agents.tools.attach(agent_id=agent_id, tool_id=tool_id)
@@ -371,7 +352,6 @@ class AgentPlatformService:
             "tool_count_after": len(after_tool_ids),
         }
 
-    @retry(**_RETRY_KWARGS)
     def detach_tool(self, *, agent_id: str, tool_id: str) -> dict[str, Any]:
         before_tool_ids = self._list_tool_ids(agent_id)
         self._client.agents.tools.detach(agent_id=agent_id, tool_id=tool_id)

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 
 import {
   PromptTemplateRecord,
@@ -194,8 +194,10 @@ export default function PromptCenterPage() {
     }
   };
 
+  const refreshEffect = useEffectEvent(refresh);
+
   useEffect(() => {
-    void refresh();
+    void refreshEffect();
   }, [includeArchived, scenario]);
 
   useEffect(() => {
@@ -353,7 +355,7 @@ export default function PromptCenterPage() {
     }
     params.set("focus", "model");
     return `/agent-studio?${params.toString()}`;
-  }, [activePersonaKeys, activePromptKeys, scenario, selected?.key, selectedScenario, tab]);
+  }, [activePersonaKeys, activePromptKeys, selected?.key, selectedScenario, tab]);
 
   const workspaceLabel =
     selectedScenario === "comment"

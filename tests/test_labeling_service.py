@@ -309,7 +309,7 @@ def test_generate_labels_uses_repair_attempt_after_validation_failure(monkeypatc
 
     monkeypatch.setattr(service, "_post_chat_completions", fake_post)
 
-    result = service.generate_labels(
+    service.generate_labels(
         base_url="http://127.0.0.1:2234/v1",
         api_key="local-token",
         model="lmstudio_openai/gemma-4-31b-it",
@@ -331,6 +331,50 @@ def test_generate_labels_uses_repair_attempt_after_validation_failure(monkeypatc
     )
 
     assert len(calls) == 2
+
+
+def test_generate_labels_honors_all_requested_repair_attempts(monkeypatch) -> None:
+    service = _build_service()
+    calls: list[dict[str, object]] = []
+
+    def fake_post(payload, *, base_url, api_key, timeout_seconds):
+        calls.append(payload)
+        content = (
+            '{"players":["Messi"],"teams":["Inter Miami"]}'
+            if len(calls) == 4
+            else '{"players":["Ronaldo"],"teams":["Inter Miami"]}'
+        )
+        return {
+            "choices": [{"message": {"content": content}, "finish_reason": "stop"}],
+            "usage": {},
+        }
+
+    monkeypatch.setattr(service, "_post_chat_completions", fake_post)
+
+    result = service.generate_labels(
+        base_url="http://127.0.0.1:2234/v1",
+        api_key="local-token",
+        model="gemma-4-31b-it",
+        system_prompt="Return grouped entities.",
+        article_input="Messi scored for Inter Miami.",
+        output_mode="best_effort_prompt_json",
+        output_schema_raw=json.dumps(
+            {
+                "type": "object",
+                "properties": {
+                    "players": {"type": "array", "items": {"type": "string"}},
+                    "teams": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["players", "teams"],
+                "additionalProperties": False,
+            }
+        ),
+        repair_retry_count=3,
+    )
+
+    assert len(calls) == 4
+    assert result["selected_attempt"] == "repair"
+    assert result["repair_retry_count"] == 3
     assert result["selected_attempt"] == "repair"
     assert result["result"]["players"] == ["Messi"]
 

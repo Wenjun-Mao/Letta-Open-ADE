@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
 
-from agent_platform_api.helpers import normalize_scenario, prompt_record_map
+from fastapi import APIRouter, Depends, HTTPException
+
+from agent_platform_api.auth import PlatformPrincipal, PlatformRole, require_operator
+from agent_platform_api.dependencies import labeling_service
+from agent_platform_api.feature_flags import ensure_platform_api_enabled
+from agent_platform_api.template_options import normalize_scenario, prompt_record_map
 from agent_platform_api.models.labeling import ApiLabelingGenerateResponse, LabelingGenerateRequest
 from agent_platform_api.openapi_metadata import TAG_LABEL_LAB
-from agent_platform_api.runtime import (
-    ensure_platform_api_enabled,
-    labeling_service,
+from agent_platform_api.options import (
     label_schema_record_map,
     resolve_label_model_selection,
 )
@@ -21,6 +24,7 @@ router = APIRouter()
     response_model=ApiLabelingGenerateResponse,
     tags=[TAG_LABEL_LAB],
     summary="Generate stateless grouped entity extraction for an input article",
+    response_model_exclude_none=True,
     openapi_extra={
         "requestBody": {
             "content": {
@@ -48,8 +52,13 @@ router = APIRouter()
         }
     },
 )
-async def api_labeling_generate(request: LabelingGenerateRequest):
+def api_labeling_generate(
+    request: LabelingGenerateRequest,
+    principal: Annotated[PlatformPrincipal, Depends(require_operator)],
+):
     ensure_platform_api_enabled()
+    if request.include_diagnostics and principal.role < PlatformRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Raw provider diagnostics require the admin role.")
 
     resolved_scenario = normalize_scenario(request.scenario, default="label")
     if resolved_scenario != "label":
@@ -129,7 +138,7 @@ async def api_labeling_generate(request: LabelingGenerateRequest):
     if not isinstance(usage, dict):
         usage = {}
 
-    return {
+    response = {
         "scenario": "label",
         "model_key": str(model_selection.get("model_key", "") or ""),
         "source_id": str(model_selection.get("source_id", "") or ""),
@@ -143,13 +152,15 @@ async def api_labeling_generate(request: LabelingGenerateRequest):
         "finish_reason": str(generation_result.get("finish_reason", "") or "") or None,
         "usage": usage,
         "received_at": str(generation_result.get("received_at", "") or "") or None,
-        "raw_request": raw_request,
-        "raw_reply": raw_reply,
         "validation_errors": generation_result.get("validation_errors", []) or [],
         "temperature": float(generation_result.get("temperature", 0.0)),
         "top_p": float(generation_result.get("top_p", 1.0)),
         "top_k": generation_result.get("top_k"),
     }
+    if request.include_diagnostics:
+        response["raw_request"] = raw_request
+        response["raw_reply"] = raw_reply
+    return response
 
 
 def json_dumps_schema(value: object) -> str | None:

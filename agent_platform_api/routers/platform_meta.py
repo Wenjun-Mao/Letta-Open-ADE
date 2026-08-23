@@ -3,15 +3,20 @@ from __future__ import annotations
 import os
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from agent_platform_api.helpers import (
+from agent_platform_api.agent_access import ensure_agent_not_archived
+from agent_platform_api.auth import PlatformPrincipal, require_admin, require_operator
+from agent_platform_api.capability_validation import missing_platform_capabilities
+from agent_platform_api.dependencies import agent_platform, client, custom_tool_registry
+from agent_platform_api.feature_flags import ensure_platform_api_enabled, is_truthy, platform_api_enabled
+from agent_platform_api.revision_log import read_prompt_persona_revisions
+from agent_platform_api.template_options import (
     active_persona_records,
     active_prompt_records,
     normalize_scenario,
     persona_option_entries,
     prompt_option_entries,
-    read_prompt_persona_revisions,
     resolve_default_persona_key,
     resolve_default_prompt_key,
 )
@@ -27,17 +32,7 @@ from agent_platform_api.models.templates import (
     ApiPromptPersonaRevisionsResponse,
 )
 from agent_platform_api.openapi_metadata import TAG_PLATFORM_META, TAG_TOOL_CENTER
-from agent_platform_api.runtime import (
-    agent_platform,
-    client,
-    custom_tool_registry,
-    ensure_agent_not_archived,
-    ensure_platform_api_enabled,
-    is_truthy,
-    model_catalog,
-    missing_platform_capabilities,
-    platform_api_enabled,
-)
+from agent_platform_api.options import model_catalog
 
 router = APIRouter()
 
@@ -120,6 +115,7 @@ async def api_platform_list_tools(search: str = "", limit: int = 100, agent_id: 
     response_model=ApiPlatformToolTestInvokeResponse,
     tags=[TAG_TOOL_CENTER],
     summary="Invoke a runtime message to validate tool-call behavior",
+    dependencies=[Depends(require_operator)],
 )
 async def api_platform_tool_test_invoke(request: PlatformToolTestInvokeRequest):
     ensure_platform_api_enabled()
@@ -238,6 +234,7 @@ async def api_platform_prompt_persona_revisions(
     agent_id: str | None = None,
     field: str | None = None,
     limit: int = 80,
+    _principal: PlatformPrincipal = Depends(require_admin),
 ):
     ensure_platform_api_enabled()
 
@@ -259,4 +256,3 @@ async def api_platform_prompt_persona_revisions(
         "field": resolved_field,
         "items": items,
     }
-

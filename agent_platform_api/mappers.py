@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_platform_api.runtime import MANAGED_TOOL_TAG
+from agent_platform_api.constants import MANAGED_TOOL_TAG
 
 
 def agent_lifecycle_payload(
@@ -107,4 +107,3 @@ def as_tool_center_item(
         "updated_at": None,
         "archived_at": None,
     }
-

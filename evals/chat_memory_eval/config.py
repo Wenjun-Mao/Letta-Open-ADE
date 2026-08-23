@@ -64,8 +64,8 @@ def _env_router_api_key() -> str:
 
 
 def load_config(path: Path) -> ChatMemoryEvalConfig:
-    env_router_base_url = _env_router_base_url()
     load_dotenv(PROJECT_ROOT / ".env", override=False)
+    env_router_base_url = _env_router_base_url()
     payload: dict[str, Any] = {}
     if path.exists():
         with path.open("rb") as handle:

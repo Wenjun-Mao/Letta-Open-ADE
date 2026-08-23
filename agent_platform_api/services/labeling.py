@@ -4,6 +4,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
+from agent_platform_api.clients.openai_chat import OpenAIChatClient, resolve_provider_model
 from agent_platform_api.settings import get_settings
 from agent_platform_api.services.labeling_helpers import (
     build_best_effort_label_system_prompt,
@@ -15,7 +16,6 @@ from agent_platform_api.services.labeling_helpers import (
     resolve_label_output_schema,
     validate_label_result,
 )
-from agent_platform_api.services.labeling_provider_client import LabelingProviderClient, resolve_provider_model
 
 
 class LabelingValidationError(ValueError):
@@ -45,9 +45,9 @@ class LabelingService:
 
     _OUTPUT_MODES = {"strict_json_schema", "json_schema", "best_effort_prompt_json"}
 
-    def __init__(self, *, settings_factory=get_settings):
+    def __init__(self, *, settings_factory=get_settings, provider_client: OpenAIChatClient | None = None):
         self._settings_factory = settings_factory
-        self._provider_client = LabelingProviderClient()
+        self._provider_client = provider_client or OpenAIChatClient()
 
     @staticmethod
     def _clamp_max_tokens(value: int) -> int:
@@ -118,6 +118,7 @@ class LabelingService:
             base_url=base_url,
             api_key=api_key,
             timeout_seconds=timeout_seconds,
+            retry_count=0,
         )
 
     def _build_payload(
@@ -327,6 +328,7 @@ class LabelingService:
         last_invalid_output = ""
         last_finish_reason: str | None = None
 
+        repairs_remaining = resolved_repair_retry_count
         while attempts:
             attempt_name, payload = attempts.pop(0)
             data = self._post_chat_completions(
@@ -365,7 +367,7 @@ class LabelingService:
                     "top_k": resolved_top_k,
                 }
 
-            if attempt_name == "primary" and resolved_repair_retry_count > 0:
+            if repairs_remaining > 0:
                 attempts.append(
                     (
                         "repair",
@@ -385,7 +387,7 @@ class LabelingService:
                         ),
                     )
                 )
-                resolved_repair_retry_count -= 1
+                repairs_remaining -= 1
 
         if last_finish_reason and last_finish_reason != "stop" and not any(
             error.startswith("Provider finished with finish_reason=") for error in last_errors

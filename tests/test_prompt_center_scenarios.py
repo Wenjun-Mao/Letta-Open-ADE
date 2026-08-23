@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from agent_platform_api.registries.prompt_persona import PromptPersonaRegistry, RegistryError
+from agent_platform_api.registries.prompt_persona_store.registry import PromptPersonaRegistry
+from agent_platform_api.registries.prompt_persona_store.types import RegistryError
 
 
 def test_create_comment_persona_infers_comment_scenario_from_key(tmp_path) -> None:
@@ -16,8 +17,8 @@ def test_create_comment_persona_infers_comment_scenario_from_key(tmp_path) -> No
 
     assert record["scenario"] == "comment"
     assert record["key"] == "comment_test"
-    assert record["source_path"] == "data/personas/personas.sqlite3#comment_test"
-    assert (tmp_path / "data" / "personas" / "personas.sqlite3").exists()
+    assert record["source_path"] == "data/runtime/personas/personas.sqlite3#comment_test"
+    assert (tmp_path / "data" / "runtime" / "personas" / "personas.sqlite3").exists()
 
 
 def test_create_chat_prompt_infers_chat_scenario_from_key(tmp_path) -> None:

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
-import json
-import re
 from datetime import datetime, timezone
 from typing import Any
 
-import httpx
-from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
-
+from agent_platform_api.clients.openai_chat import (
+    RETRYABLE_OPENAI_CHAT_EXCEPTIONS,
+    OpenAIChatClient,
+    chat_completions_url,
+    parse_sse_chat_completion_response,
+    resolve_provider_model,
+)
 from agent_platform_api.settings import get_settings
 from agent_platform_api.services.commenting_helpers import (
     build_all_in_system_prompt,
@@ -22,25 +24,13 @@ from agent_platform_api.services.commenting_helpers import (
 )
 
 
-class _RetryableCommentingError(RuntimeError):
-    """Raised for provider responses that should be retried."""
-
-
 DEFAULT_COMMENTING_RETRY_COUNT = 0
 MAX_COMMENTING_RETRY_COUNT = 5
 DEFAULT_COMMENTING_CACHE_PROMPT = False
 DEFAULT_COMMENTING_TEMPERATURE = 0.6
 DEFAULT_COMMENTING_TOP_P = 1.0
 DEFAULT_COMMENTING_TOP_K: int | None = None
-_RETRYABLE_COMMENTING_EXCEPTIONS = (
-    _RetryableCommentingError,
-    httpx.TimeoutException,
-    httpx.ConnectError,
-    httpx.ReadError,
-    httpx.RemoteProtocolError,
-    httpx.WriteError,
-)
-_VERSION_PATH_RE = re.compile(r"/v\d+(?:\.\d+)?$", re.IGNORECASE)
+_RETRYABLE_COMMENTING_EXCEPTIONS = RETRYABLE_OPENAI_CHAT_EXCEPTIONS
 
 
 class CommentingService:
@@ -54,8 +44,9 @@ class CommentingService:
     )
     _TASK_SHAPES = {"classic", "all_in_system", "structured_output"}
 
-    def __init__(self, *, settings_factory=get_settings):
+    def __init__(self, *, settings_factory=get_settings, provider_client: OpenAIChatClient | None = None):
         self._settings_factory = settings_factory
+        self._provider_client = provider_client or OpenAIChatClient()
 
     @staticmethod
     def _clamp_max_tokens(value: int) -> int:
@@ -119,21 +110,11 @@ class CommentingService:
 
     @staticmethod
     def _chat_completions_url(base_url: str) -> str:
-        base = str(base_url or "").strip().rstrip("/")
-        if base.endswith("/chat/completions"):
-            return base
-        if _VERSION_PATH_RE.search(base):
-            return f"{base}/chat/completions"
-        return f"{base}/v1/chat/completions"
+        return chat_completions_url(base_url)
 
     @classmethod
     def _resolve_provider_model(cls, model: str) -> str:
-        resolved_model = model.strip()
-        lowered_model = resolved_model.lower()
-        for prefix in cls._MODEL_HANDLE_PREFIXES:
-            if lowered_model.startswith(prefix):
-                return resolved_model[len(prefix):].strip()
-        return resolved_model
+        return resolve_provider_model(model)
 
     def _post_chat_completions_once(
         self,
@@ -143,30 +124,12 @@ class CommentingService:
         api_key: str,
         timeout_seconds: float,
     ) -> dict[str, Any]:
-        headers = {"Content-Type": "application/json"}
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
-
-        with httpx.Client(timeout=timeout_seconds) as session:
-            response = session.post(self._chat_completions_url(base_url), json=payload, headers=headers)
-
-        if response.status_code >= 500 or response.status_code == 429:
-            raise _RetryableCommentingError(
-                f"Comment provider temporary failure ({response.status_code}): {response.text}"
-            )
-        if response.status_code >= 400:
-            raise ValueError(f"Comment provider request failed ({response.status_code}): {response.text}")
-
-        try:
-            data = response.json()
-        except Exception:
-            data = self._parse_sse_chat_completion_response(response.text)
-            if data is None:  # pragma: no cover
-                raise ValueError(f"Comment provider returned non-JSON response: {response.text}")
-
-        if not isinstance(data, dict):
-            raise ValueError("Comment provider returned invalid payload")
-        return data
+        return self._provider_client.post_chat_completions_once(
+            payload,
+            base_url=base_url,
+            api_key=api_key,
+            timeout_seconds=timeout_seconds,
+        )
 
     def _post_chat_completions(
         self,
@@ -177,24 +140,18 @@ class CommentingService:
         timeout_seconds: float,
         retry_count: int,
     ) -> dict[str, Any]:
-        retrying = self._build_retrying(retry_count)
-        for attempt in retrying:
-            with attempt:
-                return self._post_chat_completions_once(
+        return self._provider_client.run_with_retries(
+            lambda: self._post_chat_completions_once(
                     payload,
                     base_url=base_url,
                     api_key=api_key,
                     timeout_seconds=timeout_seconds,
-                )
-        raise RuntimeError("Comment provider retry execution did not produce a result")
-
-    def _build_retrying(self, retry_count: int) -> Retrying:
-        return Retrying(
-            stop=stop_after_attempt(1 + self._clamp_retry_count(retry_count)),
-            wait=wait_exponential(multiplier=1, min=1, max=8),
-            retry=retry_if_exception_type(_RETRYABLE_COMMENTING_EXCEPTIONS),
-            reraise=True,
+            ),
+            self._build_retrying(retry_count),
         )
+
+    def _build_retrying(self, retry_count: int):
+        return self._provider_client.build_retrying(self._clamp_retry_count(retry_count))
 
     @staticmethod
     def _generation_result(
@@ -442,81 +399,4 @@ class CommentingService:
 
     @staticmethod
     def _parse_sse_chat_completion_response(raw_text: str) -> dict[str, Any] | None:
-        text = str(raw_text or "").strip()
-        if not text or "data:" not in text:
-            return None
-
-        chunks: list[dict[str, Any]] = []
-        for line in text.splitlines():
-            stripped = line.strip()
-            if not stripped.startswith("data:"):
-                continue
-            data_text = stripped[5:].strip()
-            if not data_text or data_text == "[DONE]":
-                continue
-            try:
-                parsed = json.loads(data_text)
-            except json.JSONDecodeError:
-                return None
-            if isinstance(parsed, dict):
-                chunks.append(parsed)
-
-        if not chunks:
-            return None
-
-        choices_by_index: dict[int, dict[str, Any]] = {}
-        result: dict[str, Any] = {
-            "id": "",
-            "object": "chat.completion",
-            "created": 0,
-            "model": "",
-            "choices": [],
-            "usage": {},
-        }
-
-        for chunk in chunks:
-            result["id"] = str(chunk.get("id") or result["id"] or "")
-            result["object"] = str(chunk.get("object") or result["object"] or "chat.completion")
-            result["created"] = int(chunk.get("created") or result["created"] or 0)
-            result["model"] = str(chunk.get("model") or result["model"] or "")
-
-            usage = chunk.get("usage")
-            if isinstance(usage, dict) and usage:
-                result["usage"] = usage
-
-            raw_choices = chunk.get("choices")
-            if not isinstance(raw_choices, list):
-                continue
-
-            for raw_choice in raw_choices:
-                if not isinstance(raw_choice, dict):
-                    continue
-                index = int(raw_choice.get("index") or 0)
-                choice_state = choices_by_index.setdefault(
-                    index,
-                    {
-                        "index": index,
-                        "message": {"role": "assistant", "content": "", "reasoning_content": ""},
-                        "finish_reason": None,
-                    },
-                )
-                message = choice_state["message"]
-                delta = raw_choice.get("delta")
-                if isinstance(delta, dict):
-                    role = str(delta.get("role") or "").strip()
-                    if role:
-                        message["role"] = role
-                    for field in ("content", "reasoning_content"):
-                        chunk_value = delta.get(field)
-                        if chunk_value is None:
-                            continue
-                        message[field] = f"{message.get(field, '')}{chunk_value}"
-
-                finish_reason = raw_choice.get("finish_reason")
-                if finish_reason is not None:
-                    choice_state["finish_reason"] = finish_reason
-
-        result["choices"] = [choices_by_index[index] for index in sorted(choices_by_index)]
-        if not result["choices"]:
-            return None
-        return result
+        return parse_sse_chat_completion_response(raw_text)

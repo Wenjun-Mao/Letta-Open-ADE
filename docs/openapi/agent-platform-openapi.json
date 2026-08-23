@@ -506,14 +506,28 @@
             "type": "string"
           },
           "raw_reply": {
-            "additionalProperties": true,
-            "title": "Raw Reply",
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Reply"
           },
           "raw_request": {
-            "additionalProperties": true,
-            "title": "Raw Request",
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Request"
           },
           "received_at": {
             "anyOf": [
@@ -869,14 +883,28 @@
             "type": "string"
           },
           "raw_reply": {
-            "additionalProperties": true,
-            "title": "Raw Reply",
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Reply"
           },
           "raw_request": {
-            "additionalProperties": true,
-            "title": "Raw Request",
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Request"
           },
           "received_at": {
             "anyOf": [
@@ -3141,6 +3169,12 @@
             "description": "Optional vLLM/Gemma thinking toggle. When true for supported vLLM sources, ADE sends `chat_template_kwargs.enable_thinking=true`.",
             "title": "Enable Thinking"
           },
+          "include_diagnostics": {
+            "default": false,
+            "description": "Administrator-only opt-in for raw provider request/reply diagnostics.",
+            "title": "Include Diagnostics",
+            "type": "boolean"
+          },
           "input": {
             "description": "News article, comment thread, or source text to comment on.",
             "title": "Input",
@@ -3401,6 +3435,12 @@
           }
         ],
         "properties": {
+          "include_diagnostics": {
+            "default": false,
+            "description": "Administrator-only opt-in for raw provider request/reply diagnostics.",
+            "title": "Include Diagnostics",
+            "type": "boolean"
+          },
           "input": {
             "description": "Article or text to extract grouped entity lists from.",
             "title": "Input",
@@ -4258,6 +4298,12 @@
         "title": "ValidationError",
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
     }
   },
   "info": {
@@ -4326,6 +4372,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Agent Studio agents",
         "tags": [
           "Agent Studio"
@@ -4365,6 +4416,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Create an Agent Studio agent",
         "tags": [
           "Agent Studio"
@@ -4407,6 +4463,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Delete archived agent (hard delete)",
         "tags": [
           "Platform Control"
@@ -4449,6 +4510,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Agent Studio agent details",
         "tags": [
           "Agent Studio"
@@ -4457,7 +4523,6 @@
     },
     "/api/v1/agents/{agent_id}/persistent_state": {
       "get": {
-        "description": "Returns persisted state from Letta backend storage (Postgres/pgvector via Letta API):\n- agent metadata\n- memory blocks\n- attached tools\n- persisted conversation history",
         "operationId": "api_get_agent_persistent_state_api_v1_agents__agent_id__persistent_state_get",
         "parameters": [
           {
@@ -4512,6 +4577,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get persisted Agent Studio state",
         "tags": [
           "Agent Studio"
@@ -4554,6 +4624,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get raw prompt messages for an Agent Studio agent",
         "tags": [
           "Agent Studio"
@@ -4595,6 +4670,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Send a chat message to a persistent Agent Studio agent",
         "tags": [
           "Agent Studio"
@@ -4657,6 +4737,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Generate a stateless comment for news/comment threads",
         "tags": [
           "Comment Lab"
@@ -4716,6 +4801,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Generate stateless grouped entity extraction for an input article",
         "tags": [
           "Label Lab"
@@ -4769,6 +4859,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List runtime options for an ADE scenario",
         "tags": [
           "Platform Meta"
@@ -4811,6 +4906,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Archive agent (soft delete)",
         "tags": [
           "Platform Control"
@@ -4872,6 +4972,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Update core-memory block value",
         "tags": [
           "Platform Control"
@@ -4924,6 +5029,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Send runtime message with optional overrides",
         "tags": [
           "Platform Runtime"
@@ -4976,6 +5086,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Update persisted agent model",
         "tags": [
           "Platform Control"
@@ -5018,6 +5133,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Purge archived agent (hard delete)",
         "tags": [
           "Platform Control"
@@ -5060,6 +5180,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Restore archived agent",
         "tags": [
           "Platform Control"
@@ -5112,6 +5237,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Update persisted system prompt",
         "tags": [
           "Platform Control"
@@ -5163,6 +5293,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Attach tool to agent",
         "tags": [
           "Tool Center"
@@ -5214,6 +5349,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Detach tool from agent",
         "tags": [
           "Tool Center"
@@ -5235,6 +5375,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get platform capability matrix",
         "tags": [
           "Platform Meta"
@@ -5278,6 +5423,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get prompt and persona metadata",
         "tags": [
           "Platform Meta"
@@ -5353,6 +5503,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get prompt/persona revision history timeline",
         "tags": [
           "Platform Meta"
@@ -5396,6 +5551,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get unified model-catalog diagnostics",
         "tags": [
           "Platform Meta"
@@ -5465,6 +5625,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List persona templates",
         "tags": [
           "Prompt Center"
@@ -5504,6 +5669,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Create persona template",
         "tags": [
           "Prompt Center"
@@ -5572,6 +5742,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get persona template",
         "tags": [
           "Prompt Center"
@@ -5638,6 +5813,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Update persona template",
         "tags": [
           "Prompt Center"
@@ -5696,6 +5876,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Archive persona template",
         "tags": [
           "Prompt Center"
@@ -5752,6 +5937,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Purge archived persona template",
         "tags": [
           "Prompt Center"
@@ -5810,6 +6000,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Restore archived persona template",
         "tags": [
           "Prompt Center"
@@ -5869,6 +6064,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List system prompt templates",
         "tags": [
           "Prompt Center"
@@ -5908,6 +6108,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Create system prompt template",
         "tags": [
           "Prompt Center"
@@ -5976,6 +6181,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get system prompt template",
         "tags": [
           "Prompt Center"
@@ -6042,6 +6252,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Update system prompt template",
         "tags": [
           "Prompt Center"
@@ -6100,6 +6315,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Archive system prompt template",
         "tags": [
           "Prompt Center"
@@ -6156,6 +6376,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Purge archived system prompt template",
         "tags": [
           "Prompt Center"
@@ -6214,6 +6439,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Restore archived system prompt template",
         "tags": [
           "Prompt Center"
@@ -6257,6 +6487,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Label Lab JSON schemas",
         "tags": [
           "Schema Center"
@@ -6296,6 +6531,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Create Label Lab JSON schema",
         "tags": [
           "Schema Center"
@@ -6348,6 +6588,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Label Lab JSON schema",
         "tags": [
           "Schema Center"
@@ -6398,6 +6643,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Update Label Lab JSON schema",
         "tags": [
           "Schema Center"
@@ -6440,6 +6690,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Archive Label Lab JSON schema",
         "tags": [
           "Schema Center"
@@ -6480,6 +6735,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Purge archived Label Lab JSON schema",
         "tags": [
           "Schema Center"
@@ -6522,6 +6782,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Restore archived Label Lab JSON schema",
         "tags": [
           "Schema Center"
@@ -6543,6 +6808,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List orchestrated test runs",
         "tags": [
           "Test Center"
@@ -6582,6 +6852,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Create orchestrated test run",
         "tags": [
           "Test Center"
@@ -6624,6 +6899,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get orchestrated test run",
         "tags": [
           "Test Center"
@@ -6666,6 +6946,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List test run artifacts",
         "tags": [
           "Test Center"
@@ -6727,6 +7012,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Read test run artifact content",
         "tags": [
           "Test Center"
@@ -6769,6 +7059,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Cancel orchestrated test run",
         "tags": [
           "Test Center"
@@ -6842,6 +7137,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Tool Center entries",
         "tags": [
           "Tool Center"
@@ -6881,6 +7181,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Create managed custom tool",
         "tags": [
           "Tool Center"
@@ -6933,6 +7238,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Tool Center managed custom tool",
         "tags": [
           "Tool Center"
@@ -6983,6 +7293,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Update managed custom tool",
         "tags": [
           "Tool Center"
@@ -7025,6 +7340,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Archive managed custom tool",
         "tags": [
           "Tool Center"
@@ -7065,6 +7385,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Purge archived managed custom tool",
         "tags": [
           "Tool Center"
@@ -7107,6 +7432,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Restore archived managed custom tool",
         "tags": [
           "Tool Center"
@@ -7176,6 +7506,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List tools for Toolbench discovery",
         "tags": [
           "Tool Center"
@@ -7217,6 +7552,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Invoke a runtime message to validate tool-call behavior",
         "tags": [
           "Tool Center"

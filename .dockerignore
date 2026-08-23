@@ -5,7 +5,10 @@ __pycache__/
 .marimo/
 data/pgdata/
 data/nltk_data/
+data/runtime/
+data/agent_lifecycle/
 data/personas/
+config/model_router_sources.local.json
 .tmp/
 diagnostics/
 tests/outputs/

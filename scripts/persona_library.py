@@ -28,7 +28,7 @@ def _registry(args: argparse.Namespace) -> PersonaSqliteRegistry:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Import/export ADE SQLite persona library data.")
-    parser.add_argument("--db-path", default="data/personas/personas.sqlite3")
+    parser.add_argument("--db-path", default="data/runtime/personas/personas.sqlite3")
     parser.add_argument("--seed-jsonl", default="agent_platform_api/seed_data/personas.jsonl")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -45,6 +45,14 @@ def main() -> None:
     markdown_parser.add_argument("--output", required=True)
     markdown_parser.add_argument("--scenario", choices=["chat", "comment"], default=None)
     markdown_parser.add_argument("--include-archived", action="store_true")
+
+    subparsers.add_parser("sync-seed", help="Synchronize the reviewed JSONL seed into the runtime database.")
+
+    promote_parser = subparsers.add_parser(
+        "promote-seed",
+        help="Explicitly replace the reviewed JSONL seed with runtime persona records.",
+    )
+    promote_parser.add_argument("--include-archived", action="store_true")
 
     args = parser.parse_args()
     registry = _registry(args)
@@ -68,6 +76,17 @@ def main() -> None:
             scenario=args.scenario,
         )
         print(f"exported {count} personas")
+        return
+    if args.command == "sync-seed":
+        print(registry.sync_seed())
+        return
+    if args.command == "promote-seed":
+        count = registry.export_jsonl(
+            Path(args.seed_jsonl),
+            include_archived=args.include_archived,
+        )
+        registry.sync_seed()
+        print(f"promoted {count} runtime personas to {args.seed_jsonl}")
         return
 
     raise SystemExit(f"Unsupported command: {args.command}")

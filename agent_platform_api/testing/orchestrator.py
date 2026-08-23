@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import threading
@@ -14,15 +15,64 @@ def _utc_now_iso() -> str:
 
 
 class PlatformTestOrchestrator:
-    """In-process orchestrator for launching and tracking test runs."""
+    """Launch tests in-process while persisting durable run state and artifacts."""
 
-    def __init__(self, project_root: Path):
-        self._project_root = project_root
-        self._log_root = (project_root / "tests" / "outputs" / "platform_orchestrator").resolve()
+    def __init__(self, project_root: Path, *, state_root: Path | None = None):
+        self._project_root = Path(project_root).resolve()
+        self._log_root = (
+            state_root or self._project_root / "data" / "runtime" / "test-runs"
+        ).resolve()
         self._log_root.mkdir(parents=True, exist_ok=True)
 
         self._lock = threading.Lock()
         self._runs: dict[str, dict[str, Any]] = {}
+        self._load_runs()
+
+    def _load_runs(self) -> None:
+        for manifest_path in sorted(self._log_root.glob("*/run.json")):
+            try:
+                payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if not isinstance(payload, dict):
+                    continue
+                run_id = str(payload.get("run_id", "") or "").strip()
+                if not run_id or run_id != manifest_path.parent.name:
+                    continue
+
+                output_dir = manifest_path.parent.resolve()
+                if not output_dir.is_relative_to(self._log_root):
+                    continue
+                run = {
+                    **payload,
+                    "run_id": run_id,
+                    "output_dir": str(output_dir),
+                    "log_file": str(output_dir / "orchestrator.log"),
+                    "_process": None,
+                }
+                if run.get("status") in {"queued", "running"}:
+                    run["status"] = "interrupted"
+                    run["finished_at"] = _utc_now_iso()
+                    run["error"] = "The API process restarted before this run completed."
+                    self._persist_run(run)
+                self._runs[run_id] = run
+            except (OSError, json.JSONDecodeError, TypeError, ValueError):
+                continue
+
+    @staticmethod
+    def _manifest_record(run: dict[str, Any]) -> dict[str, Any]:
+        return {key: value for key, value in run.items() if not key.startswith("_")}
+
+    def _persist_run(self, run: dict[str, Any]) -> None:
+        output_dir = Path(str(run["output_dir"])).resolve()
+        if not output_dir.is_relative_to(self._log_root):
+            raise ValueError("Test run output directory must remain inside the runtime test-run directory")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        manifest_path = output_dir / "run.json"
+        temporary_path = output_dir / ".run.json.tmp"
+        temporary_path.write_text(
+            json.dumps(self._manifest_record(run), ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        temporary_path.replace(manifest_path)
 
     def _build_command(
         self,
@@ -87,22 +137,29 @@ class PlatformTestOrchestrator:
         log_file = str(run.get("log_file", "") or "")
         if log_file:
             log_path = Path(log_file).resolve()
-            artifacts.append(
-                {
-                    "artifact_id": "orchestrator_log",
-                    "type": "log",
-                    "path": str(log_path),
-                    "exists": log_path.exists(),
-                    "size_bytes": log_path.stat().st_size if log_path.exists() else 0,
-                }
-            )
+            output_path = Path(str(run.get("output_dir", "") or "")).resolve()
+            if output_path.is_relative_to(self._log_root) and log_path.is_relative_to(output_path):
+                artifacts.append(
+                    {
+                        "artifact_id": "orchestrator_log",
+                        "type": "log",
+                        "path": str(log_path),
+                        "exists": log_path.exists(),
+                        "size_bytes": log_path.stat().st_size if log_path.exists() else 0,
+                    }
+                )
 
         output_dir = str(run.get("output_dir", "") or "")
         if output_dir:
             output_path = Path(output_dir).resolve()
-            if output_path.is_dir():
+            if output_path.is_dir() and output_path.is_relative_to(self._log_root):
                 for path in sorted(item for item in output_path.rglob("*") if item.is_file()):
-                    if log_file and path.resolve() == Path(log_file).resolve():
+                    resolved_path = path.resolve()
+                    if not resolved_path.is_relative_to(output_path):
+                        continue
+                    if resolved_path.name == "run.json":
+                        continue
+                    if log_file and resolved_path == Path(log_file).resolve():
                         continue
                     relative = path.relative_to(output_path).as_posix()
                     artifact_id = relative.replace("/", "__")
@@ -110,7 +167,7 @@ class PlatformTestOrchestrator:
                         {
                             "artifact_id": artifact_id,
                             "type": path.suffix.lower().lstrip(".") or "artifact",
-                            "path": str(path.resolve()),
+                            "path": str(resolved_path),
                             "exists": True,
                             "size_bytes": path.stat().st_size,
                         }
@@ -154,6 +211,7 @@ class PlatformTestOrchestrator:
 
         with self._lock:
             self._runs[run_id] = run
+            self._persist_run(run)
 
         worker = threading.Thread(target=self._run_worker, args=(run_id,), daemon=True)
         worker.start()
@@ -165,8 +223,14 @@ class PlatformTestOrchestrator:
             run = self._runs.get(run_id)
             if not run:
                 return
+            if run.get("cancel_requested"):
+                run["status"] = "cancelled"
+                run["finished_at"] = _utc_now_iso()
+                self._persist_run(run)
+                return
             run["status"] = "running"
             run["started_at"] = _utc_now_iso()
+            self._persist_run(run)
             command = list(run["command"])
             log_file = str(run["log_file"])
 
@@ -193,6 +257,7 @@ class PlatformTestOrchestrator:
                     tracked["_process"] = process
 
                 assert process.stdout is not None
+                line_count = 0
                 for line in process.stdout:
                     log.write(line)
                     log.flush()
@@ -206,6 +271,9 @@ class PlatformTestOrchestrator:
                         tail.append(clean_line)
                         if len(tail) > 200:
                             del tail[:-200]
+                        line_count += 1
+                        if line_count % 25 == 0:
+                            self._persist_run(tracked)
 
                 exit_code = process.wait()
 
@@ -220,6 +288,7 @@ class PlatformTestOrchestrator:
                         tracked["status"] = "cancelled"
                     else:
                         tracked["status"] = "passed" if exit_code == 0 else "failed"
+                    self._persist_run(tracked)
 
         except Exception as exc:
             with self._lock:
@@ -230,6 +299,7 @@ class PlatformTestOrchestrator:
                 tracked["error"] = str(exc)
                 tracked["finished_at"] = _utc_now_iso()
                 tracked["_process"] = None
+                self._persist_run(tracked)
 
     def list_runs(self) -> list[dict[str, Any]]:
         with self._lock:
@@ -267,6 +337,8 @@ class PlatformTestOrchestrator:
             return None
 
         artifact_path = Path(str(target.get("path", ""))).resolve()
+        if not artifact_path.is_relative_to(self._log_root):
+            return None
         if not artifact_path.exists():
             return {
                 "run_id": run_id,
@@ -300,8 +372,24 @@ class PlatformTestOrchestrator:
             process = run.get("_process")
             if process and run.get("status") == "running":
                 process.terminate()
+            self._persist_run(run)
 
             return self._public_record(run)
+
+    def shutdown(self) -> None:
+        """Persist terminal state and terminate child processes during API shutdown."""
+        with self._lock:
+            for run in self._runs.values():
+                if run.get("status") not in {"queued", "running"}:
+                    continue
+                run["cancel_requested"] = True
+                run["status"] = "cancelled"
+                run["finished_at"] = _utc_now_iso()
+                run["error"] = "The run was cancelled because the Agent Platform API shut down."
+                process = run.get("_process")
+                if process is not None:
+                    process.terminate()
+                self._persist_run(run)
 
 
 def _append_option(command: list[str], flag: str, value: Any) -> None:

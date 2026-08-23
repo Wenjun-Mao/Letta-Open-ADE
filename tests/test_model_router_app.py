@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 from typing import Any
 
+import httpx
+import pytest
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
@@ -13,6 +16,7 @@ from model_router.settings import RouterSourceConfig
 
 class _FakeSettings:
     sources: list[RouterSourceConfig] = []
+    request_timeout_seconds = 600.0
 
     def resolve_api_key(self) -> str:
         return "router-token"
@@ -93,6 +97,15 @@ def test_router_requires_api_key(monkeypatch) -> None:
     assert response.status_code == 401
 
 
+def test_router_health_remains_public(monkeypatch) -> None:
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+
+    response = TestClient(router_app.app).get("/v1/health")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
+
+
 def test_router_lists_agent_studio_models(monkeypatch) -> None:
     monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
     monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
@@ -107,7 +120,7 @@ def test_router_lists_agent_studio_models(monkeypatch) -> None:
 def test_router_rewrites_model_and_preserves_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 
-    def fake_post(source: RouterSourceConfig, payload: dict[str, Any]):
+    async def fake_post(source: RouterSourceConfig, payload: dict[str, Any]):
         captured["source_id"] = source.id
         captured["payload"] = payload
         return JSONResponse({"ok": True, "model": payload["model"]})
@@ -179,7 +192,7 @@ def test_router_injects_profile_sampling_defaults_for_vllm_when_omitted(monkeypa
         profile_applied=True,
     )
 
-    def fake_post(_source: RouterSourceConfig, payload: dict[str, Any]):
+    async def fake_post(_source: RouterSourceConfig, payload: dict[str, Any]):
         captured["payload"] = payload
         return JSONResponse({"ok": True, "model": payload["model"]})
 
@@ -242,7 +255,7 @@ def test_router_preserves_explicit_sampling_values(monkeypatch) -> None:
         thinking_default_enabled=True,
     )
 
-    def fake_post(_source: RouterSourceConfig, payload: dict[str, Any]):
+    async def fake_post(_source: RouterSourceConfig, payload: dict[str, Any]):
         captured["payload"] = payload
         return JSONResponse({"ok": True, "model": payload["model"]})
 
@@ -280,7 +293,7 @@ def test_router_preserves_explicit_sampling_values(monkeypatch) -> None:
 def test_router_drops_non_positive_max_tokens_before_forwarding(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 
-    def fake_post(source: RouterSourceConfig, payload: dict[str, Any]):
+    async def fake_post(source: RouterSourceConfig, payload: dict[str, Any]):
         captured["source_id"] = source.id
         captured["payload"] = payload
         return JSONResponse({"ok": True, "model": payload["model"]})
@@ -332,7 +345,7 @@ def test_router_does_not_inject_top_k_for_generic_sources(monkeypatch) -> None:
         supports_top_k=False,
     )
 
-    def fake_post(_source: RouterSourceConfig, payload: dict[str, Any]):
+    async def fake_post(_source: RouterSourceConfig, payload: dict[str, Any]):
         captured["payload"] = payload
         return JSONResponse({"ok": True, "model": payload["model"]})
 
@@ -369,3 +382,130 @@ def test_router_unknown_model_reports_source_status(monkeypatch) -> None:
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "unknown_or_unavailable_model"
     assert response.json()["error"]["source_status"] == "healthy"
+
+
+@pytest.mark.parametrize("path", ["/v1/models", "/v1/router/model-catalog", "/v1/router/sources"])
+def test_router_protects_catalog_endpoints(monkeypatch, path: str) -> None:
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
+
+    response = TestClient(router_app.app).get(path)
+
+    assert response.status_code == 401
+
+
+def test_router_catalog_endpoints_accept_valid_api_key(monkeypatch) -> None:
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
+    client = TestClient(router_app.app)
+
+    catalog_response = client.get("/v1/router/model-catalog", headers={"Authorization": "Bearer router-token"})
+    sources_response = client.get("/v1/router/sources", headers={"Authorization": "Bearer router-token"})
+
+    assert catalog_response.status_code == 200
+    assert catalog_response.json()["items"][0]["router_model_id"] == "local_llama_server::gemma4"
+    assert sources_response.status_code == 200
+    assert sources_response.json()["sources"][0]["id"] == "local_llama_server"
+
+
+def test_router_forwards_once_with_lifespan_managed_async_client(monkeypatch) -> None:
+    attempts = 0
+    captured: dict[str, Any] = {}
+
+    async def upstream_handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        captured["url"] = str(request.url)
+        captured["model"] = json.loads(request.content)["model"]
+        return httpx.Response(201, json={"id": "completion-1"})
+
+    upstream_client = httpx.AsyncClient(transport=httpx.MockTransport(upstream_handler))
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
+    monkeypatch.setattr(router_app, "_create_upstream_client", lambda: upstream_client)
+
+    with TestClient(router_app.app) as client:
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": "local_llama_server::gemma4", "messages": [{"role": "user", "content": "hi"}]},
+            headers={"Authorization": "Bearer router-token"},
+        )
+
+        assert response.status_code == 201
+        assert response.json() == {"id": "completion-1"}
+        assert attempts == 1
+        assert captured == {
+            "url": "http://127.0.0.1:8081/v1/chat/completions",
+            "model": "gemma4",
+        }
+        assert not upstream_client.is_closed
+
+    assert upstream_client.is_closed
+
+
+def test_router_does_not_retry_failed_upstream_request(monkeypatch) -> None:
+    attempts = 0
+
+    async def upstream_handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        raise httpx.ConnectError("connection refused")
+
+    upstream_client = httpx.AsyncClient(transport=httpx.MockTransport(upstream_handler))
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
+    monkeypatch.setattr(router_app, "_create_upstream_client", lambda: upstream_client)
+
+    with TestClient(router_app.app) as client:
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": "local_llama_server::gemma4", "messages": []},
+            headers={"Authorization": "Bearer router-token"},
+        )
+
+    assert response.status_code == 502
+    assert response.json()["error"]["code"] == "upstream_unreachable"
+    assert attempts == 1
+    assert upstream_client.is_closed
+
+
+class _TrackedAsyncStream(httpx.AsyncByteStream):
+    def __init__(self) -> None:
+        self.closed = False
+
+    async def __aiter__(self):
+        yield b"data: first\\n\\n"
+        yield b"data: [DONE]\\n\\n"
+
+    async def aclose(self) -> None:
+        self.closed = True
+
+
+def test_router_streams_async_upstream_response_and_closes_stream(monkeypatch) -> None:
+    stream = _TrackedAsyncStream()
+    upstream_client = httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda _request: httpx.Response(
+                202,
+                headers={"content-type": "text/event-stream"},
+                stream=stream,
+            )
+        )
+    )
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
+    monkeypatch.setattr(router_app, "_create_upstream_client", lambda: upstream_client)
+
+    with TestClient(router_app.app) as client:
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": "local_llama_server::gemma4", "messages": [], "stream": True},
+            headers={"Authorization": "Bearer router-token"},
+        )
+
+        assert response.status_code == 202
+        assert response.headers["content-type"].startswith("text/event-stream")
+        assert response.content == b"data: first\\n\\ndata: [DONE]\\n\\n"
+        assert stream.closed
+
+    assert upstream_client.is_closed

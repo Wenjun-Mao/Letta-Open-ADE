@@ -35,3 +35,34 @@ When adding a workflow, update:
 - The workflow-local `README.md`.
 - `docs/codebase-map.md` when it changes where humans should look.
 - Root README or MANUAL only when the workflow is part of normal development or operations.
+
+## Architecture Decisions
+
+Use `docs/adr/NNNN-short-title.md` for durable decisions that change a public or
+operational contract, runtime boundary, data authority, or long-lived module
+shape. Each record should state:
+
+- Context and the decision.
+- Consequences and rejected alternatives when they matter.
+- Implementation status, including whether the decision is still pending.
+
+An ADR records direction; it must not imply that code or deployment work has
+already landed. Update its status when implementation and verification complete.
+
+## Verification Boundaries
+
+- CI runs deterministic checks: locked dependency installation, unit/API tests,
+  generated artifact drift, frontend build, Compose rendering, and local image builds.
+- Provider probes, browser smoke tests, and evaluations that need live services or
+  credentials are explicit operator workflows, not default pull-request checks.
+- Keep commands in shared documentation shell-neutral where practical. If a
+  platform-specific script is required, label the platform rather than presenting
+  it as the universal command.
+
+## Feature Locality
+
+When modifying a large feature, prefer extracting its stable domain boundary
+incrementally: route entrypoint, API client, state/hook, UI components, and tests.
+Do not introduce a generic framework or a large repository move before a feature
+has a tested seam. The staged modularization direction is recorded in
+[ADR 0005](adr/0005-incremental-feature-modularization.md).

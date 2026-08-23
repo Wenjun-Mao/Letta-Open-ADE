@@ -13,9 +13,9 @@ class AgentLifecycleRegistryError(ValueError):
 class AgentLifecycleRegistry:
     """File-backed archive state for agents managed by the dev platform API."""
 
-    def __init__(self, project_root: Path):
+    def __init__(self, project_root: Path, *, base_dir: Path | None = None):
         self.project_root = Path(project_root)
-        self.base_dir = self.project_root / "data" / "agent_lifecycle"
+        self.base_dir = Path(base_dir or self.project_root / "data" / "runtime" / "agent-lifecycle").resolve()
         self.manifest_path = self.base_dir / "registry.json"
 
     def archived_agent_ids(self) -> set[str]:

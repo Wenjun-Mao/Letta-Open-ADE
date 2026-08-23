@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import agent_platform_api.runtime as runtime
 import agent_platform_api.options.catalog as options_catalog
 import agent_platform_api.options.letta_catalog as letta_catalog
 import agent_platform_api.options.selection as options_selection
+from agent_platform_api.options import resolve_comment_model_selection, runtime_options
 
 
 class _FakeRouterClient:
@@ -65,9 +65,9 @@ def test_runtime_options_use_router_catalog_and_letta_intersection(monkeypatch) 
         lambda: ({"openai-proxy/local_llama_server::gemma4"}, {"letta/letta-free"}),
     )
 
-    chat_options, _ = runtime.runtime_options("chat", force_refresh=True)
-    comment_options, _ = runtime.runtime_options("comment", force_refresh=True)
-    label_options, _ = runtime.runtime_options("label", force_refresh=True)
+    chat_options, _ = runtime_options("chat", force_refresh=True)
+    comment_options, _ = runtime_options("comment", force_refresh=True)
+    label_options, _ = runtime_options("label", force_refresh=True)
 
     assert chat_options[0]["key"] == "openai-proxy/local_llama_server::gemma4"
     assert comment_options[0]["key"] == "local_llama_server::gemma4"
@@ -84,7 +84,7 @@ def test_resolve_comment_selection_uses_router_base_url_and_key(monkeypatch) -> 
         lambda: ({"openai-proxy/local_llama_server::gemma4"}, set()),
     )
 
-    selection = runtime.resolve_comment_model_selection(model_key="local_llama_server::gemma4")
+    selection = resolve_comment_model_selection(model_key="local_llama_server::gemma4")
 
     assert selection["base_url"] == "http://model-router.local/v1"
     assert selection["provider_model_id"] == "local_llama_server::gemma4"

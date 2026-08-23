@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 import tomllib
@@ -12,6 +13,7 @@ from typing import Any
 from uuid import uuid4
 
 import httpx
+from dotenv import load_dotenv
 from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -69,6 +71,7 @@ def _project_path(value: str | Path) -> Path:
 
 
 def load_config(path: Path) -> EvalConfig:
+    load_dotenv(PROJECT_ROOT / ".env", override=False)
     payload: dict[str, Any] = {}
     if path.exists():
         with path.open("rb") as handle:
@@ -231,7 +234,9 @@ def run_evaluation(config: EvalConfig, *, now: datetime | None = None) -> dict[s
 
     timeout = max(config.timeout_seconds + 30, 60)
     rows: list[dict[str, Any]] = []
-    with httpx.Client(base_url=config.api_base_url, timeout=timeout) as client:
+    api_key = os.getenv("AGENT_PLATFORM_API_KEY", "").strip()
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    with httpx.Client(base_url=config.api_base_url, timeout=timeout, headers=headers) as client:
         validate_comment_options(client, config)
         personas = fetch_comment_personas(client, config)
         total_attempts = len(personas) * config.rounds
@@ -290,6 +295,7 @@ def run_attempt(
         "temperature": config.temperature,
         "top_p": config.top_p,
         "top_k": config.top_k,
+        "include_diagnostics": True,
     }
     started = time.perf_counter()
     response_payload: dict[str, Any] | None = None

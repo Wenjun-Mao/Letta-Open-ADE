@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import Link from "next/link";
 
 import {
@@ -13,277 +13,30 @@ import {
   listLabelSchemas,
   listPromptTemplates,
 } from "../../lib/api";
+import {
+  formatModelOptionLabel,
+  parseIntegerInRange,
+  parseNonNegativeInteger,
+  parseOptionalPositiveInteger,
+  parsePositiveNumber,
+  parseTemperature,
+  parseTopP,
+  samplingDefaultString,
+} from "../../lib/generation-controls";
 import { useI18n } from "../../lib/i18n";
+import {
+  asIntegerString as asIntString,
+  asRecord as asObject,
+  formatLocalTimestamp as formatTimestamp,
+  prettyJson as stringifyPretty,
+} from "../../lib/json-display";
+import { chooseOptionKey } from "../../lib/selection";
 
-const COPY = {
-  en: {
-    kicker: "Stateless Module",
-    title: "Label Lab",
-    intro:
-      "Generate one-shot structured entity extraction for an article. This route stays stateless and validates exact substrings before returning grouped JSON.",
-    tuningTitle: "Labeling Settings",
-    mainContentTitle: "Article Workspace",
-    outputTitle: "Extraction Result",
-    internalsTitle: "Request Internals",
-    defaultsFromRuntime: "Defaults come from backend runtime configuration and can be overridden per request.",
-    model: "Model",
-    selectModel: "Select model",
-    prompt: "Prompt",
-    schema: "Schema",
-    capability: "Capability",
-    capabilityStrict: "Strict JSON",
-    capabilityJsonSchema: "JSON Schema",
-    capabilityBestEffort: "Best Effort JSON",
-    maxTokens: "Max Tokens",
-    timeoutSeconds: "Timeout (seconds)",
-    repairRetryCount: "Repair Retry Count",
-    temperature: "Temperature",
-    topP: "Top P",
-    topK: "Top K",
-    articleInput: "Article Text",
-    articleInputPlaceholder: "Paste the article text that you want to extract entities from...",
-    promptPreview: "Prompt Preview",
-    schemaPreview: "Schema Preview",
-    manageSchemas: "Manage Schemas",
-    generate: "Generate Labels",
-    generating: "Generating...",
-    refreshOptions: "Refresh Options",
-    optionsRefreshed: "Labeling options refreshed.",
-    extractedGroupsTitle: "Extracted Groups",
-    extractedGroupsPlaceholder: "Validated grouped extraction will appear here.",
-    resultJsonTitle: "Result JSON",
-    resultJsonPlaceholder: "Validated structured output will appear here.",
-    runtimeMetaTitle: "Runtime",
-    tokenMetaTitle: "Token Usage",
-    provider: "Provider",
-    modelUsed: "Model Used",
-    outputMode: "Output Mode",
-    temperatureUsed: "Temperature Used",
-    topPUsed: "Top P Used",
-    topKUsed: "Top K Used",
-    selectedAttempt: "Selected Attempt",
-    finishReason: "Finish Reason",
-    responseSeconds: "Response Time (s)",
-    receivedAt: "Response Received At",
-    usagePromptTokens: "Prompt Tokens",
-    usageCompletionTokens: "Completion Tokens",
-    usageTotalTokens: "Total Tokens",
-    validationErrors: "Validation Errors",
-    rawRequestTitle: "Raw Request",
-    rawReplyTitle: "Raw Reply",
-    rawPlaceholder: "Raw JSON will appear here.",
-    notesTitle: "Execution Notes",
-    notesOne: "llama-server uses JSON Schema response_format, then ADE validates schema shape and exact substrings.",
-    notesTwo: "Each top-level key is an entity group whose value is an array of exact substrings from the article.",
-    notesThree: "This route is stateless and does not create or update Letta agents.",
-    selectRequired: "Please choose a model, prompt, and schema before generating.",
-    inputRequired: "Article text is required.",
-    invalidMaxTokens: "Max tokens must be a non-negative integer (0 means no limit).",
-    invalidTimeout: "Timeout must be a positive number.",
-    invalidRepairRetryCount: "Repair retry count must be an integer between 0 and 3.",
-    invalidTemperature: "Temperature must be between 0 and 2.",
-    invalidTopP: "Top P must be greater than 0 and at most 1.",
-    invalidTopK: "Top K must be a positive integer, or blank to use the model default.",
-    loadingError: "Failed to load labeling options",
-    generateError: "Label generation failed",
-    emptyGroup: "No matches returned.",
-  },
-  zh: {
-    kicker: "无状态模块",
-    title: "标注实验室",
-    intro: "对文章执行一次性结构化实体提取。该路径保持无状态，并在返回分组 JSON 前验证精确子串。",
-    tuningTitle: "标注设置",
-    mainContentTitle: "文章工作区",
-    outputTitle: "提取结果",
-    internalsTitle: "请求内部信息",
-    defaultsFromRuntime: "默认值来自后端运行配置，可在每次请求中覆盖。",
-    model: "模型",
-    selectModel: "选择模型",
-    prompt: "Prompt",
-    schema: "Schema",
-    capability: "能力",
-    capabilityStrict: "严格 JSON",
-    capabilityJsonSchema: "JSON Schema",
-    capabilityBestEffort: "尽力输出 JSON",
-    maxTokens: "最大 Token",
-    timeoutSeconds: "超时时间（秒）",
-    repairRetryCount: "修复重试次数",
-    temperature: "Temperature",
-    topP: "Top P",
-    topK: "Top K",
-    articleInput: "文章文本",
-    articleInputPlaceholder: "粘贴需要提取实体的文章文本...",
-    promptPreview: "Prompt 预览",
-    schemaPreview: "Schema 预览",
-    manageSchemas: "管理 Schema",
-    generate: "生成标注",
-    generating: "生成中...",
-    refreshOptions: "刷新配置",
-    optionsRefreshed: "标注配置已刷新。",
-    extractedGroupsTitle: "提取分组",
-    extractedGroupsPlaceholder: "通过验证的分组结果会显示在这里。",
-    resultJsonTitle: "结果 JSON",
-    resultJsonPlaceholder: "已验证的结构化结果会显示在这里。",
-    runtimeMetaTitle: "运行参数",
-    tokenMetaTitle: "Token 使用",
-    provider: "Provider",
-    modelUsed: "使用模型",
-    outputMode: "输出模式",
-    temperatureUsed: "实际 Temperature",
-    topPUsed: "实际 Top P",
-    topKUsed: "实际 Top K",
-    selectedAttempt: "命中尝试",
-    finishReason: "完成原因",
-    responseSeconds: "响应耗时（秒）",
-    receivedAt: "响应接收时间",
-    usagePromptTokens: "输入 Token",
-    usageCompletionTokens: "输出 Token",
-    usageTotalTokens: "总 Token",
-    validationErrors: "校验错误",
-    rawRequestTitle: "原始请求",
-    rawReplyTitle: "原始回复",
-    rawPlaceholder: "这里会显示原始 JSON。",
-    notesTitle: "执行说明",
-    notesOne: "llama-server 使用 JSON Schema response_format，随后由 ADE 校验 schema 结构与精确子串。",
-    notesTwo: "每个顶层字段都是一个实体分组，其值为来自文章原文的精确子串数组。",
-    notesThree: "该路径是无状态的，不会创建或更新 Letta 智能体。",
-    selectRequired: "生成前请先选择模型、Prompt 与 Schema。",
-    inputRequired: "请输入文章文本。",
-    invalidMaxTokens: "最大 Token 必须是非负整数（0 表示不限制）。",
-    invalidTimeout: "超时时间必须是正数。",
-    invalidRepairRetryCount: "修复重试次数必须是 0 到 3 之间的整数。",
-    invalidTemperature: "Temperature 必须在 0 到 2 之间。",
-    invalidTopP: "Top P 必须大于 0 且不超过 1。",
-    invalidTopK: "Top K 必须是正整数，或留空使用模型默认值。",
-    loadingError: "加载标注配置失败",
-    generateError: "标注生成失败",
-    emptyGroup: "未返回匹配项。",
-  },
-} as const;
+import { LABEL_LAB_COPY as COPY } from "./copy";
+import { formatGroupLabel, normalizeExtractionGroups } from "./extraction-presenters";
 
 function toErrorMessage(exc: unknown): string {
   return exc instanceof Error ? exc.message : String(exc);
-}
-
-function optionLabel(option: OptionEntry): string {
-  const key = (option.provider_model_id || option.key || "").trim();
-  const label = (option.label || "").trim();
-  const sourceLabel = (option.source_label || "").trim();
-  const base = label && label !== key ? `${label} (${key})` : key;
-  return sourceLabel ? `${base} - ${sourceLabel}` : base;
-}
-
-function pickSelectedKey(current: string, options: { key: string }[], fallback: string): string {
-  if (current && options.some((option) => option.key === current)) {
-    return current;
-  }
-  return options[0]?.key || fallback;
-}
-
-function parseNonNegativeInt(value: string): number | null {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return null;
-  }
-  return parsed;
-}
-
-function parsePositiveFloat(value: string): number | null {
-  const parsed = Number.parseFloat(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
-  }
-  return parsed;
-}
-
-function parseRepairRetryCount(value: string): number | null {
-  const parsed = Number.parseInt(value, 10);
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 3) {
-    return null;
-  }
-  return parsed;
-}
-
-function parseTemperature(value: string): number | null {
-  const parsed = Number.parseFloat(value);
-  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 2) {
-    return null;
-  }
-  return parsed;
-}
-
-function parseTopP(value: string): number | null {
-  const parsed = Number.parseFloat(value);
-  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 1) {
-    return null;
-  }
-  return parsed;
-}
-
-function parseOptionalPositiveInt(value: string): number | undefined | null {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return undefined;
-  }
-  const parsed = Number.parseInt(trimmed, 10);
-  if (!Number.isFinite(parsed) || parsed <= 0 || String(parsed) !== trimmed) {
-    return null;
-  }
-  return parsed;
-}
-
-function samplingDefaultString(option: OptionEntry | undefined | null, scenario: "comment_lab" | "label_lab" | "agent_studio", field: "temperature" | "top_p" | "top_k"): string | null {
-  const scenarioDefaults = option?.scenario_sampling_defaults?.[scenario];
-  const value = scenarioDefaults?.[field] ?? option?.sampling_defaults?.[field];
-  return value === undefined || value === null ? null : String(value);
-}
-
-function stringifyPretty(value: unknown): string {
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
-
-function formatTimestamp(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString();
-}
-
-function asObject(value: unknown): Record<string, unknown> {
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return value as Record<string, unknown>;
-  }
-  return {};
-}
-
-function asIntString(value: unknown): string {
-  const parsed = Number.parseInt(String(value ?? ""), 10);
-  if (!Number.isFinite(parsed)) {
-    return "";
-  }
-  return String(parsed);
-}
-
-function formatGroupLabel(key: string): string {
-  return key
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function normalizeExtractionGroups(value: LabelExtractionResult): Array<{ key: string; items: string[] }> {
-  return Object.entries(value || {})
-    .filter(([key, items]) => key.trim().length > 0 && Array.isArray(items))
-    .map(([key, items]) => ({
-      key,
-      items: items
-        .map((item) => String(item ?? "").trim())
-        .filter((item) => item.length > 0),
-    }));
 }
 
 export default function LabelLabPage() {
@@ -379,7 +132,7 @@ export default function LabelLabPage() {
       setSchemas(nextSchemas);
       setPromptRecords(nextPromptRecords);
       setSchemaRecords(nextSchemaRecords);
-      setModel((current) => pickSelectedKey(current, nextModels, optionsPayload.defaults.model || ""));
+      setModel((current) => chooseOptionKey(current, nextModels, optionsPayload.defaults.model || ""));
 
       const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
       const requestedPromptKey = (params?.get("promptKey") || "").trim();
@@ -391,7 +144,7 @@ export default function LabelLabPage() {
         if (requestedPromptKey && nextPrompts.some((option) => option.key === requestedPromptKey)) {
           return requestedPromptKey;
         }
-        return pickSelectedKey("", nextPrompts, optionsPayload.defaults.prompt_key || "");
+        return chooseOptionKey("", nextPrompts, optionsPayload.defaults.prompt_key || "");
       });
       setSchemaKey((current) => {
         if (current && nextSchemas.some((option) => option.key === current)) {
@@ -400,7 +153,7 @@ export default function LabelLabPage() {
         if (requestedSchemaKey && nextSchemas.some((option) => option.key === requestedSchemaKey)) {
           return requestedSchemaKey;
         }
-        return pickSelectedKey("", nextSchemas, optionsPayload.defaults.schema_key || "");
+        return chooseOptionKey("", nextSchemas, optionsPayload.defaults.schema_key || "");
       });
 
       if (optionsPayload.labeling) {
@@ -420,8 +173,10 @@ export default function LabelLabPage() {
     }
   };
 
+  const loadInitialOptions = useEffectEvent(loadOptions);
+
   useEffect(() => {
-    void loadOptions();
+    void loadInitialOptions();
   }, []);
 
   useEffect(() => {
@@ -454,17 +209,17 @@ export default function LabelLabPage() {
       return;
     }
 
-    const parsedMaxTokens = parseNonNegativeInt(maxTokens);
+    const parsedMaxTokens = parseNonNegativeInteger(maxTokens);
     if (parsedMaxTokens === null) {
       setError(copy.invalidMaxTokens);
       return;
     }
-    const parsedTimeoutSeconds = parsePositiveFloat(timeoutSeconds);
+    const parsedTimeoutSeconds = parsePositiveNumber(timeoutSeconds);
     if (parsedTimeoutSeconds === null) {
       setError(copy.invalidTimeout);
       return;
     }
-    const parsedRepairRetryCount = parseRepairRetryCount(repairRetryCount);
+    const parsedRepairRetryCount = parseIntegerInRange(repairRetryCount, 0, 3);
     if (parsedRepairRetryCount === null) {
       setError(copy.invalidRepairRetryCount);
       return;
@@ -479,7 +234,7 @@ export default function LabelLabPage() {
       setError(copy.invalidTopP);
       return;
     }
-    const parsedTopK = parseOptionalPositiveInt(topK);
+    const parsedTopK = parseOptionalPositiveInteger(topK);
     if (parsedTopK === null) {
       setError(copy.invalidTopK);
       return;
@@ -559,7 +314,7 @@ export default function LabelLabPage() {
                 <option value="">{copy.selectModel}</option>
                 {models.map((item) => (
                   <option key={item.key} value={item.key}>
-                    {optionLabel(item)}
+                    {formatModelOptionLabel(item)}
                   </option>
                 ))}
               </select>
@@ -570,7 +325,7 @@ export default function LabelLabPage() {
               <select className="input" value={promptKey} onChange={(event) => setPromptKey(event.target.value)} disabled={loadingOptions || submitting}>
                 {prompts.map((item) => (
                   <option key={item.key} value={item.key}>
-                    {optionLabel(item)}
+                    {formatModelOptionLabel(item)}
                   </option>
                 ))}
               </select>
@@ -581,7 +336,7 @@ export default function LabelLabPage() {
               <select className="input" value={schemaKey} onChange={(event) => setSchemaKey(event.target.value)} disabled={loadingOptions || submitting}>
                 {schemas.map((item) => (
                   <option key={item.key} value={item.key}>
-                    {optionLabel(item)}
+                    {formatModelOptionLabel(item)}
                   </option>
                 ))}
               </select>

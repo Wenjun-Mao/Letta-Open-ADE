@@ -17,6 +17,8 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
+# This is read by the dynamic Next route at request time, never bundled for browsers.
+ENV AGENT_PLATFORM_API_BASE_URL=http://agent_platform_api:8284
 EXPOSE 3000
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static

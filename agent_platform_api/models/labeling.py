@@ -52,6 +52,10 @@ class LabelingGenerateRequest(BaseModel):
     temperature: float | None = Field(default=None, ge=0, le=2, description="Sampling temperature. Defaults to Label Lab runtime settings.")
     top_p: float | None = Field(default=None, gt=0, le=1, description="Nucleus sampling top_p. Defaults to Label Lab runtime settings.")
     top_k: int | None = Field(default=None, gt=0, description="Optional top_k sampling value. Defaults to model profile or Label Lab runtime settings.")
+    include_diagnostics: bool = Field(
+        default=False,
+        description="Administrator-only opt-in for raw provider request/reply diagnostics.",
+    )
 
 
 class ApiLabelingGenerateResponse(BaseModel):
@@ -68,8 +72,8 @@ class ApiLabelingGenerateResponse(BaseModel):
     finish_reason: str | None = None
     usage: dict[str, Any] = Field(default_factory=dict)
     received_at: str | None = None
-    raw_request: dict[str, Any] = Field(default_factory=dict)
-    raw_reply: dict[str, Any] = Field(default_factory=dict)
+    raw_request: dict[str, Any] | None = None
+    raw_reply: dict[str, Any] | None = None
     validation_errors: list[str] = Field(default_factory=list)
     temperature: float
     top_p: float

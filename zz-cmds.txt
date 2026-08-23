@@ -1,2 +1,0 @@
-# Shut down the containers, wipe out everything in db and restart
-.\scripts\reset_database.ps1

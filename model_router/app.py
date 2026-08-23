@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
+import secrets
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from model_router.catalog import (
     RoutedModel,
@@ -18,19 +19,30 @@ from model_router.catalog import (
 from model_router.settings import RouterSourceConfig, get_settings
 
 
+def _create_upstream_client() -> httpx.AsyncClient:
+    """Create the shared async transport used while the router app is running."""
+    settings = get_settings()
+    return httpx.AsyncClient(timeout=settings.request_timeout_seconds)
+
+
+@asynccontextmanager
+async def _router_lifespan(application: FastAPI) -> AsyncIterator[None]:
+    upstream_client = _create_upstream_client()
+    application.state.upstream_client = upstream_client
+    try:
+        yield
+    finally:
+        await upstream_client.aclose()
+        del application.state.upstream_client
+
+
 app = FastAPI(
     title="ADE Model Router",
     version="0.1.0",
     description="First-party OpenAI-compatible router for ADE model sources.",
+    lifespan=_router_lifespan,
 )
 catalog_service = RouterCatalogService()
-_RETRYABLE_FORWARD_EXCEPTIONS = (
-    httpx.TimeoutException,
-    httpx.ConnectError,
-    httpx.ReadError,
-    httpx.RemoteProtocolError,
-    httpx.WriteError,
-)
 
 
 def _require_router_auth(authorization: str | None) -> None:
@@ -38,7 +50,7 @@ def _require_router_auth(authorization: str | None) -> None:
     if not expected_key:
         return
     scheme, _, token = str(authorization or "").partition(" ")
-    if scheme.lower() != "bearer" or token.strip() != expected_key:
+    if scheme.lower() != "bearer" or not secrets.compare_digest(token.strip(), expected_key):
         raise HTTPException(status_code=401, detail="Invalid model-router API key")
 
 
@@ -130,6 +142,7 @@ def router_model_catalog(
     refresh: bool = False,
     authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
+    _require_router_auth(authorization)
     return _catalog_payload(force_refresh=refresh)
 
 
@@ -139,6 +152,7 @@ def router_sources(
     refresh: bool = False,
     authorization: str | None = Header(default=None),
 ) -> dict[str, Any]:
+    _require_router_auth(authorization)
     snapshot = catalog_service.snapshot(force_refresh=refresh)
     return {
         "generated_at": snapshot.generated_at,
@@ -182,8 +196,8 @@ async def chat_completions(
     upstream_payload = _normalize_openai_payload(upstream_payload)
     upstream_payload = _apply_sampling_defaults(routed_model, source, upstream_payload)
     if bool(upstream_payload.get("stream", False)):
-        return _stream_chat_completion(source, upstream_payload)
-    return _post_chat_completion(source, upstream_payload)
+        return await _stream_chat_completion(source, upstream_payload)
+    return await _post_chat_completion(source, upstream_payload)
 
 
 def _normalize_openai_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -274,26 +288,20 @@ def _upstream_headers(source: RouterSourceConfig) -> dict[str, str]:
     return headers
 
 
-def _post_chat_completion(source: RouterSourceConfig, payload: dict[str, Any]) -> Response:
-    settings = get_settings()
-    retrying = Retrying(
-        stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=1, max=8),
-        retry=retry_if_exception_type(_RETRYABLE_FORWARD_EXCEPTIONS),
-        reraise=True,
-    )
+def _upstream_client() -> httpx.AsyncClient:
+    client = getattr(app.state, "upstream_client", None)
+    if not isinstance(client, httpx.AsyncClient) or client.is_closed:
+        raise RuntimeError("Model-router upstream transport is not available")
+    return client
+
+
+async def _post_chat_completion(source: RouterSourceConfig, payload: dict[str, Any]) -> Response:
     try:
-        response = None
-        for attempt in retrying:
-            with attempt:
-                with httpx.Client(timeout=settings.request_timeout_seconds) as session:
-                    response = session.post(
-                        source.chat_completions_url(),
-                        json=payload,
-                        headers=_upstream_headers(source),
-                    )
-        if response is None:
-            raise RuntimeError("Upstream request did not produce a response")
+        response = await _upstream_client().post(
+            source.chat_completions_url(),
+            json=payload,
+            headers=_upstream_headers(source),
+        )
     except Exception as exc:
         return _router_error(
             502,
@@ -304,28 +312,25 @@ def _post_chat_completion(source: RouterSourceConfig, payload: dict[str, Any]) -
     return _response_from_upstream(response, source_id=source.id)
 
 
-def _stream_chat_completion(source: RouterSourceConfig, payload: dict[str, Any]) -> StreamingResponse:
-    settings = get_settings()
-    client = httpx.Client(timeout=settings.request_timeout_seconds)
-    stream_context = client.stream(
+async def _stream_chat_completion(source: RouterSourceConfig, payload: dict[str, Any]) -> StreamingResponse | JSONResponse:
+    client = _upstream_client()
+    upstream_request = client.build_request(
         "POST",
         source.chat_completions_url(),
         json=payload,
         headers=_upstream_headers(source),
     )
     try:
-        response = stream_context.__enter__()
+        response = await client.send(upstream_request, stream=True)
     except Exception as exc:
-        client.close()
-        return _router_error(502, "upstream_unreachable", f"Source '{source.id}' could not be reached: {exc}")  # type: ignore[return-value]
+        return _router_error(502, "upstream_unreachable", f"Source '{source.id}' could not be reached: {exc}")
 
-    def iter_bytes() -> Iterator[bytes]:
+    async def iter_bytes() -> AsyncIterator[bytes]:
         try:
-            for chunk in response.iter_bytes():
+            async for chunk in response.aiter_bytes():
                 yield chunk
         finally:
-            stream_context.__exit__(None, None, None)
-            client.close()
+            await response.aclose()
 
     media_type = response.headers.get("content-type") or "text/event-stream"
     return StreamingResponse(iter_bytes(), status_code=response.status_code, media_type=media_type)

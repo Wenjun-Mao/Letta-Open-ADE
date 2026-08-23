@@ -1,0 +1,104 @@
+name: Verify Repository
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python tests and OpenAPI artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      - name: Install locked development dependencies
+        run: uv sync --frozen --group dev
+
+      - name: Run Python test suite
+        run: uv run python -m pytest
+
+      - name: Run Python fatal-error lint
+        run: uv run ruff check agent_platform_api model_router ade_core evals scripts tests
+
+      - name: Check English OpenAPI artifact drift
+        run: uv run python scripts/export_openapi.py --check
+
+      - name: Regenerate and check Chinese OpenAPI artifacts
+        run: |
+          uv run python scripts/generate_openapi_zh_manual.py
+          git diff --exit-code -- \
+            docs/openapi/agent-platform-openapi-zh.json \
+            frontend-ade/public/openapi/agent-platform-openapi-zh.json \
+            docs/openapi/zh_openapi_missing_terms.json
+
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend-ade/package-lock.json
+
+      - name: Install locked frontend dependencies
+        run: npm ci --prefix frontend-ade
+
+      - name: Run frontend tests when defined
+        run: |
+          if node -e "process.exit(require('./frontend-ade/package.json').scripts?.test ? 0 : 1)"; then
+            npm --prefix frontend-ade run test
+          else
+            echo "No frontend test script is defined; the production build remains required."
+          fi
+
+      - name: Run frontend lint
+        run: npm --prefix frontend-ade run lint
+
+      - name: Audit frontend dependencies
+        run: npm audit --prefix frontend-ade --audit-level=high
+
+      - name: Build frontend
+        run: npm --prefix frontend-ade run build
+
+  containers:
+    name: Compose and first-party images
+    runs-on: ubuntu-latest
+    env:
+      LETTA_ENV_FILE: .env.example
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Validate Compose configuration
+        run: docker compose --env-file .env.example config --quiet
+
+      - name: Build first-party service images
+        run: docker compose --env-file .env.example build model_router agent_platform_api ade_frontend
+
+# Provider probes, browser smoke tests, and eval workflows require live services or
+# credentials. They remain explicit operator-run checks rather than PR blockers.

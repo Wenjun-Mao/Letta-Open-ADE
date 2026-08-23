@@ -1,12 +1,6 @@
 {
   "missing_descriptions": [],
   "missing_summaries": [],
-  "missing_titles": [
-    "Judge Enabled",
-    "Rounds"
-  ],
-  "unknown_title_tokens": [
-    "Fixture",
-    "Judge"
-  ]
+  "missing_titles": [],
+  "unknown_title_tokens": []
 }

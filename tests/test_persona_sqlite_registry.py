@@ -12,7 +12,7 @@ from agent_platform_api.registries.prompt_persona_store import RegistryError
 def _registry(tmp_path) -> PersonaSqliteRegistry:
     return PersonaSqliteRegistry(
         tmp_path,
-        db_path=tmp_path / "data" / "personas" / "personas.sqlite3",
+        db_path=tmp_path / "data" / "runtime" / "personas" / "personas.sqlite3",
         seed_jsonl_path=tmp_path / "missing_seed.jsonl",
     )
 
@@ -30,7 +30,7 @@ def test_persona_sqlite_crud_archive_restore_and_purge(tmp_path) -> None:
         metadata={"source": "test"},
     )
     assert created["key"] == "comment_demo"
-    assert created["source_path"] == "data/personas/personas.sqlite3#comment_demo"
+    assert created["source_path"] == "data/runtime/personas/personas.sqlite3#comment_demo"
     assert created["tags"] == ["football"]
     assert created["metadata"] == {"source": "test"}
 
@@ -109,6 +109,56 @@ def test_persona_seed_jsonl_loads_when_db_is_empty(tmp_path) -> None:
 
     assert registry.get_persona("chat_linxiaotang", scenario="chat") is not None
     assert registry.get_persona("comment_10", scenario="comment") is not None
+
+
+def test_persona_seed_sync_applies_new_versions_and_preserves_runtime_only_records(tmp_path) -> None:
+    seed_path = tmp_path / "seed.jsonl"
+    seed_path.write_text(
+        json.dumps({"key": "chat_seed", "scenario": "chat", "content": "Version one"}) + "\n",
+        encoding="utf-8",
+    )
+    db_path = tmp_path / "data" / "runtime" / "personas" / "personas.sqlite3"
+
+    registry = PersonaSqliteRegistry(tmp_path, db_path=db_path, seed_jsonl_path=seed_path)
+    registry.update_persona(key="chat_seed", scenario="chat", content="Runtime edit")
+    registry.create_persona(key="comment_runtime", scenario="comment", content="Runtime only")
+
+    unchanged = PersonaSqliteRegistry(tmp_path, db_path=db_path, seed_jsonl_path=seed_path)
+    assert unchanged.get_persona("chat_seed", scenario="chat")["content"] == "Runtime edit"
+
+    seed_path.write_text(
+        json.dumps({"key": "chat_seed", "scenario": "chat", "content": "Version two"}) + "\n",
+        encoding="utf-8",
+    )
+    updated = PersonaSqliteRegistry(tmp_path, db_path=db_path, seed_jsonl_path=seed_path)
+
+    assert updated.get_persona("chat_seed", scenario="chat")["content"] == "Version two"
+    assert updated.get_persona("comment_runtime", scenario="comment")["content"] == "Runtime only"
+
+
+def test_persona_seed_sync_removes_records_deleted_from_new_seed_version(tmp_path) -> None:
+    seed_path = tmp_path / "seed.jsonl"
+    seed_path.write_text(
+        "\n".join(
+            [
+                json.dumps({"key": "chat_keep", "scenario": "chat", "content": "Keep"}),
+                json.dumps({"key": "comment_remove", "scenario": "comment", "content": "Remove"}),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    db_path = tmp_path / "data" / "runtime" / "personas" / "personas.sqlite3"
+    PersonaSqliteRegistry(tmp_path, db_path=db_path, seed_jsonl_path=seed_path)
+
+    seed_path.write_text(
+        json.dumps({"key": "chat_keep", "scenario": "chat", "content": "Keep"}) + "\n",
+        encoding="utf-8",
+    )
+    updated = PersonaSqliteRegistry(tmp_path, db_path=db_path, seed_jsonl_path=seed_path)
+
+    assert updated.get_persona("chat_keep", scenario="chat") is not None
+    assert updated.get_persona("comment_remove", scenario="comment") is None
 
 
 def test_checked_in_seed_contains_curated_and_excel_personas() -> None:

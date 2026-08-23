@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+umask 077
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -19,10 +20,10 @@ log() {
 
 redact_stream() {
   sed -E \
-    -e 's/(OPENAI_API_KEY=).*/\1***REDACTED***/' \
-    -e 's/(ARK_API_KEY=).*/\1***REDACTED***/' \
-    -e 's/(OPENAI_API_KEY:).*/\1 ***REDACTED***/' \
-    -e 's/(ARK_API_KEY:).*/\1 ***REDACTED***/'
+    -e 's#(://)[^/@[:space:]]+:[^/@[:space:]]+@#\1***:***@#g' \
+    -e 's/([Aa]uthorization:[[:space:]]*[Bb]earer[[:space:]]+)[^[:space:]]+/\1***REDACTED***/g' \
+    -e 's/^([A-Za-z_][A-Za-z0-9_]*(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|COOKIE|AUTH)[A-Za-z0-9_]*[=:][[:space:]]*).*/\1***REDACTED***/I' \
+    -e "s/([\"'][A-Za-z_][A-Za-z0-9_]*(KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|COOKIE|AUTH)[A-Za-z0-9_]*[\"']?[[:space:]]*:[[:space:]]*).*/\1***REDACTED***/I"
 }
 
 run_cmd() {
@@ -32,7 +33,7 @@ run_cmd() {
   local outfile="${OUT_DIR}/${name}.txt"
 
   log "RUN (${name}): ${cmd}"
-  if bash -lc "${cmd}" >"${outfile}" 2>&1; then
+  if bash -lc "${cmd}" 2>&1 | redact_stream >"${outfile}"; then
     log "OK  (${name}) -> ${outfile}"
   else
     local rc=$?
@@ -113,13 +114,15 @@ run_cmd "compose_version" "${COMPOSE_CMD} version"
 run_cmd "compose_ps" "cd '${PROJECT_ROOT}' && ${COMPOSE_CMD} --env-file '${ENV_FILE}' ps -a"
 
 if [[ -f "${PROJECT_ROOT}/${ENV_FILE}" ]]; then
-  log "Writing redacted env snapshot from ${ENV_FILE}"
-  redact_stream <"${PROJECT_ROOT}/${ENV_FILE}" >"${OUT_DIR}/env_redacted.txt"
+  log "Writing allowlisted environment summary from ${ENV_FILE}"
+  grep -E '^(COMPOSE_PROJECT_NAME|LETTA_SERVER_IMAGE|LETTA_DB_HOST|LETTA_PG_INTERNAL_PORT|LETTA_REDIS_HOST|LETTA_REDIS_PORT|LETTA_API_PORT|LETTA_DEBUG|ADE_FRONTEND_BIND_HOST|ADE_INTERNAL_BIND_HOST|ADE_FRONTEND_PORT|AGENT_PLATFORM_API_PORT|MODEL_ROUTER_PORT|MODEL_ROUTER_CACHE_TTL_SECONDS|MODEL_ROUTER_DISCOVERY_TIMEOUT_SECONDS|MODEL_ROUTER_REQUEST_TIMEOUT_SECONDS|MODEL_ROUTER_SOURCES_FILE|MODEL_ROUTER_MODEL_PROFILES_FILE|AGENT_PLATFORM_AUTH_ENABLED|AGENT_PLATFORM_MODEL_ROUTER_BASE_URL|AGENT_PLATFORM_PERSONA_DB_PATH|AGENT_PLATFORM_PERSONA_SEED_JSONL_PATH)=' \
+    "${PROJECT_ROOT}/${ENV_FILE}" | redact_stream >"${OUT_DIR}/env_safe_summary.txt" || true
 else
   log "WARN: env file not found at ${PROJECT_ROOT}/${ENV_FILE}"
 fi
 
-run_cmd "compose_config_redacted" "cd '${PROJECT_ROOT}' && ${COMPOSE_CMD} --env-file '${ENV_FILE}' config | sed -E 's/(OPENAI_API_KEY:).*/\\1 ***REDACTED***/; s/(MODEL_ROUTER_API_KEY:).*/\\1 ***REDACTED***/; s/(ARK_API_KEY:).*/\\1 ***REDACTED***/'"
+run_cmd "compose_services" "cd '${PROJECT_ROOT}' && ${COMPOSE_CMD} --env-file '${ENV_FILE}' config --services"
+run_cmd "compose_images" "cd '${PROJECT_ROOT}' && ${COMPOSE_CMD} --env-file '${ENV_FILE}' config --images"
 
 mapfile -t SERVICES < <(cd "${PROJECT_ROOT}" && ${COMPOSE_CMD} --env-file "${ENV_FILE}" config --services 2>/dev/null || true)
 if [[ ${#SERVICES[@]} -eq 0 ]]; then
@@ -144,7 +147,7 @@ done
 LETTA_CID="$(get_service_cid letta_server)"
 if [[ -n "${LETTA_CID}" ]]; then
   run_cmd "probe_from_container_openapi" "docker exec '${LETTA_CID}' python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8283/openapi.json', timeout=5).read(); print('openapi_ok')\""
-  run_cmd "letta_server_env_selected" "docker exec '${LETTA_CID}' /bin/sh -lc \"env | grep -E '^(OPENAI_API_BASE|OPENAI_BASE_URL|LMSTUDIO_BASE_URL|LETTA_DEFAULT_EMBEDDING_HANDLE|LETTA_MODEL_HANDLE|LETTA_REDIS_HOST|LETTA_REDIS_PORT|LETTA_DB_HOST|LETTA_PG_PORT|LETTA_API_PORT)='\""
+  run_cmd "letta_server_env_selected" "docker exec '${LETTA_CID}' /bin/sh -lc \"env | grep -E '^(OPENAI_API_BASE|OPENAI_BASE_URL|LETTA_DEFAULT_EMBEDDING_HANDLE|LETTA_MODEL_HANDLE|LETTA_REDIS_HOST|LETTA_REDIS_PORT|LETTA_DB_HOST|LETTA_PG_PORT|LETTA_API_PORT)='\""
   run_cmd "letta_server_processes" "docker exec '${LETTA_CID}' /bin/sh -lc 'ps -ef'"
   run_cmd "letta_server_listen_ports" "docker exec '${LETTA_CID}' /bin/sh -lc 'ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null || true'"
 fi
@@ -166,7 +169,7 @@ run_cmd "probe_host_openapi_curl" "curl -sS -D '${OUT_DIR}/probe_host_openapi_he
 run_cmd "probe_dns_ark" "getent hosts ark.cn-beijing.volces.com || true"
 run_cmd "probe_model_router_health" "python3 -c \"import json,urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:8290/v1/health', timeout=10); print(json.dumps(json.load(resp), indent=2))\""
 run_cmd "probe_model_router_catalog" "python3 -c \"import json,urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:8290/v1/router/model-catalog', timeout=10); payload=json.load(resp); summary={'generated_at': payload.get('generated_at'), 'sources': [{'id': item.get('id'), 'base_url': item.get('base_url'), 'status': item.get('status'), 'detail': item.get('detail'), 'allowlist_applied': item.get('allowlist_applied'), 'raw_model_count': item.get('raw_model_count'), 'filtered_model_count': item.get('filtered_model_count')} for item in payload.get('sources', [])], 'models': [{'id': item.get('router_model_id'), 'profile_applied': item.get('profile_applied'), 'supports_top_k': item.get('supports_top_k'), 'supports_thinking': item.get('supports_thinking'), 'thinking_default_enabled': item.get('thinking_default_enabled'), 'agent_studio_compatible': item.get('agent_studio_compatible'), 'sampling_defaults': item.get('sampling_defaults')} for item in payload.get('items', [])]}; print(json.dumps(summary, indent=2))\""
-run_cmd "probe_model_catalog" "python3 -c \"import json,urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:8284/api/v1/platform/model-catalog', timeout=10); payload=json.load(resp); summary={'generated_at': payload.get('generated_at'), 'sources': [{'id': item.get('id'), 'base_url': item.get('base_url'), 'status': item.get('status'), 'detail': item.get('detail'), 'allowlist_applied': item.get('allowlist_applied'), 'allowlist_checked_at': item.get('allowlist_checked_at'), 'raw_model_count': item.get('raw_model_count'), 'filtered_model_count': item.get('filtered_model_count')} for item in payload.get('sources', [])]}; print(json.dumps(summary, indent=2))\""
+run_cmd "probe_agent_platform_health" "python3 -c \"import json,urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:8284/api/v1/health', timeout=10); print(json.dumps(json.load(resp), indent=2))\""
 run_cmd "ark_allowlist_summary" "python3 -c \"import json, pathlib; path=pathlib.Path('agent_platform_api/catalog_data/ark_chat_probe_report.json'); payload=json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {'missing': True}; summary={'path': str(path), 'source_id': payload.get('source_id'), 'checked_at': payload.get('checked_at'), 'probe_mode': payload.get('probe_mode'), 'raw_model_count': payload.get('raw_model_count'), 'usable_models': payload.get('usable_models', [])}; print(json.dumps(summary, indent=2, ensure_ascii=False))\""
 
 ARCHIVE="${OUT_DIR}.tar.gz"
@@ -176,4 +179,4 @@ tar -czf "${ARCHIVE}" -C "${OUT_ROOT}" "$(basename "${OUT_DIR}")"
 log "Diagnostics complete"
 log "Directory: ${OUT_DIR}"
 log "Archive: ${ARCHIVE}"
-log "Share the .tar.gz file for analysis"
+log "Review the archive contents before sharing the .tar.gz file for analysis"

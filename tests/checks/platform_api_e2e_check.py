@@ -12,8 +12,10 @@ from letta_client import Letta
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from tests.shared.config_defaults import (
+    DEFAULT_EMBEDDING_HANDLE,
     DEFAULT_PROMPT_KEY,
     DEFAULT_TEST_MODEL_HANDLE,
+    agent_platform_headers,
 )
 
 LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", "http://localhost:8283")
@@ -90,7 +92,11 @@ def main() -> None:
     agent_id: str | None = None
 
     try:
-        with httpx.Client(base_url=AGENT_PLATFORM_API_BASE_URL, timeout=AGENT_PLATFORM_API_CLIENT_TIMEOUT_SECONDS) as http:
+        with httpx.Client(
+            base_url=AGENT_PLATFORM_API_BASE_URL,
+            timeout=AGENT_PLATFORM_API_CLIENT_TIMEOUT_SECONDS,
+            headers=agent_platform_headers(),
+        ) as http:
             capabilities_response = http.get("/api/v1/platform/capabilities")
             capabilities_response.raise_for_status()
             capabilities = capabilities_response.json()
@@ -282,4 +288,3 @@ if __name__ == "__main__":
     except Exception as exc:
         print(f"[FAIL] platform_api_e2e_check: {exc}")
         raise
-

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from agent_platform_api.helpers import normalize_scenario
+from agent_platform_api.dependencies import prompt_persona_registry
+from agent_platform_api.feature_flags import ensure_platform_api_enabled
+from agent_platform_api.template_options import normalize_scenario
 from agent_platform_api.mappers import as_template_record
 from agent_platform_api.models.templates import (
     ApiTemplateListResponse,
@@ -13,7 +15,7 @@ from agent_platform_api.models.templates import (
     PromptTemplateWriteRequest,
 )
 from agent_platform_api.openapi_metadata import TAG_PROMPT_CENTER
-from agent_platform_api.runtime import ensure_platform_api_enabled, invalidate_options_cache, prompt_persona_registry
+from agent_platform_api.options import invalidate_options_cache
 from agent_platform_api.registries.prompt_persona_store import RegistryError
 
 router = APIRouter()
@@ -383,4 +385,3 @@ async def api_prompt_center_purge_persona(key: str, scenario: str | None = None)
 
     invalidate_options_cache()
     return {"ok": True, "key": key, "kind": "persona"}
-

@@ -49,7 +49,7 @@ The default config is `evals/chat_memory_eval/config.toml`.
 
 ## Test Center
 
-ADE Test Center can launch this workflow with a focused form. UI-launched runs write artifacts under `tests/outputs/platform_orchestrator/<run_id>/` so the log, CSV, JSONL, and summary are all visible from the run artifact panel.
+ADE Test Center can launch this workflow with a focused form. UI-launched runs write artifacts under `data/runtime/test-runs/<run_id>/` so the manifest, log, CSV, JSONL, and summary are all visible from the run artifact panel and survive an API restart.
 
 ## Troubleshooting
 

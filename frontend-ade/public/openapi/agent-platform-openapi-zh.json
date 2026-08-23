@@ -506,14 +506,28 @@
             "type": "string"
           },
           "raw_reply": {
-            "additionalProperties": true,
-            "title": "原始 回复",
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原始 回复"
           },
           "raw_request": {
-            "additionalProperties": true,
-            "title": "原始 请求",
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原始 请求"
           },
           "received_at": {
             "anyOf": [
@@ -869,14 +883,28 @@
             "type": "string"
           },
           "raw_reply": {
-            "additionalProperties": true,
-            "title": "原始 回复",
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原始 回复"
           },
           "raw_request": {
-            "additionalProperties": true,
-            "title": "原始 请求",
-            "type": "object"
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原始 请求"
           },
           "received_at": {
             "anyOf": [
@@ -3141,6 +3169,12 @@
             "description": "可选 vLLM/Gemma thinking 开关。对支持的 vLLM 来源设为 true 时，ADE 会发送 `chat_template_kwargs.enable_thinking=true`。",
             "title": "启用 Thinking"
           },
+          "include_diagnostics": {
+            "default": false,
+            "description": "仅管理员可选择启用原始供应商请求/响应诊断信息。",
+            "title": "包含 诊断",
+            "type": "boolean"
+          },
           "input": {
             "description": "需要评论的新闻文章、评论线程或源文本。",
             "title": "输入",
@@ -3401,6 +3435,12 @@
           }
         ],
         "properties": {
+          "include_diagnostics": {
+            "default": false,
+            "description": "仅管理员可选择启用原始供应商请求/响应诊断信息。",
+            "title": "包含 诊断",
+            "type": "boolean"
+          },
           "input": {
             "description": "用于抽取分组实体列表的文章或文本。",
             "title": "输入",
@@ -3732,7 +3772,7 @@
                 "type": "null"
               }
             ],
-            "title": "Fixture 键"
+            "title": "测试数据集 键"
           },
           "judge_enabled": {
             "anyOf": [
@@ -3743,7 +3783,7 @@
                 "type": "null"
               }
             ],
-            "title": "Judge Enabled"
+            "title": "启用评审模型"
           },
           "judge_model_key": {
             "anyOf": [
@@ -3754,7 +3794,7 @@
                 "type": "null"
               }
             ],
-            "title": "Judge 模型 键"
+            "title": "评审模型 模型 键"
           },
           "model": {
             "anyOf": [
@@ -3813,7 +3853,7 @@
                 "type": "null"
               }
             ],
-            "title": "Rounds"
+            "title": "轮数"
           },
           "run_type": {
             "enum": [
@@ -4258,6 +4298,12 @@
         "title": "校验错误",
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
     }
   },
   "info": {
@@ -4326,6 +4372,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "列出 Agent Studio 智能体",
         "tags": [
           "智能体工作台"
@@ -4365,6 +4416,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "创建 Agent Studio 智能体",
         "tags": [
           "智能体工作台"
@@ -4407,6 +4463,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "删除已归档智能体（硬删除）",
         "tags": [
           "平台控制"
@@ -4449,6 +4510,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取 Agent Studio 智能体详情",
         "tags": [
           "智能体工作台"
@@ -4457,7 +4523,6 @@
     },
     "/api/v1/agents/{agent_id}/persistent_state": {
       "get": {
-        "description": "返回 Letta 后端存储（通过 Letta API 访问 Postgres/pgvector）中的持久化状态：\n- 智能体元数据\n- 记忆块\n- 已挂载工具\n- 持久化会话历史",
         "operationId": "api_get_agent_persistent_state_api_v1_agents__agent_id__persistent_state_get",
         "parameters": [
           {
@@ -4512,6 +4577,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取 Agent Studio 持久化状态",
         "tags": [
           "智能体工作台"
@@ -4554,6 +4624,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取 Agent Studio 智能体的原始提示词消息",
         "tags": [
           "智能体工作台"
@@ -4595,6 +4670,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "向持久化 Agent Studio 智能体发送对话消息",
         "tags": [
           "智能体工作台"
@@ -4657,6 +4737,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "生成用于新闻/评论线程的无状态评论",
         "tags": [
           "评论实验室"
@@ -4716,6 +4801,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "为输入文章生成无状态分组实体抽取",
         "tags": [
           "标注实验室"
@@ -4769,6 +4859,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "列出 ADE 场景的运行时选项",
         "tags": [
           "平台元数据"
@@ -4811,6 +4906,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "归档智能体（软删除）",
         "tags": [
           "平台控制"
@@ -4872,6 +4972,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "更新核心记忆块值",
         "tags": [
           "平台控制"
@@ -4924,6 +5029,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "发送运行时消息（支持可选覆盖参数）",
         "tags": [
           "平台运行时"
@@ -4976,6 +5086,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "更新已持久化智能体模型",
         "tags": [
           "平台控制"
@@ -5018,6 +5133,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "清除已归档智能体（硬删除）",
         "tags": [
           "平台控制"
@@ -5060,6 +5180,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "恢复已归档智能体",
         "tags": [
           "平台控制"
@@ -5112,6 +5237,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "更新已持久化系统提示词",
         "tags": [
           "平台控制"
@@ -5163,6 +5293,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "为智能体挂载工具",
         "tags": [
           "工具中心"
@@ -5214,6 +5349,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "从智能体卸载工具",
         "tags": [
           "工具中心"
@@ -5235,6 +5375,11 @@
             "description": "成功响应"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取平台能力矩阵",
         "tags": [
           "平台元数据"
@@ -5278,6 +5423,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取提示词与 Persona 元数据",
         "tags": [
           "平台元数据"
@@ -5353,6 +5503,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取提示词/Persona 修订历史时间线",
         "tags": [
           "平台元数据"
@@ -5396,6 +5551,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取统一模型目录诊断",
         "tags": [
           "平台元数据"
@@ -5465,6 +5625,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "列出 Persona 模板",
         "tags": [
           "提示词中心"
@@ -5504,6 +5669,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "创建 Persona 模板",
         "tags": [
           "提示词中心"
@@ -5572,6 +5742,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取 Persona 模板",
         "tags": [
           "提示词中心"
@@ -5638,6 +5813,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "更新 Persona 模板",
         "tags": [
           "提示词中心"
@@ -5696,6 +5876,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "归档 Persona 模板",
         "tags": [
           "提示词中心"
@@ -5752,6 +5937,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "清除已归档 Persona 模板",
         "tags": [
           "提示词中心"
@@ -5810,6 +6000,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "恢复已归档 Persona 模板",
         "tags": [
           "提示词中心"
@@ -5869,6 +6064,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "列出系统提示词模板",
         "tags": [
           "提示词中心"
@@ -5908,6 +6108,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "创建系统提示词模板",
         "tags": [
           "提示词中心"
@@ -5976,6 +6181,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取系统提示词模板",
         "tags": [
           "提示词中心"
@@ -6042,6 +6252,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "更新系统提示词模板",
         "tags": [
           "提示词中心"
@@ -6100,6 +6315,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "归档系统提示词模板",
         "tags": [
           "提示词中心"
@@ -6156,6 +6376,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "清除已归档系统提示词模板",
         "tags": [
           "提示词中心"
@@ -6214,6 +6439,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "恢复已归档系统提示词模板",
         "tags": [
           "提示词中心"
@@ -6257,6 +6487,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "列出 Label Lab JSON Schema",
         "tags": [
           "Schema 中心"
@@ -6296,6 +6531,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "创建 Label Lab JSON Schema",
         "tags": [
           "Schema 中心"
@@ -6348,6 +6588,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取 Label Lab JSON Schema",
         "tags": [
           "Schema 中心"
@@ -6398,6 +6643,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "更新 Label Lab JSON Schema",
         "tags": [
           "Schema 中心"
@@ -6440,6 +6690,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "归档 Label Lab JSON Schema",
         "tags": [
           "Schema 中心"
@@ -6480,6 +6735,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "清除已归档 Label Lab JSON Schema",
         "tags": [
           "Schema 中心"
@@ -6522,6 +6782,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "恢复已归档 Label Lab JSON Schema",
         "tags": [
           "Schema 中心"
@@ -6543,6 +6808,11 @@
             "description": "成功响应"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "列出编排测试运行",
         "tags": [
           "测试中心"
@@ -6582,6 +6852,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "创建编排测试运行",
         "tags": [
           "测试中心"
@@ -6624,6 +6899,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取编排测试运行",
         "tags": [
           "测试中心"
@@ -6666,6 +6946,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "列出测试运行产物",
         "tags": [
           "测试中心"
@@ -6727,6 +7012,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "读取测试运行产物内容",
         "tags": [
           "测试中心"
@@ -6769,6 +7059,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "取消编排测试运行",
         "tags": [
           "测试中心"
@@ -6842,6 +7137,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "列出工具中心条目",
         "tags": [
           "工具中心"
@@ -6881,6 +7181,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "创建受管自定义工具",
         "tags": [
           "工具中心"
@@ -6933,6 +7238,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "获取工具中心受管自定义工具",
         "tags": [
           "工具中心"
@@ -6983,6 +7293,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "更新受管自定义工具",
         "tags": [
           "工具中心"
@@ -7025,6 +7340,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "归档受管自定义工具",
         "tags": [
           "工具中心"
@@ -7065,6 +7385,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "清除已归档受管自定义工具",
         "tags": [
           "工具中心"
@@ -7107,6 +7432,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "恢复已归档受管自定义工具",
         "tags": [
           "工具中心"
@@ -7176,6 +7506,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "列出用于 Toolbench 发现的工具",
         "tags": [
           "工具中心"
@@ -7217,6 +7552,11 @@
             "description": "校验错误"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "发送运行时消息以验证工具调用行为",
         "tags": [
           "工具中心"

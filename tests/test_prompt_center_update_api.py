@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 import agent_platform_api.app as app_module
 from agent_platform_api.app import create_app
-from agent_platform_api.registries.prompt_persona import PromptPersonaRegistry
+from agent_platform_api.registries.prompt_persona_store.registry import PromptPersonaRegistry
 from agent_platform_api.routers import prompt_center
 
 

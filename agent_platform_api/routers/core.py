@@ -2,26 +2,26 @@ from __future__ import annotations
 
 import os
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from agent_platform_api.helpers import (
-    is_datetime_query,
+from agent_platform_api.agent_access import ensure_agent_not_archived
+from agent_platform_api.agent_context import is_datetime_query, runtime_datetime_system_hint
+from agent_platform_api.auth import require_operator
+from agent_platform_api.dependencies import agent_platform
+from agent_platform_api.feature_flags import ensure_platform_api_enabled
+from agent_platform_api.template_options import (
     normalize_scenario,
     persona_option_entries,
     prompt_option_entries,
     resolve_default_persona_key,
     resolve_default_prompt_key,
-    runtime_datetime_system_hint,
 )
 from agent_platform_api.models.agents import ApiChatResponse, ApiOptionsResponse, ChatRequest
 from agent_platform_api.openapi_metadata import TAG_AGENT_STUDIO, TAG_PLATFORM_META
-from agent_platform_api.runtime import (
+from agent_platform_api.options import (
     DEFAULT_EMBEDDING,
     agent_studio_runtime_defaults,
-    agent_platform,
     commenting_runtime_defaults,
-    ensure_agent_not_archived,
-    ensure_platform_api_enabled,
     label_schema_option_entries,
     labeling_runtime_defaults,
     resolve_default_label_schema_key,
@@ -87,6 +87,7 @@ async def api_get_options(refresh: bool = False, scenario: str = "chat"):
     response_model=ApiChatResponse,
     tags=[TAG_AGENT_STUDIO],
     summary="Send a chat message to a persistent Agent Studio agent",
+    dependencies=[Depends(require_operator)],
 )
 async def api_chat(request: ChatRequest):
     ensure_platform_api_enabled()
@@ -102,4 +103,3 @@ async def api_chat(request: ChatRequest):
         )
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 from datetime import datetime, timezone
@@ -32,13 +33,15 @@ class PersonaSqliteRegistry:
         seed_jsonl_path: Path | None = None,
     ) -> None:
         self.project_root = Path(project_root).resolve()
-        self.db_path = (db_path or self.project_root / "data" / "personas" / "personas.sqlite3").resolve()
+        self.db_path = (
+            db_path or self.project_root / "data" / "runtime" / "personas" / "personas.sqlite3"
+        ).resolve()
         self.seed_jsonl_path = (
             seed_jsonl_path or self.project_root / "agent_platform_api" / "seed_data" / "personas.jsonl"
         ).resolve()
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._ensure_schema()
-        self._seed_if_empty()
+        self.sync_seed()
 
     def list_personas(
         self,
@@ -314,14 +317,78 @@ class PersonaSqliteRegistry:
                     ON personas (scenario, archived, key);
                 CREATE VIRTUAL TABLE IF NOT EXISTS persona_fts
                     USING fts5(key, label, description, content, tags, persona_id UNINDEXED);
+                CREATE TABLE IF NOT EXISTS persona_registry_metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                );
                 """
             )
 
-    def _seed_if_empty(self) -> None:
+    def sync_seed(self) -> dict[str, Any]:
+        """Synchronize versioned canonical seed records without touching runtime-only personas."""
+        if not self.seed_jsonl_path.is_file():
+            return {"changed": False, "created": 0, "updated": 0, "skipped": 0, "removed": 0}
+
+        seed_bytes = self.seed_jsonl_path.read_bytes()
+        seed_hash = hashlib.sha256(seed_bytes).hexdigest()
+        seed_keys = self._seed_keys(seed_bytes.decode("utf-8"))
+
         with self._connect() as conn:
-            count = int(conn.execute("SELECT COUNT(*) FROM personas").fetchone()[0])
-        if count == 0 and self.seed_jsonl_path.is_file():
-            self.import_jsonl(self.seed_jsonl_path, on_conflict="skip")
+            current_hash = self._metadata_value(conn, "seed_sha256")
+            previous_keys = set(self._loads_json(self._metadata_value(conn, "seed_keys_json"), []))
+
+        if current_hash == seed_hash:
+            return {"changed": False, "created": 0, "updated": 0, "skipped": 0, "removed": 0}
+
+        counts = self.import_jsonl(self.seed_jsonl_path, on_conflict="upsert")
+        stale_seed_keys = previous_keys - seed_keys
+        with self._connect() as conn:
+            removed = 0
+            for stale_key in stale_seed_keys:
+                row = conn.execute("SELECT id FROM personas WHERE key = ?", (stale_key,)).fetchone()
+                if row is None:
+                    continue
+                conn.execute("DELETE FROM persona_fts WHERE persona_id = ?", (int(row["id"]),))
+                conn.execute("DELETE FROM personas WHERE id = ?", (int(row["id"]),))
+                removed += 1
+            self._set_metadata_value(conn, "seed_sha256", seed_hash)
+            self._set_metadata_value(conn, "seed_keys_json", json.dumps(sorted(seed_keys)))
+
+        return {"changed": True, **counts, "removed": removed}
+
+    @staticmethod
+    def _metadata_value(conn: sqlite3.Connection, key: str) -> str:
+        row = conn.execute("SELECT value FROM persona_registry_metadata WHERE key = ?", (key,)).fetchone()
+        return str(row["value"] if row else "")
+
+    @staticmethod
+    def _set_metadata_value(conn: sqlite3.Connection, key: str, value: str) -> None:
+        conn.execute(
+            """
+            INSERT INTO persona_registry_metadata (key, value) VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value
+            """,
+            (key, value),
+        )
+
+    @staticmethod
+    def _seed_keys(content: str) -> set[str]:
+        keys: set[str] = set()
+        for line_number, raw_line in enumerate(content.splitlines(), start=1):
+            line = raw_line.strip()
+            if not line:
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise RegistryError(f"Invalid seed JSONL at line {line_number}: {exc}") from exc
+            if not isinstance(payload, dict) or not str(payload.get("key", "")).strip():
+                raise RegistryError(f"Invalid seed JSONL at line {line_number}: key is required")
+            key = str(payload["key"]).strip().lower()
+            if key in keys:
+                raise RegistryError(f"Invalid seed JSONL at line {line_number}: duplicate key '{key}'")
+            keys.add(key)
+        return keys
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)

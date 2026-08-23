@@ -16,6 +16,11 @@ _VERSION_PATH_RE = re.compile(r"/v\d+(?:\.\d+)?$", re.IGNORECASE)
 
 
 class AgentPlatformSettings(BaseSettings):
+    auth_enabled: bool = True
+    api_key: str = ""
+    operator_api_key: str = ""
+    read_api_key: str = ""
+    cors_origins: str = ""
     model_router_base_url: str = ""
     model_router_api_key_env: str = "MODEL_ROUTER_API_KEY"
     model_router_api_key_secret: str = "model-router-api-key"
@@ -37,7 +42,8 @@ class AgentPlatformSettings(BaseSettings):
     agent_studio_top_k: int | None = None
     options_cache_ttl_seconds: int = 30
     model_discovery_timeout_seconds: float = 5.0
-    persona_db_path: str = "data/personas/personas.sqlite3"
+    runtime_data_dir: str = "data/runtime"
+    persona_db_path: str = "data/runtime/personas/personas.sqlite3"
     persona_seed_jsonl_path: str = "agent_platform_api/seed_data/personas.jsonl"
 
     model_config = SettingsConfigDict(
@@ -72,12 +78,20 @@ class AgentPlatformSettings(BaseSettings):
             dotenv_settings,
         )
 
-    @field_validator("model_router_base_url", "model_router_api_key_env", "model_router_api_key_secret")
+    @field_validator(
+        "api_key",
+        "operator_api_key",
+        "read_api_key",
+        "cors_origins",
+        "model_router_base_url",
+        "model_router_api_key_env",
+        "model_router_api_key_secret",
+    )
     @classmethod
     def _strip_router_text_fields(cls, value: str) -> str:
         return str(value or "").strip()
 
-    @field_validator("persona_db_path", "persona_seed_jsonl_path")
+    @field_validator("runtime_data_dir", "persona_db_path", "persona_seed_jsonl_path")
     @classmethod
     def _strip_path_fields(cls, value: str) -> str:
         return str(value or "").strip()
@@ -179,6 +193,9 @@ class AgentPlatformSettings(BaseSettings):
 
     def normalized_model_router_base_url(self) -> str:
         return self.model_router_base_url.rstrip("/")
+
+    def parsed_cors_origins(self) -> list[str]:
+        return [origin.strip().rstrip("/") for origin in self.cors_origins.split(",") if origin.strip()]
 
     def model_router_v1_base_url(self) -> str:
         base = self.normalized_model_router_base_url()

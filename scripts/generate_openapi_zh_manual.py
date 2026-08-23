@@ -119,6 +119,7 @@ DESCRIPTION_TRANSLATIONS = {
     "Optional top_k sampling value. Defaults to model profile or Label Lab runtime settings.": "可选 top_k 采样值。默认使用模型 profile 或 Label Lab 运行时设置。",
     "List existing agents so the UI can pull and inspect prior state.": "列出已有智能体，供 UI 拉取并检查历史状态。",
     "Returns persisted state from Letta backend storage (Postgres/pgvector via Letta API):\n- agent metadata\n- memory blocks\n- attached tools\n- persisted conversation history": "返回 Letta 后端存储（通过 Letta API 访问 Postgres/pgvector）中的持久化状态：\n- 智能体元数据\n- 记忆块\n- 已挂载工具\n- 持久化会话历史",
+    "Administrator-only opt-in for raw provider request/reply diagnostics.": "仅管理员可选择启用原始供应商请求/响应诊断信息。",
 }
 
 TAG_TRANSLATIONS = {
@@ -171,6 +172,8 @@ TITLE_TRANSLATIONS = {
     "Refresh": "刷新",
     "Repair Retry Count": "修复重试次数",
     "Retry Count": "重试次数",
+    "Rounds": "轮数",
+    "Judge Enabled": "启用评审模型",
     "Schema": "Schema",
     "Schemas": "Schema 列表",
     "Selected Attempt": "选中尝试",
@@ -333,6 +336,7 @@ TITLE_TOKEN_TRANSLATIONS = {
     "default": "默认",
     "defaults": "默认值",
     "delta": "变化",
+    "diagnostics": "诊断",
     "description": "描述",
     "detach": "卸载",
     "details": "详情",
@@ -350,6 +354,7 @@ TITLE_TOKEN_TRANSLATIONS = {
     "extra": "额外",
     "field": "字段",
     "filtered": "过滤后",
+    "fixture": "测试数据集",
     "generate": "生成",
     "generated": "已生成",
     "get": "获取",
@@ -365,6 +370,7 @@ TITLE_TOKEN_TRANSLATIONS = {
     "is": "是否",
     "item": "条目",
     "items": "条目",
+    "judge": "评审模型",
     "key": "键",
     "kind": "类别",
     "lab": "实验室",

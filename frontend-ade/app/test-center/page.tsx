@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 
 import {
   OptionEntry,
@@ -14,8 +14,10 @@ import {
   listRunArtifacts,
   listTestRuns,
   readRunArtifact,
+  isAbortError,
 } from "../../lib/api";
 import { useI18n } from "../../lib/i18n";
+import { isCurrentRequest, type RequestIdentity } from "../../lib/request-identity";
 import {
   CHAT_MEMORY_DEFAULT_EMBEDDING,
   CHAT_MEMORY_DEFAULT_MODEL,
@@ -135,6 +137,10 @@ export default function TestCenterPage() {
   const [runs, setRuns] = useState<PlatformRunRecord[]>([]);
   const [selectedRunId, setSelectedRunId] = useState("");
   const [selectedRun, setSelectedRun] = useState<PlatformRunRecord | null>(null);
+  const selectedRunIdRef = useRef("");
+  const selectedRunVersionRef = useRef(0);
+  const selectedRunAbortControllerRef = useRef<AbortController | null>(null);
+  const artifactAbortControllerRef = useRef<AbortController | null>(null);
 
   const [runType, setRunType] = useState<PlatformRunType>("platform_api_e2e_check");
   const [chatModels, setChatModels] = useState<OptionEntry[]>([]);
@@ -162,23 +168,64 @@ export default function TestCenterPage() {
     return runs.find((item) => item.run_id === selectedRunId) || null;
   }, [runs, selectedRun, selectedRunId]);
 
+  const currentRunRequest = (runId: string): RequestIdentity => ({
+    resourceId: runId,
+    version: selectedRunVersionRef.current,
+  });
+
+  const isCurrentRunRequest = (identity: RequestIdentity): boolean =>
+    isCurrentRequest(identity, selectedRunIdRef.current, selectedRunVersionRef.current);
+
+  const selectRun = (runId: string) => {
+    if (runId !== selectedRunIdRef.current) {
+      selectedRunIdRef.current = runId;
+      selectedRunVersionRef.current += 1;
+      selectedRunAbortControllerRef.current?.abort();
+      const hadActiveArtifactRequest = artifactAbortControllerRef.current !== null;
+      artifactAbortControllerRef.current?.abort();
+      selectedRunAbortControllerRef.current = null;
+      artifactAbortControllerRef.current = null;
+      if (hadActiveArtifactRequest) {
+        setBusy(false);
+      }
+      setSelectedRun(null);
+      setArtifacts([]);
+      setSelectedArtifactId("");
+      setArtifactContent("");
+    }
+    setSelectedRunId(runId);
+  };
+
   const refreshRuns = async () => {
     const payload = await listTestRuns();
     const items = Array.isArray(payload.items) ? payload.items : [];
     setRuns(items);
 
-    if (!selectedRunId && items.length > 0) {
-      setSelectedRunId(items[0].run_id);
+    const currentRunId = selectedRunIdRef.current;
+    if (!currentRunId && items.length > 0) {
+      selectRun(items[0].run_id);
+    } else if (currentRunId && !items.some((item) => item.run_id === currentRunId)) {
+      selectRun(items[0]?.run_id || "");
     }
   };
 
-  const refreshSelectedRun = async (runId: string) => {
+  const refreshSelectedRun = async (runId: string, identity = currentRunRequest(runId)) => {
     if (!runId) {
-      return;
+      return false;
     }
-    const [run, artifactPayload] = await Promise.all([getTestRun(runId), listRunArtifacts(runId)]);
+    const controller = new AbortController();
+    selectedRunAbortControllerRef.current?.abort();
+    selectedRunAbortControllerRef.current = controller;
+    const [run, artifactPayload] = await Promise.all([
+      getTestRun(runId, { signal: controller.signal }),
+      listRunArtifacts(runId, { signal: controller.signal }),
+    ]);
+    if (!isCurrentRunRequest(identity) || selectedRunAbortControllerRef.current !== controller) {
+      return false;
+    }
     setSelectedRun(run);
     setArtifacts(artifactPayload.items || []);
+    return true;
   };
 
   const refreshChatOptions = async () => {
@@ -197,13 +244,17 @@ export default function TestCenterPage() {
     setEvalEmbedding((current) => chooseAvailable(current, embeddings, payload.defaults?.embedding || CHAT_MEMORY_DEFAULT_EMBEDDING));
   };
 
+  const refreshRunsEffect = useEffectEvent(refreshRuns);
+  const refreshChatOptionsEffect = useEffectEvent(refreshChatOptions);
+  const refreshSelectedRunEffect = useEffectEvent(refreshSelectedRun);
+
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
       setLoading(true);
       setError("");
       try {
-        await Promise.all([refreshRuns(), refreshChatOptions()]);
+        await Promise.all([refreshRunsEffect(), refreshChatOptionsEffect()]);
       } catch (exc) {
         if (!cancelled) {
           setError(toErrorMessage(exc));
@@ -216,25 +267,30 @@ export default function TestCenterPage() {
     };
     void run();
 
-    const timer = setInterval(() => {
-      void refreshRuns().catch(() => undefined);
-      if (selectedRunId) {
-        void refreshSelectedRun(selectedRunId).catch(() => undefined);
-      }
-    }, 4000);
-
     return () => {
       cancelled = true;
-      clearInterval(timer);
     };
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      void refreshRunsEffect().catch(() => undefined);
+      if (selectedRunId) {
+        void refreshSelectedRunEffect(selectedRunId).catch(() => undefined);
+      }
+    }, 4000);
+    return () => clearInterval(timer);
   }, [selectedRunId]);
 
   useEffect(() => {
     if (!selectedRunId) {
       return;
     }
-    void refreshSelectedRun(selectedRunId).catch((exc) => {
-      setError(toErrorMessage(exc));
+    const identity = currentRunRequest(selectedRunId);
+    void refreshSelectedRunEffect(selectedRunId, identity).catch((exc) => {
+      if (isCurrentRunRequest(identity) && !isAbortError(exc)) {
+        setError(toErrorMessage(exc));
+      }
     });
   }, [selectedRunId]);
 
@@ -263,7 +319,7 @@ export default function TestCenterPage() {
         ...payload,
       });
       setStatus(`${copy.createdRun} ${created.run_id}`);
-      setSelectedRunId(created.run_id);
+      selectRun(created.run_id);
       await refreshRuns();
       await refreshSelectedRun(created.run_id);
     } catch (exc) {
@@ -277,16 +333,23 @@ export default function TestCenterPage() {
     if (!selectedRunId) {
       return;
     }
+    const targetRunId = selectedRunId;
+    const identity = currentRunRequest(targetRunId);
     setBusy(true);
     setError("");
     setStatus("");
     try {
-      const payload = await cancelTestRun(selectedRunId);
+      const payload = await cancelTestRun(targetRunId);
+      if (!isCurrentRunRequest(identity)) {
+        return;
+      }
       setStatus(`${copy.cancelRequested} ${payload.run_id}`);
-      await refreshSelectedRun(selectedRunId);
+      await refreshSelectedRun(targetRunId, identity);
       await refreshRuns();
     } catch (exc) {
-      setError(toErrorMessage(exc));
+      if (isCurrentRunRequest(identity) && !isAbortError(exc)) {
+        setError(toErrorMessage(exc));
+      }
     } finally {
       setBusy(false);
     }
@@ -296,16 +359,29 @@ export default function TestCenterPage() {
     if (!selectedRunId) {
       return;
     }
+    const targetRunId = selectedRunId;
+    const identity = currentRunRequest(targetRunId);
+    const controller = new AbortController();
+    artifactAbortControllerRef.current?.abort();
+    artifactAbortControllerRef.current = controller;
     setBusy(true);
     setError("");
     try {
-      const payload = await readRunArtifact(selectedRunId, artifactId, 250);
+      const payload = await readRunArtifact(targetRunId, artifactId, 250, { signal: controller.signal });
+      if (!isCurrentRunRequest(identity) || artifactAbortControllerRef.current !== controller) {
+        return;
+      }
       setSelectedArtifactId(artifactId);
       setArtifactContent(payload.content || "");
     } catch (exc) {
-      setError(toErrorMessage(exc));
+      if (isCurrentRunRequest(identity) && !isAbortError(exc)) {
+        setError(toErrorMessage(exc));
+      }
     } finally {
-      setBusy(false);
+      if (artifactAbortControllerRef.current === controller) {
+        artifactAbortControllerRef.current = null;
+        setBusy(false);
+      }
     }
   };
 
@@ -373,7 +449,7 @@ export default function TestCenterPage() {
             <select
               className="input"
               value={selectedRunId}
-              onChange={(e) => setSelectedRunId(e.target.value)}
+              onChange={(e) => selectRun(e.target.value)}
               disabled={runs.length === 0}
             >
               <option value="">{copy.selectRunPlaceholder}</option>

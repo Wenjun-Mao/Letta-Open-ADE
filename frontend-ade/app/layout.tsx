@@ -6,6 +6,9 @@ import { I18nProvider } from "../lib/i18n";
 export const metadata: Metadata = {
   title: "Agent Platform ADE",
   description: "Operator frontend for Agent Platform workflows",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

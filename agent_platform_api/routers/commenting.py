@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from typing import Annotated
 
-from agent_platform_api.helpers import normalize_scenario, persona_content_map, prompt_content_map
+from fastapi import APIRouter, Depends, HTTPException
+
+from agent_platform_api.auth import PlatformPrincipal, PlatformRole, require_operator
+from agent_platform_api.dependencies import commenting_service
+from agent_platform_api.feature_flags import ensure_platform_api_enabled
+from agent_platform_api.template_options import normalize_scenario, persona_content_map, prompt_content_map
 from agent_platform_api.models.commenting import ApiCommentingGenerateResponse, CommentingGenerateRequest
 from agent_platform_api.openapi_metadata import TAG_COMMENT_LAB
-from agent_platform_api.runtime import (
+from agent_platform_api.options import (
     commenting_runtime_defaults,
-    commenting_service,
-    ensure_platform_api_enabled,
     resolve_comment_model_selection,
 )
 
@@ -20,6 +23,7 @@ router = APIRouter()
     response_model=ApiCommentingGenerateResponse,
     tags=[TAG_COMMENT_LAB],
     summary="Generate a stateless comment for news/comment threads",
+    response_model_exclude_none=True,
     openapi_extra={
         "requestBody": {
             "content": {
@@ -50,8 +54,13 @@ router = APIRouter()
         }
     },
 )
-async def api_commenting_generate(request: CommentingGenerateRequest):
+def api_commenting_generate(
+    request: CommentingGenerateRequest,
+    principal: Annotated[PlatformPrincipal, Depends(require_operator)],
+):
     ensure_platform_api_enabled()
+    if request.include_diagnostics and principal.role < PlatformRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Raw provider diagnostics require the admin role.")
 
     resolved_scenario = normalize_scenario(request.scenario, default="comment")
     if resolved_scenario != "comment":
@@ -139,7 +148,7 @@ async def api_commenting_generate(request: CommentingGenerateRequest):
         raw_request = {}
     selected_attempt = str(generation_result.get("selected_attempt", "") or "").strip() or "unknown"
 
-    return {
+    response = {
         "scenario": "comment",
         "model_key": str(model_selection.get("model_key", "") or ""),
         "source_id": str(model_selection.get("source_id", "") or ""),
@@ -163,9 +172,11 @@ async def api_commenting_generate(request: CommentingGenerateRequest):
         "finish_reason": str(generation_result.get("finish_reason", "") or "") or None,
         "usage": usage,
         "received_at": str(generation_result.get("received_at", "") or "") or None,
-        "raw_request": raw_request,
-        "raw_reply": raw_reply,
     }
+    if request.include_diagnostics:
+        response["raw_request"] = raw_request
+        response["raw_reply"] = raw_reply
+    return response
 
 
 def _scenario_sampling_default(
@@ -182,4 +193,3 @@ def _scenario_sampling_default(
     if isinstance(sampling_defaults, dict):
         return sampling_defaults.get(field)
     return None
-

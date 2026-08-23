@@ -4,6 +4,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
+from agent_platform_api.dependencies import agent_platform, custom_tool_registry
+from agent_platform_api.feature_flags import ensure_platform_api_enabled
 from agent_platform_api.mappers import as_tool_center_item, managed_tool_tags
 from agent_platform_api.models.templates import (
     ApiToolCenterItemResponse,
@@ -12,7 +14,6 @@ from agent_platform_api.models.templates import (
     ToolCenterUpdateRequest,
 )
 from agent_platform_api.openapi_metadata import TAG_TOOL_CENTER
-from agent_platform_api.runtime import agent_platform, custom_tool_registry, ensure_platform_api_enabled
 from agent_platform_api.registries.custom_tool import ToolRegistryError
 
 router = APIRouter()
@@ -349,4 +350,3 @@ async def api_tool_center_purge_tool(slug: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return {"ok": True, "slug": slug, "kind": "custom_tool"}
-

@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 import agent_platform_api.app as app_module
 from agent_platform_api.app import create_app
-from agent_platform_api.routers import agents, prompt_center, tool_center
+from agent_platform_api.routers import agent_lifecycle, prompt_center, tool_center
 
 
 def _client(monkeypatch) -> TestClient:
@@ -48,19 +48,19 @@ def test_agent_archive_restore_and_purge_routes(monkeypatch) -> None:
     deleted_ids: list[str] = []
     lifecycle_registry = _FakeLifecycleRegistry()
 
-    monkeypatch.setattr(agents, "ensure_platform_api_enabled", lambda: None)
+    monkeypatch.setattr(agent_lifecycle, "ensure_platform_api_enabled", lambda: None)
     monkeypatch.setattr(
-        agents,
+        agent_lifecycle,
         "fetch_agent_or_404",
         lambda agent_id: SimpleNamespace(id=agent_id, name="Archived Agent", model="openai-proxy/model"),
     )
-    monkeypatch.setattr(agents, "agent_lifecycle_registry", lifecycle_registry)
+    monkeypatch.setattr(agent_lifecycle, "agent_lifecycle_registry", lifecycle_registry)
     monkeypatch.setattr(
-        agents,
+        agent_lifecycle,
         "agent_platform",
         SimpleNamespace(delete_agent=lambda *, agent_id: deleted_ids.append(agent_id)),
     )
-    monkeypatch.setattr(agents, "is_not_found_error", lambda exc: False)
+    monkeypatch.setattr(agent_lifecycle, "is_not_found_error", lambda exc: False)
 
     with _client(monkeypatch) as client:
         purge_before_archive = client.delete("/api/v1/platform/agents/agent-1/purge")

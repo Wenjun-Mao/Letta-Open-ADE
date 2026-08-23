@@ -56,7 +56,7 @@ const HIDDEN_HTTP_CLIENTS = [
   "swift",
   "httpie",
   "wget",
-];
+] as const;
 const SCALAR_CUSTOM_CSS = `
   .scalar-reference-intro-clients {
     display: none !important;
@@ -100,7 +100,7 @@ export default function ApiDocsPage() {
             hideClientButton: true,
             hideTestRequestButton: false,
             defaultHttpClient: { targetKey: "shell", clientKey: "curl" },
-            hiddenClients: HIDDEN_HTTP_CLIENTS,
+            hiddenClients: [...HIDDEN_HTTP_CLIENTS],
             customCss: SCALAR_CUSTOM_CSS,
           }}
         />

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 
 import {
   ToolCenterItem,
@@ -165,8 +165,10 @@ export default function ToolCenterPage() {
     }
   };
 
+  const refreshEffect = useEffectEvent(refresh);
+
   useEffect(() => {
-    void refresh();
+    void refreshEffect();
   }, [includeArchived, includeBuiltin, includeSourceInList]);
 
   const onSelect = async (item: ToolCenterItem) => {

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
-from agent_platform_api.helpers import append_prompt_persona_revision
+from agent_platform_api.agent_access import ensure_agent_not_archived
+from agent_platform_api.auth import require_admin
+from agent_platform_api.dependencies import agent_platform, test_orchestrator
+from agent_platform_api.feature_flags import ensure_platform_api_enabled
+from agent_platform_api.revision_log import append_prompt_persona_revision
 from agent_platform_api.models.platform import (
     ApiMemoryBlockUpdateResponse,
     ApiModelUpdateResponse,
@@ -24,12 +28,6 @@ from agent_platform_api.openapi_metadata import (
     TAG_PLATFORM_RUNTIME,
     TAG_TEST_CENTER,
     TAG_TOOL_CENTER,
-)
-from agent_platform_api.runtime import (
-    agent_platform,
-    ensure_agent_not_archived,
-    ensure_platform_api_enabled,
-    test_orchestrator,
 )
 
 router = APIRouter()
@@ -67,6 +65,7 @@ async def api_platform_send_message(agent_id: str, request: PlatformRuntimeMessa
     response_model=ApiSystemUpdateResponse,
     tags=[TAG_PLATFORM_CONTROL],
     summary="Update persisted system prompt",
+    dependencies=[Depends(require_admin)],
 )
 async def api_platform_update_system(agent_id: str, request: PlatformSystemUpdateRequest):
     ensure_platform_api_enabled()
@@ -95,6 +94,7 @@ async def api_platform_update_system(agent_id: str, request: PlatformSystemUpdat
     response_model=ApiModelUpdateResponse,
     tags=[TAG_PLATFORM_CONTROL],
     summary="Update persisted agent model",
+    dependencies=[Depends(require_admin)],
 )
 async def api_platform_update_model(agent_id: str, request: PlatformModelUpdateRequest):
     ensure_platform_api_enabled()
@@ -115,6 +115,7 @@ async def api_platform_update_model(agent_id: str, request: PlatformModelUpdateR
     response_model=ApiMemoryBlockUpdateResponse,
     tags=[TAG_PLATFORM_CONTROL],
     summary="Update core-memory block value",
+    dependencies=[Depends(require_admin)],
 )
 async def api_platform_update_memory_block(
     agent_id: str,
@@ -152,6 +153,7 @@ async def api_platform_update_memory_block(
     response_model=ApiToolAttachDetachResponse,
     tags=[TAG_TOOL_CENTER],
     summary="Attach tool to agent",
+    dependencies=[Depends(require_admin)],
 )
 async def api_platform_attach_tool(agent_id: str, tool_id: str):
     ensure_platform_api_enabled()
@@ -172,6 +174,7 @@ async def api_platform_attach_tool(agent_id: str, tool_id: str):
     response_model=ApiToolAttachDetachResponse,
     tags=[TAG_TOOL_CENTER],
     summary="Detach tool from agent",
+    dependencies=[Depends(require_admin)],
 )
 async def api_platform_detach_tool(agent_id: str, tool_id: str):
     ensure_platform_api_enabled()
@@ -278,4 +281,3 @@ async def api_platform_read_test_run_artifact(run_id: str, artifact_id: str, max
     if payload is None:
         raise HTTPException(status_code=404, detail="run_id or artifact_id not found")
     return payload
-
