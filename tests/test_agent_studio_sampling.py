@@ -3,13 +3,13 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from agent_platform_api.models.agents import AgentCreateRequest
-from agent_platform_api.routers.agents import _router_llm_config_for_model
-from agent_platform_api.settings import clear_settings_cache
+from ade_api.models.agents import AgentCreateRequest
+from ade_api.routers.agents import _router_llm_config_for_model
+from ade_api.settings import clear_settings_cache
 
 
 def test_router_llm_config_includes_create_time_sampling(monkeypatch) -> None:
-    monkeypatch.setenv("AGENT_PLATFORM_MODEL_ROUTER_BASE_URL", "http://model_router:8290")
+    monkeypatch.setenv("ADE_API_MODEL_ROUTER_BASE_URL", "http://model_router:8290")
     clear_settings_cache()
 
     config = _router_llm_config_for_model(
@@ -27,7 +27,7 @@ def test_router_llm_config_includes_create_time_sampling(monkeypatch) -> None:
 
 
 def test_router_llm_config_omits_unspecified_sampling(monkeypatch) -> None:
-    monkeypatch.setenv("AGENT_PLATFORM_MODEL_ROUTER_BASE_URL", "http://model_router:8290")
+    monkeypatch.setenv("ADE_API_MODEL_ROUTER_BASE_URL", "http://model_router:8290")
     clear_settings_cache()
 
     config = _router_llm_config_for_model("openai-proxy/local_llama_server::gemma4")

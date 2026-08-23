@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-import agent_platform_api.app as app_module
-from agent_platform_api.app import create_app
-from agent_platform_api.registries.prompt_persona_store.registry import PromptPersonaRegistry
-from agent_platform_api.routers import prompt_center
+import ade_api.app as app_module
+from ade_api.app import create_app
+from ade_api.registries.prompt_persona_store.registry import PromptPersonaRegistry
+from ade_api.routers import prompt_center
 
 
 def _client(monkeypatch, registry: PromptPersonaRegistry) -> TestClient:
@@ -28,7 +28,7 @@ def test_update_persona_template_content_only_with_scenario(monkeypatch, tmp_pat
 
     with _client(monkeypatch, registry) as client:
         response = client.patch(
-            "/api/v1/platform/prompt-center/personas/chat_patch_persona?scenario=chat",
+            "/api/v2/prompt-center/personas/chat_patch_persona?scenario=chat",
             json={"content": "2"},
         )
 
@@ -53,7 +53,7 @@ def test_update_prompt_template_content_only_with_scenario(monkeypatch, tmp_path
 
     with _client(monkeypatch, registry) as client:
         response = client.patch(
-            "/api/v1/platform/prompt-center/prompts/chat_patch_prompt?scenario=chat",
+            "/api/v2/prompt-center/prompts/chat_patch_prompt?scenario=chat",
             json={"content": "2"},
         )
 
@@ -71,7 +71,7 @@ def test_update_label_persona_returns_clean_400(monkeypatch, tmp_path) -> None:
 
     with _client(monkeypatch, registry) as client:
         response = client.patch(
-            "/api/v1/platform/prompt-center/personas/label_patch_persona?scenario=label",
+            "/api/v2/prompt-center/personas/label_patch_persona?scenario=label",
             json={"content": "2"},
         )
 
@@ -85,7 +85,7 @@ def test_update_prompt_template_requires_at_least_one_field(monkeypatch, tmp_pat
 
     with _client(monkeypatch, registry) as client:
         response = client.patch(
-            "/api/v1/platform/prompt-center/prompts/chat_patch_empty?scenario=chat",
+            "/api/v2/prompt-center/prompts/chat_patch_empty?scenario=chat",
             json={},
         )
 
@@ -112,7 +112,7 @@ def test_list_personas_supports_search_query(monkeypatch, tmp_path) -> None:
 
     with _client(monkeypatch, registry) as client:
         response = client.get(
-            "/api/v1/platform/prompt-center/personas?scenario=comment&search=Messi",
+            "/api/v2/prompt-center/personas?scenario=comment&search=Messi",
         )
 
     assert response.status_code == 200

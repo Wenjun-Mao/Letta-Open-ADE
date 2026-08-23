@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import agent_platform_api.options.catalog as options_catalog
-import agent_platform_api.options.letta_catalog as letta_catalog
-import agent_platform_api.options.selection as options_selection
-from agent_platform_api.options import resolve_comment_model_selection, runtime_options
+import ade_api.options.catalog as options_catalog
+import ade_api.options.letta_catalog as letta_catalog
+import ade_api.options.selection as options_selection
+from ade_api.options import resolve_comment_model_selection, runtime_options
 
 
 class _FakeRouterClient:

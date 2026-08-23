@@ -6,11 +6,11 @@ This repo favors boring, discoverable structure over clever scattering. If a fut
 
 - Root `config/` is reserved for application/runtime source-of-truth config.
 - Workflow-specific config belongs beside the workflow runner.
-- Current root config should stay limited to project-wide runtime inputs such as `config/model_router_sources.json` and `config/model_router_model_profiles.json`.
+- Current root config should stay limited to project-wide runtime inputs such as `config/model-router/sources.json` and `config/model-router/model-profiles.json`.
 
 ## Workflow And Eval Folders
 
-Use `evals/<workflow_name>/` for evaluation, probe, benchmark, or research workflows that have their own runner/config/input/output lifecycle.
+Use `workflows/evals/<workflow_name>/` for evaluation, probe, benchmark, or research workflows that have their own runner/config/input/output lifecycle.
 
 Each workflow should include:
 
@@ -26,7 +26,7 @@ Avoid compatibility shims for newly introduced workflow paths unless explicitly 
 
 Keep `scripts/` for repo-wide utilities without workflow-specific config/output bundles, such as diagnostics, OpenAPI export, reset helpers, seed helpers, or small maintenance commands.
 
-If a script grows a config file, sample input, and generated outputs, promote it into `evals/` or another named workflow folder.
+If a script grows a config file, sample input, and generated outputs, promote it into `workflows/evals/` or another named workflow folder.
 
 ## Documentation Expectations
 

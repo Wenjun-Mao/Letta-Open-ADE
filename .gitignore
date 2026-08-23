@@ -1,5 +1,5 @@
 .env
-config/model_router_sources.local.json
+config/model-router/sources.local.json
 .venv/
 __pycache__/
 data/pgdata/
@@ -18,13 +18,13 @@ letta-souce-code/
 .playwright-cli/
 .playwright-mcp/
 
-prompts/system_prompts/letta_original/system_prompts
+content/prompts/system/letta_original/system_prompts
 tests/outputs
 diagnostics
-evals/*/outputs/
+workflows/evals/*/outputs/
 
-frontend-ade/node_modules/
-frontend-ade/.next/
+apps/ade-web/node_modules/
+apps/ade-web/.next/
 
 temps/
 memory-export/

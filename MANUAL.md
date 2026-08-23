@@ -10,7 +10,7 @@ use [docs/adr/](docs/adr/).
 - Create `.env` from `.env.example` and replace every placeholder secret. Generate
   `LETTA_ENCRYPTION_KEY` once, keep it persistent, and back it up with the database;
   changing or losing it makes credentials already encrypted by Letta unreadable.
-- Review `config/model_router_sources.json`; configured provider endpoints must be
+- Review `config/model-router/sources.json`; configured provider endpoints must be
   reachable from the Docker host.
 - Treat the default stack as local-only. Its loopback bindings and bearer roles are
   a development baseline, not a substitute for reviewed ingress, TLS, secret
@@ -59,7 +59,7 @@ docker compose down
 The local endpoints are:
 
 - ADE frontend: `http://127.0.0.1:3000`
-- Agent Platform API health: `http://127.0.0.1:8284/api/v1/health`
+- Agent Platform API health: `http://127.0.0.1:8284/api/v2/health`
 - Letta API: `http://127.0.0.1:8283`
 - Model router health: `http://127.0.0.1:8290/v1/health`
 
@@ -99,12 +99,12 @@ uv run python scripts/check_python_format.py --base origin/main
 uv run python -m pytest
 uv run python scripts/export_openapi.py --check
 uv run python scripts/generate_openapi_zh_manual.py
-git diff --exit-code -- docs/openapi/agent-platform-openapi-zh.json frontend-ade/public/openapi/agent-platform-openapi-zh.json docs/openapi/zh_openapi_missing_terms.json
-npm ci --prefix frontend-ade
-npm --prefix frontend-ade run test
-npm --prefix frontend-ade run lint
-npm audit --prefix frontend-ade --audit-level=high
-npm --prefix frontend-ade run build
+git diff --exit-code -- docs/openapi/ade-api-openapi-zh.json apps/ade-web/public/openapi/ade-api-openapi-zh.json docs/openapi/zh_openapi_missing_terms.json
+npm ci --prefix apps/ade-web
+npm --prefix apps/ade-web run test
+npm --prefix apps/ade-web run lint
+npm audit --prefix apps/ade-web --audit-level=high
+npm --prefix apps/ade-web run build
 docker compose --env-file .env.example config --quiet
 ```
 
@@ -119,9 +119,9 @@ credentials. They are not CI blockers:
 ```text
 uv run python tests/checks/platform_api_e2e_check.py
 uv run python tests/checks/ade_mvp_smoke_e2e_check.py
-uv run python evals/chat_memory_eval/run.py --config evals/chat_memory_eval/config.toml --rounds 1
-uv run python evals/comment_persona_eval/run.py --config evals/comment_persona_eval/config.toml
-uv run python evals/provider_model_probe/run.py --source-id ark --mode chat-probe --write
+uv run python workflows/evals/chat_memory_eval/run.py --config workflows/evals/chat_memory_eval/config.toml --rounds 1
+uv run python workflows/evals/comment_persona_eval/run.py --config workflows/evals/comment_persona_eval/config.toml
+uv run python workflows/evals/provider_model_probe/run.py --source-id ark --mode chat-probe --write
 ```
 
 Read each workflow README before running it. Provider probing with `--write`
@@ -144,5 +144,5 @@ trusted environment.
   upstream URL and bearer credential are server-only runtime configuration.
 
 The default prompt is resolved by the backend option API. Do not depend on a
-hard-coded prompt key in runbooks; query `/api/v1/options?scenario=chat` when a
+hard-coded prompt key in runbooks; query `/api/v2/model-catalog/options?scenario=chat` when a
 specific environment needs to verify its configured default.

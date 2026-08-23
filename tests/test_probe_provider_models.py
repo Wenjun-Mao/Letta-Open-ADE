@@ -5,13 +5,13 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from agent_platform_api.llm.provider_model_probe import ProbedModelResult, SourceProbeReport
+from ade_api.llm.provider_model_probe import ProbedModelResult, SourceProbeReport
 from model_router.settings import RouterSourceConfig
 
 
 def _load_script_module():
     project_root = Path(__file__).resolve().parents[1]
-    script_path = project_root / "evals" / "provider_model_probe" / "run.py"
+    script_path = project_root / "workflows" / "evals" / "provider_model_probe" / "run.py"
     spec = importlib.util.spec_from_file_location("probe_provider_models", script_path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)

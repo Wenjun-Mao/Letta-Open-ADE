@@ -1,0 +1,23 @@
+[project]
+name = "ade-model-router"
+version = "0.3.0"
+description = "OpenAI-compatible model discovery and forwarding service for ADE."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.135.2",
+    "httpx>=0.28.1",
+    "pydantic-settings>=2.11.0",
+    "python-dotenv>=1.2.2",
+    "uvicorn>=0.42.0",
+    "model-catalog-contracts",
+]
+
+[tool.uv.sources]
+model-catalog-contracts = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/model_router"]

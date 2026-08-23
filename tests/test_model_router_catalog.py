@@ -11,7 +11,7 @@ from model_router.catalog import (
     parse_router_model_id,
 )
 from model_router.settings import RouterSourceConfig
-from ade_core.model_allowlist import SourceAllowlistLoadResult
+from model_catalog_contracts.model_allowlist import SourceAllowlistLoadResult
 import model_router.catalog as router_catalog_module
 
 

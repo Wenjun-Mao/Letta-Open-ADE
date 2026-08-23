@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from agent_platform_api.registries.prompt_persona_store.registry import PromptPersonaRegistry
-from agent_platform_api.registries.prompt_persona_store.types import RegistryError
+from ade_api.registries.prompt_persona_store.registry import PromptPersonaRegistry
+from ade_api.registries.prompt_persona_store.types import RegistryError
 
 
 def test_create_comment_persona_infers_comment_scenario_from_key(tmp_path) -> None:
@@ -32,8 +32,8 @@ def test_create_chat_prompt_infers_chat_scenario_from_key(tmp_path) -> None:
 
     assert record["scenario"] == "chat"
     assert record["key"] == "chat_test"
-    assert record["source_path"] == "prompts/system_prompts/chat/chat_test.py"
-    assert (tmp_path / "prompts" / "system_prompts" / "chat" / "chat_test.py").exists()
+    assert record["source_path"] == "content/prompts/system/chat/chat_test.py"
+    assert (tmp_path / "content" / "prompts" / "system" / "chat" / "chat_test.py").exists()
 
 
 def test_create_label_prompt_infers_label_scenario_from_key(tmp_path) -> None:
@@ -47,8 +47,8 @@ def test_create_label_prompt_infers_label_scenario_from_key(tmp_path) -> None:
 
     assert record["scenario"] == "label"
     assert record["key"] == "label_test"
-    assert record["source_path"] == "prompts/system_prompts/label/label_test.py"
-    assert (tmp_path / "prompts" / "system_prompts" / "label" / "label_test.py").exists()
+    assert record["source_path"] == "content/prompts/system/label/label_test.py"
+    assert (tmp_path / "content" / "prompts" / "system" / "label" / "label_test.py").exists()
 
 
 def test_create_template_rejects_mismatched_explicit_scenario(tmp_path) -> None:
@@ -145,7 +145,7 @@ def test_custom_templates_can_omit_label_and_description_metadata(tmp_path) -> N
         description="",
     )
 
-    source_path = tmp_path / "prompts" / "system_prompts" / "chat" / "chat_optional_meta.py"
+    source_path = tmp_path / "content" / "prompts" / "system" / "chat" / "chat_optional_meta.py"
     source = source_path.read_text(encoding="utf-8")
 
     assert "LABEL =" not in source
@@ -166,7 +166,7 @@ def test_label_scenario_rejects_persona_templates(tmp_path) -> None:
 
 
 def test_label_prompt_parses_output_schema_metadata(tmp_path) -> None:
-    prompt_path = tmp_path / "prompts" / "system_prompts" / "label" / "label_schema.py"
+    prompt_path = tmp_path / "content" / "prompts" / "system" / "label" / "label_schema.py"
     prompt_path.parent.mkdir(parents=True, exist_ok=True)
     prompt_path.write_text(
         "\n".join(

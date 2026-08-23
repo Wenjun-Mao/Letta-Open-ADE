@@ -1,6 +1,14 @@
 {
-  "missing_descriptions": [],
-  "missing_summaries": [],
-  "missing_titles": [],
+  "missing_descriptions": [
+    "Local ADE API",
+    "Model capabilities, catalog diagnostics, and scenario runtime options.",
+    "Provides the versioned Agent Studio, lab, content-center, catalog, and test APIs used by ADE Web, workflows, and first-class developer clients."
+  ],
+  "missing_summaries": [
+    "Feature-aligned runtime and authoring APIs for Letta Open ADE"
+  ],
+  "missing_titles": [
+    "ADE API"
+  ],
   "unknown_title_tokens": []
 }

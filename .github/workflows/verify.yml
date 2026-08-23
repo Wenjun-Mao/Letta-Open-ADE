@@ -32,13 +32,13 @@ jobs:
         uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
 
       - name: Install locked development dependencies
-        run: uv sync --frozen --group dev
+        run: uv sync --all-packages --frozen --group dev
 
       - name: Run Python test suite
         run: uv run python -m pytest
 
       - name: Run Python fatal-error lint
-        run: uv run ruff check agent_platform_api model_router ade_core evals scripts tests
+        run: uv run ruff check services packages workflows scripts tests
 
       - name: Check formatting on changed Python files
         env:
@@ -56,8 +56,8 @@ jobs:
         run: |
           uv run python scripts/generate_openapi_zh_manual.py
           git diff --exit-code -- \
-            docs/openapi/agent-platform-openapi-zh.json \
-            frontend-ade/public/openapi/agent-platform-openapi-zh.json \
+            docs/openapi/ade-api-openapi-zh.json \
+            apps/ade-web/public/openapi/ade-api-openapi-zh.json \
             docs/openapi/zh_openapi_missing_terms.json
 
   frontend:
@@ -73,27 +73,27 @@ jobs:
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: frontend-ade/package-lock.json
+          cache-dependency-path: apps/ade-web/package-lock.json
 
       - name: Install locked frontend dependencies
-        run: npm ci --prefix frontend-ade
+        run: npm ci --prefix apps/ade-web
 
       - name: Run frontend tests when defined
         run: |
-          if node -e "process.exit(require('./frontend-ade/package.json').scripts?.test ? 0 : 1)"; then
-            npm --prefix frontend-ade run test
+          if node -e "process.exit(require('./apps/ade-web/package.json').scripts?.test ? 0 : 1)"; then
+            npm --prefix apps/ade-web run test
           else
             echo "No frontend test script is defined; the production build remains required."
           fi
 
       - name: Run frontend lint
-        run: npm --prefix frontend-ade run lint
+        run: npm --prefix apps/ade-web run lint
 
       - name: Audit frontend dependencies
-        run: npm audit --prefix frontend-ade --audit-level=high
+        run: npm audit --prefix apps/ade-web --audit-level=high
 
       - name: Build frontend
-        run: npm --prefix frontend-ade run build
+        run: npm --prefix apps/ade-web run build
 
   containers:
     name: Compose and first-party images
@@ -109,7 +109,7 @@ jobs:
         run: docker compose --env-file .env.example config --quiet
 
       - name: Build first-party service images
-        run: docker compose --env-file .env.example build model_router agent_platform_api ade_frontend
+        run: docker compose --env-file .env.example build model-router ade-api ade-web
 
 # Provider probes, browser smoke tests, and eval workflows require live services or
 # credentials. They remain explicit operator-run checks rather than PR blockers.

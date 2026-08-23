@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from agent_platform_api.registries.persona_sqlite import PersonaSqliteRegistry
+from ade_api.registries.persona_sqlite import PersonaSqliteRegistry
 
 
 def _project_root() -> Path:
@@ -29,7 +29,7 @@ def _registry(args: argparse.Namespace) -> PersonaSqliteRegistry:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Import/export ADE SQLite persona library data.")
     parser.add_argument("--db-path", default="data/runtime/personas/personas.sqlite3")
-    parser.add_argument("--seed-jsonl", default="agent_platform_api/seed_data/personas.jsonl")
+    parser.add_argument("--seed-jsonl", default="ade_api/seed_data/personas.jsonl")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     import_parser = subparsers.add_parser("import-jsonl", help="Import personas from JSONL.")

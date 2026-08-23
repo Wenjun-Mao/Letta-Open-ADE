@@ -8,10 +8,9 @@ from pathlib import Path, PurePosixPath
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 FORMATTED_ROOTS = {
-    "ade_core",
-    "agent_platform_api",
-    "evals",
-    "model_router",
+    "packages",
+    "services",
+    "workflows",
     "scripts",
     "tests",
 }

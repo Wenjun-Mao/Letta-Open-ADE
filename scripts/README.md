@@ -1,7 +1,7 @@
 # Repository Utilities
 
 Run these utilities from the repository root. Evaluation and provider-probe
-workflows live under `evals/` with their own documentation and artifacts.
+workflows live under `workflows/evals/` with their own documentation and artifacts.
 
 ## Reset The Letta Database
 

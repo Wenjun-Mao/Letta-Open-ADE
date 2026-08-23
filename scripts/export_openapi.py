@@ -12,15 +12,15 @@ def _canonical_json(payload: dict) -> str:
 
 def _build_openapi_schema(project_root: Path) -> dict:
     sys.path.insert(0, str(project_root))
-    from agent_platform_api.main import app  # Imported lazily so script can run from any cwd.
+    from ade_api.main import app  # Imported lazily so script can run from any cwd.
 
     schema = app.openapi()
 
     if not schema.get("servers"):
         schema["servers"] = [
             {
-                "url": "http://127.0.0.1:8284",
-                "description": "Agent Platform API local",
+                "url": "http://127.0.0.1:8000",
+                "description": "Local ADE API",
             }
         ]
 
@@ -48,15 +48,15 @@ def _write_artifact(path: Path, rendered: str) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Export canonical OpenAPI artifact for Agent Platform API.")
+    parser = argparse.ArgumentParser(description="Export the canonical ADE API OpenAPI artifact.")
     parser.add_argument(
         "--output",
-        default="docs/openapi/agent-platform-openapi.json",
+        default="docs/openapi/ade-api-openapi.json",
         help="Output OpenAPI JSON file path.",
     )
     parser.add_argument(
         "--frontend-output",
-        default="frontend-ade/public/openapi/agent-platform-openapi.json",
+        default="apps/ade-web/public/openapi/ade-api-openapi.json",
         help="Secondary OpenAPI JSON path used by the ADE frontend.",
     )
     parser.add_argument(
@@ -91,4 +91,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

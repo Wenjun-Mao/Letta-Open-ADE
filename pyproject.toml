@@ -1,20 +1,29 @@
 [project]
-name = "letta-open-ade"
-version = "0.2.0"
-description = "Letta Open ADE with a first-party OpenAI-compatible model router."
+name = "letta-open-ade-workspace"
+version = "0.3.0"
+description = "Development workspace for the Letta Open ADE services and workflows."
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "fastapi>=0.135.2",
-    "httpx>=0.28.1",
-    "letta-client>=1.12.1,<2",
-    "pydantic-settings>=2.11.0",
-    "python-dotenv>=1.2.2",
-    "tenacity>=9.1.2",
-    "uvicorn>=0.42.0",
+    "ade-api",
+    "ade-model-router",
+    "model-catalog-contracts",
 ]
+
+[tool.uv.sources]
+ade-api = { workspace = true }
+ade-model-router = { workspace = true }
+model-catalog-contracts = { workspace = true }
 
 [tool.uv]
 package = false
+
+[tool.uv.workspace]
+members = [
+    "services/ade-api",
+    "services/model-router",
+    "packages/model-catalog-contracts",
+    "workflows",
+]
 
 [dependency-groups]
 dev = [
@@ -27,3 +36,11 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E9", "F"]
+
+[tool.pytest.ini_options]
+pythonpath = [
+    ".",
+    "services/ade-api/src",
+    "services/model-router/src",
+    "packages/model-catalog-contracts/src",
+]

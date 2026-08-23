@@ -1,16 +1,73 @@
 from __future__ import annotations
 
+import ast
 import ipaddress
 import json
+import os
 import subprocess
 from pathlib import Path
+from typing import Iterable
 from urllib.parse import urlparse
+
+import pytest
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+TARGET_ARCHITECTURE_ENV = "ADE_ENFORCE_TARGET_ARCHITECTURE"
+TARGET_ROOTS = (
+    "apps/ade-web",
+    "services/ade-api",
+    "services/model-router",
+    "packages/model-catalog-contracts",
+    "content",
+    "config/model-router",
+    "workflows",
+    "infra",
+    "docs",
+)
+TARGET_FEATURES = (
+    "agent_studio",
+    "comment_lab",
+    "label_lab",
+    "prompt_center",
+    "schema_center",
+    "tool_center",
+    "test_center",
+    "model_catalog",
+)
+FORBIDDEN_LEGACY_IDENTIFIERS = (
+    "agent_platform_api",
+    "apps/ade-web",
+    "ade_core",
+    "ADE_API_",
+    "ADE_WEB_",
+    "ade-api-openapi",
+)
+ARCHITECTURE_SCAN_SUFFIXES = {
+    ".env",
+    ".json",
+    ".js",
+    ".md",
+    ".mdx",
+    ".mjs",
+    ".py",
+    ".toml",
+    ".ts",
+    ".tsx",
+    ".yaml",
+    ".yml",
+}
+ARCHITECTURE_SCAN_EXCLUDED_PARTS = {
+    ".git",
+    ".next",
+    ".venv",
+    "__pycache__",
+    "node_modules",
+    "outputs",
+}
 TEXT_ROOTS = (
-    PROJECT_ROOT / "agent_platform_api",
-    PROJECT_ROOT / "ade_core",
+    PROJECT_ROOT / "ade_api",
+    PROJECT_ROOT / "model_catalog_contracts",
     PROJECT_ROOT / "model_router",
     PROJECT_ROOT / "scripts",
     PROJECT_ROOT / "evals",
@@ -23,6 +80,279 @@ TOP_LEVEL_TEXT_FILES = (
     PROJECT_ROOT / "MANUAL.md",
     PROJECT_ROOT / ".gitignore",
 )
+
+
+def _target_architecture_enforced() -> bool:
+    return os.environ.get(TARGET_ARCHITECTURE_ENV) == "1"
+
+
+def _architecture_text_files(project_root: Path) -> list[Path]:
+    files: list[Path] = []
+    for path in project_root.rglob("*"):
+        is_dotenv = path.name == ".env" or path.name.startswith(".env.")
+        if not path.is_file() or (
+            path.suffix.lower() not in ARCHITECTURE_SCAN_SUFFIXES and not is_dotenv
+        ):
+            continue
+        if any(part in ARCHITECTURE_SCAN_EXCLUDED_PARTS for part in path.parts):
+            continue
+        files.append(path)
+    return files
+
+
+def assert_canonical_roots(
+    project_root: Path, canonical_roots: Iterable[str] = TARGET_ROOTS
+) -> None:
+    missing = [root for root in canonical_roots if not (project_root / root).exists()]
+    assert missing == [], f"Missing canonical architecture roots: {missing}"
+
+
+def assert_no_forbidden_legacy_identifiers(
+    project_root: Path,
+    *,
+    forbidden_identifiers: Iterable[str] = FORBIDDEN_LEGACY_IDENTIFIERS,
+    excluded_paths: Iterable[Path] = (),
+) -> None:
+    forbidden = tuple(forbidden_identifiers)
+    excluded = {path.resolve() for path in excluded_paths}
+    offenders: list[str] = []
+
+    for path in _architecture_text_files(project_root):
+        if path.resolve() in excluded:
+            continue
+        relative_path = path.relative_to(project_root)
+        path_text = str(relative_path)
+        content = path.read_text(encoding="utf-8", errors="ignore")
+        matches = [
+            identifier
+            for identifier in forbidden
+            if identifier in path_text or identifier in content
+        ]
+        if matches:
+            offenders.append(f"{relative_path}: {', '.join(matches)}")
+
+    assert offenders == [], "Forbidden legacy identifiers:\n" + "\n".join(
+        sorted(offenders)
+    )
+
+
+def assert_feature_readmes(
+    project_root: Path,
+    *,
+    features: Iterable[str] = TARGET_FEATURES,
+    feature_roots: Iterable[str] = (
+        "apps/ade-web/src/features",
+        "services/ade-api/src/ade_api/features",
+    ),
+) -> None:
+    missing = [
+        f"{feature_root}/{feature}/README.md"
+        for feature_root in feature_roots
+        for feature in features
+        if not (project_root / feature_root / feature / "README.md").is_file()
+    ]
+    assert missing == [], "Missing feature READMEs:\n" + "\n".join(missing)
+
+
+def _module_name(source_root: Path, path: Path, package_name: str) -> str:
+    relative = path.relative_to(source_root).with_suffix("")
+    parts = list(relative.parts)
+    if parts[-1] == "__init__":
+        parts.pop()
+    return ".".join((package_name, *parts))
+
+
+def _resolve_import_from_module(
+    *, module_name: str, path: Path, node: ast.ImportFrom
+) -> str | None:
+    if node.level == 0:
+        return node.module
+
+    module_parts = module_name.split(".")
+    package_parts = module_parts if path.name == "__init__.py" else module_parts[:-1]
+    ancestor_count = node.level - 1
+    if ancestor_count > len(package_parts):
+        return None
+    base_parts = package_parts[: len(package_parts) - ancestor_count]
+    if node.module:
+        base_parts.extend(node.module.split("."))
+    return ".".join(base_parts)
+
+
+def _imported_modules(
+    *, module_name: str, path: Path, node: ast.stmt, package_name: str
+) -> list[str]:
+    if isinstance(node, ast.Import):
+        return [alias.name for alias in node.names]
+    if not isinstance(node, ast.ImportFrom):
+        return []
+
+    resolved = _resolve_import_from_module(
+        module_name=module_name,
+        path=path,
+        node=node,
+    )
+    if not resolved:
+        return []
+
+    modules = [resolved]
+    feature_base = f"{package_name}.features"
+    if resolved == feature_base:
+        modules.extend(f"{resolved}.{alias.name}" for alias in node.names)
+    return modules
+
+
+def _module_owner(module_name: str, package_name: str) -> tuple[str, str | None]:
+    feature_prefix = f"{package_name}.features."
+    if module_name.startswith(feature_prefix):
+        feature_name = module_name[len(feature_prefix) :].split(".", 1)[0]
+        return "feature", feature_name
+    if module_name == f"{package_name}.platform" or module_name.startswith(
+        f"{package_name}.platform."
+    ):
+        return "platform", None
+    if module_name == f"{package_name}.integrations" or module_name.startswith(
+        f"{package_name}.integrations."
+    ):
+        return "integration", None
+    return "other", None
+
+
+def assert_python_import_boundaries(
+    source_root: Path, *, package_name: str = "ade_api"
+) -> None:
+    violations: list[str] = []
+    for path in source_root.rglob("*.py"):
+        if "__pycache__" in path.parts:
+            continue
+        module_name = _module_name(source_root, path, package_name)
+        source_kind, source_feature = _module_owner(module_name, package_name)
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            for imported_module in _imported_modules(
+                module_name=module_name,
+                path=path,
+                node=node,
+                package_name=package_name,
+            ):
+                target_kind, target_feature = _module_owner(imported_module, package_name)
+                if (
+                    source_kind == "feature"
+                    and target_kind == "feature"
+                    and source_feature != target_feature
+                ):
+                    violations.append(
+                        f"{path.relative_to(source_root)} imports sibling feature "
+                        f"{imported_module}"
+                    )
+                elif source_kind == "platform" and target_kind == "feature":
+                    violations.append(
+                        f"{path.relative_to(source_root)} imports feature {imported_module}"
+                    )
+                elif source_kind == "integration" and target_kind == "feature":
+                    violations.append(
+                        f"{path.relative_to(source_root)} imports feature {imported_module}"
+                    )
+
+    assert violations == [], "Python import-boundary violations:\n" + "\n".join(
+        sorted(violations)
+    )
+
+
+def test_target_architecture_helpers_detect_missing_canonical_root(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "apps" / "ade-web").mkdir(parents=True)
+
+    with pytest.raises(AssertionError, match="services/ade-api"):
+        assert_canonical_roots(
+            tmp_path,
+            canonical_roots=("apps/ade-web", "services/ade-api"),
+        )
+
+
+def test_target_architecture_helpers_detect_legacy_identifier_and_honor_exclusion(
+    tmp_path: Path,
+) -> None:
+    legacy_file = tmp_path / "docs" / "migration.md"
+    legacy_file.parent.mkdir()
+    legacy_file.write_text("Replace LEGACY_NAME during the cutover.", encoding="utf-8")
+
+    with pytest.raises(AssertionError, match="LEGACY_NAME"):
+        assert_no_forbidden_legacy_identifiers(
+            tmp_path,
+            forbidden_identifiers=("LEGACY_NAME",),
+        )
+
+    assert_no_forbidden_legacy_identifiers(
+        tmp_path,
+        forbidden_identifiers=("LEGACY_NAME",),
+        excluded_paths=(legacy_file,),
+    )
+
+
+def test_target_architecture_helpers_require_feature_readmes(tmp_path: Path) -> None:
+    for feature_root in (
+        tmp_path / "apps" / "ade-web" / "src" / "features",
+        tmp_path / "services" / "ade-api" / "src" / "ade_api" / "features",
+    ):
+        (feature_root / "agent_studio").mkdir(parents=True)
+
+    with pytest.raises(AssertionError, match="README.md"):
+        assert_feature_readmes(tmp_path, features=("agent_studio",))
+
+    for feature_root in (
+        tmp_path / "apps" / "ade-web" / "src" / "features",
+        tmp_path / "services" / "ade-api" / "src" / "ade_api" / "features",
+    ):
+        (feature_root / "agent_studio" / "README.md").write_text(
+            "# Agent Studio\n", encoding="utf-8"
+        )
+
+    assert_feature_readmes(tmp_path, features=("agent_studio",))
+
+
+def test_target_architecture_helpers_enforce_python_import_boundaries(
+    tmp_path: Path,
+) -> None:
+    source_root = tmp_path / "ade_api"
+    files = {
+        "features/agent_studio/service.py": (
+            "from ..comment_lab import service\n"
+            "from ade_api.platform.settings import Settings\n"
+            "from ade_api.integrations.letta.client import LettaClient\n"
+        ),
+        "integrations/letta/client.py": "from ade_api.features.agent_studio import service\n",
+        "platform/app.py": "from ade_api.features.label_lab import api\n",
+        "features/comment_lab/service.py": "from .contracts import CommentRequest\n",
+    }
+    for relative_path, content in files.items():
+        path = source_root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    with pytest.raises(AssertionError) as exc_info:
+        assert_python_import_boundaries(source_root)
+
+    message = str(exc_info.value)
+    assert "sibling feature ade_api.features.comment_lab" in message
+    assert "integrations/letta/client.py imports feature" in message
+    assert "platform/app.py imports feature" in message
+
+
+def test_target_architecture_contract_is_opt_in() -> None:
+    if not _target_architecture_enforced():
+        return
+
+    assert_canonical_roots(PROJECT_ROOT)
+    assert_no_forbidden_legacy_identifiers(
+        PROJECT_ROOT,
+        excluded_paths=(Path(__file__),),
+    )
+    assert_feature_readmes(PROJECT_ROOT)
+    assert_python_import_boundaries(
+        PROJECT_ROOT / "services" / "ade-api" / "src" / "ade_api"
+    )
 
 
 def _text_files() -> list[Path]:
@@ -56,19 +386,19 @@ def test_no_utils_imports_reintroduced() -> None:
 
 def test_removed_catch_all_facades_stay_removed() -> None:
     removed = (
-        "agent_platform_api/helpers.py",
-        "agent_platform_api/runtime.py",
-        "agent_platform_api/model_options.py",
-        "agent_platform_api/registries/prompt_persona.py",
-        "agent_platform_api/services/labeling_provider_client.py",
+        "ade_api/helpers.py",
+        "ade_api/runtime.py",
+        "ade_api/model_options.py",
+        "ade_api/registries/prompt_persona.py",
+        "ade_api/services/labeling_provider_client.py",
     )
     assert [path for path in removed if (PROJECT_ROOT / path).exists()] == []
 
 
 def test_frontend_backend_configuration_stays_server_only() -> None:
-    frontend_root = PROJECT_ROOT / "frontend-ade"
+    frontend_root = PROJECT_ROOT / "apps/ade-web"
     offenders: list[str] = []
-    forbidden = "NEXT_PUBLIC_" + "AGENT_PLATFORM_API_BASE_URL"
+    forbidden = "NEXT_PUBLIC_" + "ADE_API_API_BASE_URL"
     for path in frontend_root.rglob("*"):
         if not path.is_file() or "node_modules" in path.parts or ".next" in path.parts:
             continue
@@ -81,7 +411,7 @@ def test_frontend_backend_configuration_stays_server_only() -> None:
 
 
 def test_removed_agent_platform_model_source_config_stays_removed() -> None:
-    removed_env_key = "AGENT_PLATFORM_" + "MODEL_SOURCES"
+    removed_env_key = "ADE_API_" + "MODEL_SOURCES"
     offenders: list[str] = []
     for path in _text_files():
         if path.name == "test_codebase_guardrails.py":
@@ -101,7 +431,7 @@ def test_agent_platform_has_no_direct_provider_catalog_fallback() -> None:
         "model_catalog_service",
     )
     offenders: list[str] = []
-    for path in (PROJECT_ROOT / "agent_platform_api").rglob("*.py"):
+    for path in (PROJECT_ROOT / "ade_api").rglob("*.py"):
         text = path.read_text(encoding="utf-8", errors="ignore")
         if any(marker in text for marker in forbidden):
             offenders.append(str(path.relative_to(PROJECT_ROOT)))
@@ -111,8 +441,8 @@ def test_agent_platform_has_no_direct_provider_catalog_fallback() -> None:
 
 def test_letta_does_not_inherit_direct_lmstudio_provider_config() -> None:
     compose_text = (PROJECT_ROOT / "compose.yaml").read_text(encoding="utf-8")
-    letta_service = compose_text.split("\n  letta_server:", 1)[1].split(
-        "\n  agent_platform_api:", 1
+    letta_service = compose_text.split("\n  letta:", 1)[1].split(
+        "\n  ade-api:", 1
     )[0]
     env_example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")
 
@@ -154,11 +484,11 @@ def test_no_tracked_generated_or_stale_artifacts() -> None:
     forbidden_fragments = (
         "__pycache__/",
         ".pyc",
-        "frontend-ade/.next/",
-        "frontend-ade/node_modules/",
-        "evals/comment_persona_eval/outputs/",
-        "evals/chat_memory_eval/outputs/",
-        "evals/provider_model_probe/outputs/",
+        "apps/ade-web/.next/",
+        "apps/ade-web/node_modules/",
+        "workflows/evals/comment_persona_eval/outputs/",
+        "workflows/evals/chat_memory_eval/outputs/",
+        "workflows/evals/provider_model_probe/outputs/",
         "temps/",
         "data/agent_lifecycle/registry.json",
         "data/personas/personas.sqlite3",
@@ -199,7 +529,7 @@ def test_tracked_model_router_sources_do_not_embed_machine_specific_ip_addresses
     None
 ):
     sources = json.loads(
-        (PROJECT_ROOT / "config" / "model_router_sources.json").read_text(
+        (PROJECT_ROOT / "config" / "model-router" / "sources.json").read_text(
             encoding="utf-8"
         )
     )
@@ -236,9 +566,9 @@ def test_docs_do_not_reference_removed_comment_eval_paths() -> None:
 
 def test_eval_workflows_are_self_documenting() -> None:
     workflows = [
-        PROJECT_ROOT / "evals" / "comment_persona_eval",
-        PROJECT_ROOT / "evals" / "chat_memory_eval",
-        PROJECT_ROOT / "evals" / "provider_model_probe",
+        PROJECT_ROOT / "workflows" / "evals" / "comment_persona_eval",
+        PROJECT_ROOT / "workflows" / "evals" / "chat_memory_eval",
+        PROJECT_ROOT / "workflows" / "evals" / "provider_model_probe",
     ]
     offenders = [
         str(path.relative_to(PROJECT_ROOT))
@@ -281,6 +611,6 @@ def test_ci_checks_formatting_without_rewriting_the_legacy_baseline() -> None:
     assert "fetch-depth: 0" in workflow
     assert "scripts/check_python_format.py" in workflow
     assert (
-        "ruff format --check agent_platform_api model_router ade_core evals scripts tests"
+        "ruff format --check ade_api model_router model_catalog_contracts evals scripts tests"
         not in workflow
     )

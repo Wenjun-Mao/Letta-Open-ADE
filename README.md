@@ -5,7 +5,7 @@ components:
 
 - `model_router`: one OpenAI-compatible gateway for configured local and cloud models.
 - `agent_platform_api`: the API used by ADE workspaces and operator tooling.
-- `frontend-ade`: the Next.js Agent Development Environment.
+- `apps/ade-web`: the Next.js Agent Development Environment.
 
 Letta, Postgres + pgvector, and Redis run alongside those components in Docker
 Compose. See [the codebase map](docs/codebase-map.md) for ownership and entrypoints.
@@ -47,12 +47,12 @@ uv run ruff check agent_platform_api model_router ade_core evals scripts tests
 uv run python -m pytest
 uv run python scripts/export_openapi.py --check
 uv run python scripts/generate_openapi_zh_manual.py
-git diff --exit-code -- docs/openapi/agent-platform-openapi-zh.json frontend-ade/public/openapi/agent-platform-openapi-zh.json docs/openapi/zh_openapi_missing_terms.json
-npm ci --prefix frontend-ade
-npm --prefix frontend-ade run test
-npm --prefix frontend-ade run lint
-npm audit --prefix frontend-ade --audit-level=high
-npm --prefix frontend-ade run build
+git diff --exit-code -- docs/openapi/ade-api-openapi-zh.json apps/ade-web/public/openapi/ade-api-openapi-zh.json docs/openapi/zh_openapi_missing_terms.json
+npm ci --prefix apps/ade-web
+npm --prefix apps/ade-web run test
+npm --prefix apps/ade-web run lint
+npm audit --prefix apps/ade-web --audit-level=high
+npm --prefix apps/ade-web run build
 docker compose --env-file .env.example config --quiet
 ```
 
@@ -64,17 +64,17 @@ operator-run checks because they need a configured stack, reachable models, or
 credentials. Run them deliberately from their workflow documentation:
 
 - `tests/checks/`: maintained API and ADE smoke checks.
-- `evals/chat_memory_eval/`: chat memory evaluation.
-- `evals/comment_persona_eval/`: Comment Lab persona evaluation.
-- `evals/provider_model_probe/`: provider capability probing and allowlist refresh.
+- `workflows/evals/chat_memory_eval/`: chat memory evaluation.
+- `workflows/evals/comment_persona_eval/`: Comment Lab persona evaluation.
+- `workflows/evals/provider_model_probe/`: provider capability probing and allowlist refresh.
 
 ## Content And Configuration
 
-- `config/model_router_sources.json`: portable model source defaults and module visibility.
-- `config/model_router_sources.local.json`: ignored machine-local endpoint overrides when needed.
-- `config/model_router_model_profiles.json`: model-specific sampling and capability metadata.
-- `prompts/system_prompts/`: file-backed prompt templates.
-- `schemas/label/`: file-backed Label Schema Center records.
+- `config/model-router/sources.json`: portable model source defaults and module visibility.
+- `config/model-router/sources.local.json`: ignored machine-local endpoint overrides when needed.
+- `config/model-router/model-profiles.json`: model-specific sampling and capability metadata.
+- `content/prompts/system/`: file-backed prompt templates.
+- `content/label-schemas/`: file-backed Label Schema Center records.
 - `agent_platform_api/seed_data/personas.jsonl`: reviewed persona seed source.
 
 Runtime SQLite persona data belongs under `data/runtime/` and is not a reviewed

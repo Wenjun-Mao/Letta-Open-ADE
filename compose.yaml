@@ -1,7 +1,7 @@
 name: letta-open-ade
 
 services:
-  letta_db:
+  postgres:
     image: pgvector/pgvector:0.8.1-pg15
     restart: unless-stopped
     environment:
@@ -10,7 +10,7 @@ services:
       POSTGRES_DB: ${LETTA_PG_DB:-letta}
     volumes:
       - ./data/pgdata:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${LETTA_PG_USER:-letta} -d ${LETTA_PG_DB:-letta}"]
       interval: 5s
@@ -27,42 +27,41 @@ services:
       timeout: 5s
       retries: 20
 
-  model_router:
+  model-router:
     build:
       context: .
-      dockerfile: docker/model_router.Dockerfile
+      dockerfile: services/model-router/Dockerfile
     restart: unless-stopped
     env_file:
       - ${LETTA_ENV_FILE:-.env}
     environment:
-      - PYTHONPATH=/app
+      - ADE_REPOSITORY_ROOT=/app
     volumes:
       - ./config:/app/config:ro
+      - ./content/model-catalog:/app/content/model-catalog:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    ports:
-      - "${ADE_INTERNAL_BIND_HOST:-127.0.0.1}:${MODEL_ROUTER_PORT:-8290}:8290"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS --max-time 5 --noproxy '*' http://127.0.0.1:8290/v1/health > /dev/null 2>&1"]
+      test: ["CMD-SHELL", "curl -fsS --max-time 5 --noproxy '*' http://127.0.0.1:8010/v1/health > /dev/null 2>&1"]
       interval: 10s
       timeout: 10s
       retries: 20
       start_period: 10s
 
-  letta_server:
+  letta:
     image: ${LETTA_SERVER_IMAGE:-letta/letta:0.16.8}
     restart: unless-stopped
     depends_on:
-      letta_db:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      model_router:
+      model-router:
         condition: service_healthy
     env_file:
       - ${LETTA_ENV_FILE:-.env}
     environment:
-      LETTA_PG_URI: ${LETTA_PG_URI:-postgresql://${LETTA_PG_USER:-letta}:${LETTA_PG_PASSWORD:-letta}@${LETTA_DB_HOST:-letta_db}:${LETTA_PG_INTERNAL_PORT:-5432}/${LETTA_PG_DB:-letta}}
+      LETTA_PG_URI: ${LETTA_PG_URI:-postgresql://${LETTA_PG_USER:-letta}:${LETTA_PG_PASSWORD:-letta}@${LETTA_DB_HOST:-postgres}:${LETTA_PG_INTERNAL_PORT:-5432}/${LETTA_PG_DB:-letta}}
       LETTA_REDIS_HOST: ${LETTA_REDIS_HOST:-redis}
       LETTA_REDIS_PORT: ${LETTA_REDIS_PORT:-6379}
       LETTA_DEBUG: ${LETTA_DEBUG:-False}
@@ -70,68 +69,64 @@ services:
       NLTK_DATA: ${NLTK_DATA:-/root/nltk_data}
       LETTA_NLTK_STRICT_LOCAL: ${LETTA_NLTK_STRICT_LOCAL:-true}
       LETTA_NLTK_DOWNLOAD_TIMEOUT_SECONDS: ${LETTA_NLTK_DOWNLOAD_TIMEOUT_SECONDS:-5}
-      OPENAI_API_BASE: ${LETTA_OPENAI_API_BASE:-http://model_router:8290/v1}
-      OPENAI_BASE_URL: ${LETTA_OPENAI_API_BASE:-http://model_router:8290/v1}
+      OPENAI_API_BASE: ${LETTA_OPENAI_API_BASE:-http://model-router:8010/v1}
+      OPENAI_BASE_URL: ${LETTA_OPENAI_API_BASE:-http://model-router:8010/v1}
       OPENAI_API_KEY: ${MODEL_ROUTER_API_KEY:-local-router-dev-key}
       # Prevent router-only machine config from registering a second Letta provider.
       LMSTUDIO_BASE_URL: ""
     volumes:
       - ./data/nltk_data:/root/nltk_data:ro
-      - ./docker/sitecustomize.py:/app/sitecustomize.py:ro
-    ports:
-      - "${ADE_INTERNAL_BIND_HOST:-127.0.0.1}:${LETTA_API_PORT:-8283}:8283"
+      - ./infra/letta/sitecustomize.py:/app/sitecustomize.py:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS --max-time 5 --noproxy '*' http://127.0.0.1:8283/v1/health/ > /dev/null 2>&1"]
       interval: ${LETTA_HEALTHCHECK_INTERVAL:-10s}
       timeout: ${LETTA_HEALTHCHECK_TIMEOUT:-10s}
       retries: ${LETTA_HEALTHCHECK_RETRIES:-30}
       start_period: ${LETTA_HEALTHCHECK_START_PERIOD:-180s}
-  agent_platform_api:
+  ade-api:
     build:
       context: .
-      dockerfile: docker/agent_platform_api.Dockerfile
+      dockerfile: services/ade-api/Dockerfile
     restart: unless-stopped
     env_file:
       - ${LETTA_ENV_FILE:-.env}
     environment:
-      - PYTHONPATH=/app
-      - LETTA_BASE_URL=http://letta_server:8283
-      - AGENT_PLATFORM_MODEL_ROUTER_BASE_URL=http://model_router:8290
-      - CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL=http://model_router:8290
+      - ADE_REPOSITORY_ROOT=/app
+      - LETTA_BASE_URL=http://letta:8283
+      - ADE_API_MODEL_ROUTER_BASE_URL=http://model-router:8010
+      - CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL=http://model-router:8010
     volumes:
-      - ./prompts:/app/prompts
-      - ./schemas:/app/schemas
+      - ./content:/app/content
       - ./config:/app/config:ro
-      - ./tools/custom:/app/tools/custom
       - ./data/runtime:/app/data/runtime
     ports:
-      - "${ADE_INTERNAL_BIND_HOST:-127.0.0.1}:${AGENT_PLATFORM_API_PORT:-8284}:8284"
+      - "${ADE_API_BIND_HOST:-127.0.0.1}:${ADE_API_PORT:-8000}:8000"
     healthcheck:
-      test: ["CMD", "/opt/venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8284/api/v1/health', timeout=5).read()"]
+      test: ["CMD", "/opt/venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v2/health', timeout=5).read()"]
       interval: 10s
       timeout: 10s
       retries: 20
       start_period: 10s
     depends_on:
-      model_router:
+      model-router:
         condition: service_healthy
-      letta_server:
+      letta:
         condition: service_healthy
 
-  ade_frontend:
+  ade-web:
     build:
-      context: ./frontend-ade
+      context: ./apps/ade-web
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_ADE_UI_VERSION: ${ADE_UI_VERSION:-}
-        NEXT_PUBLIC_ADE_UI_BUILD: ${ADE_UI_BUILD:-}
+        NEXT_PUBLIC_ADE_WEB_VERSION: ${ADE_WEB_VERSION:-}
+        NEXT_PUBLIC_ADE_WEB_BUILD: ${ADE_WEB_BUILD:-}
     restart: unless-stopped
     environment:
-      - AGENT_PLATFORM_API_BASE_URL=http://agent_platform_api:8284
-      - AGENT_PLATFORM_API_KEY=${AGENT_PLATFORM_API_KEY:?Set AGENT_PLATFORM_API_KEY in .env}
+      - ADE_API_BASE_URL=http://ade-api:8000
+      - ADE_API_ADMIN_KEY=${ADE_API_ADMIN_KEY:?Set ADE_API_ADMIN_KEY in .env}
       - PORT=3000
     ports:
-      - "${ADE_FRONTEND_BIND_HOST:-127.0.0.1}:${ADE_FRONTEND_PORT:-3000}:3000"
+      - "${ADE_WEB_BIND_HOST:-127.0.0.1}:${ADE_WEB_PORT:-3000}:3000"
     depends_on:
-      agent_platform_api:
+      ade-api:
         condition: service_healthy

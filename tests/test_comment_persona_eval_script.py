@@ -7,8 +7,8 @@ from typing import Any
 
 import httpx
 
-from evals.comment_persona_eval.artifacts import ArtifactWriter, write_artifacts
-from evals.comment_persona_eval.workflow import (
+from workflows.evals.comment_persona_eval.artifacts import ArtifactWriter, write_artifacts
+from workflows.evals.comment_persona_eval.workflow import (
     EvalConfig,
     fetch_comment_personas,
     load_config,
@@ -22,7 +22,7 @@ def _response(status_code: int, payload: dict[str, Any], request: httpx.Request)
 
 
 def test_default_config_loads_comment_lab_values() -> None:
-    config = load_config(Path("evals/comment_persona_eval/config.toml"))
+    config = load_config(Path("workflows/evals/comment_persona_eval/config.toml"))
 
     assert config.model_key == "dgx_vllm::qwen3.6-35b-a3b-fp8"
     assert config.prompt_key == "comment_v20260418"
@@ -57,7 +57,7 @@ def test_fetch_comment_personas_filters_by_key_search_and_limit() -> None:
         )
 
     config = EvalConfig(
-        news_path=Path("evals/comment_persona_eval/inputs/sports_news_demo.txt"),
+        news_path=Path("workflows/evals/comment_persona_eval/inputs/sports_news_demo.txt"),
         persona_search="Messi",
         persona_keys=("comment_second",),
         limit=1,
@@ -80,7 +80,7 @@ def test_validate_comment_options_rejects_unavailable_model_key() -> None:
         )
 
     config = EvalConfig(
-        news_path=Path("evals/comment_persona_eval/inputs/sports_news_demo.txt"),
+        news_path=Path("workflows/evals/comment_persona_eval/inputs/sports_news_demo.txt"),
         model_key="ark::doubao-seed-2-pro-260215",
     )
     with httpx.Client(base_url="http://test", transport=httpx.MockTransport(handler)) as client:
@@ -111,7 +111,7 @@ def test_run_attempt_uses_comment_lab_payload_and_flattens_success() -> None:
         )
 
     config = EvalConfig(
-        news_path=Path("evals/comment_persona_eval/inputs/sports_news_demo.txt"),
+        news_path=Path("workflows/evals/comment_persona_eval/inputs/sports_news_demo.txt"),
         model_key="local_llama_server::gemma4",
         prompt_key="comment_v20260418",
         max_tokens=0,

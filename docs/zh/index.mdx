@@ -14,8 +14,8 @@ title: Agent Platform API（中文）
   - Letta Server API: `http://127.0.0.1:8283`
   - Model Router：`http://127.0.0.1:8290`
 - API 开关：
-  - 设为 `AGENT_PLATFORM_API_ENABLED=1` 以启用路由。
-  - 设为 `AGENT_PLATFORM_API_ENABLED=0` 以硬禁用平台路由（返回 503）。
+  - 设为 `ADE_API_API_ENABLED=1` 以启用路由。
+  - 设为 `ADE_API_API_ENABLED=0` 以硬禁用平台路由（返回 503）。
 - 浏览器请求通过 ADE 同源代理访问后端；直接 API 客户端使用 Reader、Operator
   或 Admin Bearer Key。
 - 默认服务仅绑定回环地址，面向本地开发。公开部署仍需 TLS、托管密钥、限流、
@@ -40,15 +40,15 @@ title: Agent Platform API（中文）
 
 关键接口：
 
-- `POST /api/v1/platform/agents/{agent_id}/archive`
-- `POST /api/v1/platform/agents/{agent_id}/restore`
-- `DELETE /api/v1/platform/agents/{agent_id}/purge`
-- `DELETE /api/v1/agents/{agent_id}`（清除已归档智能体的别名）
-- `GET /api/v1/agents?include_archived=true`
+- `POST /api/v2/agent-studio/agents/{agent_id}/archive`
+- `POST /api/v2/agent-studio/agents/{agent_id}/restore`
+- `DELETE /api/v2/agent-studio/agents/{agent_id}/purge`
+- `DELETE /api/v2/agent-studio/agents/{agent_id}`（清除已归档智能体的别名）
+- `GET /api/v2/agent-studio/agents?include_archived=true`
 
 行为说明：
 
-- 默认情况下，`GET /api/v1/agents` 不返回已归档智能体。
+- 默认情况下，`GET /api/v2/agent-studio/agents` 不返回已归档智能体。
 - 对已归档智能体进行运行时或控制类变更会返回 `409`，需先恢复。
 - 清除操作要求目标处于已归档状态，否则返回 `400`。
 
@@ -74,10 +74,10 @@ FastAPI 返回的错误 JSON 结构如下：
 - 代码库地图：`docs/codebase-map.md`
 - 维护路线图：`docs/maintenance-roadmap.md`
 - 上游参考资料：`docs/references.md`
-- OpenAPI 英文产物：`docs/openapi/agent-platform-openapi.json`
-- OpenAPI 中文产物：`docs/openapi/agent-platform-openapi-zh.json`
-- 前端静态 OpenAPI 英文产物：`frontend-ade/public/openapi/agent-platform-openapi.json`
-- 前端静态 OpenAPI 中文产物：`frontend-ade/public/openapi/agent-platform-openapi-zh.json`
+- OpenAPI 英文产物：`docs/openapi/ade-api-openapi.json`
+- OpenAPI 中文产物：`docs/openapi/ade-api-openapi-zh.json`
+- 前端静态 OpenAPI 英文产物：`apps/ade-web/public/openapi/ade-api-openapi.json`
+- 前端静态 OpenAPI 中文产物：`apps/ade-web/public/openapi/ade-api-openapi-zh.json`
 - OpenAPI 导出脚本：`scripts/export_openapi.py`
 - 中文 OpenAPI 手工生成脚本：`scripts/generate_openapi_zh_manual.py`
 

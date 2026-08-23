@@ -7,7 +7,7 @@ future splits follow behavior boundaries rather than arbitrary line counts.
 
 ## Completed Boundaries
 
-- `frontend-ade/app/agent-studio/page.tsx` is now a composition root. Feature-local
+- `apps/ade-web/app/agent-studio/page.tsx` is now a composition root. Feature-local
   hooks own agent creation, lifecycle and selection, chat execution, inspection,
   execution traces, and notices. Pure selection, history, creation-settings, and
   tool-catalog rules have focused tests. Request identity, cancellation, and

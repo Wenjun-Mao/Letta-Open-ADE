@@ -7,7 +7,7 @@ import httpx
 import pytest
 from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_none
 
-from agent_platform_api.services.commenting import (
+from ade_api.services.commenting import (
     _RETRYABLE_COMMENTING_EXCEPTIONS,
     CommentingService,
 )
@@ -16,13 +16,13 @@ from agent_platform_api.services.commenting import (
 def _build_service() -> CommentingService:
     return CommentingService(
         settings_factory=lambda: SimpleNamespace(
-            commenting_timeout_seconds=180,
-            commenting_max_tokens=0,
-            commenting_task_shape="classic",
-            commenting_cache_prompt=False,
-            commenting_temperature=0.6,
-            commenting_top_p=1.0,
-            commenting_top_k=None,
+            comment_lab_timeout_seconds=180,
+            comment_lab_max_tokens=0,
+            comment_lab_task_shape="classic",
+            comment_lab_cache_prompt=False,
+            comment_lab_temperature=0.6,
+            comment_lab_top_p=1.0,
+            comment_lab_top_k=None,
         )
     )
 

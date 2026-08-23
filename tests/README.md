@@ -9,18 +9,18 @@ Supporting files:
 
 - `tests/shared/config_defaults.py`: shared base URLs and default handles for the live checks
 - `data/runtime/test-runs/`: manifests, logs, and artifacts written by Test Center runs
-- Chat/model behavior evals live under `evals/`, for example `evals/chat_memory_eval/`
+- Chat/model behavior evals live under `workflows/evals/`, for example `workflows/evals/chat_memory_eval/`
 
 ## Maintained Entry Points
 
 - `uv run python -m pytest`
-- `uv run python evals/chat_memory_eval/run.py --config evals/chat_memory_eval/config.toml --rounds 1`
+- `uv run python workflows/evals/chat_memory_eval/run.py --config workflows/evals/chat_memory_eval/config.toml --rounds 1`
 - `uv run python tests/checks/platform_api_e2e_check.py`
 - `uv run python tests/checks/ade_mvp_smoke_e2e_check.py`
 
 If `agent_platform_api` routes in your running container lag behind source changes, point the live checks at a source-backed API server:
 
 ```text
-AGENT_PLATFORM_API_BASE_URL=http://127.0.0.1:8285 uv run python tests/checks/platform_api_e2e_check.py
-AGENT_PLATFORM_API_BASE_URL=http://127.0.0.1:8285 uv run python tests/checks/ade_mvp_smoke_e2e_check.py
+ADE_API_API_BASE_URL=http://127.0.0.1:8285 uv run python tests/checks/platform_api_e2e_check.py
+ADE_API_API_BASE_URL=http://127.0.0.1:8285 uv run python tests/checks/ade_mvp_smoke_e2e_check.py
 ```

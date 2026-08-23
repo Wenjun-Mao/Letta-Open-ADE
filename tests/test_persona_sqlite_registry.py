@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from agent_platform_api.registries.persona_sqlite import PersonaSqliteRegistry
-from agent_platform_api.registries.prompt_persona_store import RegistryError
+from ade_api.registries.persona_sqlite import PersonaSqliteRegistry
+from ade_api.registries.prompt_persona_store import RegistryError
 
 
 def _registry(tmp_path) -> PersonaSqliteRegistry:
@@ -340,7 +340,7 @@ def test_persona_seed_sync_rolls_back_records_and_metadata_on_write_failure(
 
 
 def test_checked_in_seed_contains_curated_and_excel_personas() -> None:
-    seed_path = Path("agent_platform_api/seed_data/personas.jsonl")
+    seed_path = Path("content/personas/personas.jsonl")
     records = [
         json.loads(line)
         for line in seed_path.read_text(encoding="utf-8").splitlines()

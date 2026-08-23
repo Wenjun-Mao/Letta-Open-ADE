@@ -94,9 +94,9 @@ DESCRIPTION_TRANSLATIONS = {
     "Platform capabilities, model catalog diagnostics, and shared runtime options.": "平台能力、模型目录诊断与共享运行时选项。",
     "Must be `comment` for this endpoint.": "该端点必须使用 `comment`。",
     "News article, comment thread, or source text to comment on.": "需要评论的新闻文章、评论线程或源文本。",
-    "Comment Lab prompt key from `/api/v1/options?scenario=comment`.": "来自 `/api/v1/options?scenario=comment` 的 Comment Lab 提示词键。",
-    "Comment Lab persona key from `/api/v1/options?scenario=comment`.": "来自 `/api/v1/options?scenario=comment` 的 Comment Lab Persona 键。",
-    "Router-scoped model key from `/api/v1/options?scenario=comment`, for example `local_llama_server::gemma4`.": "来自 `/api/v1/options?scenario=comment` 的路由器作用域模型键，例如 `local_llama_server::gemma4`。",
+    "Comment Lab prompt key from `/api/v2/model-catalog/options?scenario=comment`.": "来自 `/api/v2/model-catalog/options?scenario=comment` 的 Comment Lab 提示词键。",
+    "Comment Lab persona key from `/api/v2/model-catalog/options?scenario=comment`.": "来自 `/api/v2/model-catalog/options?scenario=comment` 的 Comment Lab Persona 键。",
+    "Router-scoped model key from `/api/v2/model-catalog/options?scenario=comment`, for example `local_llama_server::gemma4`.": "来自 `/api/v2/model-catalog/options?scenario=comment` 的路由器作用域模型键，例如 `local_llama_server::gemma4`。",
     "Legacy selector kept for backward compatibility. Prefer `model_key`.": "为向后兼容保留的旧选择器。优先使用 `model_key`。",
     "Optional response token budget. Defaults to Comment Lab runtime settings.": "可选响应 Token 预算。默认使用 Comment Lab 运行时设置。",
     "Optional provider timeout in seconds. Use a realistic local-model value such as 120.": "可选供应商超时时间（秒）。本地模型建议使用类似 120 的实际值。",
@@ -109,9 +109,9 @@ DESCRIPTION_TRANSLATIONS = {
     "Optional top_k sampling value. Defaults to model profile or Comment Lab runtime settings.": "可选 top_k 采样值。默认使用模型 profile 或 Comment Lab 运行时设置。",
     "Must be `label` for this endpoint.": "该端点必须使用 `label`。",
     "Article or text to extract grouped entity lists from.": "用于抽取分组实体列表的文章或文本。",
-    "Label Lab prompt key from `/api/v1/options?scenario=label`.": "来自 `/api/v1/options?scenario=label` 的 Label Lab 提示词键。",
-    "Label Schema Center key from `/api/v1/options?scenario=label`.": "来自 `/api/v1/options?scenario=label` 的 Label Schema Center 键。",
-    "Router-scoped model key from `/api/v1/options?scenario=label`, for example `local_llama_server::gemma4`.": "来自 `/api/v1/options?scenario=label` 的路由器作用域模型键，例如 `local_llama_server::gemma4`。",
+    "Label Lab prompt key from `/api/v2/model-catalog/options?scenario=label`.": "来自 `/api/v2/model-catalog/options?scenario=label` 的 Label Lab 提示词键。",
+    "Label Schema Center key from `/api/v2/model-catalog/options?scenario=label`.": "来自 `/api/v2/model-catalog/options?scenario=label` 的 Label Schema Center 键。",
+    "Router-scoped model key from `/api/v2/model-catalog/options?scenario=label`, for example `local_llama_server::gemma4`.": "来自 `/api/v2/model-catalog/options?scenario=label` 的路由器作用域模型键，例如 `local_llama_server::gemma4`。",
     "Optional response token budget. Defaults to Label Lab runtime settings.": "可选响应 Token 预算。默认使用 Label Lab 运行时设置。",
     "Number of structured-output repair attempts after validation failure.": "结构化输出校验失败后的修复重试次数。",
     "Sampling temperature. Defaults to Label Lab runtime settings.": "采样 temperature。默认使用 Label Lab 运行时设置。",
@@ -662,17 +662,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Generate manually curated Chinese OpenAPI artifact.")
     parser.add_argument(
         "--source",
-        default="docs/openapi/agent-platform-openapi.json",
+        default="docs/openapi/ade-api-openapi.json",
         help="Source English OpenAPI artifact path.",
     )
     parser.add_argument(
         "--target",
-        default="docs/openapi/agent-platform-openapi-zh.json",
+        default="docs/openapi/ade-api-openapi-zh.json",
         help="Target Chinese OpenAPI artifact path.",
     )
     parser.add_argument(
         "--frontend-target",
-        default="frontend-ade/public/openapi/agent-platform-openapi-zh.json",
+        default="apps/ade-web/public/openapi/ade-api-openapi-zh.json",
         help="Frontend copy path for Chinese OpenAPI artifact.",
     )
     parser.add_argument(

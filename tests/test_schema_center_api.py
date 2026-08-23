@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
-from agent_platform_api.routers import schema_center
-from agent_platform_api.registries.label_schema import LabelSchemaRegistry, default_label_extraction_schema
+from ade_api.routers import schema_center
+from ade_api.registries.label_schema import LabelSchemaRegistry, default_label_extraction_schema
 
 
 def test_schema_center_routes_manage_label_schemas(monkeypatch, tmp_path) -> None:

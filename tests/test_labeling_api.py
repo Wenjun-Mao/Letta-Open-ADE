@@ -4,10 +4,10 @@ import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from agent_platform_api.auth import PlatformPrincipal, PlatformRole
-from agent_platform_api.models.labeling import LabelingGenerateRequest
-from agent_platform_api.routers import labeling
-from agent_platform_api.services.labeling import LabelingValidationError
+from ade_api.auth import PlatformPrincipal, PlatformRole
+from ade_api.models.labeling import LabelingGenerateRequest
+from ade_api.routers import labeling
+from ade_api.services.labeling import LabelingValidationError
 
 
 def test_labeling_generate_uses_model_key_and_selected_source_connection(

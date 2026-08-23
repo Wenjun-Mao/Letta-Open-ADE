@@ -5,18 +5,18 @@ from types import SimpleNamespace
 
 import pytest
 
-from agent_platform_api.services.labeling import LabelingService, LabelingValidationError
+from ade_api.services.labeling import LabelingService, LabelingValidationError
 
 
 def _build_service() -> LabelingService:
     return LabelingService(
         settings_factory=lambda: SimpleNamespace(
-            labeling_timeout_seconds=60,
-            labeling_max_tokens=1024,
-            labeling_repair_retry_count=1,
-            labeling_temperature=0.0,
-            labeling_top_p=1.0,
-            labeling_top_k=None,
+            label_lab_timeout_seconds=60,
+            label_lab_max_tokens=1024,
+            label_lab_repair_retry_count=1,
+            label_lab_temperature=0.0,
+            label_lab_top_p=1.0,
+            label_lab_top_k=None,
         )
     )
 

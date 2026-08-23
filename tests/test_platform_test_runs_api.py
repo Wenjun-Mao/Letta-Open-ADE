@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from agent_platform_api.models.platform import PlatformTestRunRequest
-from agent_platform_api.routers import platform_runtime
+from ade_api.models.platform import PlatformTestRunRequest
+from ade_api.routers import platform_runtime
 
 
 def test_platform_test_run_request_accepts_only_kept_run_types() -> None:
@@ -104,7 +104,7 @@ def test_platform_chat_memory_eval_create_passes_options(monkeypatch) -> None:
                 "run_id": "run-2",
                 "run_type": kwargs["run_type"],
                 "status": "queued",
-                "command": ["python", "evals/chat_memory_eval/run.py"],
+                "command": ["python", "workflows/evals/chat_memory_eval/run.py"],
                 "created_at": "2026-04-22T00:00:00+00:00",
                 "started_at": "",
                 "finished_at": "",
@@ -140,8 +140,8 @@ def test_platform_chat_memory_eval_create_passes_options(monkeypatch) -> None:
 def test_test_run_descriptors_own_option_validation_and_command_construction(
     tmp_path,
 ) -> None:
-    from agent_platform_api.testing.orchestrator import PlatformTestOrchestrator
-    from agent_platform_api.testing.run_descriptors import RUN_DESCRIPTORS
+    from ade_api.testing.orchestrator import PlatformTestOrchestrator
+    from ade_api.testing.run_descriptors import RUN_DESCRIPTORS
 
     assert set(RUN_DESCRIPTORS) == {
         "platform_api_e2e_check",
@@ -162,9 +162,9 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
 
     assert command == [
         sys.executable,
-        "evals/chat_memory_eval/run.py",
+        "workflows/evals/chat_memory_eval/run.py",
         "--config",
-        "evals/chat_memory_eval/config.toml",
+        "workflows/evals/chat_memory_eval/config.toml",
         "--output-dir",
         str(tmp_path / "run-output"),
         "--model",
@@ -184,7 +184,7 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
 
 
 def test_platform_orchestrator_discovers_run_output_artifacts(tmp_path) -> None:
-    from agent_platform_api.testing.orchestrator import PlatformTestOrchestrator
+    from ade_api.testing.orchestrator import PlatformTestOrchestrator
 
     orchestrator = PlatformTestOrchestrator(project_root=tmp_path)
     output_dir = tmp_path / "data" / "runtime" / "test-runs" / "run-3"
@@ -211,7 +211,7 @@ def test_platform_orchestrator_discovers_run_output_artifacts(tmp_path) -> None:
 def test_artifact_discovery_ignores_internal_and_transient_files(
     tmp_path, monkeypatch
 ) -> None:
-    from agent_platform_api.testing.run_descriptors import (
+    from ade_api.testing.run_descriptors import (
         ArtifactDiscoveryContext,
         discover_run_directory_artifacts,
     )
@@ -249,7 +249,7 @@ def test_artifact_discovery_ignores_internal_and_transient_files(
 
 
 def test_platform_orchestrator_recovers_completed_runs_from_manifests(tmp_path) -> None:
-    from agent_platform_api.testing.orchestrator import PlatformTestOrchestrator
+    from ade_api.testing.orchestrator import PlatformTestOrchestrator
 
     state_root = tmp_path / "runtime" / "test-runs"
     output_dir = state_root / "run-complete"
@@ -288,7 +288,7 @@ def test_platform_orchestrator_recovers_completed_runs_from_manifests(tmp_path) 
 def test_platform_orchestrator_keeps_retired_persisted_run_artifacts_readable(
     tmp_path,
 ) -> None:
-    from agent_platform_api.testing.orchestrator import PlatformTestOrchestrator
+    from ade_api.testing.orchestrator import PlatformTestOrchestrator
 
     state_root = tmp_path / "runtime" / "test-runs"
     output_dir = state_root / "retired-run"
@@ -330,7 +330,7 @@ def test_platform_orchestrator_keeps_retired_persisted_run_artifacts_readable(
 def test_platform_orchestrator_marks_inflight_runs_interrupted_after_restart(
     tmp_path,
 ) -> None:
-    from agent_platform_api.testing.orchestrator import PlatformTestOrchestrator
+    from ade_api.testing.orchestrator import PlatformTestOrchestrator
 
     state_root = tmp_path / "runtime" / "test-runs"
     output_dir = state_root / "run-running"
@@ -342,7 +342,7 @@ def test_platform_orchestrator_marks_inflight_runs_interrupted_after_restart(
                 "run_id": "run-running",
                 "run_type": "chat_memory_eval",
                 "status": "running",
-                "command": ["python", "evals/chat_memory_eval/run.py"],
+                "command": ["python", "workflows/evals/chat_memory_eval/run.py"],
                 "created_at": "2026-05-16T16:00:00+00:00",
                 "started_at": "2026-05-16T16:00:01+00:00",
                 "finished_at": "",

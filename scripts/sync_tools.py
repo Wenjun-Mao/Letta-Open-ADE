@@ -17,7 +17,7 @@ def sync():
         print(f"Failed to fetch tools. Is the Letta server running? Error: {e}")
         return
 
-    out_file = Path(__file__).resolve().parents[1] / "agent_platform_api" / "letta" / "tools.py"
+    out_file = Path(__file__).resolve().parents[1] / "ade_api" / "letta" / "tools.py"
     
     with out_file.open("w", encoding="utf-8") as f:
         f.write('"""\n')

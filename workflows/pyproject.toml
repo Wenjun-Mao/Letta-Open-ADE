@@ -1,0 +1,12 @@
+[project]
+name = "ade-workflows"
+version = "0.3.0"
+description = "Operator-run ADE evals, probes, and smoke workflows."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "httpx>=0.28.1",
+    "python-dotenv>=1.2.2",
+]
+
+[tool.uv]
+package = false

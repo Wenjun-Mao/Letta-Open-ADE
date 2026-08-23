@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_platform_api.main import app
+from ade_api.main import app
 
 
 def _openapi() -> dict[str, Any]:
@@ -42,7 +42,7 @@ def test_openapi_operations_are_tagged_and_have_human_summaries() -> None:
 
 def test_commenting_generate_example_documents_model_key_not_legacy_model() -> None:
     schema = _openapi()
-    operation = schema["paths"]["/api/v1/commenting/generate"]["post"]
+    operation = schema["paths"]["/api/v2/comment-lab/generations"]["post"]
     examples = operation["requestBody"]["content"]["application/json"]["examples"]
     values = [example["value"] for example in examples.values()]
 
@@ -54,7 +54,7 @@ def test_commenting_generate_example_documents_model_key_not_legacy_model() -> N
 
 def test_labeling_generate_example_documents_model_key_and_schema_key() -> None:
     schema = _openapi()
-    operation = schema["paths"]["/api/v1/labeling/generate"]["post"]
+    operation = schema["paths"]["/api/v2/label-lab/generations"]["post"]
     examples = operation["requestBody"]["content"]["application/json"]["examples"]
     values = [example["value"] for example in examples.values()]
 

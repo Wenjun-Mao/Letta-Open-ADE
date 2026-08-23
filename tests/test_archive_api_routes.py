@@ -4,9 +4,9 @@ from types import SimpleNamespace
 
 from fastapi.testclient import TestClient
 
-import agent_platform_api.app as app_module
-from agent_platform_api.app import create_app
-from agent_platform_api.routers import agent_lifecycle, prompt_center, tool_center
+import ade_api.app as app_module
+from ade_api.app import create_app
+from ade_api.routers import agent_lifecycle, prompt_center, tool_center
 
 
 def _client(monkeypatch) -> TestClient:
@@ -63,26 +63,26 @@ def test_agent_archive_restore_and_purge_routes(monkeypatch) -> None:
     monkeypatch.setattr(agent_lifecycle, "is_not_found_error", lambda exc: False)
 
     with _client(monkeypatch) as client:
-        purge_before_archive = client.delete("/api/v1/platform/agents/agent-1/purge")
+        purge_before_archive = client.delete("/api/v2/agent-studio/agents/agent-1/purge")
         assert purge_before_archive.status_code == 400
 
-        archive = client.post("/api/v1/platform/agents/agent-1/archive")
+        archive = client.post("/api/v2/agent-studio/agents/agent-1/archive")
         assert archive.status_code == 200
         assert archive.json()["archived"] is True
 
-        restore = client.post("/api/v1/platform/agents/agent-1/restore")
+        restore = client.post("/api/v2/agent-studio/agents/agent-1/restore")
         assert restore.status_code == 200
         assert restore.json()["archived"] is False
 
-        archive_again = client.post("/api/v1/platform/agents/agent-1/archive")
+        archive_again = client.post("/api/v2/agent-studio/agents/agent-1/archive")
         assert archive_again.status_code == 200
 
-        purge = client.delete("/api/v1/platform/agents/agent-1/purge")
+        purge = client.delete("/api/v2/agent-studio/agents/agent-1/purge")
         assert purge.status_code == 200
         assert purge.json() == {"ok": True, "id": "agent-1", "kind": "agent"}
         assert deleted_ids == ["agent-1"]
 
-        restore_after_purge = client.post("/api/v1/platform/agents/agent-1/restore")
+        restore_after_purge = client.post("/api/v2/agent-studio/agents/agent-1/restore")
         assert restore_after_purge.status_code == 400
 
 
@@ -118,27 +118,27 @@ def test_prompt_and_persona_archive_routes(monkeypatch) -> None:
     monkeypatch.setattr(prompt_center, "invalidate_options_cache", lambda: invalidate_calls.append("called"))
 
     with _client(monkeypatch) as client:
-        prompt_archive = client.post("/api/v1/platform/prompt-center/prompts/chat_demo/archive?scenario=chat")
+        prompt_archive = client.post("/api/v2/prompt-center/prompts/chat_demo/archive?scenario=chat")
         assert prompt_archive.status_code == 200
         assert prompt_archive.json()["archived"] is True
 
-        prompt_restore = client.post("/api/v1/platform/prompt-center/prompts/chat_demo/restore?scenario=chat")
+        prompt_restore = client.post("/api/v2/prompt-center/prompts/chat_demo/restore?scenario=chat")
         assert prompt_restore.status_code == 200
         assert prompt_restore.json()["archived"] is False
 
-        prompt_purge = client.delete("/api/v1/platform/prompt-center/prompts/chat_demo/purge?scenario=chat")
+        prompt_purge = client.delete("/api/v2/prompt-center/prompts/chat_demo/purge?scenario=chat")
         assert prompt_purge.status_code == 200
         assert prompt_purge.json() == {"ok": True, "key": "chat_demo", "kind": "prompt"}
 
-        persona_archive = client.post("/api/v1/platform/prompt-center/personas/chat_demo/archive?scenario=chat")
+        persona_archive = client.post("/api/v2/prompt-center/personas/chat_demo/archive?scenario=chat")
         assert persona_archive.status_code == 200
         assert persona_archive.json()["archived"] is True
 
-        persona_restore = client.post("/api/v1/platform/prompt-center/personas/chat_demo/restore?scenario=chat")
+        persona_restore = client.post("/api/v2/prompt-center/personas/chat_demo/restore?scenario=chat")
         assert persona_restore.status_code == 200
         assert persona_restore.json()["archived"] is False
 
-        persona_purge = client.delete("/api/v1/platform/prompt-center/personas/chat_demo/purge?scenario=chat")
+        persona_purge = client.delete("/api/v2/prompt-center/personas/chat_demo/purge?scenario=chat")
         assert persona_purge.status_code == 200
         assert persona_purge.json() == {"ok": True, "key": "chat_demo", "kind": "persona"}
 
@@ -222,19 +222,19 @@ def test_tool_archive_restore_and_purge_routes(monkeypatch) -> None:
     )
 
     with _client(monkeypatch) as client:
-        archive = client.post("/api/v1/platform/tool-center/tools/demo_tool/archive")
+        archive = client.post("/api/v2/tool-center/tools/demo_tool/archive")
         assert archive.status_code == 200
         assert archive.json()["archived"] is True
         assert deleted_tool_ids == ["tool-1"]
 
-        restore = client.post("/api/v1/platform/tool-center/tools/demo_tool/restore")
+        restore = client.post("/api/v2/tool-center/tools/demo_tool/restore")
         assert restore.status_code == 200
         assert restore.json()["archived"] is False
         assert created_tools and created_tools[0]["source_code"] == registry.source_code
 
-        archive_again = client.post("/api/v1/platform/tool-center/tools/demo_tool/archive")
+        archive_again = client.post("/api/v2/tool-center/tools/demo_tool/archive")
         assert archive_again.status_code == 200
 
-        purge = client.delete("/api/v1/platform/tool-center/tools/demo_tool/purge")
+        purge = client.delete("/api/v2/tool-center/tools/demo_tool/purge")
         assert purge.status_code == 200
         assert purge.json() == {"ok": True, "slug": "demo_tool", "kind": "custom_tool"}

@@ -115,7 +115,7 @@ run_cmd "compose_ps" "cd '${PROJECT_ROOT}' && ${COMPOSE_CMD} --env-file '${ENV_F
 
 if [[ -f "${PROJECT_ROOT}/${ENV_FILE}" ]]; then
   log "Writing allowlisted environment summary from ${ENV_FILE}"
-  grep -E '^(COMPOSE_PROJECT_NAME|LETTA_SERVER_IMAGE|LETTA_DB_HOST|LETTA_PG_INTERNAL_PORT|LETTA_REDIS_HOST|LETTA_REDIS_PORT|LETTA_API_PORT|LETTA_DEBUG|ADE_FRONTEND_BIND_HOST|ADE_INTERNAL_BIND_HOST|ADE_FRONTEND_PORT|AGENT_PLATFORM_API_PORT|MODEL_ROUTER_PORT|MODEL_ROUTER_CACHE_TTL_SECONDS|MODEL_ROUTER_DISCOVERY_TIMEOUT_SECONDS|MODEL_ROUTER_REQUEST_TIMEOUT_SECONDS|MODEL_ROUTER_SOURCES_FILE|MODEL_ROUTER_MODEL_PROFILES_FILE|AGENT_PLATFORM_AUTH_ENABLED|AGENT_PLATFORM_MODEL_ROUTER_BASE_URL|AGENT_PLATFORM_PERSONA_DB_PATH|AGENT_PLATFORM_PERSONA_SEED_JSONL_PATH)=' \
+  grep -E '^(COMPOSE_PROJECT_NAME|LETTA_SERVER_IMAGE|LETTA_DB_HOST|LETTA_PG_INTERNAL_PORT|LETTA_REDIS_HOST|LETTA_REDIS_PORT|LETTA_API_PORT|LETTA_DEBUG|ADE_WEB_BIND_HOST|ADE_INTERNAL_BIND_HOST|ADE_WEB_PORT|ADE_API_API_PORT|MODEL_ROUTER_PORT|MODEL_ROUTER_CACHE_TTL_SECONDS|MODEL_ROUTER_DISCOVERY_TIMEOUT_SECONDS|MODEL_ROUTER_REQUEST_TIMEOUT_SECONDS|MODEL_ROUTER_SOURCES_FILE|MODEL_ROUTER_MODEL_PROFILES_FILE|ADE_API_AUTH_ENABLED|ADE_API_MODEL_ROUTER_BASE_URL|ADE_API_PERSONA_DB_PATH|ADE_API_PERSONA_SEED_JSONL_PATH)=' \
     "${PROJECT_ROOT}/${ENV_FILE}" | redact_stream >"${OUT_DIR}/env_safe_summary.txt" || true
 else
   log "WARN: env file not found at ${PROJECT_ROOT}/${ENV_FILE}"
@@ -154,14 +154,14 @@ fi
 
 AGENT_API_CID="$(get_service_cid agent_platform_api)"
 if [[ -n "${AGENT_API_CID}" ]]; then
-  run_cmd "agent_platform_api_env_selected" "docker exec '${AGENT_API_CID}' /bin/sh -lc \"env | grep -E '^(AGENT_PLATFORM_MODEL_ROUTER_BASE_URL|AGENT_PLATFORM_COMMENTING_TIMEOUT_SECONDS|AGENT_PLATFORM_COMMENTING_MAX_TOKENS|AGENT_PLATFORM_COMMENTING_TASK_SHAPE|LETTA_BASE_URL)='\""
+  run_cmd "agent_platform_api_env_selected" "docker exec '${AGENT_API_CID}' /bin/sh -lc \"env | grep -E '^(ADE_API_MODEL_ROUTER_BASE_URL|ADE_API_COMMENTING_TIMEOUT_SECONDS|ADE_API_COMMENTING_MAX_TOKENS|ADE_API_COMMENTING_TASK_SHAPE|LETTA_BASE_URL)='\""
 fi
 
 MODEL_ROUTER_CID="$(get_service_cid model_router)"
 if [[ -n "${MODEL_ROUTER_CID}" ]]; then
   run_cmd "model_router_env_selected" "docker exec '${MODEL_ROUTER_CID}' /bin/sh -lc \"env | grep -E '^(MODEL_ROUTER_SOURCES_FILE|MODEL_ROUTER_MODEL_PROFILES_FILE|MODEL_ROUTER_CACHE_TTL_SECONDS|MODEL_ROUTER_DISCOVERY_TIMEOUT_SECONDS|MODEL_ROUTER_REQUEST_TIMEOUT_SECONDS)='\""
-  run_cmd "model_router_sources_file" "docker exec '${MODEL_ROUTER_CID}' /bin/sh -lc \"python -m json.tool \\\"\${MODEL_ROUTER_SOURCES_FILE:-config/model_router_sources.json}\\\"\""
-  run_cmd "model_router_model_profiles_file" "docker exec '${MODEL_ROUTER_CID}' /bin/sh -lc \"python -m json.tool \\\"\${MODEL_ROUTER_MODEL_PROFILES_FILE:-config/model_router_model_profiles.json}\\\"\""
+  run_cmd "model_router_sources_file" "docker exec '${MODEL_ROUTER_CID}' /bin/sh -lc \"python -m json.tool \\\"\${MODEL_ROUTER_SOURCES_FILE:-config/model-router/sources.json}\\\"\""
+  run_cmd "model_router_model_profiles_file" "docker exec '${MODEL_ROUTER_CID}' /bin/sh -lc \"python -m json.tool \\\"\${MODEL_ROUTER_MODEL_PROFILES_FILE:-config/model-router/model-profiles.json}\\\"\""
 fi
 
 run_cmd "probe_host_openapi" "python3 -c \"import urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:8283/openapi.json', timeout=5); print('status', getattr(resp, 'status', None)); resp.read(1); print('host_openapi_ok')\""
@@ -169,7 +169,7 @@ run_cmd "probe_host_openapi_curl" "curl -sS -D '${OUT_DIR}/probe_host_openapi_he
 run_cmd "probe_dns_ark" "getent hosts ark.cn-beijing.volces.com || true"
 run_cmd "probe_model_router_health" "python3 -c \"import json,urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:8290/v1/health', timeout=10); print(json.dumps(json.load(resp), indent=2))\""
 run_cmd "probe_model_router_catalog" "python3 -c \"import json,urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:8290/v1/router/model-catalog', timeout=10); payload=json.load(resp); summary={'generated_at': payload.get('generated_at'), 'sources': [{'id': item.get('id'), 'base_url': item.get('base_url'), 'status': item.get('status'), 'detail': item.get('detail'), 'allowlist_applied': item.get('allowlist_applied'), 'raw_model_count': item.get('raw_model_count'), 'filtered_model_count': item.get('filtered_model_count')} for item in payload.get('sources', [])], 'models': [{'id': item.get('router_model_id'), 'profile_applied': item.get('profile_applied'), 'supports_top_k': item.get('supports_top_k'), 'supports_thinking': item.get('supports_thinking'), 'thinking_default_enabled': item.get('thinking_default_enabled'), 'agent_studio_compatible': item.get('agent_studio_compatible'), 'sampling_defaults': item.get('sampling_defaults')} for item in payload.get('items', [])]}; print(json.dumps(summary, indent=2))\""
-run_cmd "probe_agent_platform_health" "python3 -c \"import json,urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:8284/api/v1/health', timeout=10); print(json.dumps(json.load(resp), indent=2))\""
+run_cmd "probe_agent_platform_health" "python3 -c \"import json,urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:8284/api/v2/health', timeout=10); print(json.dumps(json.load(resp), indent=2))\""
 run_cmd "ark_allowlist_summary" "python3 -c \"import json, pathlib; path=pathlib.Path('agent_platform_api/catalog_data/ark_chat_probe_report.json'); payload=json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {'missing': True}; summary={'path': str(path), 'source_id': payload.get('source_id'), 'checked_at': payload.get('checked_at'), 'probe_mode': payload.get('probe_mode'), 'raw_model_count': payload.get('raw_model_count'), 'usable_models': payload.get('usable_models', [])}; print(json.dumps(summary, indent=2, ensure_ascii=False))\""
 
 ARCHIVE="${OUT_DIR}.tar.gz"

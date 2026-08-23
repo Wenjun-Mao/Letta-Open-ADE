@@ -13,5 +13,5 @@ The repository previously carried generated exploratory notebooks and a local
 copy of the MemGPT paper under `docs/`. They were removed because they were
 unreferenced, bypassed the Agent Platform API, and could drift from the pinned
 Letta server and SDK. Recreate experiments as self-contained workflows under
-`evals/` when they measure product behavior, or under a documented `examples/`
+`workflows/evals/` when they measure product behavior, or under a documented `examples/`
 directory when they demonstrate a maintained integration.

@@ -16,10 +16,10 @@
 - Use Python 3.12 and locked `uv` dependencies.
 - Keep Pydantic contracts under `agent_platform_api/models/` and feature logic in
   cohesive services, registries, clients, or routers.
-- Keep frontend feature modules under `frontend-ade/app/<feature>/` and API clients
-  under `frontend-ade/lib/api/`.
+- Keep frontend feature modules under `apps/ade-web/app/<feature>/` and API clients
+  under `apps/ade-web/lib/api/`.
 - Keep workflow-specific runner, config, fixtures, docs, and ignored outputs
-  together under `evals/<workflow>/`.
+  together under `workflows/evals/<workflow>/`.
 - Do not create generic `utils` or compatibility facades. Split a module only when
   its current owner actually loses a responsibility.
 

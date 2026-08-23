@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from agent_platform_api.services.labeling_requests import (
+from ade_api.services.labeling_requests import (
     build_label_repair_request_payload,
     build_label_request_payload,
 )
-from agent_platform_api.services.labeling_responses import (
+from ade_api.services.labeling_responses import (
     append_finish_reason_diagnostic,
     build_label_generation_result,
     extract_validated_label_response,

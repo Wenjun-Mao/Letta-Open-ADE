@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import asyncio
 
-import agent_platform_api.options.catalog as options_catalog
-import agent_platform_api.options.letta_catalog as letta_catalog
-from agent_platform_api.routers import core, platform_meta
+import ade_api.options.catalog as options_catalog
+import ade_api.options.letta_catalog as letta_catalog
+from ade_api.routers import core, platform_meta
 
 
 class _FakeRouterClient:

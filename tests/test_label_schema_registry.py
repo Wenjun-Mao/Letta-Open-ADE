@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from agent_platform_api.registries.label_schema import (
+from ade_api.registries.label_schema import (
     DEFAULT_LABEL_SCHEMA_KEY,
     LabelSchemaRegistry,
     LabelSchemaRegistryError,

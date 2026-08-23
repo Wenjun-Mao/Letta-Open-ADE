@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import pytest
 
-from agent_platform_api.services.commenting_requests import (
+from ade_api.services.commenting_requests import (
     build_comment_request_payload,
     build_structured_output_compatibility_payload,
 )
-from agent_platform_api.services.commenting_responses import (
+from ade_api.services.commenting_responses import (
     map_comment_provider_response,
 )
 

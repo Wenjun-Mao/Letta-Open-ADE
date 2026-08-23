@@ -14,8 +14,8 @@ This documentation describes the local Agent Platform API used by ADE.
 	- Letta server API: `http://127.0.0.1:8283`
 	- Model router: `http://127.0.0.1:8290`
 - API switch:
-	- Set `AGENT_PLATFORM_API_ENABLED=1` to enable routes.
-	- Set `AGENT_PLATFORM_API_ENABLED=0` to hard-disable platform routes (returns 503).
+	- Set `ADE_API_API_ENABLED=1` to enable routes.
+	- Set `ADE_API_API_ENABLED=0` to hard-disable platform routes (returns 503).
 - Browser requests use ADE's same-origin proxy. Direct API clients authenticate
   with the configured reader, operator, or admin Bearer key.
 - The stack is loopback-bound and intended for local development. Public ingress
@@ -41,15 +41,15 @@ The recommended deletion path is intentionally two-step:
 
 Key endpoints:
 
-- `POST /api/v1/platform/agents/{agent_id}/archive`
-- `POST /api/v1/platform/agents/{agent_id}/restore`
-- `DELETE /api/v1/platform/agents/{agent_id}/purge`
-- `DELETE /api/v1/agents/{agent_id}` (alias for purging archived agents)
-- `GET /api/v1/agents?include_archived=true`
+- `POST /api/v2/agent-studio/agents/{agent_id}/archive`
+- `POST /api/v2/agent-studio/agents/{agent_id}/restore`
+- `DELETE /api/v2/agent-studio/agents/{agent_id}/purge`
+- `DELETE /api/v2/agent-studio/agents/{agent_id}` (alias for purging archived agents)
+- `GET /api/v2/agent-studio/agents?include_archived=true`
 
 Behavior notes:
 
-- Archived agents are excluded from `GET /api/v1/agents` by default.
+- Archived agents are excluded from `GET /api/v2/agent-studio/agents` by default.
 - Runtime and control mutations against archived agents return `409` until restored.
 - Purge requires archived state and returns `400` for non-archived agents.
 
@@ -75,9 +75,9 @@ Common status patterns:
 - Codebase map: `docs/codebase-map.md`
 - Maintenance roadmap: `docs/maintenance-roadmap.md`
 - Upstream references: `docs/references.md`
-- OpenAPI artifact: `docs/openapi/agent-platform-openapi.json`
-- Frontend artifact: `frontend-ade/public/openapi/agent-platform-openapi.json`
-- Chinese OpenAPI artifact: `docs/openapi/agent-platform-openapi-zh.json`
+- OpenAPI artifact: `docs/openapi/ade-api-openapi.json`
+- Frontend artifact: `apps/ade-web/public/openapi/ade-api-openapi.json`
+- Chinese OpenAPI artifact: `docs/openapi/ade-api-openapi-zh.json`
 - Chinese docs pages: `docs/zh/`
 - Export script: `scripts/export_openapi.py`
 - Manual zh script: `scripts/generate_openapi_zh_manual.py`

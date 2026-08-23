@@ -3,9 +3,9 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from agent_platform_api.auth import PlatformPrincipal, PlatformRole
-from agent_platform_api.models.commenting import CommentingGenerateRequest
-from agent_platform_api.routers import commenting
+from ade_api.auth import PlatformPrincipal, PlatformRole
+from ade_api.models.commenting import CommentingGenerateRequest
+from ade_api.routers import commenting
 
 
 def test_commenting_generate_uses_model_key_and_selected_source_connection(

@@ -4,16 +4,16 @@ import argparse
 import json
 from pathlib import Path
 
-from evals.chat_memory_eval.artifacts import ArtifactWriter, build_summary
-from evals.chat_memory_eval.config import (
+from workflows.evals.chat_memory_eval.artifacts import ArtifactWriter, build_summary
+from workflows.evals.chat_memory_eval.config import (
     apply_cli_overrides,
     load_config,
     router_model_key_from_agent_handle,
     router_v1_base_url,
 )
-from evals.chat_memory_eval.fixtures import ExpectedFact, load_fixture
-from evals.chat_memory_eval.judge import _parse_json_object
-from evals.chat_memory_eval.scoring import (
+from workflows.evals.chat_memory_eval.fixtures import ExpectedFact, load_fixture
+from workflows.evals.chat_memory_eval.judge import _parse_json_object
+from workflows.evals.chat_memory_eval.scoring import (
     deterministic_round_score,
     score_expected_facts,
 )
@@ -23,7 +23,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_chat_memory_config_loads_defaults_and_cli_overrides(tmp_path) -> None:
-    config = load_config(PROJECT_ROOT / "evals" / "chat_memory_eval" / "config.toml")
+    config = load_config(PROJECT_ROOT / "workflows" / "evals" / "chat_memory_eval" / "config.toml")
     args = argparse.Namespace(
         api_base_url="",
         output_dir=str(tmp_path),
@@ -51,7 +51,7 @@ def test_chat_memory_config_loads_defaults_and_cli_overrides(tmp_path) -> None:
 
 def test_chat_memory_fixture_loads_restored_conversation() -> None:
     fixture = load_fixture(
-        PROJECT_ROOT / "evals" / "chat_memory_eval" / "fixtures",
+        PROJECT_ROOT / "workflows" / "evals" / "chat_memory_eval" / "fixtures",
         "recent_user_chat_turns",
     )
 
@@ -107,10 +107,10 @@ def test_host_eval_does_not_inherit_container_only_router_hostname(monkeypatch) 
     monkeypatch.setenv("CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL", "")
     monkeypatch.setenv("MODEL_ROUTER_BASE_URL", "")
     monkeypatch.setenv(
-        "AGENT_PLATFORM_MODEL_ROUTER_BASE_URL", "http://model_router:8290"
+        "ADE_API_MODEL_ROUTER_BASE_URL", "http://model_router:8290"
     )
 
-    config = load_config(PROJECT_ROOT / "evals" / "chat_memory_eval" / "config.toml")
+    config = load_config(PROJECT_ROOT / "workflows" / "evals" / "chat_memory_eval" / "config.toml")
 
     assert router_v1_base_url(config) == "http://127.0.0.1:8290/v1"
 
@@ -120,7 +120,7 @@ def test_chat_memory_eval_accepts_explicit_router_override(monkeypatch) -> None:
         "CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL", "http://router.internal:8290"
     )
 
-    config = load_config(PROJECT_ROOT / "evals" / "chat_memory_eval" / "config.toml")
+    config = load_config(PROJECT_ROOT / "workflows" / "evals" / "chat_memory_eval" / "config.toml")
 
     assert router_v1_base_url(config) == "http://router.internal:8290/v1"
 

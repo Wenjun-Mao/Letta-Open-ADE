@@ -3,12 +3,12 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
-import agent_platform_api.services.agent_platform as agent_platform_service_module
+import ade_api.services.agent_platform as agent_platform_service_module
 import pytest
-from agent_platform_api.models.agents import ChatRequest
-from agent_platform_api.models.platform import PlatformToolTestInvokeRequest
-from agent_platform_api.routers import core, platform_meta
-from agent_platform_api.services.agent_platform import (
+from ade_api.models.agents import ChatRequest
+from ade_api.models.platform import PlatformToolTestInvokeRequest
+from ade_api.routers import core, platform_meta
+from ade_api.services.agent_platform import (
     DEFAULT_RUNTIME_RETRY_COUNT,
     DEFAULT_RUNTIME_TIMEOUT_SECONDS,
     AgentPlatformService,
@@ -144,8 +144,8 @@ def test_api_chat_forwards_timeout_and_retry_to_service(monkeypatch) -> None:
 
     response = asyncio.run(
         core.api_chat(
+            "agent-1",
             ChatRequest(
-                agent_id="agent-1",
                 message="hello",
                 timeout_seconds=120,
                 retry_count=3,

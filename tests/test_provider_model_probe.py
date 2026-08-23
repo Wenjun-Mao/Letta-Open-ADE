@@ -3,7 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from agent_platform_api.llm.provider_model_probe import (
+from ade_api.llm.provider_model_probe import (
     ProbeCatalogAuthError,
     RetryableProbeError,
     SourceProbeReport,
@@ -11,7 +11,7 @@ from agent_platform_api.llm.provider_model_probe import (
     probe_chat_model,
     probe_source_chat_models,
 )
-import agent_platform_api.llm.provider_model_probe as provider_model_probe
+import ade_api.llm.provider_model_probe as provider_model_probe
 from model_router.catalog import RouterModelRecord
 from model_router.settings import RouterSourceConfig
 
