@@ -26,6 +26,10 @@ Outputs stream to `evals/chat_memory_eval/outputs/` as timestamped CSV, JSONL, a
 - Per-turn tool calls and memory-tool calls are recorded when visible in the Agent Platform response.
 
 The optional LLM judge is diagnostic only. The process exit code uses deterministic checks.
+Host-launched runs use `http://127.0.0.1:8290/v1` for the judge by default;
+override it with `CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL` when needed. Compose
+sets that workflow-specific variable to the internal `model_router` hostname for
+Test Center runs, so host commands never inherit a Docker-only service address.
 
 ## Config
 

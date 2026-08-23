@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -37,6 +39,15 @@ jobs:
 
       - name: Run Python fatal-error lint
         run: uv run ruff check agent_platform_api model_router ade_core evals scripts tests
+
+      - name: Check formatting on changed Python files
+        env:
+          PYTHON_FORMAT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -z "$PYTHON_FORMAT_BASE" ] || ! git cat-file -e "$PYTHON_FORMAT_BASE^{commit}" 2>/dev/null; then
+            PYTHON_FORMAT_BASE="$(git rev-parse HEAD^)"
+          fi
+          uv run python scripts/check_python_format.py --base "$PYTHON_FORMAT_BASE"
 
       - name: Check English OpenAPI artifact drift
         run: uv run python scripts/export_openapi.py --check

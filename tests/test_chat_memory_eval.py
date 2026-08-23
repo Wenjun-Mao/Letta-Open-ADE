@@ -5,10 +5,18 @@ import json
 from pathlib import Path
 
 from evals.chat_memory_eval.artifacts import ArtifactWriter, build_summary
-from evals.chat_memory_eval.config import apply_cli_overrides, load_config, router_model_key_from_agent_handle
+from evals.chat_memory_eval.config import (
+    apply_cli_overrides,
+    load_config,
+    router_model_key_from_agent_handle,
+    router_v1_base_url,
+)
 from evals.chat_memory_eval.fixtures import ExpectedFact, load_fixture
 from evals.chat_memory_eval.judge import _parse_json_object
-from evals.chat_memory_eval.scoring import deterministic_round_score, score_expected_facts
+from evals.chat_memory_eval.scoring import (
+    deterministic_round_score,
+    score_expected_facts,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -49,7 +57,11 @@ def test_chat_memory_fixture_loads_restored_conversation() -> None:
 
     assert fixture.key == "recent_user_chat_turns"
     assert fixture.turns[0] == "你好，我叫张伟"
-    assert [item.key for item in fixture.expected_facts] == ["user_name", "dog_name", "dog_breed"]
+    assert [item.key for item in fixture.expected_facts] == [
+        "user_name",
+        "dog_name",
+        "dog_breed",
+    ]
 
 
 def test_expected_fact_alias_matching_is_case_insensitive() -> None:
@@ -65,7 +77,9 @@ def test_expected_fact_alias_matching_is_case_insensitive() -> None:
     assert [score.passed for score in scores] == [True, True, True]
 
 
-def test_deterministic_round_score_requires_memory_facts_and_no_forbidden_hits() -> None:
+def test_deterministic_round_score_requires_memory_facts_and_no_forbidden_hits() -> (
+    None
+):
     score = deterministic_round_score(
         assistant_texts=["我是机器人，但是可以陪你聊天"],
         initial_human_memory="",
@@ -89,8 +103,33 @@ def test_router_model_key_derives_from_agent_studio_handle() -> None:
     )
 
 
+def test_host_eval_does_not_inherit_container_only_router_hostname(monkeypatch) -> None:
+    monkeypatch.setenv("CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL", "")
+    monkeypatch.setenv("MODEL_ROUTER_BASE_URL", "")
+    monkeypatch.setenv(
+        "AGENT_PLATFORM_MODEL_ROUTER_BASE_URL", "http://model_router:8290"
+    )
+
+    config = load_config(PROJECT_ROOT / "evals" / "chat_memory_eval" / "config.toml")
+
+    assert router_v1_base_url(config) == "http://127.0.0.1:8290/v1"
+
+
+def test_chat_memory_eval_accepts_explicit_router_override(monkeypatch) -> None:
+    monkeypatch.setenv(
+        "CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL", "http://router.internal:8290"
+    )
+
+    config = load_config(PROJECT_ROOT / "evals" / "chat_memory_eval" / "config.toml")
+
+    assert router_v1_base_url(config) == "http://router.internal:8290/v1"
+
+
 def test_judge_json_parser_recovers_object_from_text() -> None:
-    assert _parse_json_object('notes\n{"pass": true, "score": 88}\nend') == {"pass": True, "score": 88}
+    assert _parse_json_object('notes\n{"pass": true, "score": 88}\nend') == {
+        "pass": True,
+        "score": 88,
+    }
 
 
 def test_chat_memory_artifact_writer_streams_csv_and_jsonl(tmp_path) -> None:
@@ -108,6 +147,14 @@ def test_chat_memory_artifact_writer_streams_csv_and_jsonl(tmp_path) -> None:
         writer.write_round(row, {"raw": row})
 
     assert "run_id" in csv_path.read_text(encoding="utf-8-sig")
-    assert json.loads(jsonl_path.read_text(encoding="utf-8"))["raw"]["run_id"] == "run-1"
-    summary = build_summary(run_id="run-1", csv_path=csv_path, jsonl_path=jsonl_path, summary_path=tmp_path / "s.json", rows=[row])
+    assert (
+        json.loads(jsonl_path.read_text(encoding="utf-8"))["raw"]["run_id"] == "run-1"
+    )
+    summary = build_summary(
+        run_id="run-1",
+        csv_path=csv_path,
+        jsonl_path=jsonl_path,
+        summary_path=tmp_path / "s.json",
+        rows=[row],
+    )
     assert summary["rounds_passed"] == 1

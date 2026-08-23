@@ -10,7 +10,9 @@ from agent_platform_api.routers import labeling
 from agent_platform_api.services.labeling import LabelingValidationError
 
 
-def test_labeling_generate_uses_model_key_and_selected_source_connection(monkeypatch) -> None:
+def test_labeling_generate_uses_model_key_and_selected_source_connection(
+    monkeypatch,
+) -> None:
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(labeling, "ensure_platform_api_enabled", lambda: None)
@@ -75,23 +77,24 @@ def test_labeling_generate_uses_model_key_and_selected_source_connection(monkeyp
             "top_k": kwargs["top_k"],
         }
 
-    monkeypatch.setattr(labeling.labeling_service, "generate_labels", fake_generate_labels)
+    monkeypatch.setattr(
+        labeling.labeling_service, "generate_labels", fake_generate_labels
+    )
 
     payload = labeling.api_labeling_generate(
-            LabelingGenerateRequest(
-                input="Messi scored.",
-                prompt_key="label_generic_entities_v1",
-                model_key="local_llama_server::gemma4",
-                max_tokens=256,
-                timeout_seconds=45,
-                repair_retry_count=1,
-                temperature=0.2,
-                top_p=0.9,
-                top_k=64,
-                include_diagnostics=True,
-            )
-            ,
-            PlatformPrincipal(role=PlatformRole.ADMIN, key_name="test"),
+        LabelingGenerateRequest(
+            input="Messi scored.",
+            prompt_key="label_generic_entities_v1",
+            model_key="local_llama_server::gemma4",
+            max_tokens=256,
+            timeout_seconds=45,
+            repair_retry_count=1,
+            temperature=0.2,
+            top_p=0.9,
+            top_k=64,
+            include_diagnostics=True,
+        ),
+        PlatformPrincipal(role=PlatformRole.ADMIN, key_name="test"),
     )
 
     assert captured["base_url"] == "http://127.0.0.1:8081/v1"
@@ -109,6 +112,8 @@ def test_labeling_generate_uses_model_key_and_selected_source_connection(monkeyp
     assert payload["top_p"] == 0.9
     assert payload["top_k"] == 64
     assert payload["result"]["people"] == ["Messi"]
+    assert payload["raw_request"] == {"model": "gemma4"}
+    assert payload["raw_reply"] == {"choices": []}
 
 
 @pytest.mark.parametrize(
@@ -121,7 +126,9 @@ def test_labeling_generate_uses_model_key_and_selected_source_connection(monkeyp
         ("top_k", 0),
     ],
 )
-def test_labeling_generate_request_rejects_invalid_sampling_ranges(field: str, value: float | int) -> None:
+def test_labeling_generate_request_rejects_invalid_sampling_ranges(
+    field: str, value: float | int
+) -> None:
     kwargs = {
         "input": "Messi scored.",
         "prompt_key": "label_generic_entities_v1",
@@ -181,19 +188,21 @@ def test_labeling_generate_returns_validation_errors_on_failure(monkeypatch) -> 
         lambda **kwargs: (_ for _ in ()).throw(
             LabelingValidationError(
                 "Label provider returned invalid structured output.",
-                validation_errors=["people[0] must exactly match a substring in the input article."],
+                validation_errors=[
+                    "people[0] must exactly match a substring in the input article."
+                ],
             )
         ),
     )
 
     with pytest.raises(HTTPException) as exc_info:
         labeling.api_labeling_generate(
-                LabelingGenerateRequest(
-                    input="Messi scored.",
-                    prompt_key="label_generic_entities_v1",
-                    model_key="local_llama_server::gemma4",
-                ),
-                PlatformPrincipal(role=PlatformRole.ADMIN, key_name="test"),
+            LabelingGenerateRequest(
+                input="Messi scored.",
+                prompt_key="label_generic_entities_v1",
+                model_key="local_llama_server::gemma4",
+            ),
+            PlatformPrincipal(role=PlatformRole.ADMIN, key_name="test"),
         )
 
     assert exc_info.value.status_code == 400

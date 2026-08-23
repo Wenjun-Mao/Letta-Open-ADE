@@ -4,26 +4,28 @@ title: ADE 前端范围
 
 # ADE 前端范围
 
-新的 ADE 前端是一个独立的 Next.js + TypeScript 应用，通过共享的 `/api/v1/...` 接口访问 `agent_platform_api` 后端。
+ADE 前端是主要的运维界面。它是独立的 Next.js + TypeScript 应用，通过同源
+`/api/v1/...` 代理，使用仅存在于服务端的凭据访问 `agent_platform_api`。
 
-## MVP 模块
+## 维护中的模块
 
 - Dashboard
 - Agent Studio
-- Prompt and Persona Lab
-- Toolbench（含工具发现）
+- Comment Lab
+- Label Lab
+- Schema Center
+- Prompt Center
+- Tool Center
 - Test Center
-- API Docs 入口
+- API Docs
 
-## Phase-2 模块
+旧的 `/prompt-persona-lab` 与 `/toolbench` 地址只负责重定向到对应 Center，
+不再维护第二套实现。
 
-- 工具 Schema 浏览器与工具测试调用 UI
-- Prompt 对比与修订历史
-- 更丰富的运行产物浏览与下载能力
-- 稳定性趋势看板
+## 运行边界
 
-## 迁移行为
-
-- 在前端切换期间保持后端 API 接口稳定。
-- 使用迁移状态接口在 ADE UI 中展示当前模式。
-- 回滚路径是前端部署/配置级，而不是数据库 Schema 回滚。
+- Agent Studio 管理持久化 Letta 智能体、记忆层、已挂载工具与执行轨迹。
+- Comment Lab 与 Label Lab 是无状态生成工作区。
+- Prompt、Schema 与 Tool Center 管理经过审阅的工作区内容及其生命周期。
+- Test Center 启动维护中的检查与评测，并读取每次运行独立的产物。
+- 浏览器代码不会获得 Provider 凭据或 Agent Platform API Key。

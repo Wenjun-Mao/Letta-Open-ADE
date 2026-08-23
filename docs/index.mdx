@@ -4,17 +4,23 @@ title: Agent Platform API
 
 # Agent Platform API
 
-This documentation tracks the local Agent Platform API used by the ADE migration.
+This documentation describes the local Agent Platform API used by ADE.
 
 ## Environment assumptions
 
 - Local development defaults:
-	- Dev UI API: `http://127.0.0.1:8284`
+	- ADE frontend: `http://127.0.0.1:3000`
+	- Agent Platform API: `http://127.0.0.1:8284`
 	- Letta server API: `http://127.0.0.1:8283`
+	- Model router: `http://127.0.0.1:8290`
 - API switch:
 	- Set `AGENT_PLATFORM_API_ENABLED=1` to enable routes.
 	- Set `AGENT_PLATFORM_API_ENABLED=0` to hard-disable platform routes (returns 503).
-- The current local stack is intended for trusted internal development use. Add auth and authz before exposing beyond local or private-network contexts.
+- Browser requests use ADE's same-origin proxy. Direct API clients authenticate
+  with the configured reader, operator, or admin Bearer key.
+- The stack is loopback-bound and intended for local development. Public ingress
+  still requires TLS, managed secrets, rate limits, monitoring, and a deployment
+  threat review.
 
 ## What this includes
 
@@ -22,7 +28,8 @@ This documentation tracks the local Agent Platform API used by the ADE migration
 - Control endpoints for prompt, model, memory block, and tool mutations.
 - Two-step safe agent deletion lifecycle (archive -> restore -> purge).
 - Test orchestration endpoints for checks and runners.
-- Migration status endpoints for dual-run rollout visibility.
+- Stateless Comment Lab and schema-driven Label Lab generation endpoints.
+- Prompt, persona, schema, and custom-tool lifecycle endpoints.
 
 ## Agent lifecycle (safe delete)
 
@@ -66,6 +73,8 @@ Common status patterns:
 ## Source of truth
 
 - Codebase map: `docs/codebase-map.md`
+- Maintenance roadmap: `docs/maintenance-roadmap.md`
+- Upstream references: `docs/references.md`
 - OpenAPI artifact: `docs/openapi/agent-platform-openapi.json`
 - Frontend artifact: `frontend-ade/public/openapi/agent-platform-openapi.json`
 - Chinese OpenAPI artifact: `docs/openapi/agent-platform-openapi-zh.json`

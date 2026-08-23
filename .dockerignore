@@ -2,7 +2,6 @@
 .env
 .venv/
 __pycache__/
-.marimo/
 data/pgdata/
 data/nltk_data/
 data/runtime/
@@ -18,7 +17,6 @@ letta-souce-code/
 .vscode/
 bruno/
 memory-export/
-notebooks/
 temps/
 frontend-ade/node_modules/
 frontend-ade/.next/

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from agent_platform_api.clients.openai_chat import (
@@ -11,16 +10,12 @@ from agent_platform_api.clients.openai_chat import (
     resolve_provider_model,
 )
 from agent_platform_api.settings import get_settings
-from agent_platform_api.services.commenting_helpers import (
-    build_all_in_system_prompt,
-    build_classic_user_payload,
-    build_structured_system_prompt,
-    extract_comment_from_reasoning,
-    extract_structured_comment,
-    is_publishable_comment,
-    normalize_content,
-    sanitize_comment,
-    structured_response_format,
+from agent_platform_api.services.commenting_requests import (
+    build_comment_request_payload,
+    build_structured_output_compatibility_payload,
+)
+from agent_platform_api.services.commenting_responses import (
+    map_comment_provider_response,
 )
 
 
@@ -36,15 +31,14 @@ _RETRYABLE_COMMENTING_EXCEPTIONS = RETRYABLE_OPENAI_CHAT_EXCEPTIONS
 class CommentingService:
     """Stateless comment generation through an OpenAI-compatible chat completions API."""
 
-    _MODEL_HANDLE_PREFIXES = (
-        "lmstudio_openai/",
-        "openai-proxy/",
-        "openai/",
-        "anthropic/",
-    )
     _TASK_SHAPES = {"classic", "all_in_system", "structured_output"}
 
-    def __init__(self, *, settings_factory=get_settings, provider_client: OpenAIChatClient | None = None):
+    def __init__(
+        self,
+        *,
+        settings_factory=get_settings,
+        provider_client: OpenAIChatClient | None = None,
+    ):
         self._settings_factory = settings_factory
         self._provider_client = provider_client or OpenAIChatClient()
 
@@ -67,25 +61,25 @@ class CommentingService:
 
     @staticmethod
     def _clamp_temperature(value: float | None) -> float:
-        return DEFAULT_COMMENTING_TEMPERATURE if value is None else max(0.0, min(2.0, float(value)))
+        return (
+            DEFAULT_COMMENTING_TEMPERATURE
+            if value is None
+            else max(0.0, min(2.0, float(value)))
+        )
 
     @staticmethod
     def _clamp_top_p(value: float | None) -> float:
-        return DEFAULT_COMMENTING_TOP_P if value is None else max(0.01, min(1.0, float(value)))
+        return (
+            DEFAULT_COMMENTING_TOP_P
+            if value is None
+            else max(0.01, min(1.0, float(value)))
+        )
 
     @staticmethod
     def _clamp_top_k(value: int | None) -> int | None:
         if value is None:
             return DEFAULT_COMMENTING_TOP_K
         return max(1, min(1000, int(value)))
-
-    @staticmethod
-    def _is_llama_cpp_adapter(source_adapter: str | None) -> bool:
-        return str(source_adapter or "").strip().lower() == "llama_cpp_server"
-
-    @staticmethod
-    def _is_vllm_adapter(source_adapter: str | None) -> bool:
-        return str(source_adapter or "").strip().lower() == "vllm_openai"
 
     @classmethod
     def _resolve_task_shape(cls, value: str | None) -> str:
@@ -100,7 +94,9 @@ class CommentingService:
         settings = self._settings_factory()
         return {
             "max_tokens": self._clamp_max_tokens(settings.commenting_max_tokens),
-            "timeout_seconds": self._clamp_timeout_seconds(settings.commenting_timeout_seconds),
+            "timeout_seconds": self._clamp_timeout_seconds(
+                settings.commenting_timeout_seconds
+            ),
             "task_shape": self._resolve_task_shape(settings.commenting_task_shape),
             "cache_prompt": bool(settings.commenting_cache_prompt),
             "temperature": self._clamp_temperature(settings.commenting_temperature),
@@ -142,39 +138,18 @@ class CommentingService:
     ) -> dict[str, Any]:
         return self._provider_client.run_with_retries(
             lambda: self._post_chat_completions_once(
-                    payload,
-                    base_url=base_url,
-                    api_key=api_key,
-                    timeout_seconds=timeout_seconds,
+                payload,
+                base_url=base_url,
+                api_key=api_key,
+                timeout_seconds=timeout_seconds,
             ),
             self._build_retrying(retry_count),
         )
 
     def _build_retrying(self, retry_count: int):
-        return self._provider_client.build_retrying(self._clamp_retry_count(retry_count))
-
-    @staticmethod
-    def _generation_result(
-        *,
-        content: str,
-        content_source: str,
-        selected_attempt: str,
-        finish_reason: str,
-        data: dict[str, Any],
-        payload: dict[str, Any],
-        runtime: dict[str, Any],
-    ) -> dict[str, Any]:
-        return {
-            "content": content,
-            "content_source": content_source,
-            "selected_attempt": selected_attempt,
-            "finish_reason": finish_reason,
-            "usage": data.get("usage", {}) if isinstance(data.get("usage", {}), dict) else {},
-            "received_at": datetime.now(timezone.utc).isoformat(),
-            "raw_request": payload,
-            "raw_reply": data,
-            **runtime,
-        }
+        return self._provider_client.build_retrying(
+            self._clamp_retry_count(retry_count)
+        )
 
     def generate_comment(
         self,
@@ -205,19 +180,43 @@ class CommentingService:
             raise ValueError("model is required")
 
         runtime_defaults = self.runtime_defaults()
-        resolved_max_tokens = runtime_defaults["max_tokens"] if max_tokens is None else self._clamp_max_tokens(max_tokens)
+        resolved_max_tokens = (
+            runtime_defaults["max_tokens"]
+            if max_tokens is None
+            else self._clamp_max_tokens(max_tokens)
+        )
         resolved_timeout_seconds = (
             runtime_defaults["timeout_seconds"]
             if timeout_seconds is None
             else self._clamp_timeout_seconds(timeout_seconds)
         )
         resolved_retry_count = self._clamp_retry_count(retry_count)
-        resolved_task_shape = runtime_defaults["task_shape"] if task_shape is None else self._resolve_task_shape(task_shape)
-        resolved_cache_prompt = bool(runtime_defaults["cache_prompt"]) if cache_prompt is None else bool(cache_prompt)
-        resolved_enable_thinking = False if enable_thinking is None else bool(enable_thinking)
-        resolved_temperature = float(runtime_defaults["temperature"]) if temperature is None else self._clamp_temperature(temperature)
-        resolved_top_p = float(runtime_defaults["top_p"]) if top_p is None else self._clamp_top_p(top_p)
-        resolved_top_k = runtime_defaults["top_k"] if top_k is None else self._clamp_top_k(top_k)
+        resolved_task_shape = (
+            runtime_defaults["task_shape"]
+            if task_shape is None
+            else self._resolve_task_shape(task_shape)
+        )
+        resolved_cache_prompt = (
+            bool(runtime_defaults["cache_prompt"])
+            if cache_prompt is None
+            else bool(cache_prompt)
+        )
+        resolved_enable_thinking = (
+            False if enable_thinking is None else bool(enable_thinking)
+        )
+        resolved_temperature = (
+            float(runtime_defaults["temperature"])
+            if temperature is None
+            else self._clamp_temperature(temperature)
+        )
+        resolved_top_p = (
+            float(runtime_defaults["top_p"])
+            if top_p is None
+            else self._clamp_top_p(top_p)
+        )
+        resolved_top_k = (
+            runtime_defaults["top_k"] if top_k is None else self._clamp_top_k(top_k)
+        )
         response_runtime = {
             "max_tokens": resolved_max_tokens,
             "timeout_seconds": resolved_timeout_seconds,
@@ -229,80 +228,21 @@ class CommentingService:
             "top_k": resolved_top_k,
         }
 
-        classic_payload = {
-            "model": resolved_model,
-            "messages": [
-                {"role": "system", "content": str(system_prompt or "")},
-                {
-                    "role": "user",
-                    "content": build_classic_user_payload(
-                        persona_prompt=persona_prompt,
-                        news_input=news_input,
-                    ),
-                },
-            ],
-            "temperature": resolved_temperature,
-            "top_p": resolved_top_p,
-            "max_tokens": resolved_max_tokens,
-        }
-
-        all_in_system_payload = {
-            "model": resolved_model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": build_all_in_system_prompt(
-                        system_prompt=system_prompt,
-                        persona_prompt=persona_prompt,
-                    ),
-                },
-                {"role": "user", "content": str(news_input or "").strip()},
-            ],
-            "temperature": resolved_temperature,
-            "top_p": resolved_top_p,
-            "max_tokens": resolved_max_tokens,
-        }
-
-        structured_output_payload = {
-            "model": resolved_model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": build_structured_system_prompt(
-                        system_prompt=system_prompt,
-                        persona_prompt=persona_prompt,
-                    ),
-                },
-                {"role": "user", "content": str(news_input or "").strip()},
-            ],
-            "temperature": resolved_temperature,
-            "top_p": resolved_top_p,
-            "max_tokens": resolved_max_tokens,
-            "response_format": structured_response_format(),
-        }
-
-        payload_by_shape: dict[str, dict[str, Any]] = {
-            "classic": classic_payload,
-            "all_in_system": all_in_system_payload,
-            "structured_output": structured_output_payload,
-        }
-
-        payload = payload_by_shape.get(resolved_task_shape, classic_payload)
-
-        if resolved_max_tokens == 0:
-            payload.pop("max_tokens", None)
-        if resolved_top_k is not None:
-            payload["top_k"] = resolved_top_k
-        if self._is_llama_cpp_adapter(source_adapter):
-            payload["cache_prompt"] = resolved_cache_prompt
-        if self._is_vllm_adapter(source_adapter) and enable_thinking is not None:
-            chat_template_kwargs = payload.get("chat_template_kwargs", {})
-            if not isinstance(chat_template_kwargs, dict):
-                chat_template_kwargs = {}
-            payload["chat_template_kwargs"] = {
-                **chat_template_kwargs,
-                "enable_thinking": resolved_enable_thinking,
-            }
+        payload = build_comment_request_payload(
+            model=resolved_model,
+            system_prompt=system_prompt,
+            persona_prompt=persona_prompt,
+            news_input=news_input,
+            task_shape=resolved_task_shape,
+            max_tokens=resolved_max_tokens,
+            cache_prompt=resolved_cache_prompt,
+            source_adapter=source_adapter,
+            enable_thinking=resolved_enable_thinking,
+            enable_thinking_is_explicit=enable_thinking is not None,
+            temperature=resolved_temperature,
+            top_p=resolved_top_p,
+            top_k=resolved_top_k,
+        )
 
         try:
             data = self._post_chat_completions(
@@ -322,8 +262,7 @@ class CommentingService:
             if "response_format" not in error_text and "json_schema" not in error_text:
                 raise
 
-            payload = dict(payload)
-            payload.pop("response_format", None)
+            payload = build_structured_output_compatibility_payload(payload)
             data = self._post_chat_completions(
                 payload,
                 base_url=resolved_base_url,
@@ -332,69 +271,12 @@ class CommentingService:
                 retry_count=resolved_retry_count,
             )
 
-        choices = data.get("choices", [])
-        if not isinstance(choices, list) or not choices:
-            raise ValueError(
-                f"Comment provider returned no choices; task_shape={resolved_task_shape}; max_tokens={resolved_max_tokens}"
-            )
-
-        message = choices[0].get("message", {}) if isinstance(choices[0], dict) else {}
-        finish_reason = str(choices[0].get("finish_reason", "") or "").strip().lower() if isinstance(choices[0], dict) else ""
-        content = normalize_content(message.get("content", ""))
-        reasoning = normalize_content(message.get("reasoning_content", "") or message.get("reasoning", ""))
-
-        if resolved_task_shape == "structured_output":
-            content = extract_structured_comment(content)
-            if not content:
-                reasoning_structured = extract_structured_comment(reasoning)
-                if reasoning_structured:
-                    cleaned_reasoning_structured = sanitize_comment(reasoning_structured)
-                    if is_publishable_comment(cleaned_reasoning_structured):
-                        return self._generation_result(
-                            content=cleaned_reasoning_structured,
-                            content_source="structured_json_reasoning_content",
-                            selected_attempt=resolved_task_shape,
-                            finish_reason=finish_reason,
-                            data=data,
-                            payload=payload,
-                            runtime=response_runtime,
-                        )
-
-        if content:
-            cleaned_content = sanitize_comment(content)
-            if is_publishable_comment(cleaned_content):
-                return self._generation_result(
-                    content=cleaned_content,
-                    content_source="assistant_content",
-                    selected_attempt=resolved_task_shape,
-                    finish_reason=finish_reason,
-                    data=data,
-                    payload=payload,
-                    runtime=response_runtime,
-                )
-
-        recovered = extract_comment_from_reasoning(reasoning)
-        if recovered:
-            cleaned_recovered = sanitize_comment(recovered)
-            if is_publishable_comment(cleaned_recovered):
-                return self._generation_result(
-                    content=cleaned_recovered,
-                    content_source="reasoning_tail_extraction",
-                    selected_attempt=resolved_task_shape,
-                    finish_reason=finish_reason,
-                    data=data,
-                    payload=payload,
-                    runtime=response_runtime,
-                )
-
-        if finish_reason and finish_reason != "stop":
-            raise ValueError(
-                "Comment provider finished without final content "
-                f"(finish_reason={finish_reason}); task_shape={resolved_task_shape}; max_tokens={resolved_max_tokens}"
-            )
-
-        raise ValueError(
-            f"Comment provider returned empty content; task_shape={resolved_task_shape}; max_tokens={resolved_max_tokens}"
+        return map_comment_provider_response(
+            data=data,
+            payload=payload,
+            runtime=response_runtime,
+            task_shape=resolved_task_shape,
+            max_tokens=resolved_max_tokens,
         )
 
     @staticmethod

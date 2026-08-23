@@ -13,7 +13,11 @@ from model_router.catalog import (
     normalize_router_model_id,
     parse_router_model_id,
 )
-from model_router.forwarding import forward_chat_completion, router_error, upstream_client_lifespan
+from model_router.forwarding import (
+    forward_chat_completion,
+    router_error,
+    upstream_client_lifespan,
+)
 from model_router.settings import RouterSourceConfig, get_settings
 
 
@@ -31,7 +35,9 @@ def _require_router_auth(authorization: str | None) -> None:
     if not expected_key:
         return
     scheme, _, token = str(authorization or "").partition(" ")
-    if scheme.lower() != "bearer" or not secrets.compare_digest(token.strip(), expected_key):
+    if scheme.lower() != "bearer" or not secrets.compare_digest(
+        token.strip(), expected_key
+    ):
         raise HTTPException(status_code=401, detail="Invalid model-router API key")
 
 
@@ -86,7 +92,9 @@ def health() -> dict[str, Any]:
     return {
         "status": "ok",
         "configured_sources": len(settings.sources),
-        "enabled_sources": len([source for source in settings.sources if source.enabled]),
+        "enabled_sources": len(
+            [source for source in settings.sources if source.enabled]
+        ),
     }
 
 
@@ -137,9 +145,13 @@ async def chat_completions(
     try:
         payload = await request.json()
     except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=400, detail="Request body must be valid JSON") from exc
+        raise HTTPException(
+            status_code=400, detail="Request body must be valid JSON"
+        ) from exc
     if not isinstance(payload, dict):
-        raise HTTPException(status_code=400, detail="Request body must be a JSON object")
+        raise HTTPException(
+            status_code=400, detail="Request body must be a JSON object"
+        )
 
     requested_model = str(payload.get("model", "") or "").strip()
     if not requested_model:
@@ -169,7 +181,11 @@ def _normalize_openai_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Normalize ADE convenience values before they reach upstream providers."""
     next_payload = dict(payload)
     max_tokens = next_payload.get("max_tokens")
-    if isinstance(max_tokens, int | float) and not isinstance(max_tokens, bool) and max_tokens <= 0:
+    if (
+        isinstance(max_tokens, int | float)
+        and not isinstance(max_tokens, bool)
+        and max_tokens <= 0
+    ):
         next_payload.pop("max_tokens", None)
     return next_payload
 
@@ -184,13 +200,22 @@ def _apply_sampling_defaults(
     for field in ("temperature", "top_p"):
         if _payload_missing(next_payload, field) and defaults.get(field) is not None:
             next_payload[field] = defaults[field]
-    if _supports_top_k(routed_model, source) and _payload_missing(next_payload, "top_k") and defaults.get("top_k") is not None:
+    if (
+        _supports_top_k(routed_model, source)
+        and _payload_missing(next_payload, "top_k")
+        and defaults.get("top_k") is not None
+    ):
         next_payload["top_k"] = defaults["top_k"]
     if _is_vllm_source(source):
         for field in ("min_p", "presence_penalty", "repetition_penalty"):
-            if _payload_missing(next_payload, field) and defaults.get(field) is not None:
+            if (
+                _payload_missing(next_payload, field)
+                and defaults.get(field) is not None
+            ):
                 next_payload[field] = defaults[field]
-        if routed_model.supports_thinking and _chat_template_kwargs_missing(next_payload, "enable_thinking"):
+        if routed_model.supports_thinking and _chat_template_kwargs_missing(
+            next_payload, "enable_thinking"
+        ):
             next_payload["chat_template_kwargs"] = {
                 **_existing_chat_template_kwargs(next_payload),
                 "enable_thinking": routed_model.thinking_default_enabled,
@@ -215,7 +240,10 @@ def _chat_template_kwargs_missing(payload: dict[str, Any], field: str) -> bool:
 
 
 def _supports_top_k(routed_model: RoutedModel, source: RouterSourceConfig) -> bool:
-    return routed_model.supports_top_k or source.adapter in {"llama_cpp_server", "vllm_openai"}
+    return routed_model.supports_top_k or source.adapter in {
+        "llama_cpp_server",
+        "vllm_openai",
+    }
 
 
 def _is_vllm_source(source: RouterSourceConfig) -> bool:

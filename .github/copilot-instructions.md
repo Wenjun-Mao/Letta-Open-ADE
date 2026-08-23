@@ -1,44 +1,59 @@
 # Project Guidelines
 
-## Code Style
-- Use Python 3.12+ and manage dependencies with `uv` (`pyproject.toml`, `uv.lock`).
-- For network/SDK calls in Python, follow the retry pattern used in `agent_platform_api/services/agent_platform.py` (`tenacity`).
-- Keep API contracts typed (Pydantic models in `agent_platform_api/models/`) and prefer service/client wrappers over route-level SDK logic.
-- For frontend changes in `frontend-ade/`, follow existing Next.js App Router + TypeScript patterns.
-
 ## Architecture
-- Runtime stack is Docker Compose: Postgres + pgvector, Redis, Letta server, FastAPI `agent_platform_api`, and Next.js `frontend-ade`.
-- Backend API surface lives in `agent_platform_api/`; cross-service helpers live in `ade_core/`; the router service lives in `model_router/`.
-- Prompt and persona assets live in `prompts/system_prompts/` and `prompts/persona/`.
-- Tests are split into:
-  - `tests/test_*.py`: pytest coverage
-  - `tests/checks/`: the two maintained live checks
 
-## Build and Test
-- Install Python dependencies: `uv sync`
-- Start stack: `docker compose up -d`
-- Reset database for a clean state:
-  - Windows: `./scripts/reset_database.ps1`
-  - Linux/macOS: `./scripts/reset_database.sh`
-- Core validations (run based on scope):
-  - `uv run python -m pytest`
-  - `uv run python tests/checks/platform_api_e2e_check.py`
-  - `uv run python tests/checks/ade_mvp_smoke_e2e_check.py`
-- Frontend build validation: `npm --prefix frontend-ade run build`
+- The browser calls the Next.js same-origin `/api/v1/...` proxy, which injects a
+  server-only Agent Platform credential.
+- `agent_platform_api` owns ADE HTTP contracts and feature orchestration.
+- `model_router` is the canonical provider discovery and generation boundary.
+- Persistent Agent Studio calls flow through Letta; stateless Comment and Label
+  calls go from Agent Platform API to the router.
+- Do not add direct provider traversal, browser-visible secrets, or a second model
+  source configuration.
 
-## Conventions
-- Letta model handles for OpenAI-compatible providers must use `openai-proxy/<model-id>` (not `openai/<model-id>`).
-- Default embedding handle is `letta/letta-free` unless a task explicitly changes embedding strategy.
-- Use `MARIMO_SMOKE_ONLY=1` when running notebook `.py` files as non-UI smoke tests.
-- Preserve startup determinism:
-  - Keep `init.sql` bootstrap behavior intact unless migration work requires coordinated changes.
-  - Respect local NLTK/offline startup handling in `docker/sitecustomize.py` and `data/nltk_data` mounts.
-- Prefer updating linked docs below rather than embedding long runbooks into code comments.
+## Code Structure
+
+- Use Python 3.12 and locked `uv` dependencies.
+- Keep Pydantic contracts under `agent_platform_api/models/` and feature logic in
+  cohesive services, registries, clients, or routers.
+- Keep frontend feature modules under `frontend-ade/app/<feature>/` and API clients
+  under `frontend-ade/lib/api/`.
+- Keep workflow-specific runner, config, fixtures, docs, and ignored outputs
+  together under `evals/<workflow>/`.
+- Do not create generic `utils` or compatibility facades. Split a module only when
+  its current owner actually loses a responsibility.
+
+## Runtime Contracts
+
+- The model router performs one upstream attempt per generation request. Feature
+  services own explicit request-scoped retry behavior.
+- Letta clients disable implicit SDK retries unless the incoming Agent Studio
+  request explicitly asks for retries.
+- Reviewed persona seeds live at `agent_platform_api/seed_data/personas.jsonl`;
+  generated runtime state lives under ignored `data/runtime/`.
+- Keep public `/api/v1/...` routes stable unless an ADR intentionally changes a
+  contract.
+
+## Verification
+
+Use the deterministic commands in `MANUAL.md`. The baseline includes:
+
+- `uv sync --frozen --group dev`
+- `uv run ruff check agent_platform_api model_router ade_core evals scripts tests`
+- `uv run python scripts/check_python_format.py --base origin/main`
+- `uv run python -m pytest`
+- OpenAPI drift and Chinese artifact checks
+- frontend tests, zero-warning lint, dependency audit, and production build
+- Compose rendering and first-party image builds
+
+Provider probes, evals, live E2E, and browser smoke checks remain explicit
+operator-run gates when a change touches their behavior.
 
 ## References
-- Onboarding and run flow: `README.md`
-- Design decisions and troubleshooting: `MANUAL.md`
-- Script catalog and command examples: `scripts/README.md`
-- Test layout and runner/check behavior: `tests/README.md`
-- API docs workflow and OpenAPI source: `docs/index.mdx`, `docs/openapi/agent-platform-openapi.json`
-- Codebase map and ADE scope: `docs/codebase-map.md`, `docs/ade-frontend-scope.mdx`
+
+- `README.md`: onboarding and runtime overview
+- `MANUAL.md`: operational runbook and complete verification commands
+- `docs/codebase-map.md`: ownership and common change locations
+- `docs/maintenance-roadmap.md`: completed cleanup record and future extraction triggers
+- `docs/adr/`: durable architecture decisions
+- `scripts/README.md` and `tests/README.md`: maintained utilities and checks

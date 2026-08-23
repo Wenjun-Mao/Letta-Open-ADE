@@ -2,8 +2,8 @@
 
 ## Status
 
-Accepted. The first incremental rollout is implemented; this remains an ongoing
-structure rule.
+Accepted and implemented through the August 2026 maintenance cleanup. This
+remains an ongoing structure rule.
 
 ## Context
 
@@ -22,12 +22,13 @@ introduce.
 
 ## Consequences
 
-The first rollout split the frontend API client by feature, extracted stable Agent
-Studio panels and memory-diff logic, separated generation-lab copy/presenters, and
-replaced backend catch-all facades with focused dependencies and modules. Request
-identity, selection, proxy, memory diff, and parsing tests protect the extracted
-seams.
+The rollout split the frontend API client by feature, reduced Agent Studio and
+Test Center route controllers to composition owners, separated persona SQL from
+seed policy and mapping, extracted generation request/response mapping, and moved
+router forwarding into a one-attempt transport. Focused request-identity,
+selection, payload, response, seed-transaction, descriptor, proxy, and UI tests
+protect those seams.
 
-Large route controllers may still be split when a cohesive boundary emerges. Avoid
-line-count-only extraction, repository-wide renames, or generic abstractions that
+Large feature modules may still be split when a cohesive boundary emerges. Avoid
+line-count-only extraction, repository-wide moves, or generic abstractions that
 make ownership harder to discover.

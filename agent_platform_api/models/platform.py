@@ -4,6 +4,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from agent_platform_api.testing.run_descriptors import validate_test_run_options
+
 from .common import LabelingOutputMode
 
 
@@ -57,26 +59,15 @@ class PlatformTestRunRequest(BaseModel):
     judge_model_key: str | None = None
 
     @model_validator(mode="after")
-    def _chat_memory_fields_only_for_chat_memory_eval(self) -> PlatformTestRunRequest:
-        chat_memory_fields = {
-            "model",
-            "prompt_key",
-            "persona_key",
-            "embedding",
-            "rounds",
-            "fixture_key",
-            "timeout_seconds",
-            "retry_count",
-            "judge_enabled",
-            "judge_model_key",
-        }
-        if self.run_type != "chat_memory_eval":
-            provided = sorted(chat_memory_fields.intersection(self.model_fields_set))
-            if provided:
-                raise ValueError(
-                    "Chat memory eval fields are only accepted when run_type='chat_memory_eval': "
-                    + ", ".join(provided)
-                )
+    def _validate_run_descriptor_options(self) -> PlatformTestRunRequest:
+        validate_test_run_options(
+            self.run_type,
+            {
+                field_name: getattr(self, field_name)
+                for field_name in self.model_fields_set
+                if field_name != "run_type"
+            },
+        )
         return self
 
 
@@ -243,7 +234,9 @@ class ApiPlatformModelCatalogSourceResponse(BaseModel):
     allowlist_checked_at: str | None = None
     raw_model_count: int = 0
     filtered_model_count: int = 0
-    models: list[ApiPlatformModelCatalogSourceModelResponse] = Field(default_factory=list)
+    models: list[ApiPlatformModelCatalogSourceModelResponse] = Field(
+        default_factory=list
+    )
 
 
 class ApiPlatformModelCatalogEntryResponse(BaseModel):

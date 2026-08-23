@@ -7,7 +7,9 @@ use [docs/adr/](docs/adr/).
 ## Before Starting
 
 - Install Docker Compose, Python 3.12 with `uv`, and Node.js for frontend-only checks.
-- Create `.env` from `.env.example` and replace placeholder secrets.
+- Create `.env` from `.env.example` and replace every placeholder secret. Generate
+  `LETTA_ENCRYPTION_KEY` once, keep it persistent, and back it up with the database;
+  changing or losing it makes credentials already encrypted by Letta unreadable.
 - Review `config/model_router_sources.json`; configured provider endpoints must be
   reachable from the Docker host.
 - Treat the default stack as local-only. Its loopback bindings and bearer roles are
@@ -93,6 +95,7 @@ start a Compose stack:
 ```text
 uv sync --frozen --group dev
 uv run ruff check agent_platform_api model_router ade_core evals scripts tests
+uv run python scripts/check_python_format.py --base origin/main
 uv run python -m pytest
 uv run python scripts/export_openapi.py --check
 uv run python scripts/generate_openapi_zh_manual.py

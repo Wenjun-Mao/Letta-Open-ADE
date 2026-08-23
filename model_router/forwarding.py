@@ -29,7 +29,9 @@ async def upstream_client_lifespan(application: FastAPI) -> AsyncIterator[None]:
         del application.state.upstream_client
 
 
-def router_error(status_code: int, code: str, message: str, **extra: Any) -> JSONResponse:
+def router_error(
+    status_code: int, code: str, message: str, **extra: Any
+) -> JSONResponse:
     """Return the router's stable OpenAI-compatible error envelope."""
     return JSONResponse(
         status_code=status_code,
@@ -108,7 +110,11 @@ async def _stream_chat_completion(
         # Streaming also issues one request; downstream cancellation closes it below.
         response = await client.send(upstream_request, stream=True)
     except Exception as exc:
-        return router_error(502, "upstream_unreachable", f"Source '{source.id}' could not be reached: {exc}")
+        return router_error(
+            502,
+            "upstream_unreachable",
+            f"Source '{source.id}' could not be reached: {exc}",
+        )
 
     async def iter_bytes() -> AsyncIterator[bytes]:
         try:
@@ -118,14 +124,18 @@ async def _stream_chat_completion(
             await response.aclose()
 
     media_type = response.headers.get("content-type") or "text/event-stream"
-    return StreamingResponse(iter_bytes(), status_code=response.status_code, media_type=media_type)
+    return StreamingResponse(
+        iter_bytes(), status_code=response.status_code, media_type=media_type
+    )
 
 
 def _response_from_upstream(response: httpx.Response, *, source_id: str) -> Response:
     content_type = response.headers.get("content-type", "")
     if "application/json" in content_type.lower():
         try:
-            return JSONResponse(status_code=response.status_code, content=response.json())
+            return JSONResponse(
+                status_code=response.status_code, content=response.json()
+            )
         except json.JSONDecodeError:
             pass
     return Response(

@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TARGET_DIR="${ROOT_DIR}/data/nltk_data"
-IMAGE="${LETTA_IMAGE:-${LETTA_SERVER_IMAGE:-letta/letta:0.16.7}}"
+IMAGE="${LETTA_IMAGE:-${LETTA_SERVER_IMAGE:-letta/letta:0.16.8}}"
 
 mkdir -p "${TARGET_DIR}"
 

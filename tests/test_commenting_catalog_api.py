@@ -8,7 +8,9 @@ from agent_platform_api.models.commenting import CommentingGenerateRequest
 from agent_platform_api.routers import commenting
 
 
-def test_commenting_generate_uses_model_key_and_selected_source_connection(monkeypatch) -> None:
+def test_commenting_generate_uses_model_key_and_selected_source_connection(
+    monkeypatch,
+) -> None:
     captured: dict[str, object] = {}
 
     monkeypatch.setattr(commenting, "ensure_platform_api_enabled", lambda: None)
@@ -47,27 +49,28 @@ def test_commenting_generate_uses_model_key_and_selected_source_connection(monke
             "top_k": kwargs["top_k"],
         }
 
-    monkeypatch.setattr(commenting.commenting_service, "generate_comment", fake_generate_comment)
+    monkeypatch.setattr(
+        commenting.commenting_service, "generate_comment", fake_generate_comment
+    )
 
     payload = commenting.api_commenting_generate(
-            CommentingGenerateRequest(
-                input="Need one comment",
-                prompt_key="comment_v20260418",
-                persona_key="comment_linxiaotang",
-                model_key="local_unsloth::qwen3.5-27b",
-                max_tokens=128,
-                timeout_seconds=45,
-                retry_count=0,
-                task_shape="classic",
-                cache_prompt=False,
-                enable_thinking=True,
-                temperature=0.8,
-                top_p=0.9,
-                top_k=64,
-                include_diagnostics=True,
-            )
-            ,
-            PlatformPrincipal(role=PlatformRole.ADMIN, key_name="test"),
+        CommentingGenerateRequest(
+            input="Need one comment",
+            prompt_key="comment_v20260418",
+            persona_key="comment_linxiaotang",
+            model_key="local_unsloth::qwen3.5-27b",
+            max_tokens=128,
+            timeout_seconds=45,
+            retry_count=0,
+            task_shape="classic",
+            cache_prompt=False,
+            enable_thinking=True,
+            temperature=0.8,
+            top_p=0.9,
+            top_k=64,
+            include_diagnostics=True,
+        ),
+        PlatformPrincipal(role=PlatformRole.ADMIN, key_name="test"),
     )
 
     assert captured["base_url"] == "http://127.0.0.1:2234/v1"
@@ -84,6 +87,7 @@ def test_commenting_generate_uses_model_key_and_selected_source_connection(monke
     assert payload["provider_model_id"] == "qwen3.5-27b"
     assert payload["enable_thinking"] is True
     assert payload["raw_request"] == {"model": "qwen3.5-27b"}
+    assert payload["raw_reply"] == {"choices": []}
 
 
 def test_commenting_generate_request_rejects_removed_compact_task_shape() -> None:
@@ -107,7 +111,9 @@ def test_commenting_generate_request_rejects_removed_compact_task_shape() -> Non
         ("top_k", 0),
     ],
 )
-def test_commenting_generate_request_rejects_invalid_sampling_ranges(field: str, value: float | int) -> None:
+def test_commenting_generate_request_rejects_invalid_sampling_ranges(
+    field: str, value: float | int
+) -> None:
     kwargs = {
         "input": "Need one comment",
         "prompt_key": "comment_v20260418",

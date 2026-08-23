@@ -50,7 +50,7 @@ services:
       start_period: 10s
 
   letta_server:
-    image: ${LETTA_SERVER_IMAGE:-letta/letta:0.16.7}
+    image: ${LETTA_SERVER_IMAGE:-letta/letta:0.16.8}
     restart: unless-stopped
     depends_on:
       letta_db:
@@ -97,6 +97,7 @@ services:
       - PYTHONPATH=/app
       - LETTA_BASE_URL=http://letta_server:8283
       - AGENT_PLATFORM_MODEL_ROUTER_BASE_URL=http://model_router:8290
+      - CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL=http://model_router:8290
     volumes:
       - ./prompts:/app/prompts
       - ./schemas:/app/schemas

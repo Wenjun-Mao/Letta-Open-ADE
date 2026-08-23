@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import json
 import subprocess
-import sys
 import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from agent_platform_api.testing.run_descriptors import (
+    ArtifactDiscoveryContext,
+    get_persisted_run_descriptor,
+    get_run_descriptor,
+)
 
 
 def _utc_now_iso() -> str:
@@ -51,7 +56,9 @@ class PlatformTestOrchestrator:
                 if run.get("status") in {"queued", "running"}:
                     run["status"] = "interrupted"
                     run["finished_at"] = _utc_now_iso()
-                    run["error"] = "The API process restarted before this run completed."
+                    run["error"] = (
+                        "The API process restarted before this run completed."
+                    )
                     self._persist_run(run)
                 self._runs[run_id] = run
             except (OSError, json.JSONDecodeError, TypeError, ValueError):
@@ -64,7 +71,9 @@ class PlatformTestOrchestrator:
     def _persist_run(self, run: dict[str, Any]) -> None:
         output_dir = Path(str(run["output_dir"])).resolve()
         if not output_dir.is_relative_to(self._log_root):
-            raise ValueError("Test run output directory must remain inside the runtime test-run directory")
+            raise ValueError(
+                "Test run output directory must remain inside the runtime test-run directory"
+            )
         output_dir.mkdir(parents=True, exist_ok=True)
         manifest_path = output_dir / "run.json"
         temporary_path = output_dir / ".run.json.tmp"
@@ -81,37 +90,7 @@ class PlatformTestOrchestrator:
         output_dir: Path,
         options: dict[str, Any],
     ) -> list[str]:
-        python = sys.executable
-
-        if run_type == "platform_api_e2e_check":
-            return [python, "tests/checks/platform_api_e2e_check.py"]
-        if run_type == "ade_mvp_smoke_e2e_check":
-            return [python, "tests/checks/ade_mvp_smoke_e2e_check.py"]
-        if run_type == "chat_memory_eval":
-            command = [
-                python,
-                "evals/chat_memory_eval/run.py",
-                "--config",
-                "evals/chat_memory_eval/config.toml",
-                "--output-dir",
-                str(output_dir),
-            ]
-            _append_option(command, "--model", options.get("model"))
-            _append_option(command, "--prompt-key", options.get("prompt_key"))
-            _append_option(command, "--persona-key", options.get("persona_key"))
-            _append_option(command, "--embedding", options.get("embedding"))
-            _append_option(command, "--fixture-key", options.get("fixture_key"))
-            _append_option(command, "--judge-model-key", options.get("judge_model_key"))
-            _append_option(command, "--rounds", options.get("rounds"))
-            _append_option(command, "--timeout-seconds", options.get("timeout_seconds"))
-            _append_option(command, "--retry-count", options.get("retry_count"))
-            if options.get("judge_enabled") is True:
-                command.append("--judge-enabled")
-            if options.get("judge_enabled") is False:
-                command.append("--no-judge-enabled")
-            return command
-
-        raise ValueError(f"Unsupported run_type: {run_type}")
+        return get_run_descriptor(run_type).build_command(output_dir, options)
 
     def _public_record(self, run: dict[str, Any]) -> dict[str, Any]:
         artifacts = self._resolve_artifacts(run)
@@ -132,48 +111,17 @@ class PlatformTestOrchestrator:
         }
 
     def _resolve_artifacts(self, run: dict[str, Any]) -> list[dict[str, Any]]:
-        artifacts: list[dict[str, Any]] = []
-
-        log_file = str(run.get("log_file", "") or "")
-        if log_file:
-            log_path = Path(log_file).resolve()
-            output_path = Path(str(run.get("output_dir", "") or "")).resolve()
-            if output_path.is_relative_to(self._log_root) and log_path.is_relative_to(output_path):
-                artifacts.append(
-                    {
-                        "artifact_id": "orchestrator_log",
-                        "type": "log",
-                        "path": str(log_path),
-                        "exists": log_path.exists(),
-                        "size_bytes": log_path.stat().st_size if log_path.exists() else 0,
-                    }
-                )
-
         output_dir = str(run.get("output_dir", "") or "")
-        if output_dir:
-            output_path = Path(output_dir).resolve()
-            if output_path.is_dir() and output_path.is_relative_to(self._log_root):
-                for path in sorted(item for item in output_path.rglob("*") if item.is_file()):
-                    resolved_path = path.resolve()
-                    if not resolved_path.is_relative_to(output_path):
-                        continue
-                    if resolved_path.name == "run.json":
-                        continue
-                    if log_file and resolved_path == Path(log_file).resolve():
-                        continue
-                    relative = path.relative_to(output_path).as_posix()
-                    artifact_id = relative.replace("/", "__")
-                    artifacts.append(
-                        {
-                            "artifact_id": artifact_id,
-                            "type": path.suffix.lower().lstrip(".") or "artifact",
-                            "path": str(resolved_path),
-                            "exists": True,
-                            "size_bytes": path.stat().st_size,
-                        }
-                    )
-
-        return artifacts
+        if not output_dir:
+            return []
+        log_file = str(run.get("log_file", "") or "")
+        context = ArtifactDiscoveryContext(
+            output_dir=Path(output_dir),
+            log_file=Path(log_file) if log_file else None,
+            state_root=self._log_root,
+        )
+        run_type = str(run.get("run_type", "") or "")
+        return get_persisted_run_descriptor(run_type).discover_artifacts(context)
 
     def create_run(
         self,
@@ -321,18 +269,23 @@ class PlatformTestOrchestrator:
             if not run:
                 return None
             run_snapshot = {
+                "run_type": str(run.get("run_type", "") or ""),
                 "log_file": str(run.get("log_file", "") or ""),
                 "output_dir": str(run.get("output_dir", "") or ""),
             }
 
         return self._resolve_artifacts(run_snapshot)
 
-    def read_artifact(self, run_id: str, artifact_id: str, *, max_lines: int = 400) -> dict[str, Any] | None:
+    def read_artifact(
+        self, run_id: str, artifact_id: str, *, max_lines: int = 400
+    ) -> dict[str, Any] | None:
         artifacts = self.list_artifacts(run_id)
         if artifacts is None:
             return None
 
-        target = next((item for item in artifacts if item.get("artifact_id") == artifact_id), None)
+        target = next(
+            (item for item in artifacts if item.get("artifact_id") == artifact_id), None
+        )
         if not target:
             return None
 
@@ -385,16 +338,10 @@ class PlatformTestOrchestrator:
                 run["cancel_requested"] = True
                 run["status"] = "cancelled"
                 run["finished_at"] = _utc_now_iso()
-                run["error"] = "The run was cancelled because the Agent Platform API shut down."
+                run["error"] = (
+                    "The run was cancelled because the Agent Platform API shut down."
+                )
                 process = run.get("_process")
                 if process is not None:
                     process.terminate()
                 self._persist_run(run)
-
-
-def _append_option(command: list[str], flag: str, value: Any) -> None:
-    if value is None:
-        return
-    if isinstance(value, str) and not value.strip():
-        return
-    command.extend([flag, str(value)])

@@ -54,7 +54,6 @@ def _strip(value: object) -> str:
 def _env_router_base_url() -> str:
     return _strip(
         os.getenv("CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL")
-        or os.getenv("AGENT_PLATFORM_MODEL_ROUTER_BASE_URL")
         or os.getenv("MODEL_ROUTER_BASE_URL")
     )
 
@@ -74,25 +73,49 @@ def load_config(path: Path) -> ChatMemoryEvalConfig:
         raise ConfigError(f"Config file not found: {path}")
 
     config = ChatMemoryEvalConfig(
-        api_base_url=_strip(payload.get("api_base_url", ChatMemoryEvalConfig.api_base_url)).rstrip("/"),
-        model_router_base_url=_strip(payload.get("model_router_base_url", "")) or env_router_base_url,
-        model_router_api_key=_strip(payload.get("model_router_api_key", "")) or _env_router_api_key(),
-        output_dir=_project_path(payload.get("output_dir", ChatMemoryEvalConfig.output_dir)),
-        fixtures_dir=_project_path(payload.get("fixtures_dir", ChatMemoryEvalConfig.fixtures_dir)),
-        fixture_key=_strip(payload.get("fixture_key", ChatMemoryEvalConfig.fixture_key)),
+        api_base_url=_strip(
+            payload.get("api_base_url", ChatMemoryEvalConfig.api_base_url)
+        ).rstrip("/"),
+        model_router_base_url=_strip(payload.get("model_router_base_url", ""))
+        or env_router_base_url,
+        model_router_api_key=_strip(payload.get("model_router_api_key", ""))
+        or _env_router_api_key(),
+        output_dir=_project_path(
+            payload.get("output_dir", ChatMemoryEvalConfig.output_dir)
+        ),
+        fixtures_dir=_project_path(
+            payload.get("fixtures_dir", ChatMemoryEvalConfig.fixtures_dir)
+        ),
+        fixture_key=_strip(
+            payload.get("fixture_key", ChatMemoryEvalConfig.fixture_key)
+        ),
         rounds=int(payload.get("rounds", ChatMemoryEvalConfig.rounds)),
-        stop_on_error=bool(payload.get("stop_on_error", ChatMemoryEvalConfig.stop_on_error)),
+        stop_on_error=bool(
+            payload.get("stop_on_error", ChatMemoryEvalConfig.stop_on_error)
+        ),
         keep_agents=bool(payload.get("keep_agents", ChatMemoryEvalConfig.keep_agents)),
         model=_strip(payload.get("model", ChatMemoryEvalConfig.model)),
         prompt_key=_strip(payload.get("prompt_key", ChatMemoryEvalConfig.prompt_key)),
-        persona_key=_strip(payload.get("persona_key", ChatMemoryEvalConfig.persona_key)),
+        persona_key=_strip(
+            payload.get("persona_key", ChatMemoryEvalConfig.persona_key)
+        ),
         embedding=_strip(payload.get("embedding", ChatMemoryEvalConfig.embedding)),
-        timeout_seconds=float(payload.get("timeout_seconds", ChatMemoryEvalConfig.timeout_seconds)),
+        timeout_seconds=float(
+            payload.get("timeout_seconds", ChatMemoryEvalConfig.timeout_seconds)
+        ),
         retry_count=int(payload.get("retry_count", ChatMemoryEvalConfig.retry_count)),
-        judge_enabled=bool(payload.get("judge_enabled", ChatMemoryEvalConfig.judge_enabled)),
+        judge_enabled=bool(
+            payload.get("judge_enabled", ChatMemoryEvalConfig.judge_enabled)
+        ),
         judge_model_key=_strip(payload.get("judge_model_key", "")),
-        judge_timeout_seconds=float(payload.get("judge_timeout_seconds", ChatMemoryEvalConfig.judge_timeout_seconds)),
-        api_retry_count=int(payload.get("api_retry_count", ChatMemoryEvalConfig.api_retry_count)),
+        judge_timeout_seconds=float(
+            payload.get(
+                "judge_timeout_seconds", ChatMemoryEvalConfig.judge_timeout_seconds
+            )
+        ),
+        api_retry_count=int(
+            payload.get("api_retry_count", ChatMemoryEvalConfig.api_retry_count)
+        ),
     )
     validate_config(config)
     return config
@@ -123,7 +146,9 @@ def validate_config(config: ChatMemoryEvalConfig) -> None:
         raise ConfigError("api_retry_count must be >= 0")
 
 
-def apply_cli_overrides(config: ChatMemoryEvalConfig, args: argparse.Namespace) -> ChatMemoryEvalConfig:
+def apply_cli_overrides(
+    config: ChatMemoryEvalConfig, args: argparse.Namespace
+) -> ChatMemoryEvalConfig:
     updates: dict[str, Any] = {}
     for field in (
         "api_base_url",

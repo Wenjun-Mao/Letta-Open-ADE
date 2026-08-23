@@ -8,7 +8,6 @@ data/runtime/
 data/agent_lifecycle/
 data/personas/
 .tmp/nltk_data/
-.marimo/
 *.pyc
 
 letta-souce-code/

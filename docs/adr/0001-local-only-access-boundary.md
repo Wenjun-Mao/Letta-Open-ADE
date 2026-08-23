@@ -20,11 +20,15 @@ operations are not safe to expose as an unauthenticated development service.
 - Health endpoints remain public so container health checks do not need secrets.
 - Diagnostics redact credentials and raw provider diagnostics require an explicit
   opt-in plus administrator access.
+- Letta receives a deployment-specific, persistent `LETTA_ENCRYPTION_KEY` so
+  provider credentials are encrypted at rest. The key is stored outside git and
+  must be backed up and rotated only through an explicit credential migration.
 
 ## Consequences
 
 The local baseline is protected by loopback port bindings, fail-closed API
 authentication, narrow CORS configuration, server-only frontend credentials, and
-black-box authorization tests. These controls do not make the stack production
-ready. A LAN or internet deployment still needs reviewed ingress, TLS, secret
-management, rate limits, monitoring, and a deployment-specific threat review.
+encrypted upstream credentials, with black-box authorization tests guarding the
+boundary. These controls do not make the stack production ready. A LAN or internet
+deployment still needs reviewed ingress, TLS, managed secret storage and rotation,
+rate limits, monitoring, and a deployment-specific threat review.

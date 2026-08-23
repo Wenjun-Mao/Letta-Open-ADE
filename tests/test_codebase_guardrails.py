@@ -34,7 +34,9 @@ def _text_files() -> list[Path]:
         files.extend(
             path
             for path in root.rglob("*")
-            if path.is_file() and path.suffix.lower() in suffixes and "__pycache__" not in path.parts
+            if path.is_file()
+            and path.suffix.lower() in suffixes
+            and "__pycache__" not in path.parts
         )
     files.extend(path for path in TOP_LEVEL_TEXT_FILES if path.is_file())
     return files
@@ -109,7 +111,9 @@ def test_agent_platform_has_no_direct_provider_catalog_fallback() -> None:
 
 def test_letta_does_not_inherit_direct_lmstudio_provider_config() -> None:
     compose_text = (PROJECT_ROOT / "compose.yaml").read_text(encoding="utf-8")
-    letta_service = compose_text.split("\n  letta_server:", 1)[1].split("\n  agent_platform_api:", 1)[0]
+    letta_service = compose_text.split("\n  letta_server:", 1)[1].split(
+        "\n  agent_platform_api:", 1
+    )[0]
     env_example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")
 
     assert 'LMSTUDIO_BASE_URL: ""' in letta_service
@@ -118,10 +122,25 @@ def test_letta_does_not_inherit_direct_lmstudio_provider_config() -> None:
 
 def test_compose_project_name_is_canonical() -> None:
     compose_text = (PROJECT_ROOT / "compose.yaml").read_text(encoding="utf-8")
-    env_example_lines = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8").splitlines()
+    env_example_lines = (
+        (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8").splitlines()
+    )
 
     assert compose_text.startswith("name: letta-open-ade\n")
     assert "COMPOSE_PROJECT_NAME=letta-open-ade" in env_example_lines
+
+
+def test_letta_runtime_security_and_image_pins_stay_explicit() -> None:
+    compose_text = (PROJECT_ROOT / "compose.yaml").read_text(encoding="utf-8")
+    env_example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")
+    nltk_seed_script = (PROJECT_ROOT / "scripts" / "seed_nltk_data.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "LETTA_ENCRYPTION_KEY=" in env_example
+    assert "letta/letta:0.16.8" in compose_text
+    assert "letta/letta:0.16.8" in env_example
+    assert "letta/letta:0.16.8" in nltk_seed_script
 
 
 def test_no_tracked_generated_or_stale_artifacts() -> None:
@@ -141,16 +160,20 @@ def test_no_tracked_generated_or_stale_artifacts() -> None:
         "evals/chat_memory_eval/outputs/",
         "evals/provider_model_probe/outputs/",
         "temps/",
-        "notebooks/zz",
         "data/agent_lifecycle/registry.json",
         "data/personas/personas.sqlite3",
         "data/runtime/",
     )
-    tracked = [line.strip().replace("\\", "/") for line in completed.stdout.splitlines() if line.strip()]
+    tracked = [
+        line.strip().replace("\\", "/")
+        for line in completed.stdout.splitlines()
+        if line.strip()
+    ]
     offenders = [
         path
         for path in tracked
-        if (PROJECT_ROOT / path).exists() and any(fragment in path for fragment in forbidden_fragments)
+        if (PROJECT_ROOT / path).exists()
+        and any(fragment in path for fragment in forbidden_fragments)
     ]
 
     assert offenders == []
@@ -172,8 +195,14 @@ def test_workflow_specific_config_stays_out_of_root_config() -> None:
     assert offenders == []
 
 
-def test_tracked_model_router_sources_do_not_embed_machine_specific_ip_addresses() -> None:
-    sources = json.loads((PROJECT_ROOT / "config" / "model_router_sources.json").read_text(encoding="utf-8"))
+def test_tracked_model_router_sources_do_not_embed_machine_specific_ip_addresses() -> (
+    None
+):
+    sources = json.loads(
+        (PROJECT_ROOT / "config" / "model_router_sources.json").read_text(
+            encoding="utf-8"
+        )
+    )
     offenders: list[str] = []
     for source in sources:
         hostname = urlparse(str(source.get("base_url", ""))).hostname or ""
@@ -218,3 +247,40 @@ def test_eval_workflows_are_self_documenting() -> None:
     ]
 
     assert offenders == []
+
+
+def test_docs_do_not_restore_retired_letta_notebooks_or_dev_ui_language() -> None:
+    retired_paths = (
+        "docs/01_letta_agents_and_memory.py",
+        "docs/02_letta_system_instructions_and_tools.py",
+        "docs/03_letta_inner_workings_and_tool_calls.py",
+        "docs/04_letta_full_prompt_synthesis.py",
+        "docs/MemGPT paper.pdf",
+        "notebooks/01-doubao-api-smoke.ipynb",
+        "notebooks/01_doubao_api_smoke.py",
+        "notebooks/02_letta_e2e.py",
+    )
+    assert [path for path in retired_paths if (PROJECT_ROOT / path).exists()] == []
+    assert (PROJECT_ROOT / "docs" / "references.md").is_file()
+
+    offenders: list[str] = []
+    for path in (PROJECT_ROOT / "docs").rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in {".md", ".mdx"}:
+            continue
+        if "Dev UI" in path.read_text(encoding="utf-8", errors="ignore"):
+            offenders.append(str(path.relative_to(PROJECT_ROOT)))
+
+    assert offenders == []
+
+
+def test_ci_checks_formatting_without_rewriting_the_legacy_baseline() -> None:
+    workflow = (PROJECT_ROOT / ".github" / "workflows" / "verify.yml").read_text(
+        encoding="utf-8"
+    )
+
+    assert "fetch-depth: 0" in workflow
+    assert "scripts/check_python_format.py" in workflow
+    assert (
+        "ruff format --check agent_platform_api model_router ade_core evals scripts tests"
+        not in workflow
+    )

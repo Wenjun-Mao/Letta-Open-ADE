@@ -1,20 +1,24 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
 from typing import Any
 
-from agent_platform_api.clients.openai_chat import OpenAIChatClient, resolve_provider_model
+from agent_platform_api.clients.openai_chat import (
+    OpenAIChatClient,
+    resolve_provider_model,
+)
 from agent_platform_api.settings import get_settings
 from agent_platform_api.services.labeling_helpers import (
-    build_best_effort_label_system_prompt,
-    build_label_user_payload,
-    build_repair_prompt,
-    label_response_format,
-    normalize_label_content,
-    parse_json_object,
     resolve_label_output_schema,
-    validate_label_result,
+)
+from agent_platform_api.services.labeling_requests import (
+    build_label_repair_request_payload,
+    build_label_request_payload,
+)
+from agent_platform_api.services.labeling_responses import (
+    append_finish_reason_diagnostic,
+    build_label_generation_result,
+    extract_validated_label_response,
 )
 
 
@@ -45,7 +49,12 @@ class LabelingService:
 
     _OUTPUT_MODES = {"strict_json_schema", "json_schema", "best_effort_prompt_json"}
 
-    def __init__(self, *, settings_factory=get_settings, provider_client: OpenAIChatClient | None = None):
+    def __init__(
+        self,
+        *,
+        settings_factory=get_settings,
+        provider_client: OpenAIChatClient | None = None,
+    ):
         self._settings_factory = settings_factory
         self._provider_client = provider_client or OpenAIChatClient()
 
@@ -67,11 +76,19 @@ class LabelingService:
 
     @staticmethod
     def _clamp_temperature(value: float | None) -> float:
-        return DEFAULT_LABELING_TEMPERATURE if value is None else max(0.0, min(2.0, float(value)))
+        return (
+            DEFAULT_LABELING_TEMPERATURE
+            if value is None
+            else max(0.0, min(2.0, float(value)))
+        )
 
     @staticmethod
     def _clamp_top_p(value: float | None) -> float:
-        return DEFAULT_LABELING_TOP_P if value is None else max(0.01, min(1.0, float(value)))
+        return (
+            DEFAULT_LABELING_TOP_P
+            if value is None
+            else max(0.01, min(1.0, float(value)))
+        )
 
     @staticmethod
     def _clamp_top_k(value: int | None) -> int | None:
@@ -98,8 +115,12 @@ class LabelingService:
         settings = self._settings_factory()
         return {
             "max_tokens": self._clamp_max_tokens(settings.labeling_max_tokens),
-            "timeout_seconds": self._clamp_timeout_seconds(settings.labeling_timeout_seconds),
-            "repair_retry_count": self._clamp_repair_retry_count(settings.labeling_repair_retry_count),
+            "timeout_seconds": self._clamp_timeout_seconds(
+                settings.labeling_timeout_seconds
+            ),
+            "repair_retry_count": self._clamp_repair_retry_count(
+                settings.labeling_repair_retry_count
+            ),
             "temperature": self._clamp_temperature(settings.labeling_temperature),
             "top_p": self._clamp_top_p(settings.labeling_top_p),
             "top_k": self._clamp_top_k(settings.labeling_top_k),
@@ -120,136 +141,6 @@ class LabelingService:
             timeout_seconds=timeout_seconds,
             retry_count=0,
         )
-
-    def _build_payload(
-        self,
-        *,
-        model: str,
-        system_prompt: str,
-        article_input: str,
-        output_schema: dict[str, Any],
-        output_schema_name: str,
-        output_mode: str,
-        max_tokens: int,
-        temperature: float,
-        top_p: float,
-        top_k: int | None,
-    ) -> dict[str, Any]:
-        if output_mode in {"strict_json_schema", "json_schema"}:
-            payload = {
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": str(system_prompt or "").strip()},
-                    {"role": "user", "content": build_label_user_payload(article_input)},
-                ],
-                "temperature": temperature,
-                "top_p": top_p,
-                "max_tokens": max_tokens,
-                "response_format": label_response_format(output_schema, name=output_schema_name),
-            }
-        else:
-            payload = {
-                "model": model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": build_best_effort_label_system_prompt(
-                            system_prompt=system_prompt,
-                            schema=output_schema,
-                        ),
-                    },
-                    {"role": "user", "content": build_label_user_payload(article_input)},
-                ],
-                "temperature": temperature,
-                "top_p": top_p,
-                "max_tokens": max_tokens,
-            }
-
-        if max_tokens == 0:
-            payload.pop("max_tokens", None)
-        if top_k is not None:
-            payload["top_k"] = top_k
-        return payload
-
-    def _build_repair_payload(
-        self,
-        *,
-        model: str,
-        system_prompt: str,
-        article_input: str,
-        output_schema: dict[str, Any],
-        output_schema_name: str,
-        output_mode: str,
-        max_tokens: int,
-        temperature: float,
-        top_p: float,
-        top_k: int | None,
-        invalid_output: str,
-        validation_errors: list[str],
-    ) -> dict[str, Any]:
-        payload = self._build_payload(
-            model=model,
-            system_prompt=system_prompt,
-            article_input=article_input,
-            output_schema=output_schema,
-            output_schema_name=output_schema_name,
-            output_mode=output_mode,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
-        )
-        payload["messages"] = [
-            payload["messages"][0],
-            {
-                "role": "user",
-                "content": build_repair_prompt(
-                    article_input=article_input,
-                    invalid_output=invalid_output,
-                    validation_errors=validation_errors,
-                ),
-            },
-        ]
-        return payload
-
-    def _extract_validated_result(
-        self,
-        *,
-        data: dict[str, Any],
-        article_input: str,
-        output_schema: dict[str, Any],
-    ) -> tuple[dict[str, list[str]] | None, str, list[str], str | None]:
-        choices = data.get("choices", [])
-        if not isinstance(choices, list) or not choices:
-            return None, "", ["Response payload did not include any choices."], None
-
-        choice = choices[0] if isinstance(choices[0], dict) else {}
-        message = choice.get("message", {}) if isinstance(choice, dict) else {}
-        finish_reason = str(choice.get("finish_reason", "") or "").strip().lower() if isinstance(choice, dict) else ""
-
-        content_candidate = normalize_label_content(message.get("content", ""))
-        reasoning_candidate = normalize_label_content(message.get("reasoning_content", ""))
-        candidates = [content_candidate] if content_candidate else [reasoning_candidate]
-        validation_errors: list[str] = []
-        invalid_output = ""
-        for candidate in candidates:
-            if not candidate:
-                continue
-            invalid_output = invalid_output or candidate
-            try:
-                parsed = parse_json_object(candidate)
-            except ValueError as exc:
-                validation_errors.append(str(exc))
-                continue
-
-            normalized, errors = validate_label_result(parsed, article_input, output_schema)
-            if normalized is not None:
-                return normalized, candidate, [], finish_reason or None
-            validation_errors.extend(errors)
-
-        if finish_reason and finish_reason != "stop":
-            validation_errors.append(f"Provider finished with finish_reason={finish_reason}.")
-        return None, invalid_output, validation_errors or ["Provider returned empty content."], finish_reason or None
 
     def generate_labels(
         self,
@@ -282,9 +173,15 @@ class LabelingService:
             raise ValueError("input is required")
 
         output_schema = resolve_label_output_schema(output_schema_raw)
-        resolved_output_schema_name = self._normalize_response_format_name(output_schema_name)
+        resolved_output_schema_name = self._normalize_response_format_name(
+            output_schema_name
+        )
         runtime_defaults = self.runtime_defaults()
-        resolved_max_tokens = runtime_defaults["max_tokens"] if max_tokens is None else self._clamp_max_tokens(max_tokens)
+        resolved_max_tokens = (
+            runtime_defaults["max_tokens"]
+            if max_tokens is None
+            else self._clamp_max_tokens(max_tokens)
+        )
         resolved_timeout_seconds = (
             runtime_defaults["timeout_seconds"]
             if timeout_seconds is None
@@ -300,14 +197,20 @@ class LabelingService:
             if temperature is None
             else self._clamp_temperature(temperature)
         )
-        resolved_top_p = float(runtime_defaults["top_p"]) if top_p is None else self._clamp_top_p(top_p)
-        resolved_top_k = runtime_defaults["top_k"] if top_k is None else self._clamp_top_k(top_k)
+        resolved_top_p = (
+            float(runtime_defaults["top_p"])
+            if top_p is None
+            else self._clamp_top_p(top_p)
+        )
+        resolved_top_k = (
+            runtime_defaults["top_k"] if top_k is None else self._clamp_top_k(top_k)
+        )
         resolved_output_mode = self._resolve_output_mode(output_mode)
 
         attempts: list[tuple[str, dict[str, Any]]] = [
             (
                 "primary",
-                self._build_payload(
+                build_label_request_payload(
                     model=resolved_model,
                     system_prompt=system_prompt,
                     article_input=article,
@@ -337,10 +240,12 @@ class LabelingService:
                 api_key=str(api_key or "").strip(),
                 timeout_seconds=resolved_timeout_seconds,
             )
-            result, invalid_output, validation_errors, finish_reason = self._extract_validated_result(
-                data=data,
-                article_input=article,
-                output_schema=output_schema,
+            result, invalid_output, validation_errors, finish_reason = (
+                extract_validated_label_response(
+                    data=data,
+                    article_input=article,
+                    output_schema=output_schema,
+                )
             )
             last_payload = payload
             last_data = data
@@ -349,29 +254,28 @@ class LabelingService:
             last_finish_reason = finish_reason
 
             if result is not None:
-                return {
-                    "result": result,
-                    "output_mode": resolved_output_mode,
-                    "selected_attempt": attempt_name,
-                    "finish_reason": finish_reason,
-                    "usage": data.get("usage", {}) if isinstance(data.get("usage", {}), dict) else {},
-                    "received_at": datetime.now(timezone.utc).isoformat(),
-                    "raw_request": payload,
-                    "raw_reply": data,
-                    "validation_errors": [],
-                    "max_tokens": resolved_max_tokens,
-                    "timeout_seconds": resolved_timeout_seconds,
-                    "repair_retry_count": resolved_repair_retry_count,
-                    "temperature": resolved_temperature,
-                    "top_p": resolved_top_p,
-                    "top_k": resolved_top_k,
-                }
+                return build_label_generation_result(
+                    result=result,
+                    output_mode=resolved_output_mode,
+                    selected_attempt=attempt_name,
+                    finish_reason=finish_reason,
+                    data=data,
+                    payload=payload,
+                    runtime={
+                        "max_tokens": resolved_max_tokens,
+                        "timeout_seconds": resolved_timeout_seconds,
+                        "repair_retry_count": resolved_repair_retry_count,
+                        "temperature": resolved_temperature,
+                        "top_p": resolved_top_p,
+                        "top_k": resolved_top_k,
+                    },
+                )
 
             if repairs_remaining > 0:
                 attempts.append(
                     (
                         "repair",
-                        self._build_repair_payload(
+                        build_label_repair_request_payload(
                             model=resolved_model,
                             system_prompt=system_prompt,
                             article_input=article,
@@ -389,10 +293,7 @@ class LabelingService:
                 )
                 repairs_remaining -= 1
 
-        if last_finish_reason and last_finish_reason != "stop" and not any(
-            error.startswith("Provider finished with finish_reason=") for error in last_errors
-        ):
-            last_errors.append(f"Provider finished with finish_reason={last_finish_reason}.")
+        append_finish_reason_diagnostic(last_errors, last_finish_reason)
         raise LabelingValidationError(
             "Label provider returned invalid structured output.",
             validation_errors=last_errors,

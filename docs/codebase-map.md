@@ -1,7 +1,8 @@
 # Codebase Map
 
-This is the fast orientation guide for Letta Open ADE. If you are wondering "where is this wired?", start here. For the next cleanup slices, see the
-[maintenance roadmap](maintenance-roadmap.md).
+This is the fast orientation guide for Letta Open ADE. If you are wondering
+"where is this wired?", start here. The August 2026 cleanup and future extraction
+triggers are recorded in the [maintenance record](maintenance-roadmap.md).
 
 ## Runtime Flow
 
@@ -21,27 +22,37 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 
 ## Backend Packages
 
-- `model_router/`: the first-party OpenAI-compatible router. It owns upstream source discovery, source health, Ark allowlist filtering, model profiles, model id routing, and module visibility.
+- `model_router/`: the first-party OpenAI-compatible router. `catalog.py` owns
+  discovery and profile enrichment, `forwarding.py` owns one-attempt upstream HTTP
+  transport, and `app.py` owns route parsing and default application.
 - `agent_platform_api/`: the ADE backend API. It owns routes, Pydantic response/request models, feature services, registries, Letta orchestration, and router catalog consumption.
-- `agent_platform_api/services/`: feature services for Agent Studio/Letta operations, Comment Lab, and Label Lab.
-- `agent_platform_api/registries/`: registries for file-backed prompts/schemas/tools, SQLite-backed personas, and agent lifecycle metadata.
+- `agent_platform_api/services/`: feature services for Agent Studio/Letta
+  operations, Comment Lab, and Label Lab. Stateless generation keeps request
+  builders and response mappers beside each feature service.
+- `agent_platform_api/registries/`: registries for file-backed
+  prompts/schemas/tools, SQLite-backed personas, and agent lifecycle metadata.
+  Persona SQL, mapping, validation, and seed projection have separate owners.
 - `agent_platform_api/options/`: router-backed model catalog enrichment, UI option building, model selection, and runtime defaults.
 - `agent_platform_api/clients/`: outbound service clients, currently the model router client.
 - `agent_platform_api/llm/`: LLM tooling that belongs to ADE, such as provider probe/report generation.
 - `agent_platform_api/letta/`: Letta SDK convenience helpers and generated Letta tool constants.
-- `agent_platform_api/testing/`: Test Center orchestration.
+- `agent_platform_api/testing/`: Test Center orchestration; `run_descriptors.py`
+  owns each run type's validation, command, and artifact contract.
 - `ade_core/`: small shared helpers used by more than one backend service. Keep this intentionally tiny.
 - `evals/`: self-contained evaluation/probe workflows with colocated runner, config, docs, inputs, and ignored outputs.
 
 ## Frontend Modules
 
-- `frontend-ade/app/agent-studio/`: persistent Letta agent creation and chat.
+- `frontend-ade/app/agent-studio/`: persistent Letta agent creation and chat. The
+  route composes feature-local creation, lifecycle, chat, inspection, trace, and
+  notice hooks plus pure selection/history/tool helpers.
 - `frontend-ade/app/comment-lab/`: stateless comment generation.
 - `frontend-ade/app/label-lab/`: stateless structured entity extraction.
 - `frontend-ade/app/prompt-center/`: prompt/persona editing.
 - `frontend-ade/app/schema-center/`: label schema editing.
 - `frontend-ade/app/tool-center/` and `frontend-ade/app/toolbench/`: custom tool management and runtime tool testing.
-- `frontend-ade/app/test-center/`: maintained live checks.
+- `frontend-ade/app/test-center/`: maintained live checks, with separate launcher,
+  run/artifact viewer, copy, and route-controller modules.
 - `frontend-ade/lib/api/`: feature API clients and shared UI-facing types.
 - `frontend-ade/app/api/v1/[...path]/`: same-origin server proxy that adds the
   server-only Agent Platform credential; browser bundles never receive it.
@@ -69,18 +80,21 @@ The router is the canonical LLM access layer. `agent_platform_api` should not tr
 | --- | --- |
 | Add or disable an LLM backend | `config/model_router_sources.json`, or the ignored local overlay for machine-specific endpoints |
 | Add or tune model-specific defaults | `config/model_router_model_profiles.json` |
-| Change model discovery/routing behavior | `model_router/catalog.py` and `model_router/app.py` |
-| Change Comment Lab generation | `agent_platform_api/services/commenting.py` and `agent_platform_api/routers/commenting.py` |
-| Change Label Lab generation | `agent_platform_api/services/labeling.py`, `agent_platform_api/services/labeling_helpers.py`, and `agent_platform_api/routers/labeling.py` |
+| Change model discovery or profiles | `model_router/catalog.py` and `model_router/profiles.py` |
+| Change router HTTP forwarding | `model_router/forwarding.py`; keep retry ownership out of this layer |
+| Change Comment Lab generation | `agent_platform_api/services/commenting.py`, `commenting_requests.py`, and `commenting_responses.py` |
+| Change Label Lab generation | `agent_platform_api/services/labeling.py`, `labeling_requests.py`, `labeling_responses.py`, and `labeling_helpers.py` |
 | Change options returned to the UI | `agent_platform_api/options/` |
 | Change Prompt Center prompt behavior | `agent_platform_api/registries/prompt_persona_store/` and `agent_platform_api/routers/prompt_center.py` |
-| Change Prompt Center persona storage | `agent_platform_api/registries/persona_sqlite.py` |
+| Change Prompt Center persona storage | `persona_sqlite.py` coordinates `persona_store.py`, `persona_records.py`, `persona_rules.py`, and `persona_seed.py` |
 | Import/export the persona library | `uv run python scripts/persona_library.py --help` |
 | Change Schema Center behavior | `agent_platform_api/registries/label_schema.py` and `agent_platform_api/routers/schema_center.py` |
 | Change Agent Studio / Letta orchestration | `agent_platform_api/services/agent_platform.py` and `agent_platform_api/routers/agents.py` |
 | Run Comment Persona Eval | `uv run python evals/comment_persona_eval/run.py --config evals/comment_persona_eval/config.toml` |
 | Run Chat Memory Eval | `uv run python evals/chat_memory_eval/run.py --config evals/chat_memory_eval/config.toml --rounds 1` |
-| Change frontend page behavior | the matching `frontend-ade/app/<module>/page.tsx` file |
+| Change Agent Studio browser state | the matching `use-agent-*.ts` or `use-chat-execution.ts` module under its feature folder |
+| Add or change a Test Center run type | `agent_platform_api/testing/run_descriptors.py`, then its local frontend launcher/view |
+| Change other frontend page behavior | the matching `frontend-ade/app/<module>/` feature folder |
 | Update OpenAPI artifacts | `uv run python scripts/export_openapi.py` |
 | Re-probe Ark usable models | `uv run python evals/provider_model_probe/run.py --source-id ark --mode chat-probe --write` |
 | Collect runtime diagnostics | `scripts/collect_diagnostics.sh` |
