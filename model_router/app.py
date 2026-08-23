@@ -2,13 +2,10 @@ from __future__ import annotations
 
 import json
 import secrets
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
 from typing import Any
 
-import httpx
 from fastapi import FastAPI, Header, HTTPException, Request
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import JSONResponse
 
 from model_router.catalog import (
     RoutedModel,
@@ -16,31 +13,15 @@ from model_router.catalog import (
     normalize_router_model_id,
     parse_router_model_id,
 )
+from model_router.forwarding import forward_chat_completion, router_error, upstream_client_lifespan
 from model_router.settings import RouterSourceConfig, get_settings
-
-
-def _create_upstream_client() -> httpx.AsyncClient:
-    """Create the shared async transport used while the router app is running."""
-    settings = get_settings()
-    return httpx.AsyncClient(timeout=settings.request_timeout_seconds)
-
-
-@asynccontextmanager
-async def _router_lifespan(application: FastAPI) -> AsyncIterator[None]:
-    upstream_client = _create_upstream_client()
-    application.state.upstream_client = upstream_client
-    try:
-        yield
-    finally:
-        await upstream_client.aclose()
-        del application.state.upstream_client
 
 
 app = FastAPI(
     title="ADE Model Router",
     version="0.1.0",
     description="First-party OpenAI-compatible router for ADE model sources.",
-    lifespan=_router_lifespan,
+    lifespan=upstream_client_lifespan,
 )
 catalog_service = RouterCatalogService()
 
@@ -96,20 +77,6 @@ def _openai_model_item(model: RoutedModel) -> dict[str, Any]:
         "source_id": model.source_id,
         "source_label": model.source_label,
     }
-
-
-def _router_error(status_code: int, code: str, message: str, **extra: Any) -> JSONResponse:
-    return JSONResponse(
-        status_code=status_code,
-        content={
-            "error": {
-                "type": "model_router_error",
-                "code": code,
-                "message": message,
-                **extra,
-            }
-        },
-    )
 
 
 @app.get("/v1/health")
@@ -183,7 +150,7 @@ async def chat_completions(
         return _unknown_model_error(requested_model)
     source = catalog_service.source_config(routed_model.source_id)
     if source is None or not source.enabled:
-        return _router_error(
+        return router_error(
             404,
             "source_disabled",
             f"Model source '{routed_model.source_id}' is disabled or missing.",
@@ -195,9 +162,7 @@ async def chat_completions(
     upstream_payload["model"] = routed_model.provider_model_id
     upstream_payload = _normalize_openai_payload(upstream_payload)
     upstream_payload = _apply_sampling_defaults(routed_model, source, upstream_payload)
-    if bool(upstream_payload.get("stream", False)):
-        return await _stream_chat_completion(source, upstream_payload)
-    return await _post_chat_completion(source, upstream_payload)
+    return await forward_chat_completion(request.app, source, upstream_payload)
 
 
 def _normalize_openai_payload(payload: dict[str, Any]) -> dict[str, Any]:
@@ -272,80 +237,9 @@ def _unknown_model_error(requested_model: str) -> JSONResponse:
     if source_status is not None:
         extra["source_status"] = source_status.status
         extra["source_detail"] = source_status.detail
-    return _router_error(
+    return router_error(
         404,
         "unknown_or_unavailable_model",
         f"Model '{normalized}' is not currently available through the router.",
         **extra,
-    )
-
-
-def _upstream_headers(source: RouterSourceConfig) -> dict[str, str]:
-    headers = {"Content-Type": "application/json"}
-    api_key = source.resolve_api_key()
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-    return headers
-
-
-def _upstream_client() -> httpx.AsyncClient:
-    client = getattr(app.state, "upstream_client", None)
-    if not isinstance(client, httpx.AsyncClient) or client.is_closed:
-        raise RuntimeError("Model-router upstream transport is not available")
-    return client
-
-
-async def _post_chat_completion(source: RouterSourceConfig, payload: dict[str, Any]) -> Response:
-    try:
-        response = await _upstream_client().post(
-            source.chat_completions_url(),
-            json=payload,
-            headers=_upstream_headers(source),
-        )
-    except Exception as exc:
-        return _router_error(
-            502,
-            "upstream_unreachable",
-            f"Source '{source.id}' could not be reached: {exc}",
-            source_id=source.id,
-        )
-    return _response_from_upstream(response, source_id=source.id)
-
-
-async def _stream_chat_completion(source: RouterSourceConfig, payload: dict[str, Any]) -> StreamingResponse | JSONResponse:
-    client = _upstream_client()
-    upstream_request = client.build_request(
-        "POST",
-        source.chat_completions_url(),
-        json=payload,
-        headers=_upstream_headers(source),
-    )
-    try:
-        response = await client.send(upstream_request, stream=True)
-    except Exception as exc:
-        return _router_error(502, "upstream_unreachable", f"Source '{source.id}' could not be reached: {exc}")
-
-    async def iter_bytes() -> AsyncIterator[bytes]:
-        try:
-            async for chunk in response.aiter_bytes():
-                yield chunk
-        finally:
-            await response.aclose()
-
-    media_type = response.headers.get("content-type") or "text/event-stream"
-    return StreamingResponse(iter_bytes(), status_code=response.status_code, media_type=media_type)
-
-
-def _response_from_upstream(response: httpx.Response, *, source_id: str) -> Response:
-    content_type = response.headers.get("content-type", "")
-    if "application/json" in content_type.lower():
-        try:
-            return JSONResponse(status_code=response.status_code, content=response.json())
-        except json.JSONDecodeError:
-            pass
-    return Response(
-        status_code=response.status_code,
-        content=response.content,
-        media_type=content_type or None,
-        headers={"X-Model-Router-Source": source_id},
     )

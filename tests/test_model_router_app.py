@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 import model_router.app as router_app
+import model_router.forwarding as router_forwarding
 from model_router.catalog import RoutedModel, RouterCatalogSnapshot, RouterSourceSnapshot
 from model_router.settings import RouterSourceConfig
 
@@ -120,14 +121,14 @@ def test_router_lists_agent_studio_models(monkeypatch) -> None:
 def test_router_rewrites_model_and_preserves_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 
-    async def fake_post(source: RouterSourceConfig, payload: dict[str, Any]):
+    async def fake_forward(_application, source: RouterSourceConfig, payload: dict[str, Any]):
         captured["source_id"] = source.id
         captured["payload"] = payload
         return JSONResponse({"ok": True, "model": payload["model"]})
 
     monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
     monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
-    monkeypatch.setattr(router_app, "_post_chat_completion", fake_post)
+    monkeypatch.setattr(router_app, "forward_chat_completion", fake_forward)
     client = TestClient(router_app.app)
 
     payload = {
@@ -192,13 +193,13 @@ def test_router_injects_profile_sampling_defaults_for_vllm_when_omitted(monkeypa
         profile_applied=True,
     )
 
-    async def fake_post(_source: RouterSourceConfig, payload: dict[str, Any]):
+    async def fake_forward(_application, _source: RouterSourceConfig, payload: dict[str, Any]):
         captured["payload"] = payload
         return JSONResponse({"ok": True, "model": payload["model"]})
 
     monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
     monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog(source=source, model=model))
-    monkeypatch.setattr(router_app, "_post_chat_completion", fake_post)
+    monkeypatch.setattr(router_app, "forward_chat_completion", fake_forward)
     client = TestClient(router_app.app)
 
     response = client.post(
@@ -255,13 +256,13 @@ def test_router_preserves_explicit_sampling_values(monkeypatch) -> None:
         thinking_default_enabled=True,
     )
 
-    async def fake_post(_source: RouterSourceConfig, payload: dict[str, Any]):
+    async def fake_forward(_application, _source: RouterSourceConfig, payload: dict[str, Any]):
         captured["payload"] = payload
         return JSONResponse({"ok": True, "model": payload["model"]})
 
     monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
     monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog(source=source, model=model))
-    monkeypatch.setattr(router_app, "_post_chat_completion", fake_post)
+    monkeypatch.setattr(router_app, "forward_chat_completion", fake_forward)
     client = TestClient(router_app.app)
 
     response = client.post(
@@ -293,14 +294,14 @@ def test_router_preserves_explicit_sampling_values(monkeypatch) -> None:
 def test_router_drops_non_positive_max_tokens_before_forwarding(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 
-    async def fake_post(source: RouterSourceConfig, payload: dict[str, Any]):
+    async def fake_forward(_application, source: RouterSourceConfig, payload: dict[str, Any]):
         captured["source_id"] = source.id
         captured["payload"] = payload
         return JSONResponse({"ok": True, "model": payload["model"]})
 
     monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
     monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
-    monkeypatch.setattr(router_app, "_post_chat_completion", fake_post)
+    monkeypatch.setattr(router_app, "forward_chat_completion", fake_forward)
     client = TestClient(router_app.app)
 
     response = client.post(
@@ -345,13 +346,13 @@ def test_router_does_not_inject_top_k_for_generic_sources(monkeypatch) -> None:
         supports_top_k=False,
     )
 
-    async def fake_post(_source: RouterSourceConfig, payload: dict[str, Any]):
+    async def fake_forward(_application, _source: RouterSourceConfig, payload: dict[str, Any]):
         captured["payload"] = payload
         return JSONResponse({"ok": True, "model": payload["model"]})
 
     monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
     monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog(source=source, model=model))
-    monkeypatch.setattr(router_app, "_post_chat_completion", fake_post)
+    monkeypatch.setattr(router_app, "forward_chat_completion", fake_forward)
     client = TestClient(router_app.app)
 
     response = client.post(
@@ -417,12 +418,27 @@ def test_router_forwards_once_with_lifespan_managed_async_client(monkeypatch) ->
         attempts += 1
         captured["url"] = str(request.url)
         captured["model"] = json.loads(request.content)["model"]
+        captured["authorization"] = request.headers.get("authorization")
         return httpx.Response(201, json={"id": "completion-1"})
 
     upstream_client = httpx.AsyncClient(transport=httpx.MockTransport(upstream_handler))
     monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
-    monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
-    monkeypatch.setattr(router_app, "_create_upstream_client", lambda: upstream_client)
+    monkeypatch.setenv("UPSTREAM_API_KEY", "source-token")
+    monkeypatch.setattr(
+        router_app,
+        "catalog_service",
+        _FakeCatalog(
+            source=RouterSourceConfig(
+                id="local_llama_server",
+                label="Local llama-server",
+                base_url="http://127.0.0.1:8081/v1",
+                adapter="llama_cpp_server",
+                enabled_for=["agent_studio", "comment_lab", "label_lab"],
+                api_key_env="UPSTREAM_API_KEY",
+            )
+        ),
+    )
+    monkeypatch.setattr(router_forwarding, "create_upstream_client", lambda: upstream_client)
 
     with TestClient(router_app.app) as client:
         response = client.post(
@@ -437,10 +453,13 @@ def test_router_forwards_once_with_lifespan_managed_async_client(monkeypatch) ->
         assert captured == {
             "url": "http://127.0.0.1:8081/v1/chat/completions",
             "model": "gemma4",
+            "authorization": "Bearer source-token",
         }
+        assert router_app.app.state.upstream_client is upstream_client
         assert not upstream_client.is_closed
 
     assert upstream_client.is_closed
+    assert not hasattr(router_app.app.state, "upstream_client")
 
 
 def test_router_does_not_retry_failed_upstream_request(monkeypatch) -> None:
@@ -454,7 +473,7 @@ def test_router_does_not_retry_failed_upstream_request(monkeypatch) -> None:
     upstream_client = httpx.AsyncClient(transport=httpx.MockTransport(upstream_handler))
     monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
     monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
-    monkeypatch.setattr(router_app, "_create_upstream_client", lambda: upstream_client)
+    monkeypatch.setattr(router_forwarding, "create_upstream_client", lambda: upstream_client)
 
     with TestClient(router_app.app) as client:
         response = client.post(
@@ -464,7 +483,14 @@ def test_router_does_not_retry_failed_upstream_request(monkeypatch) -> None:
         )
 
     assert response.status_code == 502
-    assert response.json()["error"]["code"] == "upstream_unreachable"
+    assert response.json() == {
+        "error": {
+            "type": "model_router_error",
+            "code": "upstream_unreachable",
+            "message": "Source 'local_llama_server' could not be reached: connection refused",
+            "source_id": "local_llama_server",
+        }
+    }
     assert attempts == 1
     assert upstream_client.is_closed
 
@@ -482,19 +508,24 @@ class _TrackedAsyncStream(httpx.AsyncByteStream):
 
 
 def test_router_streams_async_upstream_response_and_closes_stream(monkeypatch) -> None:
+    attempts = 0
     stream = _TrackedAsyncStream()
-    upstream_client = httpx.AsyncClient(
-        transport=httpx.MockTransport(
-            lambda _request: httpx.Response(
-                202,
-                headers={"content-type": "text/event-stream"},
-                stream=stream,
-            )
+
+    async def upstream_handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(
+            202,
+            headers={"content-type": "text/event-stream"},
+            stream=stream,
         )
+
+    upstream_client = httpx.AsyncClient(
+        transport=httpx.MockTransport(upstream_handler)
     )
     monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
     monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
-    monkeypatch.setattr(router_app, "_create_upstream_client", lambda: upstream_client)
+    monkeypatch.setattr(router_forwarding, "create_upstream_client", lambda: upstream_client)
 
     with TestClient(router_app.app) as client:
         response = client.post(
@@ -506,6 +537,66 @@ def test_router_streams_async_upstream_response_and_closes_stream(monkeypatch) -
         assert response.status_code == 202
         assert response.headers["content-type"].startswith("text/event-stream")
         assert response.content == b"data: first\\n\\ndata: [DONE]\\n\\n"
+        assert attempts == 1
         assert stream.closed
 
+    assert upstream_client.is_closed
+
+
+def test_router_stream_failure_preserves_existing_error_payload(monkeypatch) -> None:
+    attempts = 0
+
+    async def upstream_handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        raise httpx.ReadError("stream interrupted")
+
+    upstream_client = httpx.AsyncClient(transport=httpx.MockTransport(upstream_handler))
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
+    monkeypatch.setattr(router_forwarding, "create_upstream_client", lambda: upstream_client)
+
+    with TestClient(router_app.app) as client:
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": "local_llama_server::gemma4", "messages": [], "stream": True},
+            headers={"Authorization": "Bearer router-token"},
+        )
+
+    assert response.status_code == 502
+    assert response.json() == {
+        "error": {
+            "type": "model_router_error",
+            "code": "upstream_unreachable",
+            "message": "Source 'local_llama_server' could not be reached: stream interrupted",
+        }
+    }
+    assert attempts == 1
+    assert upstream_client.is_closed
+
+
+def test_router_preserves_upstream_json_error_payload(monkeypatch) -> None:
+    attempts = 0
+    provider_error = {"error": {"message": "rate limited", "type": "rate_limit_error", "code": "rate_limited"}}
+
+    async def upstream_handler(_request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(429, json=provider_error)
+
+    upstream_client = httpx.AsyncClient(transport=httpx.MockTransport(upstream_handler))
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
+    monkeypatch.setattr(router_forwarding, "create_upstream_client", lambda: upstream_client)
+
+    with TestClient(router_app.app) as client:
+        response = client.post(
+            "/v1/chat/completions",
+            json={"model": "local_llama_server::gemma4", "messages": []},
+            headers={"Authorization": "Bearer router-token"},
+        )
+
+    assert response.status_code == 429
+    assert response.json() == provider_error
+    assert attempts == 1
     assert upstream_client.is_closed
