@@ -17,6 +17,9 @@ letta-souce-code/
 
 .playwright-cli/
 .playwright-mcp/
+.pytest_cache/
+.ruff_cache/
+.vscode/
 
 content/prompts/system/letta_original/system_prompts
 tests/outputs
