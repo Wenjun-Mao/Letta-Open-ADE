@@ -6,7 +6,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
-from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from model_router.settings import (
     ModelRouterSettings,
@@ -87,7 +92,9 @@ class RoutedModel:
     label_lab_available: bool
     structured_output_mode: str | None
     sampling_defaults: dict[str, float | int] = field(default_factory=dict)
-    scenario_sampling_defaults: dict[str, dict[str, float | int]] = field(default_factory=dict)
+    scenario_sampling_defaults: dict[str, dict[str, float | int]] = field(
+        default_factory=dict
+    )
     supports_top_k: bool = False
     supports_thinking: bool = False
     thinking_default_enabled: bool = False
@@ -115,7 +122,8 @@ class RoutedModel:
             "structured_output_mode": self.structured_output_mode,
             "sampling_defaults": dict(self.sampling_defaults),
             "scenario_sampling_defaults": {
-                key: dict(value) for key, value in self.scenario_sampling_defaults.items()
+                key: dict(value)
+                for key, value in self.scenario_sampling_defaults.items()
             },
             "supports_top_k": self.supports_top_k,
             "supports_thinking": self.supports_thinking,
@@ -164,7 +172,11 @@ class RouterCatalogService:
 
     def snapshot(self, *, force_refresh: bool = False) -> RouterCatalogSnapshot:
         settings = self._settings_factory()
-        if not force_refresh and self._snapshot is not None and time.monotonic() < self._expires_at:
+        if (
+            not force_refresh
+            and self._snapshot is not None
+            and time.monotonic() < self._expires_at
+        ):
             return self._snapshot
 
         generated_at = time.time()
@@ -188,9 +200,13 @@ class RouterCatalogService:
                 if not model.provider_model_id:
                     continue
                 is_llm = model.model_type == "llm"
-                router_model_id = build_router_model_id(source.id, model.provider_model_id)
+                router_model_id = build_router_model_id(
+                    source.id, model.provider_model_id
+                )
                 profile = profiles.get(router_model_id)
-                agent_studio_compatible = True if profile is None else profile.agent_studio_compatible
+                agent_studio_compatible = (
+                    True if profile is None else profile.agent_studio_compatible
+                )
                 agent_studio_available = (
                     is_llm
                     and "agent_studio" in source.module_visibility
@@ -198,9 +214,13 @@ class RouterCatalogService:
                 )
                 label_lab_available = is_llm and "label_lab" in source.module_visibility
                 structured_output_mode = (
-                    self._structured_output_mode(source) if label_lab_available else None
+                    self._structured_output_mode(source)
+                    if label_lab_available
+                    else None
                 )
-                supports_top_k = self._supports_top_k(source.adapter) or bool(profile and profile.supports_top_k)
+                supports_top_k = self._supports_top_k(source.adapter) or bool(
+                    profile and profile.supports_top_k
+                )
                 models.append(
                     RoutedModel(
                         router_model_id=router_model_id,
@@ -213,20 +233,31 @@ class RouterCatalogService:
                         provider_model_id=model.provider_model_id,
                         model_type=model.model_type,
                         letta_handle=(
-                            f"openai-proxy/{router_model_id}" if agent_studio_available else None
+                            f"openai-proxy/{router_model_id}"
+                            if agent_studio_available
+                            else None
                         ),
                         agent_studio_available=agent_studio_available,
-                        comment_lab_available=is_llm and "comment_lab" in source.module_visibility,
+                        comment_lab_available=is_llm
+                        and "comment_lab" in source.module_visibility,
                         label_lab_available=label_lab_available,
                         structured_output_mode=structured_output_mode,
-                        sampling_defaults=profile.sampling_defaults.as_payload() if profile else {},
-                        scenario_sampling_defaults=profile.scenario_defaults_payload() if profile else {},
+                        sampling_defaults=profile.sampling_defaults.as_payload()
+                        if profile
+                        else {},
+                        scenario_sampling_defaults=profile.scenario_defaults_payload()
+                        if profile
+                        else {},
                         supports_top_k=supports_top_k,
                         supports_thinking=bool(profile and profile.supports_thinking),
-                        thinking_default_enabled=bool(profile and profile.thinking_default_enabled),
+                        thinking_default_enabled=bool(
+                            profile and profile.thinking_default_enabled
+                        ),
                         profile_applied=profile is not None,
                         profile_source=profile.profile_source if profile else "",
-                        agent_studio_candidate=bool(profile and profile.agent_studio_candidate),
+                        agent_studio_candidate=bool(
+                            profile and profile.agent_studio_candidate
+                        ),
                         agent_studio_compatible=agent_studio_compatible,
                     )
                 )
@@ -234,7 +265,10 @@ class RouterCatalogService:
 
     def _load_profiles(self) -> dict[str, ModelProfile]:
         settings = self._settings_factory()
-        profiles_file = str(getattr(settings, "model_profiles_file", "") or "config/model-router/model-profiles.json")
+        profiles_file = str(
+            getattr(settings, "model_profiles_file", "")
+            or "config/model-router/model-profiles.json"
+        )
         return load_model_profiles(profiles_file)
 
     def find_routed_model(
@@ -245,15 +279,26 @@ class RouterCatalogService:
     ) -> RoutedModel | None:
         normalized = normalize_router_model_id(router_model_id)
         snapshot = self.snapshot(force_refresh=force_refresh)
-        return next((model for model in self.flatten(snapshot) if model.router_model_id == normalized), None)
+        return next(
+            (
+                model
+                for model in self.flatten(snapshot)
+                if model.router_model_id == normalized
+            ),
+            None,
+        )
 
     def source_config(self, source_id: str) -> RouterSourceConfig | None:
         settings = self._settings_factory()
-        return next((source for source in settings.sources if source.id == source_id), None)
+        return next(
+            (source for source in settings.sources if source.id == source_id), None
+        )
 
     def source_status(self, source_id: str) -> RouterSourceSnapshot | None:
         snapshot = self.snapshot()
-        return next((source for source in snapshot.sources if source.id == source_id), None)
+        return next(
+            (source for source in snapshot.sources if source.id == source_id), None
+        )
 
     def _discover_source(
         self,
@@ -264,9 +309,13 @@ class RouterCatalogService:
         try:
             payload = self._fetch_models_payload(source, settings=settings)
             records = tuple(self._extract_model_records(payload))
-            filtered_records, allowlist_applied, allowlist_checked_at, raw_model_count, detail = (
-                self._apply_source_allowlist(source, records)
-            )
+            (
+                filtered_records,
+                allowlist_applied,
+                allowlist_checked_at,
+                raw_model_count,
+                detail,
+            ) = self._apply_source_allowlist(source, records)
             if not records:
                 return self._source_snapshot(
                     source,
@@ -338,13 +387,17 @@ class RouterCatalogService:
         retrying = Retrying(
             stop=stop_after_attempt(2),
             wait=wait_exponential(multiplier=1, min=1, max=4),
-            retry=retry_if_exception_type((RetryableRouterDiscoveryError, *_RETRYABLE_DISCOVERY_EXCEPTIONS)),
+            retry=retry_if_exception_type(
+                (RetryableRouterDiscoveryError, *_RETRYABLE_DISCOVERY_EXCEPTIONS)
+            ),
             reraise=True,
         )
         for attempt in retrying:
             with attempt:
                 return self._fetch_models_payload_once(source, settings=settings)
-        raise RuntimeError("Model-router discovery retry execution did not produce a result")
+        raise RuntimeError(
+            "Model-router discovery retry execution did not produce a result"
+        )
 
     def _fetch_models_payload_once(
         self,
@@ -367,7 +420,9 @@ class RouterCatalogService:
                 f"Provider catalog temporary failure ({response.status_code}): {response.text}"
             )
         if response.status_code >= 400:
-            raise RuntimeError(f"Provider catalog request failed ({response.status_code}): {response.text}")
+            raise RuntimeError(
+                f"Provider catalog request failed ({response.status_code}): {response.text}"
+            )
 
         payload = response.json()
         if not isinstance(payload, dict):
@@ -394,7 +449,8 @@ class RouterCatalogService:
         filtered_records = tuple(
             record
             for record in records
-            if record.model_type == "llm" and record.provider_model_id in allowlist.usable_models
+            if record.model_type == "llm"
+            and record.provider_model_id in allowlist.usable_models
         )
         return (
             filtered_records,
@@ -431,14 +487,20 @@ class RouterCatalogService:
                     or item.get("root")
                     or ""
                 )
-                model_type = RouterCatalogService._detect_model_type(item, model_id=model_id)
+                model_type = RouterCatalogService._detect_model_type(
+                    item, model_id=model_id
+                )
             model_id = RouterCatalogService._normalize_model_id(model_id)
             if not model_id or model_id in seen:
                 continue
             seen.add(model_id)
             if model_type == "unknown":
-                model_type = RouterCatalogService._detect_model_type({}, model_id=model_id)
-            records.append(RouterModelRecord(provider_model_id=model_id, model_type=model_type))
+                model_type = RouterCatalogService._detect_model_type(
+                    {}, model_id=model_id
+                )
+            records.append(
+                RouterModelRecord(provider_model_id=model_id, model_type=model_type)
+            )
         return records
 
     @staticmethod

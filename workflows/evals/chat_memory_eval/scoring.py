@@ -37,7 +37,8 @@ def assistant_replies(sequence: list[dict[str, Any]]) -> list[str]:
     return [
         str(step.get("content", "") or "").strip()
         for step in sequence
-        if str(step.get("type", "")).lower() == "assistant" and str(step.get("content", "") or "").strip()
+        if str(step.get("type", "")).lower() == "assistant"
+        and str(step.get("content", "") or "").strip()
     ]
 
 
@@ -49,7 +50,9 @@ def tool_calls(sequence: list[dict[str, Any]]) -> list[dict[str, str]]:
         calls.append(
             {
                 "name": str(step.get("name", "") or ""),
-                "arguments": str(step.get("arguments", "") or step.get("tool_arguments", "") or ""),
+                "arguments": str(
+                    step.get("arguments", "") or step.get("tool_arguments", "") or ""
+                ),
             }
         )
     return calls
@@ -68,7 +71,9 @@ def memory_changed(old_memory: str, new_memory: str) -> bool:
     return old_memory.strip() != new_memory.strip()
 
 
-def score_expected_facts(memory_text: str, expected_facts: tuple[ExpectedFact, ...]) -> list[FactScore]:
+def score_expected_facts(
+    memory_text: str, expected_facts: tuple[ExpectedFact, ...]
+) -> list[FactScore]:
     normalized = memory_text.lower()
     scores: list[FactScore] = []
     for fact in expected_facts:

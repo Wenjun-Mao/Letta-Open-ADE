@@ -64,7 +64,12 @@ def judge_round(
     return {"ok": True, "model_key": model_key, **parsed, "raw_content": content}
 
 
-def _judge_prompt(*, fixture: dict[str, Any], turn_records: list[dict[str, Any]], final_human_memory: str) -> str:
+def _judge_prompt(
+    *,
+    fixture: dict[str, Any],
+    turn_records: list[dict[str, Any]],
+    final_human_memory: str,
+) -> str:
     transcript = [
         {
             "turn_index": item.get("turn_index"),
@@ -119,4 +124,3 @@ def _parse_json_object(content: str) -> dict[str, Any] | None:
         if isinstance(parsed, dict):
             return parsed
     return None
-

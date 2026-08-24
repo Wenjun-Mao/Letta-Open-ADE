@@ -6,8 +6,14 @@ from pathlib import Path
 
 
 MIGRATIONS = (
-    (Path("data/personas/personas.sqlite3"), Path("data/runtime/personas/personas.sqlite3")),
-    (Path("data/agent_lifecycle/registry.json"), Path("data/runtime/agent-lifecycle/registry.json")),
+    (
+        Path("data/personas/personas.sqlite3"),
+        Path("data/runtime/personas/personas.sqlite3"),
+    ),
+    (
+        Path("data/agent_lifecycle/registry.json"),
+        Path("data/runtime/agent-lifecycle/registry.json"),
+    ),
 )
 
 
@@ -64,7 +70,9 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Delete a legacy source only after its destination is copied or verified identical.",
     )
-    parser.add_argument("--dry-run", action="store_true", help="Report actions without changing files.")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Report actions without changing files."
+    )
     return parser
 
 

@@ -2,8 +2,9 @@
 
 ## Status
 
-Accepted and implemented through the August 2026 maintenance cleanup. This
-remains an ongoing structure rule.
+Accepted. Its incremental, behavior-first extraction rule remains in force;
+[ADR 0006](0006-comprehension-first-service-and-feature-architecture.md)
+supersedes its previous repository-layout rollout plan.
 
 ## Context
 
@@ -18,16 +19,15 @@ introduce.
   a clear ownership boundary and focused tests.
 - Move backend initialization toward explicit application dependencies rather than
   expanding global facades.
-- Preserve public routes and contracts while moving one feature at a time.
+- Move one complete feature slice at a time and delete the replaced source once
+  the replacement is verified.
 
 ## Consequences
 
-The rollout split the frontend API client by feature, reduced Agent Studio and
-Test Center route controllers to composition owners, separated persona SQL from
-seed policy and mapping, extracted generation request/response mapping, and moved
-router forwarding into a one-attempt transport. Focused request-identity,
-selection, payload, response, seed-transaction, descriptor, proxy, and UI tests
-protect those seams.
+The service-first redesign keeps these tactics but gives every feature one
+discoverable ADE Web and ADE API home. Focused request-identity, selection,
+payload, response, seed-transaction, descriptor, proxy, and UI tests protect
+those seams.
 
 Large feature modules may still be split when a cohesive boundary emerges. Avoid
 line-count-only extraction, repository-wide moves, or generic abstractions that

@@ -35,7 +35,7 @@ openapi:
 	uv run python scripts/generate_openapi_zh_manual.py
 
 smoke:
-	docker compose exec ade-api python workflows/smoke/platform_api_e2e_check.py
+	docker compose exec ade-api python workflows/smoke/ade_api_e2e_check.py
 
 eval-chat-memory:
 	docker compose exec ade-api python workflows/evals/chat_memory_eval/run.py --config workflows/evals/chat_memory_eval/config.toml --rounds 1

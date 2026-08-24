@@ -1,9 +1,8 @@
 # ADE Maintainer Reading Guide
 
-This guide is for maintainers and contributors learning the **target**
-architecture. Start with the current [Codebase Map](codebase-map.md) while the
-migration is in progress; use this guide to understand where the project is
-going and how to place new work.
+This guide is for maintainers and contributors learning the current
+architecture. Start with the [Codebase Map](codebase-map.md) to find the
+owner of a change, then use this guide to understand the system boundaries.
 
 ## Five-Minute System Model
 
@@ -21,7 +20,7 @@ six ideas:
 
 | Time | Read | Learn |
 | --- | --- | --- |
-| 0-5 min | [ADR 0006](adr/0006-comprehension-first-service-and-feature-architecture.md) | Why the target exists and the breaking-change rules. |
+| 0-5 min | [ADR 0006](adr/0006-comprehension-first-service-and-feature-architecture.md) | Why the architecture exists and its breaking-change rules. |
 | 5-10 min | [Architecture Overview](architecture/overview.md) | Services, repository shape, dependency rules, and exposure boundary. |
 | 10-18 min | [Request Flows](architecture/request-flows.md) | How Agent Studio, generation labs, content centers, and workflows execute. |
 | 18-25 min | One feature's `README.md` | Its user value, endpoints, storage, integrations, and tests. |
@@ -29,7 +28,7 @@ six ideas:
 
 ## Find The Right Home
 
-| You need to change... | Start in the target layout |
+| You need to change... | Start here |
 | --- | --- |
 | Browser interaction or feature state | `apps/ade-web/src/features/<feature>/` |
 | ADE endpoint, contract, or business behavior | `services/ade-api/src/ade_api/features/<feature>/` |
@@ -52,11 +51,9 @@ When a concern looks reusable, first ask whether it belongs to one feature,
 `platform/`, an integration, or a workflow. Create a shared package only when
 two services need the same stable, versioned contract.
 
-## Migration Compass
+## Structure Compass
 
-During the transition, a legacy location and its target replacement can coexist
-only while one vertical slice is being moved. New long-lived work belongs in the
-service-first layout: `apps/ade-web/`, `services/ade-api/`,
-`services/model-router/`, `content/`, and `workflows/`. A completed slice deletes
-its replaced paths; do not create compatibility aliases or duplicate feature
-implementations.
+Long-lived work belongs in the service-first layout: `apps/ade-web/`,
+`services/ade-api/`, `services/model-router/`, `content/`, and `workflows/`.
+Keep a complete vertical change with its owner, and do not create compatibility
+aliases or duplicate feature implementations.

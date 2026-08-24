@@ -43,7 +43,9 @@ def load_fixture(fixtures_dir: Path, fixture_key: str) -> ConversationFixture:
     if not turns:
         raise FixtureError(f"Fixture has no turns: {path}")
 
-    expected_facts = tuple(_expected_fact(item) for item in _list(payload.get("expected_facts")))
+    expected_facts = tuple(
+        _expected_fact(item) for item in _list(payload.get("expected_facts"))
+    )
     if not expected_facts:
         raise FixtureError(f"Fixture has no expected_facts: {path}")
 
@@ -52,7 +54,9 @@ def load_fixture(fixtures_dir: Path, fixture_key: str) -> ConversationFixture:
         description=str(payload.get("description") or "").strip(),
         turns=turns,
         expected_facts=expected_facts,
-        forbidden_reply_substrings=_string_tuple(payload.get("forbidden_reply_substrings")),
+        forbidden_reply_substrings=_string_tuple(
+            payload.get("forbidden_reply_substrings")
+        ),
     )
 
 
@@ -75,4 +79,3 @@ def _expected_fact(value: object) -> ExpectedFact:
     if not aliases:
         raise FixtureError(f"expected fact '{key}' must include aliases")
     return ExpectedFact(key=key, label=label, aliases=aliases)
-

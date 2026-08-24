@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _SCENARIO_ALIASES = {
     "chat": "agent_studio",
     "comment": "comment_lab",
@@ -89,7 +89,9 @@ class SamplingDefaults(BaseModel):
         if override is None:
             return self
         return SamplingDefaults(
-            temperature=override.temperature if override.temperature is not None else self.temperature,
+            temperature=override.temperature
+            if override.temperature is not None
+            else self.temperature,
             top_p=override.top_p if override.top_p is not None else self.top_p,
             top_k=override.top_k if override.top_k is not None else self.top_k,
             min_p=override.min_p if override.min_p is not None else self.min_p,
@@ -120,7 +122,9 @@ class ModelProfile(BaseModel):
     agent_studio_candidate: bool = False
     agent_studio_compatible: bool = True
     sampling_defaults: SamplingDefaults = Field(default_factory=SamplingDefaults)
-    scenario_sampling_defaults: dict[str, SamplingDefaults] = Field(default_factory=dict)
+    scenario_sampling_defaults: dict[str, SamplingDefaults] = Field(
+        default_factory=dict
+    )
 
     @field_validator("base_model", "profile_source")
     @classmethod
@@ -155,18 +159,23 @@ class ModelProfile(BaseModel):
 def load_model_profiles(
     path: str | Path,
     *,
-    project_root: Path = _PROJECT_ROOT,
+    project_root: Path | None = None,
 ) -> dict[str, ModelProfile]:
     resolved_path = Path(path)
     if not resolved_path.is_absolute():
-        resolved_path = project_root / resolved_path
+        repository_root = Path(
+            project_root or os.getenv("ADE_REPOSITORY_ROOT") or Path.cwd()
+        ).resolve()
+        resolved_path = repository_root / resolved_path
     if not resolved_path.is_file():
         return {}
 
     raw_text = resolved_path.read_text(encoding="utf-8")
     raw_payload = json.loads(raw_text, object_pairs_hook=_reject_duplicate_object_keys)
     if not isinstance(raw_payload, dict):
-        raise ValueError("Model profile config must be a JSON object keyed by router model id")
+        raise ValueError(
+            "Model profile config must be a JSON object keyed by router model id"
+        )
 
     profiles: dict[str, ModelProfile] = {}
     for raw_key, raw_value in raw_payload.items():

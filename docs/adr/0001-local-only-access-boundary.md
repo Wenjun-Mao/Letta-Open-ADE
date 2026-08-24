@@ -15,7 +15,7 @@ operations are not safe to expose as an unauthenticated development service.
 - Default developer bindings stay local to the host.
 - Any non-local deployment must use an explicit authenticated ingress and a
   reviewed, narrow CORS policy.
-- Agent Platform routes are separated into reader, operator, and administrator
+- ADE API routes are separated into reader, operator, and administrator
   capabilities enforced with server-side bearer credentials.
 - Health endpoints remain public so container health checks do not need secrets.
 - Diagnostics redact credentials and raw provider diagnostics require an explicit

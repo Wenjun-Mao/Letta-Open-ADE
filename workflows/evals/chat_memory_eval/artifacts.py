@@ -47,7 +47,9 @@ class ArtifactWriter:
         self.csv_path.parent.mkdir(parents=True, exist_ok=True)
         self._csv_handle = self.csv_path.open("w", encoding="utf-8-sig", newline="")
         self._jsonl_handle = self.jsonl_path.open("w", encoding="utf-8", newline="\n")
-        self._writer = csv.DictWriter(self._csv_handle, fieldnames=CSV_FIELDS, extrasaction="ignore")
+        self._writer = csv.DictWriter(
+            self._csv_handle, fieldnames=CSV_FIELDS, extrasaction="ignore"
+        )
         self._writer.writeheader()
         self._csv_handle.flush()
         return self
@@ -59,16 +61,25 @@ class ArtifactWriter:
             self._jsonl_handle.close()
 
     def write_round(self, row: dict[str, Any], raw_record: dict[str, Any]) -> None:
-        if self._writer is None or self._csv_handle is None or self._jsonl_handle is None:
+        if (
+            self._writer is None
+            or self._csv_handle is None
+            or self._jsonl_handle is None
+        ):
             raise RuntimeError("ArtifactWriter must be used as a context manager")
         self._writer.writerow(row)
         self._csv_handle.flush()
-        self._jsonl_handle.write(json.dumps(raw_record, ensure_ascii=False, sort_keys=True) + "\n")
+        self._jsonl_handle.write(
+            json.dumps(raw_record, ensure_ascii=False, sort_keys=True) + "\n"
+        )
         self._jsonl_handle.flush()
 
 
 def write_summary(path: Path, summary: dict[str, Any]) -> None:
-    path.write_text(json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+    path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
 
 
 def build_summary(
@@ -91,7 +102,9 @@ def build_summary(
         "csv_path": str(csv_path),
         "jsonl_path": str(jsonl_path),
         "summary_path": str(summary_path),
-        "failed_rounds": [row.get("round") for row in rows if not bool(row.get("pass"))],
+        "failed_rounds": [
+            row.get("round") for row in rows if not bool(row.get("pass"))
+        ],
     }
 
 
@@ -105,4 +118,3 @@ def print_summary(summary: dict[str, Any]) -> None:
     print(f"csv: {summary['csv_path']}")
     print(f"jsonl: {summary['jsonl_path']}")
     print(f"summary: {summary['summary_path']}")
-

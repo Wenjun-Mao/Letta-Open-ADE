@@ -1,26 +1,48 @@
-# Tests Layout
+# Verification Layout
 
-This directory now keeps only two maintained test layers:
+Tests live beside the behavior they protect whenever a service, package, feature,
+or workflow owns that behavior. This root directory retains repository-wide
+guardrails and shared live-check configuration.
 
-- `tests/test_*.py`: pytest unit and API coverage
-- `tests/checks/`: the two live stack checks used by Test Center
+## Test Homes
 
-Supporting files:
+- `services/ade-api/tests/features/`: ADE API feature tests.
+- `services/ade-api/tests/platform/`: API composition, auth, and OpenAPI tests.
+- `services/model-router/tests/`: router catalog, profile, forwarding, and settings tests.
+- `packages/model-catalog-contracts/tests/`: stable shared-contract tests.
+- `apps/ade-web/src/**/*.test.*`: ADE Web unit and feature tests.
+- `workflows/evals/<workflow>/tests/`: eval and provider-probe tests.
+- `workflows/smoke/`: deliberate live stack checks.
+- `tests/test_codebase_guardrails.py`: repository structure and architecture guardrails.
 
-- `tests/shared/config_defaults.py`: shared base URLs and default handles for the live checks
-- `data/runtime/test-runs/`: manifests, logs, and artifacts written by Test Center runs
-- Chat/model behavior evals live under `workflows/evals/`, for example `workflows/evals/chat_memory_eval/`
-
-## Maintained Entry Points
-
-- `uv run python -m pytest`
-- `uv run python workflows/evals/chat_memory_eval/run.py --config workflows/evals/chat_memory_eval/config.toml --rounds 1`
-- `uv run python tests/checks/platform_api_e2e_check.py`
-- `uv run python tests/checks/ade_mvp_smoke_e2e_check.py`
-
-If `agent_platform_api` routes in your running container lag behind source changes, point the live checks at a source-backed API server:
+## Deterministic Checks
 
 ```text
-ADE_API_API_BASE_URL=http://127.0.0.1:8285 uv run python tests/checks/platform_api_e2e_check.py
-ADE_API_API_BASE_URL=http://127.0.0.1:8285 uv run python tests/checks/ade_mvp_smoke_e2e_check.py
+uv run python -m pytest
+uv run ruff check services packages workflows scripts tests
+npm --prefix apps/ade-web run test
+npm --prefix apps/ade-web run lint
 ```
+
+Run a focused area by passing its owned test path to pytest, for example:
+
+```text
+uv run python -m pytest services/model-router/tests
+uv run python -m pytest services/ade-api/tests/features/comment_lab
+uv run python -m pytest workflows/evals/chat_memory_eval/tests
+```
+
+## Live Checks
+
+Smoke checks require the Compose stack and model providers. Run them inside the
+`ade-api` service through the Makefile so they use Compose-network addresses and
+the configured service credentials:
+
+```text
+make smoke
+make eval-chat-memory
+make eval-comment-persona
+```
+
+Workflow outputs are run-scoped local artifacts. They are not pytest fixtures and
+must stay out of source control.

@@ -9,12 +9,16 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from model_catalog_contracts.settings_file_loader import load_json_config_list
+from model_router.config_files import load_json_config_list
 
 
 RouterSourceKind = Literal["openai-compatible"]
-RouterSourceAdapter = Literal["generic_openai", "ark_openai", "llama_cpp_server", "vllm_openai"]
-RouterSourceStatus = Literal["healthy", "auth_error", "unreachable", "empty", "disabled"]
+RouterSourceAdapter = Literal[
+    "generic_openai", "ark_openai", "llama_cpp_server", "vllm_openai"
+]
+RouterSourceStatus = Literal[
+    "healthy", "auth_error", "unreachable", "empty", "disabled"
+]
 RouterModelType = Literal["llm", "embedding", "unknown"]
 _DEFAULT_SECRETS_DIR = Path("/run/secrets")
 _PROJECT_ROOT = Path(os.getenv("ADE_REPOSITORY_ROOT", Path.cwd())).resolve()
@@ -58,8 +62,15 @@ class RouterSourceConfig(BaseModel):
         normalized = str(value or "").strip().lower().replace("-", "_")
         if not normalized:
             return "generic_openai"
-        if normalized not in {"generic_openai", "ark_openai", "llama_cpp_server", "vllm_openai"}:
-            raise ValueError("adapter must be 'generic_openai', 'ark_openai', 'llama_cpp_server', or 'vllm_openai'")
+        if normalized not in {
+            "generic_openai",
+            "ark_openai",
+            "llama_cpp_server",
+            "vllm_openai",
+        }:
+            raise ValueError(
+                "adapter must be 'generic_openai', 'ark_openai', 'llama_cpp_server', or 'vllm_openai'"
+            )
         return normalized
 
     @field_validator("enabled_for", "module_visibility", mode="before")
@@ -89,7 +100,7 @@ class RouterSourceConfig(BaseModel):
         if base.endswith("/models"):
             return base
         if base.endswith("/chat/completions"):
-            return f"{base[:-len('/chat/completions')]}/models"
+            return f"{base[: -len('/chat/completions')]}/models"
         if _VERSION_PATH_RE.search(base):
             return f"{base}/models"
         return f"{base}/v1/models"
@@ -185,7 +196,9 @@ class ModelRouterSettings(BaseSettings):
 
     @field_validator("sources")
     @classmethod
-    def _ensure_unique_source_ids(cls, value: list[RouterSourceConfig]) -> list[RouterSourceConfig]:
+    def _ensure_unique_source_ids(
+        cls, value: list[RouterSourceConfig]
+    ) -> list[RouterSourceConfig]:
         cls._validate_sources(value)
         return value
 
@@ -198,8 +211,12 @@ class ModelRouterSettings(BaseSettings):
     def _load_sources_from_file_when_env_is_empty(self) -> "ModelRouterSettings":
         if self.sources:
             return self
-        loaded_items = load_json_config_list(self.sources_file, project_root=_PROJECT_ROOT)
-        self.sources = [RouterSourceConfig.model_validate(item) for item in loaded_items]
+        loaded_items = load_json_config_list(
+            self.sources_file, project_root=_PROJECT_ROOT
+        )
+        self.sources = [
+            RouterSourceConfig.model_validate(item) for item in loaded_items
+        ]
         self._validate_sources(self.sources)
         return self
 

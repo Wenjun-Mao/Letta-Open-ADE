@@ -1,21 +1,17 @@
 ---
-title: Agent Platform API（中文）
+title: ADE API（中文）
 ---
 
-# Agent Platform API（中文）
+# ADE API（中文）
 
-本文档介绍 ADE 使用的本地 Agent Platform API。
+本文档介绍 ADE Web 与运维工作流使用的本地 ADE API。
 
 ## 环境假设
 
 - 本地开发默认地址：
-  - ADE 前端：`http://127.0.0.1:3000`
-  - Agent Platform API：`http://127.0.0.1:8284`
-  - Letta Server API: `http://127.0.0.1:8283`
-  - Model Router：`http://127.0.0.1:8290`
-- API 开关：
-  - 设为 `ADE_API_API_ENABLED=1` 以启用路由。
-  - 设为 `ADE_API_API_ENABLED=0` 以硬禁用平台路由（返回 503）。
+  - ADE Web：`http://127.0.0.1:3000`
+  - ADE API：`http://127.0.0.1:8000`
+  - Model Router 与 Letta：Compose 网络内部服务，不暴露宿主机端口。
 - 浏览器请求通过 ADE 同源代理访问后端；直接 API 客户端使用 Reader、Operator
   或 Admin Bearer Key。
 - 默认服务仅绑定回环地址，面向本地开发。公开部署仍需 TLS、托管密钥、限流、
@@ -67,12 +63,13 @@ FastAPI 返回的错误 JSON 结构如下：
 - `400`: 请求不合法、状态流转不合法、参数校验失败
 - `404`: 资源不存在
 - `409`: 对已归档智能体执行了不允许的变更
-- `503`: 平台 API 被环境开关禁用
+- `503`: 必需运行时能力或上游依赖不可用
 
 ## 事实来源（Source of truth）
 
 - 代码库地图：`docs/codebase-map.md`
-- 维护路线图：`docs/maintenance-roadmap.md`
+- 架构概览：`docs/architecture/overview.md`
+- 请求流程：`docs/architecture/request-flows.md`
 - 上游参考资料：`docs/references.md`
 - OpenAPI 英文产物：`docs/openapi/ade-api-openapi.json`
 - OpenAPI 中文产物：`docs/openapi/ade-api-openapi-zh.json`

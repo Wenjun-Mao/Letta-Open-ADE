@@ -7,37 +7,42 @@ import time
 from typing import Any
 
 import httpx
-from letta_client import Letta
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
-from tests.shared.config_defaults import (
-    DEFAULT_ADE_API_API_BASE_URL,
+from workflows.smoke.config_defaults import (
+    DEFAULT_ADE_API_BASE_URL,
     DEFAULT_EMBEDDING_HANDLE,
-    DEFAULT_LETTA_BASE_URL,
     DEFAULT_PROMPT_KEY,
     DEFAULT_TEST_MODEL_HANDLE,
-    agent_platform_headers,
+    ade_api_headers,
 )
 
-LETTA_BASE_URL = os.getenv("LETTA_BASE_URL", DEFAULT_LETTA_BASE_URL)
-ADE_API_API_BASE_URL = os.getenv("ADE_API_API_BASE_URL", DEFAULT_ADE_API_API_BASE_URL)
+ADE_API_BASE_URL = os.getenv("ADE_API_BASE_URL", DEFAULT_ADE_API_BASE_URL)
 
 
 def _as_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, indent=2)
 
 
-def _safe_delete_agent(client: Letta, agent_id: str | None) -> None:
+def _safe_purge_agent(agent_id: str | None) -> None:
     if not agent_id:
         return
     try:
-        client.agents.delete(agent_id=agent_id)
+        with httpx.Client(
+            base_url=ADE_API_BASE_URL,
+            timeout=30.0,
+            headers=ade_api_headers(),
+        ) as http:
+            http.post(f"/api/v2/agent-studio/agents/{agent_id}/archive")
+            http.delete(f"/api/v2/agent-studio/agents/{agent_id}/purge")
     except Exception:
         pass
 
 
-def _poll_run(http: httpx.Client, run_id: str, timeout_seconds: int = 300) -> dict[str, Any]:
+def _poll_run(
+    http: httpx.Client, run_id: str, timeout_seconds: int = 300
+) -> dict[str, Any]:
     deadline = time.time() + timeout_seconds
     while time.time() < deadline:
         response = http.get(f"/api/v2/test-center/runs/{run_id}")
@@ -52,7 +57,9 @@ def _poll_run(http: httpx.Client, run_id: str, timeout_seconds: int = 300) -> di
 
 
 def _pick_model(options_payload: dict[str, Any]) -> str:
-    defaults = options_payload.get("defaults", {}) if isinstance(options_payload, dict) else {}
+    defaults = (
+        options_payload.get("defaults", {}) if isinstance(options_payload, dict) else {}
+    )
     default_model = str(defaults.get("model", "") or "").strip()
     if default_model:
         return default_model
@@ -68,7 +75,9 @@ def _pick_model(options_payload: dict[str, Any]) -> str:
 
 
 def _pick_prompt_key(options_payload: dict[str, Any]) -> str:
-    defaults = options_payload.get("defaults", {}) if isinstance(options_payload, dict) else {}
+    defaults = (
+        options_payload.get("defaults", {}) if isinstance(options_payload, dict) else {}
+    )
     default_prompt = str(defaults.get("prompt_key", "") or "").strip()
     if default_prompt:
         return default_prompt
@@ -82,7 +91,9 @@ def _pick_prompt_key(options_payload: dict[str, Any]) -> str:
 
 
 def _pick_embedding(options_payload: dict[str, Any]) -> str | None:
-    defaults = options_payload.get("defaults", {}) if isinstance(options_payload, dict) else {}
+    defaults = (
+        options_payload.get("defaults", {}) if isinstance(options_payload, dict) else {}
+    )
     default_embedding = str(defaults.get("embedding", "") or "").strip()
     if default_embedding:
         return default_embedding
@@ -116,21 +127,20 @@ def main() -> None:
         "detail": "",
     }
 
-    letta_client = Letta(base_url=LETTA_BASE_URL)
     agent_id: str | None = None
 
     try:
         with httpx.Client(
-            base_url=ADE_API_API_BASE_URL,
+            base_url=ADE_API_BASE_URL,
             timeout=120.0,
-            headers=agent_platform_headers(),
+            headers=ade_api_headers(),
         ) as http:
             capabilities_response = http.get("/api/v2/model-catalog/capabilities")
             capabilities_response.raise_for_status()
             capabilities_payload = capabilities_response.json()
             summary["steps"]["dashboard_status"] = {
                 "ok": True,
-                "platform_api_enabled": bool(capabilities_payload.get("enabled", False)),
+                "ade_api_enabled": bool(capabilities_payload.get("enabled", False)),
                 "strict_mode": bool(capabilities_payload.get("strict_mode", False)),
             }
             summary["steps"]["dashboard_capabilities"] = {
@@ -138,7 +148,9 @@ def main() -> None:
                 "missing_required": capabilities_payload.get("missing_required", []),
             }
 
-            options_response = http.get("/api/v2/model-catalog/options", params={"scenario": "chat"})
+            options_response = http.get(
+                "/api/v2/model-catalog/options", params={"scenario": "chat"}
+            )
             options_response.raise_for_status()
             options_payload = options_response.json()
 
@@ -152,7 +164,9 @@ def main() -> None:
             if embedding_handle:
                 create_payload["embedding"] = embedding_handle
 
-            create_response = http.post("/api/v2/agent-studio/agents", json=create_payload)
+            create_response = http.post(
+                "/api/v2/agent-studio/agents", json=create_payload
+            )
             create_response.raise_for_status()
             created_payload = create_response.json()
             agent_id = str(created_payload.get("id", "") or "")
@@ -169,8 +183,12 @@ def main() -> None:
             list_agents_response = http.get("/api/v2/agent-studio/agents?limit=200")
             list_agents_response.raise_for_status()
             agent_items = list_agents_response.json().get("items", [])
-            if not any(str(item.get("id", "") or "") == agent_id for item in agent_items):
-                raise RuntimeError("Created agent was not visible from /api/v2/agent-studio/agents")
+            if not any(
+                str(item.get("id", "") or "") == agent_id for item in agent_items
+            ):
+                raise RuntimeError(
+                    "Created agent was not visible from /api/v2/agent-studio/agents"
+                )
 
             try:
                 chat_response = http.post(
@@ -200,12 +218,18 @@ def main() -> None:
             details_response.raise_for_status()
             details_payload = details_response.json()
             if str(details_payload.get("id", "") or "") != agent_id:
-                raise RuntimeError("Agent details endpoint returned mismatched agent id")
+                raise RuntimeError(
+                    "Agent details endpoint returned mismatched agent id"
+                )
 
-            persistent_response = http.get(f"/api/v2/agent-studio/agents/{agent_id}/persistent-state?limit=80")
+            persistent_response = http.get(
+                f"/api/v2/agent-studio/agents/{agent_id}/persistent-state?limit=80"
+            )
             persistent_response.raise_for_status()
             persistent_payload = persistent_response.json()
-            raw_prompt_response = http.get(f"/api/v2/agent-studio/agents/{agent_id}/raw-prompt")
+            raw_prompt_response = http.get(
+                f"/api/v2/agent-studio/agents/{agent_id}/raw-prompt"
+            )
             raw_prompt_response.raise_for_status()
 
             summary["steps"]["agent_studio_state"] = {
@@ -229,7 +253,9 @@ def main() -> None:
             )
             system_response.raise_for_status()
             if system_response.json().get("system_after") != marker:
-                raise RuntimeError("Prompt and Persona Lab system update did not persist")
+                raise RuntimeError(
+                    "Prompt and Persona Lab system update did not persist"
+                )
 
             persona_marker = f"Persona marker {int(time.time())}"
             human_marker = f"Human marker {int(time.time())}"
@@ -244,13 +270,19 @@ def main() -> None:
             )
             human_response.raise_for_status()
 
-            verify_response = http.get(f"/api/v2/agent-studio/agents/{agent_id}/persistent-state?limit=60")
+            verify_response = http.get(
+                f"/api/v2/agent-studio/agents/{agent_id}/persistent-state?limit=60"
+            )
             verify_response.raise_for_status()
             memory_map = _block_map(verify_response.json())
             if memory_map.get("persona") != persona_marker:
-                raise RuntimeError("Prompt and Persona Lab persona block update did not persist")
+                raise RuntimeError(
+                    "Prompt and Persona Lab persona block update did not persist"
+                )
             if memory_map.get("human") != human_marker:
-                raise RuntimeError("Prompt and Persona Lab human block update did not persist")
+                raise RuntimeError(
+                    "Prompt and Persona Lab human block update did not persist"
+                )
 
             summary["steps"]["prompt_persona_lab"] = {
                 "ok": True,
@@ -258,7 +290,9 @@ def main() -> None:
                 "persona_count": len(metadata_payload.get("personas", [])),
             }
 
-            tools_response = http.get(f"/api/v2/tool-center/runtime-tools?limit=200&agent_id={agent_id}")
+            tools_response = http.get(
+                f"/api/v2/tool-center/runtime-tools?limit=200&agent_id={agent_id}"
+            )
             tools_response.raise_for_status()
             tools_payload = tools_response.json()
             tools = tools_payload.get("items", [])
@@ -273,14 +307,22 @@ def main() -> None:
                 if tool_id:
                     attached = bool(first_tool.get("attached_to_agent", False))
                     if attached:
-                        detach_response = http.patch(f"/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/detach")
+                        detach_response = http.patch(
+                            f"/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/detach"
+                        )
                         detach_response.raise_for_status()
-                        attach_response = http.patch(f"/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/attach")
+                        attach_response = http.patch(
+                            f"/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/attach"
+                        )
                         attach_response.raise_for_status()
                     else:
-                        attach_response = http.patch(f"/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/attach")
+                        attach_response = http.patch(
+                            f"/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/attach"
+                        )
                         attach_response.raise_for_status()
-                        detach_response = http.patch(f"/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/detach")
+                        detach_response = http.patch(
+                            f"/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/detach"
+                        )
                         detach_response.raise_for_status()
                     tool_step["tool_id"] = tool_id
                     tool_step["toggle_validated"] = True
@@ -296,7 +338,7 @@ def main() -> None:
             run_create_response = http.post(
                 "/api/v2/test-center/runs",
                 json={
-                    "run_type": "platform_api_e2e_check",
+                    "run_type": "ade_api_e2e_check",
                 },
             )
             run_create_response.raise_for_status()
@@ -314,10 +356,16 @@ def main() -> None:
             runs_response = http.get("/api/v2/test-center/runs")
             runs_response.raise_for_status()
             runs_payload = runs_response.json().get("items", [])
-            if not any(str(item.get("run_id", "") or "") == run_id for item in runs_payload):
-                raise RuntimeError("Created run was not visible in /api/v2/test-center/runs")
+            if not any(
+                str(item.get("run_id", "") or "") == run_id for item in runs_payload
+            ):
+                raise RuntimeError(
+                    "Created run was not visible in /api/v2/test-center/runs"
+                )
 
-            artifacts_response = http.get(f"/api/v2/test-center/runs/{run_id}/artifacts")
+            artifacts_response = http.get(
+                f"/api/v2/test-center/runs/{run_id}/artifacts"
+            )
             artifacts_response.raise_for_status()
             artifacts = artifacts_response.json().get("items", [])
 
@@ -327,7 +375,9 @@ def main() -> None:
                 "artifact_count": len(artifacts),
             }
             if artifacts:
-                target = next((item for item in artifacts if item.get("exists")), artifacts[0])
+                target = next(
+                    (item for item in artifacts if item.get("exists")), artifacts[0]
+                )
                 artifact_id = str(target.get("artifact_id", "") or "")
                 if artifact_id:
                     artifact_read_response = http.get(
@@ -336,7 +386,9 @@ def main() -> None:
                     artifact_read_response.raise_for_status()
                     artifact_payload = artifact_read_response.json()
                     artifact_step["artifact_id"] = artifact_id
-                    artifact_step["line_count"] = int(artifact_payload.get("line_count", 0))
+                    artifact_step["line_count"] = int(
+                        artifact_payload.get("line_count", 0)
+                    )
 
             summary["steps"]["test_center"] = artifact_step
 
@@ -348,7 +400,7 @@ def main() -> None:
         raise
 
     finally:
-        _safe_delete_agent(letta_client, agent_id)
+        _safe_purge_agent(agent_id)
         print(_as_json(summary))
 
 

@@ -16,8 +16,9 @@ COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /uvx /usr/local/bin/
 COPY pyproject.toml uv.lock ./
 COPY services/model-router ./services/model-router
 COPY packages/model-catalog-contracts ./packages/model-catalog-contracts
+COPY workflows/pyproject.toml ./workflows/pyproject.toml
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --package ade-model-router --frozen --no-dev
+    uv sync --package ade-model-router --package ade-workflows --frozen --no-dev
 
 COPY config ./config
 COPY content/model-catalog ./content/model-catalog

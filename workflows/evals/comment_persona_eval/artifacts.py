@@ -54,7 +54,9 @@ class ArtifactWriter:
         self.csv_path.parent.mkdir(parents=True, exist_ok=True)
         self._csv_handle = self.csv_path.open("w", encoding="utf-8-sig", newline="")
         self._jsonl_handle = self.jsonl_path.open("w", encoding="utf-8", newline="\n")
-        self._writer = csv.DictWriter(self._csv_handle, fieldnames=CSV_FIELDS, extrasaction="ignore")
+        self._writer = csv.DictWriter(
+            self._csv_handle, fieldnames=CSV_FIELDS, extrasaction="ignore"
+        )
         self._writer.writeheader()
         self._csv_handle.flush()
         return self
@@ -66,11 +68,17 @@ class ArtifactWriter:
             self._jsonl_handle.close()
 
     def write_attempt(self, row: dict[str, Any], raw_record: dict[str, Any]) -> None:
-        if self._writer is None or self._csv_handle is None or self._jsonl_handle is None:
+        if (
+            self._writer is None
+            or self._csv_handle is None
+            or self._jsonl_handle is None
+        ):
             raise RuntimeError("ArtifactWriter must be used as a context manager")
         self._writer.writerow(row)
         self._csv_handle.flush()
-        self._jsonl_handle.write(json.dumps(raw_record, ensure_ascii=False, sort_keys=True) + "\n")
+        self._jsonl_handle.write(
+            json.dumps(raw_record, ensure_ascii=False, sort_keys=True) + "\n"
+        )
         self._jsonl_handle.flush()
 
 
@@ -90,10 +98,14 @@ def write_artifacts(
             handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
 
 
-def build_summary(run_id: str, csv_path: Path, jsonl_path: Path, rows: list[dict[str, Any]]) -> dict[str, Any]:
+def build_summary(
+    run_id: str, csv_path: Path, jsonl_path: Path, rows: list[dict[str, Any]]
+) -> dict[str, Any]:
     successes = sum(1 for row in rows if row.get("status") == "ok")
     failures = len(rows) - successes
-    slowest = sorted(rows, key=lambda row: float(row.get("elapsed_seconds", 0)), reverse=True)[:5]
+    slowest = sorted(
+        rows, key=lambda row: float(row.get("elapsed_seconds", 0)), reverse=True
+    )[:5]
     return {
         "run_id": run_id,
         "total_attempts": len(rows),
@@ -115,7 +127,9 @@ def build_summary(run_id: str, csv_path: Path, jsonl_path: Path, rows: list[dict
 
 def print_summary(summary: dict[str, Any]) -> None:
     print(f"run_id: {summary['run_id']}")
-    print(f"attempts: {summary['total_attempts']}  successes: {summary['successes']}  failures: {summary['failures']}")
+    print(
+        f"attempts: {summary['total_attempts']}  successes: {summary['successes']}  failures: {summary['failures']}"
+    )
     print(f"csv: {summary['csv_path']}")
     print(f"jsonl: {summary['jsonl_path']}")
     if summary.get("slowest"):

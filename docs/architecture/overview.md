@@ -1,9 +1,9 @@
-# ADE Target Architecture
+# ADE Architecture
 
-> This document describes the accepted target architecture from
-> [ADR 0006](../adr/0006-comprehension-first-service-and-feature-architecture.md).
-> During migration, consult the current tree and each feature's README for the
-> completed slice status.
+This document describes the implemented architecture defined by
+[ADR 0006](../adr/0006-comprehension-first-service-and-feature-architecture.md).
+The repository tree and each feature's README are the current source for local
+ownership and operational details.
 
 Letta Open ADE has one simple system story: **ADE Web** presents the product,
 **ADE API** owns product workflows, **Model Router** owns model access, and
@@ -47,26 +47,18 @@ docs/                              # Architecture, ADRs, and contributor guides
 compose.yaml                       # Primary local operator entrypoint
 ```
 
-`packages/` is intentionally absent from the default tree. Add one only for a
-stable cross-service contract that cannot belong to a service or workflow. The
-expected first case is a small `model-catalog-contracts` package for typed probe
-and catalog artifacts; a generic `core` package is not allowed.
+`packages/model-catalog-contracts/` contains the small, stable catalog and probe
+contracts shared across services. A generic `core` package is not allowed.
 
-## Current-To-Target Migration
+## Architecture Invariants
 
-| Current location | Target location | Migration rule |
-| --- | --- | --- |
-| `frontend-ade/` | `apps/ade-web/` | Move routes into `src/app/` and product code into `src/features/`. |
-| `agent_platform_api/` | `services/ade-api/src/ade_api/` | Rename the package and move behavior into feature folders. |
-| `model_router/` | `services/model-router/src/model_router/` | Keep it independent and provider-focused. |
-| `prompts/`, `schemas/`, `tools/`, seed/catalog assets | `content/` | Keep reviewed editable assets together, outside service code. |
-| `evals/` and workflow-like scripts | `workflows/` | Keep runner, config, inputs, outputs, docs, and tests together. |
-| Root `tests/` and layer tests | Owning feature or service | Mirror each feature's behavior near its source; retain service integration tests. |
-
-The migration proceeds in tested vertical slices. A slice moves one complete
-feature across UI, API, tests, documentation, and operations, then deletes the
-replaced implementation. It does not leave aliases, duplicate source trees, or
-two names for the same concern.
+- Every product capability has one feature home in ADE Web and ADE API.
+- A vertical change keeps its UI, API, tests, documentation, and operations in
+  the owning feature or workflow, then removes replaced code.
+- A current concern has one name and one home. Compatibility aliases and
+  duplicate implementations are not retained.
+- `content/` holds reviewed product material; `data/runtime/` and workflow
+  `outputs/` hold generated local state.
 
 ## Feature Ownership
 
@@ -144,8 +136,7 @@ ADE API version 2 is organized by the product capability a caller is using:
 /api/v2/health
 ```
 
-This is a breaking boundary. `/api/v1`, `agent_platform_api`, `frontend-ade`,
-`AGENT_PLATFORM_*`, `ADE_FRONTEND_*`, and old OpenAPI artifact names are removed
-when their replacement is live. Ports, database data, prompt/persona/schema/tool
-keys, and Model Router's OpenAI-compatible `/v1` API are retained unless a later
-ADR explicitly changes them.
+ADE API version 2 is the supported ADE product contract. Prompt, persona,
+schema, tool, and model-selection keys remain stable across this structure.
+Model Router retains its OpenAI-compatible `/v1` API. Any future public-contract
+change requires an ADR and a regenerated OpenAPI artifact.

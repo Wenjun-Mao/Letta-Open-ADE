@@ -54,4 +54,4 @@
 | Public contract | A documented HTTP or package interface another component may use. |
 | Internal module | A feature implementation detail that other features must not import directly. |
 | Vertical slice | One complete feature change including UI, API, tests, docs, and removal of its replaced implementation. |
-| No compatibility alias | The migration rule that old names, paths, environment variables, and API routes are removed once their replacement lands. |
+| No compatibility alias | The architecture rule that replaced names, paths, environment variables, and API routes are removed rather than maintained in parallel. |

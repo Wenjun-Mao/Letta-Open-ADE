@@ -1,21 +1,18 @@
 ---
-title: Agent Platform API
+title: ADE API
 ---
 
-# Agent Platform API
+# ADE API
 
-This documentation describes the local Agent Platform API used by ADE.
+This documentation describes the local ADE API used by ADE Web and operator
+workflows.
 
 ## Environment assumptions
 
 - Local development defaults:
-	- ADE frontend: `http://127.0.0.1:3000`
-	- Agent Platform API: `http://127.0.0.1:8284`
-	- Letta server API: `http://127.0.0.1:8283`
-	- Model router: `http://127.0.0.1:8290`
-- API switch:
-	- Set `ADE_API_API_ENABLED=1` to enable routes.
-	- Set `ADE_API_API_ENABLED=0` to hard-disable platform routes (returns 503).
+	- ADE Web: `http://127.0.0.1:3000`
+	- ADE API: `http://127.0.0.1:8000`
+	- Model Router and Letta: Compose-network services, not host endpoints.
 - Browser requests use ADE's same-origin proxy. Direct API clients authenticate
   with the configured reader, operator, or admin Bearer key.
 - The stack is loopback-bound and intended for local development. Public ingress
@@ -68,12 +65,13 @@ Common status patterns:
 - `400`: invalid request, invalid state transition, validation failures
 - `404`: missing resource
 - `409`: mutation attempted on archived agent
-- `503`: platform API disabled by env flag
+- `503`: required runtime capability or upstream dependency is unavailable
 
 ## Source of truth
 
 - Codebase map: `docs/codebase-map.md`
-- Maintenance roadmap: `docs/maintenance-roadmap.md`
+- Architecture overview: `docs/architecture/overview.md`
+- Request flows: `docs/architecture/request-flows.md`
 - Upstream references: `docs/references.md`
 - OpenAPI artifact: `docs/openapi/ade-api-openapi.json`
 - Frontend artifact: `apps/ade-web/public/openapi/ade-api-openapi.json`

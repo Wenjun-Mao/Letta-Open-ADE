@@ -3,7 +3,6 @@ from __future__ import annotations
 import ast
 import ipaddress
 import json
-import os
 import subprocess
 from pathlib import Path
 from typing import Iterable
@@ -13,7 +12,6 @@ import pytest
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-TARGET_ARCHITECTURE_ENV = "ADE_ENFORCE_TARGET_ARCHITECTURE"
 TARGET_ROOTS = (
     "apps/ade-web",
     "services/ade-api",
@@ -25,7 +23,7 @@ TARGET_ROOTS = (
     "infra",
     "docs",
 )
-TARGET_FEATURES = (
+API_FEATURES = (
     "agent_studio",
     "comment_lab",
     "label_lab",
@@ -35,13 +33,23 @@ TARGET_FEATURES = (
     "test_center",
     "model_catalog",
 )
+WEB_FEATURES = (
+    "agent-studio",
+    "comment-lab",
+    "label-lab",
+    "prompt-center",
+    "schema-center",
+    "tool-center",
+    "test-center",
+    "model-catalog",
+)
 FORBIDDEN_LEGACY_IDENTIFIERS = (
-    "agent_platform_api",
-    "apps/ade-web",
-    "ade_core",
-    "ADE_API_",
-    "ADE_WEB_",
-    "ade-api-openapi",
+    "agent_" + "platform_api",
+    "frontend" + "-ade",
+    "ade_" + "core",
+    "AGENT_" + "PLATFORM_",
+    "ADE_" + "FRONTEND_",
+    "agent-" + "platform-openapi",
 )
 ARCHITECTURE_SCAN_SUFFIXES = {
     ".env",
@@ -60,17 +68,21 @@ ARCHITECTURE_SCAN_SUFFIXES = {
 ARCHITECTURE_SCAN_EXCLUDED_PARTS = {
     ".git",
     ".next",
+    ".playwright-cli",
     ".venv",
     "__pycache__",
     "node_modules",
     "outputs",
 }
 TEXT_ROOTS = (
-    PROJECT_ROOT / "ade_api",
-    PROJECT_ROOT / "model_catalog_contracts",
-    PROJECT_ROOT / "model_router",
+    PROJECT_ROOT / "apps",
+    PROJECT_ROOT / "services",
+    PROJECT_ROOT / "packages",
+    PROJECT_ROOT / "content",
+    PROJECT_ROOT / "config",
+    PROJECT_ROOT / "infra",
     PROJECT_ROOT / "scripts",
-    PROJECT_ROOT / "evals",
+    PROJECT_ROOT / "workflows",
     PROJECT_ROOT / "docs",
     PROJECT_ROOT / "tests",
     PROJECT_ROOT / ".github",
@@ -80,10 +92,31 @@ TOP_LEVEL_TEXT_FILES = (
     PROJECT_ROOT / "MANUAL.md",
     PROJECT_ROOT / ".gitignore",
 )
-
-
-def _target_architecture_enforced() -> bool:
-    return os.environ.get(TARGET_ARCHITECTURE_ENV) == "1"
+HISTORICAL_ARCHITECTURE_RECORDS = (
+    PROJECT_ROOT
+    / "docs"
+    / "adr"
+    / "0006-comprehension-first-service-and-feature-architecture.md",
+)
+RETIRED_DOCUMENTATION_REFERENCES = (
+    "agent_" + "platform_api",
+    "Agent Platform API",
+    "frontend" + "-ade",
+    "ade_" + "core",
+    "AGENT_" + "PLATFORM_",
+    "ADE_" + "FRONTEND_",
+    "agent-" + "platform-openapi",
+    "/api/v1",
+    "http://127.0.0.1:8083",
+    "http://127.0.0.1:8283",
+    "http://127.0.0.1:8284",
+    "http://127.0.0.1:8290",
+    "tests/checks",
+    "letta_server",
+    "letta_db",
+    "ade_frontend",
+    "dev_ui",
+)
 
 
 def _architecture_text_files(project_root: Path) -> list[Path]:
@@ -136,18 +169,68 @@ def assert_no_forbidden_legacy_identifiers(
     )
 
 
+def _current_documentation_files(project_root: Path) -> list[Path]:
+    files: set[Path] = set()
+    documentation_root = project_root / "docs"
+    if documentation_root.exists():
+        files.update(
+            path
+            for path in documentation_root.rglob("*")
+            if path.is_file() and path.suffix.lower() in {".md", ".mdx"}
+        )
+
+    workflows_root = project_root / "workflows"
+    if workflows_root.exists():
+        files.update(workflows_root.rglob("README.md"))
+
+    files.update(
+        path
+        for path in (
+            project_root / "README.md",
+            project_root / "MANUAL.md",
+            project_root / "tests" / "README.md",
+            project_root / ".github" / "copilot-instructions.md",
+        )
+        if path.is_file()
+    )
+    return sorted(files)
+
+
+def assert_current_documentation_uses_canonical_terms(
+    project_root: Path,
+    *,
+    retired_references: Iterable[str] = RETIRED_DOCUMENTATION_REFERENCES,
+    historical_records: Iterable[Path] = (),
+) -> None:
+    retired = tuple(retired_references)
+    excluded = {path.resolve() for path in historical_records}
+    offenders: list[str] = []
+
+    for path in _current_documentation_files(project_root):
+        if path.resolve() in excluded:
+            continue
+        content = path.read_text(encoding="utf-8", errors="ignore")
+        matches = [reference for reference in retired if reference in content]
+        if matches:
+            offenders.append(f"{path.relative_to(project_root)}: {', '.join(matches)}")
+
+    assert offenders == [], "Retired documentation references:\n" + "\n".join(
+        sorted(offenders)
+    )
+
+
 def assert_feature_readmes(
     project_root: Path,
     *,
-    features: Iterable[str] = TARGET_FEATURES,
-    feature_roots: Iterable[str] = (
-        "apps/ade-web/src/features",
-        "services/ade-api/src/ade_api/features",
-    ),
+    web_features: Iterable[str] = WEB_FEATURES,
+    api_features: Iterable[str] = API_FEATURES,
 ) -> None:
     missing = [
         f"{feature_root}/{feature}/README.md"
-        for feature_root in feature_roots
+        for feature_root, features in (
+            ("apps/ade-web/src/features", web_features),
+            ("services/ade-api/src/ade_api/features", api_features),
+        )
         for feature in features
         if not (project_root / feature_root / feature / "README.md").is_file()
     ]
@@ -218,6 +301,23 @@ def _module_owner(module_name: str, package_name: str) -> tuple[str, str | None]
     return "other", None
 
 
+def _is_public_feature_import(module_name: str, package_name: str) -> bool:
+    feature_prefix = f"{package_name}.features."
+    if not module_name.startswith(feature_prefix):
+        return False
+    return "." not in module_name[len(feature_prefix) :]
+
+
+def _is_platform_wiring_import(
+    *, path: Path, module_name: str, package_name: str
+) -> bool:
+    if path.name == "dependencies.py":
+        return True
+    return path.name == "app.py" and _is_public_feature_import(
+        module_name, package_name
+    )
+
+
 def assert_python_import_boundaries(
     source_root: Path, *, package_name: str = "ade_api"
 ) -> None:
@@ -235,17 +335,28 @@ def assert_python_import_boundaries(
                 node=node,
                 package_name=package_name,
             ):
-                target_kind, target_feature = _module_owner(imported_module, package_name)
+                target_kind, target_feature = _module_owner(
+                    imported_module, package_name
+                )
                 if (
                     source_kind == "feature"
                     and target_kind == "feature"
                     and source_feature != target_feature
+                    and not _is_public_feature_import(imported_module, package_name)
                 ):
                     violations.append(
                         f"{path.relative_to(source_root)} imports sibling feature "
                         f"{imported_module}"
                     )
-                elif source_kind == "platform" and target_kind == "feature":
+                elif (
+                    source_kind == "platform"
+                    and target_kind == "feature"
+                    and not _is_platform_wiring_import(
+                        path=path,
+                        module_name=imported_module,
+                        package_name=package_name,
+                    )
+                ):
                     violations.append(
                         f"{path.relative_to(source_root)} imports feature {imported_module}"
                     )
@@ -291,25 +402,57 @@ def test_target_architecture_helpers_detect_legacy_identifier_and_honor_exclusio
     )
 
 
-def test_target_architecture_helpers_require_feature_readmes(tmp_path: Path) -> None:
-    for feature_root in (
-        tmp_path / "apps" / "ade-web" / "src" / "features",
-        tmp_path / "services" / "ade-api" / "src" / "ade_api" / "features",
-    ):
-        (feature_root / "agent_studio").mkdir(parents=True)
+def test_documentation_helper_allows_only_explicit_historical_records(
+    tmp_path: Path,
+) -> None:
+    current = tmp_path / "README.md"
+    historical = tmp_path / "docs" / "adr" / "0006-history.md"
+    historical.parent.mkdir(parents=True)
+    current.write_text("LEGACY_NAME", encoding="utf-8")
+    historical.write_text("LEGACY_NAME", encoding="utf-8")
 
     with pytest.raises(AssertionError, match="README.md"):
-        assert_feature_readmes(tmp_path, features=("agent_studio",))
-
-    for feature_root in (
-        tmp_path / "apps" / "ade-web" / "src" / "features",
-        tmp_path / "services" / "ade-api" / "src" / "ade_api" / "features",
-    ):
-        (feature_root / "agent_studio" / "README.md").write_text(
-            "# Agent Studio\n", encoding="utf-8"
+        assert_current_documentation_uses_canonical_terms(
+            tmp_path,
+            retired_references=("LEGACY_NAME",),
+            historical_records=(historical,),
         )
 
-    assert_feature_readmes(tmp_path, features=("agent_studio",))
+    current.write_text("Current architecture", encoding="utf-8")
+    assert_current_documentation_uses_canonical_terms(
+        tmp_path,
+        retired_references=("LEGACY_NAME",),
+        historical_records=(historical,),
+    )
+
+
+def test_target_architecture_helpers_require_feature_readmes(tmp_path: Path) -> None:
+    web_feature_root = tmp_path / "apps" / "ade-web" / "src" / "features"
+    api_feature_root = (
+        tmp_path / "services" / "ade-api" / "src" / "ade_api" / "features"
+    )
+    (web_feature_root / "agent-studio").mkdir(parents=True)
+    (api_feature_root / "agent_studio").mkdir(parents=True)
+
+    with pytest.raises(AssertionError, match="README.md"):
+        assert_feature_readmes(
+            tmp_path,
+            web_features=("agent-studio",),
+            api_features=("agent_studio",),
+        )
+
+    (web_feature_root / "agent-studio" / "README.md").write_text(
+        "# Agent Studio\n", encoding="utf-8"
+    )
+    (api_feature_root / "agent_studio" / "README.md").write_text(
+        "# Agent Studio\n", encoding="utf-8"
+    )
+
+    assert_feature_readmes(
+        tmp_path,
+        web_features=("agent-studio",),
+        api_features=("agent_studio",),
+    )
 
 
 def test_target_architecture_helpers_enforce_python_import_boundaries(
@@ -318,12 +461,15 @@ def test_target_architecture_helpers_enforce_python_import_boundaries(
     source_root = tmp_path / "ade_api"
     files = {
         "features/agent_studio/service.py": (
-            "from ..comment_lab import service\n"
+            "from ade_api.features.comment_lab.service import CommentingService\n"
+            "from ade_api.features.model_catalog import runtime_options\n"
             "from ade_api.platform.settings import Settings\n"
             "from ade_api.integrations.letta.client import LettaClient\n"
         ),
         "integrations/letta/client.py": "from ade_api.features.agent_studio import service\n",
-        "platform/app.py": "from ade_api.features.label_lab import api\n",
+        "platform/app.py": "from ade_api.features.label_lab import router\n",
+        "platform/dependencies.py": "from ade_api.features.label_lab import api\n",
+        "platform/settings.py": "from ade_api.features.label_lab import api\n",
         "features/comment_lab/service.py": "from .contracts import CommentRequest\n",
     }
     for relative_path, content in files.items():
@@ -337,17 +483,18 @@ def test_target_architecture_helpers_enforce_python_import_boundaries(
     message = str(exc_info.value)
     assert "sibling feature ade_api.features.comment_lab" in message
     assert "integrations/letta/client.py imports feature" in message
-    assert "platform/app.py imports feature" in message
+    assert "platform/settings.py imports feature" in message
 
 
-def test_target_architecture_contract_is_opt_in() -> None:
-    if not _target_architecture_enforced():
-        return
-
+def test_target_architecture_contract_is_enforced() -> None:
     assert_canonical_roots(PROJECT_ROOT)
     assert_no_forbidden_legacy_identifiers(
         PROJECT_ROOT,
-        excluded_paths=(Path(__file__),),
+        excluded_paths=(*HISTORICAL_ARCHITECTURE_RECORDS, Path(__file__)),
+    )
+    assert_current_documentation_uses_canonical_terms(
+        PROJECT_ROOT,
+        historical_records=HISTORICAL_ARCHITECTURE_RECORDS,
     )
     assert_feature_readmes(PROJECT_ROOT)
     assert_python_import_boundaries(
@@ -366,7 +513,7 @@ def _text_files() -> list[Path]:
             for path in root.rglob("*")
             if path.is_file()
             and path.suffix.lower() in suffixes
-            and "__pycache__" not in path.parts
+            and not any(part in ARCHITECTURE_SCAN_EXCLUDED_PARTS for part in path.parts)
         )
     files.extend(path for path in TOP_LEVEL_TEXT_FILES if path.is_file())
     return files
@@ -386,11 +533,11 @@ def test_no_utils_imports_reintroduced() -> None:
 
 def test_removed_catch_all_facades_stay_removed() -> None:
     removed = (
-        "ade_api/helpers.py",
-        "ade_api/runtime.py",
-        "ade_api/model_options.py",
-        "ade_api/registries/prompt_persona.py",
-        "ade_api/services/labeling_provider_client.py",
+        "services/ade-api/src/ade_api/helpers.py",
+        "services/ade-api/src/ade_api/runtime.py",
+        "services/ade-api/src/ade_api/model_options.py",
+        "services/ade-api/src/ade_api/registries/prompt_persona.py",
+        "services/ade-api/src/ade_api/services/labeling_provider_client.py",
     )
     assert [path for path in removed if (PROJECT_ROOT / path).exists()] == []
 
@@ -410,7 +557,7 @@ def test_frontend_backend_configuration_stays_server_only() -> None:
     assert offenders == []
 
 
-def test_removed_agent_platform_model_source_config_stays_removed() -> None:
+def test_removed_ade_api_model_source_config_stays_removed() -> None:
     removed_env_key = "ADE_API_" + "MODEL_SOURCES"
     offenders: list[str] = []
     for path in _text_files():
@@ -423,7 +570,7 @@ def test_removed_agent_platform_model_source_config_stays_removed() -> None:
     assert offenders == []
 
 
-def test_agent_platform_has_no_direct_provider_catalog_fallback() -> None:
+def test_ade_api_has_no_direct_provider_catalog_fallback() -> None:
     forbidden = (
         "direct-provider fallback",
         "legacy direct-provider",
@@ -431,7 +578,9 @@ def test_agent_platform_has_no_direct_provider_catalog_fallback() -> None:
         "model_catalog_service",
     )
     offenders: list[str] = []
-    for path in (PROJECT_ROOT / "ade_api").rglob("*.py"):
+    for path in (PROJECT_ROOT / "services" / "ade-api" / "src" / "ade_api").rglob(
+        "*.py"
+    ):
         text = path.read_text(encoding="utf-8", errors="ignore")
         if any(marker in text for marker in forbidden):
             offenders.append(str(path.relative_to(PROJECT_ROOT)))
@@ -441,9 +590,7 @@ def test_agent_platform_has_no_direct_provider_catalog_fallback() -> None:
 
 def test_letta_does_not_inherit_direct_lmstudio_provider_config() -> None:
     compose_text = (PROJECT_ROOT / "compose.yaml").read_text(encoding="utf-8")
-    letta_service = compose_text.split("\n  letta:", 1)[1].split(
-        "\n  ade-api:", 1
-    )[0]
+    letta_service = compose_text.split("\n  letta:", 1)[1].split("\n  ade-api:", 1)[0]
     env_example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")
 
     assert 'LMSTUDIO_BASE_URL: ""' in letta_service
@@ -510,17 +657,8 @@ def test_no_tracked_generated_or_stale_artifacts() -> None:
 
 
 def test_workflow_specific_config_stays_out_of_root_config() -> None:
-    allowed = {
-        "model_router_sources.json",
-        "model_router_sources.local.json",
-        "model_router_model_profiles.json",
-    }
     config_dir = PROJECT_ROOT / "config"
-    offenders = sorted(
-        path.name
-        for path in config_dir.iterdir()
-        if path.is_file() and path.name not in allowed
-    )
+    offenders = sorted(path.name for path in config_dir.iterdir() if path.is_file())
 
     assert offenders == []
 
@@ -603,7 +741,7 @@ def test_docs_do_not_restore_retired_letta_notebooks_or_dev_ui_language() -> Non
     assert offenders == []
 
 
-def test_ci_checks_formatting_without_rewriting_the_legacy_baseline() -> None:
+def test_ci_checks_formatting_without_rewriting_the_stable_base() -> None:
     workflow = (PROJECT_ROOT / ".github" / "workflows" / "verify.yml").read_text(
         encoding="utf-8"
     )

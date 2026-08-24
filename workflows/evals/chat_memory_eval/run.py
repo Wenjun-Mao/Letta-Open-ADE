@@ -29,7 +29,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timeout-seconds", type=float, default=None)
     parser.add_argument("--retry-count", type=int, default=None)
     parser.add_argument("--judge-model-key", default="")
-    parser.add_argument("--judge-enabled", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument(
+        "--judge-enabled", action=argparse.BooleanOptionalAction, default=None
+    )
     parser.add_argument("--keep-agents", action="store_true")
     args = parser.parse_args(argv)
 

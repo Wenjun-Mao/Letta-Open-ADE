@@ -38,6 +38,7 @@ target-version = "py312"
 select = ["E9", "F"]
 
 [tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
 pythonpath = [
     ".",
     "services/ade-api/src",

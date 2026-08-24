@@ -48,7 +48,9 @@ def _write_artifact(path: Path, rendered: str) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Export the canonical ADE API OpenAPI artifact.")
+    parser = argparse.ArgumentParser(
+        description="Export the canonical ADE API OpenAPI artifact."
+    )
     parser.add_argument(
         "--output",
         default="docs/openapi/ade-api-openapi.json",
@@ -85,7 +87,9 @@ def main() -> int:
     for path in output_paths:
         _write_artifact(path, rendered)
 
-    print(f"[INFO] paths={len(schema.get('paths', {}))} schemas={len(schema.get('components', {}).get('schemas', {}))}")
+    print(
+        f"[INFO] paths={len(schema.get('paths', {}))} schemas={len(schema.get('components', {}).get('schemas', {}))}"
+    )
     return 0
 
 

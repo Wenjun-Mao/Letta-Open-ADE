@@ -66,12 +66,14 @@ source = { virtual = "workflows" }
 dependencies = [
     { name = "httpx" },
     { name = "python-dotenv" },
+    { name = "tenacity" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
+    { name = "tenacity", specifier = ">=9.1.2" },
 ]
 
 [[package]]

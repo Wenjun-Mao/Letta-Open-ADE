@@ -25,6 +25,7 @@ workflows/evals/*/outputs/
 
 apps/ade-web/node_modules/
 apps/ade-web/.next/
+apps/ade-web/tsconfig.tsbuildinfo
 
 temps/
 memory-export/

@@ -1,6 +1,6 @@
 # Feature README Template
 
-Copy this template into a target feature directory as `README.md`. Keep it to
+Copy this template into a feature directory as `README.md`. Keep it to
 one page. It should help a contributor make a safe change without searching
 generic layer directories.
 
@@ -35,7 +35,7 @@ generic layer directories.
 
 - Source of truth: `<database, content path, or external runtime>`.
 - Runtime/generated data: `<ignored path, retention, or none>`.
-- Migration notes: `<only if relevant>`.
+- Transition notes: `<only if relevant>`.
 
 ## Tests
 

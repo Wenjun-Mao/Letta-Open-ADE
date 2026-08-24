@@ -1,49 +1,66 @@
 # Letta Open ADE
 
-Letta Open ADE is a local agent-development environment with three first-party
-components:
+Letta Open ADE is a local-first environment for building, tuning, and evaluating
+agent experiences. It combines a browser workspace, a product API, a provider
+router, and Letta's persistent-agent runtime.
 
-- `model_router`: one OpenAI-compatible gateway for configured local and cloud models.
-- `agent_platform_api`: the API used by ADE workspaces and operator tooling.
-- `apps/ade-web`: the Next.js Agent Development Environment.
+## Start Here
 
-Letta, Postgres + pgvector, and Redis run alongside those components in Docker
-Compose. See [the codebase map](docs/codebase-map.md) for ownership and entrypoints.
-
-## Local Quick Start
-
-1. Create a local `.env` from `.env.example` with your editor or file manager.
-   Supply non-placeholder API keys and review the enabled model sources before startup.
-2. Start or rebuild the local stack:
+1. Create `.env` from `.env.example`, then replace placeholder secrets and
+   enable only the model sources available on your machine.
+2. Start the local stack:
 
 ```text
 docker compose up -d --build
 ```
 
-3. Check service status:
+3. Open ADE Web at `http://127.0.0.1:3000`.
+4. Check ADE API health at `http://127.0.0.1:8000/api/v2/health`.
+
+Only ADE Web (`3000`) and ADE API (`8000`) are host-facing. Model Router,
+Letta, PostgreSQL, and Redis communicate on the Compose network. Use
+`docker compose ps` and `docker compose logs --tail=200 <service>` when a
+service needs investigation.
+
+## Repository Map
 
 ```text
-docker compose ps
+apps/ade-web/                         # Next.js product UI
+services/ade-api/                     # FastAPI product API
+services/model-router/                # OpenAI-compatible provider boundary
+packages/model-catalog-contracts/     # Small shared catalog/probe contracts
+content/                              # Reviewed prompts, personas, schemas, tools, reports
+config/model-router/                  # Model sources and model profiles
+workflows/evals/                      # Repeatable evaluations and provider probes
+workflows/smoke/                      # Live stack smoke checks
+infra/                                # Container support assets
 ```
 
-4. Open ADE at `http://127.0.0.1:3000`.
+For the rationale and dependency rules, read the [architecture overview](docs/architecture/overview.md).
+For an end-to-end view of browser, API, Letta, router, and workflow calls, read
+the [request flows](docs/architecture/request-flows.md). The [codebase map](docs/codebase-map.md)
+is the practical "where do I change this?" guide.
 
-The default configuration binds services to loopback. `8283` is the Letta API,
-`8284` is the Agent Platform API, and `8290` is the model router. Letta does not
-ship a supported UI on `8083` in this stack.
+## Daily Commands
 
-Use `docker compose logs --tail=200 <service>` to investigate a service, and
-`docker compose down` to stop the stack. `scripts/README.md` lists reset,
-diagnostics, and other repository-wide utilities.
-
-## Deterministic Verification
-
-Install the locked development environment and run the checks that do not require
-provider credentials or a running stack:
+The root `Makefile` is the concise operator entrypoint:
 
 ```text
-uv sync --frozen --group dev
-uv run ruff check agent_platform_api model_router ade_core evals scripts tests
+make setup                  # install locked Python and web dependencies
+make up                     # build and start the stack
+make status                 # show service health
+make logs SERVICE=ade-api   # inspect a service
+make smoke                  # run the API smoke workflow inside ade-api
+make down                   # stop the stack without deleting data
+```
+
+## Verification
+
+Run deterministic checks from the repository root:
+
+```text
+uv sync --all-packages --frozen --group dev
+uv run ruff check services packages workflows scripts tests
 uv run python -m pytest
 uv run python scripts/export_openapi.py --check
 uv run python scripts/generate_openapi_zh_manual.py
@@ -51,49 +68,51 @@ git diff --exit-code -- docs/openapi/ade-api-openapi-zh.json apps/ade-web/public
 npm ci --prefix apps/ade-web
 npm --prefix apps/ade-web run test
 npm --prefix apps/ade-web run lint
-npm audit --prefix apps/ade-web --audit-level=high
 npm --prefix apps/ade-web run build
 docker compose --env-file .env.example config --quiet
 ```
 
-The GitHub Actions workflow runs this deterministic suite on pull requests and
-pushes to `main`, including all three first-party service image builds.
+Live checks require a healthy stack and reachable providers. They are deliberate
+operator workflows, not default pull-request checks:
 
-Provider probes, live E2E checks, browser smoke tests, and eval workflows are
-operator-run checks because they need a configured stack, reachable models, or
-credentials. Run them deliberately from their workflow documentation:
+```text
+make smoke
+make eval-chat-memory
+make eval-comment-persona
+make probe-models SOURCE=ark
+```
 
-- `tests/checks/`: maintained API and ADE smoke checks.
-- `workflows/evals/chat_memory_eval/`: chat memory evaluation.
-- `workflows/evals/comment_persona_eval/`: Comment Lab persona evaluation.
-- `workflows/evals/provider_model_probe/`: provider capability probing and allowlist refresh.
+See [workflows/evals](workflows/evals/) for each evaluation's inputs, outputs,
+and interpretation. See [workflows/smoke](workflows/smoke/) for live API and
+ADE checks.
 
 ## Content And Configuration
 
-- `config/model-router/sources.json`: portable model source defaults and module visibility.
-- `config/model-router/sources.local.json`: ignored machine-local endpoint overrides when needed.
-- `config/model-router/model-profiles.json`: model-specific sampling and capability metadata.
-- `content/prompts/system/`: file-backed prompt templates.
-- `content/label-schemas/`: file-backed Label Schema Center records.
-- `agent_platform_api/seed_data/personas.jsonl`: reviewed persona seed source.
+- `content/prompts/system/`: reviewed system prompts by scenario.
+- `content/personas/`: reviewed persona seed and reusable persona material.
+- `content/label-schemas/`: Label Lab schema records.
+- `content/custom-tools/`: managed custom-tool registry material.
+- `content/model-catalog/`: reviewed provider probe reports and allowlists.
+- `config/model-router/sources.json`: portable model-source configuration.
+- `config/model-router/sources.local.json`: ignored machine-local source overlay.
+- `config/model-router/model-profiles.json`: model capability and sampling profiles.
 
-Runtime SQLite persona data belongs under `data/runtime/` and is not a reviewed
-source artifact. The migration policy is recorded in
-[ADR 0003](docs/adr/0003-persona-source-and-runtime-storage.md).
+Runtime state belongs under ignored `data/runtime/`; it is not reviewed product
+content. [ADR 0003](docs/adr/0003-persona-source-and-runtime-storage.md)
+describes the persona source/projection boundary.
 
-## Documentation
+## Further Reading
 
-- [Operational manual](MANUAL.md): setup, recovery, and manual verification.
-- [Codebase map](docs/codebase-map.md): where features and responsibilities live.
-- [Development conventions](docs/development-conventions.md): structure, workflow, and decision-record rules.
-- [Architecture decisions](docs/adr/): accepted directions and implementation status.
-- [OpenAPI artifacts](docs/openapi/): English and curated Chinese API specifications.
+- [Operational manual](MANUAL.md): lifecycle, recovery, and live verification.
+- [Maintainer reading guide](docs/reading-guide.md): a short route into the codebase.
+- [Development conventions](docs/development-conventions.md): feature, workflow, and ADR rules.
+- [Architecture decisions](docs/adr/): durable system decisions.
+- [OpenAPI artifacts](docs/openapi/): generated API specifications.
 
 ## Local-Only Default
 
-This repository is a local development stack, not a hardened public deployment.
-Loopback bindings, role-based bearer authentication, narrow CORS, and server-only
-browser credentials provide the local baseline described in
-[ADR 0001](docs/adr/0001-local-only-access-boundary.md). Exposing the stack outside
-the local machine still requires reviewed ingress, TLS, secret management, rate
-limits, monitoring, and a deployment-specific threat review.
+This is a local development stack, not a hardened public deployment. Loopback
+bindings, role-based bearer authentication, narrow CORS, and server-only web
+credentials are the local baseline. Public exposure still requires reviewed
+ingress, TLS, secret management, rate limits, monitoring, and a deployment
+threat review. See [ADR 0001](docs/adr/0001-local-only-access-boundary.md).

@@ -12,7 +12,7 @@ already populated database.
 
 ## Decision
 
-- `agent_platform_api/seed_data/personas.jsonl` is the reviewed, versioned persona
+- `content/personas/personas.jsonl` is the reviewed, versioned persona
   source.
 - SQLite is a runtime search/CRUD projection under ignored `data/runtime/`.
 - The registry records the reviewed seed's SHA-256 digest and managed key set. When

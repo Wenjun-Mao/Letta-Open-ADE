@@ -52,10 +52,7 @@ def _strip(value: object) -> str:
 
 
 def _env_router_base_url() -> str:
-    return _strip(
-        os.getenv("CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL")
-        or os.getenv("MODEL_ROUTER_BASE_URL")
-    )
+    return _strip(os.getenv("ADE_API_MODEL_ROUTER_BASE_URL"))
 
 
 def _env_router_api_key() -> str:
@@ -181,7 +178,7 @@ def apply_cli_overrides(
 
 
 def router_v1_base_url(config: ChatMemoryEvalConfig) -> str:
-    base = (config.model_router_base_url or "http://127.0.0.1:8290").rstrip("/")
+    base = (config.model_router_base_url or "http://127.0.0.1:8010").rstrip("/")
     if base.lower().endswith("/v1"):
         return base
     return f"{base}/v1"

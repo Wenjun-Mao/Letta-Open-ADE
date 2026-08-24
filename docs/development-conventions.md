@@ -1,6 +1,11 @@
 # Development Conventions
 
-This repo favors boring, discoverable structure over clever scattering. If a future change makes you ask "where is the rest of this?", colocate the related pieces.
+This repo favors boring, discoverable structure over clever scattering. If a
+change makes you ask "where is the rest of this?", put the related behavior in
+the owning service, feature, or workflow.
+
+Start with the [reading guide](reading-guide.md), then use the
+[codebase map](codebase-map.md) to find the owner.
 
 ## Config Boundaries
 
@@ -8,9 +13,27 @@ This repo favors boring, discoverable structure over clever scattering. If a fut
 - Workflow-specific config belongs beside the workflow runner.
 - Current root config should stay limited to project-wide runtime inputs such as `config/model-router/sources.json` and `config/model-router/model-profiles.json`.
 
+Reviewed product material belongs in `content/`, not `config/` or service source:
+prompts, personas, label schemas, custom-tool records, and reviewed model
+catalog reports each have a named `content/` subdirectory.
+
+## Service And Feature Boundaries
+
+- `apps/ade-web/` owns browser routes, product UI, and same-origin API proxying.
+- `services/ade-api/` owns product HTTP contracts and feature orchestration.
+- `services/model-router/` owns provider source discovery, model profiles, and
+  one-attempt upstream forwarding.
+- `packages/model-catalog-contracts/` may contain only stable, typed contracts
+  shared by more than one service. Do not create a generic shared package.
+- Put feature behavior under the matching `features/<feature>/` home. A feature
+  may use `platform/` and `integrations/`, but must not import another feature's
+  internal modules.
+
 ## Workflow And Eval Folders
 
-Use `workflows/evals/<workflow_name>/` for evaluation, probe, benchmark, or research workflows that have their own runner/config/input/output lifecycle.
+Use `workflows/evals/<workflow_name>/` for evaluation, probe, benchmark, or
+research workflows that have their own runner/config/input/output lifecycle.
+Use `workflows/smoke/` for named live stack checks.
 
 Each workflow should include:
 
@@ -26,7 +49,8 @@ Avoid compatibility shims for newly introduced workflow paths unless explicitly 
 
 Keep `scripts/` for repo-wide utilities without workflow-specific config/output bundles, such as diagnostics, OpenAPI export, reset helpers, seed helpers, or small maintenance commands.
 
-If a script grows a config file, sample input, and generated outputs, promote it into `workflows/evals/` or another named workflow folder.
+If a script grows a config file, sample input, and generated outputs, promote it
+into `workflows/evals/` or another named workflow folder.
 
 ## Documentation Expectations
 
@@ -61,8 +85,8 @@ already landed. Update its status when implementation and verification complete.
 
 ## Feature Locality
 
-When modifying a large feature, prefer extracting its stable domain boundary
-incrementally: route entrypoint, API client, state/hook, UI components, and tests.
-Do not introduce a generic framework or a large repository move before a feature
-has a tested seam. The staged modularization direction is recorded in
+When modifying a feature, keep a complete vertical slice together: thin route
+entrypoint, feature API contract/client, state or service, tests, local README,
+and operational notes. Delete replaced behavior instead of leaving aliases or
+duplicate source trees. The staged modularization direction is recorded in
 [ADR 0005](adr/0005-incremental-feature-modularization.md).

@@ -9,8 +9,12 @@ from typing import Any
 from uuid import uuid4
 
 from .artifacts import ArtifactWriter, build_summary, print_summary, write_summary
-from .client import AgentPlatformApiClient
-from .config import ChatMemoryEvalConfig, router_model_key_from_agent_handle, router_v1_base_url
+from .client import AdeApiClient
+from .config import (
+    ChatMemoryEvalConfig,
+    router_model_key_from_agent_handle,
+    router_v1_base_url,
+)
 from .fixtures import ConversationFixture, load_fixture
 from .judge import judge_round
 from .scoring import (
@@ -22,7 +26,9 @@ from .scoring import (
 )
 
 
-def run_evaluation(config: ChatMemoryEvalConfig, *, now: datetime | None = None) -> dict[str, Any]:
+def run_evaluation(
+    config: ChatMemoryEvalConfig, *, now: datetime | None = None
+) -> dict[str, Any]:
     run_timestamp = (now or datetime.now()).strftime("%Y%m%d_%H%M%S")
     run_id = f"chat-memory-eval-{run_timestamp}-{uuid4().hex[:8]}"
     csv_path = config.output_dir / f"chat_memory_eval_{run_timestamp}.csv"
@@ -33,7 +39,7 @@ def run_evaluation(config: ChatMemoryEvalConfig, *, now: datetime | None = None)
     fixture = load_fixture(config.fixtures_dir, config.fixture_key)
     rows: list[dict[str, Any]] = []
     client_timeout = max(config.timeout_seconds + 60, 90)
-    with AgentPlatformApiClient(
+    with AdeApiClient(
         base_url=config.api_base_url,
         timeout_seconds=client_timeout,
         retry_count=config.api_retry_count,
@@ -41,12 +47,20 @@ def run_evaluation(config: ChatMemoryEvalConfig, *, now: datetime | None = None)
     ) as api:
         validate_chat_options(api.options(), config)
         total = config.rounds
-        print(f"[INFO] Running {total} chat-memory rounds with {len(fixture.turns)} turns each.")
+        print(
+            f"[INFO] Running {total} chat-memory rounds with {len(fixture.turns)} turns each."
+        )
         print(f"[INFO] Streaming CSV to {csv_path}")
         with ArtifactWriter(csv_path=csv_path, jsonl_path=jsonl_path) as writer:
             for round_index in range(1, total + 1):
                 print(f"[{round_index}/{total}] starting")
-                row, raw = run_round(api=api, config=config, fixture=fixture, run_id=run_id, round_index=round_index)
+                row, raw = run_round(
+                    api=api,
+                    config=config,
+                    fixture=fixture,
+                    run_id=run_id,
+                    round_index=round_index,
+                )
                 rows.append(row)
                 writer.write_round(row, raw)
                 print(
@@ -70,24 +84,34 @@ def run_evaluation(config: ChatMemoryEvalConfig, *, now: datetime | None = None)
     return summary
 
 
-def validate_chat_options(payload: dict[str, Any], config: ChatMemoryEvalConfig) -> None:
+def validate_chat_options(
+    payload: dict[str, Any], config: ChatMemoryEvalConfig
+) -> None:
     models = _option_keys(payload.get("models", []))
     prompts = _option_keys(payload.get("prompts", []))
     personas = _option_keys(payload.get("personas", []))
     embeddings = _option_keys(payload.get("embeddings", []))
     if config.model not in models:
-        raise ValueError(f"model '{config.model}' is not available from /api/v2/model-catalog/options?scenario=chat")
+        raise ValueError(
+            f"model '{config.model}' is not available from /api/v2/model-catalog/options?scenario=chat"
+        )
     if config.prompt_key not in prompts:
-        raise ValueError(f"prompt_key '{config.prompt_key}' is not available from /api/v2/model-catalog/options?scenario=chat")
+        raise ValueError(
+            f"prompt_key '{config.prompt_key}' is not available from /api/v2/model-catalog/options?scenario=chat"
+        )
     if config.persona_key not in personas:
-        raise ValueError(f"persona_key '{config.persona_key}' is not available from /api/v2/model-catalog/options?scenario=chat")
+        raise ValueError(
+            f"persona_key '{config.persona_key}' is not available from /api/v2/model-catalog/options?scenario=chat"
+        )
     if config.embedding and config.embedding not in embeddings:
-        raise ValueError(f"embedding '{config.embedding}' is not available from /api/v2/model-catalog/options?scenario=chat")
+        raise ValueError(
+            f"embedding '{config.embedding}' is not available from /api/v2/model-catalog/options?scenario=chat"
+        )
 
 
 def run_round(
     *,
-    api: AgentPlatformApiClient,
+    api: AdeApiClient,
     config: ChatMemoryEvalConfig,
     fixture: ConversationFixture,
     run_id: str,
@@ -112,7 +136,9 @@ def run_round(
             fixture=fixture,
         )
         state = api.persistent_state(agent_id)
-        final_human_memory = _human_memory_from_state(state) or _last_human_memory(turn_records)
+        final_human_memory = _human_memory_from_state(state) or _last_human_memory(
+            turn_records
+        )
         score = deterministic_round_score(
             assistant_texts=assistant_texts,
             initial_human_memory=initial_human_memory,
@@ -153,7 +179,15 @@ def run_round(
             "persistent_state": state,
         }
     except Exception as exc:
-        row = _error_row(run_id, round_index, config, fixture, time.time() - started, agent_id, str(exc))
+        row = _error_row(
+            run_id,
+            round_index,
+            config,
+            fixture,
+            time.time() - started,
+            agent_id,
+            str(exc),
+        )
         raw = {**row, "error": str(exc)}
     finally:
         if agent_id and not config.keep_agents:
@@ -173,7 +207,7 @@ def run_round(
 
 def _run_turns(
     *,
-    api: AgentPlatformApiClient,
+    api: AdeApiClient,
     agent_id: str,
     config: ChatMemoryEvalConfig,
     fixture: ConversationFixture,
@@ -195,8 +229,16 @@ def _run_turns(
         memory_diff = result.get("memory_diff", {})
         if not isinstance(memory_diff, dict):
             memory_diff = {}
-        old_human = str((memory_diff.get("old") or {}).get("human", "") if isinstance(memory_diff.get("old"), dict) else "")
-        new_human = str((memory_diff.get("new") or {}).get("human", "") if isinstance(memory_diff.get("new"), dict) else "")
+        old_human = str(
+            (memory_diff.get("old") or {}).get("human", "")
+            if isinstance(memory_diff.get("old"), dict)
+            else ""
+        )
+        new_human = str(
+            (memory_diff.get("new") or {}).get("human", "")
+            if isinstance(memory_diff.get("new"), dict)
+            else ""
+        )
         if turn_index == 1:
             initial_human_memory = old_human
         replies = assistant_replies(sequence)
@@ -226,7 +268,9 @@ def _run_judge_if_enabled(
 ) -> dict[str, Any]:
     if not config.judge_enabled:
         return {"ok": False, "skipped": True}
-    model_key = config.judge_model_key or router_model_key_from_agent_handle(config.model)
+    model_key = config.judge_model_key or router_model_key_from_agent_handle(
+        config.model
+    )
     return judge_round(
         router_v1_base_url=router_v1_base_url(config),
         router_api_key=config.model_router_api_key,
@@ -238,7 +282,9 @@ def _run_judge_if_enabled(
     )
 
 
-def _create_agent_payload(config: ChatMemoryEvalConfig, round_index: int) -> dict[str, Any]:
+def _create_agent_payload(
+    config: ChatMemoryEvalConfig, round_index: int
+) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "scenario": "chat",
         "name": f"chat-memory-eval-r{round_index}-{int(time.time())}",
@@ -255,7 +301,9 @@ def _round_row(**kwargs: Any) -> dict[str, Any]:
     score = kwargs["score"]
     judge_payload = kwargs["judge_payload"]
     turn_records = kwargs["turn_records"]
-    memory_tool_count = sum(len(item.get("memory_tool_calls", [])) for item in turn_records)
+    memory_tool_count = sum(
+        len(item.get("memory_tool_calls", [])) for item in turn_records
+    )
     tool_count = sum(len(item.get("tool_calls", [])) for item in turn_records)
     return {
         "run_id": kwargs["run_id"],
@@ -269,7 +317,9 @@ def _round_row(**kwargs: Any) -> dict[str, Any]:
         "embedding": kwargs["config"].embedding,
         "fixture_key": kwargs["fixture"].key,
         "turn_count": len(turn_records),
-        "assistant_reply_count": sum(len(item.get("assistant_replies", [])) for item in turn_records),
+        "assistant_reply_count": sum(
+            len(item.get("assistant_replies", [])) for item in turn_records
+        ),
         "forbidden_hit_count": int(score.get("forbidden_hit_count", 0)),
         "human_memory_changed": bool(score.get("human_memory_changed", False)),
         "expected_facts_passed": bool(score.get("expected_facts_passed", False)),
@@ -329,7 +379,11 @@ def _error_row(
 def _option_keys(items: object) -> set[str]:
     if not isinstance(items, list):
         return set()
-    return {str(item.get("key", "") or "").strip() for item in items if isinstance(item, dict)}
+    return {
+        str(item.get("key", "") or "").strip()
+        for item in items
+        if isinstance(item, dict)
+    }
 
 
 def _human_memory_from_state(state: dict[str, Any]) -> str:

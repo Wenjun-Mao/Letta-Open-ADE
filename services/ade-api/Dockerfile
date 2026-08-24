@@ -15,7 +15,7 @@ COPY services/ade-api ./services/ade-api
 COPY packages/model-catalog-contracts ./packages/model-catalog-contracts
 COPY workflows/pyproject.toml ./workflows/pyproject.toml
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --package ade-api --frozen --no-dev
+    uv sync --package ade-api --package ade-workflows --frozen --no-dev
 
 # Copy runtime assets required by ADE API and Test Center workflows.
 COPY config ./config

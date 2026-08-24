@@ -12,7 +12,8 @@ def _canonical_json(payload: dict[str, Any]) -> str:
 
 
 SUMMARY_TRANSLATIONS = {
-    "Runtime and control APIs for ADE and local Agent Platform workflows": "面向 ADE 与本地 Agent Platform 工作流的运行时与控制 API",
+    "Runtime and control APIs for ADE and local ADE API workflows": "面向 ADE 与本地 ADE API 工作流的运行时与控制 API",
+    "Feature-aligned runtime and authoring APIs for Letta Open ADE": "面向 Letta Open ADE 的按功能组织的运行时与创作 API",
     "Archive agent (soft delete)": "归档智能体（软删除）",
     "Archive managed custom tool": "归档受管自定义工具",
     "Archive persona template": "归档 Persona 模板",
@@ -80,8 +81,11 @@ SUMMARY_TRANSLATIONS = {
 DESCRIPTION_TRANSLATIONS = {
     "Successful Response": "成功响应",
     "Validation Error": "校验错误",
-    "Agent Platform API local": "Agent Platform API 本地服务",
-    "Provides versioned API routes for Agent Platform runtime/control/test orchestration. Designed for backend-first API consumption and ADE frontend integration.": "提供用于 Agent Platform 运行时/控制/测试编排的版本化 API 路由。面向后端优先的 API 调用，并用于 ADE 前端集成。",
+    "Local ADE API": "本地 ADE API",
+    "ADE API local": "ADE API 本地服务",
+    "Provides versioned API routes for ADE API runtime/control/test orchestration. Designed for backend-first API consumption and ADE Web integration.": "提供用于 ADE API 运行时/控制/测试编排的版本化 API 路由。面向后端优先的 API 调用，并用于 ADE Web 集成。",
+    "Provides the versioned Agent Studio, lab, content-center, catalog, and test APIs used by ADE Web, workflows, and first-class developer clients.": "提供 ADE Web、工作流和一等开发者客户端使用的版本化 Agent Studio、实验室、内容中心、目录和测试 API。",
+    "Model capabilities, catalog diagnostics, and scenario runtime options.": "模型能力、目录诊断和场景运行时选项。",
     "Persistent-agent creation, inspection, and chat operations.": "持久化智能体的创建、检查与对话操作。",
     "Stateless comment generation using router-visible models.": "使用模型路由器可见模型生成无状态评论。",
     "Stateless grouped entity extraction using Label Lab schemas.": "使用 Label Lab Schema 进行无状态分组实体抽取。",
@@ -120,6 +124,7 @@ DESCRIPTION_TRANSLATIONS = {
     "List existing agents so the UI can pull and inspect prior state.": "列出已有智能体，供 UI 拉取并检查历史状态。",
     "Returns persisted state from Letta backend storage (Postgres/pgvector via Letta API):\n- agent metadata\n- memory blocks\n- attached tools\n- persisted conversation history": "返回 Letta 后端存储（通过 Letta API 访问 Postgres/pgvector）中的持久化状态：\n- 智能体元数据\n- 记忆块\n- 已挂载工具\n- 持久化会话历史",
     "Administrator-only opt-in for raw provider request/reply diagnostics.": "仅管理员可选择启用原始供应商请求/响应诊断信息。",
+    "Return the resolved model and content options for one ADE scenario.": "返回一个 ADE 场景解析后的模型与内容选项。",
 }
 
 TAG_TRANSLATIONS = {
@@ -136,6 +141,7 @@ TAG_TRANSLATIONS = {
 }
 
 TITLE_TRANSLATIONS = {
+    "ADE API": "ADE API",
     "Scenario": "场景",
     "Agent Id": "智能体 ID",
     "Adapter": "适配器",
@@ -154,6 +160,7 @@ TITLE_TRANSLATIONS = {
     "Finished At": "结束时间",
     "Letta Handle": "Letta Handle",
     "Letta Handle Prefix": "Letta Handle 前缀",
+    "Letta Catalog Visible": "Letta 目录可见",
     "Line Count": "行数",
     "Location": "位置",
     "Log File": "日志文件",
@@ -573,7 +580,9 @@ def _translate_document_fields(
                 continue
 
             if key == "title" and isinstance(value, str):
-                node[key] = _translate_title_value(value, missing_titles, unknown_title_tokens)
+                node[key] = _translate_title_value(
+                    value, missing_titles, unknown_title_tokens
+                )
                 continue
 
             _translate_document_fields(
@@ -598,21 +607,21 @@ def _apply_top_level_translations(openapi_payload: dict[str, Any]) -> None:
     info = openapi_payload.get("info")
     if isinstance(info, dict):
         if isinstance(info.get("title"), str):
-            info["title"] = "Agent Platform API"
+            info["title"] = "ADE API"
         if isinstance(info.get("summary"), str):
-            info["summary"] = "面向 ADE 与本地 Agent Platform 工作流的运行时与控制 API"
+            info["summary"] = "面向 ADE 与本地 ADE API 工作流的运行时与控制 API"
         if isinstance(info.get("description"), str):
             info["description"] = (
-                "提供用于 Agent Platform 运行时/控制/测试编排的版本化 API 路由。"
-                "面向后端优先的 API 调用，并用于 ADE 前端集成。"
+                "提供用于 ADE API 运行时/控制/测试编排的版本化 API 路由。"
+                "面向后端优先的 API 调用，并用于 ADE Web 集成。"
             )
 
     servers = openapi_payload.get("servers")
     if isinstance(servers, list):
         for server in servers:
             if isinstance(server, dict) and isinstance(server.get("description"), str):
-                if server["description"] == "Agent Platform API local":
-                    server["description"] = "Agent Platform API 本地服务"
+                if server["description"] == "ADE API local":
+                    server["description"] = "ADE API 本地服务"
 
 
 def _apply_tag_translations(openapi_payload: dict[str, Any]) -> None:
@@ -659,7 +668,9 @@ def _write_missing_report(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate manually curated Chinese OpenAPI artifact.")
+    parser = argparse.ArgumentParser(
+        description="Generate manually curated Chinese OpenAPI artifact."
+    )
     parser.add_argument(
         "--source",
         default="docs/openapi/ade-api-openapi.json",

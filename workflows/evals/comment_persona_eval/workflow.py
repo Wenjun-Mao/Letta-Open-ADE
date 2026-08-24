@@ -14,7 +14,12 @@ from uuid import uuid4
 
 import httpx
 from dotenv import load_dotenv
-from tenacity import Retrying, retry_if_exception_type, stop_after_attempt, wait_exponential
+from tenacity import (
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW_ROOT = Path(__file__).resolve().parent
@@ -42,9 +47,11 @@ class TransientApiError(ApiRequestError):
 
 @dataclass(frozen=True)
 class EvalConfig:
-    api_base_url: str = "http://127.0.0.1:8284"
+    api_base_url: str = "http://127.0.0.1:8000"
     output_dir: Path = Path("workflows/evals/comment_persona_eval/outputs")
-    news_path: Path = Path("workflows/evals/comment_persona_eval/inputs/sports_news_demo.txt")
+    news_path: Path = Path(
+        "workflows/evals/comment_persona_eval/inputs/sports_news_demo.txt"
+    )
     rounds: int = 3
     concurrency: int = 1
     stop_on_error: bool = False
@@ -80,7 +87,9 @@ def load_config(path: Path) -> EvalConfig:
         raise ConfigError(f"Config file not found: {path}")
 
     config = EvalConfig(
-        api_base_url=str(payload.get("api_base_url", EvalConfig.api_base_url)).rstrip("/"),
+        api_base_url=str(payload.get("api_base_url", EvalConfig.api_base_url)).rstrip(
+            "/"
+        ),
         output_dir=_project_path(payload.get("output_dir", EvalConfig.output_dir)),
         news_path=_project_path(payload.get("news_path", EvalConfig.news_path)),
         rounds=int(payload.get("rounds", EvalConfig.rounds)),
@@ -92,11 +101,17 @@ def load_config(path: Path) -> EvalConfig:
         model_key=str(payload.get("model_key", EvalConfig.model_key) or "").strip(),
         prompt_key=str(payload.get("prompt_key", EvalConfig.prompt_key) or "").strip(),
         max_tokens=int(payload.get("max_tokens", EvalConfig.max_tokens)),
-        timeout_seconds=float(payload.get("timeout_seconds", EvalConfig.timeout_seconds)),
+        timeout_seconds=float(
+            payload.get("timeout_seconds", EvalConfig.timeout_seconds)
+        ),
         retry_count=int(payload.get("retry_count", EvalConfig.retry_count)),
-        task_shape=str(payload.get("task_shape", EvalConfig.task_shape) or "").strip().lower(),
+        task_shape=str(payload.get("task_shape", EvalConfig.task_shape) or "")
+        .strip()
+        .lower(),
         cache_prompt=bool(payload.get("cache_prompt", EvalConfig.cache_prompt)),
-        enable_thinking=bool(payload.get("enable_thinking", EvalConfig.enable_thinking)),
+        enable_thinking=bool(
+            payload.get("enable_thinking", EvalConfig.enable_thinking)
+        ),
         temperature=float(payload.get("temperature", EvalConfig.temperature)),
         top_p=float(payload.get("top_p", EvalConfig.top_p)),
         top_k=_optional_int(payload.get("top_k", EvalConfig.top_k)),
@@ -126,7 +141,9 @@ def validate_config(config: EvalConfig) -> None:
     if config.api_retry_count < 0:
         raise ConfigError("api_retry_count must be >= 0")
     if config.task_shape not in TASK_SHAPES:
-        raise ConfigError(f"task_shape must be one of: {', '.join(sorted(TASK_SHAPES))}")
+        raise ConfigError(
+            f"task_shape must be one of: {', '.join(sorted(TASK_SHAPES))}"
+        )
     if not 0 <= config.temperature <= 2:
         raise ConfigError("temperature must be between 0 and 2")
     if not 0 < config.top_p <= 1:
@@ -154,7 +171,9 @@ def apply_cli_overrides(config: EvalConfig, args: argparse.Namespace) -> EvalCon
     return next_config
 
 
-def fetch_comment_personas(client: httpx.Client, config: EvalConfig) -> list[dict[str, Any]]:
+def fetch_comment_personas(
+    client: httpx.Client, config: EvalConfig
+) -> list[dict[str, Any]]:
     params: dict[str, Any] = {"scenario": "comment"}
     if config.persona_search:
         params["search"] = config.persona_search
@@ -178,10 +197,14 @@ def fetch_comment_personas(client: httpx.Client, config: EvalConfig) -> list[dic
     ]
     if config.persona_keys:
         wanted = set(config.persona_keys)
-        personas = [item for item in personas if str(item.get("key", "") or "") in wanted]
+        personas = [
+            item for item in personas if str(item.get("key", "") or "") in wanted
+        ]
         missing = sorted(wanted - {str(item.get("key", "") or "") for item in personas})
         if missing:
-            raise ConfigError(f"Requested persona keys were not returned by the API: {', '.join(missing)}")
+            raise ConfigError(
+                f"Requested persona keys were not returned by the API: {', '.join(missing)}"
+            )
     if config.limit:
         personas = personas[: config.limit]
     if not personas:
@@ -205,9 +228,7 @@ def validate_comment_options(client: httpx.Client, config: EvalConfig) -> None:
         if isinstance(item, dict)
     }
     prompt_keys = {
-        str(item.get("key") or "").strip()
-        for item in prompts
-        if isinstance(item, dict)
+        str(item.get("key") or "").strip() for item in prompts if isinstance(item, dict)
     }
     if config.model_key not in model_keys:
         raise ConfigError(
@@ -221,7 +242,9 @@ def validate_comment_options(client: httpx.Client, config: EvalConfig) -> None:
         )
 
 
-def run_evaluation(config: EvalConfig, *, now: datetime | None = None) -> dict[str, Any]:
+def run_evaluation(
+    config: EvalConfig, *, now: datetime | None = None
+) -> dict[str, Any]:
     run_timestamp = (now or datetime.now()).strftime("%Y%m%d_%H%M%S")
     run_id = f"comment-persona-eval-{run_timestamp}-{uuid4().hex[:8]}"
     csv_path = config.output_dir / f"comment_persona_eval_{run_timestamp}.csv"
@@ -236,20 +259,29 @@ def run_evaluation(config: EvalConfig, *, now: datetime | None = None) -> dict[s
     rows: list[dict[str, Any]] = []
     api_key = os.getenv("ADE_API_ADMIN_KEY", "").strip()
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
-    with httpx.Client(base_url=config.api_base_url, timeout=timeout, headers=headers) as client:
+    with httpx.Client(
+        base_url=config.api_base_url, timeout=timeout, headers=headers
+    ) as client:
         validate_comment_options(client, config)
         personas = fetch_comment_personas(client, config)
         total_attempts = len(personas) * config.rounds
         attempt_number = 0
-        print(f"[INFO] Running {total_attempts} attempts across {len(personas)} personas x {config.rounds} rounds.")
+        print(
+            f"[INFO] Running {total_attempts} attempts across {len(personas)} personas x {config.rounds} rounds."
+        )
         print(f"[INFO] Streaming CSV to {csv_path}")
         print(f"[INFO] Streaming JSONL to {jsonl_path}")
-        with ArtifactWriter(csv_path=csv_path, jsonl_path=jsonl_path) as artifact_writer:
+        with ArtifactWriter(
+            csv_path=csv_path, jsonl_path=jsonl_path
+        ) as artifact_writer:
             for round_number in range(1, config.rounds + 1):
                 for persona in personas:
                     attempt_number += 1
                     persona_key = str(persona.get("key", "") or "")
-                    print(f"[{attempt_number}/{total_attempts}] round={round_number} persona={persona_key}", flush=True)
+                    print(
+                        f"[{attempt_number}/{total_attempts}] round={round_number} persona={persona_key}",
+                        flush=True,
+                    )
                     row, raw_record = run_attempt(
                         client,
                         config=config,
@@ -338,11 +370,15 @@ def run_attempt(
     return row, raw_record
 
 
-def _request_json(client: httpx.Client, method: str, path: str, *, retry_count: int, **kwargs: Any) -> dict[str, Any]:
+def _request_json(
+    client: httpx.Client, method: str, path: str, *, retry_count: int, **kwargs: Any
+) -> dict[str, Any]:
     retrying = Retrying(
         stop=stop_after_attempt(1 + retry_count),
         wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
-        retry=retry_if_exception_type((httpx.TimeoutException, httpx.TransportError, TransientApiError)),
+        retry=retry_if_exception_type(
+            (httpx.TimeoutException, httpx.TransportError, TransientApiError)
+        ),
         reraise=True,
     )
     for attempt in retrying:
@@ -355,7 +391,9 @@ def _request_json(client: httpx.Client, method: str, path: str, *, retry_count: 
             try:
                 data = response.json()
             except json.JSONDecodeError as exc:
-                raise ApiRequestError(f"{method} {path} did not return valid JSON") from exc
+                raise ApiRequestError(
+                    f"{method} {path} did not return valid JSON"
+                ) from exc
             if not isinstance(data, dict):
                 raise ApiRequestError(f"{method} {path} did not return a JSON object")
             return data
@@ -374,9 +412,19 @@ def _row_from_result(
     error: str,
 ) -> dict[str, Any]:
     response = response_payload or {}
-    usage = response.get("usage", {}) if isinstance(response.get("usage", {}), dict) else {}
-    raw_reply = response.get("raw_reply", {}) if isinstance(response.get("raw_reply", {}), dict) else {}
-    timings = raw_reply.get("timings", {}) if isinstance(raw_reply.get("timings", {}), dict) else {}
+    usage = (
+        response.get("usage", {}) if isinstance(response.get("usage", {}), dict) else {}
+    )
+    raw_reply = (
+        response.get("raw_reply", {})
+        if isinstance(response.get("raw_reply", {}), dict)
+        else {}
+    )
+    timings = (
+        raw_reply.get("timings", {})
+        if isinstance(raw_reply.get("timings", {}), dict)
+        else {}
+    )
     reasoning_text = _reasoning_text(raw_reply)
     content = str(response.get("content", "") or "")
     return {
@@ -415,8 +463,12 @@ def _row_from_result(
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Evaluate Comment Lab output across SQLite-backed comment personas.")
-    parser.add_argument("--config", default="workflows/evals/comment_persona_eval/config.toml")
+    parser = argparse.ArgumentParser(
+        description="Evaluate Comment Lab output across SQLite-backed comment personas."
+    )
+    parser.add_argument(
+        "--config", default="workflows/evals/comment_persona_eval/config.toml"
+    )
     parser.add_argument("--api-base-url", default="")
     parser.add_argument("--output-dir", default="")
     parser.add_argument("--limit", type=int, default=None)

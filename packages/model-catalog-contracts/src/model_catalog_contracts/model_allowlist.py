@@ -9,11 +9,17 @@ from typing import Any
 
 PROJECT_ROOT = Path(os.getenv("ADE_REPOSITORY_ROOT", Path.cwd())).resolve()
 _ALLOWLIST_PATHS = {
-    ("ark", "chat-probe"): PROJECT_ROOT / "content" / "model-catalog" / "ark_chat_probe_report.json",
+    ("ark", "chat-probe"): PROJECT_ROOT
+    / "content"
+    / "model-catalog"
+    / "ark_chat_probe_report.json",
     (
         "ark",
         "label-structured",
-    ): PROJECT_ROOT / "content" / "model-catalog" / "ark_label_structured_probe_report.json",
+    ): PROJECT_ROOT
+    / "content"
+    / "model-catalog"
+    / "ark_label_structured_probe_report.json",
 }
 
 
@@ -29,10 +35,14 @@ class SourceAllowlistLoadResult:
     detail: str
 
 
-def resolve_source_allowlist_path(source_id: str, *, probe_mode: str = "chat-probe") -> Path | None:
+def resolve_source_allowlist_path(
+    source_id: str, *, probe_mode: str = "chat-probe"
+) -> Path | None:
     resolved_source_id = str(source_id or "").strip()
     resolved_probe_mode = str(probe_mode or "").strip()
-    return _ALLOWLIST_PATHS.get((resolved_source_id, resolved_probe_mode)) or _ALLOWLIST_PATHS.get(resolved_source_id)
+    return _ALLOWLIST_PATHS.get(
+        (resolved_source_id, resolved_probe_mode)
+    ) or _ALLOWLIST_PATHS.get(resolved_source_id)
 
 
 def load_configured_source_allowlist(
@@ -42,7 +52,9 @@ def load_configured_source_allowlist(
 ) -> SourceAllowlistLoadResult | None:
     resolved_source_id = str(source_id or "").strip()
     resolved_probe_mode = str(probe_mode or "").strip() or "chat-probe"
-    allowlist_path = resolve_source_allowlist_path(resolved_source_id, probe_mode=resolved_probe_mode)
+    allowlist_path = resolve_source_allowlist_path(
+        resolved_source_id, probe_mode=resolved_probe_mode
+    )
     if allowlist_path is None:
         return None
 
@@ -104,12 +116,16 @@ def _parse_allowlist_payload(
 
     payload_source_id = str(payload.get("source_id", "") or "").strip()
     if payload_source_id != source_id:
-        raise ValueError(f"expected source_id '{source_id}' but found '{payload_source_id}'")
+        raise ValueError(
+            f"expected source_id '{source_id}' but found '{payload_source_id}'"
+        )
 
     checked_at = _optional_text(payload.get("checked_at"))
     payload_probe_mode = _optional_text(payload.get("probe_mode"))
     if payload_probe_mode != probe_mode:
-        raise ValueError(f"expected probe_mode '{probe_mode}' but found '{payload_probe_mode}'")
+        raise ValueError(
+            f"expected probe_mode '{probe_mode}' but found '{payload_probe_mode}'"
+        )
 
     raw_model_count = payload.get("raw_model_count", 0)
     if not isinstance(raw_model_count, int) or raw_model_count < 0:

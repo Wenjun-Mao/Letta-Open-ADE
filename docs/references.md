@@ -1,6 +1,6 @@
 # Upstream References
 
-Use ADE and the Agent Platform API for project workflows. These upstream sources
+Use ADE Web and ADE API for project workflows. These upstream sources
 are the maintained references for Letta concepts and SDK behavior:
 
 - [Letta documentation](https://docs.letta.com/)
@@ -11,7 +11,7 @@ are the maintained references for Letta concepts and SDK behavior:
 
 The repository previously carried generated exploratory notebooks and a local
 copy of the MemGPT paper under `docs/`. They were removed because they were
-unreferenced, bypassed the Agent Platform API, and could drift from the pinned
+unreferenced, bypassed ADE API, and could drift from the pinned
 Letta server and SDK. Recreate experiments as self-contained workflows under
 `workflows/evals/` when they measure product behavior, or under a documented `examples/`
 directory when they demonstrate a maintained integration.

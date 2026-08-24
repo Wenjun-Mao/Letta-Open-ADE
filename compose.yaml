@@ -94,7 +94,6 @@ services:
       - ADE_REPOSITORY_ROOT=/app
       - LETTA_BASE_URL=http://letta:8283
       - ADE_API_MODEL_ROUTER_BASE_URL=http://model-router:8010
-      - CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL=http://model-router:8010
     volumes:
       - ./content:/app/content
       - ./config:/app/config:ro

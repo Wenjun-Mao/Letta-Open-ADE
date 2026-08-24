@@ -1,9 +1,9 @@
-# ADE Target Request Flows
+# ADE Request Flows
 
-> These flows describe the target architecture in
-> [ADR 0006](../adr/0006-comprehension-first-service-and-feature-architecture.md).
-> During migration, a completed feature slice follows these boundaries; use its
-> local README to confirm its implementation status.
+These flows describe the implemented architecture defined by
+[ADR 0006](../adr/0006-comprehension-first-service-and-feature-architecture.md).
+Use the owning feature README for feature-specific contracts and operational
+notes.
 
 ## Shared Web Request Path
 

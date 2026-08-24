@@ -23,13 +23,14 @@ Outputs stream to `workflows/evals/chat_memory_eval/outputs/` as timestamped CSV
 - The assistant does not self-disclose as an AI, bot, virtual assistant, or generated program.
 - The final `human` memory block changed from its initial value.
 - The final `human` memory contains expected user facts from the fixture: `张伟`, `Rocky`, and `哈士奇/Husky`.
-- Per-turn tool calls and memory-tool calls are recorded when visible in the Agent Platform response.
+- Per-turn tool calls and memory-tool calls are recorded when visible in the ADE
+  API response.
 
 The optional LLM judge is diagnostic only. The process exit code uses deterministic checks.
-Host-launched runs use `http://127.0.0.1:8290/v1` for the judge by default;
-override it with `CHAT_MEMORY_EVAL_MODEL_ROUTER_BASE_URL` when needed. Compose
-sets that workflow-specific variable to the internal `model_router` hostname for
-Test Center runs, so host commands never inherit a Docker-only service address.
+The judge inherits `ADE_API_MODEL_ROUTER_BASE_URL`, which is
+`http://model-router:8010` inside Compose. A direct host run falls back to
+`http://127.0.0.1:8010`; set `model_router_base_url` in a local config when the
+router is reachable elsewhere, or disable the advisory judge.
 
 ## Config
 
@@ -37,7 +38,7 @@ The default config is `workflows/evals/chat_memory_eval/config.toml`.
 
 | Field | Default | Meaning |
 | --- | --- | --- |
-| `api_base_url` | `http://127.0.0.1:8284` | Agent Platform API base URL. |
+| `api_base_url` | `http://127.0.0.1:8000` | ADE API base URL. |
 | `output_dir` | `workflows/evals/chat_memory_eval/outputs` | Directory for generated artifacts. |
 | `fixture_key` | `recent_user_chat_turns` | Fixture JSON in `fixtures/`. |
 | `rounds` | `3` | Number of fresh agents to run. |
@@ -45,8 +46,8 @@ The default config is `workflows/evals/chat_memory_eval/config.toml`.
 | `prompt_key` | `chat_v20260516` | Chat prompt key. |
 | `persona_key` | `chat_linxiaotang` | Chat persona key. |
 | `embedding` | `letta/letta-free` | Letta embedding handle. |
-| `timeout_seconds` | `180` | Runtime timeout sent to `/api/v2/agent-studio/messages`. |
-| `retry_count` | `0` | Runtime retry count sent to `/api/v2/agent-studio/messages`. |
+| `timeout_seconds` | `180` | Runtime timeout sent with each Agent Studio message. |
+| `retry_count` | `0` | Runtime retry count sent with each Agent Studio message. |
 | `judge_enabled` | `true` | Run advisory router-backed LLM judge. |
 | `judge_model_key` | blank | Router model key for judge; blank derives it from `model`. |
 | `api_retry_count` | `2` | Transport retry count for script-to-API calls. |

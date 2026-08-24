@@ -86,6 +86,19 @@
         "title": "AgentCreateRequest",
         "type": "object"
       },
+      "AgentModelUpdateRequest": {
+        "properties": {
+          "model": {
+            "title": "Model",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model"
+        ],
+        "title": "AgentModelUpdateRequest",
+        "type": "object"
+      },
       "ApiAgentCreateResponse": {
         "properties": {
           "embedding": {
@@ -1657,614 +1670,6 @@
         "title": "ApiPersonaMetadataResponse",
         "type": "object"
       },
-      "ApiPlatformCapabilitiesResponse": {
-        "properties": {
-          "control": {
-            "$ref": "#/components/schemas/ApiPlatformControlCapabilitiesResponse"
-          },
-          "enabled": {
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "missing_required": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Missing Required",
-            "type": "array"
-          },
-          "runtime": {
-            "$ref": "#/components/schemas/ApiPlatformRuntimeCapabilitiesResponse"
-          },
-          "sdk": {
-            "$ref": "#/components/schemas/ApiPlatformSdkCapabilitiesResponse"
-          },
-          "strict_mode": {
-            "title": "Strict Mode",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "enabled",
-          "strict_mode",
-          "missing_required",
-          "runtime",
-          "control",
-          "sdk"
-        ],
-        "title": "ApiPlatformCapabilitiesResponse",
-        "type": "object"
-      },
-      "ApiPlatformControlCapabilitiesResponse": {
-        "properties": {
-          "attach_tool": {
-            "title": "Attach Tool",
-            "type": "boolean"
-          },
-          "detach_tool": {
-            "title": "Detach Tool",
-            "type": "boolean"
-          },
-          "update_agent_model": {
-            "title": "Update Agent Model",
-            "type": "boolean"
-          },
-          "update_core_memory_block": {
-            "title": "Update Core Memory Block",
-            "type": "boolean"
-          },
-          "update_system_prompt": {
-            "title": "Update System Prompt",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "update_system_prompt",
-          "update_agent_model",
-          "update_core_memory_block",
-          "attach_tool",
-          "detach_tool"
-        ],
-        "title": "ApiPlatformControlCapabilitiesResponse",
-        "type": "object"
-      },
-      "ApiPlatformModelCatalogEntryResponse": {
-        "properties": {
-          "agent_studio_available": {
-            "title": "Agent Studio Available",
-            "type": "boolean"
-          },
-          "agent_studio_candidate": {
-            "default": false,
-            "title": "Agent Studio Candidate",
-            "type": "boolean"
-          },
-          "agent_studio_compatible": {
-            "default": true,
-            "title": "Agent Studio Compatible",
-            "type": "boolean"
-          },
-          "comment_lab_available": {
-            "title": "Comment Lab Available",
-            "type": "boolean"
-          },
-          "label_lab_available": {
-            "title": "Label Lab Available",
-            "type": "boolean"
-          },
-          "letta_handle": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Letta Handle"
-          },
-          "model_key": {
-            "title": "Model Key",
-            "type": "string"
-          },
-          "model_type": {
-            "title": "Model Type",
-            "type": "string"
-          },
-          "profile_applied": {
-            "default": false,
-            "title": "Profile Applied",
-            "type": "boolean"
-          },
-          "profile_source": {
-            "default": "",
-            "title": "Profile Source",
-            "type": "string"
-          },
-          "provider_model_id": {
-            "title": "Provider Model Id",
-            "type": "string"
-          },
-          "sampling_defaults": {
-            "additionalProperties": true,
-            "title": "Sampling Defaults",
-            "type": "object"
-          },
-          "scenario_sampling_defaults": {
-            "additionalProperties": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Scenario Sampling Defaults",
-            "type": "object"
-          },
-          "source_adapter": {
-            "default": "generic_openai",
-            "title": "Source Adapter",
-            "type": "string"
-          },
-          "source_id": {
-            "title": "Source Id",
-            "type": "string"
-          },
-          "source_kind": {
-            "title": "Source Kind",
-            "type": "string"
-          },
-          "source_label": {
-            "title": "Source Label",
-            "type": "string"
-          },
-          "structured_output_mode": {
-            "anyOf": [
-              {
-                "enum": [
-                  "strict_json_schema",
-                  "json_schema",
-                  "best_effort_prompt_json"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Structured Output Mode"
-          },
-          "supports_thinking": {
-            "default": false,
-            "title": "Supports Thinking",
-            "type": "boolean"
-          },
-          "supports_top_k": {
-            "default": false,
-            "title": "Supports Top K",
-            "type": "boolean"
-          },
-          "thinking_default_enabled": {
-            "default": false,
-            "title": "Thinking Default Enabled",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "model_key",
-          "source_id",
-          "source_label",
-          "source_kind",
-          "provider_model_id",
-          "model_type",
-          "agent_studio_available",
-          "comment_lab_available",
-          "label_lab_available"
-        ],
-        "title": "ApiPlatformModelCatalogEntryResponse",
-        "type": "object"
-      },
-      "ApiPlatformModelCatalogResponse": {
-        "properties": {
-          "generated_at": {
-            "title": "Generated At",
-            "type": "number"
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ApiPlatformModelCatalogEntryResponse"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "sources": {
-            "items": {
-              "$ref": "#/components/schemas/ApiPlatformModelCatalogSourceResponse"
-            },
-            "title": "Sources",
-            "type": "array"
-          }
-        },
-        "required": [
-          "generated_at"
-        ],
-        "title": "ApiPlatformModelCatalogResponse",
-        "type": "object"
-      },
-      "ApiPlatformModelCatalogSourceModelResponse": {
-        "properties": {
-          "model_type": {
-            "title": "Model Type",
-            "type": "string"
-          },
-          "provider_model_id": {
-            "title": "Provider Model Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "provider_model_id",
-          "model_type"
-        ],
-        "title": "ApiPlatformModelCatalogSourceModelResponse",
-        "type": "object"
-      },
-      "ApiPlatformModelCatalogSourceResponse": {
-        "properties": {
-          "adapter": {
-            "default": "generic_openai",
-            "title": "Adapter",
-            "type": "string"
-          },
-          "allowlist_applied": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Allowlist Applied"
-          },
-          "allowlist_checked_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Allowlist Checked At"
-          },
-          "base_url": {
-            "title": "Base Url",
-            "type": "string"
-          },
-          "detail": {
-            "title": "Detail",
-            "type": "string"
-          },
-          "enabled_for": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Enabled For",
-            "type": "array"
-          },
-          "filtered_model_count": {
-            "default": 0,
-            "title": "Filtered Model Count",
-            "type": "integer"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "letta_handle_prefix": {
-            "title": "Letta Handle Prefix",
-            "type": "string"
-          },
-          "models": {
-            "items": {
-              "$ref": "#/components/schemas/ApiPlatformModelCatalogSourceModelResponse"
-            },
-            "title": "Models",
-            "type": "array"
-          },
-          "raw_model_count": {
-            "default": 0,
-            "title": "Raw Model Count",
-            "type": "integer"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "label",
-          "kind",
-          "base_url",
-          "enabled_for",
-          "letta_handle_prefix",
-          "status",
-          "detail"
-        ],
-        "title": "ApiPlatformModelCatalogSourceResponse",
-        "type": "object"
-      },
-      "ApiPlatformRuntimeCapabilitiesResponse": {
-        "properties": {
-          "per_request_model_override": {
-            "title": "Per Request Model Override",
-            "type": "boolean"
-          },
-          "per_request_model_override_via_extra_body": {
-            "title": "Per Request Model Override Via Extra Body",
-            "type": "boolean"
-          },
-          "per_request_system_override": {
-            "title": "Per Request System Override",
-            "type": "boolean"
-          },
-          "per_request_system_override_via_extra_body": {
-            "title": "Per Request System Override Via Extra Body",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "per_request_model_override",
-          "per_request_model_override_via_extra_body",
-          "per_request_system_override",
-          "per_request_system_override_via_extra_body"
-        ],
-        "title": "ApiPlatformRuntimeCapabilitiesResponse",
-        "type": "object"
-      },
-      "ApiPlatformSdkCapabilitiesResponse": {
-        "properties": {
-          "agents_update_params": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Agents Update Params",
-            "type": "array"
-          },
-          "blocks_update_params": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Blocks Update Params",
-            "type": "array"
-          },
-          "messages_create_params": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Messages Create Params",
-            "type": "array"
-          }
-        },
-        "required": [
-          "messages_create_params",
-          "agents_update_params",
-          "blocks_update_params"
-        ],
-        "title": "ApiPlatformSdkCapabilitiesResponse",
-        "type": "object"
-      },
-      "ApiPlatformToolListResponse": {
-        "properties": {
-          "agent_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Agent Id"
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ApiPlatformToolResponse"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "limit": {
-            "title": "Limit",
-            "type": "integer"
-          },
-          "search": {
-            "title": "Search",
-            "type": "string"
-          },
-          "total": {
-            "title": "Total",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "total",
-          "search",
-          "limit",
-          "items"
-        ],
-        "title": "ApiPlatformToolListResponse",
-        "type": "object"
-      },
-      "ApiPlatformToolResponse": {
-        "properties": {
-          "archived": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Archived"
-          },
-          "attached_to_agent": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Attached To Agent"
-          },
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
-          },
-          "description": {
-            "title": "Description",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "last_updated_at": {
-            "title": "Last Updated At",
-            "type": "string"
-          },
-          "managed": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Managed"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "read_only": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Read Only"
-          },
-          "slug": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Slug"
-          },
-          "source_type": {
-            "title": "Source Type",
-            "type": "string"
-          },
-          "tags": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Tags",
-            "type": "array"
-          },
-          "tool_type": {
-            "title": "Tool Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "description",
-          "tool_type",
-          "source_type",
-          "created_at",
-          "last_updated_at",
-          "tags"
-        ],
-        "title": "ApiPlatformToolResponse",
-        "type": "object"
-      },
-      "ApiPlatformToolTestInvokeResponse": {
-        "properties": {
-          "agent_id": {
-            "title": "Agent Id",
-            "type": "string"
-          },
-          "expected_tool_matched": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expected Tool Matched"
-          },
-          "expected_tool_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expected Tool Name"
-          },
-          "input": {
-            "title": "Input",
-            "type": "string"
-          },
-          "result": {
-            "additionalProperties": true,
-            "title": "Result",
-            "type": "object"
-          },
-          "tool_call_count": {
-            "title": "Tool Call Count",
-            "type": "integer"
-          },
-          "tool_return_count": {
-            "title": "Tool Return Count",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "agent_id",
-          "input",
-          "tool_call_count",
-          "tool_return_count",
-          "result"
-        ],
-        "title": "ApiPlatformToolTestInvokeResponse",
-        "type": "object"
-      },
       "ApiPromptMetadataResponse": {
         "properties": {
           "description": {
@@ -2555,6 +1960,154 @@
         "title": "ApiRuntimeMessageResponse",
         "type": "object"
       },
+      "ApiRuntimeToolListResponse": {
+        "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agent Id"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApiRuntimeToolResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "search": {
+            "title": "Search",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "search",
+          "limit",
+          "items"
+        ],
+        "title": "ApiRuntimeToolListResponse",
+        "type": "object"
+      },
+      "ApiRuntimeToolResponse": {
+        "properties": {
+          "archived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Archived"
+          },
+          "attached_to_agent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attached To Agent"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_updated_at": {
+            "title": "Last Updated At",
+            "type": "string"
+          },
+          "managed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managed"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "read_only": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Only"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "tool_type": {
+            "title": "Tool Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "tool_type",
+          "source_type",
+          "created_at",
+          "last_updated_at",
+          "tags"
+        ],
+        "title": "ApiRuntimeToolResponse",
+        "type": "object"
+      },
       "ApiSystemUpdateResponse": {
         "properties": {
           "agent_id": {
@@ -2702,194 +2255,6 @@
           "updated_at"
         ],
         "title": "ApiTemplateRecordResponse",
-        "type": "object"
-      },
-      "ApiTestArtifactListResponse": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ApiTestArtifactResponse"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "run_id": {
-            "title": "Run Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "run_id",
-          "items"
-        ],
-        "title": "ApiTestArtifactListResponse",
-        "type": "object"
-      },
-      "ApiTestArtifactReadResponse": {
-        "properties": {
-          "artifact": {
-            "$ref": "#/components/schemas/ApiTestArtifactResponse"
-          },
-          "content": {
-            "title": "Content",
-            "type": "string"
-          },
-          "line_count": {
-            "title": "Line Count",
-            "type": "integer"
-          },
-          "run_id": {
-            "title": "Run Id",
-            "type": "string"
-          },
-          "truncated": {
-            "title": "Truncated",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "run_id",
-          "artifact",
-          "content",
-          "truncated",
-          "line_count"
-        ],
-        "title": "ApiTestArtifactReadResponse",
-        "type": "object"
-      },
-      "ApiTestArtifactResponse": {
-        "properties": {
-          "artifact_id": {
-            "title": "Artifact Id",
-            "type": "string"
-          },
-          "exists": {
-            "title": "Exists",
-            "type": "boolean"
-          },
-          "path": {
-            "title": "Path",
-            "type": "string"
-          },
-          "size_bytes": {
-            "title": "Size Bytes",
-            "type": "integer"
-          },
-          "type": {
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "artifact_id",
-          "type",
-          "path",
-          "exists",
-          "size_bytes"
-        ],
-        "title": "ApiTestArtifactResponse",
-        "type": "object"
-      },
-      "ApiTestRunListResponse": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ApiTestRunRecordResponse"
-            },
-            "title": "Items",
-            "type": "array"
-          }
-        },
-        "required": [
-          "items"
-        ],
-        "title": "ApiTestRunListResponse",
-        "type": "object"
-      },
-      "ApiTestRunRecordResponse": {
-        "properties": {
-          "artifacts": {
-            "items": {
-              "$ref": "#/components/schemas/ApiTestArtifactResponse"
-            },
-            "title": "Artifacts",
-            "type": "array"
-          },
-          "cancel_requested": {
-            "title": "Cancel Requested",
-            "type": "boolean"
-          },
-          "command": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Command",
-            "type": "array"
-          },
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
-          },
-          "error": {
-            "title": "Error",
-            "type": "string"
-          },
-          "exit_code": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Exit Code"
-          },
-          "finished_at": {
-            "title": "Finished At",
-            "type": "string"
-          },
-          "log_file": {
-            "title": "Log File",
-            "type": "string"
-          },
-          "output_tail": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Output Tail",
-            "type": "array"
-          },
-          "run_id": {
-            "title": "Run Id",
-            "type": "string"
-          },
-          "run_type": {
-            "title": "Run Type",
-            "type": "string"
-          },
-          "started_at": {
-            "title": "Started At",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "run_id",
-          "run_type",
-          "status",
-          "command",
-          "created_at",
-          "started_at",
-          "finished_at",
-          "log_file",
-          "cancel_requested",
-          "error"
-        ],
-        "title": "ApiTestRunRecordResponse",
         "type": "object"
       },
       "ApiToolAttachDetachResponse": {
@@ -3079,6 +2444,100 @@
           "items"
         ],
         "title": "ApiToolCenterListResponse",
+        "type": "object"
+      },
+      "ApiToolTestInvokeResponse": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "expected_tool_matched": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Tool Matched"
+          },
+          "expected_tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Tool Name"
+          },
+          "input": {
+            "title": "Input",
+            "type": "string"
+          },
+          "result": {
+            "additionalProperties": true,
+            "title": "Result",
+            "type": "object"
+          },
+          "tool_call_count": {
+            "title": "Tool Call Count",
+            "type": "integer"
+          },
+          "tool_return_count": {
+            "title": "Tool Return Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agent_id",
+          "input",
+          "tool_call_count",
+          "tool_return_count",
+          "result"
+        ],
+        "title": "ApiToolTestInvokeResponse",
+        "type": "object"
+      },
+      "CapabilitiesResponse": {
+        "properties": {
+          "control": {
+            "$ref": "#/components/schemas/ControlCapabilitiesResponse"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "missing_required": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Required",
+            "type": "array"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/RuntimeCapabilitiesResponse"
+          },
+          "sdk": {
+            "$ref": "#/components/schemas/SdkCapabilitiesResponse"
+          },
+          "strict_mode": {
+            "title": "Strict Mode",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "strict_mode",
+          "missing_required",
+          "runtime",
+          "control",
+          "sdk"
+        ],
+        "title": "CapabilitiesResponse",
         "type": "object"
       },
       "ChatRequest": {
@@ -3331,6 +2790,39 @@
         "title": "CommentingGenerateRequest",
         "type": "object"
       },
+      "ControlCapabilitiesResponse": {
+        "properties": {
+          "attach_tool": {
+            "title": "Attach Tool",
+            "type": "boolean"
+          },
+          "detach_tool": {
+            "title": "Detach Tool",
+            "type": "boolean"
+          },
+          "update_agent_model": {
+            "title": "Update Agent Model",
+            "type": "boolean"
+          },
+          "update_core_memory_block": {
+            "title": "Update Core Memory Block",
+            "type": "boolean"
+          },
+          "update_system_prompt": {
+            "title": "Update System Prompt",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "update_system_prompt",
+          "update_agent_model",
+          "update_core_memory_block",
+          "attach_tool",
+          "detach_tool"
+        ],
+        "title": "ControlCapabilitiesResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3561,6 +3053,297 @@
         "title": "LabelingGenerateRequest",
         "type": "object"
       },
+      "MemoryBlockUpdateRequest": {
+        "properties": {
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "MemoryBlockUpdateRequest",
+        "type": "object"
+      },
+      "ModelCatalogEntryResponse": {
+        "properties": {
+          "agent_studio_available": {
+            "title": "Agent Studio Available",
+            "type": "boolean"
+          },
+          "agent_studio_candidate": {
+            "default": false,
+            "title": "Agent Studio Candidate",
+            "type": "boolean"
+          },
+          "agent_studio_compatible": {
+            "default": true,
+            "title": "Agent Studio Compatible",
+            "type": "boolean"
+          },
+          "comment_lab_available": {
+            "title": "Comment Lab Available",
+            "type": "boolean"
+          },
+          "label_lab_available": {
+            "title": "Label Lab Available",
+            "type": "boolean"
+          },
+          "letta_catalog_visible": {
+            "default": false,
+            "title": "Letta Catalog Visible",
+            "type": "boolean"
+          },
+          "letta_handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Letta Handle"
+          },
+          "model_key": {
+            "title": "Model Key",
+            "type": "string"
+          },
+          "model_type": {
+            "title": "Model Type",
+            "type": "string"
+          },
+          "profile_applied": {
+            "default": false,
+            "title": "Profile Applied",
+            "type": "boolean"
+          },
+          "profile_source": {
+            "default": "",
+            "title": "Profile Source",
+            "type": "string"
+          },
+          "provider_model_id": {
+            "title": "Provider Model Id",
+            "type": "string"
+          },
+          "sampling_defaults": {
+            "additionalProperties": true,
+            "title": "Sampling Defaults",
+            "type": "object"
+          },
+          "scenario_sampling_defaults": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Scenario Sampling Defaults",
+            "type": "object"
+          },
+          "source_adapter": {
+            "default": "generic_openai",
+            "title": "Source Adapter",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_kind": {
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_label": {
+            "title": "Source Label",
+            "type": "string"
+          },
+          "structured_output_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "strict_json_schema",
+                  "json_schema",
+                  "best_effort_prompt_json"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structured Output Mode"
+          },
+          "supports_thinking": {
+            "default": false,
+            "title": "Supports Thinking",
+            "type": "boolean"
+          },
+          "supports_top_k": {
+            "default": false,
+            "title": "Supports Top K",
+            "type": "boolean"
+          },
+          "thinking_default_enabled": {
+            "default": false,
+            "title": "Thinking Default Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "model_key",
+          "source_id",
+          "source_label",
+          "source_kind",
+          "provider_model_id",
+          "model_type",
+          "agent_studio_available",
+          "comment_lab_available",
+          "label_lab_available"
+        ],
+        "title": "ModelCatalogEntryResponse",
+        "type": "object"
+      },
+      "ModelCatalogResponse": {
+        "properties": {
+          "generated_at": {
+            "title": "Generated At",
+            "type": "number"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ModelCatalogEntryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ModelCatalogSourceResponse"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at"
+        ],
+        "title": "ModelCatalogResponse",
+        "type": "object"
+      },
+      "ModelCatalogSourceModelResponse": {
+        "properties": {
+          "model_type": {
+            "title": "Model Type",
+            "type": "string"
+          },
+          "provider_model_id": {
+            "title": "Provider Model Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_model_id",
+          "model_type"
+        ],
+        "title": "ModelCatalogSourceModelResponse",
+        "type": "object"
+      },
+      "ModelCatalogSourceResponse": {
+        "properties": {
+          "adapter": {
+            "default": "generic_openai",
+            "title": "Adapter",
+            "type": "string"
+          },
+          "allowlist_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowlist Applied"
+          },
+          "allowlist_checked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowlist Checked At"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "enabled_for": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Enabled For",
+            "type": "array"
+          },
+          "filtered_model_count": {
+            "default": 0,
+            "title": "Filtered Model Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "letta_handle_prefix": {
+            "title": "Letta Handle Prefix",
+            "type": "string"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelCatalogSourceModelResponse"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "raw_model_count": {
+            "default": 0,
+            "title": "Raw Model Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "base_url",
+          "enabled_for",
+          "letta_handle_prefix",
+          "status",
+          "detail"
+        ],
+        "title": "ModelCatalogSourceResponse",
+        "type": "object"
+      },
       "PersonaTemplatePatchRequest": {
         "properties": {
           "content": {
@@ -3644,33 +3427,118 @@
         "title": "PersonaTemplateWriteRequest",
         "type": "object"
       },
-      "PlatformMemoryBlockUpdateRequest": {
+      "PromptTemplatePatchRequest": {
         "properties": {
-          "value": {
-            "title": "Value",
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          }
+        },
+        "title": "PromptTemplatePatchRequest",
+        "type": "object"
+      },
+      "PromptTemplateWriteRequest": {
+        "properties": {
+          "content": {
+            "title": "Content",
             "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "enum": [
+                  "chat",
+                  "comment",
+                  "label"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario"
           }
         },
         "required": [
-          "value"
+          "key",
+          "content"
         ],
-        "title": "PlatformMemoryBlockUpdateRequest",
+        "title": "PromptTemplateWriteRequest",
         "type": "object"
       },
-      "PlatformModelUpdateRequest": {
+      "RuntimeCapabilitiesResponse": {
         "properties": {
-          "model": {
-            "title": "Model",
-            "type": "string"
+          "per_request_model_override": {
+            "title": "Per Request Model Override",
+            "type": "boolean"
+          },
+          "per_request_model_override_via_extra_body": {
+            "title": "Per Request Model Override Via Extra Body",
+            "type": "boolean"
+          },
+          "per_request_system_override": {
+            "title": "Per Request System Override",
+            "type": "boolean"
+          },
+          "per_request_system_override_via_extra_body": {
+            "title": "Per Request System Override Via Extra Body",
+            "type": "boolean"
           }
         },
         "required": [
-          "model"
+          "per_request_model_override",
+          "per_request_model_override_via_extra_body",
+          "per_request_system_override",
+          "per_request_system_override_via_extra_body"
         ],
-        "title": "PlatformModelUpdateRequest",
+        "title": "RuntimeCapabilitiesResponse",
         "type": "object"
       },
-      "PlatformRuntimeMessageRequest": {
+      "RuntimeMessageRequest": {
         "properties": {
           "input": {
             "title": "Input",
@@ -3728,10 +3596,42 @@
         "required": [
           "input"
         ],
-        "title": "PlatformRuntimeMessageRequest",
+        "title": "RuntimeMessageRequest",
         "type": "object"
       },
-      "PlatformSystemUpdateRequest": {
+      "SdkCapabilitiesResponse": {
+        "properties": {
+          "agents_update_params": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Agents Update Params",
+            "type": "array"
+          },
+          "blocks_update_params": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Blocks Update Params",
+            "type": "array"
+          },
+          "messages_create_params": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Messages Create Params",
+            "type": "array"
+          }
+        },
+        "required": [
+          "messages_create_params",
+          "agents_update_params",
+          "blocks_update_params"
+        ],
+        "title": "SdkCapabilitiesResponse",
+        "type": "object"
+      },
+      "SystemPromptUpdateRequest": {
         "properties": {
           "system": {
             "title": "System",
@@ -3741,10 +3641,198 @@
         "required": [
           "system"
         ],
-        "title": "PlatformSystemUpdateRequest",
+        "title": "SystemPromptUpdateRequest",
         "type": "object"
       },
-      "PlatformTestRunRequest": {
+      "TestRunArtifactListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TestRunArtifactResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "items"
+        ],
+        "title": "TestRunArtifactListResponse",
+        "type": "object"
+      },
+      "TestRunArtifactReadResponse": {
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/TestRunArtifactResponse"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "line_count": {
+            "title": "Line Count",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "run_id",
+          "artifact",
+          "content",
+          "truncated",
+          "line_count"
+        ],
+        "title": "TestRunArtifactReadResponse",
+        "type": "object"
+      },
+      "TestRunArtifactResponse": {
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "exists": {
+            "title": "Exists",
+            "type": "boolean"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "type",
+          "path",
+          "exists",
+          "size_bytes"
+        ],
+        "title": "TestRunArtifactResponse",
+        "type": "object"
+      },
+      "TestRunListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TestRunRecordResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "TestRunListResponse",
+        "type": "object"
+      },
+      "TestRunRecordResponse": {
+        "properties": {
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/TestRunArtifactResponse"
+            },
+            "title": "Artifacts",
+            "type": "array"
+          },
+          "cancel_requested": {
+            "title": "Cancel Requested",
+            "type": "boolean"
+          },
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Command",
+            "type": "array"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Code"
+          },
+          "finished_at": {
+            "title": "Finished At",
+            "type": "string"
+          },
+          "log_file": {
+            "title": "Log File",
+            "type": "string"
+          },
+          "output_tail": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Output Tail",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "run_type": {
+            "title": "Run Type",
+            "type": "string"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "run_type",
+          "status",
+          "command",
+          "created_at",
+          "started_at",
+          "finished_at",
+          "log_file",
+          "cancel_requested",
+          "error"
+        ],
+        "title": "TestRunRecordResponse",
+        "type": "object"
+      },
+      "TestRunRequest": {
         "additionalProperties": false,
         "properties": {
           "embedding": {
@@ -3852,7 +3940,7 @@
           },
           "run_type": {
             "enum": [
-              "platform_api_e2e_check",
+              "ade_api_e2e_check",
               "ade_mvp_smoke_e2e_check",
               "chat_memory_eval"
             ],
@@ -3876,167 +3964,7 @@
         "required": [
           "run_type"
         ],
-        "title": "PlatformTestRunRequest",
-        "type": "object"
-      },
-      "PlatformToolTestInvokeRequest": {
-        "properties": {
-          "agent_id": {
-            "title": "Agent Id",
-            "type": "string"
-          },
-          "expected_tool_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expected Tool Name"
-          },
-          "input": {
-            "title": "Input",
-            "type": "string"
-          },
-          "override_model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Override Model"
-          },
-          "override_system": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Override System"
-          },
-          "retry_count": {
-            "anyOf": [
-              {
-                "maximum": 5.0,
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Retry Count"
-          },
-          "timeout_seconds": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "maximum": 600.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Timeout Seconds"
-          }
-        },
-        "required": [
-          "agent_id",
-          "input"
-        ],
-        "title": "PlatformToolTestInvokeRequest",
-        "type": "object"
-      },
-      "PromptTemplatePatchRequest": {
-        "properties": {
-          "content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Label"
-          }
-        },
-        "title": "PromptTemplatePatchRequest",
-        "type": "object"
-      },
-      "PromptTemplateWriteRequest": {
-        "properties": {
-          "content": {
-            "title": "Content",
-            "type": "string"
-          },
-          "description": {
-            "default": "",
-            "title": "Description",
-            "type": "string"
-          },
-          "key": {
-            "title": "Key",
-            "type": "string"
-          },
-          "label": {
-            "default": "",
-            "title": "Label",
-            "type": "string"
-          },
-          "scenario": {
-            "anyOf": [
-              {
-                "enum": [
-                  "chat",
-                  "comment",
-                  "label"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scenario"
-          }
-        },
-        "required": [
-          "key",
-          "content"
-        ],
-        "title": "PromptTemplateWriteRequest",
+        "title": "TestRunRequest",
         "type": "object"
       },
       "ToolCenterCreateRequest": {
@@ -4251,6 +4179,83 @@
           }
         },
         "title": "ToolCenterUpdateRequest",
+        "type": "object"
+      },
+      "ToolTestInvokeRequest": {
+        "properties": {
+          "agent_id": {
+            "title": "Agent Id",
+            "type": "string"
+          },
+          "expected_tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Tool Name"
+          },
+          "input": {
+            "title": "Input",
+            "type": "string"
+          },
+          "override_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Model"
+          },
+          "override_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override System"
+          },
+          "retry_count": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry Count"
+          },
+          "timeout_seconds": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 600.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timeout Seconds"
+          }
+        },
+        "required": [
+          "agent_id",
+          "input"
+        ],
+        "title": "ToolTestInvokeRequest",
         "type": "object"
       },
       "ValidationError": {
@@ -4516,7 +4521,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/archive": {
       "post": {
-        "operationId": "api_platform_archive_agent_api_v2_agent_studio_agents__agent_id__archive_post",
+        "operationId": "api_archive_agent_api_v2_agent_studio_agents__agent_id__archive_post",
         "parameters": [
           {
             "in": "path",
@@ -4563,7 +4568,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/memory/{block_label}": {
       "patch": {
-        "operationId": "api_platform_update_memory_block_api_v2_agent_studio_agents__agent_id__memory__block_label__patch",
+        "operationId": "api_update_memory_block_api_v2_agent_studio_agents__agent_id__memory__block_label__patch",
         "parameters": [
           {
             "in": "path",
@@ -4588,7 +4593,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformMemoryBlockUpdateRequest"
+                "$ref": "#/components/schemas/MemoryBlockUpdateRequest"
               }
             }
           },
@@ -4686,7 +4691,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/model": {
       "patch": {
-        "operationId": "api_platform_update_model_api_v2_agent_studio_agents__agent_id__model_patch",
+        "operationId": "api_update_agent_model_api_v2_agent_studio_agents__agent_id__model_patch",
         "parameters": [
           {
             "in": "path",
@@ -4702,7 +4707,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformModelUpdateRequest"
+                "$ref": "#/components/schemas/AgentModelUpdateRequest"
               }
             }
           },
@@ -4810,7 +4815,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/purge": {
       "delete": {
-        "operationId": "api_platform_purge_agent_api_v2_agent_studio_agents__agent_id__purge_delete",
+        "operationId": "api_purge_agent_api_v2_agent_studio_agents__agent_id__purge_delete",
         "parameters": [
           {
             "in": "path",
@@ -4904,7 +4909,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/restore": {
       "post": {
-        "operationId": "api_platform_restore_agent_api_v2_agent_studio_agents__agent_id__restore_post",
+        "operationId": "api_restore_agent_api_v2_agent_studio_agents__agent_id__restore_post",
         "parameters": [
           {
             "in": "path",
@@ -4951,7 +4956,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/runtime-messages": {
       "post": {
-        "operationId": "api_platform_send_message_api_v2_agent_studio_agents__agent_id__runtime_messages_post",
+        "operationId": "api_send_runtime_message_api_v2_agent_studio_agents__agent_id__runtime_messages_post",
         "parameters": [
           {
             "in": "path",
@@ -4967,7 +4972,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformRuntimeMessageRequest"
+                "$ref": "#/components/schemas/RuntimeMessageRequest"
               }
             }
           },
@@ -5008,7 +5013,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/system-prompt": {
       "patch": {
-        "operationId": "api_platform_update_system_api_v2_agent_studio_agents__agent_id__system_prompt_patch",
+        "operationId": "api_update_system_prompt_api_v2_agent_studio_agents__agent_id__system_prompt_patch",
         "parameters": [
           {
             "in": "path",
@@ -5024,7 +5029,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformSystemUpdateRequest"
+                "$ref": "#/components/schemas/SystemPromptUpdateRequest"
               }
             }
           },
@@ -5065,7 +5070,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/attach": {
       "patch": {
-        "operationId": "api_platform_attach_tool_api_v2_agent_studio_agents__agent_id__tools__tool_id__attach_patch",
+        "operationId": "api_attach_tool_api_v2_agent_studio_agents__agent_id__tools__tool_id__attach_patch",
         "parameters": [
           {
             "in": "path",
@@ -5121,7 +5126,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/detach": {
       "patch": {
-        "operationId": "api_platform_detach_tool_api_v2_agent_studio_agents__agent_id__tools__tool_id__detach_patch",
+        "operationId": "api_detach_tool_api_v2_agent_studio_agents__agent_id__tools__tool_id__detach_patch",
         "parameters": [
           {
             "in": "path",
@@ -5308,13 +5313,13 @@
     },
     "/api/v2/model-catalog/capabilities": {
       "get": {
-        "operationId": "api_platform_capabilities_api_v2_model_catalog_capabilities_get",
+        "operationId": "get_capabilities_api_v2_model_catalog_capabilities_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiPlatformCapabilitiesResponse"
+                  "$ref": "#/components/schemas/CapabilitiesResponse"
                 }
               }
             },
@@ -5334,7 +5339,7 @@
     },
     "/api/v2/model-catalog/models": {
       "get": {
-        "operationId": "api_platform_model_catalog_api_v2_model_catalog_models_get",
+        "operationId": "get_model_catalog_api_v2_model_catalog_models_get",
         "parameters": [
           {
             "in": "query",
@@ -5352,7 +5357,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiPlatformModelCatalogResponse"
+                  "$ref": "#/components/schemas/ModelCatalogResponse"
                 }
               }
             },
@@ -5382,6 +5387,7 @@
     },
     "/api/v2/model-catalog/options": {
       "get": {
+        "description": "Return the resolved model and content options for one ADE scenario.",
         "operationId": "api_get_options_api_v2_model_catalog_options_get",
         "parameters": [
           {
@@ -5440,7 +5446,7 @@
     },
     "/api/v2/prompt-center/catalog": {
       "get": {
-        "operationId": "api_platform_prompt_persona_metadata_api_v2_prompt_center_catalog_get",
+        "operationId": "prompt_persona_metadata_api_v2_prompt_center_catalog_get",
         "parameters": [
           {
             "in": "query",
@@ -5488,7 +5494,7 @@
     },
     "/api/v2/prompt-center/personas": {
       "get": {
-        "operationId": "api_prompt_center_list_personas_api_v2_prompt_center_personas_get",
+        "operationId": "list_personas_api_v2_prompt_center_personas_get",
         "parameters": [
           {
             "in": "query",
@@ -5560,7 +5566,7 @@
         ]
       },
       "post": {
-        "operationId": "api_prompt_center_create_persona_api_v2_prompt_center_personas_post",
+        "operationId": "create_persona_api_v2_prompt_center_personas_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -5606,7 +5612,7 @@
     },
     "/api/v2/prompt-center/personas/{key}": {
       "get": {
-        "operationId": "api_prompt_center_get_persona_api_v2_prompt_center_personas__key__get",
+        "operationId": "get_persona_api_v2_prompt_center_personas__key__get",
         "parameters": [
           {
             "in": "path",
@@ -5677,7 +5683,7 @@
         ]
       },
       "patch": {
-        "operationId": "api_prompt_center_update_persona_api_v2_prompt_center_personas__key__patch",
+        "operationId": "update_persona_api_v2_prompt_center_personas__key__patch",
         "parameters": [
           {
             "in": "path",
@@ -5750,7 +5756,7 @@
     },
     "/api/v2/prompt-center/personas/{key}/archive": {
       "post": {
-        "operationId": "api_prompt_center_archive_persona_api_v2_prompt_center_personas__key__archive_post",
+        "operationId": "archive_persona_api_v2_prompt_center_personas__key__archive_post",
         "parameters": [
           {
             "in": "path",
@@ -5813,7 +5819,7 @@
     },
     "/api/v2/prompt-center/personas/{key}/purge": {
       "delete": {
-        "operationId": "api_prompt_center_purge_persona_api_v2_prompt_center_personas__key__purge_delete",
+        "operationId": "purge_persona_api_v2_prompt_center_personas__key__purge_delete",
         "parameters": [
           {
             "in": "path",
@@ -5874,7 +5880,7 @@
     },
     "/api/v2/prompt-center/personas/{key}/restore": {
       "post": {
-        "operationId": "api_prompt_center_restore_persona_api_v2_prompt_center_personas__key__restore_post",
+        "operationId": "restore_persona_api_v2_prompt_center_personas__key__restore_post",
         "parameters": [
           {
             "in": "path",
@@ -6376,7 +6382,7 @@
     },
     "/api/v2/prompt-center/revisions": {
       "get": {
-        "operationId": "api_platform_prompt_persona_revisions_api_v2_prompt_center_revisions_get",
+        "operationId": "prompt_persona_revisions_api_v2_prompt_center_revisions_get",
         "parameters": [
           {
             "in": "query",
@@ -6799,13 +6805,13 @@
     },
     "/api/v2/test-center/runs": {
       "get": {
-        "operationId": "api_platform_list_test_runs_api_v2_test_center_runs_get",
+        "operationId": "list_test_runs_api_v2_test_center_runs_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestRunListResponse"
+                  "$ref": "#/components/schemas/TestRunListResponse"
                 }
               }
             },
@@ -6823,12 +6829,12 @@
         ]
       },
       "post": {
-        "operationId": "api_platform_create_test_run_api_v2_test_center_runs_post",
+        "operationId": "create_test_run_api_v2_test_center_runs_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformTestRunRequest"
+                "$ref": "#/components/schemas/TestRunRequest"
               }
             }
           },
@@ -6839,7 +6845,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestRunRecordResponse"
+                  "$ref": "#/components/schemas/TestRunRecordResponse"
                 }
               }
             },
@@ -6869,7 +6875,7 @@
     },
     "/api/v2/test-center/runs/{run_id}": {
       "get": {
-        "operationId": "api_platform_get_test_run_api_v2_test_center_runs__run_id__get",
+        "operationId": "get_test_run_api_v2_test_center_runs__run_id__get",
         "parameters": [
           {
             "in": "path",
@@ -6886,7 +6892,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestRunRecordResponse"
+                  "$ref": "#/components/schemas/TestRunRecordResponse"
                 }
               }
             },
@@ -6916,7 +6922,7 @@
     },
     "/api/v2/test-center/runs/{run_id}/artifacts": {
       "get": {
-        "operationId": "api_platform_list_test_run_artifacts_api_v2_test_center_runs__run_id__artifacts_get",
+        "operationId": "list_test_run_artifacts_api_v2_test_center_runs__run_id__artifacts_get",
         "parameters": [
           {
             "in": "path",
@@ -6933,7 +6939,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestArtifactListResponse"
+                  "$ref": "#/components/schemas/TestRunArtifactListResponse"
                 }
               }
             },
@@ -6963,7 +6969,7 @@
     },
     "/api/v2/test-center/runs/{run_id}/artifacts/{artifact_id}": {
       "get": {
-        "operationId": "api_platform_read_test_run_artifact_api_v2_test_center_runs__run_id__artifacts__artifact_id__get",
+        "operationId": "read_test_run_artifact_api_v2_test_center_runs__run_id__artifacts__artifact_id__get",
         "parameters": [
           {
             "in": "path",
@@ -6999,7 +7005,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestArtifactReadResponse"
+                  "$ref": "#/components/schemas/TestRunArtifactReadResponse"
                 }
               }
             },
@@ -7029,7 +7035,7 @@
     },
     "/api/v2/test-center/runs/{run_id}/cancel": {
       "post": {
-        "operationId": "api_platform_cancel_test_run_api_v2_test_center_runs__run_id__cancel_post",
+        "operationId": "cancel_test_run_api_v2_test_center_runs__run_id__cancel_post",
         "parameters": [
           {
             "in": "path",
@@ -7046,7 +7052,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestRunRecordResponse"
+                  "$ref": "#/components/schemas/TestRunRecordResponse"
                 }
               }
             },
@@ -7076,12 +7082,12 @@
     },
     "/api/v2/tool-center/invocations": {
       "post": {
-        "operationId": "api_platform_tool_test_invoke_api_v2_tool_center_invocations_post",
+        "operationId": "api_invoke_tool_probe_api_v2_tool_center_invocations_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformToolTestInvokeRequest"
+                "$ref": "#/components/schemas/ToolTestInvokeRequest"
               }
             }
           },
@@ -7092,7 +7098,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiPlatformToolTestInvokeResponse"
+                  "$ref": "#/components/schemas/ApiToolTestInvokeResponse"
                 }
               }
             },
@@ -7122,7 +7128,7 @@
     },
     "/api/v2/tool-center/runtime-tools": {
       "get": {
-        "operationId": "api_platform_list_tools_api_v2_tool_center_runtime_tools_get",
+        "operationId": "api_list_runtime_tools_api_v2_tool_center_runtime_tools_get",
         "parameters": [
           {
             "in": "query",
@@ -7166,7 +7172,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiPlatformToolListResponse"
+                  "$ref": "#/components/schemas/ApiRuntimeToolListResponse"
                 }
               }
             },
@@ -7272,7 +7278,7 @@
         ]
       },
       "post": {
-        "operationId": "api_tool_center_create_tool_api_v2_tool_center_tools_post",
+        "operationId": "create_tool_api_v2_tool_center_tools_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -7373,7 +7379,7 @@
         ]
       },
       "patch": {
-        "operationId": "api_tool_center_update_tool_api_v2_tool_center_tools__slug__patch",
+        "operationId": "update_tool_api_v2_tool_center_tools__slug__patch",
         "parameters": [
           {
             "in": "path",
@@ -7430,7 +7436,7 @@
     },
     "/api/v2/tool-center/tools/{slug}/archive": {
       "post": {
-        "operationId": "api_tool_center_archive_tool_api_v2_tool_center_tools__slug__archive_post",
+        "operationId": "archive_tool_api_v2_tool_center_tools__slug__archive_post",
         "parameters": [
           {
             "in": "path",
@@ -7477,7 +7483,7 @@
     },
     "/api/v2/tool-center/tools/{slug}/purge": {
       "delete": {
-        "operationId": "api_tool_center_purge_tool_api_v2_tool_center_tools__slug__purge_delete",
+        "operationId": "purge_tool_api_v2_tool_center_tools__slug__purge_delete",
         "parameters": [
           {
             "in": "path",
@@ -7522,7 +7528,7 @@
     },
     "/api/v2/tool-center/tools/{slug}/restore": {
       "post": {
-        "operationId": "api_tool_center_restore_tool_api_v2_tool_center_tools__slug__restore_post",
+        "operationId": "restore_tool_api_v2_tool_center_tools__slug__restore_post",
         "parameters": [
           {
             "in": "path",

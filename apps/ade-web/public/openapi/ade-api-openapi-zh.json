@@ -86,6 +86,19 @@
         "title": "智能体创建请求",
         "type": "object"
       },
+      "AgentModelUpdateRequest": {
+        "properties": {
+          "model": {
+            "title": "模型",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model"
+        ],
+        "title": "智能体 模型 更新 请求",
+        "type": "object"
+      },
       "ApiAgentCreateResponse": {
         "properties": {
           "embedding": {
@@ -1657,614 +1670,6 @@
         "title": "API Persona 元数据 响应",
         "type": "object"
       },
-      "ApiPlatformCapabilitiesResponse": {
-        "properties": {
-          "control": {
-            "$ref": "#/components/schemas/ApiPlatformControlCapabilitiesResponse"
-          },
-          "enabled": {
-            "title": "已启用",
-            "type": "boolean"
-          },
-          "missing_required": {
-            "items": {
-              "type": "string"
-            },
-            "title": "缺失必需能力",
-            "type": "array"
-          },
-          "runtime": {
-            "$ref": "#/components/schemas/ApiPlatformRuntimeCapabilitiesResponse"
-          },
-          "sdk": {
-            "$ref": "#/components/schemas/ApiPlatformSdkCapabilitiesResponse"
-          },
-          "strict_mode": {
-            "title": "严格模式",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "enabled",
-          "strict_mode",
-          "missing_required",
-          "runtime",
-          "control",
-          "sdk"
-        ],
-        "title": "API 平台 能力 响应",
-        "type": "object"
-      },
-      "ApiPlatformControlCapabilitiesResponse": {
-        "properties": {
-          "attach_tool": {
-            "title": "挂载 工具",
-            "type": "boolean"
-          },
-          "detach_tool": {
-            "title": "卸载 工具",
-            "type": "boolean"
-          },
-          "update_agent_model": {
-            "title": "更新 智能体 模型",
-            "type": "boolean"
-          },
-          "update_core_memory_block": {
-            "title": "更新 核心 记忆 块",
-            "type": "boolean"
-          },
-          "update_system_prompt": {
-            "title": "更新 系统 提示词",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "update_system_prompt",
-          "update_agent_model",
-          "update_core_memory_block",
-          "attach_tool",
-          "detach_tool"
-        ],
-        "title": "API 平台 控制 能力 响应",
-        "type": "object"
-      },
-      "ApiPlatformModelCatalogEntryResponse": {
-        "properties": {
-          "agent_studio_available": {
-            "title": "智能体 工作台 可用",
-            "type": "boolean"
-          },
-          "agent_studio_candidate": {
-            "default": false,
-            "title": "智能体 工作台 候选",
-            "type": "boolean"
-          },
-          "agent_studio_compatible": {
-            "default": true,
-            "title": "智能体 工作台 兼容",
-            "type": "boolean"
-          },
-          "comment_lab_available": {
-            "title": "评论 实验室 可用",
-            "type": "boolean"
-          },
-          "label_lab_available": {
-            "title": "标签 实验室 可用",
-            "type": "boolean"
-          },
-          "letta_handle": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Letta Handle"
-          },
-          "model_key": {
-            "title": "模型 键",
-            "type": "string"
-          },
-          "model_type": {
-            "title": "模型 类型",
-            "type": "string"
-          },
-          "profile_applied": {
-            "default": false,
-            "title": "已应用 Profile",
-            "type": "boolean"
-          },
-          "profile_source": {
-            "default": "",
-            "title": "Profile 来源",
-            "type": "string"
-          },
-          "provider_model_id": {
-            "title": "供应商 模型 ID",
-            "type": "string"
-          },
-          "sampling_defaults": {
-            "additionalProperties": true,
-            "title": "采样 默认值",
-            "type": "object"
-          },
-          "scenario_sampling_defaults": {
-            "additionalProperties": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "场景 采样 默认值",
-            "type": "object"
-          },
-          "source_adapter": {
-            "default": "generic_openai",
-            "title": "来源 适配器",
-            "type": "string"
-          },
-          "source_id": {
-            "title": "来源 ID",
-            "type": "string"
-          },
-          "source_kind": {
-            "title": "来源 类别",
-            "type": "string"
-          },
-          "source_label": {
-            "title": "来源 标签",
-            "type": "string"
-          },
-          "structured_output_mode": {
-            "anyOf": [
-              {
-                "enum": [
-                  "strict_json_schema",
-                  "json_schema",
-                  "best_effort_prompt_json"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "结构化输出模式"
-          },
-          "supports_thinking": {
-            "default": false,
-            "title": "支持 Thinking",
-            "type": "boolean"
-          },
-          "supports_top_k": {
-            "default": false,
-            "title": "支持 Top K",
-            "type": "boolean"
-          },
-          "thinking_default_enabled": {
-            "default": false,
-            "title": "Thinking 默认启用",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "model_key",
-          "source_id",
-          "source_label",
-          "source_kind",
-          "provider_model_id",
-          "model_type",
-          "agent_studio_available",
-          "comment_lab_available",
-          "label_lab_available"
-        ],
-        "title": "API 平台 模型 目录 条目 响应",
-        "type": "object"
-      },
-      "ApiPlatformModelCatalogResponse": {
-        "properties": {
-          "generated_at": {
-            "title": "已生成 时间",
-            "type": "number"
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ApiPlatformModelCatalogEntryResponse"
-            },
-            "title": "条目",
-            "type": "array"
-          },
-          "sources": {
-            "items": {
-              "$ref": "#/components/schemas/ApiPlatformModelCatalogSourceResponse"
-            },
-            "title": "来源列表",
-            "type": "array"
-          }
-        },
-        "required": [
-          "generated_at"
-        ],
-        "title": "API 平台 模型 目录 响应",
-        "type": "object"
-      },
-      "ApiPlatformModelCatalogSourceModelResponse": {
-        "properties": {
-          "model_type": {
-            "title": "模型 类型",
-            "type": "string"
-          },
-          "provider_model_id": {
-            "title": "供应商 模型 ID",
-            "type": "string"
-          }
-        },
-        "required": [
-          "provider_model_id",
-          "model_type"
-        ],
-        "title": "API 平台 模型 目录 来源 模型 响应",
-        "type": "object"
-      },
-      "ApiPlatformModelCatalogSourceResponse": {
-        "properties": {
-          "adapter": {
-            "default": "generic_openai",
-            "title": "适配器",
-            "type": "string"
-          },
-          "allowlist_applied": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "已应用允许列表"
-          },
-          "allowlist_checked_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "允许列表检查时间"
-          },
-          "base_url": {
-            "title": "Base URL",
-            "type": "string"
-          },
-          "detail": {
-            "title": "详情",
-            "type": "string"
-          },
-          "enabled_for": {
-            "items": {
-              "type": "string"
-            },
-            "title": "启用场景",
-            "type": "array"
-          },
-          "filtered_model_count": {
-            "default": 0,
-            "title": "过滤后 模型 计数",
-            "type": "integer"
-          },
-          "id": {
-            "title": "ID",
-            "type": "string"
-          },
-          "kind": {
-            "title": "类别",
-            "type": "string"
-          },
-          "label": {
-            "title": "标签",
-            "type": "string"
-          },
-          "letta_handle_prefix": {
-            "title": "Letta Handle 前缀",
-            "type": "string"
-          },
-          "models": {
-            "items": {
-              "$ref": "#/components/schemas/ApiPlatformModelCatalogSourceModelResponse"
-            },
-            "title": "模型列表",
-            "type": "array"
-          },
-          "raw_model_count": {
-            "default": 0,
-            "title": "原始 模型 计数",
-            "type": "integer"
-          },
-          "status": {
-            "title": "状态",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "label",
-          "kind",
-          "base_url",
-          "enabled_for",
-          "letta_handle_prefix",
-          "status",
-          "detail"
-        ],
-        "title": "API 平台 模型 目录 来源 响应",
-        "type": "object"
-      },
-      "ApiPlatformRuntimeCapabilitiesResponse": {
-        "properties": {
-          "per_request_model_override": {
-            "title": "每 请求 模型 覆盖",
-            "type": "boolean"
-          },
-          "per_request_model_override_via_extra_body": {
-            "title": "每 请求 模型 覆盖 通过 额外 正文",
-            "type": "boolean"
-          },
-          "per_request_system_override": {
-            "title": "每 请求 系统 覆盖",
-            "type": "boolean"
-          },
-          "per_request_system_override_via_extra_body": {
-            "title": "每 请求 系统 覆盖 通过 额外 正文",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "per_request_model_override",
-          "per_request_model_override_via_extra_body",
-          "per_request_system_override",
-          "per_request_system_override_via_extra_body"
-        ],
-        "title": "API 平台 运行时 能力 响应",
-        "type": "object"
-      },
-      "ApiPlatformSdkCapabilitiesResponse": {
-        "properties": {
-          "agents_update_params": {
-            "items": {
-              "type": "string"
-            },
-            "title": "智能体 更新 参数",
-            "type": "array"
-          },
-          "blocks_update_params": {
-            "items": {
-              "type": "string"
-            },
-            "title": "记忆块 更新 参数",
-            "type": "array"
-          },
-          "messages_create_params": {
-            "items": {
-              "type": "string"
-            },
-            "title": "消息 创建 参数",
-            "type": "array"
-          }
-        },
-        "required": [
-          "messages_create_params",
-          "agents_update_params",
-          "blocks_update_params"
-        ],
-        "title": "API 平台 SDK 能力 响应",
-        "type": "object"
-      },
-      "ApiPlatformToolListResponse": {
-        "properties": {
-          "agent_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "智能体 ID"
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ApiPlatformToolResponse"
-            },
-            "title": "条目",
-            "type": "array"
-          },
-          "limit": {
-            "title": "限制",
-            "type": "integer"
-          },
-          "search": {
-            "title": "搜索",
-            "type": "string"
-          },
-          "total": {
-            "title": "总数",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "total",
-          "search",
-          "limit",
-          "items"
-        ],
-        "title": "API 平台 工具 列表 响应",
-        "type": "object"
-      },
-      "ApiPlatformToolResponse": {
-        "properties": {
-          "archived": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "已归档"
-          },
-          "attached_to_agent": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "已挂载 到 智能体"
-          },
-          "created_at": {
-            "title": "创建时间",
-            "type": "string"
-          },
-          "description": {
-            "title": "描述",
-            "type": "string"
-          },
-          "id": {
-            "title": "ID",
-            "type": "string"
-          },
-          "last_updated_at": {
-            "title": "最近更新时间",
-            "type": "string"
-          },
-          "managed": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "受管"
-          },
-          "name": {
-            "title": "名称",
-            "type": "string"
-          },
-          "read_only": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "只读"
-          },
-          "slug": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Slug"
-          },
-          "source_type": {
-            "title": "来源类型",
-            "type": "string"
-          },
-          "tags": {
-            "items": {
-              "type": "string"
-            },
-            "title": "标签",
-            "type": "array"
-          },
-          "tool_type": {
-            "title": "工具类型",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "name",
-          "description",
-          "tool_type",
-          "source_type",
-          "created_at",
-          "last_updated_at",
-          "tags"
-        ],
-        "title": "API 平台 工具 响应",
-        "type": "object"
-      },
-      "ApiPlatformToolTestInvokeResponse": {
-        "properties": {
-          "agent_id": {
-            "title": "智能体 ID",
-            "type": "string"
-          },
-          "expected_tool_matched": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "期望 工具 匹配"
-          },
-          "expected_tool_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "期望工具名称"
-          },
-          "input": {
-            "title": "输入",
-            "type": "string"
-          },
-          "result": {
-            "additionalProperties": true,
-            "title": "结果",
-            "type": "object"
-          },
-          "tool_call_count": {
-            "title": "工具 调用 计数",
-            "type": "integer"
-          },
-          "tool_return_count": {
-            "title": "工具 返回 计数",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "agent_id",
-          "input",
-          "tool_call_count",
-          "tool_return_count",
-          "result"
-        ],
-        "title": "API 平台 工具 测试 调用 响应",
-        "type": "object"
-      },
       "ApiPromptMetadataResponse": {
         "properties": {
           "description": {
@@ -2555,6 +1960,154 @@
         "title": "API 运行时 消息 响应",
         "type": "object"
       },
+      "ApiRuntimeToolListResponse": {
+        "properties": {
+          "agent_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "智能体 ID"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApiRuntimeToolResponse"
+            },
+            "title": "条目",
+            "type": "array"
+          },
+          "limit": {
+            "title": "限制",
+            "type": "integer"
+          },
+          "search": {
+            "title": "搜索",
+            "type": "string"
+          },
+          "total": {
+            "title": "总数",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "search",
+          "limit",
+          "items"
+        ],
+        "title": "API 运行时 工具 列表 响应",
+        "type": "object"
+      },
+      "ApiRuntimeToolResponse": {
+        "properties": {
+          "archived": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "已归档"
+          },
+          "attached_to_agent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "已挂载 到 智能体"
+          },
+          "created_at": {
+            "title": "创建时间",
+            "type": "string"
+          },
+          "description": {
+            "title": "描述",
+            "type": "string"
+          },
+          "id": {
+            "title": "ID",
+            "type": "string"
+          },
+          "last_updated_at": {
+            "title": "最近更新时间",
+            "type": "string"
+          },
+          "managed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "受管"
+          },
+          "name": {
+            "title": "名称",
+            "type": "string"
+          },
+          "read_only": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "只读"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "source_type": {
+            "title": "来源类型",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "标签",
+            "type": "array"
+          },
+          "tool_type": {
+            "title": "工具类型",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "tool_type",
+          "source_type",
+          "created_at",
+          "last_updated_at",
+          "tags"
+        ],
+        "title": "API 运行时 工具 响应",
+        "type": "object"
+      },
       "ApiSystemUpdateResponse": {
         "properties": {
           "agent_id": {
@@ -2702,194 +2255,6 @@
           "updated_at"
         ],
         "title": "API 模板 记录 响应",
-        "type": "object"
-      },
-      "ApiTestArtifactListResponse": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ApiTestArtifactResponse"
-            },
-            "title": "条目",
-            "type": "array"
-          },
-          "run_id": {
-            "title": "运行 ID",
-            "type": "string"
-          }
-        },
-        "required": [
-          "run_id",
-          "items"
-        ],
-        "title": "API 测试 产物 列表 响应",
-        "type": "object"
-      },
-      "ApiTestArtifactReadResponse": {
-        "properties": {
-          "artifact": {
-            "$ref": "#/components/schemas/ApiTestArtifactResponse"
-          },
-          "content": {
-            "title": "内容",
-            "type": "string"
-          },
-          "line_count": {
-            "title": "行数",
-            "type": "integer"
-          },
-          "run_id": {
-            "title": "运行 ID",
-            "type": "string"
-          },
-          "truncated": {
-            "title": "已截断",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "run_id",
-          "artifact",
-          "content",
-          "truncated",
-          "line_count"
-        ],
-        "title": "API 测试 产物 读取 响应",
-        "type": "object"
-      },
-      "ApiTestArtifactResponse": {
-        "properties": {
-          "artifact_id": {
-            "title": "产物 ID",
-            "type": "string"
-          },
-          "exists": {
-            "title": "是否存在",
-            "type": "boolean"
-          },
-          "path": {
-            "title": "路径",
-            "type": "string"
-          },
-          "size_bytes": {
-            "title": "字节大小",
-            "type": "integer"
-          },
-          "type": {
-            "title": "类型",
-            "type": "string"
-          }
-        },
-        "required": [
-          "artifact_id",
-          "type",
-          "path",
-          "exists",
-          "size_bytes"
-        ],
-        "title": "API 测试 产物 响应",
-        "type": "object"
-      },
-      "ApiTestRunListResponse": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/ApiTestRunRecordResponse"
-            },
-            "title": "条目",
-            "type": "array"
-          }
-        },
-        "required": [
-          "items"
-        ],
-        "title": "测试运行列表响应",
-        "type": "object"
-      },
-      "ApiTestRunRecordResponse": {
-        "properties": {
-          "artifacts": {
-            "items": {
-              "$ref": "#/components/schemas/ApiTestArtifactResponse"
-            },
-            "title": "产物",
-            "type": "array"
-          },
-          "cancel_requested": {
-            "title": "取消 请求的",
-            "type": "boolean"
-          },
-          "command": {
-            "items": {
-              "type": "string"
-            },
-            "title": "命令",
-            "type": "array"
-          },
-          "created_at": {
-            "title": "创建时间",
-            "type": "string"
-          },
-          "error": {
-            "title": "错误",
-            "type": "string"
-          },
-          "exit_code": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "退出 源码"
-          },
-          "finished_at": {
-            "title": "结束时间",
-            "type": "string"
-          },
-          "log_file": {
-            "title": "日志文件",
-            "type": "string"
-          },
-          "output_tail": {
-            "items": {
-              "type": "string"
-            },
-            "title": "输出尾部",
-            "type": "array"
-          },
-          "run_id": {
-            "title": "运行 ID",
-            "type": "string"
-          },
-          "run_type": {
-            "title": "运行类型",
-            "type": "string"
-          },
-          "started_at": {
-            "title": "开始时间",
-            "type": "string"
-          },
-          "status": {
-            "title": "状态",
-            "type": "string"
-          }
-        },
-        "required": [
-          "run_id",
-          "run_type",
-          "status",
-          "command",
-          "created_at",
-          "started_at",
-          "finished_at",
-          "log_file",
-          "cancel_requested",
-          "error"
-        ],
-        "title": "API 测试 运行 记录 响应",
         "type": "object"
       },
       "ApiToolAttachDetachResponse": {
@@ -3079,6 +2444,100 @@
           "items"
         ],
         "title": "API 工具 中心 列表 响应",
+        "type": "object"
+      },
+      "ApiToolTestInvokeResponse": {
+        "properties": {
+          "agent_id": {
+            "title": "智能体 ID",
+            "type": "string"
+          },
+          "expected_tool_matched": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "期望 工具 匹配"
+          },
+          "expected_tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "期望工具名称"
+          },
+          "input": {
+            "title": "输入",
+            "type": "string"
+          },
+          "result": {
+            "additionalProperties": true,
+            "title": "结果",
+            "type": "object"
+          },
+          "tool_call_count": {
+            "title": "工具 调用 计数",
+            "type": "integer"
+          },
+          "tool_return_count": {
+            "title": "工具 返回 计数",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "agent_id",
+          "input",
+          "tool_call_count",
+          "tool_return_count",
+          "result"
+        ],
+        "title": "工具测试调用响应",
+        "type": "object"
+      },
+      "CapabilitiesResponse": {
+        "properties": {
+          "control": {
+            "$ref": "#/components/schemas/ControlCapabilitiesResponse"
+          },
+          "enabled": {
+            "title": "已启用",
+            "type": "boolean"
+          },
+          "missing_required": {
+            "items": {
+              "type": "string"
+            },
+            "title": "缺失必需能力",
+            "type": "array"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/RuntimeCapabilitiesResponse"
+          },
+          "sdk": {
+            "$ref": "#/components/schemas/SdkCapabilitiesResponse"
+          },
+          "strict_mode": {
+            "title": "严格模式",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "strict_mode",
+          "missing_required",
+          "runtime",
+          "control",
+          "sdk"
+        ],
+        "title": "能力 响应",
         "type": "object"
       },
       "ChatRequest": {
@@ -3331,6 +2790,39 @@
         "title": "评论 生成 请求",
         "type": "object"
       },
+      "ControlCapabilitiesResponse": {
+        "properties": {
+          "attach_tool": {
+            "title": "挂载 工具",
+            "type": "boolean"
+          },
+          "detach_tool": {
+            "title": "卸载 工具",
+            "type": "boolean"
+          },
+          "update_agent_model": {
+            "title": "更新 智能体 模型",
+            "type": "boolean"
+          },
+          "update_core_memory_block": {
+            "title": "更新 核心 记忆 块",
+            "type": "boolean"
+          },
+          "update_system_prompt": {
+            "title": "更新 系统 提示词",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "update_system_prompt",
+          "update_agent_model",
+          "update_core_memory_block",
+          "attach_tool",
+          "detach_tool"
+        ],
+        "title": "控制 能力 响应",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3561,6 +3053,297 @@
         "title": "标注 生成 请求",
         "type": "object"
       },
+      "MemoryBlockUpdateRequest": {
+        "properties": {
+          "value": {
+            "title": "值",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "记忆 块 更新 请求",
+        "type": "object"
+      },
+      "ModelCatalogEntryResponse": {
+        "properties": {
+          "agent_studio_available": {
+            "title": "智能体 工作台 可用",
+            "type": "boolean"
+          },
+          "agent_studio_candidate": {
+            "default": false,
+            "title": "智能体 工作台 候选",
+            "type": "boolean"
+          },
+          "agent_studio_compatible": {
+            "default": true,
+            "title": "智能体 工作台 兼容",
+            "type": "boolean"
+          },
+          "comment_lab_available": {
+            "title": "评论 实验室 可用",
+            "type": "boolean"
+          },
+          "label_lab_available": {
+            "title": "标签 实验室 可用",
+            "type": "boolean"
+          },
+          "letta_catalog_visible": {
+            "default": false,
+            "title": "Letta 目录可见",
+            "type": "boolean"
+          },
+          "letta_handle": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Letta Handle"
+          },
+          "model_key": {
+            "title": "模型 键",
+            "type": "string"
+          },
+          "model_type": {
+            "title": "模型 类型",
+            "type": "string"
+          },
+          "profile_applied": {
+            "default": false,
+            "title": "已应用 Profile",
+            "type": "boolean"
+          },
+          "profile_source": {
+            "default": "",
+            "title": "Profile 来源",
+            "type": "string"
+          },
+          "provider_model_id": {
+            "title": "供应商 模型 ID",
+            "type": "string"
+          },
+          "sampling_defaults": {
+            "additionalProperties": true,
+            "title": "采样 默认值",
+            "type": "object"
+          },
+          "scenario_sampling_defaults": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "场景 采样 默认值",
+            "type": "object"
+          },
+          "source_adapter": {
+            "default": "generic_openai",
+            "title": "来源 适配器",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "来源 ID",
+            "type": "string"
+          },
+          "source_kind": {
+            "title": "来源 类别",
+            "type": "string"
+          },
+          "source_label": {
+            "title": "来源 标签",
+            "type": "string"
+          },
+          "structured_output_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "strict_json_schema",
+                  "json_schema",
+                  "best_effort_prompt_json"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "结构化输出模式"
+          },
+          "supports_thinking": {
+            "default": false,
+            "title": "支持 Thinking",
+            "type": "boolean"
+          },
+          "supports_top_k": {
+            "default": false,
+            "title": "支持 Top K",
+            "type": "boolean"
+          },
+          "thinking_default_enabled": {
+            "default": false,
+            "title": "Thinking 默认启用",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "model_key",
+          "source_id",
+          "source_label",
+          "source_kind",
+          "provider_model_id",
+          "model_type",
+          "agent_studio_available",
+          "comment_lab_available",
+          "label_lab_available"
+        ],
+        "title": "模型 目录 条目 响应",
+        "type": "object"
+      },
+      "ModelCatalogResponse": {
+        "properties": {
+          "generated_at": {
+            "title": "已生成 时间",
+            "type": "number"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ModelCatalogEntryResponse"
+            },
+            "title": "条目",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ModelCatalogSourceResponse"
+            },
+            "title": "来源列表",
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_at"
+        ],
+        "title": "模型 目录 响应",
+        "type": "object"
+      },
+      "ModelCatalogSourceModelResponse": {
+        "properties": {
+          "model_type": {
+            "title": "模型 类型",
+            "type": "string"
+          },
+          "provider_model_id": {
+            "title": "供应商 模型 ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_model_id",
+          "model_type"
+        ],
+        "title": "模型 目录 来源 模型 响应",
+        "type": "object"
+      },
+      "ModelCatalogSourceResponse": {
+        "properties": {
+          "adapter": {
+            "default": "generic_openai",
+            "title": "适配器",
+            "type": "string"
+          },
+          "allowlist_applied": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "已应用允许列表"
+          },
+          "allowlist_checked_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "允许列表检查时间"
+          },
+          "base_url": {
+            "title": "Base URL",
+            "type": "string"
+          },
+          "detail": {
+            "title": "详情",
+            "type": "string"
+          },
+          "enabled_for": {
+            "items": {
+              "type": "string"
+            },
+            "title": "启用场景",
+            "type": "array"
+          },
+          "filtered_model_count": {
+            "default": 0,
+            "title": "过滤后 模型 计数",
+            "type": "integer"
+          },
+          "id": {
+            "title": "ID",
+            "type": "string"
+          },
+          "kind": {
+            "title": "类别",
+            "type": "string"
+          },
+          "label": {
+            "title": "标签",
+            "type": "string"
+          },
+          "letta_handle_prefix": {
+            "title": "Letta Handle 前缀",
+            "type": "string"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelCatalogSourceModelResponse"
+            },
+            "title": "模型列表",
+            "type": "array"
+          },
+          "raw_model_count": {
+            "default": 0,
+            "title": "原始 模型 计数",
+            "type": "integer"
+          },
+          "status": {
+            "title": "状态",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "kind",
+          "base_url",
+          "enabled_for",
+          "letta_handle_prefix",
+          "status",
+          "detail"
+        ],
+        "title": "模型 目录 来源 响应",
+        "type": "object"
+      },
       "PersonaTemplatePatchRequest": {
         "properties": {
           "content": {
@@ -3644,33 +3427,118 @@
         "title": "Persona 模板 写入 请求",
         "type": "object"
       },
-      "PlatformMemoryBlockUpdateRequest": {
+      "PromptTemplatePatchRequest": {
         "properties": {
-          "value": {
-            "title": "值",
+          "content": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "内容"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "描述"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "标签"
+          }
+        },
+        "title": "提示词 模板 补丁 请求",
+        "type": "object"
+      },
+      "PromptTemplateWriteRequest": {
+        "properties": {
+          "content": {
+            "title": "内容",
             "type": "string"
+          },
+          "description": {
+            "default": "",
+            "title": "描述",
+            "type": "string"
+          },
+          "key": {
+            "title": "键",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "标签",
+            "type": "string"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "enum": [
+                  "chat",
+                  "comment",
+                  "label"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "场景"
           }
         },
         "required": [
-          "value"
+          "key",
+          "content"
         ],
-        "title": "平台 记忆 块 更新 请求",
+        "title": "提示词 模板 写入 请求",
         "type": "object"
       },
-      "PlatformModelUpdateRequest": {
+      "RuntimeCapabilitiesResponse": {
         "properties": {
-          "model": {
-            "title": "模型",
-            "type": "string"
+          "per_request_model_override": {
+            "title": "每 请求 模型 覆盖",
+            "type": "boolean"
+          },
+          "per_request_model_override_via_extra_body": {
+            "title": "每 请求 模型 覆盖 通过 额外 正文",
+            "type": "boolean"
+          },
+          "per_request_system_override": {
+            "title": "每 请求 系统 覆盖",
+            "type": "boolean"
+          },
+          "per_request_system_override_via_extra_body": {
+            "title": "每 请求 系统 覆盖 通过 额外 正文",
+            "type": "boolean"
           }
         },
         "required": [
-          "model"
+          "per_request_model_override",
+          "per_request_model_override_via_extra_body",
+          "per_request_system_override",
+          "per_request_system_override_via_extra_body"
         ],
-        "title": "平台 模型 更新 请求",
+        "title": "运行时 能力 响应",
         "type": "object"
       },
-      "PlatformRuntimeMessageRequest": {
+      "RuntimeMessageRequest": {
         "properties": {
           "input": {
             "title": "输入",
@@ -3728,10 +3596,42 @@
         "required": [
           "input"
         ],
-        "title": "平台 运行时 消息 请求",
+        "title": "运行时 消息 请求",
         "type": "object"
       },
-      "PlatformSystemUpdateRequest": {
+      "SdkCapabilitiesResponse": {
+        "properties": {
+          "agents_update_params": {
+            "items": {
+              "type": "string"
+            },
+            "title": "智能体 更新 参数",
+            "type": "array"
+          },
+          "blocks_update_params": {
+            "items": {
+              "type": "string"
+            },
+            "title": "记忆块 更新 参数",
+            "type": "array"
+          },
+          "messages_create_params": {
+            "items": {
+              "type": "string"
+            },
+            "title": "消息 创建 参数",
+            "type": "array"
+          }
+        },
+        "required": [
+          "messages_create_params",
+          "agents_update_params",
+          "blocks_update_params"
+        ],
+        "title": "SDK 能力 响应",
+        "type": "object"
+      },
+      "SystemPromptUpdateRequest": {
         "properties": {
           "system": {
             "title": "系统提示词",
@@ -3741,10 +3641,198 @@
         "required": [
           "system"
         ],
-        "title": "平台 系统 更新 请求",
+        "title": "系统 提示词 更新 请求",
         "type": "object"
       },
-      "PlatformTestRunRequest": {
+      "TestRunArtifactListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TestRunArtifactResponse"
+            },
+            "title": "条目",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "运行 ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "items"
+        ],
+        "title": "测试 运行 产物 列表 响应",
+        "type": "object"
+      },
+      "TestRunArtifactReadResponse": {
+        "properties": {
+          "artifact": {
+            "$ref": "#/components/schemas/TestRunArtifactResponse"
+          },
+          "content": {
+            "title": "内容",
+            "type": "string"
+          },
+          "line_count": {
+            "title": "行数",
+            "type": "integer"
+          },
+          "run_id": {
+            "title": "运行 ID",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "已截断",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "run_id",
+          "artifact",
+          "content",
+          "truncated",
+          "line_count"
+        ],
+        "title": "测试 运行 产物 读取 响应",
+        "type": "object"
+      },
+      "TestRunArtifactResponse": {
+        "properties": {
+          "artifact_id": {
+            "title": "产物 ID",
+            "type": "string"
+          },
+          "exists": {
+            "title": "是否存在",
+            "type": "boolean"
+          },
+          "path": {
+            "title": "路径",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "字节大小",
+            "type": "integer"
+          },
+          "type": {
+            "title": "类型",
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "type",
+          "path",
+          "exists",
+          "size_bytes"
+        ],
+        "title": "测试 运行 产物 响应",
+        "type": "object"
+      },
+      "TestRunListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TestRunRecordResponse"
+            },
+            "title": "条目",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "测试 运行 列表 响应",
+        "type": "object"
+      },
+      "TestRunRecordResponse": {
+        "properties": {
+          "artifacts": {
+            "items": {
+              "$ref": "#/components/schemas/TestRunArtifactResponse"
+            },
+            "title": "产物",
+            "type": "array"
+          },
+          "cancel_requested": {
+            "title": "取消 请求的",
+            "type": "boolean"
+          },
+          "command": {
+            "items": {
+              "type": "string"
+            },
+            "title": "命令",
+            "type": "array"
+          },
+          "created_at": {
+            "title": "创建时间",
+            "type": "string"
+          },
+          "error": {
+            "title": "错误",
+            "type": "string"
+          },
+          "exit_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "退出 源码"
+          },
+          "finished_at": {
+            "title": "结束时间",
+            "type": "string"
+          },
+          "log_file": {
+            "title": "日志文件",
+            "type": "string"
+          },
+          "output_tail": {
+            "items": {
+              "type": "string"
+            },
+            "title": "输出尾部",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "运行 ID",
+            "type": "string"
+          },
+          "run_type": {
+            "title": "运行类型",
+            "type": "string"
+          },
+          "started_at": {
+            "title": "开始时间",
+            "type": "string"
+          },
+          "status": {
+            "title": "状态",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "run_type",
+          "status",
+          "command",
+          "created_at",
+          "started_at",
+          "finished_at",
+          "log_file",
+          "cancel_requested",
+          "error"
+        ],
+        "title": "测试 运行 记录 响应",
+        "type": "object"
+      },
+      "TestRunRequest": {
         "additionalProperties": false,
         "properties": {
           "embedding": {
@@ -3852,7 +3940,7 @@
           },
           "run_type": {
             "enum": [
-              "platform_api_e2e_check",
+              "ade_api_e2e_check",
               "ade_mvp_smoke_e2e_check",
               "chat_memory_eval"
             ],
@@ -3876,167 +3964,7 @@
         "required": [
           "run_type"
         ],
-        "title": "平台 测试 运行 请求",
-        "type": "object"
-      },
-      "PlatformToolTestInvokeRequest": {
-        "properties": {
-          "agent_id": {
-            "title": "智能体 ID",
-            "type": "string"
-          },
-          "expected_tool_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "期望工具名称"
-          },
-          "input": {
-            "title": "输入",
-            "type": "string"
-          },
-          "override_model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "覆盖模型"
-          },
-          "override_system": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "覆盖系统提示词"
-          },
-          "retry_count": {
-            "anyOf": [
-              {
-                "maximum": 5.0,
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "重试次数"
-          },
-          "timeout_seconds": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "maximum": 600.0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "超时秒数"
-          }
-        },
-        "required": [
-          "agent_id",
-          "input"
-        ],
-        "title": "平台 工具 测试 调用 请求",
-        "type": "object"
-      },
-      "PromptTemplatePatchRequest": {
-        "properties": {
-          "content": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "内容"
-          },
-          "description": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "描述"
-          },
-          "label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "标签"
-          }
-        },
-        "title": "提示词 模板 补丁 请求",
-        "type": "object"
-      },
-      "PromptTemplateWriteRequest": {
-        "properties": {
-          "content": {
-            "title": "内容",
-            "type": "string"
-          },
-          "description": {
-            "default": "",
-            "title": "描述",
-            "type": "string"
-          },
-          "key": {
-            "title": "键",
-            "type": "string"
-          },
-          "label": {
-            "default": "",
-            "title": "标签",
-            "type": "string"
-          },
-          "scenario": {
-            "anyOf": [
-              {
-                "enum": [
-                  "chat",
-                  "comment",
-                  "label"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "场景"
-          }
-        },
-        "required": [
-          "key",
-          "content"
-        ],
-        "title": "提示词 模板 写入 请求",
+        "title": "测试 运行 请求",
         "type": "object"
       },
       "ToolCenterCreateRequest": {
@@ -4253,6 +4181,83 @@
         "title": "工具 中心 更新 请求",
         "type": "object"
       },
+      "ToolTestInvokeRequest": {
+        "properties": {
+          "agent_id": {
+            "title": "智能体 ID",
+            "type": "string"
+          },
+          "expected_tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "期望工具名称"
+          },
+          "input": {
+            "title": "输入",
+            "type": "string"
+          },
+          "override_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "覆盖模型"
+          },
+          "override_system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "覆盖系统提示词"
+          },
+          "retry_count": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "重试次数"
+          },
+          "timeout_seconds": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 600.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "超时秒数"
+          }
+        },
+        "required": [
+          "agent_id",
+          "input"
+        ],
+        "title": "工具 测试 调用 请求",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -4302,9 +4307,9 @@
     }
   },
   "info": {
-    "description": "提供用于 Agent Platform 运行时/控制/测试编排的版本化 API 路由。面向后端优先的 API 调用，并用于 ADE 前端集成。",
-    "summary": "面向 ADE 与本地 Agent Platform 工作流的运行时与控制 API",
-    "title": "Agent Platform API",
+    "description": "提供用于 ADE API 运行时/控制/测试编排的版本化 API 路由。面向后端优先的 API 调用，并用于 ADE Web 集成。",
+    "summary": "面向 ADE 与本地 ADE API 工作流的运行时与控制 API",
+    "title": "ADE API",
     "version": "0.3.0"
   },
   "openapi": "3.1.0",
@@ -4516,7 +4521,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/archive": {
       "post": {
-        "operationId": "api_platform_archive_agent_api_v2_agent_studio_agents__agent_id__archive_post",
+        "operationId": "api_archive_agent_api_v2_agent_studio_agents__agent_id__archive_post",
         "parameters": [
           {
             "in": "path",
@@ -4563,7 +4568,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/memory/{block_label}": {
       "patch": {
-        "operationId": "api_platform_update_memory_block_api_v2_agent_studio_agents__agent_id__memory__block_label__patch",
+        "operationId": "api_update_memory_block_api_v2_agent_studio_agents__agent_id__memory__block_label__patch",
         "parameters": [
           {
             "in": "path",
@@ -4588,7 +4593,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformMemoryBlockUpdateRequest"
+                "$ref": "#/components/schemas/MemoryBlockUpdateRequest"
               }
             }
           },
@@ -4686,7 +4691,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/model": {
       "patch": {
-        "operationId": "api_platform_update_model_api_v2_agent_studio_agents__agent_id__model_patch",
+        "operationId": "api_update_agent_model_api_v2_agent_studio_agents__agent_id__model_patch",
         "parameters": [
           {
             "in": "path",
@@ -4702,7 +4707,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformModelUpdateRequest"
+                "$ref": "#/components/schemas/AgentModelUpdateRequest"
               }
             }
           },
@@ -4810,7 +4815,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/purge": {
       "delete": {
-        "operationId": "api_platform_purge_agent_api_v2_agent_studio_agents__agent_id__purge_delete",
+        "operationId": "api_purge_agent_api_v2_agent_studio_agents__agent_id__purge_delete",
         "parameters": [
           {
             "in": "path",
@@ -4904,7 +4909,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/restore": {
       "post": {
-        "operationId": "api_platform_restore_agent_api_v2_agent_studio_agents__agent_id__restore_post",
+        "operationId": "api_restore_agent_api_v2_agent_studio_agents__agent_id__restore_post",
         "parameters": [
           {
             "in": "path",
@@ -4951,7 +4956,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/runtime-messages": {
       "post": {
-        "operationId": "api_platform_send_message_api_v2_agent_studio_agents__agent_id__runtime_messages_post",
+        "operationId": "api_send_runtime_message_api_v2_agent_studio_agents__agent_id__runtime_messages_post",
         "parameters": [
           {
             "in": "path",
@@ -4967,7 +4972,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformRuntimeMessageRequest"
+                "$ref": "#/components/schemas/RuntimeMessageRequest"
               }
             }
           },
@@ -5008,7 +5013,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/system-prompt": {
       "patch": {
-        "operationId": "api_platform_update_system_api_v2_agent_studio_agents__agent_id__system_prompt_patch",
+        "operationId": "api_update_system_prompt_api_v2_agent_studio_agents__agent_id__system_prompt_patch",
         "parameters": [
           {
             "in": "path",
@@ -5024,7 +5029,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformSystemUpdateRequest"
+                "$ref": "#/components/schemas/SystemPromptUpdateRequest"
               }
             }
           },
@@ -5065,7 +5070,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/attach": {
       "patch": {
-        "operationId": "api_platform_attach_tool_api_v2_agent_studio_agents__agent_id__tools__tool_id__attach_patch",
+        "operationId": "api_attach_tool_api_v2_agent_studio_agents__agent_id__tools__tool_id__attach_patch",
         "parameters": [
           {
             "in": "path",
@@ -5121,7 +5126,7 @@
     },
     "/api/v2/agent-studio/agents/{agent_id}/tools/{tool_id}/detach": {
       "patch": {
-        "operationId": "api_platform_detach_tool_api_v2_agent_studio_agents__agent_id__tools__tool_id__detach_patch",
+        "operationId": "api_detach_tool_api_v2_agent_studio_agents__agent_id__tools__tool_id__detach_patch",
         "parameters": [
           {
             "in": "path",
@@ -5308,13 +5313,13 @@
     },
     "/api/v2/model-catalog/capabilities": {
       "get": {
-        "operationId": "api_platform_capabilities_api_v2_model_catalog_capabilities_get",
+        "operationId": "get_capabilities_api_v2_model_catalog_capabilities_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiPlatformCapabilitiesResponse"
+                  "$ref": "#/components/schemas/CapabilitiesResponse"
                 }
               }
             },
@@ -5334,7 +5339,7 @@
     },
     "/api/v2/model-catalog/models": {
       "get": {
-        "operationId": "api_platform_model_catalog_api_v2_model_catalog_models_get",
+        "operationId": "get_model_catalog_api_v2_model_catalog_models_get",
         "parameters": [
           {
             "in": "query",
@@ -5352,7 +5357,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiPlatformModelCatalogResponse"
+                  "$ref": "#/components/schemas/ModelCatalogResponse"
                 }
               }
             },
@@ -5382,6 +5387,7 @@
     },
     "/api/v2/model-catalog/options": {
       "get": {
+        "description": "返回一个 ADE 场景解析后的模型与内容选项。",
         "operationId": "api_get_options_api_v2_model_catalog_options_get",
         "parameters": [
           {
@@ -5440,7 +5446,7 @@
     },
     "/api/v2/prompt-center/catalog": {
       "get": {
-        "operationId": "api_platform_prompt_persona_metadata_api_v2_prompt_center_catalog_get",
+        "operationId": "prompt_persona_metadata_api_v2_prompt_center_catalog_get",
         "parameters": [
           {
             "in": "query",
@@ -5488,7 +5494,7 @@
     },
     "/api/v2/prompt-center/personas": {
       "get": {
-        "operationId": "api_prompt_center_list_personas_api_v2_prompt_center_personas_get",
+        "operationId": "list_personas_api_v2_prompt_center_personas_get",
         "parameters": [
           {
             "in": "query",
@@ -5560,7 +5566,7 @@
         ]
       },
       "post": {
-        "operationId": "api_prompt_center_create_persona_api_v2_prompt_center_personas_post",
+        "operationId": "create_persona_api_v2_prompt_center_personas_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -5606,7 +5612,7 @@
     },
     "/api/v2/prompt-center/personas/{key}": {
       "get": {
-        "operationId": "api_prompt_center_get_persona_api_v2_prompt_center_personas__key__get",
+        "operationId": "get_persona_api_v2_prompt_center_personas__key__get",
         "parameters": [
           {
             "in": "path",
@@ -5677,7 +5683,7 @@
         ]
       },
       "patch": {
-        "operationId": "api_prompt_center_update_persona_api_v2_prompt_center_personas__key__patch",
+        "operationId": "update_persona_api_v2_prompt_center_personas__key__patch",
         "parameters": [
           {
             "in": "path",
@@ -5750,7 +5756,7 @@
     },
     "/api/v2/prompt-center/personas/{key}/archive": {
       "post": {
-        "operationId": "api_prompt_center_archive_persona_api_v2_prompt_center_personas__key__archive_post",
+        "operationId": "archive_persona_api_v2_prompt_center_personas__key__archive_post",
         "parameters": [
           {
             "in": "path",
@@ -5813,7 +5819,7 @@
     },
     "/api/v2/prompt-center/personas/{key}/purge": {
       "delete": {
-        "operationId": "api_prompt_center_purge_persona_api_v2_prompt_center_personas__key__purge_delete",
+        "operationId": "purge_persona_api_v2_prompt_center_personas__key__purge_delete",
         "parameters": [
           {
             "in": "path",
@@ -5874,7 +5880,7 @@
     },
     "/api/v2/prompt-center/personas/{key}/restore": {
       "post": {
-        "operationId": "api_prompt_center_restore_persona_api_v2_prompt_center_personas__key__restore_post",
+        "operationId": "restore_persona_api_v2_prompt_center_personas__key__restore_post",
         "parameters": [
           {
             "in": "path",
@@ -6376,7 +6382,7 @@
     },
     "/api/v2/prompt-center/revisions": {
       "get": {
-        "operationId": "api_platform_prompt_persona_revisions_api_v2_prompt_center_revisions_get",
+        "operationId": "prompt_persona_revisions_api_v2_prompt_center_revisions_get",
         "parameters": [
           {
             "in": "query",
@@ -6799,13 +6805,13 @@
     },
     "/api/v2/test-center/runs": {
       "get": {
-        "operationId": "api_platform_list_test_runs_api_v2_test_center_runs_get",
+        "operationId": "list_test_runs_api_v2_test_center_runs_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestRunListResponse"
+                  "$ref": "#/components/schemas/TestRunListResponse"
                 }
               }
             },
@@ -6823,12 +6829,12 @@
         ]
       },
       "post": {
-        "operationId": "api_platform_create_test_run_api_v2_test_center_runs_post",
+        "operationId": "create_test_run_api_v2_test_center_runs_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformTestRunRequest"
+                "$ref": "#/components/schemas/TestRunRequest"
               }
             }
           },
@@ -6839,7 +6845,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestRunRecordResponse"
+                  "$ref": "#/components/schemas/TestRunRecordResponse"
                 }
               }
             },
@@ -6869,7 +6875,7 @@
     },
     "/api/v2/test-center/runs/{run_id}": {
       "get": {
-        "operationId": "api_platform_get_test_run_api_v2_test_center_runs__run_id__get",
+        "operationId": "get_test_run_api_v2_test_center_runs__run_id__get",
         "parameters": [
           {
             "in": "path",
@@ -6886,7 +6892,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestRunRecordResponse"
+                  "$ref": "#/components/schemas/TestRunRecordResponse"
                 }
               }
             },
@@ -6916,7 +6922,7 @@
     },
     "/api/v2/test-center/runs/{run_id}/artifacts": {
       "get": {
-        "operationId": "api_platform_list_test_run_artifacts_api_v2_test_center_runs__run_id__artifacts_get",
+        "operationId": "list_test_run_artifacts_api_v2_test_center_runs__run_id__artifacts_get",
         "parameters": [
           {
             "in": "path",
@@ -6933,7 +6939,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestArtifactListResponse"
+                  "$ref": "#/components/schemas/TestRunArtifactListResponse"
                 }
               }
             },
@@ -6963,7 +6969,7 @@
     },
     "/api/v2/test-center/runs/{run_id}/artifacts/{artifact_id}": {
       "get": {
-        "operationId": "api_platform_read_test_run_artifact_api_v2_test_center_runs__run_id__artifacts__artifact_id__get",
+        "operationId": "read_test_run_artifact_api_v2_test_center_runs__run_id__artifacts__artifact_id__get",
         "parameters": [
           {
             "in": "path",
@@ -6999,7 +7005,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestArtifactReadResponse"
+                  "$ref": "#/components/schemas/TestRunArtifactReadResponse"
                 }
               }
             },
@@ -7029,7 +7035,7 @@
     },
     "/api/v2/test-center/runs/{run_id}/cancel": {
       "post": {
-        "operationId": "api_platform_cancel_test_run_api_v2_test_center_runs__run_id__cancel_post",
+        "operationId": "cancel_test_run_api_v2_test_center_runs__run_id__cancel_post",
         "parameters": [
           {
             "in": "path",
@@ -7046,7 +7052,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiTestRunRecordResponse"
+                  "$ref": "#/components/schemas/TestRunRecordResponse"
                 }
               }
             },
@@ -7076,12 +7082,12 @@
     },
     "/api/v2/tool-center/invocations": {
       "post": {
-        "operationId": "api_platform_tool_test_invoke_api_v2_tool_center_invocations_post",
+        "operationId": "api_invoke_tool_probe_api_v2_tool_center_invocations_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PlatformToolTestInvokeRequest"
+                "$ref": "#/components/schemas/ToolTestInvokeRequest"
               }
             }
           },
@@ -7092,7 +7098,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiPlatformToolTestInvokeResponse"
+                  "$ref": "#/components/schemas/ApiToolTestInvokeResponse"
                 }
               }
             },
@@ -7122,7 +7128,7 @@
     },
     "/api/v2/tool-center/runtime-tools": {
       "get": {
-        "operationId": "api_platform_list_tools_api_v2_tool_center_runtime_tools_get",
+        "operationId": "api_list_runtime_tools_api_v2_tool_center_runtime_tools_get",
         "parameters": [
           {
             "in": "query",
@@ -7166,7 +7172,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiPlatformToolListResponse"
+                  "$ref": "#/components/schemas/ApiRuntimeToolListResponse"
                 }
               }
             },
@@ -7272,7 +7278,7 @@
         ]
       },
       "post": {
-        "operationId": "api_tool_center_create_tool_api_v2_tool_center_tools_post",
+        "operationId": "create_tool_api_v2_tool_center_tools_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -7373,7 +7379,7 @@
         ]
       },
       "patch": {
-        "operationId": "api_tool_center_update_tool_api_v2_tool_center_tools__slug__patch",
+        "operationId": "update_tool_api_v2_tool_center_tools__slug__patch",
         "parameters": [
           {
             "in": "path",
@@ -7430,7 +7436,7 @@
     },
     "/api/v2/tool-center/tools/{slug}/archive": {
       "post": {
-        "operationId": "api_tool_center_archive_tool_api_v2_tool_center_tools__slug__archive_post",
+        "operationId": "archive_tool_api_v2_tool_center_tools__slug__archive_post",
         "parameters": [
           {
             "in": "path",
@@ -7477,7 +7483,7 @@
     },
     "/api/v2/tool-center/tools/{slug}/purge": {
       "delete": {
-        "operationId": "api_tool_center_purge_tool_api_v2_tool_center_tools__slug__purge_delete",
+        "operationId": "purge_tool_api_v2_tool_center_tools__slug__purge_delete",
         "parameters": [
           {
             "in": "path",
@@ -7522,7 +7528,7 @@
     },
     "/api/v2/tool-center/tools/{slug}/restore": {
       "post": {
-        "operationId": "api_tool_center_restore_tool_api_v2_tool_center_tools__slug__restore_post",
+        "operationId": "restore_tool_api_v2_tool_center_tools__slug__restore_post",
         "parameters": [
           {
             "in": "path",
@@ -7570,7 +7576,7 @@
   },
   "servers": [
     {
-      "description": "Local ADE API",
+      "description": "本地 ADE API",
       "url": "http://127.0.0.1:8000"
     }
   ],
@@ -7604,7 +7610,7 @@
       "name": "测试中心"
     },
     {
-      "description": "Model capabilities, catalog diagnostics, and scenario runtime options.",
+      "description": "模型能力、目录诊断和场景运行时选项。",
       "name": "Model Catalog"
     }
   ]

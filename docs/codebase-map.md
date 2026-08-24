@@ -1,113 +1,100 @@
 # Codebase Map
 
-This is the fast orientation guide for Letta Open ADE. If you are wondering
-"where is this wired?", start here. The August 2026 cleanup and future extraction
-triggers are recorded in the [maintenance record](maintenance-roadmap.md).
+Use this page to find the first owner of a change. Read the
+[architecture overview](architecture/overview.md) for dependency rules and the
+[request flows](architecture/request-flows.md) before crossing a service or
+feature boundary.
 
-## Runtime Flow
+## Runtime Map
 
 ```text
-Browser / Bruno / tests
-  -> apps/ade-web or direct HTTP
-  -> agent_platform_api
-  -> model_router
-  -> upstream OpenAI-compatible providers
+Browser
+  -> apps/ade-web
+  -> services/ade-api
+  -> services/model-router -> configured providers
 
-Agent Studio also creates persistent agents through Letta:
-
-agent_platform_api -> Letta server -> model_router -> upstream providers
+Agent Studio adds:
+services/ade-api -> letta -> services/model-router -> configured providers
 ```
 
-The router is the canonical LLM access layer. `agent_platform_api` should not traverse provider base URLs directly for normal model discovery or generation.
+ADE Web and ADE API are host-facing on `3000` and `8000`. Model Router, Letta,
+PostgreSQL, and Redis are Compose-network services. Model Router is the only
+provider-facing boundary for normal discovery and generation.
 
-## Backend Packages
+## Repository Homes
 
-- `model_router/`: the first-party OpenAI-compatible router. `catalog.py` owns
-  discovery and profile enrichment, `forwarding.py` owns one-attempt upstream HTTP
-  transport, and `app.py` owns route parsing and default application.
-- `agent_platform_api/`: the ADE backend API. It owns routes, Pydantic response/request models, feature services, registries, Letta orchestration, and router catalog consumption.
-- `agent_platform_api/services/`: feature services for Agent Studio/Letta
-  operations, Comment Lab, and Label Lab. Stateless generation keeps request
-  builders and response mappers beside each feature service.
-- `agent_platform_api/registries/`: registries for file-backed
-  prompts/schemas/tools, SQLite-backed personas, and agent lifecycle metadata.
-  Persona SQL, mapping, validation, and seed projection have separate owners.
-- `agent_platform_api/options/`: router-backed model catalog enrichment, UI option building, model selection, and runtime defaults.
-- `agent_platform_api/clients/`: outbound service clients, currently the model router client.
-- `agent_platform_api/llm/`: LLM tooling that belongs to ADE, such as provider probe/report generation.
-- `agent_platform_api/letta/`: Letta SDK convenience helpers and generated Letta tool constants.
-- `agent_platform_api/testing/`: Test Center orchestration; `run_descriptors.py`
-  owns each run type's validation, command, and artifact contract.
-- `ade_core/`: small shared helpers used by more than one backend service. Keep this intentionally tiny.
-- `workflows/evals/`: self-contained evaluation/probe workflows with colocated runner, config, docs, inputs, and ignored outputs.
+| Concern | Home | Start With |
+| --- | --- | --- |
+| Browser UI, page routes, feature state | `apps/ade-web/` | `src/app/` for thin routes, `src/features/` for product behavior |
+| Product HTTP API and feature orchestration | `services/ade-api/` | `src/ade_api/features/<feature>/` |
+| API setup, settings, auth, dependency wiring | `services/ade-api/` | `src/ade_api/platform/` |
+| Letta and Model Router protocol adapters | `services/ade-api/` | `src/ade_api/integrations/` |
+| Provider discovery, profiles, and forwarding | `services/model-router/` | `src/model_router/` and `config/model-router/` |
+| Typed catalog/probe exchange formats | `packages/model-catalog-contracts/` | `src/model_catalog_contracts/` |
+| Prompts, personas, schemas, tools, reports | `content/` | owning center's adapter and its matching content subdirectory |
+| Model source configuration | `config/model-router/` | `sources.json`, local overlay, and `model-profiles.json` |
+| Evals and provider probes | `workflows/evals/` | workflow-local `README.md` and `run.py` |
+| Live smoke coverage | `workflows/smoke/` | named smoke script or `make smoke` |
+| Compose support files | `infra/` | `compose.yaml` and the relevant `infra/` asset |
 
-## Frontend Modules
+## Feature Homes
 
-- `apps/ade-web/app/agent-studio/`: persistent Letta agent creation and chat. The
-  route composes feature-local creation, lifecycle, chat, inspection, trace, and
-  notice hooks plus pure selection/history/tool helpers.
-- `apps/ade-web/app/comment-lab/`: stateless comment generation.
-- `apps/ade-web/app/label-lab/`: stateless structured entity extraction.
-- `apps/ade-web/app/prompt-center/`: prompt/persona editing.
-- `apps/ade-web/app/schema-center/`: label schema editing.
-- `apps/ade-web/app/tool-center/` and `apps/ade-web/app/toolbench/`: custom tool management and runtime tool testing.
-- `apps/ade-web/app/test-center/`: maintained live checks, with separate launcher,
-  run/artifact viewer, copy, and route-controller modules.
-- `apps/ade-web/lib/api/`: feature API clients and shared UI-facing types.
-- `apps/ade-web/app/api/v1/[...path]/`: same-origin server proxy that adds the
-  server-only Agent Platform credential; browser bundles never receive it.
-- Large feature folders keep local copy, presentation, and component modules next
-  to their route, for example `apps/ade-web/app/agent-studio/`.
+Every product capability has matching ADE Web and ADE API homes. Keep route
+entrypoints thin and put behavior, contracts, content/storage adapters, and
+tests with the owning feature.
 
-## Persistent Content
+| Feature | ADE Web | ADE API | Primary dependency |
+| --- | --- | --- | --- |
+| Agent Studio | `src/features/agent-studio/` | `features/agent_studio/` | Letta |
+| Comment Lab | `src/features/comment-lab/` | `features/comment_lab/` | Model Router |
+| Label Lab | `src/features/label-lab/` | `features/label_lab/` | Model Router and label schemas |
+| Prompt Center | `src/features/prompt-center/` | `features/prompt_center/` | prompt and persona content |
+| Schema Center | `src/features/schema-center/` | `features/schema_center/` | label-schema content |
+| Tool Center | `src/features/tool-center/` | `features/tool_center/` | custom-tool content and Letta |
+| Test Center | `src/features/test-center/` | `features/test_center/` | workflows and artifacts |
+| Model Catalog | `src/features/model-catalog/` | `features/model_catalog/` | Model Router catalog |
 
-- `config/model-router/sources.json`: portable, reviewed model-source defaults.
-- `config/model-router/sources.local.json`: ignored machine-local endpoint overlay selected through `MODEL_ROUTER_SOURCES_FILE`.
-- `config/model-router/model-profiles.json`: router model intelligence such as recommended sampling defaults, thinking support, and Agent Studio compatibility flags.
-- `content/prompts/system/`: prompt templates grouped by scenario.
-- `agent_platform_api/seed_data/personas.jsonl`: reviewed persona source data.
-- `data/runtime/`: local runtime state, including the SQLite persona projection;
-  generated SQLite files do not belong in git. See [ADR 0003](adr/0003-persona-source-and-runtime-storage.md).
-- `content/label-schemas/`: Label Lab JSON schema center storage.
-- `content/custom-tools/`: file-backed custom tool source storage.
-- `agent_platform_api/catalog_data/`: checked-in model probe reports and allowlists.
-- `workflows/evals/*/outputs/`: local generated eval/probe outputs, ignored by git.
-- `data/`: runtime data root. Keep committed files here minimal; generated service state should normally stay untracked.
+See the [feature README template](feature-readme-template.md) for the expected
+local documentation. A vertical feature change keeps web, API, tests, docs, and
+operations together, then deletes replaced implementation rather than leaving an
+alias behind.
 
-## Where Do I Change X?
+## Content And Runtime Data
 
-| Task | Start Here |
+- `content/prompts/system/`: versioned system prompts by scenario.
+- `content/personas/`: reviewed persona seed and templates.
+- `content/label-schemas/`: reviewed Label Lab schemas.
+- `content/custom-tools/`: managed custom-tool registry material.
+- `content/model-catalog/`: reviewed probe reports and allowlists.
+- `data/runtime/`: ignored runtime projections, SQLite, Test Center runs, and
+  other generated state.
+
+Reviewed content has no application imports. Runtime state is never a substitute
+for its reviewed source. See [ADR 0003](adr/0003-persona-source-and-runtime-storage.md)
+for the persona projection contract.
+
+## Common Changes
+
+| Change | Start Here |
 | --- | --- |
-| Add or disable an LLM backend | `config/model-router/sources.json`, or the ignored local overlay for machine-specific endpoints |
-| Add or tune model-specific defaults | `config/model-router/model-profiles.json` |
-| Change model discovery or profiles | `model_router/catalog.py` and `model_router/profiles.py` |
-| Change router HTTP forwarding | `model_router/forwarding.py`; keep retry ownership out of this layer |
-| Change Comment Lab generation | `agent_platform_api/services/commenting.py`, `commenting_requests.py`, and `commenting_responses.py` |
-| Change Label Lab generation | `agent_platform_api/services/labeling.py`, `labeling_requests.py`, `labeling_responses.py`, and `labeling_helpers.py` |
-| Change options returned to the UI | `agent_platform_api/options/` |
-| Change Prompt Center prompt behavior | `agent_platform_api/registries/prompt_persona_store/` and `agent_platform_api/routers/prompt_center.py` |
-| Change Prompt Center persona storage | `persona_sqlite.py` coordinates `persona_store.py`, `persona_records.py`, `persona_rules.py`, and `persona_seed.py` |
-| Import/export the persona library | `uv run python scripts/persona_library.py --help` |
-| Change Schema Center behavior | `agent_platform_api/registries/label_schema.py` and `agent_platform_api/routers/schema_center.py` |
-| Change Agent Studio / Letta orchestration | `agent_platform_api/services/agent_platform.py` and `agent_platform_api/routers/agents.py` |
-| Run Comment Persona Eval | `uv run python workflows/evals/comment_persona_eval/run.py --config workflows/evals/comment_persona_eval/config.toml` |
-| Run Chat Memory Eval | `uv run python workflows/evals/chat_memory_eval/run.py --config workflows/evals/chat_memory_eval/config.toml --rounds 1` |
-| Change Agent Studio browser state | the matching `use-agent-*.ts` or `use-chat-execution.ts` module under its feature folder |
-| Add or change a Test Center run type | `agent_platform_api/testing/run_descriptors.py`, then its local frontend launcher/view |
-| Change other frontend page behavior | the matching `apps/ade-web/app/<module>/` feature folder |
-| Update OpenAPI artifacts | `uv run python scripts/export_openapi.py` |
-| Re-probe Ark usable models | `uv run python workflows/evals/provider_model_probe/run.py --source-id ark --mode chat-probe --write` |
-| Collect runtime diagnostics | `scripts/collect_diagnostics.sh` |
-| Update repo conventions | `docs/development-conventions.md` |
-| Review an architectural direction or its rollout status | `docs/adr/` |
+| Add or disable a model source | `config/model-router/sources.json` or ignored `sources.local.json` |
+| Tune model sampling/capabilities | `config/model-router/model-profiles.json` |
+| Change provider discovery/forwarding | `services/model-router/src/model_router/` |
+| Change Agent Studio lifecycle or memory flow | Agent Studio feature and [Agent Studio flow](architecture/request-flows.md#agent-studio) |
+| Change Comment or Label generation | owning lab feature and its request/response mapping |
+| Change prompt/persona behavior | Prompt Center feature and `content/prompts/` or `content/personas/` |
+| Change label schemas | Schema Center feature and `content/label-schemas/` |
+| Change custom tools | Tool Center feature and `content/custom-tools/` |
+| Add a Test Center run type | Test Center feature plus its workflow entrypoint and artifacts |
+| Add an eval/probe | a self-contained `workflows/evals/<workflow>/` folder |
+| Regenerate API artifacts | `uv run python scripts/export_openapi.py` |
+| Diagnose the Compose stack | `scripts/collect_diagnostics.sh .env` |
 
 ## Guardrails
 
-- Do not add new `utils/` imports. Shared backend helpers belong in `ade_core/`; Agent Platform code belongs under `agent_platform_api/`.
-- Do not add a second Agent Platform model-source config. The router source file is the source of truth.
-- Do not reintroduce Agent Platform direct-provider traversal for normal model discovery or generation.
-- Keep generated build/cache/runtime artifacts out of git.
-- Keep multi-file workflows colocated under `workflows/evals/` instead of splitting runner/config/output across root folders.
-- Keep provider probes and live evals operator-run; deterministic checks belong in CI.
-- Record durable architecture choices in `docs/adr/` and state clearly when their implementation is pending.
-- If a historical note becomes misleading, delete it or move the important fact into this map or `MANUAL.md`.
+- Do not call providers directly from ADE Web, ADE API features, or workflows.
+- Do not let one feature import another feature's internal implementation.
+- Do not create generic `utils` or a catch-all shared package.
+- Keep workflow runner, config, fixtures, outputs, documentation, and tests
+  together under its workflow.
+- Record durable contract, deployment, or data-authority decisions in `docs/adr/`.
