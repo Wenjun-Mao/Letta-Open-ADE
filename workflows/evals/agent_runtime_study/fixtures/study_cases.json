@@ -1,0 +1,197 @@
+{
+  "cases": [
+    {
+      "key": "chat_memory_baseline",
+      "description": "Restored Chinese multi-turn baseline for identity and pet memory.",
+      "agent_keys": ["companion"],
+      "subject_keys": ["zhangwei"],
+      "conversations": {
+        "primary": {"agent_key": "companion", "subject_key": "zhangwei"}
+      },
+      "turns": [
+        {"conversation_key": "primary", "user": "你好，我叫张伟"},
+        {"conversation_key": "primary", "user": "跟我说说你自己吧"},
+        {"conversation_key": "primary", "user": "你喜欢小狗吗？我有一只小狗叫Rocky"},
+        {"conversation_key": "primary", "user": "是一只哈士奇。你有小狗吗？"},
+        {"conversation_key": "primary", "user": "要不要我送你一只？"},
+        {"conversation_key": "primary", "user": "你花店有些什么花呀都？收入好吗？"},
+        {"conversation_key": "primary", "user": "我过来光顾你生意好不好？你花店在哪里啊？"}
+      ],
+      "fact_assertions": [
+        {"subject_key": "zhangwei", "aliases": ["张伟"]},
+        {"subject_key": "zhangwei", "aliases": ["Rocky", "rocky"]},
+        {"subject_key": "zhangwei", "aliases": ["哈士奇", "Husky", "husky"]}
+      ],
+      "assistant_assertions": [
+        {
+          "conversation_key": "primary",
+          "forbidden": [
+            "我是ai", "作为ai", "语言模型", "虚拟助手", "我是机器人",
+            "我不是真的", "我并不真实", "程序生成"
+          ]
+        }
+      ],
+      "required_tools": ["propose_memory_change"]
+    },
+    {
+      "key": "correction_chain",
+      "description": "A correction must supersede the prior active value without deleting history.",
+      "conversations": {
+        "primary": {"agent_key": "primary", "subject_key": "primary"}
+      },
+      "turns": [
+        {"conversation_key": "primary", "user": "我现在住在北京。"},
+        {"conversation_key": "primary", "user": "更正一下，我现在住在多伦多。"}
+      ],
+      "fact_assertions": [
+        {"subject_key": "primary", "aliases": ["多伦多", "Toronto"]},
+        {"subject_key": "primary", "aliases": ["北京", "Beijing"], "absent": true}
+      ],
+      "required_tools": ["propose_memory_change"]
+    },
+    {
+      "key": "explicit_forgetting",
+      "description": "Forgetting creates a tombstone and removes the fact from the active projection.",
+      "conversations": {
+        "primary": {"agent_key": "primary", "subject_key": "primary"}
+      },
+      "turns": [
+        {"conversation_key": "primary", "user": "我最喜欢的颜色是蓝色。"},
+        {"conversation_key": "primary", "user": "请忘掉我喜欢蓝色这件事。"}
+      ],
+      "fact_assertions": [
+        {"subject_key": "primary", "aliases": ["蓝色", "blue"], "absent": true}
+      ],
+      "required_tools": ["propose_memory_change"]
+    },
+    {
+      "key": "cross_agent_subject_sharing",
+      "description": "Two reusable agent definitions share only the explicitly bound subject memory.",
+      "agent_keys": ["companion", "assistant"],
+      "subject_keys": ["alice"],
+      "conversations": {
+        "companion_chat": {"agent_key": "companion", "subject_key": "alice"},
+        "assistant_chat": {"agent_key": "assistant", "subject_key": "alice"}
+      },
+      "turns": [
+        {"conversation_key": "companion_chat", "user": "我的名字是Alice。"},
+        {"conversation_key": "assistant_chat", "user": "你还记得我的名字吗？"}
+      ],
+      "fact_assertions": [
+        {"subject_key": "alice", "aliases": ["Alice", "alice"]}
+      ],
+      "assistant_assertions": [
+        {"conversation_key": "assistant_chat", "contains_any": ["Alice", "alice"]}
+      ],
+      "required_tools": ["propose_memory_change"]
+    },
+    {
+      "key": "cross_subject_isolation",
+      "description": "Memory from one subject must never appear in another subject context.",
+      "subject_keys": ["alice", "bob"],
+      "conversations": {
+        "alice_chat": {"agent_key": "primary", "subject_key": "alice"},
+        "bob_chat": {"agent_key": "primary", "subject_key": "bob"}
+      },
+      "turns": [
+        {"conversation_key": "alice_chat", "user": "我的名字是Alice。"},
+        {"conversation_key": "bob_chat", "user": "你知道我的名字吗？"}
+      ],
+      "fact_assertions": [
+        {"subject_key": "alice", "aliases": ["Alice", "alice"]},
+        {"subject_key": "bob", "aliases": ["Alice", "alice"], "absent": true}
+      ],
+      "assistant_assertions": [
+        {"conversation_key": "bob_chat", "forbidden": ["Alice", "alice"]}
+      ],
+      "required_tools": ["propose_memory_change"]
+    },
+    {
+      "key": "old_memory_deep_search",
+      "description": "An old fact outside the compact profile is available through explicit search.",
+      "conversations": {
+        "primary": {"agent_key": "primary", "subject_key": "primary"}
+      },
+      "initial_facts": [
+        {"subject_key": "primary", "key": "favorite_museum", "value": "Royal Ontario Museum"},
+        {"subject_key": "primary", "key": "favorite_breakfast", "value": "豆浆"},
+        {"subject_key": "primary", "key": "shoe_size", "value": "42"},
+        {"subject_key": "primary", "key": "preferred_season", "value": "秋天"},
+        {"subject_key": "primary", "key": "music", "value": "爵士乐"},
+        {"subject_key": "primary", "key": "coffee", "value": "拿铁"},
+        {"subject_key": "primary", "key": "language", "value": "中文"},
+        {"subject_key": "primary", "key": "weekend_activity", "value": "骑车"}
+      ],
+      "profile_token_override": 48,
+      "turns": [
+        {"conversation_key": "primary", "user": "我最喜欢哪一家博物馆？如果看不到请搜索记忆。"}
+      ],
+      "assistant_assertions": [
+        {"conversation_key": "primary", "contains_any": ["Royal Ontario Museum", "皇家安大略博物馆"]}
+      ],
+      "required_tools": ["search_memory"]
+    },
+    {
+      "key": "long_history_compaction",
+      "description": "A versioned summary and recent raw turns fit a bounded context while raw history remains intact.",
+      "conversations": {
+        "primary": {"agent_key": "primary", "subject_key": "primary"}
+      },
+      "prelude_messages": [
+        {
+          "conversation_key": "primary",
+          "count": 40,
+          "user_template": "历史问题 {index}：请记住这是一次普通对话。",
+          "assistant_template": "历史回答 {index}：已收到。",
+          "summary": "用户进行了多轮普通历史对话；没有产生新的持久事实。",
+          "summary_through_sequence": 70
+        }
+      ],
+      "turns": [
+        {"conversation_key": "primary", "user": "请简短确认我们之前聊过很多轮。"}
+      ],
+      "assistant_assertions": [
+        {"conversation_key": "primary", "contains_any": ["很多", "多轮", "聊过"]}
+      ]
+    },
+    {
+      "key": "false_memory_prevention",
+      "description": "Hypothetical user language must not become committed memory.",
+      "conversations": {
+        "primary": {"agent_key": "primary", "subject_key": "primary"}
+      },
+      "turns": [
+        {"conversation_key": "primary", "user": "也许以后我会养一只叫Milo的猫，但现在没有。"}
+      ],
+      "fact_assertions": [
+        {"subject_key": "primary", "aliases": ["Milo", "milo"], "absent": true}
+      ]
+    },
+    {
+      "key": "weather_tool_selection",
+      "description": "The executor must preserve a correct curated weather tool call and result.",
+      "conversations": {
+        "primary": {"agent_key": "primary", "subject_key": "primary"}
+      },
+      "turns": [
+        {"conversation_key": "primary", "user": "请查一下多伦多现在的测试天气。"}
+      ],
+      "assistant_assertions": [
+        {"conversation_key": "primary", "contains_any": ["21", "clear", "晴"]}
+      ],
+      "required_tools": ["get_weather"]
+    },
+    {
+      "key": "weather_tool_failure",
+      "description": "A deterministic tool failure remains in the trace and can be explained to the user.",
+      "conversations": {
+        "primary": {"agent_key": "primary", "subject_key": "primary"}
+      },
+      "turns": [
+        {"conversation_key": "primary", "user": "请查询FAIL_CITY的天气；如果工具失败就直接说明。"}
+      ],
+      "required_tools": ["get_weather"],
+      "require_failed_tool_result": true
+    }
+  ]
+}

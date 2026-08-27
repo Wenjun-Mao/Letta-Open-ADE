@@ -1,0 +1,26 @@
+router_v1_base_url = "http://model-router:8010/v1"
+ade_api_base_url = "http://127.0.0.1:8000"
+output_dir = "workflows/evals/agent_runtime_study/outputs"
+fixture_path = "workflows/evals/agent_runtime_study/fixtures/study_cases.json"
+models = [
+  "dgx_vllm::qwen3.6-35b-a3b-fp8",
+  "local_llama_server::gemma4",
+]
+adapters = ["custom_loop", "pydantic_ai"]
+case_keys = []
+run_live = false
+timeout_seconds = 180
+retry_count = 0
+max_model_requests = 6
+max_output_tokens = 4096
+memory_search_limit = 8
+include_episodes = false
+
+[context_budget]
+total_tokens = 16384
+response_reserve_tokens = 4096
+agent_tokens = 1800
+profile_tokens = 1200
+summary_tokens = 1200
+retrieved_tokens = 1200
+recent_message_tokens = 1700

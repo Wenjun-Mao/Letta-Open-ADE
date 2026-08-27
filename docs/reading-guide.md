@@ -31,6 +31,11 @@ six ideas:
 | 20-26 min | One feature's `README.md` | Its user value, endpoints, storage, integrations, and tests. |
 | 26-30 min | [Feature README Template](feature-readme-template.md) and [Glossary](glossary.md) | How to add work without recreating cross-cutting ambiguity. |
 
+For the proposed, not-yet-implemented Agent Studio runtime direction, read the
+[replacement study](architecture/agent-runtime-replacement-study.md) and then
+[ADR 0009](adr/0009-ade-owned-agent-runtime.md). Do not use them as descriptions of
+current production behavior while the ADR remains Proposed.
+
 ## Find The Right Home
 
 | You need to change... | Start here |

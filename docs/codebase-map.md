@@ -34,6 +34,7 @@ provider-facing boundary for normal discovery and generation.
 | Prompts, personas, schemas, tools, reports | `content/` | owning center's adapter and its matching content subdirectory |
 | Model source configuration | `config/model-router/` | `sources.json`, local overlay, and `model-profiles.json` |
 | Evals and provider probes | `workflows/evals/` | workflow-local `README.md` and `run.py` |
+| Native agent-runtime architecture study | `workflows/evals/agent_runtime_study/` | workflow README, [study report](architecture/agent-runtime-replacement-study.md), and proposed [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
 | Live smoke coverage | `workflows/smoke/` | named smoke script or `make smoke` |
 | Compose support files | `infra/` | `compose.yaml` and the relevant `infra/` asset |
 
@@ -87,6 +88,7 @@ for the persona projection contract.
 | Change custom tools | Tool Center feature and `content/custom-tools/` |
 | Add a Test Center run type | Test Center feature plus its workflow entrypoint and artifacts |
 | Add an eval/probe | a self-contained `workflows/evals/<workflow>/` folder |
+| Study or reproduce the proposed native agent runtime | `workflows/evals/agent_runtime_study/` (production remains Letta-backed) |
 | Regenerate API artifacts | `uv run python scripts/export_openapi.py` |
 | Diagnose the Compose stack | `scripts/collect_diagnostics.sh .env` |
 
