@@ -3,6 +3,7 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 
 import {
+  type ChatMemoryEvaluationConfig,
   type CreateTestRunPayload,
   type TestArtifact,
   type TestRunRecord,
@@ -18,6 +19,12 @@ import { useI18n } from "@/shared/i18n";
 import { isCurrentRequest, type RequestIdentity } from "@/shared/request-identity";
 import { getTestCenterCopy } from "./test-center-copy";
 import { TestCenterView } from "./test-center-view";
+import {
+  isEvaluationRunning,
+  toChatMemoryEvaluationForm,
+  type ChatMemoryEvaluationForm,
+} from "./chat-memory-evaluation-helpers";
+import { useChatMemoryEvaluations } from "./use-chat-memory-evaluations";
 
 function toErrorMessage(exc: unknown): string {
   return exc instanceof Error ? exc.message : String(exc);
@@ -43,6 +50,8 @@ export default function TestCenterPage() {
   const [artifacts, setArtifacts] = useState<TestArtifact[]>([]);
   const [selectedArtifactId, setSelectedArtifactId] = useState("");
   const [artifactContent, setArtifactContent] = useState("");
+  const [launcherPreset, setLauncherPreset] = useState<ChatMemoryEvaluationForm | null>(null);
+  const evaluations = useChatMemoryEvaluations();
 
   const selectedRunSummary = useMemo(() => {
     if (selectedRun) {
@@ -113,6 +122,19 @@ export default function TestCenterPage() {
 
   const refreshRunsEffect = useEffectEvent(refreshRuns);
   const refreshSelectedRunEffect = useEffectEvent(refreshSelectedRun);
+  const refreshEvaluationsEffect = useEffectEvent(evaluations.refreshEvaluations);
+  const refreshSelectedEvaluationEffect = useEffectEvent(evaluations.refreshSelectedEvaluation);
+  const loadSelectedEvaluationEffect = useEffectEvent((runId: string, ready: boolean) => {
+    if (!ready || !runId) {
+      return;
+    }
+    const identity = evaluations.currentEvaluationRequest(runId);
+    void refreshSelectedEvaluationEffect(runId, identity).catch((exc) => {
+      if (evaluations.isCurrentEvaluationRequest(identity) && !isAbortError(exc)) {
+        setError(toErrorMessage(exc));
+      }
+    });
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -120,7 +142,7 @@ export default function TestCenterPage() {
       setLoading(true);
       setError("");
       try {
-        await refreshRunsEffect();
+        await Promise.all([refreshRunsEffect(), refreshEvaluationsEffect()]);
       } catch (exc) {
         if (!cancelled) {
           setError(toErrorMessage(exc));
@@ -144,9 +166,16 @@ export default function TestCenterPage() {
       if (selectedRunId) {
         void refreshSelectedRunEffect(selectedRunId).catch(() => undefined);
       }
+      if (evaluations.items.some(isEvaluationRunning)) {
+        void refreshEvaluationsEffect().catch(() => undefined);
+      }
+      const selectedEvaluation = evaluations.selectedEvaluationSummary;
+      if (selectedEvaluation?.ready && isEvaluationRunning(selectedEvaluation)) {
+        loadSelectedEvaluationEffect(selectedEvaluation.run_id, true);
+      }
     }, 4000);
     return () => clearInterval(timer);
-  }, [selectedRunId]);
+  }, [evaluations.items, evaluations.selectedEvaluationSummary, selectedRunId]);
 
   useEffect(() => {
     if (!selectedRunId) {
@@ -160,6 +189,17 @@ export default function TestCenterPage() {
     });
   }, [selectedRunId]);
 
+  useEffect(() => {
+    loadSelectedEvaluationEffect(
+      evaluations.selectedEvaluationId,
+      Boolean(evaluations.selectedEvaluationSummary?.ready),
+    );
+  }, [
+    evaluations.selectedEvaluationId,
+    evaluations.selectedEvaluationSummary?.ready,
+    evaluations.selectedEvaluationSummary?.run_status,
+  ]);
+
   const onCreateRun = async (payload: CreateTestRunPayload) => {
     setBusy(true);
     setError("");
@@ -170,6 +210,12 @@ export default function TestCenterPage() {
       selectRun(created.run_id);
       await refreshRuns();
       await refreshSelectedRun(created.run_id);
+      if (payload.run_type === "chat_memory_eval") {
+        const evaluationItems = await evaluations.refreshEvaluations();
+        if (evaluationItems.some((item) => item.run_id === created.run_id)) {
+          evaluations.selectEvaluation(created.run_id);
+        }
+      }
     } catch (exc) {
       setError(toErrorMessage(exc));
     } finally {
@@ -233,6 +279,12 @@ export default function TestCenterPage() {
     }
   };
 
+  const onRerunEvaluationSetup = (config: ChatMemoryEvaluationConfig) => {
+    setLauncherPreset(toChatMemoryEvaluationForm(config));
+    setStatus(copy.rerunPrepared);
+    setError("");
+  };
+
   return (
     <TestCenterView
       copy={copy}
@@ -247,6 +299,11 @@ export default function TestCenterPage() {
       artifacts={artifacts}
       selectedArtifactId={selectedArtifactId}
       artifactContent={artifactContent}
+      evaluationItems={evaluations.items}
+      selectedEvaluationId={evaluations.selectedEvaluationId}
+      selectedEvaluationSummary={evaluations.selectedEvaluationSummary}
+      selectedEvaluation={evaluations.selectedEvaluation}
+      launcherPreset={launcherPreset}
       onCreateRun={onCreateRun}
       onRefreshRuns={refreshRuns}
       onLauncherError={setError}
@@ -255,6 +312,14 @@ export default function TestCenterPage() {
       onCancelSelectedRun={() => void onCancelSelected()}
       onRefreshArtifacts={() => (selectedRunId ? void refreshSelectedRun(selectedRunId) : undefined)}
       onReadArtifact={(artifactId) => void onReadArtifact(artifactId)}
+      onSelectEvaluation={(runId) => {
+        evaluations.selectEvaluation(runId);
+        if (runs.some((run) => run.run_id === runId)) {
+          selectRun(runId);
+        }
+      }}
+      onRefreshEvaluations={() => void evaluations.refreshEvaluations().catch((exc) => setError(toErrorMessage(exc)))}
+      onRerunEvaluationSetup={onRerunEvaluationSetup}
     />
   );
 }

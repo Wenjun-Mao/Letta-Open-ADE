@@ -607,6 +607,24 @@ def test_compose_project_name_is_canonical() -> None:
     assert "COMPOSE_PROJECT_NAME=letta-open-ade" in env_example_lines
 
 
+def test_python_service_images_default_to_the_managed_virtualenv() -> None:
+    dockerfiles = (
+        PROJECT_ROOT / "services" / "ade-api" / "Dockerfile",
+        PROJECT_ROOT / "services" / "model-router" / "Dockerfile",
+    )
+
+    offenders = [
+        str(path.relative_to(PROJECT_ROOT))
+        for path in dockerfiles
+        if 'PATH="/opt/venv/bin:${PATH}"' not in path.read_text(encoding="utf-8")
+    ]
+
+    assert offenders == [], (
+        "Python service images must make /opt/venv/bin the default PATH so "
+        f"documented exec commands use installed dependencies: {offenders}"
+    )
+
+
 def test_letta_runtime_security_and_image_pins_stay_explicit() -> None:
     compose_text = (PROJECT_ROOT / "compose.yaml").read_text(encoding="utf-8")
     env_example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")

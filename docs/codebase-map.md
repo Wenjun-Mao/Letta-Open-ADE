@@ -51,7 +51,7 @@ tests with the owning feature.
 | Prompt Center | `src/features/prompt-center/` | `features/prompt_center/` | prompt and persona content |
 | Schema Center | `src/features/schema-center/` | `features/schema_center/` | label-schema content |
 | Tool Center | `src/features/tool-center/` | `features/tool_center/` | custom-tool content and Letta |
-| Test Center | `src/features/test-center/` | `features/test_center/` | workflows and artifacts |
+| Test Center | `src/features/test-center/` | `features/test_center/` | workflow orchestration and typed artifact projections |
 | Model Catalog | `src/features/model-catalog/` | `features/model_catalog/` | Model Router catalog |
 
 See the [feature README template](feature-readme-template.md) for the expected

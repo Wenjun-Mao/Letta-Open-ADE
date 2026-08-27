@@ -4,6 +4,10 @@ This guide is for maintainers and contributors learning the current
 architecture. Start with the [Codebase Map](codebase-map.md) to find the
 owner of a change, then use this guide to understand the system boundaries.
 
+For the active product outcome, read the [Product Roadmap](product-roadmap.md).
+The [Maintenance Roadmap](maintenance-roadmap.md) is retained only as a
+historical cleanup record and must not be used to select current work.
+
 ## Five-Minute System Model
 
 Read [Architecture Overview](architecture/overview.md), then remember these
@@ -20,11 +24,12 @@ six ideas:
 
 | Time | Read | Learn |
 | --- | --- | --- |
-| 0-5 min | [ADR 0006](adr/0006-comprehension-first-service-and-feature-architecture.md) | Why the architecture exists and its breaking-change rules. |
-| 5-10 min | [Architecture Overview](architecture/overview.md) | Services, repository shape, dependency rules, and exposure boundary. |
-| 10-18 min | [Request Flows](architecture/request-flows.md) | How Agent Studio, generation labs, content centers, and workflows execute. |
-| 18-25 min | One feature's `README.md` | Its user value, endpoints, storage, integrations, and tests. |
-| 25-30 min | [Feature README Template](feature-readme-template.md) and [Glossary](glossary.md) | How to add work without recreating cross-cutting ambiguity. |
+| 0-4 min | [Product Roadmap](product-roadmap.md) | The current Agent Behavior Evaluation Loop outcome and its boundaries. |
+| 4-8 min | [ADR 0006](adr/0006-comprehension-first-service-and-feature-architecture.md) | Why the architecture exists and its breaking-change rules. |
+| 8-13 min | [Architecture Overview](architecture/overview.md) | Services, repository shape, dependency rules, and exposure boundary. |
+| 13-20 min | [Request Flows](architecture/request-flows.md) | How Agent Studio, generation labs, content centers, and workflows execute. |
+| 20-26 min | One feature's `README.md` | Its user value, endpoints, storage, integrations, and tests. |
+| 26-30 min | [Feature README Template](feature-readme-template.md) and [Glossary](glossary.md) | How to add work without recreating cross-cutting ambiguity. |
 
 ## Find The Right Home
 

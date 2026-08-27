@@ -6,27 +6,17 @@ import {
 } from "./api";
 import { fetchOptions, type OptionEntry } from "@/features/model-catalog/api";
 import {
-  CHAT_MEMORY_DEFAULT_EMBEDDING,
-  CHAT_MEMORY_DEFAULT_MODEL,
-  CHAT_MEMORY_DEFAULT_PERSONA,
-  CHAT_MEMORY_DEFAULT_PROMPT,
-  CHAT_MEMORY_FIXTURES,
   ChatMemoryEvalFields,
-  chooseAvailable,
 } from "./chat-memory-eval-fields";
+import {
+  DEFAULT_CHAT_MEMORY_EVALUATION_FORM,
+  reconcileChatMemoryEvaluationForm,
+  resolveChatMemoryEvaluationLaunchState,
+  type ChatMemoryEvaluationForm,
+} from "./chat-memory-evaluation-helpers";
 import { TEST_RUN_TYPES, type TestCenterCopy } from "./test-center-copy";
 
-export type ChatMemoryEvalFormState = {
-  model: string;
-  promptKey: string;
-  personaKey: string;
-  embedding: string;
-  fixtureKey: string;
-  rounds: string;
-  timeoutSeconds: string;
-  retryCount: string;
-  judgeEnabled: boolean;
-};
+export type ChatMemoryEvalFormState = ChatMemoryEvaluationForm;
 
 export function buildTestRunPayload(
   runType: TestRunType,
@@ -35,6 +25,9 @@ export function buildTestRunPayload(
   if (runType !== "chat_memory_eval") {
     return { run_type: runType };
   }
+  const rounds = Number.parseInt(form.rounds, 10);
+  const timeoutSeconds = Number.parseFloat(form.timeoutSeconds);
+  const retryCount = Number.parseInt(form.retryCount, 10);
   return {
     run_type: runType,
     model: form.model,
@@ -42,9 +35,9 @@ export function buildTestRunPayload(
     persona_key: form.personaKey,
     embedding: form.embedding,
     fixture_key: form.fixtureKey,
-    rounds: Math.max(1, Number.parseInt(form.rounds, 10) || 1),
-    timeout_seconds: Math.max(1, Number.parseFloat(form.timeoutSeconds) || 180),
-    retry_count: Math.max(0, Number.parseInt(form.retryCount, 10) || 0),
+    rounds: Number.isInteger(rounds) ? Math.min(100, Math.max(1, rounds)) : 1,
+    timeout_seconds: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0 ? Math.min(600, timeoutSeconds) : 180,
+    retry_count: Number.isInteger(retryCount) ? Math.min(5, Math.max(0, retryCount)) : 0,
     judge_enabled: form.judgeEnabled,
   };
 }
@@ -57,6 +50,7 @@ type Props = {
   copy: TestCenterCopy;
   busy: boolean;
   loading: boolean;
+  preset: ChatMemoryEvaluationForm | null;
   onCreateRun: (payload: CreateTestRunPayload) => Promise<void>;
   onRefreshRuns: () => Promise<void>;
   onError: (message: string) => void;
@@ -69,15 +63,15 @@ export function TestRunLauncher(props: Props) {
   const [chatPrompts, setChatPrompts] = useState<OptionEntry[]>([]);
   const [chatPersonas, setChatPersonas] = useState<OptionEntry[]>([]);
   const [chatEmbeddings, setChatEmbeddings] = useState<OptionEntry[]>([]);
-  const [evalModel, setEvalModel] = useState(CHAT_MEMORY_DEFAULT_MODEL);
-  const [evalPromptKey, setEvalPromptKey] = useState(CHAT_MEMORY_DEFAULT_PROMPT);
-  const [evalPersonaKey, setEvalPersonaKey] = useState(CHAT_MEMORY_DEFAULT_PERSONA);
-  const [evalEmbedding, setEvalEmbedding] = useState(CHAT_MEMORY_DEFAULT_EMBEDDING);
-  const [evalFixtureKey, setEvalFixtureKey] = useState(CHAT_MEMORY_FIXTURES[0]);
-  const [evalRounds, setEvalRounds] = useState("3");
-  const [evalTimeoutSeconds, setEvalTimeoutSeconds] = useState("180");
-  const [evalRetryCount, setEvalRetryCount] = useState("0");
-  const [evalJudgeEnabled, setEvalJudgeEnabled] = useState(true);
+  const [evalModel, setEvalModel] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.model);
+  const [evalPromptKey, setEvalPromptKey] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.promptKey);
+  const [evalPersonaKey, setEvalPersonaKey] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.personaKey);
+  const [evalEmbedding, setEvalEmbedding] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.embedding);
+  const [evalFixtureKey, setEvalFixtureKey] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.fixtureKey);
+  const [evalRounds, setEvalRounds] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.rounds);
+  const [evalTimeoutSeconds, setEvalTimeoutSeconds] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.timeoutSeconds);
+  const [evalRetryCount, setEvalRetryCount] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.retryCount);
+  const [evalJudgeEnabled, setEvalJudgeEnabled] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.judgeEnabled);
 
   const form: ChatMemoryEvalFormState = {
     model: evalModel,
@@ -91,7 +85,19 @@ export function TestRunLauncher(props: Props) {
     judgeEnabled: evalJudgeEnabled,
   };
 
-  const refreshChatOptions = async () => {
+  const applyForm = (nextForm: ChatMemoryEvaluationForm) => {
+    setEvalModel(nextForm.model);
+    setEvalPromptKey(nextForm.promptKey);
+    setEvalPersonaKey(nextForm.personaKey);
+    setEvalEmbedding(nextForm.embedding);
+    setEvalFixtureKey(nextForm.fixtureKey);
+    setEvalRounds(nextForm.rounds);
+    setEvalTimeoutSeconds(nextForm.timeoutSeconds);
+    setEvalRetryCount(nextForm.retryCount);
+    setEvalJudgeEnabled(nextForm.judgeEnabled);
+  };
+
+  const refreshChatOptions = async (requestedForm: ChatMemoryEvaluationForm) => {
     const payload = await fetchOptions("chat");
     const models = Array.isArray(payload.models) ? payload.models.filter((item) => item.available !== false) : [];
     const prompts = Array.isArray(payload.prompts) ? payload.prompts : [];
@@ -101,18 +107,34 @@ export function TestRunLauncher(props: Props) {
     setChatPrompts(prompts);
     setChatPersonas(personas);
     setChatEmbeddings(embeddings);
-    setEvalModel((current) => chooseAvailable(current, models, CHAT_MEMORY_DEFAULT_MODEL));
-    setEvalPromptKey((current) => chooseAvailable(current, prompts, payload.defaults?.prompt_key || CHAT_MEMORY_DEFAULT_PROMPT));
-    setEvalPersonaKey((current) => chooseAvailable(current, personas, payload.defaults?.persona_key || CHAT_MEMORY_DEFAULT_PERSONA));
-    setEvalEmbedding((current) => chooseAvailable(current, embeddings, payload.defaults?.embedding || CHAT_MEMORY_DEFAULT_EMBEDDING));
+    applyForm(reconcileChatMemoryEvaluationForm(requestedForm, {
+      models,
+      prompts,
+      personas,
+      embeddings,
+      defaults: payload.defaults,
+    }));
   };
 
   const refreshChatOptionsEffect = useEffectEvent(refreshChatOptions);
   const reportError = useEffectEvent(props.onError);
 
   useEffect(() => {
+    if (!props.preset) {
+      return;
+    }
+    setRunType("chat_memory_eval");
+    applyForm(props.preset);
+  }, [props.preset]);
+
+  useEffect(() => {
     let cancelled = false;
-    void refreshChatOptionsEffect()
+    const launchState = resolveChatMemoryEvaluationLaunchState(
+      typeof window === "undefined" ? "" : window.location.search,
+    );
+    setRunType(launchState.runType);
+    applyForm(launchState.form);
+    void refreshChatOptionsEffect(launchState.form)
       .catch((exc) => {
         if (!cancelled) {
           reportError(toErrorMessage(exc));

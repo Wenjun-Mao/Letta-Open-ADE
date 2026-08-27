@@ -4,6 +4,9 @@ from pathlib import Path
 from typing import Any
 
 from ade_api.features.test_center.artifact_access import TestRunArtifactAccess
+from ade_api.features.test_center.chat_memory_evaluations import (
+    ChatMemoryEvaluationReader,
+)
 from ade_api.features.test_center.process_executor import TestRunProcessExecutor
 from ade_api.features.test_center.run_descriptors import get_run_descriptor
 from ade_api.features.test_center.run_store import RunRecord, TestRunStore
@@ -19,6 +22,9 @@ class TestRunOrchestrator:
         )
         self._run_store = TestRunStore(resolved_state_root)
         self._artifact_access = TestRunArtifactAccess(self._run_store.state_root)
+        self._chat_memory_evaluations = ChatMemoryEvaluationReader(
+            self._run_store.state_root
+        )
         self._process_executor = TestRunProcessExecutor(project_root, self._run_store)
 
     def _build_command(
@@ -67,6 +73,7 @@ class TestRunOrchestrator:
             run_type=run_type,
             output_dir=output_dir,
             command=command,
+            options=options,
         )
         self._process_executor.start(run_id)
         return self._public_record(run)
@@ -79,6 +86,21 @@ class TestRunOrchestrator:
     def get_run(self, run_id: str) -> dict[str, Any] | None:
         run = self._run_store.get_snapshot(run_id)
         return self._public_record(run) if run else None
+
+    def list_chat_memory_evaluations(self) -> list[dict[str, Any]]:
+        runs = [
+            run
+            for run in self._run_store.list_snapshots()
+            if run.get("run_type") == "chat_memory_eval"
+        ]
+        runs.sort(key=lambda run: str(run.get("created_at", "")), reverse=True)
+        return [self._chat_memory_evaluations.list_item(run) for run in runs]
+
+    def get_chat_memory_evaluation(self, run_id: str) -> dict[str, Any] | None:
+        run = self._run_store.get_snapshot(run_id)
+        if not run or run.get("run_type") != "chat_memory_eval":
+            return None
+        return self._chat_memory_evaluations.detail(run)
 
     def list_artifacts(self, run_id: str) -> list[dict[str, Any]] | None:
         run = self._run_store.get_snapshot(run_id)

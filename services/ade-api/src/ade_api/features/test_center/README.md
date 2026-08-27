@@ -15,6 +15,7 @@ those live under `workflows/` and use public ADE HTTP contracts.
 - Subprocess lifecycle and cancellation: `process_executor.py`
 - Bounded artifact discovery and content reads: `artifact_access.py`
 - Run-type command definitions: `run_descriptors.py`
+- Typed chat-memory evaluation artifact reads: `chat_memory_evaluations.py`
 - Runtime data: `data/runtime/test-runs/`
 
 ## Request Flow
@@ -24,6 +25,21 @@ those live under `workflows/` and use public ADE HTTP contracts.
 3. `TestRunOrchestrator` delegates subprocess work to `process_executor.py` and
    durable status updates to `run_store.py`.
 4. `artifact_access.py` exposes only files inside the run-owned output directory.
+
+## Chat-memory evaluation reads
+
+`GET /api/v2/test-center/chat-memory-evaluations` lists persisted
+`chat_memory_eval` runs newest first. Active or incomplete runs remain visible
+with `ready=false` and their stored launch options. Completed runs are `ready`
+only when their scoped summary and JSONL artifacts validate together.
+The read model fills omitted launch values with the chat-memory runner defaults;
+the manifest still stores only the options the caller supplied.
+
+`GET /api/v2/test-center/chat-memory-evaluations/{run_id}` returns the fixture,
+per-round scores, turns, tool calls, and final persistent memory layers. Missing
+or malformed artifacts return a clear conflict response rather than breaking the
+list endpoint. New manifests persist request options; older manifests without
+them remain readable.
 
 ## Tests
 

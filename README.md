@@ -103,6 +103,7 @@ describes the persona source/projection boundary.
 
 ## Further Reading
 
+- [Product roadmap](docs/product-roadmap.md): current outcome, acceptance criteria, and explicit non-goals.
 - [Operational manual](MANUAL.md): lifecycle, recovery, and live verification.
 - [Maintainer reading guide](docs/reading-guide.md): a short route into the codebase.
 - [Development conventions](docs/development-conventions.md): feature, workflow, and ADR rules.

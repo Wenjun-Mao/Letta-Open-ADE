@@ -1,10 +1,16 @@
 import type { OptionEntry } from "@/features/model-catalog/api";
+import {
+  CHAT_MEMORY_FIXTURES,
+  chooseAvailableOption,
+} from "./chat-memory-evaluation-helpers";
 
-export const CHAT_MEMORY_DEFAULT_MODEL = "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8";
-export const CHAT_MEMORY_DEFAULT_PROMPT = "chat_v20260516";
-export const CHAT_MEMORY_DEFAULT_PERSONA = "chat_linxiaotang";
-export const CHAT_MEMORY_DEFAULT_EMBEDDING = "letta/letta-free";
-export const CHAT_MEMORY_FIXTURES = ["recent_user_chat_turns"];
+export {
+  CHAT_MEMORY_DEFAULT_EMBEDDING,
+  CHAT_MEMORY_DEFAULT_MODEL,
+  CHAT_MEMORY_DEFAULT_PERSONA,
+  CHAT_MEMORY_DEFAULT_PROMPT,
+  CHAT_MEMORY_FIXTURES,
+} from "./chat-memory-evaluation-helpers";
 
 export type ChatMemoryEvalCopy = {
   model: string;
@@ -51,14 +57,7 @@ export function optionLabel(option: OptionEntry): string {
 }
 
 export function chooseAvailable(current: string, options: OptionEntry[], preferred: string): string {
-  const keys = new Set(options.map((item) => String(item.key || "").trim()).filter(Boolean));
-  if (current && keys.has(current)) {
-    return current;
-  }
-  if (preferred && keys.has(preferred)) {
-    return preferred;
-  }
-  return options[0]?.key || current || preferred;
+  return chooseAvailableOption(current, options, preferred);
 }
 
 export function ChatMemoryEvalFields(props: Props) {

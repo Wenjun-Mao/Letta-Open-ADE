@@ -66,6 +66,20 @@ CHAT_MEMORY_EVAL_FIELDS: Final[frozenset[str]] = frozenset(
     }
 )
 
+# These mirror the runner TOML so Test Center can render an active run before
+# the runner has written its effective config into the summary artifact.
+DEFAULT_CHAT_MEMORY_EVALUATION_CONFIG: Final[dict[str, Any]] = {
+    "model": "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
+    "prompt_key": "chat_v20260516",
+    "persona_key": "chat_linxiaotang",
+    "embedding": "letta/letta-free",
+    "fixture_key": "recent_user_chat_turns",
+    "rounds": 3,
+    "timeout_seconds": 180.0,
+    "retry_count": 0,
+    "judge_enabled": True,
+}
+
 
 def _append_option(command: list[str], flag: str, value: Any) -> None:
     if value is None:

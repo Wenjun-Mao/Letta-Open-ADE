@@ -95,24 +95,36 @@ registry is allowed to hide the owner.
 
 ```mermaid
 sequenceDiagram
-    participant U as Operator or ADE Web
-    participant T as Test Center / workflow
+    participant U as Operator
+    participant W as ADE Web
+    participant T as Test Center API
+    participant E as Evaluation workflow
     participant A as ADE API
     participant R as Model Router
     participant O as Local artifacts
-    U->>T: Launch named check, eval, or probe
-    T->>A: Public ADE API contract
+    U->>W: Open evaluation from Agent Studio or Test Center
+    W->>T: Launch named check, eval, or probe
+    T->>E: Start run with persisted options
+    E->>A: Public ADE API contract
     A->>R: Model operation when required
     R-->>A: Model result
-    A-->>T: Run result
-    T->>O: CSV, JSONL, summary, and logs
-    O-->>U: Inspectable artifacts
+    A-->>E: Run result
+    E->>O: CSV, JSONL, summary, and logs
+    U->>W: Compare runs or inspect a turn
+    W->>T: Request typed evaluation evidence
+    T->>O: Read run-owned artifacts
+    T-->>W: Metrics, rounds, turns, tools, and memory layers
 ```
 
-Test Center owns interactive run launch and artifact viewing. `workflows/` owns
-CLI-oriented evals, probes, and smoke checks. Both consume public boundaries;
-neither imports arbitrary ADE API internals. Provider probes that must call
-providers run within Model Router's service boundary.
+Test Center owns interactive run launch, persisted launch options, and typed
+read models projected from run-owned artifacts. Agent Studio may prefill a Test
+Center evaluation but does not execute it or mutate the selected agent. Raw
+artifacts remain secondary diagnostics. `workflows/` owns CLI-oriented evals,
+probes, and smoke checks. Both consume public boundaries; neither imports
+arbitrary ADE API internals. Provider probes that must call providers run within
+Model Router's service boundary. See
+[ADR 0008](../adr/0008-test-center-evaluation-read-models.md) for this ownership
+contract.
 
 ## Model Catalog
 

@@ -7,7 +7,10 @@ from ade_api.platform.dependencies import TestOrchestratorDependency
 from ade_api.platform.feature_flags import ensure_ade_api_enabled
 from ade_api.platform.openapi_metadata import TAG_TEST_CENTER
 
+from .chat_memory_evaluations import ChatMemoryEvaluationArtifactUnavailable
 from .contracts import (
+    ChatMemoryEvaluationDetailResponse,
+    ChatMemoryEvaluationListResponse,
     TestRunArtifactListResponse,
     TestRunArtifactReadResponse,
     TestRunListResponse,
@@ -17,6 +20,42 @@ from .contracts import (
 
 
 router = APIRouter(dependencies=[Depends(require_operator)])
+
+
+@router.get(
+    "/api/v2/test-center/chat-memory-evaluations",
+    response_model=ChatMemoryEvaluationListResponse,
+    tags=[TAG_TEST_CENTER],
+    summary="List chat-memory evaluations",
+)
+async def list_chat_memory_evaluations(
+    test_orchestrator: TestOrchestratorDependency,
+):
+    ensure_ade_api_enabled()
+    return {"items": test_orchestrator.list_chat_memory_evaluations()}
+
+
+@router.get(
+    "/api/v2/test-center/chat-memory-evaluations/{run_id}",
+    response_model=ChatMemoryEvaluationDetailResponse,
+    response_model_exclude_none=True,
+    tags=[TAG_TEST_CENTER],
+    summary="Get chat-memory evaluation detail",
+)
+async def get_chat_memory_evaluation(
+    run_id: str,
+    test_orchestrator: TestOrchestratorDependency,
+):
+    ensure_ade_api_enabled()
+    try:
+        evaluation = test_orchestrator.get_chat_memory_evaluation(run_id)
+    except ChatMemoryEvaluationArtifactUnavailable as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if evaluation is None:
+        raise HTTPException(
+            status_code=404, detail="chat-memory evaluation run_id not found"
+        )
+    return evaluation
 
 
 @router.get(

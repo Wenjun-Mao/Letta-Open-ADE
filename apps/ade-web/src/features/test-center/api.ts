@@ -26,6 +26,86 @@ export type TestRunRecord = {
   artifacts?: TestArtifact[];
 };
 
+export type ChatMemoryEvaluationConfig = {
+  model: string;
+  prompt_key: string;
+  persona_key: string;
+  embedding: string;
+  fixture_key: string;
+  rounds: number;
+  timeout_seconds: number;
+  retry_count: number;
+  judge_enabled: boolean;
+};
+
+export type ChatMemoryEvaluationMetrics = {
+  rounds_total: number;
+  rounds_passed: number;
+  rounds_failed: number;
+  errors: number;
+  pass_rate: number;
+  average_elapsed_seconds: number;
+  forbidden_hit_count: number;
+  memory_changed_rounds: number;
+  expected_facts_passed_rounds: number;
+  memory_tool_call_count: number;
+  total_tool_call_count: number;
+  cleanup_passed_rounds: number;
+};
+
+export type EvaluationListItem = {
+  run_id: string;
+  run_status: string;
+  created_at: string;
+  finished_at: string;
+  ready: boolean;
+  config: ChatMemoryEvaluationConfig;
+  metrics: ChatMemoryEvaluationMetrics | null;
+};
+
+export type EvaluationToolCall = Record<string, unknown>;
+
+export type EvaluationMemoryBlock = {
+  label: string;
+  value: string;
+  description?: string;
+  limit?: number;
+};
+
+export type EvaluationTurn = {
+  turn_index: number;
+  user_input: string;
+  assistant_replies: string[];
+  elapsed_seconds: number;
+  memory_changed_this_turn: boolean;
+  human_memory_before_turn: string;
+  human_memory_after_turn: string;
+  tool_calls: EvaluationToolCall[];
+  memory_tool_calls: EvaluationToolCall[];
+};
+
+export type EvaluationRound = {
+  round: number;
+  status: string;
+  passed: boolean;
+  elapsed_seconds: number;
+  agent_id: string;
+  archived: boolean;
+  purged: boolean;
+  error: string;
+  initial_human_memory: string;
+  final_human_memory: string;
+  deterministic_score: Record<string, unknown>;
+  judge: Record<string, unknown> | null;
+  memory_blocks: EvaluationMemoryBlock[];
+  turns: EvaluationTurn[];
+};
+
+export type EvaluationDetail = EvaluationListItem & {
+  fixture: Record<string, unknown>;
+  rounds: EvaluationRound[];
+};
+
 export type CreateTestRunPayload = {
   run_type: TestRunType;
   model?: string;
@@ -68,4 +148,12 @@ export function readRunArtifact(runId: string, artifactId: string, maxLines = 40
     truncated: boolean;
     line_count: number;
   }>(`/api/v2/test-center/runs/${runId}/artifacts/${artifactId}?max_lines=${maxLines}`, options);
+}
+
+export function listChatMemoryEvaluations(options?: ApiRequestOptions) {
+  return requestJson<{ items: EvaluationListItem[] }>("/api/v2/test-center/chat-memory-evaluations", options);
+}
+
+export function getChatMemoryEvaluation(runId: string, options?: ApiRequestOptions) {
+  return requestJson<EvaluationDetail>(`/api/v2/test-center/chat-memory-evaluations/${runId}`, options);
 }

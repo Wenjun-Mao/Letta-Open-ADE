@@ -84,6 +84,8 @@ export default function AgentStudioPage() {
             createTemperature={creation.createTemperature}
             createTopP={creation.createTopP}
             createTopK={creation.createTopK}
+            timeoutSeconds={chat.timeoutSeconds}
+            retryCount={chat.retryCount}
             busy={busy}
             loading={loading}
             agents={lifecycle.agents}

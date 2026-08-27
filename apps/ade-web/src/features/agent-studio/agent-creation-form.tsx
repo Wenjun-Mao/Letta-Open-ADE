@@ -1,6 +1,7 @@
 import type { OptionEntry } from "@/features/model-catalog/api";
 import { formatModelOptionLabel } from "@/shared/generation-controls";
 
+import { AgentEvaluationHandoffCard } from "./agent-evaluation-handoff-card";
 import type { Translate } from "./types";
 
 type SetText = (value: string) => void;
@@ -19,6 +20,8 @@ export type AgentCreationFormProps = {
   createTemperature: string;
   createTopP: string;
   createTopK: string;
+  timeoutSeconds: string;
+  retryCount: string;
   busy: boolean;
   loading: boolean;
   onCreateNameChange: SetText;
@@ -48,6 +51,8 @@ export function AgentCreationForm({
   createTemperature,
   createTopP,
   createTopK,
+  timeoutSeconds,
+  retryCount,
   busy,
   loading,
   onCreateNameChange,
@@ -149,6 +154,16 @@ export function AgentCreationForm({
           {t("Reload Models", "重新加载模型")}
         </button>
       </div>
+
+      <AgentEvaluationHandoffCard
+        t={t}
+        createModel={createModel}
+        createPromptKey={createPromptKey}
+        createPersonaKey={createPersonaKey}
+        createEmbedding={createEmbedding}
+        timeoutSeconds={timeoutSeconds}
+        retryCount={retryCount}
+      />
     </>
   );
 }

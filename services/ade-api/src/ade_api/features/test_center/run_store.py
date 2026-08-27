@@ -44,12 +44,14 @@ class TestRunStore:
         run_type: str,
         output_dir: Path,
         command: list[str],
+        options: dict[str, Any] | None = None,
     ) -> RunRecord:
         resolved_output_dir = output_dir.resolve()
         self._assert_output_directory(resolved_output_dir)
         run: RunRecord = {
             "run_id": run_id,
             "run_type": run_type,
+            "options": dict(options or {}),
             "status": "queued",
             "command": command,
             "output_dir": str(resolved_output_dir),
@@ -88,6 +90,7 @@ class TestRunStore:
     def copy_record(run: RunRecord) -> RunRecord:
         snapshot = dict(run)
         snapshot["command"] = list(run.get("command", []))
+        snapshot["options"] = dict(run.get("options", {}))
         snapshot["output_tail"] = list(run.get("output_tail", []))
         return snapshot
 
@@ -124,6 +127,8 @@ class TestRunStore:
                     "log_file": str(output_dir / "orchestrator.log"),
                     "_process": None,
                 }
+                if not isinstance(run.get("options"), dict):
+                    run["options"] = {}
                 if run.get("status") in {"queued", "running"}:
                     run["status"] = "interrupted"
                     run["finished_at"] = utc_now_iso()

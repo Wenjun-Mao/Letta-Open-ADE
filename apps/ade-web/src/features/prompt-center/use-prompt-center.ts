@@ -18,12 +18,19 @@ import {
   type PromptTemplateRecord,
 } from "./api";
 import type { PromptCenterCopy } from "./copy";
-import { buildWorkspaceLink, normalizeScenarioKey, type CenterTab, toErrorMessage } from "./helpers";
+import {
+  buildWorkspaceLink,
+  normalizeScenarioKey,
+  resolvePromptCenterLaunchState,
+  type CenterTab,
+  toErrorMessage,
+} from "./helpers";
 import type { Scenario } from "@/features/model-catalog/api";
 
 export function usePromptCenter(copy: PromptCenterCopy) {
-  const [tab, setTab] = useState<CenterTab>("prompts");
-  const [scenario, setScenario] = useState<Scenario>("chat");
+  const [tab, setTabState] = useState<CenterTab>("prompts");
+  const [scenario, setScenarioState] = useState<Scenario>("chat");
+  const [launchHydrated, setLaunchHydrated] = useState(false);
   const [includeArchived, setIncludeArchived] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -70,6 +77,29 @@ export function usePromptCenter(copy: PromptCenterCopy) {
     setDraftContent(item.content || "");
   };
 
+  const setTab = (nextTab: CenterTab) => {
+    if (nextTab === tab || (scenario === "label" && nextTab === "personas")) {
+      return;
+    }
+    resetDraft();
+    setError("");
+    setStatus("");
+    setTabState(nextTab);
+  };
+
+  const setScenario = (nextScenario: Scenario) => {
+    if (nextScenario === scenario) {
+      return;
+    }
+    resetDraft();
+    setError("");
+    setStatus("");
+    if (nextScenario === "label") {
+      setTabState("prompts");
+    }
+    setScenarioState(nextScenario);
+  };
+
   const refresh = async () => {
     setLoading(true);
     setError("");
@@ -97,18 +127,21 @@ export function usePromptCenter(copy: PromptCenterCopy) {
   const refreshEffect = useEffectEvent(refresh);
 
   useEffect(() => {
+    const launchState = resolvePromptCenterLaunchState(
+      typeof window === "undefined" ? "" : window.location.search,
+    );
+    setTabState(launchState.tab);
+    setScenarioState(launchState.scenario);
+    setSelectedKey(launchState.key);
+    setLaunchHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!launchHydrated) {
+      return;
+    }
     void refreshEffect();
-  }, [includeArchived, scenario]);
-
-  useEffect(() => {
-    resetDraft();
-    setError("");
-    setStatus("");
-  }, [tab, scenario]);
-
-  useEffect(() => {
-    if (scenario === "label" && tab === "personas") setTab("prompts");
-  }, [scenario, tab]);
+  }, [includeArchived, launchHydrated, scenario]);
 
   const save = async () => {
     if (!draftKey.trim()) {

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { buildWorkspaceLink, normalizeScenarioKey } from "./helpers";
+import {
+  buildWorkspaceLink,
+  normalizeScenarioKey,
+  resolvePromptCenterLaunchState,
+} from "./helpers";
 
 describe("normalizeScenarioKey", () => {
   it("adds the selected scenario prefix and replaces a different scenario prefix", () => {
@@ -10,6 +14,37 @@ describe("normalizeScenarioKey", () => {
 
   it("keeps an empty key empty", () => {
     expect(normalizeScenarioKey("   ", "chat")).toBe("");
+  });
+});
+
+describe("resolvePromptCenterLaunchState", () => {
+  it("hydrates a prompt or persona selection from a deep link", () => {
+    expect(
+      resolvePromptCenterLaunchState(
+        "?tab=personas&scenario=chat&key=chat_linxiaotang",
+      ),
+    ).toEqual({
+      tab: "personas",
+      scenario: "chat",
+      key: "chat_linxiaotang",
+    });
+  });
+
+  it("falls back safely and never selects personas for Label Lab", () => {
+    expect(
+      resolvePromptCenterLaunchState(
+        "?tab=personas&scenario=label&key=label_generic_entities_v1",
+      ),
+    ).toEqual({
+      tab: "prompts",
+      scenario: "label",
+      key: "label_generic_entities_v1",
+    });
+    expect(resolvePromptCenterLaunchState("?tab=nope&scenario=nope")).toEqual({
+      tab: "prompts",
+      scenario: "chat",
+      key: "",
+    });
   });
 });
 

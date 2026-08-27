@@ -2,6 +2,33 @@ import type { Scenario } from "@/features/model-catalog/api";
 
 export type CenterTab = "prompts" | "personas";
 
+export type PromptCenterLaunchState = {
+  tab: CenterTab;
+  scenario: Scenario;
+  key: string;
+};
+
+const PROMPT_CENTER_TABS = new Set<CenterTab>(["prompts", "personas"]);
+const PROMPT_CENTER_SCENARIOS = new Set<Scenario>(["chat", "comment", "label"]);
+
+export function resolvePromptCenterLaunchState(search: string): PromptCenterLaunchState {
+  const params = new URLSearchParams(search);
+  const requestedTab = (params.get("tab") || "").trim() as CenterTab;
+  const requestedScenario = (params.get("scenario") || "").trim() as Scenario;
+  const scenario = PROMPT_CENTER_SCENARIOS.has(requestedScenario) ? requestedScenario : "chat";
+  const tab = scenario === "label"
+    ? "prompts"
+    : PROMPT_CENTER_TABS.has(requestedTab)
+      ? requestedTab
+      : "prompts";
+
+  return {
+    tab,
+    scenario,
+    key: (params.get("key") || "").trim(),
+  };
+}
+
 export function toErrorMessage(value: unknown): string {
   return value instanceof Error ? value.message : String(value);
 }

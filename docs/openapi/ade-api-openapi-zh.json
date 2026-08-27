@@ -2540,6 +2540,516 @@
         "title": "能力 响应",
         "type": "object"
       },
+      "ChatMemoryEvaluationConfigResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "embedding": {
+            "title": "向量模型",
+            "type": "string"
+          },
+          "fixture_key": {
+            "title": "测试数据集 键",
+            "type": "string"
+          },
+          "judge_enabled": {
+            "title": "启用评审模型",
+            "type": "boolean"
+          },
+          "model": {
+            "title": "模型",
+            "type": "string"
+          },
+          "persona_key": {
+            "title": "Persona 键",
+            "type": "string"
+          },
+          "prompt_key": {
+            "title": "提示词键",
+            "type": "string"
+          },
+          "retry_count": {
+            "title": "重试次数",
+            "type": "integer"
+          },
+          "rounds": {
+            "title": "轮数",
+            "type": "integer"
+          },
+          "timeout_seconds": {
+            "title": "超时秒数",
+            "type": "number"
+          }
+        },
+        "required": [
+          "model",
+          "prompt_key",
+          "persona_key",
+          "embedding",
+          "fixture_key",
+          "rounds",
+          "timeout_seconds",
+          "retry_count",
+          "judge_enabled"
+        ],
+        "title": "对话 记忆 评估 配置 响应",
+        "type": "object"
+      },
+      "ChatMemoryEvaluationDetailResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/ChatMemoryEvaluationConfigResponse"
+          },
+          "created_at": {
+            "title": "创建时间",
+            "type": "string"
+          },
+          "finished_at": {
+            "title": "结束时间",
+            "type": "string"
+          },
+          "fixture": {
+            "$ref": "#/components/schemas/ChatMemoryEvaluationFixtureResponse"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatMemoryEvaluationMetricsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ready": {
+            "title": "已就绪",
+            "type": "boolean"
+          },
+          "rounds": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMemoryEvaluationRoundResponse"
+            },
+            "title": "轮数",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "运行 ID",
+            "type": "string"
+          },
+          "run_status": {
+            "title": "运行 状态",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "run_status",
+          "created_at",
+          "finished_at",
+          "ready",
+          "config",
+          "fixture",
+          "rounds"
+        ],
+        "title": "对话 记忆 评估 详情 响应",
+        "type": "object"
+      },
+      "ChatMemoryEvaluationExpectedFactResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "别名",
+            "type": "array"
+          },
+          "key": {
+            "title": "键",
+            "type": "string"
+          },
+          "label": {
+            "title": "标签",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "aliases"
+        ],
+        "title": "对话 记忆 评估 期望 事实 响应",
+        "type": "object"
+      },
+      "ChatMemoryEvaluationFixtureResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "title": "描述",
+            "type": "string"
+          },
+          "expected_facts": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMemoryEvaluationExpectedFactResponse"
+            },
+            "title": "期望 事实",
+            "type": "array"
+          },
+          "forbidden_reply_substrings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "禁止 回复 子字符串",
+            "type": "array"
+          },
+          "key": {
+            "title": "键",
+            "type": "string"
+          },
+          "turns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "对话轮次",
+            "type": "array"
+          }
+        },
+        "required": [
+          "key",
+          "description",
+          "turns",
+          "expected_facts",
+          "forbidden_reply_substrings"
+        ],
+        "title": "对话 记忆 评估 测试数据集 响应",
+        "type": "object"
+      },
+      "ChatMemoryEvaluationListItemResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/ChatMemoryEvaluationConfigResponse"
+          },
+          "created_at": {
+            "title": "创建时间",
+            "type": "string"
+          },
+          "finished_at": {
+            "title": "结束时间",
+            "type": "string"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatMemoryEvaluationMetricsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ready": {
+            "title": "已就绪",
+            "type": "boolean"
+          },
+          "run_id": {
+            "title": "运行 ID",
+            "type": "string"
+          },
+          "run_status": {
+            "title": "运行 状态",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "run_status",
+          "created_at",
+          "finished_at",
+          "ready",
+          "config"
+        ],
+        "title": "对话 记忆 评估 列表 条目 响应",
+        "type": "object"
+      },
+      "ChatMemoryEvaluationListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMemoryEvaluationListItemResponse"
+            },
+            "title": "条目",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "对话 记忆 评估 列表 响应",
+        "type": "object"
+      },
+      "ChatMemoryEvaluationMemoryBlockResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "描述"
+          },
+          "label": {
+            "title": "标签",
+            "type": "string"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "限制"
+          },
+          "value": {
+            "title": "值",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "对话 记忆 评估 记忆 块 响应",
+        "type": "object"
+      },
+      "ChatMemoryEvaluationMetricsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "average_elapsed_seconds": {
+            "title": "平均耗时秒数",
+            "type": "number"
+          },
+          "cleanup_passed_rounds": {
+            "title": "清理通过轮数",
+            "type": "integer"
+          },
+          "errors": {
+            "title": "错误",
+            "type": "integer"
+          },
+          "expected_facts_passed_rounds": {
+            "title": "期望 事实 通过 轮次",
+            "type": "integer"
+          },
+          "forbidden_hit_count": {
+            "title": "禁止 命中 计数",
+            "type": "integer"
+          },
+          "memory_changed_rounds": {
+            "title": "记忆 已变更 轮次",
+            "type": "integer"
+          },
+          "memory_tool_call_count": {
+            "title": "记忆 工具 调用 计数",
+            "type": "integer"
+          },
+          "pass_rate": {
+            "title": "通过率",
+            "type": "number"
+          },
+          "rounds_failed": {
+            "title": "失败轮数",
+            "type": "integer"
+          },
+          "rounds_passed": {
+            "title": "通过轮数",
+            "type": "integer"
+          },
+          "rounds_total": {
+            "title": "轮次 总数",
+            "type": "integer"
+          },
+          "total_tool_call_count": {
+            "title": "总数 工具 调用 计数",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rounds_total",
+          "rounds_passed",
+          "rounds_failed",
+          "errors",
+          "pass_rate",
+          "average_elapsed_seconds",
+          "forbidden_hit_count",
+          "memory_changed_rounds",
+          "expected_facts_passed_rounds",
+          "memory_tool_call_count",
+          "total_tool_call_count",
+          "cleanup_passed_rounds"
+        ],
+        "title": "对话 记忆 评估 指标 响应",
+        "type": "object"
+      },
+      "ChatMemoryEvaluationRoundResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_id": {
+            "title": "智能体 ID",
+            "type": "string"
+          },
+          "archived": {
+            "title": "已归档",
+            "type": "boolean"
+          },
+          "deterministic_score": {
+            "additionalProperties": true,
+            "title": "确定性评分",
+            "type": "object"
+          },
+          "elapsed_seconds": {
+            "title": "耗时秒数",
+            "type": "number"
+          },
+          "error": {
+            "title": "错误",
+            "type": "string"
+          },
+          "final_human_memory": {
+            "title": "最终 Human 记忆",
+            "type": "string"
+          },
+          "initial_human_memory": {
+            "title": "初始 Human 记忆",
+            "type": "string"
+          },
+          "judge": {
+            "additionalProperties": true,
+            "title": "评审模型",
+            "type": "object"
+          },
+          "memory_blocks": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMemoryEvaluationMemoryBlockResponse"
+            },
+            "title": "记忆 记忆块",
+            "type": "array"
+          },
+          "passed": {
+            "title": "是否通过",
+            "type": "boolean"
+          },
+          "purged": {
+            "title": "已清理",
+            "type": "boolean"
+          },
+          "round": {
+            "title": "轮次",
+            "type": "integer"
+          },
+          "status": {
+            "title": "状态",
+            "type": "string"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/ChatMemoryEvaluationTurnResponse"
+            },
+            "title": "对话轮次",
+            "type": "array"
+          }
+        },
+        "required": [
+          "round",
+          "status",
+          "passed",
+          "elapsed_seconds",
+          "agent_id",
+          "archived",
+          "purged",
+          "error",
+          "initial_human_memory",
+          "final_human_memory",
+          "deterministic_score",
+          "judge",
+          "turns"
+        ],
+        "title": "对话 记忆 评估 轮次 响应",
+        "type": "object"
+      },
+      "ChatMemoryEvaluationTurnResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "assistant_replies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "助手回复",
+            "type": "array"
+          },
+          "elapsed_seconds": {
+            "title": "耗时秒数",
+            "type": "number"
+          },
+          "human_memory_after_turn": {
+            "title": "Human 记忆 变更后 轮次",
+            "type": "string"
+          },
+          "human_memory_before_turn": {
+            "title": "Human 记忆 变更前 轮次",
+            "type": "string"
+          },
+          "memory_changed_this_turn": {
+            "title": "记忆 已变更 本轮 轮次",
+            "type": "boolean"
+          },
+          "memory_tool_calls": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "记忆 工具 调用",
+            "type": "array"
+          },
+          "tool_calls": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "工具 调用",
+            "type": "array"
+          },
+          "turn_index": {
+            "title": "轮次 索引",
+            "type": "integer"
+          },
+          "user_input": {
+            "title": "用户 输入",
+            "type": "string"
+          }
+        },
+        "required": [
+          "turn_index",
+          "user_input",
+          "assistant_replies",
+          "elapsed_seconds",
+          "memory_changed_this_turn",
+          "human_memory_before_turn",
+          "human_memory_after_turn",
+          "tool_calls",
+          "memory_tool_calls"
+        ],
+        "title": "对话 记忆 评估 轮次 响应",
+        "type": "object"
+      },
       "ChatRequest": {
         "properties": {
           "message": {
@@ -6800,6 +7310,79 @@
         "summary": "恢复已归档 Label Lab JSON Schema",
         "tags": [
           "Schema 中心"
+        ]
+      }
+    },
+    "/api/v2/test-center/chat-memory-evaluations": {
+      "get": {
+        "operationId": "list_chat_memory_evaluations_api_v2_test_center_chat_memory_evaluations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMemoryEvaluationListResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "列出聊天记忆评估",
+        "tags": [
+          "测试中心"
+        ]
+      }
+    },
+    "/api/v2/test-center/chat-memory-evaluations/{run_id}": {
+      "get": {
+        "operationId": "get_chat_memory_evaluation_api_v2_test_center_chat_memory_evaluations__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "运行 ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMemoryEvaluationDetailResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "获取聊天记忆评估详情",
+        "tags": [
+          "测试中心"
         ]
       }
     },
