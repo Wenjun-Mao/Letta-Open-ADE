@@ -1,0 +1,73 @@
+{
+  "corpus_size": 1000,
+  "documents": [
+    {
+      "id": "alice_museum",
+      "subject_id": "alice",
+      "text": "Alice's favorite museum is the Royal Ontario Museum in Toronto.",
+      "aliases": ["Royal Ontario Museum", "ROM", "安大略皇家博物馆"]
+    },
+    {
+      "id": "alice_city",
+      "subject_id": "alice",
+      "text": "Alice lives in Toronto.",
+      "aliases": ["Toronto", "多伦多"]
+    },
+    {
+      "id": "alice_concert",
+      "subject_id": "alice",
+      "text": "Alice attended her first jazz concert at Massey Hall.",
+      "aliases": ["Massey Hall"]
+    },
+    {
+      "id": "bob_museum",
+      "subject_id": "bob",
+      "text": "Bob's favorite museum is the Art Gallery of Ontario.",
+      "aliases": ["Art Gallery of Ontario", "AGO"]
+    },
+    {
+      "id": "bob_secret",
+      "subject_id": "bob",
+      "text": "Bob's archive identifier is blue-orchid-17.",
+      "aliases": ["blue-orchid-17"]
+    }
+  ],
+  "cases": [
+    {
+      "id": "calibration_city",
+      "subject_id": "alice",
+      "query": "What is the residence location?",
+      "expected_document_ids": ["alice_city"],
+      "split": "calibration"
+    },
+    {
+      "id": "calibration_irrelevant",
+      "subject_id": "alice",
+      "query": "What is Alice's passport number?",
+      "hard_negative": true,
+      "split": "calibration"
+    },
+    {
+      "id": "cross_lingual_museum",
+      "subject_id": "alice",
+      "query": "我最喜欢哪一家博物馆？",
+      "expected_document_ids": ["alice_museum"],
+      "tags": ["cross_lingual"],
+      "split": "held_out"
+    },
+    {
+      "id": "held_out_concert",
+      "subject_id": "alice",
+      "query": "Where was Alice's first jazz concert?",
+      "expected_document_ids": ["alice_concert"],
+      "split": "held_out"
+    },
+    {
+      "id": "subject_isolation",
+      "subject_id": "alice",
+      "query": "What is the blue-orchid-17 archive identifier?",
+      "hard_negative": true,
+      "split": "held_out"
+    }
+  ]
+}
