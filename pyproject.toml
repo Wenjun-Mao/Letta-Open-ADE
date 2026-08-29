@@ -6,12 +6,14 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
     "ade-api",
     "ade-model-router",
+    "agent-runtime-eval-contracts",
     "model-catalog-contracts",
 ]
 
 [tool.uv.sources]
 ade-api = { workspace = true }
 ade-model-router = { workspace = true }
+agent-runtime-eval-contracts = { workspace = true }
 model-catalog-contracts = { workspace = true }
 
 [tool.uv]
@@ -21,6 +23,7 @@ package = false
 members = [
     "services/ade-api",
     "services/model-router",
+    "packages/agent-runtime-eval-contracts",
     "packages/model-catalog-contracts",
     "workflows",
 ]
@@ -44,5 +47,6 @@ pythonpath = [
     ".",
     "services/ade-api/src",
     "services/model-router/src",
+    "packages/agent-runtime-eval-contracts/src",
     "packages/model-catalog-contracts/src",
 ]

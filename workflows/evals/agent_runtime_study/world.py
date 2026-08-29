@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from agent_runtime_eval_contracts import StudyCase
+
 from .contracts import (
     AgentDefinition,
     Conversation,
@@ -10,7 +12,6 @@ from .contracts import (
     MemorySubject,
     MessageRole,
 )
-from .fixtures import StudyCase
 from .fact_registry import fact_key
 from .memory import MemoryPolicy
 from .product_material import CHAT_PERSONA, CHAT_SYSTEM_PROMPT

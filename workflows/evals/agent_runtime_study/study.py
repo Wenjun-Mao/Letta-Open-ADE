@@ -6,14 +6,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from agent_runtime_eval_contracts import StudyCase, load_cases, score_case, select_cases
+
 from .adapters import CustomLoopAdapter, PydanticAIAdapter
 from .adapters.transport import HttpxChatCompletionsTransport
 from .artifacts import StudyArtifactWriter, json_value
 from .config import StudyConfig, public_config
 from .contracts import ContextBudget, RuntimePolicy, TurnRequest
-from .fixtures import StudyCase, load_cases, select_cases
 from .memory import MemoryRetriever
 from .memory_review import RouterMemoryReviewer
+from .observation_normalization import normalize_facts, normalize_turn
 from .provenance import capture_provenance, capture_router_catalog
 from .repository import InMemoryStudyRepository
 from .runtime import StudyAgentRuntime, event_payload
@@ -22,7 +24,6 @@ from .semantic_retrieval import (
     OpenAICompatibleEmbeddingsClient,
     RetrievalConfig,
 )
-from .scoring import score_case
 from .study_evidence import (
     build_qualification_evidence,
     run_semantic_retrieval_evaluation,
@@ -229,9 +230,12 @@ async def run_case(
     }
     score = score_case(
         case=case,
-        facts_by_subject=facts_by_subject,
+        facts_by_subject={
+            key: normalize_facts(facts) for key, facts in facts_by_subject.items()
+        },
         results_by_conversation={
-            key: tuple(values) for key, values in results_by_conversation.items()
+            key: tuple(normalize_turn(result) for result in values)
+            for key, values in results_by_conversation.items()
         },
     )
     role_scores = score.pop("role_scores")

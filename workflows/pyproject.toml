@@ -4,10 +4,16 @@ version = "0.3.0"
 description = "Operator-run ADE evals, probes, and smoke workflows."
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "agent-runtime-eval-contracts",
     "httpx>=0.28.1",
+    "model-catalog-contracts",
     "python-dotenv>=1.2.2",
     "tenacity>=9.1.2",
 ]
+
+[tool.uv.sources]
+agent-runtime-eval-contracts = { workspace = true }
+model-catalog-contracts = { workspace = true }
 
 [tool.uv]
 package = false

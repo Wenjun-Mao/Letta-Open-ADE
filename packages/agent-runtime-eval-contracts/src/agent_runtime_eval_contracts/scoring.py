@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Mapping, Sequence
 
-from .contracts import MemoryFact, RunEventType, RunStatus, TurnResult
 from .fixtures import StudyCase
+from .observations import FactObservation, TurnObservation
 
 
 @dataclass(frozen=True)
@@ -43,8 +43,8 @@ def visible_private_reasoning_markers(text: str) -> tuple[str, ...]:
 def score_case(
     *,
     case: StudyCase,
-    facts_by_subject: dict[str, tuple[MemoryFact, ...]],
-    results_by_conversation: dict[str, tuple[TurnResult, ...]],
+    facts_by_subject: Mapping[str, Sequence[FactObservation]],
+    results_by_conversation: Mapping[str, Sequence[TurnObservation]],
 ) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
     reviewer_checks: list[dict[str, Any]] = []
@@ -74,21 +74,12 @@ def score_case(
     for assertion in case.assistant_assertions:
         results = results_by_conversation.get(assertion.conversation_key, ())
         committed_text = "\n".join(
-            result.assistant_message.content
-            for result in results
-            if result.assistant_message is not None
+            result.assistant_text or "" for result in results if result.assistant_text
         )
         candidate_text = "\n".join(
-            text
+            result.candidate_assistant_text or result.assistant_text or ""
             for result in results
-            if (
-                text := result.candidate_assistant_text
-                or (
-                    result.assistant_message.content
-                    if result.assistant_message is not None
-                    else ""
-                )
-            )
+            if result.candidate_assistant_text or result.assistant_text
         )
         checks.append(
             _assistant_content_check(
@@ -111,29 +102,20 @@ def score_case(
         result for values in results_by_conversation.values() for result in values
     )
     assistant_text = "\n".join(
-        result.assistant_message.content
-        for result in all_results
-        if result.assistant_message is not None
+        result.assistant_text or "" for result in all_results if result.assistant_text
     )
     reasoning_markers = visible_private_reasoning_markers(assistant_text)
     checks.append(_private_reasoning_check(reasoning_markers))
     candidate_text = "\n".join(
-        text
+        result.candidate_assistant_text or result.assistant_text or ""
         for result in all_results
-        if (
-            text := result.candidate_assistant_text
-            or (
-                result.assistant_message.content
-                if result.assistant_message is not None
-                else ""
-            )
-        )
+        if result.candidate_assistant_text or result.assistant_text
     )
     conversation_checks.append(
         _private_reasoning_check(visible_private_reasoning_markers(candidate_text))
     )
     used_tools = {
-        execution.name for result in all_results for execution in result.tool_executions
+        execution.name for result in all_results for execution in result.tools
     }
     for tool_name in case.required_tools:
         check = {
@@ -147,18 +129,16 @@ def score_case(
         has_failed_tool = any(
             not execution.succeeded
             for result in all_results
-            for execution in result.tool_executions
+            for execution in result.tools
         )
         check = {"kind": "failed_tool_was_observed", "pass": has_failed_tool}
         checks.append(check)
         conversation_checks.append(check)
 
-    all_succeeded = all(
-        result.run.status is RunStatus.SUCCEEDED for result in all_results
-    )
+    all_succeeded = all(result.status == "succeeded" for result in all_results)
     trace_preserved = all(
-        any(event.type is RunEventType.MODEL_REQUEST for event in result.events)
-        and any(event.type is RunEventType.MODEL_RESPONSE for event in result.events)
+        any(event.type == "model.request" for event in result.events)
+        and any(event.type == "model.response" for event in result.events)
         for result in all_results
     )
     checks.extend(
@@ -172,12 +152,11 @@ def score_case(
     )
     reviewer_checks.append({"kind": "reviewed_turns_committed", "pass": all_succeeded})
     conversation_observed = len(all_results) == len(case.turns) and all(
-        result.candidate_assistant_text is not None
-        or result.assistant_message is not None
+        result.candidate_assistant_text is not None or result.assistant_text is not None
         for result in all_results
     )
     reviewer_observed = len(all_results) == len(case.turns) and all(
-        any(event.type is RunEventType.MEMORY_REVIEW_REQUEST for event in result.events)
+        any(event.type == "memory.review.request" for event in result.events)
         for result in all_results
     )
     failed = [check for check in checks if not check["pass"]]
@@ -250,8 +229,8 @@ def _role_score(observed: bool, checks: list[dict[str, Any]]) -> dict[str, Any]:
 def weighted_candidate_score(
     *,
     candidate: str,
-    dimensions: dict[str, float],
-    mandatory_gates: dict[str, bool],
+    dimensions: Mapping[str, float],
+    mandatory_gates: Mapping[str, bool],
 ) -> WeightedScore:
     missing = sorted(set(SCORE_WEIGHTS) - set(dimensions))
     if missing:

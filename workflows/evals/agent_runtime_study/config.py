@@ -6,6 +6,10 @@ from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Any
 
+from agent_runtime_eval_contracts import (
+    semantic_retrieval_cases_path,
+    study_cases_path,
+)
 from dotenv import load_dotenv
 
 from .contracts import ContextBudget, RuntimePolicy
@@ -133,7 +137,7 @@ def load_config(path: Path) -> StudyConfig:
         fixture_path=_project_path(
             payload.get(
                 "fixture_path",
-                "workflows/evals/agent_runtime_study/fixtures/study_cases.json",
+                study_cases_path(),
             )
         ),
         models=_strings(payload.get("models"), DEFAULT_MODELS),
@@ -173,13 +177,13 @@ def load_config(path: Path) -> StudyConfig:
         retrieval_fixture_path=_project_path(
             payload.get(
                 "retrieval_fixture_path",
-                "workflows/evals/agent_runtime_study/fixtures/semantic_retrieval_cases.json",
+                semantic_retrieval_cases_path(),
             )
         ),
         deployment_registry_path=_project_path(
             payload.get(
                 "deployment_registry_path",
-                "workflows/evals/agent_runtime_study/deployments.toml",
+                "config/model-router/deployment-manifest.json",
             )
         ),
         allow_unqualified_study_models=bool(

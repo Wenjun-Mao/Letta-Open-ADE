@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -67,6 +68,19 @@ class StudyCase:
     profile_token_override: int | None
 
 
+def study_cases_path() -> Path:
+    return _package_data_path("study_cases.json")
+
+
+def semantic_retrieval_cases_path() -> Path:
+    return _package_data_path("semantic_retrieval_cases.json")
+
+
+def _package_data_path(name: str) -> Path:
+    resource = files("agent_runtime_eval_contracts").joinpath("data", name)
+    return Path(str(resource))
+
+
 def load_cases(path: Path) -> tuple[StudyCase, ...]:
     if not path.is_file():
         raise FixtureError(f"Fixture suite not found: {path}")
@@ -113,9 +127,7 @@ def _case(value: object) -> StudyCase:
 
     turns = tuple(
         FixtureTurn(
-            conversation_key=_required_string(
-                _object(turn, "turn"), "conversation_key"
-            ),
+            conversation_key=_required_string(_object(turn, "turn"), "conversation_key"),
             user=_required_string(_object(turn, "turn"), "user"),
         )
         for turn in _list(item.get("turns"))
@@ -138,9 +150,7 @@ def _case(value: object) -> StudyCase:
                     _object(fact, "initial_fact"), "subject_key"
                 ),
                 value=_required_string(_object(fact, "initial_fact"), "value"),
-                fact_type=str(
-                    _object(fact, "initial_fact").get("fact_type") or ""
-                ).strip(),
+                fact_type=str(_object(fact, "initial_fact").get("fact_type") or "").strip(),
                 qualifier=(
                     str(_object(fact, "initial_fact")["qualifier"]).strip()
                     if _object(fact, "initial_fact").get("qualifier") is not None

@@ -7,6 +7,7 @@ members = [
     "ade-api",
     "ade-model-router",
     "ade-workflows",
+    "agent-runtime-eval-contracts",
     "letta-open-ade-workspace",
     "model-catalog-contracts",
 ]
@@ -72,17 +73,26 @@ name = "ade-workflows"
 version = "0.3.0"
 source = { virtual = "workflows" }
 dependencies = [
+    { name = "agent-runtime-eval-contracts" },
     { name = "httpx" },
+    { name = "model-catalog-contracts" },
     { name = "python-dotenv" },
     { name = "tenacity" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "agent-runtime-eval-contracts", editable = "packages/agent-runtime-eval-contracts" },
     { name = "httpx", specifier = ">=0.28.1" },
+    { name = "model-catalog-contracts", editable = "packages/model-catalog-contracts" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "tenacity", specifier = ">=9.1.2" },
 ]
+
+[[package]]
+name = "agent-runtime-eval-contracts"
+version = "0.3.0"
+source = { editable = "packages/agent-runtime-eval-contracts" }
 
 [[package]]
 name = "alembic"
@@ -407,6 +417,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "ade-api" },
     { name = "ade-model-router" },
+    { name = "agent-runtime-eval-contracts" },
     { name = "model-catalog-contracts" },
 ]
 
@@ -421,6 +432,7 @@ dev = [
 requires-dist = [
     { name = "ade-api", editable = "services/ade-api" },
     { name = "ade-model-router", editable = "services/model-router" },
+    { name = "agent-runtime-eval-contracts", editable = "packages/agent-runtime-eval-contracts" },
     { name = "model-catalog-contracts", editable = "packages/model-catalog-contracts" },
 ]
 

@@ -1,0 +1,13 @@
+[project]
+name = "agent-runtime-eval-contracts"
+version = "0.3.0"
+description = "Stable fixtures, observations, scoring, and qualification contracts for agent-runtime evaluation."
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_runtime_eval_contracts"]

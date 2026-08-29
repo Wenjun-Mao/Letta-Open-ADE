@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from workflows.evals.agent_runtime_study.deployment_qualification import (
+from agent_runtime_eval_contracts import (
     Deployment,
     DeploymentFingerprint,
     DeploymentLifecycle,
@@ -12,13 +12,10 @@ from workflows.evals.agent_runtime_study.deployment_qualification import (
     ReleaseTarget,
     apply_qualification,
     assess_qualification,
-    current_policy_hashes,
-    load_deployments,
-    policy_bundle_hash,
     release_gate,
     replace_fingerprint,
-    validate_policy_hashes,
 )
+from workflows.evals.agent_runtime_study.study_evidence import deployments_from_manifest
 
 
 def _fingerprint(**changes: object) -> DeploymentFingerprint:
@@ -297,10 +294,13 @@ def test_complete_rounds_cannot_release_a_fingerprint_missing_provenance() -> No
     assert decision.allowed is False
 
 
-def test_checked_in_registry_tracks_actual_identity_separately_from_aliases() -> None:
-    registry_path = Path(__file__).resolve().parents[1] / "deployments.toml"
+def test_canonical_manifest_tracks_actual_identity_separately_from_aliases() -> None:
+    registry_path = (
+        Path(__file__).resolve().parents[4]
+        / "config/model-router/deployment-manifest.json"
+    )
 
-    deployments = load_deployments(registry_path)
+    deployments = deployments_from_manifest(registry_path)
 
     assert [item.deployment_id for item in deployments] == [
         "dgx-qwen3_6-chat",
@@ -320,22 +320,3 @@ def test_checked_in_registry_tracks_actual_identity_separately_from_aliases() ->
     assert deployments[0].fingerprint.provenance_complete is True
     assert retriever.fingerprint.provenance_complete is True
     assert llama.fingerprint.provenance_complete is False
-    validate_policy_hashes(deployments, registry_path.parent)
-
-
-def test_policy_bundle_hash_binds_paths_and_contents(tmp_path: Path) -> None:
-    (tmp_path / "a.txt").write_text("same", encoding="utf-8")
-    (tmp_path / "b.txt").write_text("same", encoding="utf-8")
-
-    original = policy_bundle_hash(tmp_path, ("a.txt",))
-    renamed = policy_bundle_hash(tmp_path, ("b.txt",))
-    (tmp_path / "a.txt").write_text("changed", encoding="utf-8")
-
-    assert original != renamed
-    assert original != policy_bundle_hash(tmp_path, ("a.txt",))
-    assert set(current_policy_hashes(Path(__file__).resolve().parents[1])) == {
-        "prompt_policy_sha256",
-        "tool_policy_sha256",
-        "schema_policy_sha256",
-        "retrieval_policy_sha256",
-    }

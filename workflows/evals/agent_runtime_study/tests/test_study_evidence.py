@@ -5,22 +5,23 @@ from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
 
-from workflows.evals.agent_runtime_study.config import load_config
-from workflows.evals.agent_runtime_study.deployment_qualification import (
+from agent_runtime_eval_contracts import (
     DeploymentLifecycle,
     DeploymentRole,
-    load_deployments,
     replace_fingerprint,
 )
+
+from workflows.evals.agent_runtime_study.config import load_config
 from workflows.evals.agent_runtime_study.study_evidence import (
     build_qualification_evidence,
+    deployments_from_manifest,
     run_semantic_retrieval_evaluation,
 )
 
 
 WORKFLOW_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = WORKFLOW_ROOT / "config.toml"
-REGISTRY_PATH = WORKFLOW_ROOT / "deployments.toml"
+REGISTRY_PATH = WORKFLOW_ROOT.parents[2] / "config/model-router/deployment-manifest.json"
 
 
 class KeywordEmbeddings:
@@ -177,7 +178,7 @@ def test_study_override_is_explicit_and_never_applies_to_production(
 
 
 def test_changed_fingerprint_cannot_inherit_aggregated_rounds(tmp_path: Path) -> None:
-    deployments = load_deployments(REGISTRY_PATH)
+    deployments = deployments_from_manifest(REGISTRY_PATH)
     initial = build_qualification_evidence(
         run_id="before-change",
         registry_path=REGISTRY_PATH,

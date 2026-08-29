@@ -1,17 +1,8 @@
-"""Deterministic deployment identity and qualification for the runtime study.
-
-This module deliberately models a router alias as a convenience label rather
-than deployment identity. Qualification evidence is bound to the immutable
-fingerprint, so a change to any runtime, policy, or hardware input cannot
-inherit a prior deployment's passing rounds.
-"""
-
 from __future__ import annotations
 
 import hashlib
 import json
 import re
-import tomllib
 from dataclasses import dataclass, replace
 from enum import StrEnum
 from pathlib import Path
@@ -20,45 +11,6 @@ from typing import Iterable, Mapping, TypeAlias
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _FROZEN_VALUE_TYPES = (str, int, float, bool)
-
-POLICY_BUNDLES: Mapping[str, tuple[str, ...]] = {
-    "prompt_policy_sha256": (
-        "../../../content/personas/personas.jsonl",
-        "../../../content/prompts/system/chat/chat_v20260516.py",
-        "context.py",
-        "memory_review.py",
-        "product_material.py",
-        "world.py",
-    ),
-    "tool_policy_sha256": ("tools.py",),
-    "schema_policy_sha256": (
-        "adapters/base.py",
-        "adapters/custom_loop.py",
-        "adapters/pydantic_ai_adapter.py",
-        "adapters/transport.py",
-        "config.py",
-        "contract_benchmarks.py",
-        "contracts.py",
-        "decision.py",
-        "deployment_qualification.py",
-        "fact_registry.py",
-        "fixtures.py",
-        "fixtures/study_cases.json",
-        "memory.py",
-        "repository.py",
-        "runtime.py",
-        "scoring.py",
-        "scripted.py",
-        "study.py",
-        "study_evidence.py",
-    ),
-    "retrieval_policy_sha256": (
-        "config.toml",
-        "semantic_retrieval.py",
-        "fixtures/semantic_retrieval_cases.json",
-        "retrieval_benchmark.py",
-    ),
-}
 
 
 class DeploymentLifecycle(StrEnum):
@@ -96,9 +48,7 @@ def policy_bundle_hash(workflow_root: Path, relative_paths: Iterable[str]) -> st
         normalized = Path(relative_path).as_posix()
         path = workflow_root / normalized
         if not path.is_file():
-            raise DeploymentQualificationError(
-                f"policy input does not exist: {normalized}"
-            )
+            raise DeploymentQualificationError(f"policy input does not exist: {normalized}")
         encoded_path = normalized.encode("utf-8")
         content = path.read_bytes()
         digest.update(len(encoded_path).to_bytes(8, "big"))
@@ -106,32 +56,6 @@ def policy_bundle_hash(workflow_root: Path, relative_paths: Iterable[str]) -> st
         digest.update(len(content).to_bytes(8, "big"))
         digest.update(content)
     return f"sha256:{digest.hexdigest()}"
-
-
-def current_policy_hashes(workflow_root: Path) -> dict[str, str]:
-    return {
-        field_name: policy_bundle_hash(workflow_root, relative_paths)
-        for field_name, relative_paths in POLICY_BUNDLES.items()
-    }
-
-
-def validate_policy_hashes(
-    deployments: Iterable["Deployment"], workflow_root: Path
-) -> None:
-    expected = current_policy_hashes(workflow_root)
-    mismatches: list[str] = []
-    for deployment in deployments:
-        for field_name, expected_digest in expected.items():
-            configured = getattr(deployment.fingerprint, field_name)
-            if configured != expected_digest:
-                mismatches.append(
-                    f"{deployment.deployment_id}.{field_name}: "
-                    f"configured={configured}, expected={expected_digest}"
-                )
-    if mismatches:
-        raise DeploymentQualificationError(
-            "deployment policy fingerprints are stale:\n" + "\n".join(mismatches)
-        )
 
 
 def _non_empty(value: str | None, label: str) -> str:
@@ -236,9 +160,7 @@ class DeploymentFingerprint:
             "endpoint_identity",
             _non_empty(self.endpoint_identity, "endpoint_identity"),
         )
-        object.__setattr__(
-            self, "served_model", _non_empty(self.served_model, "served_model")
-        )
+        object.__setattr__(self, "served_model", _non_empty(self.served_model, "served_model"))
         object.__setattr__(
             self,
             "artifact_reference",
@@ -249,17 +171,13 @@ class DeploymentFingerprint:
             "runtime_implementation",
             _non_empty(self.runtime_implementation, "runtime_implementation"),
         )
-        object.__setattr__(
-            self, "artifact_revision", _optional_text(self.artifact_revision)
-        )
+        object.__setattr__(self, "artifact_revision", _optional_text(self.artifact_revision))
         object.__setattr__(
             self,
             "artifact_sha256",
             _normalize_sha256(self.artifact_sha256, "artifact_sha256"),
         )
-        object.__setattr__(
-            self, "runtime_version", _optional_text(self.runtime_version)
-        )
+        object.__setattr__(self, "runtime_version", _optional_text(self.runtime_version))
         object.__setattr__(
             self,
             "runtime_image_digest",
@@ -281,9 +199,7 @@ class DeploymentFingerprint:
             "context_settings",
             "hardware_metadata",
         ):
-            object.__setattr__(
-                self, field_name, freeze_metadata(getattr(self, field_name))
-            )
+            object.__setattr__(self, field_name, freeze_metadata(getattr(self, field_name)))
 
     def payload(self) -> dict[str, object]:
         return {
@@ -339,9 +255,7 @@ class Deployment:
         object.__setattr__(
             self, "deployment_id", _non_empty(self.deployment_id, "deployment_id")
         )
-        aliases = tuple(
-            _non_empty(alias, "route alias") for alias in self.route_aliases
-        )
+        aliases = tuple(_non_empty(alias, "route alias") for alias in self.route_aliases)
         if not aliases:
             raise DeploymentQualificationError("at least one route alias is required")
         if len(set(aliases)) != len(aliases):
@@ -349,9 +263,7 @@ class Deployment:
         object.__setattr__(self, "route_aliases", aliases)
         roles = tuple(DeploymentRole(role) for role in self.roles)
         if not roles:
-            raise DeploymentQualificationError(
-                "at least one deployment role is required"
-            )
+            raise DeploymentQualificationError("at least one deployment role is required")
         if len(set(roles)) != len(roles):
             raise DeploymentQualificationError("deployment roles must be unique")
         object.__setattr__(self, "roles", roles)
@@ -523,76 +435,3 @@ def release_gate(
         False,
         "release requires current qualification, complete provenance, and three passing rounds per role",
     )
-
-
-def _optional_mapping(payload: Mapping[str, object], key: str) -> Mapping[str, object]:
-    value = payload.get(key, {})
-    if not isinstance(value, Mapping):
-        raise DeploymentQualificationError(f"{key} must be a table")
-    return value
-
-
-def _parse_fingerprint(payload: Mapping[str, object]) -> DeploymentFingerprint:
-    return DeploymentFingerprint(
-        provider=str(payload.get("provider") or ""),
-        endpoint_role=str(payload.get("endpoint_role") or ""),
-        endpoint_identity=str(payload.get("endpoint_identity") or ""),
-        served_model=str(payload.get("served_model") or ""),
-        artifact_reference=str(payload.get("artifact_reference") or ""),
-        artifact_revision=_optional_text(payload.get("artifact_revision")),
-        artifact_sha256=_optional_text(payload.get("artifact_sha256")),
-        runtime_implementation=str(payload.get("runtime_implementation") or ""),
-        runtime_version=_optional_text(payload.get("runtime_version")),
-        runtime_image_digest=_optional_text(payload.get("runtime_image_digest")),
-        prompt_policy_sha256=str(payload.get("prompt_policy_sha256") or ""),
-        tool_policy_sha256=str(payload.get("tool_policy_sha256") or ""),
-        schema_policy_sha256=str(payload.get("schema_policy_sha256") or ""),
-        retrieval_policy_sha256=str(payload.get("retrieval_policy_sha256") or ""),
-        sampling_settings=_optional_mapping(payload, "sampling_settings"),
-        context_settings=_optional_mapping(payload, "context_settings"),
-        hardware_metadata=_optional_mapping(payload, "hardware_metadata"),
-    )
-
-
-def load_deployments(path: Path) -> tuple[Deployment, ...]:
-    """Load the checked-in study registry without probing a network endpoint."""
-
-    with path.open("rb") as handle:
-        payload = tomllib.load(handle)
-    if payload.get("schema_version") != 1:
-        raise DeploymentQualificationError("unsupported deployments schema_version")
-    raw_deployments = payload.get("deployment")
-    if not isinstance(raw_deployments, list) or not raw_deployments:
-        raise DeploymentQualificationError(
-            "at least one [[deployment]] table is required"
-        )
-    deployments: list[Deployment] = []
-    for item in raw_deployments:
-        if not isinstance(item, Mapping):
-            raise DeploymentQualificationError("deployment entries must be tables")
-        aliases = item.get("route_aliases")
-        roles = item.get("roles")
-        fingerprint = item.get("fingerprint")
-        if not isinstance(aliases, list) or not all(
-            isinstance(alias, str) for alias in aliases
-        ):
-            raise DeploymentQualificationError("route_aliases must be a string list")
-        if not isinstance(roles, list):
-            raise DeploymentQualificationError("roles must be a string list")
-        if not isinstance(fingerprint, Mapping):
-            raise DeploymentQualificationError("deployment fingerprint must be a table")
-        deployments.append(
-            Deployment(
-                deployment_id=str(item.get("id") or ""),
-                route_aliases=tuple(aliases),
-                roles=tuple(DeploymentRole(str(role)) for role in roles),
-                fingerprint=_parse_fingerprint(fingerprint),
-                lifecycle=DeploymentLifecycle(
-                    str(item.get("lifecycle") or "discovered")
-                ),
-            )
-        )
-    identifiers = [deployment.deployment_id for deployment in deployments]
-    if len(identifiers) != len(set(identifiers)):
-        raise DeploymentQualificationError("deployment ids must be unique")
-    return tuple(deployments)

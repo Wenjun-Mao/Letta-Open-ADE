@@ -6,8 +6,9 @@ import statistics
 from pathlib import Path
 from typing import Any
 
+from agent_runtime_eval_contracts import weighted_candidate_score
+
 from .contract_benchmarks import run_contract_benchmarks
-from .scoring import weighted_candidate_score
 from .scripted import ScriptStep, SharedScript, scripted_adapter
 from .contracts import (
     AgentDefinition,

@@ -5,20 +5,22 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 
-from .artifacts import json_value
-from .config import StudyConfig
-from .deployment_qualification import (
+from agent_runtime_eval_contracts import (
     Deployment,
+    DeploymentFingerprint,
+    DeploymentLifecycle,
     DeploymentRole,
     QualificationAssessment,
     QualificationRound,
     ReleaseTarget,
     apply_qualification,
     assess_qualification,
-    load_deployments,
     release_gate,
-    validate_policy_hashes,
 )
+from model_catalog_contracts.deployment_manifest import load_deployment_manifest
+
+from .artifacts import json_value
+from .config import StudyConfig
 from .semantic_retrieval import (
     EmbeddingClientConfig,
     EmbeddingProvider,
@@ -153,8 +155,7 @@ def build_qualification_evidence(
     allow_unqualified_study_models: bool,
     deployments: Sequence[Deployment] | None = None,
 ) -> dict[str, Any]:
-    registry = tuple(deployments or load_deployments(registry_path))
-    validate_policy_hashes(registry, registry_path.parent)
+    registry = tuple(deployments or deployments_from_manifest(registry_path))
     alias_map: dict[str, Deployment] = {}
     for deployment in registry:
         for alias in deployment.route_aliases:
@@ -312,6 +313,24 @@ def build_qualification_evidence(
         "study_gate_pass": all(item["decision"]["allowed"] for item in study_decisions),
         "study_override_enabled": allow_unqualified_study_models,
     }
+
+
+def deployments_from_manifest(path: Path) -> tuple[Deployment, ...]:
+    """Project the canonical catalog manifest into generic qualification records."""
+
+    manifest = load_deployment_manifest(path)
+    if not manifest.deployments:
+        raise StudyEvidenceError(f"Deployment manifest contains no deployments: {path}")
+    return tuple(
+        Deployment(
+            deployment_id=entry.deployment_id,
+            route_aliases=entry.route_aliases,
+            roles=tuple(DeploymentRole(role) for role in entry.roles),
+            lifecycle=DeploymentLifecycle(entry.lifecycle),
+            fingerprint=DeploymentFingerprint(**entry.fingerprint.as_dict()),
+        )
+        for entry in manifest.deployments
+    )
 
 
 def _coverage_payload(

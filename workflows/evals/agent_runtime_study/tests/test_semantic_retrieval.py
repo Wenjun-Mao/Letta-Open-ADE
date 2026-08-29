@@ -3,11 +3,12 @@ from __future__ import annotations
 import json
 from collections.abc import Sequence
 from io import BytesIO
-from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError
 
 import pytest
+
+from agent_runtime_eval_contracts import semantic_retrieval_cases_path
 
 from workflows.evals.agent_runtime_study.semantic_retrieval import (
     DEFAULT_EMBEDDING_DIMENSIONS,
@@ -30,9 +31,7 @@ from workflows.evals.agent_runtime_study.semantic_retrieval import (
 )
 
 
-FIXTURE_PATH = Path(
-    "workflows/evals/agent_runtime_study/fixtures/semantic_retrieval_cases.json"
-)
+FIXTURE_PATH = semantic_retrieval_cases_path()
 
 
 class KeywordEmbeddings:

@@ -5,6 +5,13 @@ from dataclasses import dataclass
 
 import pytest
 
+from agent_runtime_eval_contracts import (
+    AssistantAssertion,
+    FixtureTurn,
+    StudyCase,
+    score_case,
+)
+
 from workflows.evals.agent_runtime_study.contracts import (
     AgentDefinition,
     Conversation,
@@ -19,11 +26,6 @@ from workflows.evals.agent_runtime_study.contracts import (
     TurnRequest,
 )
 from workflows.evals.agent_runtime_study.memory import MemoryPolicy
-from workflows.evals.agent_runtime_study.fixtures import (
-    AssistantAssertion,
-    FixtureTurn,
-    StudyCase,
-)
 from workflows.evals.agent_runtime_study.memory_review import (
     FactRegistryError,
     MemoryEntityKind,
@@ -39,7 +41,7 @@ from workflows.evals.agent_runtime_study.memory_review import (
 )
 from workflows.evals.agent_runtime_study.repository import InMemoryStudyRepository
 from workflows.evals.agent_runtime_study.runtime import StudyAgentRuntime
-from workflows.evals.agent_runtime_study.scoring import score_case
+from workflows.evals.agent_runtime_study.observation_normalization import normalize_turn
 
 
 def _repository() -> InMemoryStudyRepository:
@@ -511,7 +513,7 @@ def test_reviewer_failure_commits_neither_assistant_nor_memory() -> None:
         score = score_case(
             case=case,
             facts_by_subject={"primary": ()},
-            results_by_conversation={"primary": (result,)},
+            results_by_conversation={"primary": (normalize_turn(result),)},
         )
         assert score["role_scores"]["conversation"]["pass"] is True
         assert score["role_scores"]["reviewer"]["pass"] is False

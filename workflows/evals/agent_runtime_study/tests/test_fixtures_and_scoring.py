@@ -1,26 +1,24 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
-from workflows.evals.agent_runtime_study.fixtures import (
+from agent_runtime_eval_contracts import (
     FixtureError,
     load_cases,
+    semantic_retrieval_cases_path,
     select_cases,
+    study_cases_path,
+    visible_private_reasoning_markers,
+    weighted_candidate_score,
 )
 from workflows.evals.agent_runtime_study.product_material import (
     CHAT_SYSTEM_PROMPT,
     SOURCE_CHAT_SYSTEM_PROMPT,
 )
-from workflows.evals.agent_runtime_study.scoring import (
-    visible_private_reasoning_markers,
-    weighted_candidate_score,
-)
 from workflows.evals.agent_runtime_study.world import build_case_world
 
 
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "study_cases.json"
+FIXTURES = study_cases_path()
 
 
 def test_ade_native_prompt_removes_letta_owned_blocks_only() -> None:
@@ -56,6 +54,7 @@ def test_fixture_suite_covers_every_required_behavior() -> None:
     assert select_cases(cases, ("correction_chain",))[0].key == "correction_chain"
     with pytest.raises(FixtureError, match="Unknown fixture"):
         select_cases(cases, ("missing",))
+    assert semantic_retrieval_cases_path().is_file()
 
 
 def test_weighted_score_requires_all_dimensions_and_preserves_gate_result() -> None:
