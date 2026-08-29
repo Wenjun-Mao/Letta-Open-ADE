@@ -4,7 +4,15 @@ import {
   type CreateTestRunPayload,
   type TestRunType,
 } from "./api";
-import { fetchOptions, type OptionEntry } from "@/features/model-catalog/api";
+import { fetchModelCatalog, fetchOptions, type OptionEntry } from "@/features/model-catalog/api";
+import type { ModelCatalogEntry } from "@/features/model-catalog/contracts";
+import {
+  AgentRuntimeV3AcceptanceFields,
+  DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_FORM,
+  hasAgentRuntimeV3AcceptanceDeployments,
+  reconcileAgentRuntimeV3AcceptanceForm,
+  type AgentRuntimeV3AcceptanceForm,
+} from "./agent-runtime-v3-acceptance-fields";
 import {
   ChatMemoryEvalFields,
 } from "./chat-memory-eval-fields";
@@ -17,11 +25,28 @@ import {
 import { TEST_RUN_TYPES, type TestCenterCopy } from "./test-center-copy";
 
 export type ChatMemoryEvalFormState = ChatMemoryEvaluationForm;
+export type AgentRuntimeV3AcceptanceFormState = AgentRuntimeV3AcceptanceForm;
 
 export function buildTestRunPayload(
   runType: TestRunType,
   form: ChatMemoryEvalFormState,
+  v3Form: AgentRuntimeV3AcceptanceFormState = DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_FORM,
 ): CreateTestRunPayload {
+  if (runType === "agent_runtime_v3_acceptance") {
+    const rounds = Number.parseInt(v3Form.rounds, 10);
+    const timeoutSeconds = Number.parseFloat(v3Form.timeoutSeconds);
+    const retryCount = Number.parseInt(v3Form.retryCount, 10);
+    return {
+      run_type: runType,
+      conversation_model_key: v3Form.conversationModelKey,
+      reviewer_model_key: v3Form.reviewerModelKey,
+      embedding_model_key: v3Form.embeddingModelKey,
+      rounds: Number.isInteger(rounds) ? Math.min(3, Math.max(1, rounds)) : 3,
+      timeout_seconds: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0 ? Math.min(600, timeoutSeconds) : 180,
+      retry_count: Number.isInteger(retryCount) ? Math.min(5, Math.max(0, retryCount)) : 0,
+      include_llama_compatibility: v3Form.includeLlamaCompatibility,
+    };
+  }
   if (runType !== "chat_memory_eval") {
     return { run_type: runType };
   }
@@ -63,6 +88,8 @@ export function TestRunLauncher(props: Props) {
   const [chatPrompts, setChatPrompts] = useState<OptionEntry[]>([]);
   const [chatPersonas, setChatPersonas] = useState<OptionEntry[]>([]);
   const [chatEmbeddings, setChatEmbeddings] = useState<OptionEntry[]>([]);
+  const [runtimeDeployments, setRuntimeDeployments] = useState<ModelCatalogEntry[]>([]);
+  const [v3Form, setV3Form] = useState(DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_FORM);
   const [evalModel, setEvalModel] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.model);
   const [evalPromptKey, setEvalPromptKey] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.promptKey);
   const [evalPersonaKey, setEvalPersonaKey] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.personaKey);
@@ -98,7 +125,10 @@ export function TestRunLauncher(props: Props) {
   };
 
   const refreshChatOptions = async (requestedForm: ChatMemoryEvaluationForm) => {
-    const payload = await fetchOptions("chat");
+    const [payload, catalog] = await Promise.all([
+      fetchOptions("chat"),
+      fetchModelCatalog().catch(() => ({ items: [] })),
+    ]);
     const models = Array.isArray(payload.models) ? payload.models.filter((item) => item.available !== false) : [];
     const prompts = Array.isArray(payload.prompts) ? payload.prompts : [];
     const personas = Array.isArray(payload.personas) ? payload.personas : [];
@@ -107,6 +137,9 @@ export function TestRunLauncher(props: Props) {
     setChatPrompts(prompts);
     setChatPersonas(personas);
     setChatEmbeddings(embeddings);
+    const deployments = (Array.isArray(catalog.items) ? catalog.items : []).filter((item) => item.deployment);
+    setRuntimeDeployments(deployments);
+    setV3Form((current) => reconcileAgentRuntimeV3AcceptanceForm(current, deployments));
     applyForm(reconcileChatMemoryEvaluationForm(requestedForm, {
       models,
       prompts,
@@ -150,7 +183,13 @@ export function TestRunLauncher(props: Props) {
     };
   }, []);
 
-  const disabled = props.busy || props.loading || optionsLoading;
+  const disabled = props.busy
+    || props.loading
+    || optionsLoading
+    || (
+      runType === "agent_runtime_v3_acceptance"
+      && !hasAgentRuntimeV3AcceptanceDeployments(runtimeDeployments)
+    );
 
   return (
     <div className="card">
@@ -193,11 +232,19 @@ export function TestRunLauncher(props: Props) {
             setEvalJudgeEnabled={setEvalJudgeEnabled}
           />
         ) : null}
+        {runType === "agent_runtime_v3_acceptance" ? (
+          <AgentRuntimeV3AcceptanceFields
+            copy={props.copy}
+            deployments={runtimeDeployments}
+            form={v3Form}
+            onChange={setV3Form}
+          />
+        ) : null}
       </div>
       <div className="toolbar" style={{ marginTop: 10 }}>
         <button
           className="button"
-          onClick={() => void props.onCreateRun(buildTestRunPayload(runType, form))}
+          onClick={() => void props.onCreateRun(buildTestRunPayload(runType, form, v3Form))}
           disabled={disabled}
         >
           {props.busy ? props.copy.submitting : props.copy.createRun}

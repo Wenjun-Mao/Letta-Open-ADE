@@ -20,6 +20,10 @@ def test_run_request_accepts_supported_run_types() -> None:
         == "ade_mvp_smoke_e2e_check"
     )
     assert TestRunRequest(run_type="chat_memory_eval").run_type == "chat_memory_eval"
+    assert (
+        TestRunRequest(run_type="agent_runtime_v3_acceptance").run_type
+        == "agent_runtime_v3_acceptance"
+    )
 
     with pytest.raises(ValidationError):
         TestRunRequest(run_type="agent_bootstrap_check")
@@ -89,6 +93,31 @@ def test_chat_memory_eval_request_accepts_focused_fields() -> None:
     assert request.judge_enabled is False
 
 
+def test_agent_runtime_v3_acceptance_request_accepts_only_focused_fields() -> None:
+    request = TestRunRequest(
+        run_type="agent_runtime_v3_acceptance",
+        conversation_model_key="dgx_vllm::qwen3.6-35b-a3b-fp8",
+        reviewer_model_key="dgx_vllm::qwen3.6-35b-a3b-fp8",
+        embedding_model_key="dgx_embedding_sidecar::qwen3-embedding-0.6b",
+        rounds=3,
+        timeout_seconds=180,
+        retry_count=0,
+        include_llama_compatibility=True,
+    )
+
+    assert request.rounds == 3
+    assert request.include_llama_compatibility is True
+
+    with pytest.raises(ValidationError, match="Unsupported fields"):
+        TestRunRequest(
+            run_type="agent_runtime_v3_acceptance",
+            prompt_key="chat_v20260516",
+        )
+
+    with pytest.raises(ValidationError, match="rounds must be between 1 and 3"):
+        TestRunRequest(run_type="agent_runtime_v3_acceptance", rounds=4)
+
+
 def test_chat_memory_eval_create_passes_options(monkeypatch) -> None:
     captured: dict[str, object] = {}
 
@@ -142,6 +171,7 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
         "ade_api_e2e_check",
         "ade_mvp_smoke_e2e_check",
         "chat_memory_eval",
+        "agent_runtime_v3_acceptance",
     }
 
     orchestrator = TestRunOrchestrator(project_root=tmp_path)
@@ -178,6 +208,41 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
         "--rounds",
         "2",
         "--no-judge-enabled",
+    ]
+
+    v3_command = orchestrator._build_command(
+        run_type="agent_runtime_v3_acceptance",
+        output_dir=tmp_path / "v3-output",
+        options={
+            "conversation_model_key": "dgx_vllm::chat",
+            "reviewer_model_key": "dgx_vllm::reviewer",
+            "embedding_model_key": "dgx_embedding_sidecar::embedding",
+            "rounds": 3,
+            "timeout_seconds": 180,
+            "retry_count": 0,
+            "include_llama_compatibility": False,
+        },
+    )
+    assert v3_command == [
+        sys.executable,
+        "workflows/evals/agent_runtime_v3_acceptance/run.py",
+        "--config",
+        "workflows/evals/agent_runtime_v3_acceptance/config.toml",
+        "--output-dir",
+        str(tmp_path / "v3-output"),
+        "--conversation-model-key",
+        "dgx_vllm::chat",
+        "--reviewer-model-key",
+        "dgx_vllm::reviewer",
+        "--embedding-model-key",
+        "dgx_embedding_sidecar::embedding",
+        "--rounds",
+        "3",
+        "--timeout-seconds",
+        "180",
+        "--retry-count",
+        "0",
+        "--no-include-llama-compatibility",
     ]
     with pytest.raises(
         ValueError, match="only accepted when run_type='chat_memory_eval'"

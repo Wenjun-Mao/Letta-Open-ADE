@@ -46,6 +46,12 @@ describe("chat-memory evaluation launch state", () => {
     });
   });
 
+  it("keeps the v3 acceptance launcher selectable without applying chat fields to its payload", () => {
+    expect(
+      resolveChatMemoryEvaluationLaunchState("?runType=agent_runtime_v3_acceptance"),
+    ).toMatchObject({ runType: "agent_runtime_v3_acceptance" });
+  });
+
   it("reconciles stale query selections with the available chat options", () => {
     expect(
       reconcileChatMemoryEvaluationForm(

@@ -316,7 +316,11 @@ def test_canonical_manifest_tracks_actual_identity_separately_from_aliases() -> 
         ("endpoint_port", 8001),
         ("request_timeout_seconds", 15),
     )
-    assert all(item.lifecycle is DeploymentLifecycle.DISCOVERED for item in deployments)
+    assert [item.lifecycle for item in deployments] == [
+        DeploymentLifecycle.CANDIDATE,
+        DeploymentLifecycle.CANDIDATE,
+        DeploymentLifecycle.DISCOVERED,
+    ]
     assert deployments[0].fingerprint.provenance_complete is True
     assert retriever.fingerprint.provenance_complete is True
     assert llama.fingerprint.provenance_complete is False

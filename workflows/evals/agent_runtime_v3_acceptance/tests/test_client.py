@@ -211,3 +211,13 @@ def test_terminal_wait_times_out_when_sse_never_finishes() -> None:
         await client.aclose()
 
     asyncio.run(scenario())
+
+
+def test_owned_client_disables_implicit_sse_read_timeout() -> None:
+    async def scenario() -> None:
+        client = RuntimeV3Client("https://ade.test", "key")
+        assert client._client.timeout.read is None
+        assert client._client.timeout.connect == 30
+        await client.aclose()
+
+    asyncio.run(scenario())

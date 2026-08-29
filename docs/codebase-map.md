@@ -35,11 +35,13 @@ provider-facing boundary for normal discovery and generation.
 | Letta and Model Router protocol adapters | `services/ade-api/` | `src/ade_api/integrations/` |
 | Provider discovery, profiles, and forwarding | `services/model-router/` | `src/model_router/` and `config/model-router/` |
 | Typed catalog/probe exchange formats | `packages/model-catalog-contracts/` | `src/model_catalog_contracts/` |
+| Shared agent-runtime eval contracts | `packages/agent-runtime-eval-contracts/` | package README and `src/agent_runtime_eval_contracts/` |
 | Prompts, personas, schemas, tools, reports | `content/` | owning center's adapter and its matching content subdirectory |
 | Model source configuration | `config/model-router/` | `sources.json`, local overlay, and `model-profiles.json` |
 | Evals and provider probes | `workflows/evals/` | workflow-local `README.md` and `run.py` |
 | Native agent-runtime preview | `services/ade-api/src/ade_api/features/agent_runtime_v3/` | feature README, thin application/worker coordinators, and owning service modules |
-| Native agent-runtime evidence | `workflows/evals/agent_runtime_study/` | workflow README, exact deployment registry, [study report](architecture/agent-runtime-replacement-study.md), and accepted [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
+| Native agent-runtime research evidence | `workflows/evals/agent_runtime_study/` | workflow README, [study report](architecture/agent-runtime-replacement-study.md), and accepted [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
+| Native agent-runtime production qualification | `workflows/evals/agent_runtime_v3_acceptance/` | workflow README, policy registry, reviewed promotion command, and [ADR 0010](adr/0010-production-path-runtime-qualification.md) |
 | Live smoke coverage | `workflows/smoke/` | named smoke script or `make smoke` |
 | Compose support files | `infra/` | `compose.yaml` and the relevant `infra/` asset |
 
@@ -52,7 +54,7 @@ tests with the owning feature.
 | Feature | ADE Web | ADE API | Primary dependency |
 | --- | --- | --- | --- |
 | Agent Studio | `src/features/agent-studio/` | `features/agent_studio/` | Letta |
-| Native agent runtime v3 preview | Not exposed | `features/agent_runtime_v3/` | PostgreSQL and Model Router |
+| Native agent runtime v3 preview | Test Center qualification only | `features/agent_runtime_v3/` | PostgreSQL and Model Router |
 | Comment Lab | `src/features/comment-lab/` | `features/comment_lab/` | Model Router |
 | Label Lab | `src/features/label-lab/` | `features/label_lab/` | Model Router and label schemas |
 | Prompt Center | `src/features/prompt-center/` | `features/prompt_center/` | prompt and persona content |
@@ -95,7 +97,8 @@ for the persona projection contract.
 | Add a Test Center run type | Test Center feature plus its workflow entrypoint and artifacts |
 | Add an eval/probe | a self-contained `workflows/evals/<workflow>/` folder |
 | Change the opt-in native runtime | `features/agent_runtime_v3/` plus accepted [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
-| Reproduce native-runtime qualification evidence | `workflows/evals/agent_runtime_study/` (supported Agent Studio remains Letta-backed) |
+| Reproduce runtime research evidence | `workflows/evals/agent_runtime_study/` |
+| Qualify the production v3 path | `workflows/evals/agent_runtime_v3_acceptance/` through Test Center or its CLI |
 | Regenerate API artifacts | `uv run python scripts/export_openapi.py` |
 | Diagnose the Compose stack | `scripts/collect_diagnostics.sh .env` |
 

@@ -2,19 +2,23 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import os
+import signal
 import subprocess
 import sys
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import agent_runtime_eval_contracts  # noqa: E402
-from agent_runtime_eval_contracts import load_cases  # noqa: E402
+from agent_runtime_eval_contracts import load_cases, study_cases_path  # noqa: E402
 
 from workflows.evals.agent_runtime_v3_acceptance.artifacts import RoundArtifactWriter  # noqa: E402
 from workflows.evals.agent_runtime_v3_acceptance.cleanup import (  # noqa: E402
@@ -30,6 +34,9 @@ from workflows.evals.agent_runtime_v3_acceptance.config import (  # noqa: E402
 )
 from workflows.evals.agent_runtime_v3_acceptance.proposal import (  # noqa: E402
     build_promotion_proposal,
+)
+from workflows.evals.agent_runtime_v3_acceptance.policy import (  # noqa: E402
+    production_policy_hashes,
 )
 from workflows.evals.agent_runtime_v3_acceptance.runner import (  # noqa: E402
     QualificationRound,
@@ -64,13 +71,19 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
         raise RuntimeError(
             "live acceptance requires database_url for fail-closed cleanup"
         )
-    cases = tuple(load_cases())
+    cases = tuple(load_cases(study_cases_path()))
     canonical_case_keys = tuple(str(getattr(case, "key")) for case in cases)
     if not canonical_case_keys or len(canonical_case_keys) != len(
         set(canonical_case_keys)
     ):
         raise RuntimeError("shared canonical case matrix is empty or non-unique")
-    run_id = f"agent-runtime-v3-{datetime.now(UTC).strftime('%Y%m%dt%H%M%sz')}"
+    run_id = (
+        f"agent-runtime-v3-{datetime.now(UTC).strftime('%Y%m%dt%H%M%sz')}"
+        f"-{uuid4().hex[:8]}"
+    )
+    source_revision = _source_revision()
+    source_dirty = _source_dirty()
+    policy_hashes = production_policy_hashes()
     writer = RoundArtifactWriter(config.output_dir, run_id)
     client = RuntimeV3Client(config.api_base_url, config.api_key)
     resource_scopes: list[ResourceScope] = []
@@ -121,6 +134,9 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
                 compatibility
                 if isinstance(compatibility, QualificationRound)
                 else None,
+                source_revision=source_revision,
+                source_dirty=source_dirty,
+                policy_hashes=policy_hashes,
             )
         )
         proposal = build_promotion_proposal(
@@ -130,6 +146,10 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
             canonical_case_keys=canonical_case_keys,
             required_rounds=3,
             provenance_sha256=provenance_sha256,
+            source_revision=source_revision,
+            source_dirty=source_dirty,
+            policy_hashes=policy_hashes,
+            qualification_config=_qualification_config(config),
         )
         return {
             "run_id": run_id,
@@ -184,9 +204,22 @@ def main(argv: list[str] | None = None) -> int:
         retry_count=args.retry_count,
         include_llama_compatibility=args.include_llama_compatibility,
     )
-    result = asyncio.run(run_acceptance(config))
+    previous_sigterm = signal.signal(signal.SIGTERM, _interrupt_for_cleanup)
+    try:
+        result = asyncio.run(run_acceptance(config))
+    except KeyboardInterrupt:
+        print("Acceptance run cancelled after scoped cleanup.", file=sys.stderr)
+        return 130
+    finally:
+        signal.signal(signal.SIGTERM, previous_sigterm)
     print(result)
     return 0 if result["eligible"] else 1
+
+
+def _interrupt_for_cleanup(_signum: int, _frame: object) -> None:
+    # Test Center sends SIGTERM. Raising through the async stack preserves the
+    # workflow's fail-closed cleanup instead of abandoning generated rows.
+    raise KeyboardInterrupt
 
 
 def _write_rounds(
@@ -232,6 +265,13 @@ def _round_summary(round_result: QualificationRound) -> dict[str, Any]:
                 "case_key": case.case_key,
                 "score": case.score,
                 "infrastructure": case.infrastructure,
+                "turns": [asdict(item) for item in case.turns],
+                "tools": [asdict(item) for item in case.tools],
+                "facts": [asdict(item) for item in case.facts],
+                "resources": {
+                    "definition_keys": list(case.resources.definition_keys),
+                    "subject_external_keys": list(case.resources.subject_external_keys),
+                },
             }
             for case in round_result.cases
         ],
@@ -244,19 +284,23 @@ def _provenance(
     canonical_case_keys: tuple[str, ...],
     primary_rounds: tuple[QualificationRound, ...],
     compatibility_round: QualificationRound | None,
+    *,
+    source_revision: str | None,
+    source_dirty: bool | None,
+    policy_hashes: dict[str, str],
 ) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "kind": "agent-runtime-v3-acceptance-provenance",
         "captured_at": datetime.now(UTC).isoformat(),
         "run_id": run_id,
-        "git_revision": _git_revision(),
+        "source_revision": source_revision,
+        "source_dirty": source_dirty,
+        "policy_hashes": dict(sorted(policy_hashes.items())),
         "effective_config": public_config(config),
         "canonical_case_keys": list(canonical_case_keys),
         "canonical_case_keys_sha256": _sha256_text("\n".join(canonical_case_keys)),
-        "agent_runtime_eval_contracts_version": getattr(
-            agent_runtime_eval_contracts, "__version__", None
-        ),
+        "agent_runtime_eval_contracts_version": _contracts_version(),
         "primary_rounds": [_round_summary(item) for item in primary_rounds],
         "llama_compatibility": (
             _round_summary(compatibility_round)
@@ -266,7 +310,21 @@ def _provenance(
     }
 
 
-def _git_revision() -> str | None:
+def _qualification_config(config: AcceptanceConfig) -> dict[str, Any]:
+    return {
+        "conversation_model_key": config.conversation_model_key,
+        "reviewer_model_key": config.reviewer_model_key,
+        "embedding_model_key": config.embedding_model_key,
+        "rounds": config.rounds,
+        "timeout_seconds": config.timeout_seconds,
+        "retry_count": config.retry_count,
+    }
+
+
+def _source_revision() -> str | None:
+    configured = str(os.getenv("ADE_SOURCE_REVISION") or "").strip().casefold()
+    if configured:
+        return configured
     try:
         return subprocess.check_output(
             ["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL
@@ -275,10 +333,34 @@ def _git_revision() -> str | None:
         return None
 
 
+def _source_dirty() -> bool | None:
+    configured = str(os.getenv("ADE_SOURCE_DIRTY") or "").strip().casefold()
+    if configured in {"0", "false", "no"}:
+        return False
+    if configured in {"1", "true", "yes"}:
+        return True
+    try:
+        output = subprocess.check_output(
+            ["git", "status", "--porcelain"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return bool(output.strip())
+
+
 def _sha256_text(value: str) -> str:
     import hashlib
 
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _contracts_version() -> str | None:
+    try:
+        return version("agent-runtime-eval-contracts")
+    except PackageNotFoundError:
+        return getattr(agent_runtime_eval_contracts, "__version__", None)
 
 
 if __name__ == "__main__":

@@ -54,6 +54,7 @@ const VALID_RUN_TYPES = new Set<TestRunType>([
   "ade_api_e2e_check",
   "ade_mvp_smoke_e2e_check",
   "chat_memory_eval",
+  "agent_runtime_v3_acceptance",
 ]);
 
 const TERMINAL_EVALUATION_STATUSES = new Set([

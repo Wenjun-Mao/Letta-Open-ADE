@@ -16,6 +16,12 @@ const COPY = {
     timeoutSeconds: "Timeout (seconds)",
     retryCount: "Retry Count",
     judgeEnabled: "Advisory LLM judge",
+    conversationModel: "Conversation deployment",
+    reviewerModel: "Reviewer deployment",
+    retrieverModel: "Retriever deployment",
+    llamaCompatibility: "Run nonblocking llama-server compatibility round",
+    nativeRuntimeRequirement: "Runs through the opt-in ADE-native API and worker. Complete production-path rounds may generate a reviewed promotion proposal; they never promote automatically.",
+    nativeRuntimeDeploymentsUnavailable: "Required conversation, reviewer, and retriever deployment metadata is not currently available. Other Test Center runs remain usable.",
     submitting: "Submitting...",
     createRun: "Create Run",
     refreshRuns: "Refresh Runs",
@@ -129,6 +135,12 @@ const COPY = {
     timeoutSeconds: "超时（秒）",
     retryCount: "重试次数",
     judgeEnabled: "启用辅助 LLM 评审",
+    conversationModel: "对话模型部署",
+    reviewerModel: "记忆评审模型部署",
+    retrieverModel: "检索模型部署",
+    llamaCompatibility: "运行不阻断发布的 llama-server 兼容性轮次",
+    nativeRuntimeRequirement: "此评估通过可选启用的 ADE 原生 API 与 Worker 运行。完整的生产路径轮次可以生成待审核的晋级提案，但绝不会自动晋级。",
+    nativeRuntimeDeploymentsUnavailable: "当前缺少所需的对话、记忆评审或检索部署元数据。测试中心的其他运行仍可继续使用。",
     submitting: "提交中...",
     createRun: "创建运行",
     refreshRuns: "刷新运行列表",
@@ -238,6 +250,7 @@ export const TEST_RUN_TYPES: TestRunType[] = [
   "ade_api_e2e_check",
   "ade_mvp_smoke_e2e_check",
   "chat_memory_eval",
+  "agent_runtime_v3_acceptance",
 ];
 
 export function getTestCenterCopy(locale: Locale): TestCenterCopy {

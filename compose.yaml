@@ -87,6 +87,9 @@ services:
     build:
       context: .
       dockerfile: services/ade-api/Dockerfile
+      args:
+        ADE_SOURCE_REVISION: ${ADE_SOURCE_REVISION:-unknown}
+        ADE_SOURCE_DIRTY: ${ADE_SOURCE_DIRTY:-true}
     restart: unless-stopped
     env_file:
       - ${LETTA_ENV_FILE:-.env}
@@ -101,6 +104,7 @@ services:
       - ./content:/app/content
       - ./config:/app/config:ro
       - ./data/runtime:/app/data/runtime
+      - ./workflows/evals/agent_runtime_v3_acceptance/outputs:/app/workflows/evals/agent_runtime_v3_acceptance/outputs
     ports:
       - "${ADE_API_BIND_HOST:-127.0.0.1}:${ADE_API_PORT:-8000}:8000"
     healthcheck:
@@ -120,6 +124,9 @@ services:
     build:
       context: .
       dockerfile: services/ade-api/Dockerfile
+      args:
+        ADE_SOURCE_REVISION: ${ADE_SOURCE_REVISION:-unknown}
+        ADE_SOURCE_DIRTY: ${ADE_SOURCE_DIRTY:-true}
     restart: "no"
     environment:
       - ADE_REPOSITORY_ROOT=/app
@@ -144,6 +151,9 @@ services:
     build:
       context: .
       dockerfile: services/ade-api/Dockerfile
+      args:
+        ADE_SOURCE_REVISION: ${ADE_SOURCE_REVISION:-unknown}
+        ADE_SOURCE_DIRTY: ${ADE_SOURCE_DIRTY:-true}
     restart: unless-stopped
     environment:
       - ADE_REPOSITORY_ROOT=/app

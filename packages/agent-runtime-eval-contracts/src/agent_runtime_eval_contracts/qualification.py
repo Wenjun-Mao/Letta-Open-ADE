@@ -48,7 +48,9 @@ def policy_bundle_hash(workflow_root: Path, relative_paths: Iterable[str]) -> st
         normalized = Path(relative_path).as_posix()
         path = workflow_root / normalized
         if not path.is_file():
-            raise DeploymentQualificationError(f"policy input does not exist: {normalized}")
+            raise DeploymentQualificationError(
+                f"policy input does not exist: {normalized}"
+            )
         encoded_path = normalized.encode("utf-8")
         content = path.read_bytes()
         digest.update(len(encoded_path).to_bytes(8, "big"))
@@ -160,7 +162,9 @@ class DeploymentFingerprint:
             "endpoint_identity",
             _non_empty(self.endpoint_identity, "endpoint_identity"),
         )
-        object.__setattr__(self, "served_model", _non_empty(self.served_model, "served_model"))
+        object.__setattr__(
+            self, "served_model", _non_empty(self.served_model, "served_model")
+        )
         object.__setattr__(
             self,
             "artifact_reference",
@@ -171,13 +175,17 @@ class DeploymentFingerprint:
             "runtime_implementation",
             _non_empty(self.runtime_implementation, "runtime_implementation"),
         )
-        object.__setattr__(self, "artifact_revision", _optional_text(self.artifact_revision))
+        object.__setattr__(
+            self, "artifact_revision", _optional_text(self.artifact_revision)
+        )
         object.__setattr__(
             self,
             "artifact_sha256",
             _normalize_sha256(self.artifact_sha256, "artifact_sha256"),
         )
-        object.__setattr__(self, "runtime_version", _optional_text(self.runtime_version))
+        object.__setattr__(
+            self, "runtime_version", _optional_text(self.runtime_version)
+        )
         object.__setattr__(
             self,
             "runtime_image_digest",
@@ -199,7 +207,9 @@ class DeploymentFingerprint:
             "context_settings",
             "hardware_metadata",
         ):
-            object.__setattr__(self, field_name, freeze_metadata(getattr(self, field_name)))
+            object.__setattr__(
+                self, field_name, freeze_metadata(getattr(self, field_name))
+            )
 
     def payload(self) -> dict[str, object]:
         return {
@@ -255,7 +265,9 @@ class Deployment:
         object.__setattr__(
             self, "deployment_id", _non_empty(self.deployment_id, "deployment_id")
         )
-        aliases = tuple(_non_empty(alias, "route alias") for alias in self.route_aliases)
+        aliases = tuple(
+            _non_empty(alias, "route alias") for alias in self.route_aliases
+        )
         if not aliases:
             raise DeploymentQualificationError("at least one route alias is required")
         if len(set(aliases)) != len(aliases):
@@ -263,7 +275,9 @@ class Deployment:
         object.__setattr__(self, "route_aliases", aliases)
         roles = tuple(DeploymentRole(role) for role in self.roles)
         if not roles:
-            raise DeploymentQualificationError("at least one deployment role is required")
+            raise DeploymentQualificationError(
+                "at least one deployment role is required"
+            )
         if len(set(roles)) != len(roles):
             raise DeploymentQualificationError("deployment roles must be unique")
         object.__setattr__(self, "roles", roles)

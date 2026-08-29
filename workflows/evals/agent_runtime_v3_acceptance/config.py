@@ -45,8 +45,8 @@ class AcceptanceConfig:
             raise ConfigError("reviewer_model_key is required")
         if not self.embedding_model_key.strip():
             raise ConfigError("embedding_model_key is required")
-        if self.rounds < 1:
-            raise ConfigError("rounds must be positive")
+        if not 1 <= self.rounds <= 3:
+            raise ConfigError("rounds must be between 1 and 3")
         if not 5 <= self.timeout_seconds <= 600:
             raise ConfigError("timeout_seconds must be between 5 and 600")
         if not 0 <= self.retry_count <= 5:
@@ -61,7 +61,12 @@ def load_config(path: Path | None = None) -> AcceptanceConfig:
         api_base_url=_value(
             "API_BASE_URL", payload, "api_base_url", "http://127.0.0.1:8000"
         ).rstrip("/"),
-        api_key=_value("API_KEY", payload, "api_key", ""),
+        api_key=_value(
+            "API_KEY",
+            payload,
+            "api_key",
+            os.getenv("ADE_API_OPERATOR_KEY") or os.getenv("ADE_API_ADMIN_KEY") or "",
+        ),
         output_dir=_project_path(
             _value(
                 "OUTPUT_DIR",
@@ -70,7 +75,11 @@ def load_config(path: Path | None = None) -> AcceptanceConfig:
                 "workflows/evals/agent_runtime_v3_acceptance/outputs",
             )
         ),
-        database_url=_nullable_value("DATABASE_URL", payload, "database_url"),
+        database_url=(
+            _nullable_value("DATABASE_URL", payload, "database_url")
+            or str(os.getenv("ADE_API_DATABASE_URL") or "").strip()
+            or None
+        ),
         conversation_model_key=_value(
             "CONVERSATION_MODEL_KEY",
             payload,

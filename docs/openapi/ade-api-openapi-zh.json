@@ -5110,6 +5110,17 @@
       "TestRunRequest": {
         "additionalProperties": false,
         "properties": {
+          "conversation_model_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "会话 模型 键"
+          },
           "embedding": {
             "anyOf": [
               {
@@ -5121,6 +5132,17 @@
             ],
             "title": "向量模型"
           },
+          "embedding_model_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "向量模型 模型 键"
+          },
           "fixture_key": {
             "anyOf": [
               {
@@ -5131,6 +5153,17 @@
               }
             ],
             "title": "测试数据集 键"
+          },
+          "include_llama_compatibility": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "包含 Llama Compatibility"
           },
           "judge_enabled": {
             "anyOf": [
@@ -5200,6 +5233,17 @@
             ],
             "title": "重试次数"
           },
+          "reviewer_model_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "评审器 模型 键"
+          },
           "rounds": {
             "anyOf": [
               {
@@ -5217,7 +5261,8 @@
             "enum": [
               "ade_api_e2e_check",
               "ade_mvp_smoke_e2e_check",
-              "chat_memory_eval"
+              "chat_memory_eval",
+              "agent_runtime_v3_acceptance"
             ],
             "title": "运行类型",
             "type": "string"

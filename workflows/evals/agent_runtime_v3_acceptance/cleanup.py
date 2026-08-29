@@ -56,7 +56,9 @@ class ScopedPostgresCleanup:
             raise CleanupError(
                 "cleanup may only be prepared by the packet cleanup owner"
             )
-        if not database_url.startswith(("postgres://", "postgresql://")):
+        if not database_url.startswith(
+            ("postgres://", "postgresql://", "postgresql+psycopg://")
+        ):
             raise CleanupError("cleanup requires a PostgreSQL database URL")
         self.database_url = database_url
         self.output_dir = output_dir
@@ -113,7 +115,7 @@ class ScopedPostgresCleanup:
             raise CleanupError(
                 "psycopg is required for live PostgreSQL cleanup"
             ) from exc
-        with psycopg.connect(self.database_url) as connection:
+        with psycopg.connect(_psycopg_url(self.database_url)) as connection:
             with connection.cursor() as cursor:
                 results = []
                 for statement, params in statements:
@@ -198,11 +200,6 @@ WITH target_subjects AS (
                     + "\nDELETE FROM ade.messages WHERE conversation_id IN (SELECT id FROM target_conversations)",
                     conversation_params,
                 ),
-                (
-                    target
-                    + "\nDELETE FROM ade.conversations WHERE id IN (SELECT id FROM target_conversations)",
-                    conversation_params,
-                ),
             )
         )
     if scope.subject_external_keys:
@@ -225,6 +222,11 @@ WITH target_subjects AS (
                 ),
                 (
                     target_facts
+                    + "\nUPDATE ade.memory_facts SET current_revision_id = NULL WHERE id IN (SELECT id FROM target_facts)",
+                    fact_params,
+                ),
+                (
+                    target_facts
                     + "\nDELETE FROM ade.memory_revisions WHERE fact_id IN (SELECT id FROM target_facts)",
                     fact_params,
                 ),
@@ -232,6 +234,21 @@ WITH target_subjects AS (
                     target_facts
                     + "\nDELETE FROM ade.memory_facts WHERE id IN (SELECT id FROM target_facts)",
                     fact_params,
+                ),
+            )
+        )
+    if scope.definition_keys and scope.subject_external_keys:
+        statements.extend(
+            (
+                (
+                    target
+                    + "\nDELETE FROM ade.runs WHERE id IN (SELECT id FROM target_runs)",
+                    conversation_params,
+                ),
+                (
+                    target
+                    + "\nDELETE FROM ade.conversations WHERE id IN (SELECT id FROM target_conversations)",
+                    conversation_params,
                 ),
             )
         )
@@ -295,6 +312,10 @@ def _redacted_database_target(database_url: str) -> str:
     host = parsed.hostname or "unknown"
     database = parsed.path.rsplit("/", maxsplit=1)[-1] or "unknown"
     return f"{parsed.scheme}://{host}/{database}"
+
+
+def _psycopg_url(database_url: str) -> str:
+    return database_url.replace("postgresql+psycopg://", "postgresql://", 1)
 
 
 def _write_manifest(path: Path, payload: dict[str, Any]) -> None:

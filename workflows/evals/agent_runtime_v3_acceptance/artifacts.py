@@ -34,7 +34,9 @@ class RoundArtifactWriter:
         self._write_json_lines(events_path, events)
         event_sha256 = _sha256(events_path.read_bytes())
         round_payload = {
-            **payload,
+            **{
+                key: value for key, value in payload.items() if key != "artifact_sha256"
+            },
             "created_at": datetime.now(UTC).isoformat(),
             "events_sha256": event_sha256,
         }

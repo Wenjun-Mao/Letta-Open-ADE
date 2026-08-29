@@ -22,10 +22,14 @@ def normalize_turn(result: TurnResult) -> TurnObservation:
     return TurnObservation(
         status=result.run.status.value,
         assistant_text=(
-            result.assistant_message.content if result.assistant_message is not None else None
+            result.assistant_message.content
+            if result.assistant_message is not None
+            else None
         ),
         candidate_assistant_text=result.candidate_assistant_text,
-        events=tuple(EventObservation(type=event.type.value) for event in result.events),
+        events=tuple(
+            EventObservation(type=event.type.value) for event in result.events
+        ),
         tools=tuple(
             ToolObservation(name=tool.name, succeeded=tool.succeeded)
             for tool in result.tool_executions

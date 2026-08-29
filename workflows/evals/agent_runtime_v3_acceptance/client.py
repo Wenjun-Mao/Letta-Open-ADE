@@ -43,7 +43,11 @@ class RuntimeV3Client:
         client: httpx.AsyncClient | None = None,
     ) -> None:
         self.api_base_url = api_base_url.rstrip("/")
-        self._client = client or httpx.AsyncClient()
+        # SSE read duration is owned by await_terminal's explicit workflow
+        # deadline, not HTTPX's unrelated five-second default.
+        self._client = client or httpx.AsyncClient(
+            timeout=httpx.Timeout(30.0, read=None)
+        )
         self._owns_client = client is None
         self._headers = {"Authorization": f"Bearer {api_key}"}
 

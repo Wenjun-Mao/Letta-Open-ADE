@@ -1,7 +1,11 @@
-.PHONY: setup up down status logs test check openapi smoke eval-chat-memory eval-comment-persona probe-models native-runtime-migrate native-runtime-up native-runtime-db-test
+.PHONY: setup up down status logs test check openapi smoke eval-chat-memory eval-comment-persona eval-agent-runtime-v3 probe-models native-runtime-migrate native-runtime-up native-runtime-db-test
 
 SERVICE ?= ade-api
 SOURCE ?= ark
+ADE_SOURCE_REVISION ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
+ADE_SOURCE_DIRTY ?= $(shell test -z "$$(git status --porcelain 2>/dev/null)" && echo false || echo true)
+export ADE_SOURCE_REVISION
+export ADE_SOURCE_DIRTY
 
 setup:
 	uv sync --all-packages --frozen --group dev
@@ -53,6 +57,9 @@ eval-chat-memory:
 
 eval-comment-persona:
 	docker compose exec ade-api python workflows/evals/comment_persona_eval/run.py --config workflows/evals/comment_persona_eval/config.toml
+
+eval-agent-runtime-v3: native-runtime-up
+	docker compose exec ade-api python workflows/evals/agent_runtime_v3_acceptance/run.py --config workflows/evals/agent_runtime_v3_acceptance/config.toml --rounds 3
 
 probe-models:
 	docker compose exec model-router python workflows/evals/provider_model_probe/run.py --source-id $(SOURCE) --mode chat-probe --write

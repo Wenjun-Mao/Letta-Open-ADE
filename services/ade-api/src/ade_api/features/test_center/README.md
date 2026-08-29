@@ -26,6 +26,12 @@ those live under `workflows/` and use public ADE HTTP contracts.
    durable status updates to `run_store.py`.
 4. `artifact_access.py` exposes only files inside the run-owned output directory.
 
+`agent_runtime_v3_acceptance` is the production-path qualification launcher. It
+forwards an exact conversation/reviewer/retriever deployment set to the opt-in v3
+workflow and exposes its raw evidence through the ordinary run-owned artifact view.
+The workflow may propose promotion, but Test Center never edits the deployment
+manifest.
+
 ## Chat-memory evaluation reads
 
 `GET /api/v2/test-center/chat-memory-evaluations` lists persisted

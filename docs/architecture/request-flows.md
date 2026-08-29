@@ -126,6 +126,13 @@ Model Router's service boundary. See
 [ADR 0008](../adr/0008-test-center-evaluation-read-models.md) for this ownership
 contract.
 
+Native-runtime qualification is a stricter form of this flow: the workflow calls
+the real `/api/v3` asynchronous API and worker, captures normalized events and
+PostgreSQL-backed memory evidence, and then purges only its run-owned resources.
+Only complete production-path rounds may emit a promotion proposal, and applying
+that proposal is a separate reviewed operator action under
+[ADR 0010](../adr/0010-production-path-runtime-qualification.md).
+
 ## Model Catalog
 
 The Model Catalog feature is the one ADE-facing interpretation boundary for

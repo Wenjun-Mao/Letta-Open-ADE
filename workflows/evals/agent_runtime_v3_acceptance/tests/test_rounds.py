@@ -5,10 +5,15 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from workflows.evals.agent_runtime_v3_acceptance.qualification import (
     is_eligible_primary_matrix,
 )
-from workflows.evals.agent_runtime_v3_acceptance.runner import execute_case
+from workflows.evals.agent_runtime_v3_acceptance.runner import (
+    execute_case,
+    run_primary_rounds,
+)
 
 
 @dataclass(frozen=True)
@@ -26,6 +31,10 @@ class _Case:
     subject_keys: tuple[str, ...] = ("primary",)
     initial_facts: tuple[object, ...] = ()
     prelude_messages: tuple[object, ...] = ()
+    fact_assertions: tuple[object, ...] = ()
+    assistant_assertions: tuple[object, ...] = ()
+    required_tools: tuple[str, ...] = ()
+    require_failed_tool_result: bool = False
 
 
 class _FakeClient:
@@ -60,96 +69,41 @@ class _FakeClient:
 
     async def stream_events(self, url: str):
         run_id = url.split("/")[-2]
-        yield SimpleNamespace(
-            event_id="1",
-            event_type="run.started",
-            data={
-                "run_id": run_id,
-                "sequence": 1,
-                "type": "run.started",
-                "payload": {},
-            },
-        )
-        yield SimpleNamespace(
-            event_id="2",
-            event_type="model.request",
-            data={
-                "run_id": run_id,
-                "sequence": 2,
-                "type": "model.request",
-                "payload": {"role": "conversation"},
-            },
-        )
-        yield SimpleNamespace(
-            event_id="3",
-            event_type="model.response",
-            data={
-                "run_id": run_id,
-                "sequence": 3,
-                "type": "model.response",
-                "payload": {"role": "conversation"},
-            },
-        )
+        events = [
+            ("run.started", {}),
+            ("model.request.started", {"role": "conversation"}),
+            ("model.response.completed", {"role": "conversation"}),
+        ]
         if self.retry:
-            yield SimpleNamespace(
-                event_id="4",
-                event_type="retry.scheduled",
-                data={
-                    "run_id": run_id,
-                    "sequence": 4,
-                    "type": "retry.scheduled",
-                    "payload": {},
-                },
-            )
-        yield SimpleNamespace(
-            event_id="5",
-            event_type="memory.review.request",
-            data={
-                "run_id": run_id,
-                "sequence": 5,
-                "type": "memory.review.request",
-                "payload": {},
-            },
-        )
+            events.append(("retry.scheduled", {}))
+        events.append(("model.request.started", {"role": "reviewer"}))
         if self.reviewed:
+            events.append(("model.response.completed", {"role": "reviewer"}))
+        if self.status == "succeeded":
+            events.append(("message.committed", {"role": "assistant"}))
+        terminal_type = (
+            "run.completed" if self.status == "succeeded" else f"run.{self.status}"
+        )
+        events.append((terminal_type, {"usage": {"total_tokens": 12}}))
+        for sequence, (event_type, payload) in enumerate(events, start=1):
             yield SimpleNamespace(
-                event_id="6",
-                event_type="memory.reviewed",
+                event_id=str(sequence),
+                event_type=event_type,
                 data={
                     "run_id": run_id,
-                    "sequence": 6,
-                    "type": "memory.reviewed",
-                    "payload": {},
+                    "sequence": sequence,
+                    "type": event_type,
+                    "payload": payload,
                 },
             )
-        message_sequence = 7 if self.reviewed else 6
-        yield SimpleNamespace(
-            event_id=str(message_sequence),
-            event_type="message.committed",
-            data={
-                "run_id": run_id,
-                "sequence": message_sequence,
-                "type": "message.committed",
-                "payload": {"role": "assistant", "content": "hello"},
-            },
-        )
-        terminal_sequence = message_sequence + 1
-        yield SimpleNamespace(
-            event_id=str(terminal_sequence),
-            event_type=f"run.{self.status if self.status != 'succeeded' else 'completed'}",
-            data={
-                "run_id": run_id,
-                "sequence": terminal_sequence,
-                "type": f"run.{self.status if self.status != 'succeeded' else 'completed'}",
-                "payload": {},
-            },
-        )
 
     async def get_run(self, run_id: str) -> dict[str, Any]:
         return {
             "id": run_id,
             "status": self.status,
             "attempt_count": 2 if self.retry else 1,
+            "started_at": "2026-08-29T12:00:00Z",
+            "finished_at": "2026-08-29T12:00:01Z",
         }
 
     async def await_terminal(self, accepted: dict[str, Any], *, timeout_seconds: float):
@@ -255,7 +209,46 @@ def test_cancellation_and_concurrent_requests_are_recorded_as_diagnostics() -> N
     asyncio.run(scenario())
 
 
-def test_reviewer_and_message_atomicity_is_a_required_success_invariant() -> None:
+def test_client_deadline_cancels_and_waits_for_terminal_evidence() -> None:
+    class _TimedOutClient(_FakeClient):
+        def __init__(self) -> None:
+            super().__init__(status="cancelled")
+            self.wait_count = 0
+
+        async def await_terminal(
+            self, accepted: dict[str, Any], *, timeout_seconds: float
+        ):
+            self.wait_count += 1
+            if self.wait_count == 1:
+                from workflows.evals.agent_runtime_v3_acceptance.client import (
+                    RunTimeout,
+                )
+
+                raise RunTimeout("deadline")
+            return await super().await_terminal(
+                accepted, timeout_seconds=timeout_seconds
+            )
+
+    async def scenario() -> None:
+        client = _TimedOutClient()
+        result = await execute_case(
+            client=client,
+            case=_case(),
+            namespace="acceptance-timeout",
+            conversation_model_key="chat",
+            reviewer_model_key="reviewer",
+            embedding_model_key="embedding",
+            timeout_seconds=180,
+            retry_count=0,
+        )
+        assert client.cancelled
+        assert client.wait_count == 2
+        assert result.infrastructure["terminal_statuses"] == ["cancelled"]
+
+    asyncio.run(scenario())
+
+
+def test_reviewer_request_and_response_trace_is_a_required_success_invariant() -> None:
     async def scenario() -> None:
         result = await execute_case(
             client=_FakeClient(reviewed=False),
@@ -269,8 +262,65 @@ def test_reviewer_and_message_atomicity_is_a_required_success_invariant() -> Non
         )
         assert result.score["pass"] is False
         assert any(
-            failure["kind"] == "reviewer_atomicity"
+            failure["kind"] == "required_model_events" and failure["role"] == "reviewer"
             for failure in result.infrastructure["failures"]
         )
+
+    asyncio.run(scenario())
+
+
+def test_uncertain_create_response_is_registered_for_scoped_cleanup() -> None:
+    class _UncertainCreateClient(_FakeClient):
+        async def create_definition(self, **_payload: Any) -> dict[str, Any]:
+            raise TimeoutError("creation outcome is unknown")
+
+    async def scenario() -> None:
+        scopes = []
+        with pytest.raises(TimeoutError, match="unknown"):
+            await execute_case(
+                client=_UncertainCreateClient(),
+                case=_case(),
+                namespace="acceptance-uncertain",
+                conversation_model_key="chat",
+                reviewer_model_key="reviewer",
+                embedding_model_key="embedding",
+                timeout_seconds=180,
+                retry_count=0,
+                resource_scope_sink=scopes,
+            )
+        assert len(scopes) == 1
+        assert scopes[0].definition_keys[0].startswith("acceptance-uncertain")
+
+    asyncio.run(scenario())
+
+
+def test_infrastructure_failure_is_recorded_without_aborting_the_matrix() -> None:
+    class _UnavailableClient(_FakeClient):
+        async def create_definition(self, **_payload: Any) -> dict[str, Any]:
+            raise ConnectionError("router unavailable")
+
+    async def scenario() -> None:
+        scopes = []
+        rounds = await run_primary_rounds(
+            client=_UnavailableClient(),
+            cases=(_case("case-a"), _case("case-b")),
+            canonical_case_keys=("case-a", "case-b"),
+            namespace="acceptance-matrix",
+            rounds=1,
+            conversation_model_key="chat",
+            reviewer_model_key="reviewer",
+            embedding_model_key="embedding",
+            timeout_seconds=180,
+            retry_count=0,
+            resource_scope_sink=scopes,
+        )
+        assert rounds[0].complete_matrix is True
+        assert rounds[0].passed is False
+        assert [item.case_key for item in rounds[0].cases] == ["case-a", "case-b"]
+        assert all(
+            item.infrastructure["failures"][0]["kind"] == "case_execution_error"
+            for item in rounds[0].cases
+        )
+        assert len(scopes) == 2
 
     asyncio.run(scenario())

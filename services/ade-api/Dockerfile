@@ -1,11 +1,16 @@
 FROM python:3.12-slim
 
+ARG ADE_SOURCE_REVISION=unknown
+ARG ADE_SOURCE_DIRTY=true
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app/services/ade-api/src:/app/packages/model-catalog-contracts/src:/app \
+    PYTHONPATH=/app/services/ade-api/src:/app/packages/agent-runtime-eval-contracts/src:/app/packages/model-catalog-contracts/src:/app \
     PATH="/opt/venv/bin:${PATH}" \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
-    UV_LINK_MODE=copy
+    UV_LINK_MODE=copy \
+    ADE_SOURCE_REVISION=${ADE_SOURCE_REVISION} \
+    ADE_SOURCE_DIRTY=${ADE_SOURCE_DIRTY}
 
 WORKDIR /app
 
@@ -13,6 +18,7 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /uvx /usr/local/bin/
 COPY pyproject.toml uv.lock ./
 COPY services/ade-api ./services/ade-api
+COPY packages/agent-runtime-eval-contracts ./packages/agent-runtime-eval-contracts
 COPY packages/model-catalog-contracts ./packages/model-catalog-contracts
 COPY workflows/pyproject.toml ./workflows/pyproject.toml
 RUN --mount=type=cache,target=/root/.cache/uv \

@@ -197,7 +197,10 @@ def test_fingerprint_and_qualification_sequence_are_deterministic() -> None:
     assert deployment.fingerprint.sha256 == renamed.fingerprint.sha256
     assert deployment.fingerprint.sha256 != changed.sha256
     assert assess_qualification(deployment, rounds).qualified is True
-    assert apply_qualification(deployment, rounds).lifecycle is DeploymentLifecycle.QUALIFIED
+    assert (
+        apply_qualification(deployment, rounds).lifecycle
+        is DeploymentLifecycle.QUALIFIED
+    )
 
     reset = replace_fingerprint(
         apply_qualification(deployment, rounds),
@@ -205,11 +208,14 @@ def test_fingerprint_and_qualification_sequence_are_deterministic() -> None:
     )
     assert reset.lifecycle is DeploymentLifecycle.DISCOVERED
     assert assess_qualification(reset, rounds).stale_round_count == 6
-    assert release_gate(
-        reset,
-        target=ReleaseTarget.PRODUCTION,
-        assessment=assess_qualification(reset, rounds),
-    ).allowed is False
+    assert (
+        release_gate(
+            reset,
+            target=ReleaseTarget.PRODUCTION,
+            assessment=assess_qualification(reset, rounds),
+        ).allowed
+        is False
+    )
 
 
 def test_policy_bundle_hash_binds_relative_paths_and_contents(tmp_path: Path) -> None:

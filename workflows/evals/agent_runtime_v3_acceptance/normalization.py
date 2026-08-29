@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from .client import SseEvent
@@ -10,7 +10,6 @@ from .contracts import (
     FactObservation,
     ToolObservation,
     TurnObservation,
-    observation_instance,
     score_observations,
 )
 
@@ -19,23 +18,53 @@ TERMINAL_EVENT_TYPES = frozenset({"run.completed", "run.failed", "run.cancelled"
 SUCCESS_REQUIRED_EVENTS = frozenset(
     {
         "run.started",
-        "model.request",
-        "model.response",
-        "memory.review.request",
-        "memory.reviewed",
         "message.committed",
         "run.completed",
     }
 )
+MODEL_ROLES = ("conversation", "reviewer")
+
+
+@dataclass(frozen=True)
+class RecordedTurn:
+    case_key: str
+    conversation_key: str
+    run_id: str
+    attempt_count: int
+    observation: TurnObservation
+
+
+@dataclass(frozen=True)
+class RecordedEvent:
+    run_id: str
+    sequence: int
+    event_type: str
+    attempt: int | None
+    payload: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class RecordedTool:
+    run_id: str
+    name: str
+    succeeded: bool
+    payload: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class RecordedFact:
+    subject_key: str
+    fact_id: str
+    observation: FactObservation
 
 
 @dataclass(frozen=True)
 class NormalizedCase:
     score: dict[str, Any]
-    turns: tuple[Any, ...]
-    events: tuple[Any, ...]
-    tools: tuple[Any, ...]
-    facts: tuple[Any, ...]
+    turns: tuple[RecordedTurn, ...]
+    events: tuple[RecordedEvent, ...]
+    tools: tuple[RecordedTool, ...]
+    facts: tuple[RecordedFact, ...]
     infrastructure: dict[str, Any]
 
 
@@ -45,9 +74,9 @@ def normalize_case(
     turns: list[dict[str, Any]],
     subject_facts: dict[str, list[dict[str, Any]]],
 ) -> NormalizedCase:
-    turn_observations: list[Any] = []
-    event_observations: list[Any] = []
-    tool_observations: list[Any] = []
+    turn_records: list[RecordedTurn] = []
+    event_records: list[RecordedEvent] = []
+    tool_records: list[RecordedTool] = []
     failures: list[dict[str, Any]] = []
     statuses: list[str] = []
 
@@ -56,67 +85,76 @@ def normalize_case(
         run_id = _required(run, "id")
         status = str(run.get("status") or "unknown")
         statuses.append(status)
+        (
+            run_events,
+            run_tools,
+            score_events,
+            score_tools,
+            run_failures,
+            usage,
+        ) = _normalize_run_events(run_id, item.get("events") or (), status)
+        event_records.extend(run_events)
+        tool_records.extend(run_tools)
+        failures.extend(run_failures)
         assistant_content = _assistant_content(item.get("conversation_state") or {})
-        turn_observations.append(
-            observation_instance(
-                TurnObservation,
-                {
-                    "case_key": str(getattr(case, "key")),
-                    "conversation_key": str(item["conversation_key"]),
-                    "run_id": run_id,
-                    "status": status,
-                    "assistant_content": assistant_content,
-                    "attempt_count": int(run.get("attempt_count") or 0),
-                },
+        turn_records.append(
+            RecordedTurn(
+                case_key=str(getattr(case, "key")),
+                conversation_key=str(item["conversation_key"]),
+                run_id=run_id,
+                attempt_count=int(run.get("attempt_count") or 0),
+                observation=TurnObservation(
+                    status=status,
+                    assistant_text=assistant_content or None,
+                    candidate_assistant_text=assistant_content or None,
+                    events=tuple(score_events),
+                    tools=tuple(score_tools),
+                    usage=usage,
+                    elapsed_seconds=_elapsed_seconds(run),
+                ),
             )
         )
-        normalized_events, normalized_tools, run_failures = _normalize_run_events(
-            run_id, item.get("events") or (), status
-        )
-        event_observations.extend(normalized_events)
-        tool_observations.extend(normalized_tools)
-        failures.extend(run_failures)
 
-    fact_observations = tuple(
-        observation_instance(
-            FactObservation,
-            {"subject_key": subject_key, "facts": tuple(facts)},
+    fact_records = tuple(
+        RecordedFact(
+            subject_key=subject_key,
+            fact_id=str(fact.get("id") or ""),
+            observation=FactObservation(
+                key=str(fact.get("key") or fact.get("normalized_key") or ""),
+                value=str(fact.get("value") or ""),
+            ),
         )
         for subject_key, facts in sorted(subject_facts.items())
+        for fact in facts
+        if str(fact.get("value") or "").strip()
     )
     facts_by_subject = {
         subject_key: tuple(
-            item for item in fact_observations if _subject_key(item) == subject_key
+            record.observation
+            for record in fact_records
+            if record.subject_key == subject_key
         )
         for subject_key in subject_facts
     }
-    turns_by_conversation: dict[str, tuple[Any, ...]] = {}
-    for conversation_key in {str(item["conversation_key"]) for item in turns}:
-        turns_by_conversation[conversation_key] = tuple(
-            item
-            for item in turn_observations
-            if getattr(item, "conversation_key", None) == conversation_key
+    results_by_conversation = {
+        conversation_key: tuple(
+            record.observation
+            for record in turn_records
+            if record.conversation_key == conversation_key
         )
-    events_by_run = _group_by_run(event_observations)
-    tools_by_run = _group_by_run(tool_observations)
-    observations = {
-        "turns": tuple(turn_observations),
-        "events": tuple(event_observations),
-        "tools": tuple(tool_observations),
-        "facts": fact_observations,
-        "facts_by_subject": facts_by_subject,
-        "turns_by_conversation": turns_by_conversation,
-        "events_by_run": events_by_run,
-        "tools_by_run": tools_by_run,
-        "failures": tuple(failures),
+        for conversation_key in {record.conversation_key for record in turn_records}
     }
-    score = score_observations(case, observations)
+    score = score_observations(
+        case=case,
+        facts_by_subject=facts_by_subject,
+        results_by_conversation=results_by_conversation,
+    )
     return NormalizedCase(
         score=score,
-        turns=tuple(turn_observations),
-        events=tuple(event_observations),
-        tools=tuple(tool_observations),
-        facts=fact_observations,
+        turns=tuple(turn_records),
+        events=tuple(event_records),
+        tools=tuple(tool_records),
+        facts=fact_records,
         infrastructure={
             "failures": failures,
             "terminal_statuses": statuses,
@@ -129,11 +167,22 @@ def normalize_case(
 
 def _normalize_run_events(
     run_id: str, events: tuple[SseEvent, ...] | list[SseEvent], status: str
-) -> tuple[list[Any], list[Any], list[dict[str, Any]]]:
-    normalized: list[Any] = []
-    tools: list[Any] = []
+) -> tuple[
+    list[RecordedEvent],
+    list[RecordedTool],
+    list[EventObservation],
+    list[ToolObservation],
+    list[dict[str, Any]],
+    dict[str, int],
+]:
+    recorded_events: list[RecordedEvent] = []
+    recorded_tools: list[RecordedTool] = []
+    score_events: list[EventObservation] = []
+    score_tools: list[ToolObservation] = []
     failures: list[dict[str, Any]] = []
     event_types: list[str] = []
+    model_events: set[tuple[str, str]] = set()
+    usage: dict[str, int] = {}
     last_sequence = 0
     for event in events:
         payload = dict(event.data.get("payload") or {})
@@ -148,49 +197,90 @@ def _normalize_run_events(
                 {"kind": "event_sequence", "pass": False, "sequence": sequence}
             )
         last_sequence = sequence
-        normalized.append(
-            observation_instance(
-                EventObservation,
-                {
-                    "run_id": run_id,
-                    "sequence": sequence,
-                    "event_type": event_type,
-                    "attempt": event.data.get("attempt"),
-                    "payload": payload,
-                },
+        recorded_events.append(
+            RecordedEvent(
+                run_id=run_id,
+                sequence=sequence,
+                event_type=event_type,
+                attempt=_optional_int(event.data.get("attempt")),
+                payload=payload,
             )
         )
-        if event_type == "tool.result":
-            tools.append(
-                observation_instance(
-                    ToolObservation,
-                    {
-                        "run_id": run_id,
-                        "name": str(
-                            payload.get("name") or payload.get("tool_name") or ""
-                        ),
-                        "succeeded": bool(
-                            payload.get("succeeded", payload.get("ok", False))
-                        ),
-                        "payload": payload,
-                    },
+        canonical_type = _canonical_event_type(event_type, payload)
+        if canonical_type:
+            score_events.append(EventObservation(type=canonical_type))
+        if event_type in {"model.request.started", "model.response.completed"}:
+            role = str(payload.get("role") or "")
+            model_events.add((role, event_type))
+        if event_type == "tool.call.completed":
+            name = str(payload.get("name") or payload.get("tool_name") or "")
+            recorded_tools.append(
+                RecordedTool(
+                    run_id=run_id,
+                    name=name,
+                    succeeded=True,
+                    payload=payload,
                 )
             )
+            score_tools.append(ToolObservation(name=name, succeeded=True))
+        if event_type == "run.completed":
+            usage = _usage(payload.get("usage"))
+
     if status == "succeeded":
         missing = sorted(SUCCESS_REQUIRED_EVENTS - set(event_types))
         if missing:
             failures.append(
                 {"kind": "required_events", "pass": False, "missing": missing}
             )
+        for role in MODEL_ROLES:
+            missing_model_events = [
+                event_type
+                for event_type in ("model.request.started", "model.response.completed")
+                if (role, event_type) not in model_events
+            ]
+            if missing_model_events:
+                failures.append(
+                    {
+                        "kind": "required_model_events",
+                        "pass": False,
+                        "role": role,
+                        "missing": missing_model_events,
+                    }
+                )
         if "run.failed" in event_types or "run.cancelled" in event_types:
             failures.append({"kind": "terminal_event_conflict", "pass": False})
-        if "message.committed" in event_types and "memory.reviewed" not in event_types:
-            failures.append({"kind": "reviewer_atomicity", "pass": False})
     elif not any(item in TERMINAL_EVENT_TYPES for item in event_types):
         failures.append(
             {"kind": "terminal_event_missing", "pass": False, "status": status}
         )
-    return normalized, tools, failures
+    return (
+        recorded_events,
+        recorded_tools,
+        score_events,
+        score_tools,
+        failures,
+        usage,
+    )
+
+
+def _canonical_event_type(event_type: str, payload: dict[str, Any]) -> str:
+    if event_type == "model.request.started":
+        if payload.get("role") == "reviewer":
+            return "memory.review.request"
+        return "model.request"
+    if event_type == "model.response.completed":
+        return "model.response"
+    return event_type
+
+
+def _usage(value: object) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(key): int(item)
+        for key, item in value.items()
+        if isinstance(item, int) and not isinstance(item, bool)
+    }
 
 
 def _assistant_content(state: dict[str, Any]) -> str:
@@ -203,11 +293,25 @@ def _assistant_content(state: dict[str, Any]) -> str:
     return ""
 
 
-def _group_by_run(items: list[Any]) -> dict[str, tuple[Any, ...]]:
-    grouped: dict[str, list[Any]] = defaultdict(list)
-    for item in items:
-        grouped[str(getattr(item, "run_id", ""))].append(item)
-    return {key: tuple(value) for key, value in grouped.items()}
+def _elapsed_seconds(run: dict[str, Any]) -> float:
+    started = _datetime(run.get("started_at"))
+    finished = _datetime(run.get("finished_at"))
+    if started is None or finished is None:
+        return 0.0
+    return max(0.0, (finished - started).total_seconds())
+
+
+def _datetime(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _optional_int(value: object) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
 def _required(payload: dict[str, Any], key: str) -> str:
@@ -215,7 +319,3 @@ def _required(payload: dict[str, Any], key: str) -> str:
     if not value:
         raise ValueError(f"run response is missing {key}")
     return value
-
-
-def _subject_key(value: object) -> str:
-    return str(getattr(value, "subject_key", ""))

@@ -55,7 +55,9 @@ compose.yaml                       # Primary local operator entrypoint
 ```
 
 `packages/model-catalog-contracts/` contains the small, stable catalog and probe
-contracts shared across services. A generic `core` package is not allowed.
+contracts shared across services. `packages/agent-runtime-eval-contracts/` contains
+only runtime-neutral fixtures, observations, scoring, and qualification contracts
+shared by the two agent-runtime evals. A generic `core` package is not allowed.
 
 ## Architecture Invariants
 

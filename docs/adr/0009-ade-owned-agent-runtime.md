@@ -160,6 +160,9 @@ cutover is approved.
 - The study review and implementation approval occurred on 2026-08-29; do not treat
   that approval as production-cutover approval.
 - Record a later cutover ADR if implementation evidence changes material contracts.
+- Apply the production qualification and reviewed-promotion rules in
+  [ADR 0010](0010-production-path-runtime-qualification.md); direct study rounds do
+  not qualify the `/api/v3` implementation.
 
 ## Implementation Status
 

@@ -127,7 +127,9 @@ def _case(value: object) -> StudyCase:
 
     turns = tuple(
         FixtureTurn(
-            conversation_key=_required_string(_object(turn, "turn"), "conversation_key"),
+            conversation_key=_required_string(
+                _object(turn, "turn"), "conversation_key"
+            ),
             user=_required_string(_object(turn, "turn"), "user"),
         )
         for turn in _list(item.get("turns"))
@@ -150,7 +152,9 @@ def _case(value: object) -> StudyCase:
                     _object(fact, "initial_fact"), "subject_key"
                 ),
                 value=_required_string(_object(fact, "initial_fact"), "value"),
-                fact_type=str(_object(fact, "initial_fact").get("fact_type") or "").strip(),
+                fact_type=str(
+                    _object(fact, "initial_fact").get("fact_type") or ""
+                ).strip(),
                 qualifier=(
                     str(_object(fact, "initial_fact")["qualifier"]).strip()
                     if _object(fact, "initial_fact").get("qualifier") is not None

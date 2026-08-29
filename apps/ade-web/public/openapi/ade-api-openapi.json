@@ -5110,6 +5110,17 @@
       "TestRunRequest": {
         "additionalProperties": false,
         "properties": {
+          "conversation_model_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Model Key"
+          },
           "embedding": {
             "anyOf": [
               {
@@ -5121,6 +5132,17 @@
             ],
             "title": "Embedding"
           },
+          "embedding_model_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Embedding Model Key"
+          },
           "fixture_key": {
             "anyOf": [
               {
@@ -5131,6 +5153,17 @@
               }
             ],
             "title": "Fixture Key"
+          },
+          "include_llama_compatibility": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Include Llama Compatibility"
           },
           "judge_enabled": {
             "anyOf": [
@@ -5200,6 +5233,17 @@
             ],
             "title": "Retry Count"
           },
+          "reviewer_model_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Model Key"
+          },
           "rounds": {
             "anyOf": [
               {
@@ -5217,7 +5261,8 @@
             "enum": [
               "ade_api_e2e_check",
               "ade_mvp_smoke_e2e_check",
-              "chat_memory_eval"
+              "chat_memory_eval",
+              "agent_runtime_v3_acceptance"
             ],
             "title": "Run Type",
             "type": "string"

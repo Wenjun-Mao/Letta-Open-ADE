@@ -7,8 +7,10 @@ under `outputs/`, which is intentionally ignored.
 
 Read the conclusions in
 [`docs/architecture/agent-runtime-replacement-study.md`](../../../docs/architecture/agent-runtime-replacement-study.md)
-and the unaccepted proposal in
+and the accepted implementation decision in
 [`docs/adr/0009-ade-owned-agent-runtime.md`](../../../docs/adr/0009-ade-owned-agent-runtime.md).
+Production-path qualification is separate and is governed by
+[`docs/adr/0010-production-path-runtime-qualification.md`](../../../docs/adr/0010-production-path-runtime-qualification.md).
 
 ## What It Measures
 
@@ -56,7 +58,7 @@ not changed.
 agent_runtime_study/
   run.py                         # CLI entrypoint
   config.toml                    # Non-secret defaults
-  contracts.py                   # Shared domain/runtime contracts
+  contracts.py                   # Study-only runtime execution contracts
   fact_registry.py               # Closed fact and entity rules
   memory_review.py               # Dedicated reviewer protocol
   repository.py                  # Transactional deterministic study store
@@ -66,12 +68,14 @@ agent_runtime_study/
   product_material.py            # Study-only prompt compiler
   tools.py                       # Search and weather tools
   runtime.py                     # ADE-owned orchestration
-  deployment_qualification.py    # Fingerprints and role lifecycle
-  deployments.toml               # Exact studied deployments
   adapters/                      # Custom-loop and PydanticAI executors
-  fixtures/                      # Runtime and retrieval cases
   tests/                         # Deterministic contract coverage
 ```
+
+Canonical fixtures, runtime-neutral observations, deterministic scoring, and
+qualification primitives live in the buildable
+`packages/agent-runtime-eval-contracts/` package. Exact deployment metadata has
+one checked-in authority: `config/model-router/deployment-manifest.json`.
 
 ## Setup And Static Study
 
@@ -121,8 +125,8 @@ uv run python workflows/evals/agent_runtime_study/run.py \
 DGX Qwen is the primary conversation and required reviewer deployment.
 `local_llama_server::gemma4` is a route alias for the compatibility deployment, not
 its identity. The exact served artifact, revision/digest, runtime, hardware, context,
-sampling, and policy hashes are declared in `deployments.toml` and copied into each
-run's qualification artifact.
+sampling, and policy hashes are declared in the deployment manifest and copied into
+each run's qualification artifact.
 
 Multilingual retrieval uses a direct OpenAI-compatible Qwen3-Embedding-0.6B sidecar
 on the DGX Spark. The workflow client sets provider retries to zero. Automatic
@@ -136,11 +140,11 @@ A route alias is never treated as a durable model identity. Every deployment is
 qualified independently for one or more roles using its exact fingerprint and four
 policy-bundle hashes. Any fingerprint or policy change makes prior rounds stale.
 
-Release qualification requires three consecutive passing rounds under the same
-fingerprint. Conversation and reviewer rounds advance only when the `custom_loop`
-run covers the complete canonical fixture matrix. Focused `--case` diagnostics are
-retained as evidence but cannot advance or repair qualification history. Retriever
-qualification uses the complete retrieval benchmark in each run.
+This study records historical research evidence only. Release qualification now
+requires three consecutive passing rounds through the real `/api/v3` API, worker,
+and PostgreSQL path. Direct `custom_loop` rounds and focused `--case` diagnostics
+cannot advance or repair production qualification history. Use
+`workflows/evals/agent_runtime_v3_acceptance/` for that gate.
 
 Conversation and reviewer outcomes are scored independently. A valid candidate
 response is not failed merely because memory review is rejected, and a successful

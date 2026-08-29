@@ -21,7 +21,9 @@ from workflows.evals.agent_runtime_study.study_evidence import (
 
 WORKFLOW_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = WORKFLOW_ROOT / "config.toml"
-REGISTRY_PATH = WORKFLOW_ROOT.parents[2] / "config/model-router/deployment-manifest.json"
+REGISTRY_PATH = (
+    WORKFLOW_ROOT.parents[2] / "config/model-router/deployment-manifest.json"
+)
 
 
 class KeywordEmbeddings:

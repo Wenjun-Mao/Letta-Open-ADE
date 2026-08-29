@@ -22,6 +22,11 @@ class ArtifactDiscoveryContext:
 
 CommandBuilder = Callable[[Path, RunOptions], list[str]]
 ArtifactDiscoverer = Callable[[ArtifactDiscoveryContext], list[ArtifactRecord]]
+OptionValidator = Callable[[RunOptions], None]
+
+
+def _accept_any_values(_: RunOptions) -> None:
+    return None
 
 
 @dataclass(frozen=True)
@@ -33,10 +38,12 @@ class TestRunDescriptor:
     unexpected_field_message: str
     command_builder: CommandBuilder
     artifact_discoverer: ArtifactDiscoverer
+    option_validator: OptionValidator = _accept_any_values
 
     def validate_options(self, options: RunOptions) -> None:
         unexpected = sorted(set(options).difference(self.accepted_fields))
         if not unexpected:
+            self.option_validator(options)
             return
 
         raise ValueError(self.unexpected_field_message + ": " + ", ".join(unexpected))
@@ -66,6 +73,18 @@ CHAT_MEMORY_EVAL_FIELDS: Final[frozenset[str]] = frozenset(
     }
 )
 
+AGENT_RUNTIME_V3_ACCEPTANCE_FIELDS: Final[frozenset[str]] = frozenset(
+    {
+        "conversation_model_key",
+        "reviewer_model_key",
+        "embedding_model_key",
+        "rounds",
+        "timeout_seconds",
+        "retry_count",
+        "include_llama_compatibility",
+    }
+)
+
 # These mirror the runner TOML so Test Center can render an active run before
 # the runner has written its effective config into the summary artifact.
 DEFAULT_CHAT_MEMORY_EVALUATION_CONFIG: Final[dict[str, Any]] = {
@@ -78,6 +97,16 @@ DEFAULT_CHAT_MEMORY_EVALUATION_CONFIG: Final[dict[str, Any]] = {
     "timeout_seconds": 180.0,
     "retry_count": 0,
     "judge_enabled": True,
+}
+
+DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_CONFIG: Final[dict[str, Any]] = {
+    "conversation_model_key": "dgx_vllm::qwen3.6-35b-a3b-fp8",
+    "reviewer_model_key": "dgx_vllm::qwen3.6-35b-a3b-fp8",
+    "embedding_model_key": "dgx_embedding_sidecar::qwen3-embedding-0.6b",
+    "rounds": 3,
+    "timeout_seconds": 180.0,
+    "retry_count": 0,
+    "include_llama_compatibility": True,
 }
 
 
@@ -119,6 +148,39 @@ def _build_chat_memory_eval(output_dir: Path, options: RunOptions) -> list[str]:
         command.append("--judge-enabled")
     if options.get("judge_enabled") is False:
         command.append("--no-judge-enabled")
+    return command
+
+
+def _validate_agent_runtime_v3_acceptance(options: RunOptions) -> None:
+    rounds = options.get("rounds")
+    if rounds is not None and (not isinstance(rounds, int) or not 1 <= rounds <= 3):
+        raise ValueError("agent runtime v3 acceptance rounds must be between 1 and 3")
+
+
+def _build_agent_runtime_v3_acceptance(
+    output_dir: Path, options: RunOptions
+) -> list[str]:
+    command = [
+        sys.executable,
+        "workflows/evals/agent_runtime_v3_acceptance/run.py",
+        "--config",
+        "workflows/evals/agent_runtime_v3_acceptance/config.toml",
+        "--output-dir",
+        str(output_dir),
+    ]
+    _append_option(
+        command, "--conversation-model-key", options.get("conversation_model_key")
+    )
+    _append_option(command, "--reviewer-model-key", options.get("reviewer_model_key"))
+    _append_option(command, "--embedding-model-key", options.get("embedding_model_key"))
+    _append_option(command, "--rounds", options.get("rounds"))
+    _append_option(command, "--timeout-seconds", options.get("timeout_seconds"))
+    _append_option(command, "--retry-count", options.get("retry_count"))
+    compatibility = options.get("include_llama_compatibility")
+    if compatibility is True:
+        command.append("--include-llama-compatibility")
+    if compatibility is False:
+        command.append("--no-include-llama-compatibility")
     return command
 
 
@@ -202,6 +264,16 @@ RUN_DESCRIPTORS: Final[dict[str, TestRunDescriptor]] = {
         unexpected_field_message="Unsupported fields for run_type='chat_memory_eval'",
         command_builder=_build_chat_memory_eval,
         artifact_discoverer=discover_run_directory_artifacts,
+    ),
+    "agent_runtime_v3_acceptance": TestRunDescriptor(
+        run_type="agent_runtime_v3_acceptance",
+        accepted_fields=AGENT_RUNTIME_V3_ACCEPTANCE_FIELDS,
+        unexpected_field_message=(
+            "Unsupported fields for run_type='agent_runtime_v3_acceptance'"
+        ),
+        command_builder=_build_agent_runtime_v3_acceptance,
+        artifact_discoverer=discover_run_directory_artifacts,
+        option_validator=_validate_agent_runtime_v3_acceptance,
     ),
 }
 

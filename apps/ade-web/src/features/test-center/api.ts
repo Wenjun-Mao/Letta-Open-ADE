@@ -1,6 +1,10 @@
 import { requestJson, type ApiRequestOptions } from "@/shared/api/client";
 
-export type TestRunType = "ade_api_e2e_check" | "ade_mvp_smoke_e2e_check" | "chat_memory_eval";
+export type TestRunType =
+  | "ade_api_e2e_check"
+  | "ade_mvp_smoke_e2e_check"
+  | "chat_memory_eval"
+  | "agent_runtime_v3_acceptance";
 
 export type TestArtifact = {
   artifact_id: string;
@@ -118,6 +122,10 @@ export type CreateTestRunPayload = {
   retry_count?: number;
   judge_enabled?: boolean;
   judge_model_key?: string;
+  conversation_model_key?: string;
+  reviewer_model_key?: string;
+  embedding_model_key?: string;
+  include_llama_compatibility?: boolean;
 };
 
 export function listTestRuns(options?: ApiRequestOptions) {

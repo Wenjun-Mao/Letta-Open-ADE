@@ -16,6 +16,7 @@ class TestRunRequest(BaseModel):
         "ade_api_e2e_check",
         "ade_mvp_smoke_e2e_check",
         "chat_memory_eval",
+        "agent_runtime_v3_acceptance",
     ]
     model: str | None = None
     prompt_key: str | None = None
@@ -27,6 +28,10 @@ class TestRunRequest(BaseModel):
     retry_count: int | None = Field(default=None, ge=0, le=5)
     judge_enabled: bool | None = None
     judge_model_key: str | None = None
+    conversation_model_key: str | None = None
+    reviewer_model_key: str | None = None
+    embedding_model_key: str | None = None
+    include_llama_compatibility: bool | None = None
 
     @model_validator(mode="after")
     def _validate_run_descriptor_options(self) -> TestRunRequest:

@@ -10,6 +10,23 @@ export type SamplingDefaults = {
   repetition_penalty?: number | null;
 };
 
+export type DeploymentMetadata = {
+  deployment_id: string;
+  roles: Array<"conversation" | "reviewer" | "retriever">;
+  lifecycle: "discovered" | "candidate" | "qualified" | "deprecated";
+  fingerprint: { sha256: string; [key: string]: unknown };
+  qualification: {
+    qualified: boolean;
+    role_results: Array<{
+      role: "conversation" | "reviewer" | "retriever";
+      observed_rounds: number;
+      consecutive_passing_rounds: number;
+      qualified: boolean;
+    }>;
+    [key: string]: unknown;
+  };
+};
+
 export type OptionEntry = {
   key: string;
   label: string;
@@ -31,6 +48,16 @@ export type OptionEntry = {
   profile_source?: string | null;
   agent_studio_candidate?: boolean | null;
   agent_studio_compatible?: boolean | null;
+  deployment?: DeploymentMetadata | null;
+};
+
+export type ModelCatalogEntry = {
+  model_key: string;
+  source_id: string;
+  source_label: string;
+  provider_model_id: string;
+  model_type: string;
+  deployment?: DeploymentMetadata | null;
 };
 
 export type ScenarioOptions = {

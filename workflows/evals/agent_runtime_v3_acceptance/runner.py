@@ -66,6 +66,11 @@ async def execute_case(
         definition_key = _resource_key(
             namespace, str(getattr(case, "key")), f"agent-{agent_key}"
         )
+        definition_keys.append(definition_key)
+        if resource_scope_sink is not None:
+            # Register the deterministic key before the request. A timeout can
+            # leave creation outcome unknown, but cleanup must still cover it.
+            resource_scope_sink.append(ResourceScope((definition_key,), (), {}, ()))
         created = await client.create_definition(
             definition_key=definition_key,
             name=f"v3 acceptance {getattr(case, 'key')} {agent_key}",
@@ -73,13 +78,12 @@ async def execute_case(
             reviewer_model_key=reviewer_model_key,
             embedding_model_key=embedding_model_key,
         )
-        definition_keys.append(definition_key)
         fingerprints.update(_deployment_fingerprints(created))
         deployment_snapshots.extend(_deployment_snapshots(created))
         if resource_scope_sink is not None:
             resource_scope_sink.append(
                 ResourceScope(
-                    (definition_key,),
+                    (),
                     (),
                     _deployment_fingerprints(created),
                     _deployment_snapshots(created),
@@ -90,12 +94,12 @@ async def execute_case(
         external_key = _resource_key(
             namespace, str(getattr(case, "key")), f"subject-{subject_key}"
         )
-        created = await client.create_subject(
-            external_key, f"v3 acceptance {subject_key}"
-        )
         subject_external_keys.append(external_key)
         if resource_scope_sink is not None:
             resource_scope_sink.append(ResourceScope((), (external_key,), {}, ()))
+        created = await client.create_subject(
+            external_key, f"v3 acceptance {subject_key}"
+        )
         subjects[str(subject_key)] = _id(created, "subject")
     for conversation_key, binding in dict(getattr(case, "conversations")).items():
         agent_key, subject_key = binding
@@ -150,13 +154,11 @@ async def execute_case(
             timeout_seconds=timeout_seconds,
             retry_count=retry_count,
         )
-        try:
-            run, events = await client.await_terminal(
-                accepted, timeout_seconds=timeout_seconds * (retry_count + 1) + 30
-            )
-        except RunTimeout:
-            run = await client.cancel_run(str(accepted["run_id"]))
-            events = ()
+        run, events = await _await_terminal_with_cancellation(
+            client,
+            accepted,
+            timeout_seconds=timeout_seconds * (retry_count + 1) + 30,
+        )
         state = await client.get_conversation_state(conversation_id)
         completed_turns.append(
             {
@@ -206,30 +208,39 @@ async def run_primary_rounds(
 ) -> tuple[QualificationRound, ...]:
     results: list[QualificationRound] = []
     for index in range(1, rounds + 1):
-        executions = tuple(
-            await execute_case(
-                client=client,
-                case=case,
-                namespace=_resource_key(namespace, f"round-{index}"),
-                conversation_model_key=conversation_model_key,
-                reviewer_model_key=reviewer_model_key,
-                embedding_model_key=embedding_model_key,
-                timeout_seconds=timeout_seconds,
-                retry_count=retry_count,
-                resource_scope_sink=resource_scope_sink,
-            )
-            for case in cases
-        )
-        fingerprints = _combined_fingerprints(executions)
-        case_keys = tuple(item.case_key for item in executions)
+        executions: list[CaseExecution] = []
+        for case in cases:
+            case_scopes: list[ResourceScope] = []
+            try:
+                execution = await execute_case(
+                    client=client,
+                    case=case,
+                    namespace=_resource_key(namespace, f"round-{index}"),
+                    conversation_model_key=conversation_model_key,
+                    reviewer_model_key=reviewer_model_key,
+                    embedding_model_key=embedding_model_key,
+                    timeout_seconds=timeout_seconds,
+                    retry_count=retry_count,
+                    resource_scope_sink=case_scopes,
+                )
+            except Exception as exc:
+                execution = _failed_case_execution(case, exc, case_scopes)
+            if resource_scope_sink is not None:
+                resource_scope_sink.extend(case_scopes)
+            executions.append(execution)
+        materialized_executions = tuple(executions)
+        fingerprints = _combined_fingerprints(materialized_executions)
+        case_keys = tuple(item.case_key for item in materialized_executions)
         result = QualificationRound(
             index=index,
             kind="primary",
             execution_mode=execution_mode,
             complete_matrix=case_keys == canonical_case_keys,
-            passed=all(bool(item.score.get("pass")) for item in executions),
+            passed=all(
+                bool(item.score.get("pass")) for item in materialized_executions
+            ),
             case_keys=case_keys,
-            cases=executions,
+            cases=materialized_executions,
             deployment_fingerprints=fingerprints,
         )
         results.append(on_round_complete(result) if on_round_complete else result)
@@ -249,29 +260,36 @@ async def run_llama_compatibility_round(
     resource_scope_sink: list[ResourceScope] | None = None,
     on_round_complete: Callable[[QualificationRound], QualificationRound] | None = None,
 ) -> QualificationRound:
-    executions = tuple(
-        await execute_case(
-            client=client,
-            case=case,
-            namespace=_resource_key(namespace, "llama-compatibility"),
-            conversation_model_key=conversation_model_key,
-            reviewer_model_key=reviewer_model_key,
-            embedding_model_key=embedding_model_key,
-            timeout_seconds=timeout_seconds,
-            retry_count=retry_count,
-            resource_scope_sink=resource_scope_sink,
-        )
-        for case in cases
-    )
+    executions: list[CaseExecution] = []
+    for case in cases:
+        case_scopes: list[ResourceScope] = []
+        try:
+            execution = await execute_case(
+                client=client,
+                case=case,
+                namespace=_resource_key(namespace, "llama-compatibility"),
+                conversation_model_key=conversation_model_key,
+                reviewer_model_key=reviewer_model_key,
+                embedding_model_key=embedding_model_key,
+                timeout_seconds=timeout_seconds,
+                retry_count=retry_count,
+                resource_scope_sink=case_scopes,
+            )
+        except Exception as exc:
+            execution = _failed_case_execution(case, exc, case_scopes)
+        if resource_scope_sink is not None:
+            resource_scope_sink.extend(case_scopes)
+        executions.append(execution)
+    materialized_executions = tuple(executions)
     result = QualificationRound(
         index=1,
         kind="llama-compatibility",
         execution_mode="live-api",
         complete_matrix=False,
-        passed=all(bool(item.score.get("pass")) for item in executions),
-        case_keys=tuple(item.case_key for item in executions),
-        cases=executions,
-        deployment_fingerprints=_combined_fingerprints(executions),
+        passed=all(bool(item.score.get("pass")) for item in materialized_executions),
+        case_keys=tuple(item.case_key for item in materialized_executions),
+        cases=materialized_executions,
+        deployment_fingerprints=_combined_fingerprints(materialized_executions),
     )
     return on_round_complete(result) if on_round_complete else result
 
@@ -291,11 +309,48 @@ async def _complete_setup_turn(
         timeout_seconds=timeout_seconds,
         retry_count=retry_count,
     )
-    run, _events = await client.await_terminal(
-        accepted, timeout_seconds=timeout_seconds * (retry_count + 1) + 30
+    run, _events = await _await_terminal_with_cancellation(
+        client,
+        accepted,
+        timeout_seconds=timeout_seconds * (retry_count + 1) + 30,
     )
     if run.get("status") != "succeeded":
         raise RuntimeError("canonical setup turn did not succeed")
+
+
+async def _await_terminal_with_cancellation(
+    client: RuntimeV3Client,
+    accepted: dict[str, Any],
+    *,
+    timeout_seconds: float,
+) -> tuple[dict[str, Any], tuple[Any, ...]]:
+    try:
+        return await client.await_terminal(accepted, timeout_seconds=timeout_seconds)
+    except RunTimeout:
+        return await _cancel_and_await_terminal(client, accepted)
+    except BaseException:
+        try:
+            await _cancel_and_await_terminal(client, accepted)
+        except Exception as cleanup_error:
+            raise RuntimeError(
+                "accepted v3 run could not be cancelled before cleanup"
+            ) from cleanup_error
+        raise
+
+
+async def _cancel_and_await_terminal(
+    client: RuntimeV3Client, accepted: dict[str, Any]
+) -> tuple[dict[str, Any], tuple[Any, ...]]:
+    run_id = str(accepted["run_id"])
+    await client.cancel_run(run_id)
+    try:
+        run, events = await client.await_terminal(accepted, timeout_seconds=30)
+    except RunTimeout as exc:
+        run = await client.get_run(run_id)
+        events = ()
+        if run.get("status") not in {"succeeded", "failed", "cancelled"}:
+            raise RuntimeError(f"cancelled v3 run {run_id} did not terminate") from exc
+    return run, events
 
 
 def _first_conversation_for_subject(case: object, subject_key: str) -> str:
@@ -330,6 +385,56 @@ def _combined_fingerprints(executions: tuple[CaseExecution, ...]) -> dict[str, s
     combined: dict[str, str] = {}
     for execution in executions:
         for role, fingerprint in execution.resources.deployment_fingerprints.items():
+            prior = combined.setdefault(role, fingerprint)
+            if prior != fingerprint:
+                combined[role] = "inconsistent"
+    return combined
+
+
+def _failed_case_execution(
+    case: object, exc: Exception, scopes: list[ResourceScope]
+) -> CaseExecution:
+    resources = ResourceScope(
+        definition_keys=tuple(key for scope in scopes for key in scope.definition_keys),
+        subject_external_keys=tuple(
+            key for scope in scopes for key in scope.subject_external_keys
+        ),
+        deployment_fingerprints=_combined_scope_fingerprints(scopes),
+        deployment_snapshots=tuple(
+            snapshot for scope in scopes for snapshot in scope.deployment_snapshots
+        ),
+    )
+    failure = {
+        "kind": "case_execution_error",
+        "pass": False,
+        "error_type": type(exc).__name__,
+        "message": str(exc),
+    }
+    return CaseExecution(
+        case_key=str(getattr(case, "key")),
+        score={
+            "case_key": str(getattr(case, "key")),
+            "pass": False,
+            "checks": [failure],
+            "failed_checks": [failure],
+        },
+        turns=(),
+        events=(),
+        tools=(),
+        facts=(),
+        infrastructure={
+            "failures": [failure],
+            "terminal_statuses": [],
+            "all_terminal": False,
+        },
+        resources=resources,
+    )
+
+
+def _combined_scope_fingerprints(scopes: list[ResourceScope]) -> dict[str, str]:
+    combined: dict[str, str] = {}
+    for scope in scopes:
+        for role, fingerprint in scope.deployment_fingerprints.items():
             prior = combined.setdefault(role, fingerprint)
             if prior != fingerprint:
                 combined[role] = "inconsistent"
