@@ -1,0 +1,11 @@
+# Secrets and database access stay in AGENT_RUNTIME_V3_ACCEPTANCE_* environment variables.
+api_base_url = "http://127.0.0.1:8000"
+output_dir = "workflows/evals/agent_runtime_v3_acceptance/outputs"
+conversation_model_key = "dgx_vllm::qwen3.6-35b-a3b-fp8"
+reviewer_model_key = "dgx_vllm::qwen3.6-35b-a3b-fp8"
+embedding_model_key = "dgx_embedding_sidecar::qwen3-embedding-0.6b"
+llama_compatibility_model_key = "local_llama_server::gemma4"
+rounds = 3
+timeout_seconds = 180
+retry_count = 0
+include_llama_compatibility = true
