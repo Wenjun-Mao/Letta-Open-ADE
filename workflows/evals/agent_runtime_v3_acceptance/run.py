@@ -220,7 +220,6 @@ async def _close_client_and_cleanup(
         cleaner = ScopedPostgresCleanup(
             database_url=config.database_url,
             output_dir=config.output_dir,
-            cleanup_owner=config.cleanup_owner,
         )
         cleaner.cleanup(
             CleanupScope(

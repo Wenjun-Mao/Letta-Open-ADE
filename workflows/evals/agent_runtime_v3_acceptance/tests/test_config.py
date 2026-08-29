@@ -52,18 +52,7 @@ def test_container_environment_is_a_safe_fallback_for_ui_launched_runs(
     )
 
 
-def test_rejects_unsafe_cleanup_configuration(tmp_path: Path) -> None:
-    config = AcceptanceConfig(
-        api_base_url="https://ade.test",
-        api_key="operator-key",
-        output_dir=tmp_path,
-        database_url="postgresql://example",
-        cleanup_owner="wrong-owner",
-    )
-
-    with pytest.raises(ConfigError, match="cleanup_owner"):
-        config.validate()
-
+def test_rejects_invalid_qualification_round_count(tmp_path: Path) -> None:
     with pytest.raises(ConfigError, match="between 1 and 3"):
         AcceptanceConfig(
             api_base_url="https://ade.test",

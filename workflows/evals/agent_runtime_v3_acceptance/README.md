@@ -48,6 +48,11 @@ tool outcomes, and final facts beside its content-addressed summary. Provenance
 binds the image source revision, clean-build state, shared contract version,
 production policy hashes, exact role deployments, and effective config.
 
+A failed primary round is completed and written in full, then later primary
+rounds are skipped because three consecutive passes are no longer possible in
+that run. The requested llama compatibility round remains diagnostic and still
+runs.
+
 Test Center cancellation sends `SIGTERM`; the CLI converts that signal into a
 controlled unwind, requests cancellation for any accepted v3 run, waits for its
 terminal state, and then executes the same scoped PostgreSQL cleanup transaction.

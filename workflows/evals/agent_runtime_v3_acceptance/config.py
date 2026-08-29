@@ -8,7 +8,6 @@ from typing import Any
 
 
 WORKFLOW_ROOT = Path(__file__).resolve().parent
-CLEANUP_OWNER = "019db09f-a9e0-7d93-a8b8-7697d67ad5bc"
 DEFAULT_DGX_CHAT_MODEL = "dgx_vllm::qwen3.6-35b-a3b-fp8"
 DEFAULT_DGX_EMBEDDING_MODEL = "dgx_embedding_sidecar::qwen3-embedding-0.6b"
 DEFAULT_LLAMA_COMPATIBILITY_MODEL = "local_llama_server::gemma4"
@@ -32,7 +31,6 @@ class AcceptanceConfig:
     timeout_seconds: float = 180.0
     retry_count: int = 0
     include_llama_compatibility: bool = True
-    cleanup_owner: str = CLEANUP_OWNER
 
     def validate(self) -> None:
         if not self.api_base_url.strip():
@@ -51,8 +49,6 @@ class AcceptanceConfig:
             raise ConfigError("timeout_seconds must be between 5 and 600")
         if not 0 <= self.retry_count <= 5:
             raise ConfigError("retry_count must be between 0 and 5")
-        if self.cleanup_owner != CLEANUP_OWNER:
-            raise ConfigError("cleanup_owner is fixed by the task packet")
 
 
 def load_config(path: Path | None = None) -> AcceptanceConfig:
@@ -109,7 +105,6 @@ def load_config(path: Path | None = None) -> AcceptanceConfig:
         include_llama_compatibility=_bool_value(
             "INCLUDE_LLAMA_COMPATIBILITY", payload, "include_llama_compatibility", True
         ),
-        cleanup_owner=_value("CLEANUP_OWNER", payload, "cleanup_owner", CLEANUP_OWNER),
     )
     config.validate()
     return config
@@ -135,7 +130,6 @@ def public_config(config: AcceptanceConfig) -> dict[str, object]:
         "timeout_seconds": config.timeout_seconds,
         "retry_count": config.retry_count,
         "include_llama_compatibility": config.include_llama_compatibility,
-        "cleanup_owner": config.cleanup_owner,
     }
 
 

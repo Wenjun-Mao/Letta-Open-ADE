@@ -294,7 +294,7 @@ def test_uncertain_create_response_is_registered_for_scoped_cleanup() -> None:
     asyncio.run(scenario())
 
 
-def test_infrastructure_failure_is_recorded_without_aborting_the_matrix() -> None:
+def test_infrastructure_failure_finishes_the_matrix_then_stops_later_rounds() -> None:
     class _UnavailableClient(_FakeClient):
         async def create_definition(self, **_payload: Any) -> dict[str, Any]:
             raise ConnectionError("router unavailable")
@@ -306,7 +306,7 @@ def test_infrastructure_failure_is_recorded_without_aborting_the_matrix() -> Non
             cases=(_case("case-a"), _case("case-b")),
             canonical_case_keys=("case-a", "case-b"),
             namespace="acceptance-matrix",
-            rounds=1,
+            rounds=3,
             conversation_model_key="chat",
             reviewer_model_key="reviewer",
             embedding_model_key="embedding",
@@ -314,6 +314,7 @@ def test_infrastructure_failure_is_recorded_without_aborting_the_matrix() -> Non
             retry_count=0,
             resource_scope_sink=scopes,
         )
+        assert len(rounds) == 1
         assert rounds[0].complete_matrix is True
         assert rounds[0].passed is False
         assert [item.case_key for item in rounds[0].cases] == ["case-a", "case-b"]

@@ -244,6 +244,10 @@ async def run_primary_rounds(
             deployment_fingerprints=fingerprints,
         )
         results.append(on_round_complete(result) if on_round_complete else result)
+        if not result.passed:
+            # With a fixed three-round qualification window, any failed complete
+            # round makes a promotion proposal impossible for this run.
+            break
     return tuple(results)
 
 

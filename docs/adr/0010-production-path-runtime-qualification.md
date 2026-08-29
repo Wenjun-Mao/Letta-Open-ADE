@@ -30,6 +30,9 @@ policy that produced a result.
 - One release candidate requires three consecutive passing complete rounds for one
   conversation/reviewer/retriever set. A failed round resets that role's consecutive
   sequence.
+- The runner preserves the entire first failed canonical round, then skips later
+  primary rounds because that run can no longer establish three consecutive
+  passes. Requested compatibility diagnostics may still continue.
 - Focused cases, fake transports, unavailable roles, and compatibility-only runs
   never advance qualification.
 - llama-server remains compatibility evidence and does not block a separately

@@ -52,7 +52,6 @@ def test_client_close_failure_cannot_skip_scoped_cleanup(
     config = SimpleNamespace(
         database_url="postgresql://example",
         output_dir=tmp_path,
-        cleanup_owner="test-owner",
     )
     scopes = [
         ResourceScope(

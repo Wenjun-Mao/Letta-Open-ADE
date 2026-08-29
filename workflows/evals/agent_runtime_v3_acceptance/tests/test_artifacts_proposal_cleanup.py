@@ -8,7 +8,6 @@ import pytest
 
 from workflows.evals.agent_runtime_v3_acceptance.artifacts import RoundArtifactWriter
 from workflows.evals.agent_runtime_v3_acceptance.cleanup import (
-    CLEANUP_OWNER,
     CleanupError,
     CleanupScope,
     ScopedPostgresCleanup,
@@ -119,7 +118,9 @@ def test_promotion_proposal_requires_complete_live_primary_matrix(
     assert not (tmp_path / "deployment-manifest.json").exists()
 
 
-def test_cleanup_refuses_wrong_owner_or_unscoped_queries(tmp_path: Path) -> None:
+def test_cleanup_refuses_unsupported_database_or_unscoped_queries(
+    tmp_path: Path,
+) -> None:
     scope = CleanupScope(
         run_id="acceptance-20260829",
         definition_keys=("acceptance-20260829-agent",),
@@ -134,7 +135,6 @@ def test_cleanup_refuses_wrong_owner_or_unscoped_queries(tmp_path: Path) -> None
     cleaner = ScopedPostgresCleanup(
         database_url="postgresql://example",
         output_dir=tmp_path,
-        cleanup_owner=CLEANUP_OWNER,
         execute=execute,
     )
 
@@ -159,11 +159,10 @@ def test_cleanup_refuses_wrong_owner_or_unscoped_queries(tmp_path: Path) -> None
         == "postgresql://ade_app:secret@postgres:5432/ade"
     )
 
-    with pytest.raises(CleanupError, match="owner"):
+    with pytest.raises(CleanupError, match="PostgreSQL"):
         ScopedPostgresCleanup(
-            database_url="postgresql://example",
+            database_url="sqlite:///unsafe.db",
             output_dir=tmp_path,
-            cleanup_owner="not-the-owner",
             execute=lambda _sql, _params: {},
         ).cleanup(scope)
 

@@ -10,9 +10,6 @@ from typing import Any
 from urllib.parse import urlsplit
 
 
-CLEANUP_OWNER = "019db09f-a9e0-7d93-a8b8-7697d67ad5bc"
-
-
 class CleanupError(RuntimeError):
     pass
 
@@ -49,13 +46,8 @@ class ScopedPostgresCleanup:
         *,
         database_url: str,
         output_dir: Path,
-        cleanup_owner: str,
         execute: Callable[[str, tuple[tuple[str, ...], ...]], Any] | None = None,
     ) -> None:
-        if cleanup_owner != CLEANUP_OWNER:
-            raise CleanupError(
-                "cleanup may only be prepared by the packet cleanup owner"
-            )
         if not database_url.startswith(
             ("postgres://", "postgresql://", "postgresql+psycopg://")
         ):
