@@ -11,6 +11,7 @@ from workflows.evals.agent_runtime_v3_acceptance.cleanup import (
     CleanupError,
     CleanupScope,
     ScopedPostgresCleanup,
+    _psycopg_params,
     _psycopg_url,
 )
 from workflows.evals.agent_runtime_v3_acceptance.proposal import (
@@ -158,6 +159,7 @@ def test_cleanup_refuses_unsupported_database_or_unscoped_queries(
         _psycopg_url("postgresql+psycopg://ade_app:secret@postgres:5432/ade")
         == "postgresql://ade_app:secret@postgres:5432/ade"
     )
+    assert _psycopg_params((("a", "b"), ("c",))) == (["a", "b"], ["c"])
 
     with pytest.raises(CleanupError, match="PostgreSQL"):
         ScopedPostgresCleanup(

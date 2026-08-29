@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+import signal
 from pathlib import Path
 
 import pytest
@@ -105,8 +107,31 @@ def test_cli_cancellation_unwinds_through_cleanup(
     )
 
     async def cancelled(_config: AcceptanceConfig) -> dict[str, object]:
-        raise KeyboardInterrupt
+        signal.raise_signal(signal.SIGTERM)
+        await asyncio.sleep(0)
+        raise AssertionError("SIGTERM did not cancel the acceptance task")
 
     monkeypatch.setattr(run_module, "run_acceptance", cancelled)
 
     assert run_module.main(["--config", str(tmp_path / "missing.toml")]) == 130
+
+
+def test_cli_does_not_mask_cleanup_failure_as_successful_cancellation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("AGENT_RUNTIME_V3_ACCEPTANCE_API_KEY", "operator-key")
+    monkeypatch.setenv(
+        "AGENT_RUNTIME_V3_ACCEPTANCE_DATABASE_URL", "postgresql://example"
+    )
+
+    async def cleanup_fails(_config: AcceptanceConfig) -> dict[str, object]:
+        try:
+            signal.raise_signal(signal.SIGTERM)
+            await asyncio.sleep(0)
+        finally:
+            raise RuntimeError("cleanup failed")
+
+    monkeypatch.setattr(run_module, "run_acceptance", cleanup_fails)
+
+    with pytest.raises(RuntimeError, match="cleanup failed"):
+        run_module.main(["--config", str(tmp_path / "missing.toml")])

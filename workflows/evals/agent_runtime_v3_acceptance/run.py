@@ -46,6 +46,10 @@ from workflows.evals.agent_runtime_v3_acceptance.runner import (  # noqa: E402
 )
 
 
+class AcceptanceCancelled(RuntimeError):
+    pass
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run the ADE v3 black-box acceptance matrix."
@@ -184,22 +188,44 @@ def main(argv: list[str] | None = None) -> int:
         retry_count=args.retry_count,
         include_llama_compatibility=args.include_llama_compatibility,
     )
-    previous_sigterm = signal.signal(signal.SIGTERM, _interrupt_for_cleanup)
     try:
-        result = asyncio.run(run_acceptance(config))
-    except KeyboardInterrupt:
+        result = asyncio.run(_run_interruptible(config))
+    except AcceptanceCancelled:
         print("Acceptance run cancelled after scoped cleanup.", file=sys.stderr)
         return 130
-    finally:
-        signal.signal(signal.SIGTERM, previous_sigterm)
+    except KeyboardInterrupt:
+        print("Acceptance run cancelled before startup completed.", file=sys.stderr)
+        return 130
     print(result)
     return 0 if result["eligible"] else 1
 
 
-def _interrupt_for_cleanup(_signum: int, _frame: object) -> None:
-    # Test Center sends SIGTERM. Raising through the async stack preserves the
-    # workflow's fail-closed cleanup instead of abandoning generated rows.
-    raise KeyboardInterrupt
+async def _run_interruptible(config: AcceptanceConfig) -> dict[str, Any]:
+    loop = asyncio.get_running_loop()
+    task = asyncio.current_task()
+    if task is None:
+        raise RuntimeError("acceptance runner has no active asyncio task")
+    cancellation_requested = False
+    previous_handlers: dict[signal.Signals, Any] = {}
+
+    def request_cancellation(_signum: int, _frame: object) -> None:
+        nonlocal cancellation_requested
+        if cancellation_requested:
+            return
+        cancellation_requested = True
+        loop.call_soon_threadsafe(task.cancel)
+
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        previous_handlers[signum] = signal.signal(signum, request_cancellation)
+    try:
+        return await run_acceptance(config)
+    except asyncio.CancelledError as exc:
+        if cancellation_requested:
+            raise AcceptanceCancelled from exc
+        raise
+    finally:
+        for signum, handler in previous_handlers.items():
+            signal.signal(signum, handler)
 
 
 async def _close_client_and_cleanup(

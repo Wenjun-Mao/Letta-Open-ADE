@@ -111,7 +111,7 @@ class ScopedPostgresCleanup:
             with connection.cursor() as cursor:
                 results = []
                 for statement, params in statements:
-                    cursor.execute(statement, params)
+                    cursor.execute(statement, _psycopg_params(params))
                     results.append({"rowcount": cursor.rowcount})
                 return results
 
@@ -308,6 +308,13 @@ def _redacted_database_target(database_url: str) -> str:
 
 def _psycopg_url(database_url: str) -> str:
     return database_url.replace("postgresql+psycopg://", "postgresql://", 1)
+
+
+def _psycopg_params(
+    params: tuple[tuple[str, ...], ...],
+) -> tuple[list[str], ...]:
+    # Psycopg maps lists to PostgreSQL arrays; tuples are composite records.
+    return tuple(list(values) for values in params)
 
 
 def _write_manifest(path: Path, payload: dict[str, Any]) -> None:
