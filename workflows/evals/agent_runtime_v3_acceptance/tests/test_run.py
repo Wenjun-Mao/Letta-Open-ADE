@@ -6,7 +6,11 @@ from types import SimpleNamespace
 import pytest
 
 from workflows.evals.agent_runtime_v3_acceptance import run as run_module
-from workflows.evals.agent_runtime_v3_acceptance.runner import ResourceScope
+from workflows.evals.agent_runtime_v3_acceptance.cleanup import CleanupScope
+from workflows.evals.agent_runtime_v3_acceptance.runner import (
+    ResourceScope,
+    _resource_key,
+)
 
 
 _new_run_id = run_module._new_run_id
@@ -20,7 +24,7 @@ def test_run_id_uses_portable_utc_timestamp() -> None:
         random_suffix="deadbeef",
     )
 
-    assert run_id == "agent-runtime-v3-20260829T222217Z-deadbeef"
+    assert run_id == "agent-runtime-v3-20260829t222217z-deadbeef"
     assert len(run_id) == 42
 
 
@@ -28,8 +32,32 @@ def test_run_id_defaults_to_an_eight_character_suffix() -> None:
     run_id = _new_run_id(now=datetime(2026, 8, 29, tzinfo=UTC))
 
     timestamp, suffix = run_id.rsplit("-", 1)
-    assert timestamp == "agent-runtime-v3-20260829T000000Z"
+    assert timestamp == "agent-runtime-v3-20260829t000000z"
     assert len(suffix) == 8
+
+
+def test_generated_resource_keys_are_bound_to_cleanup_run_id() -> None:
+    run_id = _new_run_id(
+        now=datetime(2026, 8, 29, tzinfo=UTC), random_suffix="ABCDEF12"
+    )
+    round_namespace = _resource_key(run_id, "round-1")
+    definition_key = _resource_key(
+        round_namespace, "chat_memory_baseline", "agent-primary"
+    )
+    subject_key = _resource_key(
+        round_namespace, "chat_memory_baseline", "subject-primary"
+    )
+
+    scope = CleanupScope(
+        run_id=run_id,
+        definition_keys=(definition_key,),
+        subject_external_keys=(subject_key,),
+    )
+
+    scope.validate()
+    assert run_id == "agent-runtime-v3-20260829t000000z-abcdef12"
+    assert definition_key.startswith(run_id)
+    assert subject_key.startswith(run_id)
 
 
 def test_client_close_failure_cannot_skip_scoped_cleanup(

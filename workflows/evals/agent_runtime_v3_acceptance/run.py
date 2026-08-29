@@ -74,8 +74,8 @@ def _new_run_id(
     *, now: datetime | None = None, random_suffix: str | None = None
 ) -> str:
     timestamp = (now or datetime.now(UTC)).astimezone(UTC)
-    suffix = random_suffix or uuid4().hex[:8]
-    return f"agent-runtime-v3-{timestamp.strftime('%Y%m%dT%H%M%SZ')}-{suffix}"
+    suffix = (random_suffix or uuid4().hex[:8]).lower()
+    return f"agent-runtime-v3-{timestamp.strftime('%Y%m%dt%H%M%Sz')}-{suffix}"
 
 
 async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
