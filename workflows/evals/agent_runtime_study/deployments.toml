@@ -1,0 +1,105 @@
+schema_version = 1
+
+# Router aliases are selectors only. The nested fingerprint is the identity that
+# qualification evidence binds to; unknown integrity fields keep this registry
+# in discovered state until an operator captures them.
+
+[[deployment]]
+id = "dgx-qwen3_6-chat"
+route_aliases = ["dgx_vllm::qwen3.6-35b-a3b-fp8"]
+roles = ["conversation", "reviewer"]
+lifecycle = "discovered"
+
+[deployment.fingerprint]
+provider = "dgx_vllm"
+endpoint_role = "openai-compatible-chat"
+endpoint_identity = "dgx-spark-vllm-chat:8000"
+served_model = "qwen3.6-35b-a3b-fp8"
+artifact_reference = "Qwen/Qwen3.6-35B-A3B-FP8"
+runtime_implementation = "vLLM"
+prompt_policy_sha256 = "9554034d8feba7f58aa6abfc6c24446b1a40e1d1c235c427812ed7fec7b690a8"
+tool_policy_sha256 = "4392b333b09b5570df76c0c466380af78cad65f903be8486cec7c3eaf5724fa8"
+schema_policy_sha256 = "d43ccdbfa766da1eb787811db239355c15f895efd1bcf5f1eaaba6082707f162"
+retrieval_policy_sha256 = "5ed3d8a26519dd624ef3e096cce74c2a430772d17aac52416cb26e5fc0daa08e"
+
+[deployment.fingerprint.sampling_settings]
+temperature = 1.0
+top_p = 0.95
+top_k = 20
+min_p = 0.0
+presence_penalty = 1.5
+repetition_penalty = 1.0
+thinking_enabled = true
+
+[deployment.fingerprint.context_settings]
+total_tokens = 16384
+response_reserve_tokens = 4096
+max_output_tokens = 4096
+max_model_requests = 6
+
+[deployment.fingerprint.hardware_metadata]
+host_class = "NVIDIA DGX Spark"
+accelerator = "NVIDIA GB10"
+runtime_host = "dgx-spark"
+
+[[deployment]]
+id = "dgx-qwen3-embedding-0_6b"
+route_aliases = ["dgx_embedding_sidecar::qwen3-embedding-0.6b"]
+roles = ["retriever"]
+lifecycle = "discovered"
+
+[deployment.fingerprint]
+provider = "dgx_embedding_sidecar"
+endpoint_role = "openai-compatible-embeddings"
+endpoint_identity = "dgx-spark-embedding-sidecar:8001"
+served_model = "Qwen/Qwen3-Embedding-0.6B"
+artifact_reference = "Qwen/Qwen3-Embedding-0.6B"
+runtime_implementation = "DGX OpenAI-compatible embeddings sidecar"
+prompt_policy_sha256 = "9554034d8feba7f58aa6abfc6c24446b1a40e1d1c235c427812ed7fec7b690a8"
+tool_policy_sha256 = "4392b333b09b5570df76c0c466380af78cad65f903be8486cec7c3eaf5724fa8"
+schema_policy_sha256 = "d43ccdbfa766da1eb787811db239355c15f895efd1bcf5f1eaaba6082707f162"
+retrieval_policy_sha256 = "5ed3d8a26519dd624ef3e096cce74c2a430772d17aac52416cb26e5fc0daa08e"
+
+[deployment.fingerprint.sampling_settings]
+dimensions = 1024
+query_instruction_enabled = true
+hidden_retries = 0
+
+[deployment.fingerprint.context_settings]
+endpoint_port = 8001
+request_timeout_seconds = 15
+
+[deployment.fingerprint.hardware_metadata]
+host_class = "NVIDIA DGX Spark"
+runtime_host = "dgx-spark"
+
+[[deployment]]
+id = "llama-server-qwen3_5-27b"
+route_aliases = ["local_llama_server::gemma4"]
+roles = ["conversation", "reviewer"]
+lifecycle = "discovered"
+
+[deployment.fingerprint]
+provider = "local_llama_server"
+endpoint_role = "openai-compatible-chat"
+endpoint_identity = "remote-llama-server:8081"
+served_model = "Qwen3.5-27B-UD-Q4_K_XL.gguf"
+artifact_reference = "Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
+runtime_implementation = "llama-server"
+prompt_policy_sha256 = "9554034d8feba7f58aa6abfc6c24446b1a40e1d1c235c427812ed7fec7b690a8"
+tool_policy_sha256 = "4392b333b09b5570df76c0c466380af78cad65f903be8486cec7c3eaf5724fa8"
+schema_policy_sha256 = "d43ccdbfa766da1eb787811db239355c15f895efd1bcf5f1eaaba6082707f162"
+retrieval_policy_sha256 = "5ed3d8a26519dd624ef3e096cce74c2a430772d17aac52416cb26e5fc0daa08e"
+
+[deployment.fingerprint.sampling_settings]
+thinking_enabled = false
+parallel_requests = 4
+flash_attention = true
+
+[deployment.fingerprint.context_settings]
+context_tokens = 32768
+context_shift_enabled = false
+
+[deployment.fingerprint.hardware_metadata]
+runtime_host = "remote-llama-server"
+gpu_layers = "all"
