@@ -1,7 +1,7 @@
 # ADR 0009: ADE Owns The Conversational Agent Runtime
 
 - Status: Proposed; not accepted or implemented
-- Date: 2026-08-27
+- Date: 2026-08-29
 - Study: [ADE-Native Agent Runtime Replacement Study](../architecture/agent-runtime-replacement-study.md)
 
 ## Context
@@ -35,6 +35,11 @@ ADE will eventually own a fresh conversational agent runtime with these boundari
 - ADE resolves memory keys through a versioned fact-type registry with value shape,
   cardinality, aliases, and entity-binding rules; models cannot invent persisted
   key namespaces.
+- A required memory reviewer runs after conversation generation. It receives only
+  subject-bound active facts/entities and user-authored evidence, never assistant
+  prose or a model-selectable subject ID. There is no fallback reviewer.
+- Assistant output and validated memory revisions commit atomically. Reviewer,
+  evidence, or optimistic-version failure commits neither output nor memory.
 - Raw messages are immutable. Summaries and optional episodes are versioned
   derivatives and never replace their source history.
 - Context construction, memory policy, retries/timeouts, tools, and normalized events
@@ -43,26 +48,38 @@ ADE will eventually own a fresh conversational agent runtime with these boundari
 - Initial tools are curated ADE handlers. Arbitrary Tool Center code execution,
   approvals, and a replacement sandbox are not part of the core runtime.
 - Redis is not retained without a separately demonstrated requirement.
-- pgvector and episode persistence remain gated by held-out semantic-retrieval
-  evidence. The current lexical prototype fails a Chinese query for an English fact
-  on both local models, so some measured multilingual semantic capability is a
-  cutover requirement even if pgvector is not the eventual implementation.
+- Multilingual fact retrieval uses versioned embeddings and PostgreSQL `pgvector`.
+  Qwen3-Embedding-0.6B passed the held-out recall, cross-lingual, hard-negative,
+  isolation, and latency gates. Persisted memory episodes are deferred because
+  semantic fact retrieval passes without them; they require separate evidence.
 - The eventual API is a clean breaking `/api/v3`; no Letta agent importer or v2
   compatibility layer is required for the fresh-start cutover.
 
 The minimal custom OpenAI-compatible executor is the current provisional choice. It
 is the only adapter that passes the deterministic mandatory contracts with one ADE
-retry owner. Live DGX exercises pass the restored fact-capture assertions only with
-an explicit reasoning-only repair step and also reveal duplicate free-form memory
-keys. The llama-server compatibility run omits the user's name. The executor is not
-approved for production until ADE-owned fact typing, multilingual old-memory
-retrieval, both local-model gates, and the complete acceptance suite pass.
+retry owner. The study now has ADE-owned fact typing and passing multilingual
+retrieval. Under the final policy fingerprint, the complete DGX matrix passed
+`12/12`; the llama-server compatibility matrix passed `11/12` and failed because its
+conversation model claimed a weather-tool failure without issuing the required tool
+call. Independent role scoring correctly left that failure with llama conversation
+while the DGX reviewer passed. No deployment is release-ready: DGX reviewer and
+retriever have two consecutive passing rounds, DGX conversation has one, and llama
+conversation has zero.
+
+Model route names are not qualification identities. Conversation, reviewer, and
+retriever deployments must be tracked by exact artifact revision or digest, runtime,
+hardware, context/sampling settings, and prompt/tool/schema/retrieval policy hashes.
+Every changed fingerprint starts a fresh lifecycle and requires three consecutive
+passing complete rounds. Focused diagnostics never count as qualification rounds.
 
 ## Required Runtime Semantics
 
 - A database-backed conversation lease serializes accepted turns across workers.
 - Shared-subject writes serialize transactionally and use optimistic fact versions.
 - State changes, terminal run state/events, and outbox records commit atomically.
+- Conversation generation cannot propose memory writes. The required reviewer runs
+  after generation, uses a closed discriminated schema, and fails the turn atomically
+  if it cannot produce a valid review. Corrections are not treated as forgetting.
 - An idempotency key is bound to a canonical request hash; different payload reuse is
   `409 Conflict`.
 - SDK/framework/Router retries are zero. `retry_count` means additional ADE attempts.
@@ -122,8 +139,11 @@ normalization, and security of curated handlers.
 
 Agent Studio's API and UI will change materially from agents/blocks to definitions,
 subjects, conversations, memories, runs, and events. Tool Center and Model Catalog
-will lose Letta-backed capabilities unless deliberately replaced. Letta and Redis
-remain in production until v3 passes all gates and a fresh-start cutover is approved.
+will lose Letta-backed capabilities unless deliberately replaced. Operating v3 also
+adds an embedding deployment and qualification registry, but aliases may change
+without invalidating durable identity only when the exact fingerprint is unchanged.
+Letta and Redis remain in production until v3 passes all gates and a fresh-start
+cutover is approved.
 
 ## Guardrails
 
@@ -132,6 +152,10 @@ remain in production until v3 passes all gates and a fresh-start cutover is appr
 - Do not add a legacy Letta importer, dual-write path, or compatibility aliases.
 - Do not expose subject selection in model-controlled tool arguments.
 - Do not enable hidden framework/SDK retries.
+- Do not release an unqualified deployment through an alias or reviewer fallback.
+- Do not count focused diagnostic fixtures as qualification rounds.
+- Do not normalize invalid `forget` plus `add` proposals into a correction; require
+  the reviewer to satisfy the typed operation contract.
 - Preserve the study harness and generated-artifact format for later comparison.
 - Update this ADR to Accepted only after the user reviews the study and explicitly
   approves implementation.

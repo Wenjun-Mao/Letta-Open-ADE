@@ -13,8 +13,10 @@ class FixtureError(ValueError):
 @dataclass(frozen=True)
 class InitialFact:
     subject_key: str
-    key: str
     value: str
+    fact_type: str = ""
+    qualifier: str | None = None
+    key: str = ""
 
 
 @dataclass(frozen=True)
@@ -135,8 +137,16 @@ def _case(value: object) -> StudyCase:
                 subject_key=_required_string(
                     _object(fact, "initial_fact"), "subject_key"
                 ),
-                key=_required_string(_object(fact, "initial_fact"), "key"),
                 value=_required_string(_object(fact, "initial_fact"), "value"),
+                fact_type=str(
+                    _object(fact, "initial_fact").get("fact_type") or ""
+                ).strip(),
+                qualifier=(
+                    str(_object(fact, "initial_fact")["qualifier"]).strip()
+                    if _object(fact, "initial_fact").get("qualifier") is not None
+                    else None
+                ),
+                key=str(_object(fact, "initial_fact").get("key") or "").strip(),
             )
             for fact in _list(item.get("initial_facts"))
         ),

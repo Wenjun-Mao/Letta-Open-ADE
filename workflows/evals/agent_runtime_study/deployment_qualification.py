@@ -21,6 +21,45 @@ from typing import Iterable, Mapping, TypeAlias
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _FROZEN_VALUE_TYPES = (str, int, float, bool)
 
+POLICY_BUNDLES: Mapping[str, tuple[str, ...]] = {
+    "prompt_policy_sha256": (
+        "../../../content/personas/personas.jsonl",
+        "../../../content/prompts/system/chat/chat_v20260516.py",
+        "context.py",
+        "memory_review.py",
+        "product_material.py",
+        "world.py",
+    ),
+    "tool_policy_sha256": ("tools.py",),
+    "schema_policy_sha256": (
+        "adapters/base.py",
+        "adapters/custom_loop.py",
+        "adapters/pydantic_ai_adapter.py",
+        "adapters/transport.py",
+        "config.py",
+        "contract_benchmarks.py",
+        "contracts.py",
+        "decision.py",
+        "deployment_qualification.py",
+        "fact_registry.py",
+        "fixtures.py",
+        "fixtures/study_cases.json",
+        "memory.py",
+        "repository.py",
+        "runtime.py",
+        "scoring.py",
+        "scripted.py",
+        "study.py",
+        "study_evidence.py",
+    ),
+    "retrieval_policy_sha256": (
+        "config.toml",
+        "semantic_retrieval.py",
+        "fixtures/semantic_retrieval_cases.json",
+        "retrieval_benchmark.py",
+    ),
+}
+
 
 class DeploymentLifecycle(StrEnum):
     DISCOVERED = "discovered"
@@ -47,6 +86,52 @@ class DeploymentQualificationError(ValueError):
 
 FrozenValue: TypeAlias = str | int | float | bool | None | tuple["FrozenValue", ...]
 FrozenMetadata: TypeAlias = tuple[tuple[str, FrozenValue], ...]
+
+
+def policy_bundle_hash(workflow_root: Path, relative_paths: Iterable[str]) -> str:
+    """Hash path-bound policy inputs so renamed files cannot preserve a digest."""
+
+    digest = hashlib.sha256()
+    for relative_path in sorted(relative_paths):
+        normalized = Path(relative_path).as_posix()
+        path = workflow_root / normalized
+        if not path.is_file():
+            raise DeploymentQualificationError(
+                f"policy input does not exist: {normalized}"
+            )
+        encoded_path = normalized.encode("utf-8")
+        content = path.read_bytes()
+        digest.update(len(encoded_path).to_bytes(8, "big"))
+        digest.update(encoded_path)
+        digest.update(len(content).to_bytes(8, "big"))
+        digest.update(content)
+    return f"sha256:{digest.hexdigest()}"
+
+
+def current_policy_hashes(workflow_root: Path) -> dict[str, str]:
+    return {
+        field_name: policy_bundle_hash(workflow_root, relative_paths)
+        for field_name, relative_paths in POLICY_BUNDLES.items()
+    }
+
+
+def validate_policy_hashes(
+    deployments: Iterable["Deployment"], workflow_root: Path
+) -> None:
+    expected = current_policy_hashes(workflow_root)
+    mismatches: list[str] = []
+    for deployment in deployments:
+        for field_name, expected_digest in expected.items():
+            configured = getattr(deployment.fingerprint, field_name)
+            if configured != expected_digest:
+                mismatches.append(
+                    f"{deployment.deployment_id}.{field_name}: "
+                    f"configured={configured}, expected={expected_digest}"
+                )
+    if mismatches:
+        raise DeploymentQualificationError(
+            "deployment policy fingerprints are stale:\n" + "\n".join(mismatches)
+        )
 
 
 def _non_empty(value: str | None, label: str) -> str:
@@ -109,9 +194,7 @@ def _metadata_payload(value: FrozenMetadata) -> dict[str, object]:
     def thaw(item: FrozenValue) -> object:
         if isinstance(item, tuple):
             if all(
-                isinstance(part, tuple)
-                and len(part) == 2
-                and isinstance(part[0], str)
+                isinstance(part, tuple) and len(part) == 2 and isinstance(part[0], str)
                 for part in item
             ):
                 return {str(key): thaw(nested) for key, nested in item}
@@ -166,11 +249,17 @@ class DeploymentFingerprint:
             "runtime_implementation",
             _non_empty(self.runtime_implementation, "runtime_implementation"),
         )
-        object.__setattr__(self, "artifact_revision", _optional_text(self.artifact_revision))
         object.__setattr__(
-            self, "artifact_sha256", _normalize_sha256(self.artifact_sha256, "artifact_sha256")
+            self, "artifact_revision", _optional_text(self.artifact_revision)
         )
-        object.__setattr__(self, "runtime_version", _optional_text(self.runtime_version))
+        object.__setattr__(
+            self,
+            "artifact_sha256",
+            _normalize_sha256(self.artifact_sha256, "artifact_sha256"),
+        )
+        object.__setattr__(
+            self, "runtime_version", _optional_text(self.runtime_version)
+        )
         object.__setattr__(
             self,
             "runtime_image_digest",
@@ -192,7 +281,9 @@ class DeploymentFingerprint:
             "context_settings",
             "hardware_metadata",
         ):
-            object.__setattr__(self, field_name, freeze_metadata(getattr(self, field_name)))
+            object.__setattr__(
+                self, field_name, freeze_metadata(getattr(self, field_name))
+            )
 
     def payload(self) -> dict[str, object]:
         return {
@@ -248,7 +339,9 @@ class Deployment:
         object.__setattr__(
             self, "deployment_id", _non_empty(self.deployment_id, "deployment_id")
         )
-        aliases = tuple(_non_empty(alias, "route alias") for alias in self.route_aliases)
+        aliases = tuple(
+            _non_empty(alias, "route alias") for alias in self.route_aliases
+        )
         if not aliases:
             raise DeploymentQualificationError("at least one route alias is required")
         if len(set(aliases)) != len(aliases):
@@ -256,7 +349,9 @@ class Deployment:
         object.__setattr__(self, "route_aliases", aliases)
         roles = tuple(DeploymentRole(role) for role in self.roles)
         if not roles:
-            raise DeploymentQualificationError("at least one deployment role is required")
+            raise DeploymentQualificationError(
+                "at least one deployment role is required"
+            )
         if len(set(roles)) != len(roles):
             raise DeploymentQualificationError("deployment roles must be unique")
         object.__setattr__(self, "roles", roles)
@@ -317,8 +412,12 @@ def assess_qualification(
     """Assess exactly three trailing passes per declared role for this fingerprint."""
 
     current_digest = deployment.fingerprint.sha256
-    relevant = [round_ for round_ in rounds if round_.deployment_id == deployment.deployment_id]
-    current = [round_ for round_ in relevant if round_.fingerprint_sha256 == current_digest]
+    relevant = [
+        round_ for round_ in rounds if round_.deployment_id == deployment.deployment_id
+    ]
+    current = [
+        round_ for round_ in relevant if round_.fingerprint_sha256 == current_digest
+    ]
     stale_round_count = len(relevant) - len(current)
     role_sequences = [(round_.role, round_.sequence) for round_ in current]
     if len(role_sequences) != len(set(role_sequences)):
@@ -464,7 +563,9 @@ def load_deployments(path: Path) -> tuple[Deployment, ...]:
         raise DeploymentQualificationError("unsupported deployments schema_version")
     raw_deployments = payload.get("deployment")
     if not isinstance(raw_deployments, list) or not raw_deployments:
-        raise DeploymentQualificationError("at least one [[deployment]] table is required")
+        raise DeploymentQualificationError(
+            "at least one [[deployment]] table is required"
+        )
     deployments: list[Deployment] = []
     for item in raw_deployments:
         if not isinstance(item, Mapping):
@@ -486,7 +587,9 @@ def load_deployments(path: Path) -> tuple[Deployment, ...]:
                 route_aliases=tuple(aliases),
                 roles=tuple(DeploymentRole(str(role)) for role in roles),
                 fingerprint=_parse_fingerprint(fingerprint),
-                lifecycle=DeploymentLifecycle(str(item.get("lifecycle") or "discovered")),
+                lifecycle=DeploymentLifecycle(
+                    str(item.get("lifecycle") or "discovered")
+                ),
             )
         )
     identifiers = [deployment.deployment_id for deployment in deployments]

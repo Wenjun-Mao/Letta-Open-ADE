@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
+from io import BytesIO
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError
 
 import pytest
 
@@ -48,16 +50,27 @@ class KeywordEmbeddings:
     def _vector(text: str) -> tuple[float, ...]:
         normalized = text.casefold()
         if any(term in normalized for term in ("museum", "博物馆", "安大略")):
-            return (1.0, 0.0, 0.0, 0.0)
+            return (1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
         if any(
-            term in normalized for term in ("toronto", "city", "residence", "多伦多")
+            term in normalized
+            for term in ("toronto", "city", "residence", "live", "多伦多", "城市", "住")
         ):
-            return (0.0, 1.0, 0.0, 0.0)
+            return (0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
         if any(term in normalized for term in ("concert", "massey", "jazz")):
-            return (0.0, 0.0, 1.0, 0.0)
+            return (0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        if any(term in normalized for term in ("rocky", "husky", "哈士奇", "狗")):
+            return (0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0)
+        if any(
+            term in normalized for term in ("language", "mandarin", "语言", "普通话")
+        ):
+            return (0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0)
+        if any(term in normalized for term in ("shoe", "eu 38", "38码")):
+            return (0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0)
+        if any(term in normalized for term in ("sister", "mei", "小美")):
+            return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
         if "blue-orchid" in normalized:
-            return (0.0, 0.0, 0.0, 1.0)
-        return (0.0, 0.0, 0.0, 0.0)
+            return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0)
+        return (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 
 
 class StepClock:
@@ -119,7 +132,6 @@ def test_openai_client_uses_dgx_defaults_and_one_request_without_retries() -> No
     assert json.loads(request.data) == {
         "model": "test-model",
         "input": ["first", "second"],
-        "dimensions": 3,
     }
     assert EmbeddingClientConfig().base_url == DEFAULT_EMBEDDINGS_BASE_URL
     assert EmbeddingClientConfig().model == DEFAULT_EMBEDDINGS_MODEL
@@ -139,11 +151,37 @@ def test_openai_client_does_not_retry_a_transport_failure() -> None:
         EmbeddingClientConfig(dimensions=3), opener=opener
     )
 
-    with pytest.raises(EmbeddingRequestError):
+    with pytest.raises(EmbeddingRequestError) as captured:
         client.embed(("one request",))
+    assert captured.value.retryable is True
     assert calls == 1
     with pytest.raises(ValueError, match="zero retries"):
         EmbeddingClientConfig(max_retries=1)
+
+
+@pytest.mark.parametrize(
+    ("status_code", "retryable"),
+    ((400, False), (429, True), (503, True)),
+)
+def test_openai_client_classifies_http_failures_for_ade_owned_retries(
+    status_code: int, retryable: bool
+) -> None:
+    def opener(*args: Any, **kwargs: Any) -> _Response:
+        raise HTTPError(
+            "http://embedding-sidecar:8001/v1/embeddings",
+            status_code,
+            "failed",
+            hdrs=None,
+            fp=BytesIO(b'{"error":"failed"}'),
+        )
+
+    client = OpenAICompatibleEmbeddingsClient(
+        EmbeddingClientConfig(dimensions=3), opener=opener
+    )
+
+    with pytest.raises(EmbeddingRequestError) as captured:
+        client.embed(("one request",))
+    assert captured.value.retryable is retryable
 
 
 def test_qwen_formatting_and_cosine_similarity_are_explicit_and_stable() -> None:
@@ -158,7 +196,9 @@ def test_qwen_formatting_and_cosine_similarity_are_explicit_and_stable() -> None
         cosine_similarity((1,), (1, 0))
 
 
-def test_retrieval_strategies_rank_deterministically_and_preserve_subject_isolation() -> None:
+def test_retrieval_strategies_rank_deterministically_and_preserve_subject_isolation() -> (
+    None
+):
     documents = (
         RetrievalDocument(
             id="b_museum",
@@ -184,13 +224,19 @@ def test_retrieval_strategies_rank_deterministically_and_preserve_subject_isolat
     alias_result = retriever.search(
         "alice", "ROM", strategy=RetrievalStrategy.ALIAS, limit=2
     )
-    assert [result.document.id for result in alias_result] == ["a_museum_tie", "b_museum"]
+    assert [result.document.id for result in alias_result] == [
+        "a_museum_tie",
+        "b_museum",
+    ]
     assert all(result.alias_score == 1.0 for result in alias_result)
 
     semantic_result = retriever.search(
         "alice", "Which museum is preferred?", strategy=RetrievalStrategy.SEMANTIC
     )
-    assert [result.document.id for result in semantic_result] == ["a_museum_tie", "b_museum"]
+    assert [result.document.id for result in semantic_result] == [
+        "a_museum_tie",
+        "b_museum",
+    ]
     assert all(result.semantic_score == 1.0 for result in semantic_result)
 
     isolated = retriever.search(
@@ -200,8 +246,18 @@ def test_retrieval_strategies_rank_deterministically_and_preserve_subject_isolat
     )
     assert isolated == ()
 
+    all_candidates = retriever.search(
+        "alice",
+        "museum",
+        strategy=RetrievalStrategy.LEXICAL,
+        limit=None,
+    )
+    assert len(all_candidates) == 2
 
-def test_fixture_evaluation_calibrates_then_scores_held_out_thousand_item_corpus() -> None:
+
+def test_fixture_evaluation_calibrates_then_scores_held_out_thousand_item_corpus() -> (
+    None
+):
     fixture = load_retrieval_fixture(FIXTURE_PATH)
     embeddings = KeywordEmbeddings()
 
@@ -214,9 +270,11 @@ def test_fixture_evaluation_calibrates_then_scores_held_out_thousand_item_corpus
 
     assert len(expand_corpus(fixture.documents, fixture.corpus_size)) == 1000
     assert calibration is not None
-    assert calibration.observation_count == 2
+    assert calibration.observation_count == 6
+    assert calibration.precision == 1.0
+    assert calibration.recall == 1.0
     assert calibration.false_positive_rate == 0.0
-    assert metrics.evaluated_case_count == 3
+    assert metrics.evaluated_case_count == 12
     assert metrics.cross_lingual_recall_at_3 == 1.0
     assert metrics.overall_recall == 1.0
     assert metrics.hard_negative_false_positive_rate == 0.0
@@ -224,7 +282,16 @@ def test_fixture_evaluation_calibrates_then_scores_held_out_thousand_item_corpus
     assert [row.case_id for row in metrics.rows] == [
         "cross_lingual_museum",
         "held_out_concert",
-        "subject_isolation",
+        "cross_lingual_city",
+        "cross_lingual_pet_name",
+        "cross_lingual_pet_breed",
+        "cross_lingual_language",
+        "held_out_shoe_size",
+        "held_out_sister",
+        "hard_negative_food",
+        "hard_negative_phone",
+        "subject_isolation_secret",
+        "subject_isolation_pet",
     ]
     assert any(
         text.startswith("Instruct: retrieve matching memories\nQuery:")
@@ -243,6 +310,6 @@ def test_threshold_calibration_prefers_a_deterministic_high_score_boundary() -> 
         )
     )
 
-    assert calibration.threshold == 0.82
+    assert calibration.threshold == pytest.approx(0.615)
     assert calibration.balanced_accuracy == 1.0
     assert calibration.precision == 1.0

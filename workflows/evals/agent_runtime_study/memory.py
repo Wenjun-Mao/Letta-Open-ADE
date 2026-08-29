@@ -16,11 +16,18 @@ from .contracts import (
     Message,
     utc_now,
 )
+from .fact_registry import fact_key, fact_type_spec, normalize_qualifier
 from .repository import (
     InMemoryStudyRepository,
     NotFoundError,
     OptimisticConflictError,
     RepositoryError,
+)
+from .semantic_retrieval import (
+    EmbeddingProvider,
+    RetrievalConfig,
+    RetrievalDocument,
+    SemanticRetriever,
 )
 
 
@@ -63,6 +70,23 @@ class MemoryPolicy:
     ) -> None:
         if not proposal.key.strip():
             raise MemoryProposalError("key is required")
+        if proposal.fact_type:
+            spec = fact_type_spec(proposal.fact_type)
+            qualifier = normalize_qualifier(spec, proposal.qualifier)
+            if not proposal.entity_id:
+                raise MemoryProposalError("entity_id is required for typed facts")
+            entity = self.repository.get_memory_entity(proposal.entity_id)
+            if entity.subject_id != subject_id:
+                raise MemoryProposalError("memory entity belongs to another subject")
+            if entity.kind is not spec.entity_kind:
+                raise MemoryProposalError(
+                    f"memory entity kind must be {spec.entity_kind.value}"
+                )
+            expected_key = fact_key(spec.name, entity.id, qualifier)
+            if proposal.key != expected_key:
+                raise MemoryProposalError(
+                    "typed memory key must be derived from fact type and entity"
+                )
         if not proposal.evidence_quote.strip():
             raise MemoryProposalError("evidence_quote is required")
         if any(message.role.value != "user" for message in source_messages):
@@ -77,11 +101,14 @@ class MemoryPolicy:
             )
         evidence_spans = _evidence_spans(proposal.evidence_quote, source_messages)
         quote = normalize_text(proposal.evidence_quote)
+        source_text = " ".join(
+            normalize_text(message.content) for message in source_messages
+        )
         if not evidence_spans:
             raise MemoryProposalError(
                 "evidence_quote must be an exact excerpt from a bound user message"
             )
-        if any(marker in quote for marker in _UNCERTAIN_MARKERS):
+        if any(marker in source_text for marker in _UNCERTAIN_MARKERS):
             raise MemoryProposalError(
                 "uncertain or hypothetical claims are not durable facts"
             )
@@ -106,6 +133,14 @@ class MemoryPolicy:
             if proposal.expected_version != fact.version:
                 raise OptimisticConflictError(
                     f"Fact version {fact.version} != expected {proposal.expected_version}"
+                )
+            if proposal.fact_type and (
+                fact.fact_type != proposal.fact_type
+                or fact.entity_id != proposal.entity_id
+                or fact.qualifier != proposal.qualifier
+            ):
+                raise MemoryProposalError(
+                    "typed mutation metadata must match the active fact"
                 )
         if (
             proposal.operation is MemoryOperation.CORRECT
@@ -262,6 +297,9 @@ class MemoryPolicy:
                 proposal.evidence_quote,
                 source_messages,
             ),
+            fact_type=proposal.fact_type,
+            entity_id=proposal.entity_id,
+            qualifier=proposal.qualifier,
         )
         self.repository.revisions.setdefault(fact_id, []).append(revision)
         return revision
@@ -309,6 +347,9 @@ class MemoryPolicy:
             current_revision_id=revision.id,
             created_at=now,
             updated_at=now,
+            fact_type=proposal.fact_type,
+            entity_id=proposal.entity_id,
+            qualifier=proposal.qualifier,
         )
         return revision
 
@@ -338,6 +379,9 @@ class MemoryPolicy:
             fact,
             key=proposal.key.strip(),
             value=str(proposal.value or "").strip(),
+            fact_type=proposal.fact_type or fact.fact_type,
+            entity_id=proposal.entity_id or fact.entity_id,
+            qualifier=(proposal.qualifier if proposal.fact_type else fact.qualifier),
             version=fact.version + 1,
             current_revision_id=revision.id,
             updated_at=utc_now(),
@@ -380,6 +424,9 @@ class MemoryPolicy:
             current_revision_id=revision.id,
             created_at=now,
             updated_at=now,
+            fact_type=proposal.fact_type,
+            entity_id=proposal.entity_id,
+            qualifier=proposal.qualifier,
         )
         return revision
 
@@ -459,8 +506,16 @@ def _evidence_spans(
 
 
 class MemoryRetriever:
-    def __init__(self, repository: InMemoryStudyRepository):
+    def __init__(
+        self,
+        repository: InMemoryStudyRepository,
+        *,
+        embeddings: EmbeddingProvider | None = None,
+        semantic_config: RetrievalConfig | None = None,
+    ):
         self.repository = repository
+        self.embeddings = embeddings
+        self.semantic_config = semantic_config
 
     @staticmethod
     def _score(query: str, text: str) -> float:
@@ -473,9 +528,41 @@ class MemoryRetriever:
         return overlap / len(query_terms) + phrase_bonus
 
     def search_facts(
-        self, subject_id: str, query: str, *, limit: int
+        self,
+        subject_id: str,
+        query: str,
+        *,
+        limit: int,
+        minimum_score: float | None | object = ...,
     ) -> tuple[MemoryFact, ...]:
         candidates = self.repository.list_subject_facts(subject_id, active_only=True)
+        if self.embeddings is not None:
+            documents = tuple(
+                RetrievalDocument(
+                    id=fact.id,
+                    subject_id=fact.subject_id,
+                    text=f"{fact.fact_type or fact.key}: {fact.value}",
+                    aliases=tuple(
+                        value
+                        for value in (
+                            fact.key,
+                            fact.value,
+                            fact.qualifier,
+                        )
+                        if value
+                    ),
+                )
+                for fact in candidates
+            )
+            ranked_ids = self._semantic_ids(
+                documents,
+                subject_id=subject_id,
+                query=query,
+                limit=limit,
+                minimum_score=minimum_score,
+            )
+            by_id = {fact.id: fact for fact in candidates}
+            return tuple(by_id[fact_id] for fact_id in ranked_ids)
         ranked = sorted(
             candidates,
             key=lambda fact: (
@@ -491,10 +578,34 @@ class MemoryRetriever:
         )[:limit]
 
     def search_episodes(
-        self, subject_id: str, query: str, *, limit: int
+        self,
+        subject_id: str,
+        query: str,
+        *,
+        limit: int,
+        minimum_score: float | None | object = ...,
     ) -> tuple[MemoryEpisode, ...]:
+        candidates = self.repository.list_episodes(subject_id)
+        if self.embeddings is not None:
+            documents = tuple(
+                RetrievalDocument(
+                    id=episode.id,
+                    subject_id=episode.subject_id,
+                    text=episode.content,
+                )
+                for episode in candidates
+            )
+            ranked_ids = self._semantic_ids(
+                documents,
+                subject_id=subject_id,
+                query=query,
+                limit=limit,
+                minimum_score=minimum_score,
+            )
+            by_id = {episode.id: episode for episode in candidates}
+            return tuple(by_id[episode_id] for episode_id in ranked_ids)
         ranked = sorted(
-            self.repository.list_episodes(subject_id),
+            candidates,
             key=lambda episode: (
                 self._score(query, episode.content),
                 episode.created_at,
@@ -504,6 +615,32 @@ class MemoryRetriever:
         return tuple(
             episode for episode in ranked if self._score(query, episode.content) > 0
         )[:limit]
+
+    def _semantic_ids(
+        self,
+        documents: tuple[RetrievalDocument, ...],
+        *,
+        subject_id: str,
+        query: str,
+        limit: int,
+        minimum_score: float | None | object,
+    ) -> tuple[str, ...]:
+        if not documents:
+            return ()
+        retriever = SemanticRetriever(
+            documents,
+            self.embeddings,
+            config=self.semantic_config,
+        )
+        return tuple(
+            result.document.id
+            for result in retriever.search(
+                subject_id,
+                query,
+                limit=limit,
+                minimum_score=minimum_score,
+            )
+        )
 
 
 def assert_fact_subject(fact: MemoryFact, subject_id: str) -> None:

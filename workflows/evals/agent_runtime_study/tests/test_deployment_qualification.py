@@ -12,9 +12,12 @@ from workflows.evals.agent_runtime_study.deployment_qualification import (
     ReleaseTarget,
     apply_qualification,
     assess_qualification,
+    current_policy_hashes,
     load_deployments,
+    policy_bundle_hash,
     release_gate,
     replace_fingerprint,
+    validate_policy_hashes,
 )
 
 
@@ -142,18 +145,26 @@ def test_qualification_requires_three_consecutive_passes_for_each_role() -> None
     assessment = assess_qualification(deployment, rounds)
 
     assert assessment.qualified is False
-    assert [(item.role, item.consecutive_passing_rounds) for item in assessment.role_results] == [
+    assert [
+        (item.role, item.consecutive_passing_rounds) for item in assessment.role_results
+    ] == [
         (DeploymentRole.CONVERSATION, 3),
         (DeploymentRole.REVIEWER, 2),
     ]
-    assert apply_qualification(deployment, rounds).lifecycle is DeploymentLifecycle.CANDIDATE
+    assert (
+        apply_qualification(deployment, rounds).lifecycle
+        is DeploymentLifecycle.CANDIDATE
+    )
 
-    qualified_rounds = (*rounds, _round(
-        deployment,
-        role=DeploymentRole.REVIEWER,
-        sequence=8,
-        passed=True,
-    ))
+    qualified_rounds = (
+        *rounds,
+        _round(
+            deployment,
+            role=DeploymentRole.REVIEWER,
+            sequence=8,
+            passed=True,
+        ),
+    )
     qualified = apply_qualification(deployment, qualified_rounds)
 
     assert assess_qualification(deployment, qualified_rounds).qualified is True
@@ -287,9 +298,7 @@ def test_complete_rounds_cannot_release_a_fingerprint_missing_provenance() -> No
 
 
 def test_checked_in_registry_tracks_actual_identity_separately_from_aliases() -> None:
-    registry_path = (
-        Path(__file__).resolve().parents[1] / "deployments.toml"
-    )
+    registry_path = Path(__file__).resolve().parents[1] / "deployments.toml"
 
     deployments = load_deployments(registry_path)
 
@@ -308,4 +317,25 @@ def test_checked_in_registry_tracks_actual_identity_separately_from_aliases() ->
         ("request_timeout_seconds", 15),
     )
     assert all(item.lifecycle is DeploymentLifecycle.DISCOVERED for item in deployments)
-    assert not any(item.fingerprint.provenance_complete for item in deployments)
+    assert deployments[0].fingerprint.provenance_complete is True
+    assert retriever.fingerprint.provenance_complete is True
+    assert llama.fingerprint.provenance_complete is False
+    validate_policy_hashes(deployments, registry_path.parent)
+
+
+def test_policy_bundle_hash_binds_paths_and_contents(tmp_path: Path) -> None:
+    (tmp_path / "a.txt").write_text("same", encoding="utf-8")
+    (tmp_path / "b.txt").write_text("same", encoding="utf-8")
+
+    original = policy_bundle_hash(tmp_path, ("a.txt",))
+    renamed = policy_bundle_hash(tmp_path, ("b.txt",))
+    (tmp_path / "a.txt").write_text("changed", encoding="utf-8")
+
+    assert original != renamed
+    assert original != policy_bundle_hash(tmp_path, ("a.txt",))
+    assert set(current_policy_hashes(Path(__file__).resolve().parents[1])) == {
+        "prompt_policy_sha256",
+        "tool_policy_sha256",
+        "schema_policy_sha256",
+        "retrieval_policy_sha256",
+    }

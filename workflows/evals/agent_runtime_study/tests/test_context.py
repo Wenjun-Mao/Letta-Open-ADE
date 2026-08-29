@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from workflows.evals.agent_runtime_study.context import ContextBuilder
 from workflows.evals.agent_runtime_study.contracts import (
     AgentDefinition,
@@ -12,6 +14,10 @@ from workflows.evals.agent_runtime_study.contracts import (
 )
 from workflows.evals.agent_runtime_study.memory import MemoryPolicy, MemoryRetriever
 from workflows.evals.agent_runtime_study.repository import InMemoryStudyRepository
+from workflows.evals.agent_runtime_study.semantic_retrieval import (
+    RetrievalConfig,
+    RetrievalStrategy,
+)
 
 
 def _context_repository() -> InMemoryStudyRepository:
@@ -166,3 +172,99 @@ def test_summary_versions_are_optimistic_and_replaceable() -> None:
     assert second.version == 2
     assert repository.get_summary("conversation-a") == second
     assert repository.list_summary_versions("conversation-a") == (first, second)
+
+
+class CrossLingualEmbeddings:
+    def embed(self, texts: Sequence[str]) -> tuple[tuple[float, ...], ...]:
+        return tuple(self._vector(text) for text in texts)
+
+    @staticmethod
+    def _vector(text: str) -> tuple[float, ...]:
+        normalized = text.casefold()
+        if any(term in normalized for term in ("museum", "博物馆", "rom")):
+            return (1.0, 0.0)
+        if "blue-orchid" in normalized:
+            return (0.0, 1.0)
+        return (0.0, 0.0)
+
+
+class WeakSemanticEmbeddings:
+    def embed(self, texts: Sequence[str]) -> tuple[tuple[float, ...], ...]:
+        return tuple(
+            (1.0, 0.0) if text.startswith("Instruct:") else (0.4, 0.916515138991168)
+            for text in texts
+        )
+
+
+def test_runtime_retriever_handles_cross_lingual_queries_without_subject_leakage() -> (
+    None
+):
+    repository = _context_repository()
+    _add_fact(
+        repository,
+        "subject-a",
+        "conversation-a",
+        "favorite_museum",
+        "Royal Ontario Museum",
+    )
+    _add_fact(
+        repository,
+        "subject-b",
+        "conversation-b",
+        "archive_identifier",
+        "blue-orchid-17",
+    )
+    retriever = MemoryRetriever(
+        repository,
+        embeddings=CrossLingualEmbeddings(),
+        semantic_config=RetrievalConfig(
+            strategy=RetrievalStrategy.HYBRID,
+            minimum_score=0.5,
+            query_instruction="retrieve user memory",
+        ),
+    )
+
+    museum = retriever.search_facts(
+        "subject-a",
+        "我最喜欢哪一家博物馆？",
+        limit=3,
+    )
+    isolated = retriever.search_facts(
+        "subject-a",
+        "What is the blue-orchid-17 archive identifier?",
+        limit=3,
+    )
+
+    assert [fact.value for fact in museum] == ["Royal Ontario Museum"]
+    assert isolated == ()
+
+
+def test_explicit_memory_search_can_return_low_confidence_subject_candidates() -> None:
+    repository = _context_repository()
+    _add_fact(
+        repository,
+        "subject-a",
+        "conversation-a",
+        "favorite_museum",
+        "Royal Ontario Museum",
+    )
+    retriever = MemoryRetriever(
+        repository,
+        embeddings=WeakSemanticEmbeddings(),
+        semantic_config=RetrievalConfig(
+            strategy=RetrievalStrategy.SEMANTIC,
+            minimum_score=0.5,
+            query_instruction="retrieve user memory",
+        ),
+    )
+
+    automatic = retriever.search_facts("subject-a", "博物馆", limit=3)
+    explicit = retriever.search_facts(
+        "subject-a",
+        "博物馆",
+        limit=3,
+        minimum_score=None,
+    )
+
+    assert automatic == ()
+    assert [fact.value for fact in explicit] == ["Royal Ontario Museum"]

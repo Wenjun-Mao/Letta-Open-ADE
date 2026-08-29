@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import replace
 
 import pytest
 
@@ -10,8 +9,10 @@ from workflows.evals.agent_runtime_study.contracts import (
     Conversation,
     ExecutorRequest,
     ExecutorResult,
+    MemoryOperation,
     MemorySubject,
     RunEventType,
+    RunStatus,
     RuntimePolicy,
     TurnRequest,
 )
@@ -19,10 +20,17 @@ from workflows.evals.agent_runtime_study.repository import (
     IdempotencyConflictError,
     InMemoryStudyRepository,
 )
+from workflows.evals.agent_runtime_study.memory_review import (
+    MemoryReviewDecision,
+    MemoryReviewProposal,
+    MemoryReviewRequest,
+)
 from workflows.evals.agent_runtime_study.runtime import StudyAgentRuntime
+from workflows.evals.agent_runtime_study.semantic_retrieval import (
+    EmbeddingRequestError,
+)
 from workflows.evals.agent_runtime_study.scripted import (
     ScriptStep,
-    ScriptToolCall,
     SharedScript,
     scripted_adapter,
 )
@@ -137,35 +145,37 @@ def test_turn_acceptance_rolls_back_run_when_user_message_fails(
     asyncio.run(scenario())
 
 
-def test_commit_failure_records_each_tool_execution_once(
+def test_reviewed_memory_commit_failure_has_no_tool_execution(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     async def scenario() -> None:
         runtime, _ = _runtime()
-        agent = runtime.repository.agent_definitions["agent"]
-        runtime.repository.agent_definitions["agent"] = replace(
-            agent, tool_names=("propose_memory_change",)
-        )
-        script = SharedScript(
-            (
-                ScriptStep(
-                    tool_calls=(
-                        ScriptToolCall(
-                            name="propose_memory_change",
-                            arguments={
-                                "operation": "add",
-                                "key": "name",
-                                "value": "Alice",
-                                "evidence_quote": "name is Alice",
-                            },
-                            call_id="memory-call",
-                        ),
-                    )
-                ),
-                ScriptStep(text="hello"),
-            )
-        )
+        script = SharedScript((ScriptStep(text="hello"),))
         runtime.executor = scripted_adapter("custom_loop", script)
+
+        class Reviewer:
+            model_key = "reviewer"
+
+            async def review(
+                self, request: MemoryReviewRequest
+            ) -> MemoryReviewDecision:
+                return MemoryReviewDecision(
+                    reviewer_model_key=self.model_key,
+                    proposals=(
+                        MemoryReviewProposal(
+                            operation=MemoryOperation.ADD,
+                            fact_type="person.name",
+                            value="Alice",
+                            evidence_quote="name is Alice",
+                        ),
+                    ),
+                    raw_responses=(),
+                    usage={},
+                    model_request_count=1,
+                    protocol_repaired=False,
+                )
+
+        runtime.memory_reviewer = Reviewer()
 
         def fail_commit(**_kwargs):
             raise RuntimeError("commit failed")
@@ -181,7 +191,92 @@ def test_commit_failure_records_each_tool_execution_once(
         )
 
         assert result.run.error_message == "commit failed"
-        assert [item.call_id for item in result.tool_executions] == ["memory-call"]
+        assert result.tool_executions == ()
+
+    asyncio.run(scenario())
+
+
+def test_cancellation_after_review_prevents_late_atomic_commit() -> None:
+    async def scenario() -> None:
+        runtime, _ = _runtime()
+
+        class Signal:
+            cancelled = False
+
+            def is_set(self) -> bool:
+                return self.cancelled
+
+        signal = Signal()
+
+        class Reviewer:
+            model_key = "reviewer"
+
+            async def review(
+                self, request: MemoryReviewRequest
+            ) -> MemoryReviewDecision:
+                return MemoryReviewDecision(
+                    reviewer_model_key=self.model_key,
+                    proposals=(),
+                    raw_responses=(),
+                    usage={},
+                    model_request_count=1,
+                    protocol_repaired=False,
+                )
+
+        runtime.memory_reviewer = Reviewer()
+        original_review_with_controls = runtime._review_with_controls
+
+        async def review_then_cancel(*args, **kwargs):
+            decision = await original_review_with_controls(*args, **kwargs)
+            signal.cancelled = True
+            return decision
+
+        runtime._review_with_controls = review_then_cancel
+        result = await runtime.run_turn(
+            TurnRequest(
+                conversation_id="conversation-a",
+                user_content="cancel before commit",
+                idempotency_key="late-cancel",
+                policy=RuntimePolicy(timeout_seconds=2),
+                cancellation=signal,
+            )
+        )
+
+        assert result.run.status is RunStatus.CANCELLED
+        assert result.assistant_message is None
+        assert runtime.repository.list_subject_facts("subject", active_only=False) == ()
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize(("retryable", "expected_attempts"), ((False, 1), (True, 2)))
+def test_context_embedding_failures_use_exact_ade_retry_policy(
+    monkeypatch: pytest.MonkeyPatch,
+    retryable: bool,
+    expected_attempts: int,
+) -> None:
+    async def scenario() -> None:
+        runtime, _ = _runtime()
+        calls = 0
+
+        def fail_context(**_kwargs):
+            nonlocal calls
+            calls += 1
+            raise EmbeddingRequestError("embedding failed", retryable=retryable)
+
+        monkeypatch.setattr(runtime.context_builder, "build", fail_context)
+        result = await runtime.run_turn(
+            TurnRequest(
+                conversation_id="conversation-a",
+                user_content="trigger retrieval",
+                idempotency_key=f"embedding-{retryable}",
+                policy=RuntimePolicy(timeout_seconds=2, retry_count=1),
+            )
+        )
+
+        assert result.run.status is RunStatus.FAILED
+        assert result.run.attempt_count == expected_attempts
+        assert calls == expected_attempts
 
     asyncio.run(scenario())
 

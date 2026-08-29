@@ -21,7 +21,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
-DEFAULT_EMBEDDINGS_BASE_URL = "http://127.0.0.1:8001/v1"
+DEFAULT_EMBEDDINGS_BASE_URL = "http://100.64.35.71:8001/v1"
 DEFAULT_EMBEDDINGS_MODEL = "Qwen/Qwen3-Embedding-0.6B"
 DEFAULT_EMBEDDING_DIMENSIONS = 1024
 DEFAULT_QUERY_INSTRUCTION = (
@@ -34,6 +34,10 @@ Vector = tuple[float, ...]
 
 class EmbeddingRequestError(RuntimeError):
     """Raised when the configured embeddings endpoint cannot serve one request."""
+
+    def __init__(self, message: str, *, retryable: bool = False) -> None:
+        super().__init__(message)
+        self.retryable = retryable
 
 
 class FixtureError(ValueError):
@@ -83,7 +87,9 @@ class EmbeddingClientConfig:
         if self.timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
         if self.max_retries != 0:
-            raise ValueError("semantic retrieval embeddings client permits zero retries")
+            raise ValueError(
+                "semantic retrieval embeddings client permits zero retries"
+            )
 
     @property
     def embeddings_url(self) -> str:
@@ -114,7 +120,6 @@ class OpenAICompatibleEmbeddingsClient:
             {
                 "model": self.config.model,
                 "input": list(values),
-                "dimensions": self.config.dimensions,
             }
         ).encode("utf-8")
         headers = {
@@ -136,24 +141,42 @@ class OpenAICompatibleEmbeddingsClient:
         try:
             with self._opener(request, timeout=self.config.timeout_seconds) as response:
                 raw_body = response.read()
-        except (HTTPError, URLError, OSError, TimeoutError) as error:
+        except HTTPError as error:
+            try:
+                detail = error.read().decode("utf-8", errors="replace")[:500]
+            except OSError:
+                detail = ""
+            suffix = f": {detail}" if detail else ""
             raise EmbeddingRequestError(
-                f"Embeddings request to {self.config.embeddings_url} failed"
+                f"Embeddings request to {self.config.embeddings_url} returned "
+                f"HTTP {error.code}{suffix}",
+                retryable=error.code == 429 or error.code >= 500,
+            ) from error
+        except (URLError, OSError, TimeoutError) as error:
+            raise EmbeddingRequestError(
+                f"Embeddings request to {self.config.embeddings_url} failed",
+                retryable=True,
             ) from error
         try:
             payload_data = json.loads(raw_body.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as error:
-            raise EmbeddingRequestError("Embeddings endpoint returned invalid JSON") from error
+            raise EmbeddingRequestError(
+                "Embeddings endpoint returned invalid JSON"
+            ) from error
         return self._parse_response(payload_data, len(values))
 
-    def _parse_response(self, payload: object, expected_count: int) -> tuple[Vector, ...]:
+    def _parse_response(
+        self, payload: object, expected_count: int
+    ) -> tuple[Vector, ...]:
         if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
             raise EmbeddingRequestError("Embeddings response must contain a data array")
         records = payload["data"]
         indexed: dict[int, Vector] = {}
         for record in records:
             if not isinstance(record, dict):
-                raise EmbeddingRequestError("Embeddings response data item must be an object")
+                raise EmbeddingRequestError(
+                    "Embeddings response data item must be an object"
+                )
             index = record.get("index")
             embedding = record.get("embedding")
             if not isinstance(index, int) or not isinstance(embedding, list):
@@ -161,18 +184,24 @@ class OpenAICompatibleEmbeddingsClient:
                     "Embeddings response item requires integer index and embedding array"
                 )
             if index in indexed or index < 0 or index >= expected_count:
-                raise EmbeddingRequestError("Embeddings response contains an invalid index")
+                raise EmbeddingRequestError(
+                    "Embeddings response contains an invalid index"
+                )
             try:
                 vector = tuple(float(value) for value in embedding)
             except (TypeError, ValueError) as error:
-                raise EmbeddingRequestError("Embedding values must be numeric") from error
+                raise EmbeddingRequestError(
+                    "Embedding values must be numeric"
+                ) from error
             if len(vector) != self.config.dimensions:
                 raise EmbeddingRequestError(
                     f"Expected {self.config.dimensions} dimensions, received {len(vector)}"
                 )
             indexed[index] = vector
         if len(indexed) != expected_count:
-            raise EmbeddingRequestError("Embeddings response count does not match input count")
+            raise EmbeddingRequestError(
+                "Embeddings response count does not match input count"
+            )
         return tuple(indexed[index] for index in range(expected_count))
 
 
@@ -280,7 +309,7 @@ class SemanticRetriever:
         query: str,
         *,
         strategy: RetrievalStrategy | str | None = None,
-        limit: int | None = None,
+        limit: int | None | object = ...,
         minimum_score: float | None | object = ...,
         query_instruction: str | None | object = ...,
     ) -> tuple[RetrievalResult, ...]:
@@ -294,15 +323,17 @@ class SemanticRetriever:
         selected_strategy = RetrievalStrategy(
             self.config.strategy if strategy is None else strategy
         )
-        selected_limit = self.config.limit if limit is None else limit
+        selected_limit = self.config.limit if limit is ... else limit
+        if selected_limit is not None and not isinstance(selected_limit, int):
+            raise TypeError("limit must be an integer or None")
         if selected_limit is not None and selected_limit <= 0:
             raise ValueError("limit must be positive or None")
         selected_threshold = (
-            self.config.minimum_score
-            if minimum_score is ...
-            else minimum_score
+            self.config.minimum_score if minimum_score is ... else minimum_score
         )
-        if selected_threshold is not None and not isinstance(selected_threshold, float | int):
+        if selected_threshold is not None and not isinstance(
+            selected_threshold, float | int
+        ):
             raise TypeError("minimum_score must be a number or None")
         instruction = (
             self.config.query_instruction
@@ -313,7 +344,9 @@ class SemanticRetriever:
             raise TypeError("query_instruction must be a string or None")
 
         candidates = tuple(
-            document for document in self._documents if document.subject_id == subject_id
+            document
+            for document in self._documents
+            if document.subject_id == subject_id
         )
         need_semantic = selected_strategy in {
             RetrievalStrategy.SEMANTIC,
@@ -359,10 +392,16 @@ class SemanticRetriever:
         return tuple(results if selected_limit is None else results[:selected_limit])
 
     def _ensure_document_vectors(self, documents: Sequence[RetrievalDocument]) -> None:
-        pending = tuple(document for document in documents if document.id not in self._document_vectors)
+        pending = tuple(
+            document
+            for document in documents
+            if document.id not in self._document_vectors
+        )
         if not pending:
             return
-        vectors = self._embeddings_or_raise().embed(tuple(document.text for document in pending))
+        vectors = self._embeddings_or_raise().embed(
+            tuple(document.text for document in pending)
+        )
         if len(vectors) != len(pending):
             raise ValueError("embedding provider returned an unexpected document count")
         for document, vector in zip(pending, vectors, strict=True):
@@ -492,10 +531,14 @@ def load_retrieval_fixture(path: str | Path) -> RetrievalFixture:
     except OSError as error:
         raise FixtureError(f"Fixture suite not found: {fixture_path}") from error
     except json.JSONDecodeError as error:
-        raise FixtureError(f"Fixture suite contains invalid JSON: {fixture_path}") from error
+        raise FixtureError(
+            f"Fixture suite contains invalid JSON: {fixture_path}"
+        ) from error
     if not isinstance(payload, dict):
         raise FixtureError("fixture suite must be an object")
-    documents = tuple(_fixture_document(value) for value in _fixture_list(payload, "documents"))
+    documents = tuple(
+        _fixture_document(value) for value in _fixture_list(payload, "documents")
+    )
     cases = tuple(_fixture_case(value) for value in _fixture_list(payload, "cases"))
     if not documents or not cases:
         raise FixtureError("fixture suite requires documents and cases")
@@ -512,7 +555,9 @@ def load_retrieval_fixture(path: str | Path) -> RetrievalFixture:
             raise FixtureError(f"fixture case {case.id} has an unknown subject")
         missing = set(case.expected_document_ids) - known_documents
         if missing:
-            raise FixtureError(f"fixture case {case.id} references unknown documents: {missing}")
+            raise FixtureError(
+                f"fixture case {case.id} references unknown documents: {missing}"
+            )
     try:
         return RetrievalFixture(
             documents=documents,
@@ -541,7 +586,9 @@ def _fixture_document(value: object) -> RetrievalDocument:
             id=_required_string(value, "id"),
             subject_id=_required_string(value, "subject_id"),
             text=_required_string(value, "text"),
-            aliases=tuple(str(alias).strip() for alias in aliases if str(alias).strip()),
+            aliases=tuple(
+                str(alias).strip() for alias in aliases if str(alias).strip()
+            ),
         )
     except ValueError as error:
         raise FixtureError(str(error)) from error
@@ -725,9 +772,18 @@ def calibrate_threshold(
     values = tuple(observations)
     if any(not math.isfinite(observation.score) for observation in values):
         raise ValueError("threshold observations must have finite scores")
+    observed_scores = sorted({observation.score for observation in values})
     candidates = sorted(
-        {observation.score for observation in values}
-        | {math.nextafter(max(observation.score for observation in values), math.inf)}
+        set(observed_scores)
+        | {
+            (left + right) / 2
+            for left, right in zip(
+                observed_scores,
+                observed_scores[1:],
+                strict=False,
+            )
+        }
+        | {math.nextafter(observed_scores[-1], math.inf)}
     )
     choices: list[ThresholdCalibration] = []
     for threshold in candidates:
@@ -760,13 +816,16 @@ def calibrate_threshold(
                 observation_count=len(values),
             )
         )
-    # Higher threshold wins exact ties, making false-positive avoidance explicit.
+    # For equally accurate boundaries, prefer the threshold furthest from any
+    # calibration observation. This avoids pinning the decision boundary to one
+    # fragile positive score while retaining a deterministic high-threshold tie.
     return max(
         choices,
         key=lambda choice: (
             choice.balanced_accuracy,
             choice.precision,
             choice.recall,
+            min(abs(observation.score - choice.threshold) for observation in values),
             choice.threshold,
         ),
     )
@@ -793,7 +852,11 @@ def calibration_observations(
         )
         scores = {result.document.id: result.score for result in results}
         if case.expected_document_ids:
-            matched = [scores[document_id] for document_id in case.expected_document_ids if document_id in scores]
+            matched = [
+                scores[document_id]
+                for document_id in case.expected_document_ids
+                if document_id in scores
+            ]
             observations.append(
                 ThresholdObservation(
                     score=max(matched) if matched else -1.0,

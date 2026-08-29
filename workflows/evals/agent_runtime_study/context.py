@@ -12,20 +12,15 @@ from .repository import InMemoryStudyRepository
 
 
 MEMORY_CONTROL_INSTRUCTIONS = """Memory rules:
-- Store only durable facts explicitly stated by the user.
-- When the user adds, corrects, combines, or asks to forget a durable fact, you
-  MUST call propose_memory_change before replying in the same turn.
-- The runtime binds every memory operation to the current subject. Never request,
-  infer, or invent another subject identifier.
-- For add, provide value and an exact evidence_quote from the current user message.
-- For correct and forget, copy the fact id and version from the active profile into
-  fact_id and expected_version. A correction may preserve prior fact details while
-  adding only the newly stated refinement.
-- For merge, provide every target fact id and expected version.
-- Do not store guesses, implications, temporary plans, or facts about third parties.
+- A separate ADE memory reviewer evaluates durable facts after your response. Do not
+  claim that you stored, corrected, or forgot memory, and do not invent memory-write
+  tool calls.
+- Use only committed facts shown in context. Never request, infer, or invent another
+  subject identifier.
 - Use search_memory for older details that are not visible in the active profile.
-- If a tool returns an error, correct the arguments rather than silently skipping a
-  required durable-memory update.
+- Do not present guesses or implications as remembered user facts.
+- Return only user-visible dialogue. Never expose private reasoning, planning, draft
+  text, chain-of-thought, or internal monologue in the response.
 """
 
 

@@ -9,11 +9,34 @@ from workflows.evals.agent_runtime_study.fixtures import (
     load_cases,
     select_cases,
 )
-from workflows.evals.agent_runtime_study.scoring import weighted_candidate_score
+from workflows.evals.agent_runtime_study.product_material import (
+    CHAT_SYSTEM_PROMPT,
+    SOURCE_CHAT_SYSTEM_PROMPT,
+)
+from workflows.evals.agent_runtime_study.scoring import (
+    visible_private_reasoning_markers,
+    weighted_candidate_score,
+)
 from workflows.evals.agent_runtime_study.world import build_case_world
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "study_cases.json"
+
+
+def test_ade_native_prompt_removes_letta_owned_blocks_only() -> None:
+    assert "<basic_functions>" in SOURCE_CHAT_SYSTEM_PROMPT
+    assert "<memory>" in SOURCE_CHAT_SYSTEM_PROMPT
+    assert "<basic_functions>" not in CHAT_SYSTEM_PROMPT
+    assert "<memory>" not in CHAT_SYSTEM_PROMPT
+    assert "<style>" in CHAT_SYSTEM_PROMPT
+    assert "PURE DIALOGUE ONLY" in CHAT_SYSTEM_PROMPT
+
+
+def test_visible_private_reasoning_markers_are_a_mandatory_signal() -> None:
+    assert visible_private_reasoning_markers("普通对话") == ()
+    assert visible_private_reasoning_markers("Thinking process:\nprivate plan") == (
+        "thinking process:",
+    )
 
 
 def test_fixture_suite_covers_every_required_behavior() -> None:

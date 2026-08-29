@@ -17,7 +17,31 @@
       "id": "alice_concert",
       "subject_id": "alice",
       "text": "Alice attended her first jazz concert at Massey Hall.",
-      "aliases": ["Massey Hall"]
+      "aliases": ["Massey Hall", "梅西音乐厅"]
+    },
+    {
+      "id": "alice_pet",
+      "subject_id": "alice",
+      "text": "Alice's dog is named Rocky and is a Siberian Husky.",
+      "aliases": ["Rocky", "Siberian Husky", "Husky", "哈士奇"]
+    },
+    {
+      "id": "alice_language",
+      "subject_id": "alice",
+      "text": "Alice prefers Mandarin Chinese for casual conversation.",
+      "aliases": ["Mandarin Chinese", "Mandarin", "中文", "普通话"]
+    },
+    {
+      "id": "alice_shoe_size",
+      "subject_id": "alice",
+      "text": "Alice's shoe size is EU 38.",
+      "aliases": ["EU 38", "38码"]
+    },
+    {
+      "id": "alice_sister",
+      "subject_id": "alice",
+      "text": "Alice's sister is named Mei.",
+      "aliases": ["Mei", "小美"]
     },
     {
       "id": "bob_museum",
@@ -30,20 +54,55 @@
       "subject_id": "bob",
       "text": "Bob's archive identifier is blue-orchid-17.",
       "aliases": ["blue-orchid-17"]
+    },
+    {
+      "id": "bob_pet",
+      "subject_id": "bob",
+      "text": "Bob's cat Milo is a Siamese.",
+      "aliases": ["Milo", "Siamese", "暹罗猫"]
     }
   ],
   "cases": [
     {
-      "id": "calibration_city",
+      "id": "calibration_city_en",
       "subject_id": "alice",
-      "query": "What is the residence location?",
+      "query": "Where does Alice live?",
       "expected_document_ids": ["alice_city"],
       "split": "calibration"
     },
     {
-      "id": "calibration_irrelevant",
+      "id": "calibration_city_zh",
+      "subject_id": "alice",
+      "query": "Alice住在哪个城市？",
+      "expected_document_ids": ["alice_city"],
+      "tags": ["cross_lingual"],
+      "split": "calibration"
+    },
+    {
+      "id": "calibration_museum_en",
+      "subject_id": "alice",
+      "query": "Which museum does Alice like most?",
+      "expected_document_ids": ["alice_museum"],
+      "split": "calibration"
+    },
+    {
+      "id": "calibration_pet_en",
+      "subject_id": "alice",
+      "query": "What breed is Rocky?",
+      "expected_document_ids": ["alice_pet"],
+      "split": "calibration"
+    },
+    {
+      "id": "calibration_irrelevant_passport",
       "subject_id": "alice",
       "query": "What is Alice's passport number?",
+      "hard_negative": true,
+      "split": "calibration"
+    },
+    {
+      "id": "calibration_subject_isolation",
+      "subject_id": "alice",
+      "query": "What is the blue-orchid-17 archive identifier?",
       "hard_negative": true,
       "split": "calibration"
     },
@@ -63,9 +122,76 @@
       "split": "held_out"
     },
     {
-      "id": "subject_isolation",
+      "id": "cross_lingual_city",
+      "subject_id": "alice",
+      "query": "Alice现在住在哪座城市？",
+      "expected_document_ids": ["alice_city"],
+      "tags": ["cross_lingual"],
+      "split": "held_out"
+    },
+    {
+      "id": "cross_lingual_pet_name",
+      "subject_id": "alice",
+      "query": "Alice的狗叫什么名字？",
+      "expected_document_ids": ["alice_pet"],
+      "tags": ["cross_lingual"],
+      "split": "held_out"
+    },
+    {
+      "id": "cross_lingual_pet_breed",
+      "subject_id": "alice",
+      "query": "Rocky是什么品种的狗？",
+      "expected_document_ids": ["alice_pet"],
+      "tags": ["cross_lingual"],
+      "split": "held_out"
+    },
+    {
+      "id": "cross_lingual_language",
+      "subject_id": "alice",
+      "query": "Alice日常聊天偏好用什么语言？",
+      "expected_document_ids": ["alice_language"],
+      "tags": ["cross_lingual"],
+      "split": "held_out"
+    },
+    {
+      "id": "held_out_shoe_size",
+      "subject_id": "alice",
+      "query": "What is Alice's EU shoe size?",
+      "expected_document_ids": ["alice_shoe_size"],
+      "split": "held_out"
+    },
+    {
+      "id": "held_out_sister",
+      "subject_id": "alice",
+      "query": "Who is Alice's sister?",
+      "expected_document_ids": ["alice_sister"],
+      "split": "held_out"
+    },
+    {
+      "id": "hard_negative_food",
+      "subject_id": "alice",
+      "query": "What is Alice's favorite food?",
+      "hard_negative": true,
+      "split": "held_out"
+    },
+    {
+      "id": "hard_negative_phone",
+      "subject_id": "alice",
+      "query": "What is Alice's phone number?",
+      "hard_negative": true,
+      "split": "held_out"
+    },
+    {
+      "id": "subject_isolation_secret",
       "subject_id": "alice",
       "query": "What is the blue-orchid-17 archive identifier?",
+      "hard_negative": true,
+      "split": "held_out"
+    },
+    {
+      "id": "subject_isolation_pet",
+      "subject_id": "alice",
+      "query": "What breed is Bob's cat Milo?",
       "hard_negative": true,
       "split": "held_out"
     }

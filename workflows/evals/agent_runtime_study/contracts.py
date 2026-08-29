@@ -30,6 +30,12 @@ class MemoryFactStatus(StrEnum):
     FORGOTTEN = "forgotten"
 
 
+class MemoryEntityKind(StrEnum):
+    SUBJECT = "subject"
+    PET = "pet"
+    RELATED_PERSON = "related_person"
+
+
 class RunStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
@@ -47,6 +53,10 @@ class RunEventType(StrEnum):
     TOOL_CALL = "tool.call"
     TOOL_RESULT = "tool.result"
     MEMORY_PROPOSED = "memory.proposed"
+    MEMORY_REVIEW_REQUEST = "memory.review.request"
+    MEMORY_REVIEW_REPAIR = "memory.review.repair"
+    MEMORY_REVIEWED = "memory.reviewed"
+    MEMORY_ENTITY_CREATED = "memory.entity.created"
     MEMORY_COMMITTED = "memory.committed"
     MESSAGE_COMMITTED = "message.committed"
     RETRY_SCHEDULED = "retry.scheduled"
@@ -81,6 +91,15 @@ class MemorySubject:
 
 
 @dataclass(frozen=True)
+class MemoryEntity:
+    id: str
+    subject_id: str
+    kind: MemoryEntityKind
+    label: str = ""
+    created_at: datetime = field(default_factory=utc_now)
+
+
+@dataclass(frozen=True)
 class Conversation:
     id: str
     agent_definition_id: str
@@ -111,6 +130,9 @@ class MemoryFact:
     current_revision_id: str
     created_at: datetime
     updated_at: datetime
+    fact_type: str = ""
+    entity_id: str = ""
+    qualifier: str | None = None
 
 
 @dataclass(frozen=True)
@@ -136,6 +158,9 @@ class MemoryRevision:
     run_id: str
     evidence_quote: str
     evidence_spans: tuple[MemoryEvidenceSpan, ...]
+    fact_type: str = ""
+    entity_id: str = ""
+    qualifier: str | None = None
     created_at: datetime = field(default_factory=utc_now)
 
 
@@ -216,6 +241,9 @@ class MemoryProposal:
     target_fact_ids: tuple[str, ...] = ()
     expected_version: int | None = None
     expected_versions: dict[str, int] = field(default_factory=dict)
+    fact_type: str = ""
+    entity_id: str = ""
+    qualifier: str | None = None
 
 
 @dataclass(frozen=True)
@@ -283,6 +311,16 @@ class ToolExecution:
 
 
 @dataclass(frozen=True)
+class MemoryReviewTrace:
+    reviewer_model_key: str
+    model_request_count: int
+    protocol_repaired: bool
+    proposal_count: int
+    raw_responses: tuple[str, ...]
+    usage: dict[str, int]
+
+
+@dataclass(frozen=True)
 class ExecutorRequest:
     run_id: str
     model_key: str
@@ -327,6 +365,8 @@ class TurnResult:
     raw_model_messages: tuple[dict[str, Any], ...]
     usage: dict[str, int]
     elapsed_seconds: float
+    memory_review: MemoryReviewTrace | None = None
+    candidate_assistant_text: str | None = None
 
 
 class CancellationSignal(Protocol):

@@ -11,6 +11,8 @@ from .contracts import (
     Conversation,
     ConversationSummary,
     MemoryEpisode,
+    MemoryEntity,
+    MemoryEntityKind,
     MemoryFact,
     MemorySubject,
     Message,
@@ -47,6 +49,7 @@ class InMemoryStudyRepository:
         self._lock = RLock()
         self.agent_definitions: dict[str, AgentDefinition] = {}
         self.subjects: dict[str, MemorySubject] = {}
+        self.memory_entities: dict[str, MemoryEntity] = {}
         self.conversations: dict[str, Conversation] = {}
         self.messages: dict[str, list[Message]] = {}
         self.facts: dict[str, MemoryFact] = {}
@@ -72,6 +75,7 @@ class InMemoryStudyRepository:
         return {
             "agent_definitions": dict(self.agent_definitions),
             "subjects": dict(self.subjects),
+            "memory_entities": dict(self.memory_entities),
             "conversations": dict(self.conversations),
             "messages": {key: list(value) for key, value in self.messages.items()},
             "facts": dict(self.facts),
@@ -99,6 +103,57 @@ class InMemoryStudyRepository:
             if value.id in self.subjects:
                 raise RepositoryError(f"Memory subject already exists: {value.id}")
             self.subjects[value.id] = value
+            self.memory_entities[value.id] = MemoryEntity(
+                id=value.id,
+                subject_id=value.id,
+                kind=MemoryEntityKind.SUBJECT,
+                label=value.display_name or value.external_key,
+                created_at=value.created_at,
+            )
+
+    def add_memory_entity(self, value: MemoryEntity) -> None:
+        with self._lock:
+            self.get_subject(value.subject_id)
+            if value.id in self.memory_entities:
+                raise RepositoryError(f"Memory entity already exists: {value.id}")
+            if value.kind is MemoryEntityKind.SUBJECT:
+                raise RepositoryError("Only add_subject may create a subject entity")
+            self.memory_entities[value.id] = value
+
+    def create_memory_entity(
+        self,
+        *,
+        subject_id: str,
+        kind: MemoryEntityKind,
+        label: str = "",
+    ) -> MemoryEntity:
+        value = MemoryEntity(
+            id=f"entity_{uuid4().hex}",
+            subject_id=subject_id,
+            kind=kind,
+            label=label.strip(),
+        )
+        self.add_memory_entity(value)
+        return value
+
+    def get_memory_entity(self, entity_id: str) -> MemoryEntity:
+        try:
+            return self.memory_entities[entity_id]
+        except KeyError as exc:
+            raise NotFoundError(f"Memory entity not found: {entity_id}") from exc
+
+    def list_subject_entities(self, subject_id: str) -> tuple[MemoryEntity, ...]:
+        self.get_subject(subject_id)
+        return tuple(
+            sorted(
+                (
+                    entity
+                    for entity in self.memory_entities.values()
+                    if entity.subject_id == subject_id
+                ),
+                key=lambda entity: (entity.created_at, entity.id),
+            )
+        )
 
     def add_conversation(self, value: Conversation) -> None:
         with self._lock:

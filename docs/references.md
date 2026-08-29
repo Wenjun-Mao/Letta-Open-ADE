@@ -15,6 +15,8 @@ are the maintained references for Letta concepts and SDK behavior:
 - [PydanticAI agents](https://pydantic.dev/docs/ai/core-concepts/agents/)
 - [PydanticAI message history](https://pydantic.dev/docs/ai/core-concepts/message-history/)
 - [PydanticAI OpenAI-compatible providers](https://pydantic.dev/docs/ai/models/openai/)
+- [Qwen3-Embedding-0.6B model card](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B)
+- [vLLM pooling models](https://docs.vllm.ai/en/stable/models/pooling_models/)
 
 The current replacement research, source/image provenance, and independently
 implemented comparison harness are documented in the

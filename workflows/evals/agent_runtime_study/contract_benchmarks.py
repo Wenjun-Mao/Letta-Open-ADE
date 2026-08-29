@@ -6,11 +6,17 @@ from typing import Any
 from .contracts import (
     AgentDefinition,
     Conversation,
+    MemoryOperation,
     MemorySubject,
     RunEventType,
     RunStatus,
     RuntimePolicy,
     TurnRequest,
+)
+from .memory_review import (
+    MemoryReviewDecision,
+    MemoryReviewProposal,
+    MemoryReviewRequest,
 )
 from .repository import InMemoryStudyRepository
 from .runtime import StudyAgentRuntime
@@ -21,6 +27,30 @@ from .scripted import (
     scripted_adapter,
 )
 from .tools import CURATED_TOOL_DEFINITIONS
+
+
+class _ContractMemoryReviewer:
+    model_key = "scripted-reviewer"
+
+    async def review(self, request: MemoryReviewRequest) -> MemoryReviewDecision:
+        proposals = ()
+        if "My name is Alice" in request.current_user_message.content:
+            proposals = (
+                MemoryReviewProposal(
+                    operation=MemoryOperation.ADD,
+                    fact_type="person.name",
+                    value="Alice",
+                    evidence_quote="My name is Alice",
+                ),
+            )
+        return MemoryReviewDecision(
+            reviewer_model_key=self.model_key,
+            proposals=proposals,
+            raw_responses=(),
+            usage={},
+            model_request_count=1,
+            protocol_repaired=False,
+        )
 
 
 def _runtime(adapter_name: str, script: SharedScript):
@@ -48,6 +78,7 @@ def _runtime(adapter_name: str, script: SharedScript):
     runtime = StudyAgentRuntime(
         repository=repository,
         executor=scripted_adapter(adapter_name, script),
+        memory_reviewer=_ContractMemoryReviewer(),
     )
     return runtime, repository
 
@@ -122,16 +153,6 @@ async def run_contract_benchmarks(
                 ScriptStep(
                     tool_calls=(
                         ScriptToolCall(
-                            name="propose_memory_change",
-                            arguments={
-                                "operation": "add",
-                                "key": "user_name",
-                                "value": "Alice",
-                                "evidence_quote": "My name is Alice",
-                            },
-                            call_id="memory-1",
-                        ),
-                        ScriptToolCall(
                             name="get_weather",
                             arguments={"city": "Toronto"},
                             call_id="weather-1",
@@ -147,7 +168,7 @@ async def run_contract_benchmarks(
             _check(
                 "multiple_tool_steps",
                 multi.run.status is RunStatus.SUCCEEDED
-                and len(multi.tool_executions) == 2
+                and len(multi.tool_executions) == 1
                 and len(active) == 1
                 and active[0].value == "Alice",
                 multi,

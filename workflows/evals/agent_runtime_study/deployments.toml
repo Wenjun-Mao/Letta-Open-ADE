@@ -1,8 +1,8 @@
 schema_version = 1
 
 # Router aliases are selectors only. The nested fingerprint is the identity that
-# qualification evidence binds to; unknown integrity fields keep this registry
-# in discovered state until an operator captures them.
+# qualification evidence binds to. Lifecycle remains discovered until three
+# consecutive role-specific study rounds qualify this exact fingerprint.
 
 [[deployment]]
 id = "dgx-qwen3_6-chat"
@@ -16,11 +16,14 @@ endpoint_role = "openai-compatible-chat"
 endpoint_identity = "dgx-spark-vllm-chat:8000"
 served_model = "qwen3.6-35b-a3b-fp8"
 artifact_reference = "Qwen/Qwen3.6-35B-A3B-FP8"
+artifact_revision = "95a723d08a9490559dae23d0cff1d9466213d989"
 runtime_implementation = "vLLM"
-prompt_policy_sha256 = "9554034d8feba7f58aa6abfc6c24446b1a40e1d1c235c427812ed7fec7b690a8"
-tool_policy_sha256 = "4392b333b09b5570df76c0c466380af78cad65f903be8486cec7c3eaf5724fa8"
-schema_policy_sha256 = "d43ccdbfa766da1eb787811db239355c15f895efd1bcf5f1eaaba6082707f162"
-retrieval_policy_sha256 = "5ed3d8a26519dd624ef3e096cce74c2a430772d17aac52416cb26e5fc0daa08e"
+runtime_version = "0.19.2rc1.dev134+gfe9c3d6c5"
+runtime_image_digest = "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc"
+prompt_policy_sha256 = "5f15240ff6274e9d0d32238ce45059f4c790d4559bab6c6bb5dd8a2476b3f7d3"
+tool_policy_sha256 = "19b621d3b608a9df52e48926e1b6bfd02a4b20b715dbbc880d85c3aa16722ef3"
+schema_policy_sha256 = "b5e3470807c420d685d7a4529b1159fa66e85ecb7c757e5181a53bad83b8774e"
+retrieval_policy_sha256 = "8c439d3bdc7543eac4c0eefc7d50847c76ee30878b43faee3ab66b11d2ebd22e"
 
 [deployment.fingerprint.sampling_settings]
 temperature = 1.0
@@ -54,15 +57,19 @@ endpoint_role = "openai-compatible-embeddings"
 endpoint_identity = "dgx-spark-embedding-sidecar:8001"
 served_model = "Qwen/Qwen3-Embedding-0.6B"
 artifact_reference = "Qwen/Qwen3-Embedding-0.6B"
-runtime_implementation = "DGX OpenAI-compatible embeddings sidecar"
-prompt_policy_sha256 = "9554034d8feba7f58aa6abfc6c24446b1a40e1d1c235c427812ed7fec7b690a8"
-tool_policy_sha256 = "4392b333b09b5570df76c0c466380af78cad65f903be8486cec7c3eaf5724fa8"
-schema_policy_sha256 = "d43ccdbfa766da1eb787811db239355c15f895efd1bcf5f1eaaba6082707f162"
-retrieval_policy_sha256 = "5ed3d8a26519dd624ef3e096cce74c2a430772d17aac52416cb26e5fc0daa08e"
+artifact_revision = "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3"
+runtime_implementation = "vLLM"
+runtime_version = "0.19.2rc1.dev134+gfe9c3d6c5"
+runtime_image_digest = "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc"
+prompt_policy_sha256 = "5f15240ff6274e9d0d32238ce45059f4c790d4559bab6c6bb5dd8a2476b3f7d3"
+tool_policy_sha256 = "19b621d3b608a9df52e48926e1b6bfd02a4b20b715dbbc880d85c3aa16722ef3"
+schema_policy_sha256 = "b5e3470807c420d685d7a4529b1159fa66e85ecb7c757e5181a53bad83b8774e"
+retrieval_policy_sha256 = "8c439d3bdc7543eac4c0eefc7d50847c76ee30878b43faee3ab66b11d2ebd22e"
 
 [deployment.fingerprint.sampling_settings]
 dimensions = 1024
 query_instruction_enabled = true
+strategy = "semantic"
 hidden_retries = 0
 
 [deployment.fingerprint.context_settings]
@@ -76,30 +83,38 @@ runtime_host = "dgx-spark"
 [[deployment]]
 id = "llama-server-qwen3_5-27b"
 route_aliases = ["local_llama_server::gemma4"]
-roles = ["conversation", "reviewer"]
+roles = ["conversation"]
 lifecycle = "discovered"
 
 [deployment.fingerprint]
 provider = "local_llama_server"
 endpoint_role = "openai-compatible-chat"
-endpoint_identity = "remote-llama-server:8081"
+endpoint_identity = "100.81.194.12:8081"
 served_model = "Qwen3.5-27B-UD-Q4_K_XL.gguf"
-artifact_reference = "Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
+artifact_reference = "unsloth/Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf"
+artifact_revision = "30d153c8bdfd8ea1f25d47c4d2c4933cbb5bca52"
+artifact_sha256 = "sha256:13cb6228344898afa50d963c02ae0d991ae25094eea8837db8d0e452e91c5888"
 runtime_implementation = "llama-server"
-prompt_policy_sha256 = "9554034d8feba7f58aa6abfc6c24446b1a40e1d1c235c427812ed7fec7b690a8"
-tool_policy_sha256 = "4392b333b09b5570df76c0c466380af78cad65f903be8486cec7c3eaf5724fa8"
-schema_policy_sha256 = "d43ccdbfa766da1eb787811db239355c15f895efd1bcf5f1eaaba6082707f162"
-retrieval_policy_sha256 = "5ed3d8a26519dd624ef3e096cce74c2a430772d17aac52416cb26e5fc0daa08e"
+runtime_version = "b1-225088e"
+prompt_policy_sha256 = "5f15240ff6274e9d0d32238ce45059f4c790d4559bab6c6bb5dd8a2476b3f7d3"
+tool_policy_sha256 = "19b621d3b608a9df52e48926e1b6bfd02a4b20b715dbbc880d85c3aa16722ef3"
+schema_policy_sha256 = "b5e3470807c420d685d7a4529b1159fa66e85ecb7c757e5181a53bad83b8774e"
+retrieval_policy_sha256 = "8c439d3bdc7543eac4c0eefc7d50847c76ee30878b43faee3ab66b11d2ebd22e"
 
 [deployment.fingerprint.sampling_settings]
 thinking_enabled = false
-parallel_requests = 4
+temperature = 0.6
+top_p = 0.95
+top_k = 20
+min_p = 0.05
+repetition_penalty = 1.0
+parallel_slots = 4
 flash_attention = true
 
 [deployment.fingerprint.context_settings]
-context_tokens = 32768
+context_tokens = 8192
 context_shift_enabled = false
 
 [deployment.fingerprint.hardware_metadata]
-runtime_host = "remote-llama-server"
+runtime_host = "windows-llama-server"
 gpu_layers = "all"

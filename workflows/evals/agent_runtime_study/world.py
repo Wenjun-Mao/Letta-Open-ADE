@@ -11,6 +11,7 @@ from .contracts import (
     MessageRole,
 )
 from .fixtures import StudyCase
+from .fact_registry import fact_key
 from .memory import MemoryPolicy
 from .product_material import CHAT_PERSONA, CHAT_SYSTEM_PROMPT
 from .repository import InMemoryStudyRepository
@@ -103,14 +104,21 @@ def _seed_facts(
         source = repository.append_message(
             conversation_id=conversation_id,
             role=MessageRole.USER,
-            content=f"{initial.key}: {initial.value}",
+            content=f"{initial.fact_type or initial.key}: {initial.value}",
             run_id="fixture_seed",
         )
         proposal = MemoryProposal(
             operation=MemoryOperation.ADD,
-            key=initial.key,
+            key=(
+                fact_key(initial.fact_type, subject_id, initial.qualifier)
+                if initial.fact_type
+                else initial.key
+            ),
             value=initial.value,
             evidence_quote=initial.value,
+            fact_type=initial.fact_type,
+            entity_id=subject_id if initial.fact_type else "",
+            qualifier=initial.qualifier,
         )
         with repository.transaction():
             policy.apply_batch(

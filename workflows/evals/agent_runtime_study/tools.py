@@ -1,51 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from .contracts import (
-    MemoryOperation,
-    MemoryProposal,
-    Message,
     ToolDefinition,
     ToolExecution,
 )
-from .memory import MemoryPolicy, MemoryProposalError, MemoryRetriever
-
-
-MEMORY_PROPOSAL_TOOL = ToolDefinition(
-    name="propose_memory_change",
-    description=(
-        "Propose an evidence-backed durable-memory add, correction, merge, or "
-        "forget operation for the current subject. Subject identity is bound by "
-        "the runtime and is intentionally not an argument."
-    ),
-    parameters_json_schema={
-        "type": "object",
-        "additionalProperties": False,
-        "properties": {
-            "operation": {
-                "type": "string",
-                "enum": ["add", "correct", "merge", "forget"],
-            },
-            "key": {"type": "string", "minLength": 1},
-            "value": {"type": ["string", "null"]},
-            "evidence_quote": {"type": "string", "minLength": 1},
-            "fact_id": {"type": ["string", "null"]},
-            "target_fact_ids": {
-                "type": "array",
-                "items": {"type": "string"},
-                "default": [],
-            },
-            "expected_version": {"type": ["integer", "null"], "minimum": 1},
-            "expected_versions": {
-                "type": "object",
-                "additionalProperties": {"type": "integer", "minimum": 1},
-                "default": {},
-            },
-        },
-        "required": ["operation", "key", "evidence_quote"],
-    },
-)
+from .memory import MemoryRetriever
 
 MEMORY_SEARCH_TOOL = ToolDefinition(
     name="search_memory",
@@ -76,7 +38,6 @@ WEATHER_TOOL = ToolDefinition(
 )
 
 CURATED_TOOL_DEFINITIONS = (
-    MEMORY_PROPOSAL_TOOL,
     MEMORY_SEARCH_TOOL,
     WEATHER_TOOL,
 )
@@ -90,27 +51,20 @@ _WEATHER_FIXTURES = {
 
 
 class TurnToolSession:
-    """Subject-bound, attempt-local tool state; writes commit only on run success."""
+    """Subject-bound, attempt-local access to curated conversational tools."""
 
     def __init__(
         self,
         *,
         subject_id: str,
-        conversation_id: str,
-        source_messages: tuple[Message, ...],
-        memory_policy: MemoryPolicy,
         memory_retriever: MemoryRetriever,
         search_limit: int,
         include_episodes: bool,
     ) -> None:
         self.subject_id = subject_id
-        self.conversation_id = conversation_id
-        self.source_messages = source_messages
-        self.memory_policy = memory_policy
         self.memory_retriever = memory_retriever
         self.search_limit = search_limit
         self.include_episodes = include_episodes
-        self.pending_proposals: list[MemoryProposal] = []
         self.executions: list[ToolExecution] = []
 
     async def execute(
@@ -118,13 +72,11 @@ class TurnToolSession:
     ) -> dict[str, Any]:
         try:
             if "subject_id" in arguments or "memory_subject_id" in arguments:
-                raise MemoryProposalError(
+                raise ValueError(
                     "subject selection is forbidden in model-controlled arguments"
                 )
-            if name == MEMORY_PROPOSAL_TOOL.name:
-                result = self._propose(arguments)
-            elif name == MEMORY_SEARCH_TOOL.name:
-                result = self._search(arguments)
+            if name == MEMORY_SEARCH_TOOL.name:
+                result = await self._search(arguments)
             elif name == WEATHER_TOOL.name:
                 result = self._weather(arguments)
             else:
@@ -148,58 +100,27 @@ class TurnToolSession:
         )
         return result
 
-    def _propose(self, arguments: dict[str, Any]) -> dict[str, Any]:
-        operation = MemoryOperation(str(arguments.get("operation") or ""))
-        expected_versions_raw = arguments.get("expected_versions") or {}
-        if not isinstance(expected_versions_raw, dict):
-            raise MemoryProposalError("expected_versions must be an object")
-        proposal = MemoryProposal(
-            operation=operation,
-            key=str(arguments.get("key") or "").strip(),
-            value=(
-                str(arguments["value"]).strip()
-                if arguments.get("value") is not None
-                else None
-            ),
-            evidence_quote=str(arguments.get("evidence_quote") or "").strip(),
-            fact_id=str(arguments.get("fact_id") or "").strip() or None,
-            target_fact_ids=tuple(
-                str(item).strip()
-                for item in (arguments.get("target_fact_ids") or [])
-                if str(item).strip()
-            ),
-            expected_version=(
-                int(arguments["expected_version"])
-                if arguments.get("expected_version") is not None
-                else None
-            ),
-            expected_versions={
-                str(key): int(value) for key, value in expected_versions_raw.items()
-            },
-        )
-        self.memory_policy.validate_batch(
-            subject_id=self.subject_id,
-            proposals=(*self.pending_proposals, proposal),
-            source_messages=self.source_messages,
-        )
-        self.pending_proposals.append(proposal)
-        return {
-            "ok": True,
-            "status": "staged",
-            "proposal_index": len(self.pending_proposals) - 1,
-            "operation": proposal.operation.value,
-            "key": proposal.key,
-        }
-
-    def _search(self, arguments: dict[str, Any]) -> dict[str, Any]:
+    async def _search(self, arguments: dict[str, Any]) -> dict[str, Any]:
         query = str(arguments.get("query") or "").strip()
         if not query:
             raise ValueError("query is required")
         requested_limit = int(arguments.get("limit") or self.search_limit)
         limit = max(1, min(self.search_limit, requested_limit))
-        facts = self.memory_retriever.search_facts(self.subject_id, query, limit=limit)
+        facts = await asyncio.to_thread(
+            self.memory_retriever.search_facts,
+            self.subject_id,
+            query,
+            limit=limit,
+            minimum_score=None,
+        )
         episodes = (
-            self.memory_retriever.search_episodes(self.subject_id, query, limit=limit)
+            await asyncio.to_thread(
+                self.memory_retriever.search_episodes,
+                self.subject_id,
+                query,
+                limit=limit,
+                minimum_score=None,
+            )
             if self.include_episodes
             else ()
         )
@@ -231,14 +152,6 @@ class TurnToolSession:
             "temperature_c": None,
         }
         return {"ok": True, "city": city, **weather}
-
-    def commit(self, *, run_id: str):
-        return self.memory_policy.apply_batch(
-            subject_id=self.subject_id,
-            proposals=tuple(self.pending_proposals),
-            source_messages=self.source_messages,
-            run_id=run_id,
-        )
 
 
 def curated_tools(names: tuple[str, ...]) -> tuple[ToolDefinition, ...]:

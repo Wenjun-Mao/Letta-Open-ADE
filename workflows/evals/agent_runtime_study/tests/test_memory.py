@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from workflows.evals.agent_runtime_study.contracts import (
@@ -16,13 +14,11 @@ from workflows.evals.agent_runtime_study.contracts import (
 from workflows.evals.agent_runtime_study.memory import (
     MemoryPolicy,
     MemoryProposalError,
-    MemoryRetriever,
 )
 from workflows.evals.agent_runtime_study.repository import (
     InMemoryStudyRepository,
     OptimisticConflictError,
 )
-from workflows.evals.agent_runtime_study.tools import TurnToolSession
 
 
 def _repository() -> InMemoryStudyRepository:
@@ -194,6 +190,24 @@ def test_evidence_uncertainty_subject_and_version_are_validated() -> None:
             source_messages=(source,),
             run_id="run",
         )
+    cherry_picked = _source(
+        repository,
+        "Maybe I will get a cat named Milo, but I do not have one now",
+    )
+    with pytest.raises(MemoryProposalError, match="uncertain"):
+        policy.apply_batch(
+            subject_id="subject-a",
+            proposals=(
+                MemoryProposal(
+                    operation=MemoryOperation.ADD,
+                    key="cat_name",
+                    value="Milo",
+                    evidence_quote="cat named Milo",
+                ),
+            ),
+            source_messages=(cherry_picked,),
+            run_id="run",
+        )
     with pytest.raises(MemoryProposalError, match="exact excerpt"):
         policy.apply_batch(
             subject_id="subject-a",
@@ -330,37 +344,6 @@ def test_repository_transaction_rolls_back_partial_memory_batch() -> None:
             run_id="run",
         )
     assert repository.list_subject_facts("subject-a") == ()
-
-
-def test_duplicate_staged_key_is_reported_before_model_loop_finishes() -> None:
-    async def scenario() -> None:
-        repository = _repository()
-        source = _source(repository, "My name is Alice")
-        session = TurnToolSession(
-            subject_id="subject-a",
-            conversation_id="conversation",
-            source_messages=(source,),
-            memory_policy=MemoryPolicy(repository),
-            memory_retriever=MemoryRetriever(repository),
-            search_limit=8,
-            include_episodes=False,
-        )
-        arguments = {
-            "operation": "add",
-            "key": "name",
-            "value": "Alice",
-            "evidence_quote": "name is Alice",
-        }
-
-        first = await session.execute("propose_memory_change", arguments, "call-1")
-        duplicate = await session.execute("propose_memory_change", arguments, "call-2")
-
-        assert first["ok"] is True
-        assert duplicate["ok"] is False
-        assert "already uses key" in duplicate["error"]
-        assert len(session.pending_proposals) == 1
-
-    asyncio.run(scenario())
 
 
 def test_batch_rejects_multiple_mutations_of_one_fact() -> None:

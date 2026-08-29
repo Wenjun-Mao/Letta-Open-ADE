@@ -34,7 +34,7 @@ provider-facing boundary for normal discovery and generation.
 | Prompts, personas, schemas, tools, reports | `content/` | owning center's adapter and its matching content subdirectory |
 | Model source configuration | `config/model-router/` | `sources.json`, local overlay, and `model-profiles.json` |
 | Evals and provider probes | `workflows/evals/` | workflow-local `README.md` and `run.py` |
-| Native agent-runtime architecture study | `workflows/evals/agent_runtime_study/` | workflow README, [study report](architecture/agent-runtime-replacement-study.md), and proposed [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
+| Native agent-runtime architecture study | `workflows/evals/agent_runtime_study/` | workflow README, exact deployment registry, [study report](architecture/agent-runtime-replacement-study.md), and proposed [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
 | Live smoke coverage | `workflows/smoke/` | named smoke script or `make smoke` |
 | Compose support files | `infra/` | `compose.yaml` and the relevant `infra/` asset |
 
@@ -95,6 +95,9 @@ for the persona projection contract.
 ## Guardrails
 
 - Do not call providers directly from ADE Web, ADE API features, or workflows.
+- The agent-runtime study may call its declared embedding sidecar directly for
+  fingerprinted retrieval evidence only; production generation remains routed
+  through Model Router and this exception must not spread to product code.
 - Do not let one feature import another feature's internal implementation.
 - Do not create generic `utils` or a catch-all shared package.
 - Keep workflow runner, config, fixtures, outputs, documentation, and tests

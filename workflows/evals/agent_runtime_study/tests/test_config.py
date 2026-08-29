@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from workflows.evals.agent_runtime_study.config import load_config
+from workflows.evals.agent_runtime_study.config import load_config, with_overrides
 
 
 def test_study_endpoint_environment_overrides_file(
@@ -46,3 +46,16 @@ def test_host_api_default_uses_configured_compose_port(
     config = load_config(config_path)
 
     assert config.ade_api_base_url == "http://127.0.0.1:8123"
+
+
+def test_request_scoped_retry_override_does_not_change_the_default(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "study.toml"
+    config_path.write_text("retry_count = 0\n", encoding="utf-8")
+
+    config = load_config(config_path)
+    overridden = with_overrides(config, retry_count=1)
+
+    assert config.policy.retry_count == 0
+    assert overridden.policy.retry_count == 1

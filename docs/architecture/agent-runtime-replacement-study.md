@@ -1,6 +1,6 @@
 # ADE-Native Agent Runtime Replacement Study
 
-- Study date: 2026-08-27
+- Study date: 2026-08-29
 - Production impact: none
 - Decision state: architecture proposed; replacement not approved
 - Reproducible workflow: [`workflows/evals/agent_runtime_study/`](../../workflows/evals/agent_runtime_study/README.md)
@@ -29,10 +29,19 @@ It preserves one ADE retry owner and recovers malformed protocol messages withou
 framework retry. The exact PydanticAI `2.35.1` adapter tested here is disqualified;
 that result does not claim every possible PydanticAI integration is impossible.
 
-No runtime candidate is approved for cutover. The custom loop passes the static
-executor contract and both models' curated weather-tool checks, but the live
-conversation suite still exposes model-compliance and memory-normalization gaps.
-The proposed ADR therefore remains **Proposed**, not Accepted.
+The study now has the core product contracts that were previously missing: a closed
+fact/entity registry, a separate subject-bound memory reviewer, atomic review and
+assistant commit, multilingual semantic retrieval, and exact deployment
+qualification. These additions strengthen the custom loop recommendation without
+making it production-ready.
+
+No runtime deployment is approved for cutover. Under the current exact fingerprints,
+the complete DGX matrix passed `12/12`. The complete llama-server compatibility
+matrix passed `11/12`; its conversation model claimed a weather-tool failure without
+calling the tool. Role-specific scoring attributed that failure only to the llama
+conversation deployment, while the shared DGX reviewer passed independently. The
+three-round release gate is not yet satisfied, so the proposed ADR remains
+**Proposed**, not Accepted.
 
 ## Scope And Method
 
@@ -61,12 +70,18 @@ The workflow records provenance in every run. The studied runtime was:
 | Local image digest | `sha256:aa66c3eeee13d2dfc40c650d709b550237ee31bfc91942a52fa488a13fa8c102` |
 | Upstream release commit in notes | `1131535` |
 | PydanticAI distribution | `pydantic-ai-slim[openai]==2.35.1` |
-| Primary live model | `dgx_vllm::qwen3.6-35b-a3b-fp8` |
-| Compatibility model | `local_llama_server::gemma4` |
+| Primary chat/reviewer artifact | `Qwen/Qwen3.6-35B-A3B-FP8` at `95a723d08a9490559dae23d0cff1d9466213d989` |
+| DGX runtime | vLLM `0.19.2rc1.dev134+gfe9c3d6c5`, image `sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc` |
+| Compatibility artifact | `unsloth/Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf` at `30d153c8bdfd8ea1f25d47c4d2c4933cbb5bca52` |
+| Compatibility artifact SHA-256 | `13cb6228344898afa50d963c02ae0d991ae25094eea8837db8d0e452e91c5888` |
+| llama-server runtime | build `b1-225088e`, `8192` context tokens, `4` slots |
+| Retriever artifact | `Qwen/Qwen3-Embedding-0.6B` at `97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3` |
 
-Artifacts also contain the repository revision/status, workflow-tree hash, fixture
-hash, `uv.lock` hash, prompt/persona hashes, effective non-secret config, and live
-Model Router catalog.
+The route aliases `dgx_vllm::qwen3.6-35b-a3b-fp8` and
+`local_llama_server::gemma4` are routing conveniences, not model identities. Every
+artifact also contains the repository revision/status, workflow-tree hash, fixture
+hash, `uv.lock` hash, exact policy-bundle hashes, effective non-secret config, and
+live Model Router catalog.
 
 Primary upstream references:
 
@@ -80,6 +95,8 @@ Primary upstream references:
 - [PydanticAI agents](https://pydantic.dev/docs/ai/core-concepts/agents/)
 - [PydanticAI message history](https://pydantic.dev/docs/ai/core-concepts/message-history/)
 - [PydanticAI OpenAI provider](https://pydantic.dev/docs/ai/models/openai/)
+- [Qwen3-Embedding-0.6B model card](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B)
+- [vLLM pooling models](https://docs.vllm.ai/en/stable/models/pooling_models/)
 
 ## What ADE Uses Today
 
@@ -157,7 +174,7 @@ swap.
 | Persona memory | Letta block | Agent-definition snapshot, not subject memory |
 | Conversation search | Letta tool | Rebuild as subject/history search |
 | Context compaction | Letta | Rebuild as versioned derivatives |
-| Embedding discovery/retrieval | Letta | Defer pending semantic benchmark |
+| Embedding discovery/retrieval | Letta | Rebuild as versioned subject-bound semantic retrieval |
 | Agent/tool loop | Letta | Rebuild small curated loop |
 | Timeout/retry request controls | ADE plus SDK | Make ADE sole owner |
 | Archive metadata | ADE | Move into PostgreSQL conversation/definition status |
@@ -255,12 +272,30 @@ Only explicit durable user facts are committed by default. Inferences remain
 uncommitted. Forgetting a memory does not silently rewrite immutable conversation
 history.
 
+### `MemoryReviewer`
+
+Memory extraction is a required model role, not a conversation tool. It runs after
+the conversation model has produced a candidate user-visible response, but it sees
+only the current user message, prior user-authored messages, and an ADE-built
+inventory of active facts and entity references. Assistant text is excluded to
+prevent persona details or model guesses from becoming user memory. ADE binds the
+subject server-side and assigns durable entity IDs; reviewer arguments cannot name
+or switch subjects.
+
+The reviewer emits a closed batch of typed proposals. ADE resolves exact evidence
+spans, applies registry/cardinality/entity rules, and validates the whole batch
+before any mutation. A failed review, malformed operation, conflict, or provider
+failure aborts the candidate assistant response and all staged memory revisions.
+There is no fallback reviewer and no partial batch commit.
+
 ### Derivatives
 
 `ConversationSummary` is immutable and versioned, covers a validated contiguous
 message prefix, records generation policy/model/run, and may supersede an earlier
-summary. `MemoryEpisode` is the equivalent optional subject/conversation derivative
-for episodic retrieval. Both are replaceable projections, never source authority.
+summary. `MemoryEpisode` remains a possible future derivative, but it is not part of
+the initial recommended v3 persistence model because held-out semantic fact
+retrieval passed without episodes. Any future episode store must remain a
+replaceable projection, never source authority.
 
 ### `Run`, `RunAttempt`, `RunEvent`, And `ToolDefinition`
 
@@ -314,9 +349,7 @@ ade.memory_revisions
 ade.memory_revision_sources
 ade.conversation_summaries
 ade.summary_sources
-ade.memory_episodes             # contract retained; feature initially gated
-ade.episode_sources
-ade.memory_embeddings           # only if semantic retrieval is accepted
+ade.memory_embeddings
 ade.conversation_run_leases
 ```
 
@@ -339,12 +372,14 @@ State changes, terminal run status, terminal events, and outbox records commit i
 one transaction. Event streaming reads the outbox/run-event sequence. Redis is not
 part of this design.
 
-`pgvector` remains an implementation choice rather than an assumption. Phase 1 can
-start with active-profile selection, exact matching, PostgreSQL text/trigram search,
-and explicit deep search, but the live Chinese-to-English miss proves that lexical
-search alone cannot pass cutover. Benchmark multilingual embeddings against explicit
-normalization; if embeddings win at acceptable p95 latency/storage cost, add
-`memory_embeddings` with explicit embedding model/version/dimension.
+Use PostgreSQL `pgvector` for semantic fact vectors while retaining exact/text
+filters for fact type, entity, status, workspace, and subject. Every embedding row
+records source fact/revision, model artifact revision, dimensions, normalization,
+and retrieval-policy version. A changed embedding fingerprint requires controlled
+re-embedding into a new version before traffic switches; it must never silently mix
+incompatible vector spaces. The live Qwen3-Embedding-0.6B benchmark passed the
+defined multilingual quality, isolation, and latency gates, while lexical retrieval
+had already failed the Chinese-to-English case.
 
 ## Context Construction
 
@@ -378,9 +413,11 @@ its section budget. It summarizes only complete turns through a validated sequen
 emits its own run/events, and never deletes source messages. A failed summary either
 falls back to a previously valid version or produces an explicit context error.
 
-## Memory Write Contract
+## Memory Review And Write Contract
 
-The server binds every proposal to the run's subject and current user source
+The conversation executor cannot write memory. After it returns a candidate reply,
+the required reviewer receives a server-built, subject-bound review packet. The
+server binds every reviewer proposal to the run's subject and user-authored source
 messages. Validation proceeds in this order:
 
 1. Parse the closed operation schema; reject unknown fields and subject selectors.
@@ -392,12 +429,19 @@ messages. Validation proceeds in this order:
 6. For `merge`, verify every target belongs to the subject and every version matches.
 7. Prove a new value is a lossless canonicalization of current evidence plus any
    explicitly referenced prior facts. Store original-language values by default.
-8. Stage proposals during the model loop; commit only with the successful assistant
-   message and terminal run events.
+8. Validate the complete proposal batch, including duplicate/cardinality conflicts.
+9. Commit valid revisions only with the successful assistant message and terminal
+   run events. Any reviewer or proposal failure aborts the whole candidate turn.
 
 Conflicts are not silently overwritten. A subject write conflict may trigger one
 explicit memory-replan step within the same run if budget remains; it is not a
 transport retry and is visible as an event.
+
+Operation meaning is not inferred away at the storage boundary. A correction must
+use `correct`; `forget` is accepted only for explicit user intent to remove retained
+information. In the final live matrix, the reviewer emitted `forget` plus `add` for
+one location correction and later emitted `add` against an existing fact. Both were
+rejected atomically rather than normalized into a write with different semantics.
 
 ## Concurrency, Idempotency, Cancellation, And Recovery
 
@@ -479,11 +523,14 @@ production reasoning is private, redacted from normal UI, and governed by retent
 
 ## Tools, Approval, And Sandboxing
 
-The prototype exposes only:
+The conversation prototype exposes only:
 
-- `propose_memory_change` (staged write).
 - `search_memory` (subject-bound read).
 - `get_weather` (deterministic read-only fixture).
+
+Memory review is a separate required role and protocol, not a model-visible tool.
+This prevents conversation personas, assistant prose, and tool-loop choices from
+becoming memory authority.
 
 Production v3 begins with curated, versioned handlers and explicit side-effect
 classification. Arbitrary Tool Center Python/npm/pip execution, arbitrary shell,
@@ -493,22 +540,43 @@ smuggled into the core runtime migration.
 
 ## Retrieval Experiment
 
-The deterministic lexical benchmark produced:
+The initial deterministic lexical benchmark was useful as a failure baseline: fact
+only recalled `0.40` and fact plus episode recalled `0.80` across five handcrafted
+cases, while both missed the Chinese query for an English `Royal Ontario Museum`
+fact. That established multilingual semantic retrieval as a mandatory gate, not a
+future optimization.
 
-| Variant | Recall | Cases |
+The implemented semantic benchmark uses the exact
+`Qwen/Qwen3-Embedding-0.6B` revision
+`97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3` through a dedicated vLLM pooling
+sidecar. The workflow calls its OpenAI-compatible embeddings endpoint directly with
+SDK retries disabled. A six-case calibration set selects an automatic-retrieval
+threshold, and a disjoint 12-case held-out set evaluates eight positives, five
+cross-lingual cases, four hard negatives/isolation checks, and a 1,000-document
+corpus.
+
+Latest complete live result:
+
+| Metric | Result | Gate |
 | --- | ---: | ---: |
-| Fact only | `0.40` | 5 |
-| Fact plus episode | `0.80` | 5 |
+| Calibration precision | `1.00` | `>= 0.95` |
+| Calibration recall | `1.00` | `>= 0.95` |
+| Overall held-out recall | `1.00` | `>= 0.95` |
+| Cross-lingual recall at 3 | `1.00` | `1.00` |
+| Hard-negative false-positive rate | `0.00` | `<= 0.05` |
+| Held-out p95 latency | `101.3 ms` | `<= 250 ms` |
 
-This is enough to retain the optional `MemoryEpisode` contract in the v3 model. It
-is not enough to enable episode persistence by itself: the cases are small and
-handcrafted. More importantly, both variants miss the Chinese query for an English
-`Royal Ontario Museum` fact. The corrected live deep-search fixture reproduces that
-miss on both local models even though both correctly call `search_memory`. A
-multilingual semantic retrieval capability is therefore required before cutover;
-the next benchmark must compare embeddings/pgvector against explicit multilingual
-normalization using held-out aliases, false positives, p50/p95 latency, index/storage
-cost, and provenance-valid episode generation.
+Subject isolation also passed. Automatic retrieval uses the calibrated threshold
+(`0.6311` in this run). Explicit `search_memory` intentionally returns top
+subject-bound candidates without that threshold because short deliberate queries
+otherwise traded away recall. This difference is an explicit product contract, not
+a hidden tuning exception.
+
+Semantic fact retrieval now satisfies the study gate without persisted episodes, so
+episodes are deferred from initial v3. The prototype currently re-embeds its
+in-memory corpus per search; production must persist versioned vectors in pgvector
+and measure incremental indexing, storage, and re-embedding operations before
+cutover.
 
 ## Executor Comparison
 
@@ -533,55 +601,114 @@ ties favor fewer ADE-owned protocol lines.
 Current static result: the minimal custom loop passes all `12/12` contracts with a
 weighted diagnostic score of approximately `82.5`. The tested PydanticAI adapter
 passes `10/12`, fails mandatory reasoning-only and malformed-argument recovery, and
-scores approximately `76.3`.
+scores approximately `76.9`.
 Those scores do not override its failed gate.
 
 ### Live Model Evidence
 
-Live requests went through Model Router with every SDK/framework retry set to zero:
+Live requests went through Model Router with SDK/framework retries at zero. The
+explicit study command used one additional ADE retry for transient transport
+failures; the final llama behavioral failure was not retryable and was not retried
+away. Conversation generation used each selected model, while DGX Qwen was the
+required reviewer for both matrices.
 
-- DGX Qwen passed the restored seven-turn fact-capture assertions for `张伟`,
-  `Rocky`, and `哈士奇`, assistant disclosure checks, and normalized trace checks.
-  It required an explicit reasoning-only protocol-repair model step. The run also
-  produced two active Rocky-name facts under semantically duplicate free-form keys;
-  this is why the target contract now requires ADE-owned fact types and cardinality
-  rather than arbitrary model keys.
-- llama-server completed the same seven turns and captured Rocky plus Husky, but it
-  omitted `张伟`. Increasing the output allowance to `4096` did not fix the miss.
-- DGX initially repeated an identical staged `name` proposal and failed only at
-  commit. Moving batch-conflict validation to proposal time made the focused
-  cross-subject isolation rerun pass without weakening subject boundaries.
-- After removing seeded-memory leakage from recent conversation history, both models
-  called `search_memory` for the Chinese museum query and received no lexical match
-  for the English fact. This is a real retrieval failure, not a tool-selection
-  failure.
-- The custom loop passed weather selection and deterministic weather failure on both
-  DGX Qwen and llama-server with correlated tool events.
-- The PydanticAI adapter passed the focused weather-selection smoke on both models,
-  but that does not repair its deterministic mandatory-gate failures.
+The final full DGX matrix (`agent-runtime-study-20260829_133925`) passed `12/12`:
 
-Accordingly, the custom loop is a provisional implementation direction, not a
-production-qualified runtime. No candidate currently passes all required memory
-correctness, normalization, multilingual retrieval, and both-local-model gates.
+- Baseline memory captured `张伟`, `Rocky`, and `哈士奇` on the correct typed subject
+  and pet entity.
+- Correction, forgetting, cross-agent sharing, cross-subject isolation, deep search,
+  compaction, false-memory prevention, both weather traces, and private-reasoning
+  non-disclosure all passed.
+- The strict correction contract remained unchanged: the successful reviewer output
+  used an accepted typed correction rather than relying on normalization of an
+  invalid `forget` plus `add` batch.
+- The ten runtime cases took about `653.5s` in total (`65.3s` mean); the seven-turn
+  baseline accounted for `190.1s`. These are diagnostic end-to-end case timings,
+  not provider throughput benchmarks.
+
+Earlier runs under now-stale policy fingerprints rejected invalid correction
+proposals from the same reviewer deployment (`forget` plus `add`, or `add` against
+an existing singleton fact). Those artifacts do not count toward current
+qualification, but they remain useful evidence that one successful round is not a
+stability claim and that the three-consecutive-round gate is necessary.
+
+The final full llama-server matrix (`agent-runtime-study-20260829_135040`) passed
+`11/12`:
+
+- Baseline typed memory, forgetting, sharing/isolation, deep search, compaction,
+  false-memory prevention, correction, and normal weather selection passed.
+- The conversation model told the user that `FAIL_CITY` lookup failed without ever
+  calling `get_weather`. The assistant prose sounded plausible, but the required
+  correlated tool-call/failure trace was absent, so the case correctly failed.
+- Role-specific evidence marked the llama conversation role failed and the DGX
+  reviewer role passed; a combined case score no longer contaminates both roles.
+- The ten runtime cases took about `97.0s` in total (`9.7s` mean). The alias
+  `local_llama_server::gemma4` actually resolved to the fingerprinted Qwen3.5-27B
+  GGUF deployment recorded above.
+
+The semantic retriever and DGX reviewer passed in both final complete runs, so each
+has two consecutive passing rounds under the current fingerprint. DGX conversation
+has one passing round because it was observed only in the DGX matrix. The llama
+conversation role has zero consecutive passes after its failed round. All remain
+candidates until their own three-round gates pass; the unavailable llama runtime
+binary digest independently prevents that deployment from qualifying.
+
+These results distinguish executor correctness from deployment qualification. The
+custom loop is still the simplest passing executor and remains the provisional
+implementation direction. The current model/reviewer fingerprints are not
+production-qualified, and rerunning only the failed cases cannot advance them.
+
+## Deployment Churn And Qualification
+
+Local model names are expected to change as better artifacts become available. The
+runtime therefore separates stable product roles from mutable routing aliases and
+exact deployment identities:
+
+- Product roles are `conversation`, `reviewer`, and `retriever`.
+- A route alias selects a candidate but carries no qualification by itself.
+- A deployment fingerprint includes artifact revision/digest, served model, runtime
+  implementation/version/image digest, endpoint role, hardware, context and sampling
+  settings, plus prompt/tool/schema/retrieval policy hashes.
+- A changed artifact, quantization, runtime, context, sampling profile, embedding
+  space, or policy bundle creates a new effective fingerprint. Prior rounds become
+  stale rather than being inherited by a familiar alias.
+- Release requires three consecutive passing complete rounds for every required
+  role. Conversation and reviewer rounds count only when the minimal custom loop
+  covers the complete canonical fixture matrix. Focused diagnostics remain useful
+  evidence but cannot advance qualification.
+- Retriever rounds use the complete calibration and held-out retrieval suite.
+- The normal release gate rejects candidates. The harness has an explicit
+  study/development override solely to collect evidence, and every use is recorded.
+- There is no reviewer fallback. A fallback would make the effective memory policy
+  depend on runtime availability and hide which deployment produced state.
+
+This turns model upgrades into measured replacement candidates rather than source
+code migrations. A newer DGX or llama-server model can be registered under any
+convenient alias, but it serves a role only after its exact fingerprint independently
+passes the role gate. Rollback means selecting a still-qualified prior fingerprint,
+not pretending two model artifacts are interchangeable.
 
 ## Roadmap
 
 ### Phase 0: Decision Review
 
-Review this study and proposed ADR. Resolve live model gates, retention policy, and
-the memory-review strategy. No production implementation begins without approval.
+Review this study and proposed ADR. Resolve reviewer-deployment reliability,
+retention policy, and operational ownership for embedding qualification/re-indexing.
+No production implementation begins without approval.
 
 ### Phase 1: Native Persistence
 
 Add ADE PostgreSQL migrations/repositories for immutable definitions, subjects,
 conversations, messages, runs/events/outbox, and facts/revisions. Add transaction,
-lease, optimistic-lock, isolation, and crash-recovery tests. Keep Letta production.
+lease, optimistic-lock, isolation, crash-recovery, and versioned pgvector tests. Keep
+Letta production.
 
 ### Phase 2: Runtime Behind An Internal Flag
 
-Implement the selected executor, context builder, staged memory policy, curated
-tools, cancellation, and normalized events against native repositories. Run shadow
-synthetic evals only; do not dual-write real agents.
+Implement the selected executor, context builder, required reviewer, typed memory
+policy, semantic retrieval, curated tools, cancellation, and normalized events
+against native repositories. Run shadow synthetic evals only; do not dual-write real
+agents.
 
 ### Phase 3: Breaking v3 API And Agent Studio UI
 
@@ -620,6 +747,8 @@ Replacement work may not cut over until all are true:
 - Tool calls/results correlate and failures preserve complete traces.
 - Raw history survives summary/compaction and old memory remains retrievable.
 - False memories are not committed.
+- Conversation, reviewer, and retriever fingerprints each have three consecutive
+  passing complete rounds; no study override or fallback appears in a release run.
 - DGX Qwen passes the restored `张伟`/`Rocky`/`哈士奇` baseline with no forbidden
   disclosure.
 - llama-server passes the defined compatibility protocol and memory gate.
@@ -628,12 +757,14 @@ Replacement work may not cut over until all are true:
 
 ## Open Questions
 
-- Should a dedicated required memory-review model step be used when conversational
-  models skip optional tool calls, or should memory quality remain prompt-driven?
+- Which reviewer prompt/schema/model combination can pass three consecutive complete
+  rounds without weakening `correct` versus `forget` semantics?
 - What production retention/redaction period should apply to private reasoning and
   raw provider payloads?
-- Which multilingual semantic strategy passes held-out recall/precision and latency,
-  and does its evidence justify pgvector and persisted episodes?
+- What is the production re-embedding rollout, storage budget, and rollback process
+  when the retriever artifact changes?
+- Should episodes ever be introduced after fact-only semantic retrieval, and what
+  held-out improvement would justify their added provenance and lifecycle cost?
 - Which initial production weather/search provider and error contract should replace
   the deterministic fixture?
 - Is Tool Center arbitrary execution still a product requirement after curated v3

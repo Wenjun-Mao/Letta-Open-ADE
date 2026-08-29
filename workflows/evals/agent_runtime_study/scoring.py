@@ -25,6 +25,20 @@ SCORE_WEIGHTS = {
     "measured_overhead": 0.05,
 }
 
+PRIVATE_REASONING_MARKERS = (
+    "<think>",
+    "</think>",
+    "thinking process:",
+    "internal monologue:",
+    "思考过程:",
+    "思考过程：",
+)
+
+
+def visible_private_reasoning_markers(text: str) -> tuple[str, ...]:
+    normalized = str(text or "").casefold()
+    return tuple(marker for marker in PRIVATE_REASONING_MARKERS if marker in normalized)
+
 
 def score_case(
     *,
@@ -33,6 +47,7 @@ def score_case(
     results_by_conversation: dict[str, tuple[TurnResult, ...]],
 ) -> dict[str, Any]:
     checks: list[dict[str, Any]] = []
+    reviewer_checks: list[dict[str, Any]] = []
     for assertion in case.fact_assertions:
         facts = facts_by_subject.get(assertion.subject_key, ())
         searchable = "\n".join(f"{fact.key}: {fact.value}" for fact in facts).casefold()
@@ -44,59 +59,99 @@ def score_case(
         )
         present = bool(aliases) and key_matches
         passed = not present if assertion.absent else present
-        checks.append(
-            {
-                "kind": "fact_absent" if assertion.absent else "fact_present",
-                "subject_key": assertion.subject_key,
-                "key": assertion.key,
-                "aliases": list(assertion.aliases),
-                "matched_aliases": list(aliases),
-                "pass": passed,
-            }
-        )
+        check = {
+            "kind": "fact_absent" if assertion.absent else "fact_present",
+            "subject_key": assertion.subject_key,
+            "key": assertion.key,
+            "aliases": list(assertion.aliases),
+            "matched_aliases": list(aliases),
+            "pass": passed,
+        }
+        checks.append(check)
+        reviewer_checks.append(check)
 
+    conversation_checks: list[dict[str, Any]] = []
     for assertion in case.assistant_assertions:
         results = results_by_conversation.get(assertion.conversation_key, ())
-        text = "\n".join(
+        committed_text = "\n".join(
             result.assistant_message.content
             for result in results
             if result.assistant_message is not None
-        ).casefold()
-        contains = [item for item in assertion.contains_any if item.casefold() in text]
-        forbidden = [item for item in assertion.forbidden if item.casefold() in text]
+        )
+        candidate_text = "\n".join(
+            text
+            for result in results
+            if (
+                text := result.candidate_assistant_text
+                or (
+                    result.assistant_message.content
+                    if result.assistant_message is not None
+                    else ""
+                )
+            )
+        )
         checks.append(
-            {
-                "kind": "assistant_content",
-                "conversation_key": assertion.conversation_key,
-                "contains_any": list(assertion.contains_any),
-                "matched_contains": contains,
-                "forbidden_hits": forbidden,
-                "pass": (not assertion.contains_any or bool(contains))
-                and not forbidden,
-            }
+            _assistant_content_check(
+                assertion.conversation_key,
+                assertion.contains_any,
+                assertion.forbidden,
+                committed_text,
+            )
+        )
+        conversation_checks.append(
+            _assistant_content_check(
+                assertion.conversation_key,
+                assertion.contains_any,
+                assertion.forbidden,
+                candidate_text,
+            )
         )
 
     all_results = tuple(
         result for values in results_by_conversation.values() for result in values
     )
+    assistant_text = "\n".join(
+        result.assistant_message.content
+        for result in all_results
+        if result.assistant_message is not None
+    )
+    reasoning_markers = visible_private_reasoning_markers(assistant_text)
+    checks.append(_private_reasoning_check(reasoning_markers))
+    candidate_text = "\n".join(
+        text
+        for result in all_results
+        if (
+            text := result.candidate_assistant_text
+            or (
+                result.assistant_message.content
+                if result.assistant_message is not None
+                else ""
+            )
+        )
+    )
+    conversation_checks.append(
+        _private_reasoning_check(visible_private_reasoning_markers(candidate_text))
+    )
     used_tools = {
         execution.name for result in all_results for execution in result.tool_executions
     }
     for tool_name in case.required_tools:
-        checks.append(
-            {
-                "kind": "required_tool",
-                "tool_name": tool_name,
-                "pass": tool_name in used_tools,
-            }
-        )
+        check = {
+            "kind": "required_tool",
+            "tool_name": tool_name,
+            "pass": tool_name in used_tools,
+        }
+        checks.append(check)
+        conversation_checks.append(check)
     if case.require_failed_tool_result:
         has_failed_tool = any(
             not execution.succeeded
             for result in all_results
             for execution in result.tool_executions
         )
-        checks.append({"kind": "failed_tool_was_observed", "pass": has_failed_tool})
+        check = {"kind": "failed_tool_was_observed", "pass": has_failed_tool}
+        checks.append(check)
+        conversation_checks.append(check)
 
     all_succeeded = all(
         result.run.status is RunStatus.SUCCEEDED for result in all_results
@@ -111,6 +166,19 @@ def score_case(
             {"kind": "all_runs_succeeded", "pass": all_succeeded},
             {"kind": "normalized_trace_preserved", "pass": trace_preserved},
         )
+    )
+    conversation_checks.append(
+        {"kind": "normalized_trace_preserved", "pass": trace_preserved}
+    )
+    reviewer_checks.append({"kind": "reviewed_turns_committed", "pass": all_succeeded})
+    conversation_observed = len(all_results) == len(case.turns) and all(
+        result.candidate_assistant_text is not None
+        or result.assistant_message is not None
+        for result in all_results
+    )
+    reviewer_observed = len(all_results) == len(case.turns) and all(
+        any(event.type is RunEventType.MEMORY_REVIEW_REQUEST for event in result.events)
+        for result in all_results
     )
     failed = [check for check in checks if not check["pass"]]
     return {
@@ -135,6 +203,47 @@ def score_case(
             )
             for result in all_results
         ),
+        "role_scores": {
+            "conversation": _role_score(conversation_observed, conversation_checks),
+            "reviewer": _role_score(reviewer_observed, reviewer_checks),
+        },
+    }
+
+
+def _assistant_content_check(
+    conversation_key: str,
+    contains_any: tuple[str, ...],
+    forbidden: tuple[str, ...],
+    text: str,
+) -> dict[str, Any]:
+    normalized = text.casefold()
+    contains = [item for item in contains_any if item.casefold() in normalized]
+    forbidden_hits = [item for item in forbidden if item.casefold() in normalized]
+    return {
+        "kind": "assistant_content",
+        "conversation_key": conversation_key,
+        "contains_any": list(contains_any),
+        "matched_contains": contains,
+        "forbidden_hits": forbidden_hits,
+        "pass": (not contains_any or bool(contains)) and not forbidden_hits,
+    }
+
+
+def _private_reasoning_check(markers: tuple[str, ...]) -> dict[str, Any]:
+    return {
+        "kind": "private_reasoning_not_exposed",
+        "visible_markers": list(markers),
+        "pass": not markers,
+    }
+
+
+def _role_score(observed: bool, checks: list[dict[str, Any]]) -> dict[str, Any]:
+    failed = [check for check in checks if not check["pass"]]
+    return {
+        "observed": observed,
+        "pass": not failed if observed else None,
+        "checks": checks,
+        "failed_checks": failed,
     }
 
 

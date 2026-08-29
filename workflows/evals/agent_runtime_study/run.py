@@ -48,6 +48,7 @@ async def _run(args: argparse.Namespace) -> dict[str, object]:
         run_live=args.live if args.live else None,
         output_dir=Path(args.output_dir).resolve() if args.output_dir else None,
         timeout_seconds=args.timeout_seconds,
+        retry_count=args.retry_count,
         max_output_tokens=args.max_output_tokens,
     )
     if config.run_live:
@@ -109,6 +110,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--live", action="store_true")
     parser.add_argument("--letta-baseline", action="store_true")
     parser.add_argument("--timeout-seconds", type=float)
+    parser.add_argument(
+        "--retry-count",
+        type=int,
+        help="Additional ADE-owned attempts after the initial turn (default: config).",
+    )
     parser.add_argument("--max-output-tokens", type=int)
     args = parser.parse_args(argv)
     summary = asyncio.run(_run(args))

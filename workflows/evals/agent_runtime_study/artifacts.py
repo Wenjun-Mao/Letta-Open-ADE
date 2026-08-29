@@ -31,6 +31,8 @@ class StudyArtifactWriter:
         self.turns_path = self.run_dir / "turns.jsonl"
         self.summary_path = self.run_dir / "summary.json"
         self.provenance_path = self.run_dir / "provenance.json"
+        self.retrieval_path = self.run_dir / "retrieval.json"
+        self.qualification_path = self.run_dir / "qualification.json"
         self._turns = self.turns_path.open("w", encoding="utf-8", newline="\n")
 
     def write_turn(self, payload: dict[str, Any]) -> None:
@@ -49,6 +51,21 @@ class StudyArtifactWriter:
 
     def write_provenance(self, payload: dict[str, Any]) -> None:
         self.provenance_path.write_text(
+            json.dumps(
+                json_value(payload), ensure_ascii=False, indent=2, sort_keys=True
+            ),
+            encoding="utf-8",
+        )
+
+    def write_retrieval(self, payload: dict[str, Any]) -> None:
+        self._write_json(self.retrieval_path, payload)
+
+    def write_qualification(self, payload: dict[str, Any]) -> None:
+        self._write_json(self.qualification_path, payload)
+
+    @staticmethod
+    def _write_json(path: Path, payload: dict[str, Any]) -> None:
+        path.write_text(
             json.dumps(
                 json_value(payload), ensure_ascii=False, indent=2, sort_keys=True
             ),

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
@@ -11,13 +12,27 @@ from .artifacts import StudyArtifactWriter, json_value
 from .config import StudyConfig, public_config
 from .contracts import ContextBudget, RuntimePolicy, TurnRequest
 from .fixtures import StudyCase, load_cases, select_cases
+from .memory import MemoryRetriever
+from .memory_review import RouterMemoryReviewer
 from .provenance import capture_provenance, capture_router_catalog
+from .repository import InMemoryStudyRepository
 from .runtime import StudyAgentRuntime, event_payload
+from .semantic_retrieval import (
+    EmbeddingClientConfig,
+    OpenAICompatibleEmbeddingsClient,
+    RetrievalConfig,
+)
 from .scoring import score_case
+from .study_evidence import (
+    build_qualification_evidence,
+    run_semantic_retrieval_evaluation,
+)
 from .world import build_case_world
 
 
 AdapterFactory = Callable[[], Any]
+ReviewerFactory = Callable[[], Any]
+RetrieverFactory = Callable[[InMemoryStudyRepository], MemoryRetriever]
 
 
 def _adapter_factory(config: StudyConfig, adapter_name: str) -> AdapterFactory:
@@ -42,7 +57,8 @@ async def run_live_study(
     project_root: Path,
 ) -> dict[str, Any]:
     run_id = f"agent-runtime-study-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    cases = select_cases(load_cases(config.fixture_path), config.case_keys)
+    all_cases = load_cases(config.fixture_path)
+    cases = select_cases(all_cases, config.case_keys)
     rows: list[dict[str, Any]] = []
     with StudyArtifactWriter(config.output_dir, run_id) as writer:
         provenance = capture_provenance(project_root)
@@ -52,6 +68,39 @@ async def run_live_study(
             api_key=config.router_api_key,
         )
         writer.write_provenance(provenance)
+        embeddings = OpenAICompatibleEmbeddingsClient(
+            EmbeddingClientConfig(
+                base_url=config.embeddings_base_url,
+                model=config.embeddings_model,
+                dimensions=config.embedding_dimensions,
+                timeout_seconds=config.embedding_timeout_seconds,
+                api_key=config.embeddings_api_key or None,
+                max_retries=0,
+            )
+        )
+        retrieval_evidence = await asyncio.to_thread(
+            run_semantic_retrieval_evaluation,
+            config,
+            embeddings=embeddings,
+        )
+        writer.write_retrieval(retrieval_evidence)
+        calibrated_threshold = float(retrieval_evidence["calibration"]["threshold"])
+        retriever_factory: RetrieverFactory = lambda repository: MemoryRetriever(
+            repository,
+            embeddings=embeddings,
+            semantic_config=RetrievalConfig(
+                strategy=config.retrieval_strategy,
+                limit=config.policy.memory_search_limit,
+                minimum_score=calibrated_threshold,
+                query_instruction=config.retrieval_query_instruction,
+            ),
+        )
+        reviewer_factory: ReviewerFactory = lambda: RouterMemoryReviewer(
+            model_key=config.reviewer_model_key,
+            base_url=config.router_v1_base_url,
+            api_key=config.router_api_key,
+            max_output_tokens=config.reviewer_max_output_tokens,
+        )
         for adapter_name in config.adapters:
             factory = _adapter_factory(config, adapter_name)
             for model_key in config.models:
@@ -61,6 +110,8 @@ async def run_live_study(
                         model_key=model_key,
                         adapter_name=adapter_name,
                         adapter_factory=factory,
+                        reviewer_factory=reviewer_factory,
+                        retriever_factory=retriever_factory,
                         policy=config.policy,
                         writer=writer,
                     )
@@ -70,6 +121,23 @@ async def run_live_study(
                         f"pass={evidence['score']['pass']}",
                         flush=True,
                     )
+        qualification_evidence = build_qualification_evidence(
+            run_id=run_id,
+            registry_path=config.deployment_registry_path,
+            output_dir=config.output_dir,
+            models=config.models,
+            reviewer_model_key=config.reviewer_model_key,
+            rows=rows,
+            retrieval_evidence=retrieval_evidence,
+            required_case_keys=tuple(case.key for case in all_cases),
+            qualification_adapter="custom_loop",
+            allow_unqualified_study_models=(config.allow_unqualified_study_models),
+        )
+        writer.write_qualification(qualification_evidence)
+        row_passed = sum(1 for row in rows if row["score"]["pass"])
+        gate_passed = int(bool(retrieval_evidence["acceptance"]["pass"])) + int(
+            bool(qualification_evidence["study_gate_pass"])
+        )
         summary = {
             "run_id": run_id,
             "kind": "live",
@@ -77,12 +145,16 @@ async def run_live_study(
             "adapters": list(config.adapters),
             "case_keys": [case.key for case in cases],
             "rows": rows,
-            "total": len(rows),
-            "passed": sum(1 for row in rows if row["score"]["pass"]),
-            "failed": sum(1 for row in rows if not row["score"]["pass"]),
+            "total": len(rows) + 2,
+            "passed": row_passed + gate_passed,
+            "failed": len(rows) + 2 - row_passed - gate_passed,
+            "retrieval_acceptance": retrieval_evidence["acceptance"],
+            "qualification": qualification_evidence,
             "provenance_path": str(writer.provenance_path),
             "turns_path": str(writer.turns_path),
             "summary_path": str(writer.summary_path),
+            "retrieval_path": str(writer.retrieval_path),
+            "qualification_path": str(writer.qualification_path),
         }
         writer.write_summary(summary)
     return summary
@@ -94,6 +166,8 @@ async def run_case(
     model_key: str,
     adapter_name: str,
     adapter_factory: AdapterFactory,
+    reviewer_factory: ReviewerFactory,
+    retriever_factory: RetrieverFactory,
     policy: RuntimePolicy,
     writer: StudyArtifactWriter | None = None,
 ) -> dict[str, Any]:
@@ -101,6 +175,8 @@ async def run_case(
     runtime = StudyAgentRuntime(
         repository=world.repository,
         executor=adapter_factory(),
+        memory_reviewer=reviewer_factory(),
+        memory_retriever=retriever_factory(world.repository),
     )
     case_policy = _case_policy(policy, case)
     results_by_conversation: dict[str, list] = {
@@ -132,11 +208,13 @@ async def run_case(
                         if result.assistant_message
                         else None
                     ),
+                    "candidate_assistant": result.candidate_assistant_text,
                     "memory_revisions": result.memory_revisions,
                     "tool_executions": result.tool_executions,
                     "reasoning": result.reasoning,
                     "raw_model_messages": result.raw_model_messages,
                     "usage": result.usage,
+                    "memory_review": result.memory_review,
                     "elapsed_seconds": result.elapsed_seconds,
                     "context": result.context,
                     "events": event_payload(result),
@@ -156,6 +234,7 @@ async def run_case(
             key: tuple(values) for key, values in results_by_conversation.items()
         },
     )
+    role_scores = score.pop("role_scores")
     all_facts = {
         key: world.repository.list_subject_facts(subject_id, active_only=False)
         for key, subject_id in world.subject_ids.items()
@@ -171,6 +250,7 @@ async def run_case(
         "case_key": case.key,
         "description": case.description,
         "score": score,
+        "role_scores": role_scores,
         "active_facts": json_value(facts_by_subject),
         "all_facts": json_value(all_facts),
         "revisions": json_value(revisions),

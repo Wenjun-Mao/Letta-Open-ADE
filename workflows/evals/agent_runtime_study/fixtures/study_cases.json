@@ -30,8 +30,7 @@
             "我不是真的", "我并不真实", "程序生成"
           ]
         }
-      ],
-      "required_tools": ["propose_memory_change"]
+      ]
     },
     {
       "key": "correction_chain",
@@ -46,8 +45,7 @@
       "fact_assertions": [
         {"subject_key": "primary", "aliases": ["多伦多", "Toronto"]},
         {"subject_key": "primary", "aliases": ["北京", "Beijing"], "absent": true}
-      ],
-      "required_tools": ["propose_memory_change"]
+      ]
     },
     {
       "key": "explicit_forgetting",
@@ -61,8 +59,7 @@
       ],
       "fact_assertions": [
         {"subject_key": "primary", "aliases": ["蓝色", "blue"], "absent": true}
-      ],
-      "required_tools": ["propose_memory_change"]
+      ]
     },
     {
       "key": "cross_agent_subject_sharing",
@@ -82,8 +79,7 @@
       ],
       "assistant_assertions": [
         {"conversation_key": "assistant_chat", "contains_any": ["Alice", "alice"]}
-      ],
-      "required_tools": ["propose_memory_change"]
+      ]
     },
     {
       "key": "cross_subject_isolation",
@@ -103,8 +99,7 @@
       ],
       "assistant_assertions": [
         {"conversation_key": "bob_chat", "forbidden": ["Alice", "alice"]}
-      ],
-      "required_tools": ["propose_memory_change"]
+      ]
     },
     {
       "key": "old_memory_deep_search",
@@ -113,14 +108,14 @@
         "primary": {"agent_key": "primary", "subject_key": "primary"}
       },
       "initial_facts": [
-        {"subject_key": "primary", "key": "favorite_museum", "value": "Royal Ontario Museum"},
-        {"subject_key": "primary", "key": "favorite_breakfast", "value": "豆浆"},
-        {"subject_key": "primary", "key": "shoe_size", "value": "42"},
-        {"subject_key": "primary", "key": "preferred_season", "value": "秋天"},
-        {"subject_key": "primary", "key": "music", "value": "爵士乐"},
-        {"subject_key": "primary", "key": "coffee", "value": "拿铁"},
-        {"subject_key": "primary", "key": "language", "value": "中文"},
-        {"subject_key": "primary", "key": "weekend_activity", "value": "骑车"}
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "place", "value": "Royal Ontario Museum"},
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "food", "value": "豆浆"},
+        {"subject_key": "primary", "fact_type": "person.shoe_size", "value": "42"},
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "season", "value": "秋天"},
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "music", "value": "爵士乐"},
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "drink", "value": "拿铁"},
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "language", "value": "中文"},
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "activity", "value": "骑车"}
       ],
       "profile_token_override": 48,
       "turns": [
