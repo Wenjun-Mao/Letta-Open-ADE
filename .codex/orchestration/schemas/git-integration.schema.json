@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://private.local/codex-flow/git-integration.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "operation_id", "ownership_hash", "main_branch",
+    "main_revision", "executor_tip", "upstream", "disposition", "superseded_by", "recorded_at"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "kind": { "const": "codex-flow-git-integration" },
+    "operation_id": { "$ref": "#/$defs/safeId" },
+    "ownership_hash": { "$ref": "#/$defs/digest" },
+    "main_branch": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "main_revision": { "$ref": "#/$defs/revision" },
+    "executor_tip": { "$ref": "#/$defs/revision" },
+    "upstream": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/upstream" }
+      ]
+    },
+    "disposition": { "enum": ["ancestor", "patch-equivalent", "superseded", "unmerged"] },
+    "superseded_by": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/revision" }
+      ]
+    },
+    "recorded_at": { "$ref": "#/$defs/timestamp" }
+  },
+  "$defs": {
+    "safeId": {
+      "type": "string", "minLength": 1, "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "revision": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" },
+    "digest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "timestamp": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["remote", "ref", "remote_identity"],
+      "properties": {
+        "remote": {
+          "type": "string", "minLength": 1, "maxLength": 128,
+          "pattern": "^[A-Za-z0-9._-]+$"
+        },
+        "ref": { "type": "string", "pattern": "^refs/heads/.+", "maxLength": 512 },
+        "remote_identity": { "$ref": "#/$defs/digest" }
+      }
+    }
+  }
+}

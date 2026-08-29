@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://private.local/codex-flow/host-capability-evidence.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "adapter_id", "host_session_id", "checked_at",
+    "execution_kind", "environment_type", "placement_mode", "support", "thread_discovery"
+  ],
+  "properties": {
+    "schema_version": { "const": 3 },
+    "adapter_id": { "$ref": "#/$defs/safeId" },
+    "host_session_id": { "$ref": "#/$defs/safeId" },
+    "checked_at": { "type": "string", "format": "date-time", "maxLength": 64 },
+    "execution_kind": { "enum": ["task-thread", "subagent"] },
+    "environment_type": { "enum": ["local", "host-worktree", "projectless"] },
+    "placement_mode": { "enum": ["same-project", "cross-project", "projectless", "inherited"] },
+    "support": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_kind", "environment", "execution_path", "project_placement", "model", "reasoning_effort"],
+      "properties": {
+        "execution_kind": { "$ref": "#/$defs/supportEvidence" },
+        "environment": { "$ref": "#/$defs/supportEvidence" },
+        "execution_path": { "$ref": "#/$defs/supportEvidence" },
+        "project_placement": { "$ref": "#/$defs/supportEvidence" },
+        "model": { "$ref": "#/$defs/supportEvidence" },
+        "reasoning_effort": { "$ref": "#/$defs/supportEvidence" }
+      }
+    },
+    "thread_discovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["query", "fallback"],
+      "properties": {
+        "query": { "enum": ["supported", "rejected", "unavailable", "not-applicable"] },
+        "fallback": { "enum": ["bounded-unfiltered", "exact-read", "none"] }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "execution_kind": { "const": "task-thread" },
+        "thread_discovery": {
+          "oneOf": [
+            {
+              "properties": {
+                "query": { "const": "supported" },
+                "fallback": { "const": "none" }
+              }
+            },
+            {
+              "properties": {
+                "query": { "enum": ["rejected", "unavailable"] },
+                "fallback": { "enum": ["bounded-unfiltered", "exact-read"] }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "properties": {
+        "execution_kind": { "const": "subagent" },
+        "thread_discovery": {
+          "properties": {
+            "query": { "const": "not-applicable" },
+            "fallback": { "const": "none" }
+          }
+        }
+      }
+    }
+  ],
+  "allOf": [
+    {
+      "if": { "properties": { "execution_kind": { "const": "subagent" } } },
+      "then": { "properties": { "placement_mode": { "const": "inherited" } } }
+    },
+    {
+      "if": { "properties": { "execution_kind": { "const": "task-thread" } } },
+      "then": { "properties": { "placement_mode": { "enum": ["same-project", "cross-project", "projectless"] } } }
+    },
+    {
+      "if": { "properties": { "placement_mode": { "enum": ["projectless", "inherited"] } } },
+      "then": {
+        "properties": {
+          "support": {
+            "properties": {
+              "project_placement": {
+                "properties": {
+                  "state": { "const": "not-required" },
+                  "basis": { "const": "not-required" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "placement_mode": { "enum": ["same-project", "cross-project"] } } },
+      "then": {
+        "properties": {
+          "support": {
+            "properties": {
+              "project_placement": {
+                "properties": {
+                  "state": { "enum": ["supported", "unsupported", "unknown"] }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "safeId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "supportEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "basis"],
+      "properties": {
+        "state": { "enum": ["supported", "unsupported", "unknown", "not-required"] },
+        "basis": {
+          "enum": [
+            "tool-schema", "open-selector", "closed-selector", "fixed-role",
+            "host-contract", "not-required", "unavailable"
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "state": { "const": "supported" },
+            "basis": {
+              "enum": ["tool-schema", "open-selector", "closed-selector", "fixed-role", "host-contract"]
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": { "const": "unsupported" },
+            "basis": { "enum": ["tool-schema", "closed-selector", "fixed-role", "host-contract"] }
+          }
+        },
+        {
+          "properties": {
+            "state": { "const": "unknown" },
+            "basis": { "const": "unavailable" }
+          }
+        },
+        {
+          "properties": {
+            "state": { "const": "not-required" },
+            "basis": { "const": "not-required" }
+          }
+        }
+      ]
+    }
+  }
+}

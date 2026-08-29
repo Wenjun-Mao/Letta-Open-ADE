@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://private.local/codex-flow/terminal-receipt.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "recipient",
+    "executor_id",
+    "run_id",
+    "source_revision",
+    "sequence",
+    "supersedes_callback_ids",
+    "expires_at",
+    "classification",
+    "branch",
+    "commit",
+    "upstream",
+    "cleanliness",
+    "result_or_blocker",
+    "next_decision",
+    "accounting"
+  ],
+  "properties": {
+    "schema_version": { "const": 2 },
+    "recipient": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lineage_id", "thread_id", "generation"],
+      "properties": {
+        "lineage_id": { "$ref": "#/$defs/safeId" },
+        "thread_id": { "$ref": "#/$defs/safeId" },
+        "generation": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "executor_id": { "$ref": "#/$defs/safeId" },
+    "run_id": { "$ref": "#/$defs/safeId" },
+    "source_revision": { "$ref": "#/$defs/commit" },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "supersedes_callback_ids": {
+      "type": "array",
+      "maxItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^terminal-v2-[a-f0-9]{64}$"
+      }
+    },
+    "expires_at": { "$ref": "#/$defs/timestamp" },
+    "classification": { "enum": ["PASS", "BLOCKED", "FAIL"] },
+    "branch": { "$ref": "#/$defs/gitRef" },
+    "commit": { "$ref": "#/$defs/commit" },
+    "upstream": { "$ref": "#/$defs/gitRef" },
+    "cleanliness": { "enum": ["clean", "dirty", "unknown"] },
+    "result_or_blocker": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "next_decision": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "accounting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["PRODUCT", "CROSS_CUTTING_PRODUCT_FIX", "ENVIRONMENT", "PROOF_HARNESS"],
+      "properties": {
+        "PRODUCT": { "type": "number", "minimum": 0 },
+        "CROSS_CUTTING_PRODUCT_FIX": { "type": "number", "minimum": 0 },
+        "ENVIRONMENT": { "type": "number", "minimum": 0 },
+        "PROOF_HARNESS": { "type": "number", "minimum": 0 }
+      }
+    }
+  },
+  "$defs": {
+    "safeId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "commit": {
+      "type": "string",
+      "minLength": 7,
+      "maxLength": 128,
+      "pattern": "^[0-9a-fA-F]+$"
+    },
+    "gitRef": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]*$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    }
+  }
+}

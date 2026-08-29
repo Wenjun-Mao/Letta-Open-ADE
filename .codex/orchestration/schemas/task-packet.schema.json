@@ -1,0 +1,285 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://private.local/codex-flow/task-packet.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "task_id", "run_id", "title", "objective", "role", "execution_kind", "launch_deadline", "baseline",
+    "environment", "host_placement", "model", "reasoning_effort", "ownership", "dependencies",
+    "shared_resources", "verification", "callback", "integration_gate", "cleanup_owner", "stop_policy"
+  ],
+  "properties": {
+    "schema_version": { "const": 5 },
+    "task_id": { "$ref": "#/$defs/safeId" },
+    "run_id": { "$ref": "#/$defs/safeId" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "objective": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "role": { "enum": ["coordinator", "executor"] },
+    "execution_kind": { "enum": ["task-thread", "subagent"] },
+    "launch_deadline": { "$ref": "#/$defs/launchDeadline" },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "cleanliness"],
+      "properties": {
+        "revision": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "cleanliness": { "enum": ["clean", "dirty-authorized"] }
+      }
+    },
+    "environment": { "$ref": "#/$defs/environment" },
+    "host_placement": { "$ref": "#/$defs/hostPlacement" },
+    "model": {
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "minLength": 1, "maxLength": 128 }
+      ]
+    },
+    "reasoning_effort": {
+      "enum": [null, "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["write_paths", "read_paths", "exclusions"],
+      "properties": {
+        "write_paths": { "$ref": "#/$defs/nonemptyPaths" },
+        "read_paths": { "$ref": "#/$defs/paths" },
+        "exclusions": { "$ref": "#/$defs/paths" }
+      }
+    },
+    "dependencies": { "$ref": "#/$defs/safeIds" },
+    "shared_resources": { "$ref": "#/$defs/safeIds64" },
+    "verification": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+    },
+    "callback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recipient", "executor_id", "receipt_schema_version"],
+      "properties": {
+        "recipient": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lineage_id", "thread_id", "generation"],
+          "properties": {
+            "lineage_id": { "$ref": "#/$defs/safeId" },
+            "thread_id": { "$ref": "#/$defs/safeId" },
+            "generation": { "type": "integer", "minimum": 1, "maximum": 2147483647 }
+          }
+        },
+        "executor_id": { "$ref": "#/$defs/safeId" },
+        "receipt_schema_version": { "const": 2 }
+      }
+    },
+    "integration_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gate_id", "reproof"],
+      "properties": {
+        "gate_id": { "$ref": "#/$defs/safeId" },
+        "reproof": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+        }
+      }
+    },
+    "cleanup_owner": { "$ref": "#/$defs/safeId" },
+    "stop_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["urgent", "ordinary_completion"],
+      "properties": {
+        "urgent": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": { "enum": ["blocker", "approval", "high-risk-drift"] }
+        },
+        "ordinary_completion": { "const": "journal-monitor" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "environment": { "properties": { "type": { "const": "host-worktree" } } }
+        }
+      },
+      "then": {
+        "properties": {
+          "execution_kind": { "const": "task-thread" },
+          "baseline": { "properties": { "cleanliness": { "const": "clean" } } }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "execution_kind": { "const": "subagent" } } },
+      "then": { "properties": { "host_placement": { "properties": { "mode": { "const": "inherited" } } } } }
+    },
+    {
+      "if": { "properties": { "execution_kind": { "const": "task-thread" } } },
+      "then": { "properties": { "host_placement": { "properties": { "mode": { "enum": ["same-project", "cross-project", "projectless"] } } } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_kind": { "const": "task-thread" },
+          "environment": { "properties": { "type": { "const": "projectless" } } }
+        }
+      },
+      "then": { "properties": { "host_placement": { "properties": { "mode": { "const": "projectless" } } } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "execution_kind": { "const": "task-thread" },
+          "environment": { "properties": { "type": { "enum": ["local", "host-worktree"] } } }
+        }
+      },
+      "then": { "properties": { "host_placement": { "properties": { "mode": { "enum": ["same-project", "cross-project"] } } } } }
+    }
+  ],
+  "$defs": {
+    "hostPlacement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "target_project_id", "reason"],
+      "properties": {
+        "mode": { "enum": ["same-project", "cross-project", "projectless", "inherited"] },
+        "target_project_id": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/safeId" }
+          ]
+        },
+        "reason": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1, "maxLength": 512 }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "mode": { "const": "same-project" },
+            "target_project_id": { "$ref": "#/$defs/safeId" },
+            "reason": { "type": "null" }
+          }
+        },
+        {
+          "properties": {
+            "mode": { "const": "cross-project" },
+            "target_project_id": { "$ref": "#/$defs/safeId" },
+            "reason": { "type": "string", "minLength": 1, "maxLength": 512 }
+          }
+        },
+        {
+          "properties": {
+            "mode": { "const": "projectless" },
+            "target_project_id": { "type": "null" },
+            "reason": { "type": "string", "minLength": 1, "maxLength": 512 }
+          }
+        },
+        {
+          "properties": {
+            "mode": { "const": "inherited" },
+            "target_project_id": { "type": "null" },
+            "reason": { "type": "null" }
+          }
+        }
+      ]
+    },
+    "environment": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "project_path"],
+          "properties": {
+            "type": { "const": "local" },
+            "project_path": { "type": "string", "minLength": 1, "maxLength": 1024 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "x-codex-flow-distinct-properties": ["starting_branch", "executor_branch"],
+          "required": ["type", "repository_path", "starting_branch", "executor_branch"],
+          "properties": {
+            "type": { "const": "host-worktree" },
+            "repository_path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+            "starting_branch": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "executor_branch": { "type": "string", "minLength": 1, "maxLength": 256 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "projectless" } }
+        }
+      ]
+    },
+    "safeId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "safeIds": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/safeId" }
+    },
+    "safeIds64": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/safeId" }
+    },
+    "launchDeadline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "timezone"],
+      "properties": {
+        "at": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 64,
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]+)?(?:Z|[+-][0-9]{2}:[0-9]{2})$"
+        },
+        "timezone": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "pattern": "^(?!\\.?$)(?!/)(?![A-Za-z]:/)(?!\\.git(?:/|$))(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*[*?\\[\\]{}]).+$"
+    },
+    "paths": {
+      "type": "array",
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/path" }
+    },
+    "nonemptyPaths": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/path" }
+    }
+  }
+}

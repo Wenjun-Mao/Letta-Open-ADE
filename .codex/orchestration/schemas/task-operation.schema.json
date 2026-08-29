@@ -1,0 +1,778 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://private.local/codex-flow/task-operation.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "operation_id", "project_id", "packet_hash",
+    "request", "host_preflights", "active_host_preflight_id", "status", "attempts", "observed",
+    "observation_policy", "incompatibility", "resolution", "created_at", "updated_at"
+  ],
+  "properties": {
+    "schema_version": { "const": 9 },
+    "kind": { "const": "codex-flow-task-create-operation" },
+    "operation_id": { "$ref": "#/$defs/journalId" },
+    "project_id": { "$ref": "#/$defs/safeId" },
+    "packet_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "request": { "$ref": "#/$defs/request" },
+    "host_preflights": {
+      "type": "array",
+      "maxItems": 64,
+      "items": { "$ref": "#/$defs/hostPreflight" }
+    },
+    "active_host_preflight_id": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/journalId" }
+      ]
+    },
+    "status": {
+      "enum": [
+        "prepared", "dispatching", "ambiguous", "observed", "failed", "expired",
+        "host-incompatible", "host-session-blocked", "rejected-before-release"
+      ]
+    },
+    "attempts": {
+      "type": "array",
+      "maxItems": 32,
+      "items": { "$ref": "#/$defs/attempt" }
+    },
+    "observed": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/observed" }
+      ]
+    },
+    "observation_policy": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/observationPolicy" }
+      ]
+    },
+    "incompatibility": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/incompatibility" }
+      ]
+    },
+    "resolution": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/resolution" }
+      ]
+    },
+    "created_at": { "$ref": "#/$defs/timestamp" },
+    "updated_at": { "$ref": "#/$defs/timestamp" }
+  },
+  "$defs": {
+    "safeId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "objectId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "journalId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 96,
+      "pattern": "^[A-Za-z0-9_.-]+$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "maxLength": 64
+    },
+    "deadline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "timezone"],
+      "properties": {
+        "at": { "$ref": "#/$defs/timestamp" },
+        "timezone": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "cleanliness"],
+      "properties": {
+        "revision": { "type": "string", "minLength": 1, "maxLength": 256 },
+        "cleanliness": { "enum": ["clean", "dirty-authorized"] }
+      }
+    },
+    "environment": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "project_path"],
+          "properties": {
+            "type": { "const": "local" },
+            "project_path": { "type": "string", "minLength": 1, "maxLength": 1024 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "x-codex-flow-distinct-properties": ["starting_branch", "executor_branch"],
+          "required": ["type", "repository_path", "starting_branch", "executor_branch"],
+          "properties": {
+            "type": { "const": "host-worktree" },
+            "repository_path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+            "starting_branch": { "type": "string", "minLength": 1, "maxLength": 256 },
+            "executor_branch": { "type": "string", "minLength": 1, "maxLength": 256 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": { "type": { "const": "projectless" } }
+        }
+      ]
+    },
+    "hostPlacement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "target_project_id", "reason"],
+      "properties": {
+        "mode": { "enum": ["same-project", "cross-project", "projectless", "inherited"] },
+        "target_project_id": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/safeId" }
+          ]
+        },
+        "reason": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1, "maxLength": 512 }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "mode": { "const": "same-project" },
+            "target_project_id": { "$ref": "#/$defs/safeId" },
+            "reason": { "type": "null" }
+          }
+        },
+        {
+          "properties": {
+            "mode": { "const": "cross-project" },
+            "target_project_id": { "$ref": "#/$defs/safeId" },
+            "reason": { "type": "string", "minLength": 1, "maxLength": 512 }
+          }
+        },
+        {
+          "properties": {
+            "mode": { "const": "projectless" },
+            "target_project_id": { "type": "null" },
+            "reason": { "type": "string", "minLength": 1, "maxLength": 512 }
+          }
+        },
+        {
+          "properties": {
+            "mode": { "const": "inherited" },
+            "target_project_id": { "type": "null" },
+            "reason": { "type": "null" }
+          }
+        }
+      ]
+    },
+    "request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id", "run_id", "role", "execution_kind", "title",
+        "launch_deadline", "model", "reasoning_effort", "baseline", "environment", "host_placement"
+      ],
+      "properties": {
+        "task_id": { "$ref": "#/$defs/safeId" },
+        "run_id": { "$ref": "#/$defs/safeId" },
+        "role": { "enum": ["coordinator", "executor"] },
+        "execution_kind": { "enum": ["task-thread", "subagent"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "launch_deadline": { "$ref": "#/$defs/deadline" },
+        "model": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1, "maxLength": 128 }
+          ]
+        },
+        "reasoning_effort": {
+          "enum": [null, "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]
+        },
+        "baseline": { "$ref": "#/$defs/baseline" },
+        "environment": { "$ref": "#/$defs/environment" },
+        "host_placement": { "$ref": "#/$defs/hostPlacement" }
+      }
+    },
+    "supportEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "basis"],
+      "properties": {
+        "state": { "enum": ["supported", "unsupported", "unknown", "not-required"] },
+        "basis": {
+          "enum": [
+            "tool-schema", "open-selector", "closed-selector", "fixed-role",
+            "host-contract", "not-required", "unavailable"
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "state": { "const": "supported" },
+            "basis": {
+              "enum": ["tool-schema", "open-selector", "closed-selector", "fixed-role", "host-contract"]
+            }
+          }
+        },
+        {
+          "properties": {
+            "state": { "const": "unsupported" },
+            "basis": { "enum": ["tool-schema", "closed-selector", "fixed-role", "host-contract"] }
+          }
+        },
+        {
+          "properties": {
+            "state": { "const": "unknown" },
+            "basis": { "const": "unavailable" }
+          }
+        },
+        {
+          "properties": {
+            "state": { "const": "not-required" },
+            "basis": { "const": "not-required" }
+          }
+        }
+      ]
+    },
+    "hostPreflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "preflight_id", "schema_version", "adapter_id", "host_session_id", "checked_at",
+        "execution_kind", "environment_type", "placement_mode", "support", "thread_discovery"
+      ],
+      "properties": {
+        "preflight_id": { "$ref": "#/$defs/journalId" },
+        "schema_version": { "const": 3 },
+        "adapter_id": { "$ref": "#/$defs/safeId" },
+        "host_session_id": { "$ref": "#/$defs/safeId" },
+        "checked_at": { "$ref": "#/$defs/timestamp" },
+        "execution_kind": { "enum": ["task-thread", "subagent"] },
+        "environment_type": { "enum": ["local", "host-worktree", "projectless"] },
+        "placement_mode": { "enum": ["same-project", "cross-project", "projectless", "inherited"] },
+        "support": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["execution_kind", "environment", "execution_path", "project_placement", "model", "reasoning_effort"],
+          "properties": {
+            "execution_kind": { "$ref": "#/$defs/supportEvidence" },
+            "environment": { "$ref": "#/$defs/supportEvidence" },
+            "execution_path": { "$ref": "#/$defs/supportEvidence" },
+            "project_placement": { "$ref": "#/$defs/supportEvidence" },
+            "model": { "$ref": "#/$defs/supportEvidence" },
+            "reasoning_effort": { "$ref": "#/$defs/supportEvidence" }
+          }
+        },
+        "thread_discovery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["query", "fallback"],
+          "properties": {
+            "query": { "enum": ["supported", "rejected", "unavailable", "not-applicable"] },
+            "fallback": { "enum": ["bounded-unfiltered", "exact-read", "none"] }
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "execution_kind": { "const": "task-thread" },
+            "thread_discovery": {
+              "oneOf": [
+                {
+                  "properties": {
+                    "query": { "const": "supported" },
+                    "fallback": { "const": "none" }
+                  }
+                },
+                {
+                  "properties": {
+                    "query": { "enum": ["rejected", "unavailable"] },
+                    "fallback": { "enum": ["bounded-unfiltered", "exact-read"] }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "properties": {
+            "execution_kind": { "const": "subagent" },
+            "thread_discovery": {
+              "properties": {
+                "query": { "const": "not-applicable" },
+                "fallback": { "const": "none" }
+              }
+            }
+          }
+        }
+      ],
+      "allOf": [
+        {
+          "if": { "properties": { "execution_kind": { "const": "subagent" } } },
+          "then": { "properties": { "placement_mode": { "const": "inherited" } } }
+        },
+        {
+          "if": { "properties": { "execution_kind": { "const": "task-thread" } } },
+          "then": { "properties": { "placement_mode": { "enum": ["same-project", "cross-project", "projectless"] } } }
+        },
+        {
+          "if": { "properties": { "placement_mode": { "enum": ["projectless", "inherited"] } } },
+          "then": {
+            "properties": {
+              "support": {
+                "properties": {
+                  "project_placement": {
+                    "properties": {
+                      "state": { "const": "not-required" },
+                      "basis": { "const": "not-required" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "placement_mode": { "enum": ["same-project", "cross-project"] } } },
+          "then": {
+            "properties": {
+              "support": {
+                "properties": {
+                  "project_placement": {
+                    "properties": {
+                      "state": { "enum": ["supported", "unsupported", "unknown"] }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt_id", "sequence", "status", "started_at", "ambiguous_after", "finished_at",
+        "host_preflight_id", "failure_code"
+      ],
+      "properties": {
+        "attempt_id": { "$ref": "#/$defs/journalId" },
+        "sequence": { "type": "integer", "minimum": 1, "maximum": 32 },
+        "status": {
+          "enum": ["dispatching", "ambiguous", "not-created", "observed", "failed", "host-session-blocked"]
+        },
+        "started_at": { "$ref": "#/$defs/timestamp" },
+        "ambiguous_after": { "$ref": "#/$defs/timestamp" },
+        "finished_at": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/timestamp" }
+          ]
+        },
+        "host_preflight_id": { "$ref": "#/$defs/journalId" },
+        "failure_code": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "enum": [
+                "argument-serialization", "adapter-unavailable", "backend-unavailable",
+                "schema-runtime-drift", "host-control-failure"
+              ]
+            }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "status": { "const": "host-session-blocked" },
+            "failure_code": {
+              "enum": [
+                "argument-serialization", "adapter-unavailable", "backend-unavailable",
+                "schema-runtime-drift", "host-control-failure"
+              ]
+            }
+          }
+        },
+        {
+          "properties": {
+            "status": { "enum": ["dispatching", "ambiguous", "not-created", "observed", "failed"] },
+            "failure_code": { "type": "null" }
+          }
+        }
+      ]
+    },
+    "titleEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "value", "normalization"],
+      "properties": {
+        "source": { "enum": ["host-observed", "unavailable"] },
+        "value": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1, "maxLength": 160 }
+          ]
+        },
+        "normalization": { "enum": ["none", "bounded-host-write", "not-applicable"] }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "source": { "const": "host-observed" },
+            "value": { "type": "string", "minLength": 1, "maxLength": 160 },
+            "normalization": { "enum": ["none", "bounded-host-write"] }
+          }
+        },
+        {
+          "properties": {
+            "source": { "const": "unavailable" },
+            "value": { "type": "null" },
+            "normalization": { "const": "not-applicable" }
+          }
+        }
+      ]
+    },
+    "visibilityEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "value"],
+      "properties": {
+        "source": { "enum": ["host-observed", "host-contract"] },
+        "value": { "type": "boolean" }
+      }
+    },
+    "selectorEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "value"],
+      "properties": {
+        "source": { "enum": ["host-observed", "host-accepted", "role-contract", "unavailable"] },
+        "value": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1, "maxLength": 128 }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "source": { "enum": ["host-observed", "host-accepted", "role-contract"] },
+            "value": { "type": "string", "minLength": 1, "maxLength": 128 }
+          }
+        },
+        {
+          "properties": {
+            "source": { "const": "unavailable" },
+            "value": { "type": "null" }
+          }
+        }
+      ]
+    },
+    "reasoningEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "value"],
+      "properties": {
+        "source": { "enum": ["host-observed", "host-accepted", "role-contract", "unavailable"] },
+        "value": {
+          "enum": [null, "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "source": { "enum": ["host-observed", "host-accepted", "role-contract"] },
+            "value": { "enum": ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"] }
+          }
+        },
+        {
+          "properties": {
+            "source": { "const": "unavailable" },
+            "value": { "type": "null" }
+          }
+        }
+      ]
+    },
+    "hostLabelEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "value"],
+      "properties": {
+        "source": { "enum": ["host-observed", "unavailable"] },
+        "value": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1, "maxLength": 160 }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "source": { "const": "host-observed" },
+            "value": { "type": "string", "minLength": 1, "maxLength": 160 }
+          }
+        },
+        {
+          "properties": {
+            "source": { "const": "unavailable" },
+            "value": { "type": "null" }
+          }
+        }
+      ]
+    },
+    "executionPathEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "value"],
+      "properties": {
+        "source": { "enum": ["host-observed", "not-required", "unavailable"] },
+        "value": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1, "maxLength": 1024 }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "source": { "const": "host-observed" },
+            "value": { "type": "string", "minLength": 1, "maxLength": 1024 }
+          }
+        },
+        {
+          "properties": {
+            "source": { "enum": ["not-required", "unavailable"] },
+            "value": { "type": "null" }
+          }
+        }
+      ]
+    },
+    "projectPlacementEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "value"],
+      "properties": {
+        "source": { "enum": ["host-observed", "host-accepted", "not-applicable", "unavailable"] },
+        "value": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/safeId" }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "source": { "enum": ["host-observed", "host-accepted"] },
+            "value": { "$ref": "#/$defs/safeId" }
+          }
+        },
+        {
+          "properties": {
+            "source": { "enum": ["not-applicable", "unavailable"] },
+            "value": { "type": "null" }
+          }
+        }
+      ]
+    },
+    "observationEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "title", "visibility", "model", "reasoning_effort",
+        "host_label", "execution_path", "project_placement"
+      ],
+      "properties": {
+        "schema_version": { "const": 3 },
+        "title": { "$ref": "#/$defs/titleEvidence" },
+        "visibility": { "$ref": "#/$defs/visibilityEvidence" },
+        "model": { "$ref": "#/$defs/selectorEvidence" },
+        "reasoning_effort": { "$ref": "#/$defs/reasoningEvidence" },
+        "host_label": { "$ref": "#/$defs/hostLabelEvidence" },
+        "execution_path": { "$ref": "#/$defs/executionPathEvidence" },
+        "project_placement": { "$ref": "#/$defs/projectPlacementEvidence" }
+      }
+    },
+    "observed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["object_id", "actual_kind", "evidence", "observed_at"],
+      "properties": {
+        "object_id": { "$ref": "#/$defs/objectId" },
+        "actual_kind": { "enum": ["task-thread", "subagent"] },
+        "evidence": { "$ref": "#/$defs/observationEvidence" },
+        "observed_at": { "$ref": "#/$defs/timestamp" }
+      }
+    },
+    "observationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reason_code"],
+      "properties": {
+        "state": { "enum": ["accepted", "rejected"] },
+        "reason_code": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "enum": [
+                "execution-kind-mismatch", "title-unavailable", "title-mismatch",
+                "visibility-mismatch", "model-mismatch", "reasoning-effort-mismatch",
+                "execution-path-unverified", "project-placement-unavailable",
+                "project-placement-not-applicable", "project-placement-mismatch",
+                "project-placement-unexpected"
+              ]
+            }
+          ]
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "state": { "const": "accepted" },
+            "reason_code": { "type": "null" }
+          }
+        },
+        {
+          "properties": {
+            "state": { "const": "rejected" },
+            "reason_code": {
+              "enum": [
+                "execution-kind-mismatch", "title-unavailable", "title-mismatch",
+                "visibility-mismatch", "model-mismatch", "reasoning-effort-mismatch",
+                "execution-path-unverified", "project-placement-unavailable",
+                "project-placement-not-applicable", "project-placement-mismatch",
+                "project-placement-unexpected"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "incompatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type", "stage", "reason_code", "preflight_id", "host_session_id",
+        "attempt_id", "recorded_at"
+      ],
+      "properties": {
+        "type": { "enum": ["selector-incompatible", "host-session-failure"] },
+        "stage": { "enum": ["preflight", "dispatch"] },
+        "reason_code": { "$ref": "#/$defs/safeId" },
+        "preflight_id": { "$ref": "#/$defs/journalId" },
+        "host_session_id": { "$ref": "#/$defs/safeId" },
+        "attempt_id": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/journalId" }
+          ]
+        },
+        "recorded_at": { "$ref": "#/$defs/timestamp" }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "type": { "const": "selector-incompatible" },
+            "stage": { "const": "preflight" },
+            "reason_code": {
+              "pattern": "^(?:execution-kind|environment|execution-path|project-placement|model|reasoning-effort)-(?:unsupported|unverified)$"
+            },
+            "attempt_id": { "type": "null" }
+          }
+        },
+        {
+          "properties": {
+            "type": { "const": "host-session-failure" },
+            "stage": { "const": "dispatch" },
+            "reason_code": {
+              "enum": [
+                "argument-serialization", "adapter-unavailable", "backend-unavailable",
+                "schema-runtime-drift", "host-control-failure"
+              ]
+            },
+            "attempt_id": { "$ref": "#/$defs/journalId" }
+          }
+        }
+      ]
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["disposition", "reason_code", "host_object_state", "execution_path_state", "branch_claim_settlement", "recorded_at"],
+      "properties": {
+        "disposition": { "const": "rejected-before-release" },
+        "reason_code": {
+          "enum": [
+            "operator-cancelled", "host-object-archived",
+            "pre-release-validation-failed", "host-placement-rejected"
+          ]
+        },
+        "host_object_state": { "const": "archived" },
+        "execution_path_state": { "enum": ["absent", "not-applicable"] },
+        "branch_claim_settlement": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["claim", "local_branch_state"],
+              "properties": {
+                "claim": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "schema_version", "kind", "operation_id", "object_id", "worktree_path",
+                    "branch", "baseline_revision", "claimed_at", "claim_hash"
+                  ],
+                  "properties": {
+                    "schema_version": { "const": 1 },
+                    "kind": { "const": "codex-flow-git-branch-claim" },
+                    "operation_id": { "$ref": "#/$defs/journalId" },
+                    "object_id": { "$ref": "#/$defs/objectId" },
+                    "worktree_path": { "type": "string", "minLength": 1, "maxLength": 2048 },
+                    "branch": { "type": "string", "minLength": 1, "maxLength": 256 },
+                    "baseline_revision": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" },
+                    "claimed_at": { "$ref": "#/$defs/timestamp" },
+                    "claim_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+                  }
+                },
+                "local_branch_state": { "const": "absent" }
+              }
+            }
+          ]
+        },
+        "recorded_at": { "$ref": "#/$defs/timestamp" }
+      }
+    }
+  }
+}
