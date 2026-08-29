@@ -225,8 +225,9 @@ async def run_primary_rounds(
                 )
             except Exception as exc:
                 execution = _failed_case_execution(case, exc, case_scopes)
-            if resource_scope_sink is not None:
-                resource_scope_sink.extend(case_scopes)
+            finally:
+                if resource_scope_sink is not None:
+                    resource_scope_sink.extend(case_scopes)
             executions.append(execution)
         materialized_executions = tuple(executions)
         fingerprints = _combined_fingerprints(materialized_executions)
@@ -281,8 +282,9 @@ async def run_llama_compatibility_round(
             )
         except Exception as exc:
             execution = _failed_case_execution(case, exc, case_scopes)
-        if resource_scope_sink is not None:
-            resource_scope_sink.extend(case_scopes)
+        finally:
+            if resource_scope_sink is not None:
+                resource_scope_sink.extend(case_scopes)
         executions.append(execution)
     materialized_executions = tuple(executions)
     result = QualificationRound(

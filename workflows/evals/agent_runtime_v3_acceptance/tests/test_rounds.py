@@ -325,3 +325,31 @@ def test_infrastructure_failure_finishes_the_matrix_then_stops_later_rounds() ->
         assert len(scopes) == 2
 
     asyncio.run(scenario())
+
+
+def test_task_cancellation_preserves_uncertain_resource_scope() -> None:
+    class _CancelledClient(_FakeClient):
+        async def create_conversation(self, *_args: Any) -> dict[str, Any]:
+            raise asyncio.CancelledError
+
+    async def scenario() -> None:
+        scopes = []
+        with pytest.raises(asyncio.CancelledError):
+            await run_primary_rounds(
+                client=_CancelledClient(),
+                cases=(_case("cancelled-case"),),
+                canonical_case_keys=("cancelled-case",),
+                namespace="acceptance-cancel-scope",
+                rounds=3,
+                conversation_model_key="chat",
+                reviewer_model_key="reviewer",
+                embedding_model_key="embedding",
+                timeout_seconds=180,
+                retry_count=0,
+                resource_scope_sink=scopes,
+            )
+
+        assert any(scope.definition_keys for scope in scopes)
+        assert any(scope.subject_external_keys for scope in scopes)
+
+    asyncio.run(scenario())

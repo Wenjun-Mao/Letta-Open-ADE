@@ -26,7 +26,7 @@ native-runtime-up: native-runtime-migrate
 native-runtime-db-test: native-runtime-migrate
 	docker compose --profile native-runtime run --rm \
 		ade-runtime-migrate /bin/sh -ec \
-		'export ADE_TEST_DATABASE_URL="postgresql+psycopg://$${ADE_PG_APP_USER:-ade_app}:$${ADE_PG_APP_PASSWORD}@postgres:5432/$${ADE_PG_DB:-ade}"; uv pip install --quiet --python /opt/venv/bin/python pytest && /opt/venv/bin/python -m pytest services/ade-api/tests/agent_runtime_v3/persistence -q'
+		'export ADE_TEST_DATABASE_URL="postgresql+psycopg://$${ADE_PG_APP_USER:-ade_app}:$${ADE_PG_APP_PASSWORD}@postgres:5432/$${ADE_PG_DB:-ade}"; uv pip install --quiet --python /opt/venv/bin/python pytest && /opt/venv/bin/python -m pytest services/ade-api/tests/agent_runtime_v3/persistence workflows/evals/agent_runtime_v3_acceptance/tests/test_cleanup_postgres.py -q'
 
 status:
 	docker compose ps
