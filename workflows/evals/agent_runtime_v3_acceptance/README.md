@@ -48,6 +48,10 @@ tool outcomes, and final facts beside its content-addressed summary. Provenance
 binds the image source revision, clean-build state, shared contract version,
 production policy hashes, exact role deployments, and effective config.
 
+Canonical cases that declare a conversation summary cannot pass on dialogue
+alone: the production path must emit `summary.committed`, and the conversation
+state must still expose the expected immutable raw-message count.
+
 A failed primary round is completed and written in full, then later primary
 rounds are skipped because three consecutive passes are no longer possible in
 that run. The requested llama compatibility round remains diagnostic and still

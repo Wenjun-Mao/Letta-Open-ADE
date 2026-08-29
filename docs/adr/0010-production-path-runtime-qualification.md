@@ -35,6 +35,8 @@ policy that produced a result.
   passes. Requested compatibility diagnostics may still continue.
 - Focused cases, fake transports, unavailable roles, and compatibility-only runs
   never advance qualification.
+- Long-history evidence requires both an explicit versioned-summary commitment
+  event and preservation of the expected immutable raw-message history.
 - llama-server remains compatibility evidence and does not block a separately
   qualified DGX role set.
 - A run may emit a content-addressed promotion proposal, but it cannot edit the

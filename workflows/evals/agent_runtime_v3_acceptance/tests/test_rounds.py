@@ -23,6 +23,15 @@ class _Turn:
 
 
 @dataclass(frozen=True)
+class _Prelude:
+    conversation_key: str
+    count: int
+    user_template: str
+    summary: str
+    summary_through_sequence: int
+
+
+@dataclass(frozen=True)
 class _Case:
     key: str
     conversations: dict[str, tuple[str, str]]
@@ -351,5 +360,42 @@ def test_task_cancellation_preserves_uncertain_resource_scope() -> None:
 
         assert any(scope.definition_keys for scope in scopes)
         assert any(scope.subject_external_keys for scope in scopes)
+
+    asyncio.run(scenario())
+
+
+def test_compaction_case_cannot_pass_without_a_versioned_summary_event() -> None:
+    async def scenario() -> None:
+        case = _Case(
+            key="long-history",
+            conversations={"primary": ("primary", "primary")},
+            turns=(_Turn("primary", "confirm our history"),),
+            prelude_messages=(
+                _Prelude(
+                    conversation_key="primary",
+                    count=1,
+                    user_template="history {index}",
+                    summary="A prior history summary",
+                    summary_through_sequence=2,
+                ),
+            ),
+        )
+
+        result = await execute_case(
+            client=_FakeClient(),
+            case=case,
+            namespace="acceptance-summary",
+            conversation_model_key="chat",
+            reviewer_model_key="reviewer",
+            embedding_model_key="embedding",
+            timeout_seconds=180,
+            retry_count=0,
+        )
+
+        assert result.score["pass"] is False
+        assert any(
+            check["kind"] == "versioned_summary_committed"
+            for check in result.infrastructure["failures"]
+        )
 
     asyncio.run(scenario())

@@ -3,6 +3,14 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 
+def requires_versioned_summary(case: object) -> bool:
+    return any(
+        bool(str(getattr(prelude, "summary", "")).strip())
+        and int(getattr(prelude, "summary_through_sequence", 0)) > 0
+        for prelude in tuple(getattr(case, "prelude_messages", ()))
+    )
+
+
 def is_eligible_primary_matrix(
     rounds: Iterable[object],
     *,

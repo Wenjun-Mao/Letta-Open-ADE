@@ -22,6 +22,7 @@ from agent_runtime_eval_contracts import (
 from model_catalog_contracts.deployment_manifest import DeploymentManifest
 
 from .policy import production_policy_hashes
+from .qualification import requires_versioned_summary
 
 
 REQUIRED_ROLES = frozenset({"conversation", "reviewer", "retriever"})
@@ -386,6 +387,15 @@ def _validate_and_rescore_case(
         results_by_conversation=results_by_conversation,
     )
     _require_equal(payload.get("score"), rescored, f"{case.key} deterministic score")
+    if requires_versioned_summary(case) and not any(
+        event.type == "summary.committed"
+        for values in results_by_conversation.values()
+        for result in values
+        for event in result.events
+    ):
+        raise PromotionReviewError(
+            f"{case.key} lacks a versioned summary commitment event"
+        )
     return run_ids
 
 

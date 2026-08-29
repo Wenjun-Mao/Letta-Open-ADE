@@ -261,6 +261,11 @@ def _passing_case_evidence(case, round_index: int):
             EventObservation(type="model.request"),
             EventObservation(type="model.response"),
             EventObservation(type="memory.review.request"),
+            *(
+                (EventObservation(type="summary.committed"),)
+                if case.prelude_messages
+                else ()
+            ),
         )
         assistant_text = " ".join(
             assistant_fragments.get(fixture_turn.conversation_key) or ["ok"]
@@ -311,6 +316,13 @@ def _passing_case_evidence(case, round_index: int):
             ("model.request.started", {"role": "reviewer"}),
             ("model.response.completed", {"role": "reviewer"}),
         ]
+        if case.prelude_messages:
+            raw_types.append(
+                (
+                    "summary.committed",
+                    {"version": 1, "through_sequence": 70},
+                )
+            )
         raw_types.extend(
             ("tool.call.completed", {"name": tool.name}) for tool in tool_observations
         )

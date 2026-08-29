@@ -8,6 +8,7 @@ from typing import Any
 
 from .client import RunTimeout, RuntimeV3Client
 from .normalization import normalize_case
+from .qualification import requires_versioned_summary
 
 
 @dataclass(frozen=True)
@@ -174,10 +175,26 @@ async def execute_case(
         values = response.get("facts")
         facts[subject_key] = list(values) if isinstance(values, list) else []
     normalized = normalize_case(case=case, turns=completed_turns, subject_facts=facts)
-    passed = (
-        bool(normalized.score.get("pass")) and not normalized.infrastructure["failures"]
-    )
-    score = {**normalized.score, "pass": passed}
+    capability_checks = _capability_checks(case, normalized.events, completed_turns)
+    capability_failures = [check for check in capability_checks if not check["pass"]]
+    infrastructure = {
+        **normalized.infrastructure,
+        "failures": [
+            *normalized.infrastructure["failures"],
+            *capability_failures,
+        ],
+        "capability_checks": capability_checks,
+    }
+    passed = bool(normalized.score.get("pass")) and not infrastructure["failures"]
+    score = {
+        **normalized.score,
+        "pass": passed,
+        "checks": [*normalized.score["checks"], *capability_failures],
+        "failed_checks": [
+            *normalized.score["failed_checks"],
+            *capability_failures,
+        ],
+    }
     return CaseExecution(
         case_key=str(getattr(case, "key")),
         score=score,
@@ -185,9 +202,53 @@ async def execute_case(
         events=normalized.events,
         tools=normalized.tools,
         facts=normalized.facts,
-        infrastructure=normalized.infrastructure,
+        infrastructure=infrastructure,
         resources=scope,
     )
+
+
+def _capability_checks(
+    case: object,
+    events: tuple[Any, ...],
+    completed_turns: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    if not requires_versioned_summary(case):
+        return []
+    expected_messages: dict[str, int] = {}
+    for prelude in tuple(getattr(case, "prelude_messages", ())):
+        conversation_key = str(getattr(prelude, "conversation_key"))
+        expected_messages[conversation_key] = expected_messages.get(
+            conversation_key, 0
+        ) + (2 * int(getattr(prelude, "count", 0)))
+    for turn in tuple(getattr(case, "turns", ())):
+        conversation_key = str(getattr(turn, "conversation_key"))
+        expected_messages[conversation_key] = (
+            expected_messages.get(conversation_key, 0) + 2
+        )
+    observed_messages: dict[str, int] = {}
+    for turn in completed_turns:
+        state_messages = (turn.get("conversation_state") or {}).get("messages")
+        if isinstance(state_messages, list):
+            observed_messages[str(turn["conversation_key"])] = len(state_messages)
+    summary_observed = any(
+        str(getattr(event, "event_type", "")) == "summary.committed" for event in events
+    )
+    raw_history_preserved = all(
+        observed_messages.get(key, 0) >= expected
+        for key, expected in expected_messages.items()
+    )
+    return [
+        {
+            "kind": "versioned_summary_committed",
+            "pass": summary_observed,
+        },
+        {
+            "kind": "raw_history_preserved",
+            "expected_message_counts": expected_messages,
+            "observed_message_counts": observed_messages,
+            "pass": raw_history_preserved,
+        },
+    ]
 
 
 async def run_primary_rounds(
