@@ -36,6 +36,18 @@
     "api_key_secret": "dgx-vllm-api-key"
   },
   {
+    "id": "dgx_embedding_sidecar",
+    "label": "DGX Spark embedding sidecar",
+    "base_url": "http://dgx-spark.local:8001/v1",
+    "kind": "openai-compatible",
+    "adapter": "vllm_openai",
+    "enabled": false,
+    "enabled_for": ["embedding"],
+    "letta_handle_prefix": "openai-proxy",
+    "api_key_env": "DGX_EMBEDDING_API_KEY",
+    "api_key_secret": "dgx-embedding-api-key"
+  },
+  {
     "id": "local_unsloth",
     "label": "Local Unsloth Studio",
     "base_url": "http://host.docker.internal:2234/v1",

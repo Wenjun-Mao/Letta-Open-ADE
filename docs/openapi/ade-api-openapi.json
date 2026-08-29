@@ -1,6 +1,43 @@
 {
   "components": {
     "schemas": {
+      "AcceptTurnRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "retry_count": {
+            "default": 0,
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Retry Count",
+            "type": "integer"
+          },
+          "timeout_seconds": {
+            "default": 180.0,
+            "maximum": 600.0,
+            "minimum": 5.0,
+            "title": "Timeout Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "content",
+          "idempotency_key"
+        ],
+        "title": "AcceptTurnRequest",
+        "type": "object"
+      },
       "AgentCreateRequest": {
         "properties": {
           "embedding": {
@@ -84,6 +121,85 @@
           }
         },
         "title": "AgentCreateRequest",
+        "type": "object"
+      },
+      "AgentDefinitionResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "definition_key": {
+            "title": "Definition Key",
+            "type": "string"
+          },
+          "deployments": {
+            "items": {
+              "$ref": "#/components/schemas/DeploymentSnapshotResponse"
+            },
+            "title": "Deployments",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "memory_policy_version": {
+            "title": "Memory Policy Version",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "persona_key": {
+            "title": "Persona Key",
+            "type": "string"
+          },
+          "persona_sha256": {
+            "title": "Persona Sha256",
+            "type": "string"
+          },
+          "prompt_key": {
+            "title": "Prompt Key",
+            "type": "string"
+          },
+          "prompt_sha256": {
+            "title": "Prompt Sha256",
+            "type": "string"
+          },
+          "qualification_state": {
+            "$ref": "#/components/schemas/QualificationState"
+          },
+          "tool_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tool Names",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "definition_key",
+          "version",
+          "name",
+          "prompt_key",
+          "prompt_sha256",
+          "persona_key",
+          "persona_sha256",
+          "tool_names",
+          "memory_policy_version",
+          "qualification_state",
+          "deployments",
+          "created_at"
+        ],
+        "title": "AgentDefinitionResponse",
         "type": "object"
       },
       "AgentModelUpdateRequest": {
@@ -1167,6 +1283,18 @@
               }
             ],
             "title": "Available"
+          },
+          "deployment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployment"
           },
           "description": {
             "title": "Description",
@@ -3333,6 +3461,242 @@
         "title": "ControlCapabilitiesResponse",
         "type": "object"
       },
+      "ConversationResponse": {
+        "properties": {
+          "agent_definition_id": {
+            "title": "Agent Definition Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "memory_subject_id": {
+            "title": "Memory Subject Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "agent_definition_id",
+          "memory_subject_id",
+          "version",
+          "created_at"
+        ],
+        "title": "ConversationResponse",
+        "type": "object"
+      },
+      "ConversationStateResponse": {
+        "properties": {
+          "agent_definition_id": {
+            "title": "Agent Definition Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "memory_subject_id": {
+            "title": "Memory Subject Id",
+            "type": "string"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageResponse"
+            },
+            "title": "Messages",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "agent_definition_id",
+          "memory_subject_id",
+          "version",
+          "created_at",
+          "messages"
+        ],
+        "title": "ConversationStateResponse",
+        "type": "object"
+      },
+      "CreateAgentDefinitionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "definition_key": {
+            "maxLength": 64,
+            "minLength": 2,
+            "pattern": "^[a-z][a-z0-9_-]+$",
+            "title": "Definition Key",
+            "type": "string"
+          },
+          "embedding_model_key": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Embedding Model Key",
+            "type": "string"
+          },
+          "model_key": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Model Key",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "persona_key": {
+            "default": "chat_linxiaotang",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Persona Key",
+            "type": "string"
+          },
+          "prompt_key": {
+            "default": "chat_v20260516",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Prompt Key",
+            "type": "string"
+          },
+          "reviewer_model_key": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Reviewer Model Key",
+            "type": "string"
+          },
+          "tool_names": {
+            "items": {
+              "const": "search_memory",
+              "type": "string"
+            },
+            "maxItems": 1,
+            "title": "Tool Names",
+            "type": "array"
+          }
+        },
+        "required": [
+          "definition_key",
+          "name",
+          "model_key",
+          "reviewer_model_key",
+          "embedding_model_key"
+        ],
+        "title": "CreateAgentDefinitionRequest",
+        "type": "object"
+      },
+      "CreateConversationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "agent_definition_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Agent Definition Id",
+            "type": "string"
+          },
+          "memory_subject_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Memory Subject Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "agent_definition_id",
+          "memory_subject_id"
+        ],
+        "title": "CreateConversationRequest",
+        "type": "object"
+      },
+      "CreateMemorySubjectRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "display_name": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Display Name",
+            "type": "string"
+          },
+          "external_key": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "External Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "external_key"
+        ],
+        "title": "CreateMemorySubjectRequest",
+        "type": "object"
+      },
+      "DeploymentSnapshotResponse": {
+        "properties": {
+          "deployment_id": {
+            "title": "Deployment Id",
+            "type": "string"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "fingerprint_payload": {
+            "additionalProperties": true,
+            "title": "Fingerprint Payload",
+            "type": "object"
+          },
+          "lifecycle": {
+            "title": "Lifecycle",
+            "type": "string"
+          },
+          "qualification_state": {
+            "$ref": "#/components/schemas/QualificationState"
+          },
+          "role": {
+            "enum": [
+              "conversation",
+              "reviewer",
+              "retriever"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "route_alias": {
+            "title": "Route Alias",
+            "type": "string"
+          }
+        },
+        "required": [
+          "deployment_id",
+          "route_alias",
+          "fingerprint",
+          "role",
+          "lifecycle",
+          "qualification_state"
+        ],
+        "title": "DeploymentSnapshotResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3576,6 +3940,260 @@
         "title": "MemoryBlockUpdateRequest",
         "type": "object"
       },
+      "MemoryEvidenceResponse": {
+        "properties": {
+          "end_char": {
+            "title": "End Char",
+            "type": "integer"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "message_sha256": {
+            "title": "Message Sha256",
+            "type": "string"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          },
+          "start_char": {
+            "title": "Start Char",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "message_id",
+          "start_char",
+          "end_char",
+          "quote",
+          "message_sha256"
+        ],
+        "title": "MemoryEvidenceResponse",
+        "type": "object"
+      },
+      "MemoryFactResponse": {
+        "properties": {
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "fact_type": {
+            "title": "Fact Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "qualifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qualifier"
+          },
+          "revisions": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryRevisionResponse"
+            },
+            "title": "Revisions",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "superseded",
+              "forgotten"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "fact_type",
+          "entity_id",
+          "value",
+          "status",
+          "version",
+          "revisions",
+          "updated_at"
+        ],
+        "title": "MemoryFactResponse",
+        "type": "object"
+      },
+      "MemoryOperation": {
+        "enum": [
+          "add",
+          "correct",
+          "merge",
+          "forget"
+        ],
+        "title": "MemoryOperation",
+        "type": "string"
+      },
+      "MemoryRevisionResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryEvidenceResponse"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "fact_version": {
+            "title": "Fact Version",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "operation": {
+            "$ref": "#/components/schemas/MemoryOperation"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "id",
+          "operation",
+          "fact_version",
+          "value",
+          "run_id",
+          "evidence",
+          "created_at"
+        ],
+        "title": "MemoryRevisionResponse",
+        "type": "object"
+      },
+      "MemorySubjectResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "external_key": {
+            "title": "External Key",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "external_key",
+          "display_name",
+          "created_at"
+        ],
+        "title": "MemorySubjectResponse",
+        "type": "object"
+      },
+      "MessageResponse": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "sequence",
+          "role",
+          "content",
+          "created_at"
+        ],
+        "title": "MessageResponse",
+        "type": "object"
+      },
       "ModelCatalogEntryResponse": {
         "properties": {
           "agent_studio_available": {
@@ -3595,6 +4213,18 @@
           "comment_lab_available": {
             "title": "Comment Lab Available",
             "type": "boolean"
+          },
+          "deployment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployment"
           },
           "label_lab_available": {
             "title": "Label Lab Available",
@@ -4020,6 +4650,120 @@
         "title": "PromptTemplateWriteRequest",
         "type": "object"
       },
+      "QualificationState": {
+        "enum": [
+          "qualified",
+          "unqualified"
+        ],
+        "title": "QualificationState",
+        "type": "string"
+      },
+      "RunResponse": {
+        "properties": {
+          "attempt_count": {
+            "title": "Attempt Count",
+            "type": "integer"
+          },
+          "cancellation_requested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancellation Requested At"
+          },
+          "conversation_id": {
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "qualification_state": {
+            "$ref": "#/components/schemas/QualificationState"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "id",
+          "conversation_id",
+          "status",
+          "qualification_state",
+          "attempt_count",
+          "created_at"
+        ],
+        "title": "RunResponse",
+        "type": "object"
+      },
+      "RunStatus": {
+        "enum": [
+          "pending",
+          "running",
+          "succeeded",
+          "failed",
+          "cancelled"
+        ],
+        "title": "RunStatus",
+        "type": "string"
+      },
       "RuntimeCapabilitiesResponse": {
         "properties": {
           "per_request_model_override": {
@@ -4139,6 +4883,27 @@
           "blocks_update_params"
         ],
         "title": "SdkCapabilitiesResponse",
+        "type": "object"
+      },
+      "SubjectMemoriesResponse": {
+        "properties": {
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryFactResponse"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "subject_id": {
+            "title": "Subject Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_id",
+          "facts"
+        ],
+        "title": "SubjectMemoriesResponse",
         "type": "object"
       },
       "SystemPromptUpdateRequest": {
@@ -4766,6 +5531,33 @@
           "input"
         ],
         "title": "ToolTestInvokeRequest",
+        "type": "object"
+      },
+      "TurnAcceptedResponse": {
+        "properties": {
+          "events_url": {
+            "title": "Events Url",
+            "type": "string"
+          },
+          "idempotent_replay": {
+            "default": false,
+            "title": "Idempotent Replay",
+            "type": "boolean"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "events_url"
+        ],
+        "title": "TurnAcceptedResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -8155,6 +8947,539 @@
           "Tool Center"
         ]
       }
+    },
+    "/api/v3/agent-definitions": {
+      "post": {
+        "operationId": "create_agent_definition_api_v3_agent_definitions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAgentDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDefinitionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create an immutable v3 agent definition",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
+    },
+    "/api/v3/agent-definitions/{definition_id}": {
+      "get": {
+        "operationId": "get_agent_definition_api_v3_agent_definitions__definition_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "definition_id",
+            "required": true,
+            "schema": {
+              "title": "Definition Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDefinitionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get a v3 agent definition",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
+    },
+    "/api/v3/conversations": {
+      "post": {
+        "operationId": "create_conversation_api_v3_conversations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateConversationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create a v3 conversation",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
+    },
+    "/api/v3/conversations/{conversation_id}/state": {
+      "get": {
+        "operationId": "get_conversation_state_api_v3_conversations__conversation_id__state_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationStateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get v3 conversation state",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
+    },
+    "/api/v3/conversations/{conversation_id}/turns": {
+      "post": {
+        "operationId": "accept_turn_api_v3_conversations__conversation_id__turns_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptTurnRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnAcceptedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Accept an asynchronous v3 conversation turn",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
+    },
+    "/api/v3/memory-subjects": {
+      "post": {
+        "operationId": "create_memory_subject_api_v3_memory_subjects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMemorySubjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemorySubjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create a v3 memory subject",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
+    },
+    "/api/v3/memory-subjects/{subject_id}": {
+      "get": {
+        "operationId": "get_memory_subject_api_v3_memory_subjects__subject_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemorySubjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get a v3 memory subject",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
+    },
+    "/api/v3/memory-subjects/{subject_id}/memories": {
+      "get": {
+        "operationId": "get_subject_memories_api_v3_memory_subjects__subject_id__memories_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubjectMemoriesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inspect typed subject memories",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
+    },
+    "/api/v3/runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_api_v3_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get a v3 run",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
+    },
+    "/api/v3/runs/{run_id}/cancel": {
+      "post": {
+        "operationId": "cancel_run_api_v3_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Cancel a v3 run",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
+    },
+    "/api/v3/runs/{run_id}/events": {
+      "get": {
+        "operationId": "stream_run_events_api_v3_runs__run_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stream normalized v3 run events",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
     }
   },
   "servers": [
@@ -8195,6 +9520,10 @@
     {
       "description": "Model capabilities, catalog diagnostics, and scenario runtime options.",
       "name": "Model Catalog"
+    },
+    {
+      "description": "Disabled-by-default ADE-owned agent runtime preview APIs.",
+      "name": "Agent Runtime v3 Preview"
     }
   ]
 }

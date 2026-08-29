@@ -32,6 +32,7 @@ class ApiOptionEntryResponse(BaseModel):
     profile_source: str | None = None
     agent_studio_candidate: bool | None = None
     agent_studio_compatible: bool | None = None
+    deployment: dict[str, Any] | None = None
 
 
 class ApiOptionsDefaultsResponse(BaseModel):
@@ -156,6 +157,7 @@ class ModelCatalogEntryResponse(BaseModel):
     profile_source: str = ""
     agent_studio_candidate: bool = False
     agent_studio_compatible: bool = True
+    deployment: dict[str, Any] | None = None
 
 
 class ModelCatalogResponse(BaseModel):

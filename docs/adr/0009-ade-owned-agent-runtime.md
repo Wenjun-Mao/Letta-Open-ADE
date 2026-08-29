@@ -1,6 +1,6 @@
 # ADR 0009: ADE Owns The Conversational Agent Runtime
 
-- Status: Proposed; not accepted or implemented
+- Status: Accepted for implementation; production cutover not approved
 - Date: 2026-08-29
 - Study: [ADE-Native Agent Runtime Replacement Study](../architecture/agent-runtime-replacement-study.md)
 
@@ -21,7 +21,7 @@ The accompanying study traced all dependencies, black-boxed current behavior thr
 ADE API, independently prototyped target contracts, and compared a minimal custom
 model/tool loop with PydanticAI `2.35.1`. Production behavior was not changed.
 
-## Proposed Decision
+## Decision
 
 ADE will eventually own a fresh conversational agent runtime with these boundaries:
 
@@ -131,7 +131,7 @@ threat model and decision.
 
 ## Consequences
 
-If accepted, ADE gains explicit product semantics, inspectable PostgreSQL state,
+With this decision, ADE gains explicit product semantics, inspectable PostgreSQL state,
 deterministic retry/cancellation ownership, subject sharing/isolation, and a smaller
 maintainer mental model. It also assumes responsibility for persistence migrations,
 leases/recovery, context/summary policy, memory correctness, provider protocol
@@ -147,7 +147,7 @@ cutover is approved.
 
 ## Guardrails
 
-- Do not implement production replacement work while this ADR is Proposed.
+- Do not make v3 the production Agent Studio path without a later cutover ADR.
 - Do not describe static adapter tests as live-model qualification.
 - Do not add a legacy Letta importer, dual-write path, or compatibility aliases.
 - Do not expose subject selection in model-controlled tool arguments.
@@ -157,12 +157,14 @@ cutover is approved.
 - Do not normalize invalid `forget` plus `add` proposals into a correction; require
   the reviewer to satisfy the typed operation contract.
 - Preserve the study harness and generated-artifact format for later comparison.
-- Update this ADR to Accepted only after the user reviews the study and explicitly
-  approves implementation.
+- The study review and implementation approval occurred on 2026-08-29; do not treat
+  that approval as production-cutover approval.
 - Record a later cutover ADR if implementation evidence changes material contracts.
 
 ## Implementation Status
 
-Only the reproducible study workflow, tests, architecture report, and this proposed
-ADR exist. Current `/api/v2`, ADE Web, Letta `0.16.8`, Compose services, PostgreSQL,
-Redis, and existing Agent Studio behavior are unchanged.
+The user accepted this ADR for implementation on 2026-08-29. The first implementation
+is a disabled-by-default `/api/v3` vertical slice with separate ADE persistence and a
+worker; accepting this ADR does not authorize production cutover. Current `/api/v2`,
+ADE Web, Letta `0.16.8`, and Agent Studio behavior remain authoritative until a later
+cutover decision is reviewed and accepted.

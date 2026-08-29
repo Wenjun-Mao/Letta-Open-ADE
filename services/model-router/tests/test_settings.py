@@ -62,6 +62,10 @@ def test_router_settings_parse_sources_and_module_visibility(monkeypatch) -> Non
         assert (
             settings.sources[1].models_endpoint() == "https://ark.example/api/v3/models"
         )
+        assert (
+            settings.sources[0].embeddings_url()
+            == "http://127.0.0.1:8081/v1/embeddings"
+        )
         assert settings.sources[2].adapter == "vllm_openai"
         assert settings.sources[2].visible_modules() == (
             "agent_studio",

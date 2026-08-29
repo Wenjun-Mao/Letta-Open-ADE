@@ -35,6 +35,19 @@ docker inspect <container-name> --format '{{ index .Config.Labels "com.docker.co
 docker compose -p <old-project-name> down --remove-orphans
 ```
 
+The optional `native-runtime` profile adds one-shot `ade-runtime-migrate` and the
+long-running `ade-runtime-worker`. It is not started by the ordinary stack.
+
+```text
+make native-runtime-migrate
+make native-runtime-db-test
+make native-runtime-up
+```
+
+`native-runtime-up` explicitly enables unqualified development-mode runs. Release
+mode rejects unqualified deployment fingerprints, and no production cutover has
+been approved.
+
 ## Endpoints And Network Boundary
 
 - ADE Web: `http://127.0.0.1:3000`

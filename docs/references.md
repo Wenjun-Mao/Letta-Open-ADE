@@ -21,9 +21,9 @@ are the maintained references for Letta concepts and SDK behavior:
 The current replacement research, source/image provenance, and independently
 implemented comparison harness are documented in the
 [ADE-Native Agent Runtime Replacement Study](architecture/agent-runtime-replacement-study.md).
-Its accompanying [ADR 0009](adr/0009-ade-owned-agent-runtime.md) is proposed only;
-the implemented product remains Letta-backed until it is explicitly accepted and
-all cutover gates pass.
+Its accompanying [ADR 0009](adr/0009-ade-owned-agent-runtime.md) is accepted for an
+opt-in implementation preview. The supported product remains Letta-backed until all
+qualification gates pass and a separate production cutover is accepted.
 
 The repository previously carried generated exploratory notebooks and a local
 copy of the MemGPT paper under `docs/`. They were removed because they were

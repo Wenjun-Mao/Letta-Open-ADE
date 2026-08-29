@@ -94,6 +94,9 @@ services:
       - ADE_REPOSITORY_ROOT=/app
       - LETTA_BASE_URL=http://letta:8283
       - ADE_API_MODEL_ROUTER_BASE_URL=http://model-router:8010
+      - ADE_API_AGENT_RUNTIME_V3_ENABLED=${ADE_API_AGENT_RUNTIME_V3_ENABLED:-false}
+      - ADE_API_AGENT_RUNTIME_V3_MODE=${ADE_API_AGENT_RUNTIME_V3_MODE:-release}
+      - ADE_API_DATABASE_URL=postgresql+psycopg://${ADE_PG_APP_USER:-ade_app}:${ADE_PG_APP_PASSWORD:-ade}@postgres:5432/${ADE_PG_DB:-ade}
     volumes:
       - ./content:/app/content
       - ./config:/app/config:ro
@@ -110,6 +113,54 @@ services:
       model-router:
         condition: service_healthy
       letta:
+        condition: service_healthy
+
+  ade-runtime-migrate:
+    profiles: ["native-runtime"]
+    build:
+      context: .
+      dockerfile: services/ade-api/Dockerfile
+    restart: "no"
+    environment:
+      - ADE_REPOSITORY_ROOT=/app
+      - ADE_DATABASE_ADMIN_URL=postgresql://${LETTA_PG_USER:-letta}:${LETTA_PG_PASSWORD:-letta}@postgres:5432/postgres
+      - ADE_DATABASE_MIGRATION_URL=postgresql+psycopg://${LETTA_PG_USER:-letta}:${LETTA_PG_PASSWORD:-letta}@postgres:5432/${ADE_PG_DB:-ade}
+      - ADE_PG_DB=${ADE_PG_DB:-ade}
+      - ADE_PG_OWNER_ROLE=${ADE_PG_OWNER_ROLE:-ade_owner}
+      - ADE_PG_APP_USER=${ADE_PG_APP_USER:-ade_app}
+      - ADE_PG_APP_PASSWORD=${ADE_PG_APP_PASSWORD:?Set ADE_PG_APP_PASSWORD in .env}
+    command:
+      - /bin/sh
+      - -ec
+      - >-
+        python -m ade_api.features.agent_runtime_v3.bootstrap &&
+        alembic -c services/ade-api/alembic.ini upgrade head
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ade-runtime-worker:
+    profiles: ["native-runtime"]
+    build:
+      context: .
+      dockerfile: services/ade-api/Dockerfile
+    restart: unless-stopped
+    environment:
+      - ADE_REPOSITORY_ROOT=/app
+      - ADE_API_AGENT_RUNTIME_V3_ENABLED=true
+      - ADE_API_AGENT_RUNTIME_V3_MODE=${ADE_API_AGENT_RUNTIME_V3_MODE:-development}
+      - ADE_API_DATABASE_URL=postgresql+psycopg://${ADE_PG_APP_USER:-ade_app}:${ADE_PG_APP_PASSWORD:?Set ADE_PG_APP_PASSWORD in .env}@postgres:5432/${ADE_PG_DB:-ade}
+      - ADE_API_MODEL_ROUTER_BASE_URL=http://model-router:8010
+      - MODEL_ROUTER_API_KEY=${MODEL_ROUTER_API_KEY:-local-router-dev-key}
+      - ADE_API_AGENT_RUNTIME_V3_WORKER_ID=${ADE_API_AGENT_RUNTIME_V3_WORKER_ID:-ade-runtime-worker}
+      - ADE_API_AGENT_RUNTIME_V3_WORKER_POLL_SECONDS=${ADE_API_AGENT_RUNTIME_V3_WORKER_POLL_SECONDS:-0.5}
+      - ADE_API_AGENT_RUNTIME_V3_LEASE_SECONDS=${ADE_API_AGENT_RUNTIME_V3_LEASE_SECONDS:-60}
+      - ADE_API_AGENT_RUNTIME_V3_HEARTBEAT_SECONDS=${ADE_API_AGENT_RUNTIME_V3_HEARTBEAT_SECONDS:-15}
+    command: ["python", "-m", "ade_api.features.agent_runtime_v3.worker"]
+    depends_on:
+      ade-runtime-migrate:
+        condition: service_completed_successfully
+      model-router:
         condition: service_healthy
 
   ade-web:

@@ -2,9 +2,9 @@
 
 - Study date: 2026-08-29
 - Production impact: none
-- Decision state: architecture proposed; replacement not approved
+- Decision state: implementation accepted; production cutover not approved
 - Reproducible workflow: [`workflows/evals/agent_runtime_study/`](../../workflows/evals/agent_runtime_study/README.md)
-- Proposed decision: [ADR 0009](../adr/0009-ade-owned-agent-runtime.md)
+- Accepted implementation decision: [ADR 0009](../adr/0009-ade-owned-agent-runtime.md)
 
 ## Executive Conclusion
 
@@ -40,8 +40,14 @@ the complete DGX matrix passed `12/12`. The complete llama-server compatibility
 matrix passed `11/12`; its conversation model claimed a weather-tool failure without
 calling the tool. Role-specific scoring attributed that failure only to the llama
 conversation deployment, while the shared DGX reviewer passed independently. The
-three-round release gate is not yet satisfied, so the proposed ADR remains
-**Proposed**, not Accepted.
+three-round release gate is not yet satisfied. ADR 0009 is accepted for a disabled
+implementation preview, but no deployment or production cutover is approved.
+
+The follow-up implementation lives under
+`services/ade-api/src/ade_api/features/agent_runtime_v3/`. It adds an opt-in
+`/api/v3` API, separate PostgreSQL schema, worker, Router-routed embeddings, typed
+memory review, and normalized run events. It does not change the supported `/api/v2`
+Agent Studio path or this study's recorded qualification evidence.
 
 ## Scope And Method
 
@@ -753,7 +759,7 @@ Replacement work may not cut over until all are true:
   disclosure.
 - llama-server passes the defined compatibility protocol and memory gate.
 - Full Python tests, Ruff, `make check`, and live artifacts pass.
-- ADR 0009 is explicitly reviewed and accepted by the user.
+- A later production-cutover ADR is explicitly reviewed and accepted by the user.
 
 ## Open Questions
 

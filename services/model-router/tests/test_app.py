@@ -126,6 +126,45 @@ def test_router_lists_agent_studio_models(monkeypatch) -> None:
     assert response.json()["data"][0]["id"] == "local_llama_server::gemma4"
 
 
+def test_router_lists_embedding_models(monkeypatch) -> None:
+    source = RouterSourceConfig(
+        id="embedding_source",
+        label="Embedding source",
+        base_url="http://127.0.0.1:8001/v1",
+        adapter="vllm_openai",
+        enabled_for=["embedding"],
+    )
+    embedding_model = RoutedModel(
+        router_model_id="embedding_source::embedding-model",
+        source_id=source.id,
+        source_label=source.label,
+        source_kind="openai-compatible",
+        source_adapter=source.adapter,
+        source_base_url=source.base_url,
+        module_visibility=("embedding",),
+        provider_model_id="embedding-model",
+        model_type="embedding",
+        letta_handle=None,
+        agent_studio_available=False,
+        comment_lab_available=False,
+        label_lab_available=False,
+        structured_output_mode=None,
+    )
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(
+        router_app,
+        "catalog_service",
+        _FakeCatalog(source=source, model=embedding_model),
+    )
+
+    response = TestClient(router_app.app).get(
+        "/v1/models", headers={"Authorization": "Bearer router-token"}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["data"][0]["id"] == "embedding_source::embedding-model"
+
+
 def test_router_rewrites_model_and_preserves_payload(monkeypatch) -> None:
     captured: dict[str, Any] = {}
 
@@ -543,6 +582,82 @@ def test_router_does_not_retry_failed_upstream_request(monkeypatch) -> None:
         }
     }
     assert attempts == 1
+    assert upstream_client.is_closed
+
+
+def test_router_forwards_embeddings_once_with_source_auth(monkeypatch) -> None:
+    attempts = 0
+    captured: dict[str, Any] = {}
+
+    async def upstream_handler(request: httpx.Request) -> httpx.Response:
+        nonlocal attempts
+        attempts += 1
+        captured["url"] = str(request.url)
+        captured["payload"] = json.loads(request.content)
+        captured["authorization"] = request.headers.get("authorization")
+        return httpx.Response(200, json={"object": "list", "data": []})
+
+    source = RouterSourceConfig(
+        id="embedding_source",
+        label="Embedding source",
+        base_url="http://127.0.0.1:8001/v1",
+        adapter="vllm_openai",
+        enabled_for=["embedding"],
+        api_key_env="EMBEDDING_SOURCE_API_KEY",
+    )
+    embedding_model = RoutedModel(
+        router_model_id="embedding_source::qwen3-embedding-0.6b",
+        source_id=source.id,
+        source_label=source.label,
+        source_kind="openai-compatible",
+        source_adapter=source.adapter,
+        source_base_url=source.base_url,
+        module_visibility=("embedding",),
+        provider_model_id="qwen3-embedding-0.6b",
+        model_type="embedding",
+        letta_handle=None,
+        agent_studio_available=False,
+        comment_lab_available=False,
+        label_lab_available=False,
+        structured_output_mode=None,
+    )
+    upstream_client = httpx.AsyncClient(transport=httpx.MockTransport(upstream_handler))
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setenv("EMBEDDING_SOURCE_API_KEY", "embedding-token")
+    monkeypatch.setattr(
+        router_app,
+        "catalog_service",
+        _FakeCatalog(source=source, model=embedding_model),
+    )
+    monkeypatch.setattr(
+        router_forwarding, "create_upstream_client", lambda: upstream_client
+    )
+
+    with TestClient(router_app.app) as client:
+        response = client.post(
+            "/v1/embeddings",
+            json={
+                "model": "embedding_source::qwen3-embedding-0.6b",
+                "input": ["hello", "bonjour"],
+                "dimensions": 1024,
+                "encoding_format": "float",
+            },
+            headers={"Authorization": "Bearer router-token"},
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"object": "list", "data": []}
+    assert attempts == 1
+    assert captured == {
+        "url": "http://127.0.0.1:8001/v1/embeddings",
+        "payload": {
+            "model": "qwen3-embedding-0.6b",
+            "input": ["hello", "bonjour"],
+            "dimensions": 1024,
+            "encoding_format": "float",
+        },
+        "authorization": "Bearer embedding-token",
+    }
     assert upstream_client.is_closed
 
 

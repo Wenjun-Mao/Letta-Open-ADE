@@ -16,7 +16,7 @@ six ideas:
 1. `ade-web` is the browser product, not the business-logic owner.
 2. `ade-api` owns ADE workflows, feature contracts, and orchestration.
 3. `model-router` owns provider-facing model access and model intelligence.
-4. Letta owns persistent agent execution; Agent Studio owns ADE's Letta use.
+4. Letta owns supported Agent Studio execution; native v3 is an opt-in preview.
 5. `content/` is reviewed product material; `workflows/` is executable operator work.
 6. A product feature has one home, including its UI, API, tests, and README.
 
@@ -31,10 +31,12 @@ six ideas:
 | 20-26 min | One feature's `README.md` | Its user value, endpoints, storage, integrations, and tests. |
 | 26-30 min | [Feature README Template](feature-readme-template.md) and [Glossary](glossary.md) | How to add work without recreating cross-cutting ambiguity. |
 
-For the proposed, not-yet-implemented Agent Studio runtime direction, read the
-[replacement study](architecture/agent-runtime-replacement-study.md) and then
-[ADR 0009](adr/0009-ade-owned-agent-runtime.md). Do not use them as descriptions of
-current production behavior while the ADR remains Proposed.
+For the opt-in Agent Studio runtime direction, read the
+[replacement study](architecture/agent-runtime-replacement-study.md), then
+[ADR 0009](adr/0009-ade-owned-agent-runtime.md), then the
+[`agent_runtime_v3` guide](../services/ade-api/src/ade_api/features/agent_runtime_v3/README.md).
+The implementation decision is accepted, but current product behavior remains
+Letta-backed until a separate cutover is approved.
 
 ## Find The Right Home
 

@@ -111,9 +111,23 @@ class RouterSourceConfig(BaseModel):
             return ""
         if base.endswith("/chat/completions"):
             return base
+        if base.endswith("/embeddings"):
+            return f"{base[: -len('/embeddings')]}/chat/completions"
         if _VERSION_PATH_RE.search(base):
             return f"{base}/chat/completions"
         return f"{base}/v1/chat/completions"
+
+    def embeddings_url(self) -> str:
+        base = self.normalized_base_url()
+        if not base:
+            return ""
+        if base.endswith("/embeddings"):
+            return base
+        if base.endswith("/chat/completions"):
+            return f"{base[: -len('/chat/completions')]}/embeddings"
+        if _VERSION_PATH_RE.search(base):
+            return f"{base}/embeddings"
+        return f"{base}/v1/embeddings"
 
     def visible_modules(self) -> tuple[str, ...]:
         raw_tags = self.module_visibility or self.enabled_for
@@ -157,6 +171,7 @@ class ModelRouterSettings(BaseSettings):
     sources: list[RouterSourceConfig] = Field(default_factory=list)
     sources_file: str = "config/model-router/sources.json"
     model_profiles_file: str = "config/model-router/model-profiles.json"
+    deployment_manifest_file: str = "config/model-router/deployment-manifest.json"
     api_key: str = ""
     api_key_secret: str = "model-router-api-key"
     cache_ttl_seconds: int = 30
@@ -202,7 +217,7 @@ class ModelRouterSettings(BaseSettings):
         cls._validate_sources(value)
         return value
 
-    @field_validator("sources_file", "model_profiles_file")
+    @field_validator("sources_file", "model_profiles_file", "deployment_manifest_file")
     @classmethod
     def _strip_config_file(cls, value: str) -> str:
         return str(value or "").strip()

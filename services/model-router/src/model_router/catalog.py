@@ -21,6 +21,10 @@ from model_router.settings import (
     get_settings,
 )
 from model_router.profiles import ModelProfile, load_model_profiles
+from model_catalog_contracts.deployment_manifest import (
+    DeploymentManifestEntry,
+    load_deployment_manifest,
+)
 from model_catalog_contracts.model_allowlist import load_configured_source_allowlist
 
 
@@ -102,6 +106,7 @@ class RoutedModel:
     profile_source: str = ""
     agent_studio_candidate: bool = False
     agent_studio_compatible: bool = True
+    deployment: DeploymentManifestEntry | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -132,6 +137,9 @@ class RoutedModel:
             "profile_source": self.profile_source,
             "agent_studio_candidate": self.agent_studio_candidate,
             "agent_studio_compatible": self.agent_studio_compatible,
+            "deployment": self.deployment.as_catalog_dict()
+            if self.deployment is not None
+            else None,
         }
 
 
@@ -193,6 +201,7 @@ class RouterCatalogService:
     def flatten(self, snapshot: RouterCatalogSnapshot) -> list[RoutedModel]:
         models: list[RoutedModel] = []
         profiles = self._load_profiles()
+        deployments = self._load_deployment_manifest()
         for source in snapshot.sources:
             if source.status != "healthy":
                 continue
@@ -204,6 +213,7 @@ class RouterCatalogService:
                     source.id, model.provider_model_id
                 )
                 profile = profiles.get(router_model_id)
+                deployment = deployments.for_route_alias(router_model_id)
                 agent_studio_compatible = (
                     True if profile is None else profile.agent_studio_compatible
                 )
@@ -259,6 +269,7 @@ class RouterCatalogService:
                             profile and profile.agent_studio_candidate
                         ),
                         agent_studio_compatible=agent_studio_compatible,
+                        deployment=deployment,
                     )
                 )
         return models
@@ -271,6 +282,14 @@ class RouterCatalogService:
         )
         return load_model_profiles(profiles_file)
 
+    def _load_deployment_manifest(self):
+        settings = self._settings_factory()
+        manifest_file = str(
+            getattr(settings, "deployment_manifest_file", "")
+            or "config/model-router/deployment-manifest.json"
+        )
+        return load_deployment_manifest(manifest_file)
+
     def find_routed_model(
         self,
         router_model_id: str,
@@ -279,11 +298,22 @@ class RouterCatalogService:
     ) -> RoutedModel | None:
         normalized = normalize_router_model_id(router_model_id)
         snapshot = self.snapshot(force_refresh=force_refresh)
+        models = self.flatten(snapshot)
+        direct = next(
+            (model for model in models if model.router_model_id == normalized),
+            None,
+        )
+        if direct is not None:
+            return direct
+        deployment = self._load_deployment_manifest().for_route_alias(normalized)
+        if deployment is None:
+            return None
         return next(
             (
                 model
-                for model in self.flatten(snapshot)
-                if model.router_model_id == normalized
+                for model in models
+                if model.deployment is not None
+                and model.deployment.deployment_id == deployment.deployment_id
             ),
             None,
         )
@@ -449,8 +479,8 @@ class RouterCatalogService:
         filtered_records = tuple(
             record
             for record in records
-            if record.model_type == "llm"
-            and record.provider_model_id in allowlist.usable_models
+            if record.model_type != "llm"
+            or record.provider_model_id in allowlist.usable_models
         )
         return (
             filtered_records,

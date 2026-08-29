@@ -22,6 +22,8 @@ It does not run models or create agents.
 ## Dependencies And Boundaries
 
 - Uses shared application dependencies, scenario defaults, and API metadata.
+- Exposes read-only cross-feature template lookup through the package-root
+  `PromptTemplateReader` contract and `build_prompt_template_reader()` factory.
 - Owns template validation, prompt file lifecycle, persona SQLite persistence, and
   prompt/persona revision helpers.
 - Must not call Letta or model providers directly.

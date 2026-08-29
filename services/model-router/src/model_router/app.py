@@ -15,6 +15,7 @@ from model_router.catalog import (
 )
 from model_router.forwarding import (
     forward_chat_completion,
+    forward_embeddings,
     router_error,
     upstream_client_lifespan,
 )
@@ -106,7 +107,7 @@ def list_models(authorization: str | None = Header(default=None)) -> dict[str, A
     models = [
         _openai_model_item(model)
         for model in catalog_service.flatten(snapshot)
-        if model.agent_studio_available
+        if model.agent_studio_available or model.model_type == "embedding"
     ]
     return {"object": "list", "data": models}
 
@@ -175,6 +176,54 @@ async def chat_completions(
     upstream_payload = _normalize_openai_payload(upstream_payload)
     upstream_payload = _apply_sampling_defaults(routed_model, source, upstream_payload)
     return await forward_chat_completion(request.app, source, upstream_payload)
+
+
+@app.post("/v1/embeddings")
+@app.post("/v1/embeddings/")
+async def embeddings(
+    request: Request,
+    authorization: str | None = Header(default=None),
+):
+    _require_router_auth(authorization)
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=400, detail="Request body must be valid JSON"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=400, detail="Request body must be a JSON object"
+        )
+
+    requested_model = str(payload.get("model", "") or "").strip()
+    if not requested_model:
+        raise HTTPException(status_code=400, detail="model is required")
+
+    routed_model = catalog_service.find_routed_model(requested_model)
+    if routed_model is None:
+        return _unknown_model_error(requested_model)
+    if routed_model.model_type != "embedding":
+        return router_error(
+            400,
+            "unsupported_model_type",
+            f"Model '{routed_model.router_model_id}' is not an embedding model.",
+            model=routed_model.router_model_id,
+            model_type=routed_model.model_type,
+        )
+    source = catalog_service.source_config(routed_model.source_id)
+    if source is None or not source.enabled:
+        return router_error(
+            404,
+            "source_disabled",
+            f"Model source '{routed_model.source_id}' is disabled or missing.",
+            model=normalize_router_model_id(requested_model),
+            source_id=routed_model.source_id,
+        )
+
+    upstream_payload = dict(payload)
+    upstream_payload["model"] = routed_model.provider_model_id
+    return await forward_embeddings(request.app, source, upstream_payload)
 
 
 def _normalize_openai_payload(payload: dict[str, Any]) -> dict[str, Any]:

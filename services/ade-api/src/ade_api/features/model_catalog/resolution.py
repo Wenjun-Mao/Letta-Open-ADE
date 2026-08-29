@@ -139,6 +139,7 @@ def runtime_options(
                 "profile_source": item.get("profile_source", ""),
                 "agent_studio_candidate": item.get("agent_studio_candidate", False),
                 "agent_studio_compatible": item.get("agent_studio_compatible", True),
+                "deployment": item.get("deployment"),
             }
         )
 

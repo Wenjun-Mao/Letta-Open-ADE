@@ -1,7 +1,38 @@
 """Prompt Center public interface without runtime initialization side effects."""
 
 from importlib import import_module
-from typing import Any
+from pathlib import Path
+from typing import Any, Protocol
+
+
+class PromptTemplateReader(Protocol):
+    """Read-only template lookup used by sibling ADE features."""
+
+    def get_template(
+        self,
+        kind: str,
+        key: str,
+        *,
+        archived: bool = False,
+        scenario: str | None = None,
+    ) -> dict[str, Any] | None: ...
+
+
+def build_prompt_template_reader(
+    project_root: Path,
+    *,
+    persona_db_path: Path | None = None,
+    persona_seed_jsonl_path: Path | None = None,
+) -> PromptTemplateReader:
+    """Build the Prompt Center registry behind its read-only public contract."""
+
+    from .registry import PromptPersonaRegistry
+
+    return PromptPersonaRegistry(
+        project_root,
+        persona_db_path=persona_db_path,
+        persona_seed_jsonl_path=persona_seed_jsonl_path,
+    )
 
 
 _EXPORT_MODULES = {
@@ -18,7 +49,11 @@ _EXPORT_MODULES = {
     "resolve_default_persona_key": ".template_options",
     "resolve_default_prompt_key": ".template_options",
 }
-__all__ = list(_EXPORT_MODULES)
+__all__ = [
+    *_EXPORT_MODULES,
+    "PromptTemplateReader",
+    "build_prompt_template_reader",
+]
 
 
 def __getattr__(name: str) -> Any:

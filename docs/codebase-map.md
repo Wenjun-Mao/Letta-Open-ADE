@@ -15,6 +15,10 @@ Browser
 
 Agent Studio adds:
 services/ade-api -> letta -> services/model-router -> configured providers
+
+Opt-in native v3 preview adds:
+services/ade-api -> PostgreSQL
+ade-runtime-worker -> PostgreSQL + services/model-router -> configured providers
 ```
 
 ADE Web and ADE API are host-facing on `3000` and `8000`. Model Router, Letta,
@@ -34,7 +38,8 @@ provider-facing boundary for normal discovery and generation.
 | Prompts, personas, schemas, tools, reports | `content/` | owning center's adapter and its matching content subdirectory |
 | Model source configuration | `config/model-router/` | `sources.json`, local overlay, and `model-profiles.json` |
 | Evals and provider probes | `workflows/evals/` | workflow-local `README.md` and `run.py` |
-| Native agent-runtime architecture study | `workflows/evals/agent_runtime_study/` | workflow README, exact deployment registry, [study report](architecture/agent-runtime-replacement-study.md), and proposed [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
+| Native agent-runtime preview | `services/ade-api/src/ade_api/features/agent_runtime_v3/` | feature README, thin application/worker coordinators, and owning service modules |
+| Native agent-runtime evidence | `workflows/evals/agent_runtime_study/` | workflow README, exact deployment registry, [study report](architecture/agent-runtime-replacement-study.md), and accepted [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
 | Live smoke coverage | `workflows/smoke/` | named smoke script or `make smoke` |
 | Compose support files | `infra/` | `compose.yaml` and the relevant `infra/` asset |
 
@@ -47,6 +52,7 @@ tests with the owning feature.
 | Feature | ADE Web | ADE API | Primary dependency |
 | --- | --- | --- | --- |
 | Agent Studio | `src/features/agent-studio/` | `features/agent_studio/` | Letta |
+| Native agent runtime v3 preview | Not exposed | `features/agent_runtime_v3/` | PostgreSQL and Model Router |
 | Comment Lab | `src/features/comment-lab/` | `features/comment_lab/` | Model Router |
 | Label Lab | `src/features/label-lab/` | `features/label_lab/` | Model Router and label schemas |
 | Prompt Center | `src/features/prompt-center/` | `features/prompt_center/` | prompt and persona content |
@@ -88,7 +94,8 @@ for the persona projection contract.
 | Change custom tools | Tool Center feature and `content/custom-tools/` |
 | Add a Test Center run type | Test Center feature plus its workflow entrypoint and artifacts |
 | Add an eval/probe | a self-contained `workflows/evals/<workflow>/` folder |
-| Study or reproduce the proposed native agent runtime | `workflows/evals/agent_runtime_study/` (production remains Letta-backed) |
+| Change the opt-in native runtime | `features/agent_runtime_v3/` plus accepted [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
+| Reproduce native-runtime qualification evidence | `workflows/evals/agent_runtime_study/` (supported Agent Studio remains Letta-backed) |
 | Regenerate API artifacts | `uv run python scripts/export_openapi.py` |
 | Diagnose the Compose stack | `scripts/collect_diagnostics.sh .env` |
 
@@ -96,8 +103,10 @@ for the persona projection contract.
 
 - Do not call providers directly from ADE Web, ADE API features, or workflows.
 - The agent-runtime study may call its declared embedding sidecar directly for
-  fingerprinted retrieval evidence only; production generation remains routed
-  through Model Router and this exception must not spread to product code.
+  fingerprinted historical evidence only; the v3 preview routes generation and
+  embeddings through Model Router and this exception must not spread to product code.
+- Keep native v3 disabled in the ordinary Compose stack until a separate production
+  cutover is reviewed and accepted.
 - Do not let one feature import another feature's internal implementation.
 - Do not create generic `utils` or a catch-all shared package.
 - Keep workflow runner, config, fixtures, outputs, documentation, and tests

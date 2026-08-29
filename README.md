@@ -2,7 +2,8 @@
 
 Letta Open ADE is a local-first environment for building, tuning, and evaluating
 agent experiences. It combines a browser workspace, a product API, a provider
-router, and Letta's persistent-agent runtime.
+router, and Letta's persistent-agent runtime. An opt-in ADE-owned `/api/v3`
+runtime preview is implemented separately; it does not replace Agent Studio.
 
 ## Start Here
 
@@ -81,6 +82,19 @@ make eval-chat-memory
 make eval-comment-persona
 make probe-models SOURCE=ark
 ```
+
+The native runtime preview is a separate operator path:
+
+```text
+make native-runtime-migrate
+make native-runtime-db-test
+make native-runtime-up
+```
+
+These commands create/migrate the ADE-owned database and enable the profile in
+development mode. Ordinary `make up` keeps v3 disabled. See the
+[`agent_runtime_v3` guide](services/ade-api/src/ade_api/features/agent_runtime_v3/README.md)
+and [ADR 0009](docs/adr/0009-ade-owned-agent-runtime.md) before using it.
 
 See [workflows/evals](workflows/evals/) for each evaluation's inputs, outputs,
 and interpretation. See [workflows/smoke](workflows/smoke/) for live API and

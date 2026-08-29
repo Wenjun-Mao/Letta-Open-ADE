@@ -47,7 +47,10 @@ runtime_host = "dgx-spark"
 
 [[deployment]]
 id = "dgx-qwen3-embedding-0_6b"
-route_aliases = ["dgx_embedding_sidecar::qwen3-embedding-0.6b"]
+route_aliases = [
+  "dgx_embedding_sidecar::qwen3-embedding-0.6b",
+  "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+]
 roles = ["retriever"]
 lifecycle = "discovered"
 

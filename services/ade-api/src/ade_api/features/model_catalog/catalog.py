@@ -92,6 +92,11 @@ def enriched_catalog_items(
                 "agent_studio_compatible": bool(
                     raw_item.get("agent_studio_compatible", True)
                 ),
+                "deployment": (
+                    dict(raw_item["deployment"])
+                    if isinstance(raw_item.get("deployment"), dict)
+                    else None
+                ),
             }
         )
     return items

@@ -11,6 +11,7 @@ from model_router.catalog import (
     parse_router_model_id,
 )
 from model_router.settings import RouterSourceConfig
+from model_catalog_contracts.deployment_manifest import DeploymentFingerprint
 from model_catalog_contracts.model_allowlist import SourceAllowlistLoadResult
 import model_router.catalog as router_catalog_module
 
@@ -18,12 +19,14 @@ import model_router.catalog as router_catalog_module
 def _settings_with_sources(
     *sources: RouterSourceConfig,
     model_profiles_file: str = "missing-model-profiles.json",
+    deployment_manifest_file: str = "missing-deployment-manifest.json",
 ) -> SimpleNamespace:
     return SimpleNamespace(
         sources=list(sources),
         cache_ttl_seconds=30,
         discovery_timeout_seconds=5.0,
         model_profiles_file=model_profiles_file,
+        deployment_manifest_file=deployment_manifest_file,
     )
 
 
@@ -113,10 +116,223 @@ def test_router_catalog_filters_ark_through_chat_allowlist(monkeypatch) -> None:
 
     assert ark_source.allowlist_applied is True
     assert ark_source.raw_model_count == 3
-    assert ark_source.filtered_model_count == 1
+    assert ark_source.filtered_model_count == 2
     assert [model.router_model_id for model in models] == [
-        "ark::doubao-seed-1-8-251228"
+        "ark::doubao-seed-1-8-251228",
+        "ark::doubao-embedding-text-240715",
     ]
+    assert models[1].model_type == "embedding"
+
+
+def test_router_catalog_enriches_matching_model_from_deployment_manifest(
+    monkeypatch, tmp_path
+) -> None:
+    fingerprint = {
+        "provider": "dgx_vllm",
+        "endpoint_role": "openai-compatible-chat",
+        "endpoint_identity": "dgx-spark-vllm-chat:8000",
+        "served_model": "qwen3.6-35b-a3b-fp8",
+        "artifact_reference": "Qwen/Qwen3.6-35B-A3B-FP8",
+        "artifact_revision": "a" * 40,
+        "artifact_sha256": None,
+        "runtime_implementation": "vLLM",
+        "runtime_version": "0.19.2",
+        "runtime_image_digest": "b" * 64,
+        "prompt_policy_sha256": "c" * 64,
+        "tool_policy_sha256": "d" * 64,
+        "schema_policy_sha256": "e" * 64,
+        "retrieval_policy_sha256": "f" * 64,
+        "sampling_settings": {"temperature": 1.0},
+        "context_settings": {"total_tokens": 16384},
+        "hardware_metadata": {"accelerator": "NVIDIA GB10"},
+    }
+    manifest_path = tmp_path / "deployment-manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "deployments": [
+                    {
+                        "id": "dgx-qwen-chat",
+                        "route_aliases": ["dgx_vllm::qwen3.6-35b-a3b-fp8"],
+                        "roles": ["conversation", "reviewer"],
+                        "lifecycle": "candidate",
+                        "fingerprint": fingerprint,
+                        "qualification": {
+                            "fingerprint_sha256": DeploymentFingerprint.from_payload(
+                                fingerprint
+                            ).sha256,
+                            "qualified": False,
+                            "stale_round_count": 1,
+                            "role_results": [
+                                {
+                                    "role": "conversation",
+                                    "observed_rounds": 1,
+                                    "consecutive_passing_rounds": 1,
+                                    "qualified": False,
+                                },
+                                {
+                                    "role": "reviewer",
+                                    "observed_rounds": 2,
+                                    "consecutive_passing_rounds": 2,
+                                    "qualified": False,
+                                },
+                            ],
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source = RouterSourceConfig(
+        id="dgx_vllm",
+        label="DGX Spark vLLM",
+        base_url="http://127.0.0.1:8000/v1",
+        adapter="vllm_openai",
+        enabled_for=["agent_studio"],
+    )
+    service = RouterCatalogService(
+        settings_factory=lambda: _settings_with_sources(
+            source, deployment_manifest_file=str(manifest_path)
+        )
+    )
+    monkeypatch.setattr(
+        router_catalog_module,
+        "load_configured_source_allowlist",
+        lambda source_id: None,
+    )
+    monkeypatch.setattr(
+        service,
+        "_fetch_models_payload",
+        lambda source, *, settings: {"data": [{"id": "qwen3.6-35b-a3b-fp8"}]},
+    )
+
+    model = service.flatten(service.snapshot(force_refresh=True))[0]
+    deployment = model.as_dict()["deployment"]
+
+    assert deployment == {
+        "deployment_id": "dgx-qwen-chat",
+        "roles": ["conversation", "reviewer"],
+        "lifecycle": "candidate",
+        "fingerprint": {
+            **fingerprint,
+            "artifact_sha256": None,
+            "runtime_image_digest": "b" * 64,
+            "sha256": DeploymentFingerprint.from_payload(fingerprint).sha256,
+        },
+        "qualification": {
+            "fingerprint_sha256": DeploymentFingerprint.from_payload(
+                fingerprint
+            ).sha256,
+            "qualified": False,
+            "stale_round_count": 1,
+            "role_results": [
+                {
+                    "role": "conversation",
+                    "observed_rounds": 1,
+                    "consecutive_passing_rounds": 1,
+                    "qualified": False,
+                },
+                {
+                    "role": "reviewer",
+                    "observed_rounds": 2,
+                    "consecutive_passing_rounds": 2,
+                    "qualified": False,
+                },
+            ],
+        },
+    }
+    assert "route_aliases" not in deployment
+
+
+def test_router_resolves_stable_alias_through_the_discovered_deployment(
+    monkeypatch, tmp_path
+) -> None:
+    fingerprint = {
+        "provider": "embedding-source",
+        "endpoint_role": "openai-compatible-embeddings",
+        "endpoint_identity": "embedding:8001",
+        "served_model": "Qwen/Qwen3-Embedding-0.6B",
+        "artifact_reference": "Qwen/Qwen3-Embedding-0.6B",
+        "artifact_revision": "a" * 40,
+        "artifact_sha256": None,
+        "runtime_implementation": "vLLM",
+        "runtime_version": "0.19.2",
+        "runtime_image_digest": "b" * 64,
+        "prompt_policy_sha256": "c" * 64,
+        "tool_policy_sha256": "d" * 64,
+        "schema_policy_sha256": "e" * 64,
+        "retrieval_policy_sha256": "f" * 64,
+        "sampling_settings": {"dimensions": 1024},
+        "context_settings": {"request_timeout_seconds": 15},
+        "hardware_metadata": {},
+    }
+    manifest_path = tmp_path / "deployment-manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "deployments": [
+                    {
+                        "id": "embedding-deployment",
+                        "route_aliases": [
+                            "embedding-source::stable",
+                            "embedding-source::Qwen/Qwen3-Embedding-0.6B",
+                        ],
+                        "roles": ["retriever"],
+                        "lifecycle": "candidate",
+                        "fingerprint": fingerprint,
+                        "qualification": {
+                            "fingerprint_sha256": DeploymentFingerprint.from_payload(
+                                fingerprint
+                            ).sha256,
+                            "qualified": False,
+                            "stale_round_count": 0,
+                            "role_results": [
+                                {
+                                    "role": "retriever",
+                                    "observed_rounds": 0,
+                                    "consecutive_passing_rounds": 0,
+                                    "qualified": False,
+                                }
+                            ],
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source = RouterSourceConfig(
+        id="embedding-source",
+        label="Embedding source",
+        base_url="http://127.0.0.1:8001/v1",
+        adapter="vllm_openai",
+        enabled_for=["embedding"],
+    )
+    service = RouterCatalogService(
+        settings_factory=lambda: _settings_with_sources(
+            source, deployment_manifest_file=str(manifest_path)
+        )
+    )
+    monkeypatch.setattr(
+        router_catalog_module,
+        "load_configured_source_allowlist",
+        lambda source_id: None,
+    )
+    monkeypatch.setattr(
+        service,
+        "_fetch_models_payload",
+        lambda source, *, settings: {"data": [{"id": "Qwen/Qwen3-Embedding-0.6B"}]},
+    )
+
+    model = service.find_routed_model("embedding-source::stable")
+
+    assert model is not None
+    assert model.provider_model_id == "Qwen/Qwen3-Embedding-0.6B"
+    assert model.deployment is not None
+    assert model.deployment.deployment_id == "embedding-deployment"
 
 
 def test_router_catalog_enriches_models_from_profiles_and_gates_agent_studio(

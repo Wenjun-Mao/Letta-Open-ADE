@@ -7,7 +7,9 @@ ownership and operational details.
 
 Letta Open ADE has one simple system story: **ADE Web** presents the product,
 **ADE API** owns product workflows, **Model Router** owns model access, and
-**Letta** provides persistent agent runtime.
+**Letta** provides the supported persistent Agent Studio runtime. An accepted,
+disabled-by-default native v3 preview lets ADE API and a separate worker exercise
+ADE-owned persistence without changing that product path.
 
 ```mermaid
 flowchart LR
@@ -18,7 +20,11 @@ flowchart LR
     L --> R
     R --> P[Local and cloud\nmodel providers]
     A --> C[content/\nprompts, personas, schemas, tools]
-    A --> D[(PostgreSQL / Redis\ninternal)]
+    L --> S[(PostgreSQL / Redis\nLetta state)]
+    A -. opt-in /api/v3 .-> D[(PostgreSQL\nADE v3 state)]
+    A -. accepted runs .-> V[ade-runtime-worker\noptional profile]
+    V --> D
+    V --> R
 ```
 
 ## Repository Shape
@@ -32,6 +38,7 @@ apps/
 
 services/
   ade-api/                         # FastAPI product API
+    migrations/                    # Alembic authority for ADE-owned PostgreSQL
     src/ade_api/
       platform/                    # App composition, settings, auth, DI
       integrations/                # Letta and Model Router adapters
@@ -100,7 +107,9 @@ flowchart TD
 | ADE API | Product workflows | Host port `8000` | `ade-api`, `ADE_API_*` |
 | Model Router | Provider access | Compose network only | `model-router`, `MODEL_ROUTER_*` |
 | Letta | Agent runtime | Compose network only | `letta`, `LETTA_*` |
-| PostgreSQL / Redis | Runtime storage | Compose network only | `postgres`, `redis` |
+| Native runtime worker | Opt-in v3 run execution | Compose profile only | `ade-runtime-worker`, `ADE_API_AGENT_RUNTIME_V3_*` |
+| PostgreSQL | Letta and separate ADE v3 databases | Compose network only | `postgres`, `LETTA_PG_*`, `ADE_PG_*` |
+| Redis | Current Letta runtime storage | Compose network only | `redis`, `LETTA_REDIS_*` |
 
 All browser calls use ADE Web's same-origin proxy. The proxy is the only web
 component that receives the server-side ADE API credential. ADE API talks to
@@ -138,5 +147,10 @@ ADE API version 2 is organized by the product capability a caller is using:
 
 ADE API version 2 is the supported ADE product contract. Prompt, persona,
 schema, tool, and model-selection keys remain stable across this structure.
-Model Router retains its OpenAI-compatible `/v1` API. Any future public-contract
-change requires an ADR and a regenerated OpenAPI artifact.
+Model Router retains its OpenAI-compatible `/v1` API.
+
+The opt-in native preview exposes a breaking `/api/v3` resource model for agent
+definitions, memory subjects, conversations, turns, runs/events, and typed memories.
+It has no ADE Web UI or compatibility promise and must remain disabled in the normal
+stack until a later cutover ADR is accepted. Any future public-contract change
+requires an ADR and regenerated OpenAPI artifacts.

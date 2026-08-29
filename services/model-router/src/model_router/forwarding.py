@@ -73,15 +73,37 @@ async def forward_chat_completion(
     return await _post_chat_completion(client, source, payload)
 
 
+async def forward_embeddings(
+    application: FastAPI,
+    source: RouterSourceConfig,
+    payload: dict[str, Any],
+) -> Response:
+    """Forward exactly one OpenAI-compatible embeddings request upstream."""
+    return await _post_json_request(
+        _upstream_client(application), source, payload, source.embeddings_url()
+    )
+
+
 async def _post_chat_completion(
     client: httpx.AsyncClient,
     source: RouterSourceConfig,
     payload: dict[str, Any],
 ) -> Response:
+    return await _post_json_request(
+        client, source, payload, source.chat_completions_url()
+    )
+
+
+async def _post_json_request(
+    client: httpx.AsyncClient,
+    source: RouterSourceConfig,
+    payload: dict[str, Any],
+    url: str,
+) -> Response:
     try:
         # httpx has no implicit retry; one call here is the complete retry policy.
         response = await client.post(
-            source.chat_completions_url(),
+            url,
             json=payload,
             headers=_upstream_headers(source),
         )

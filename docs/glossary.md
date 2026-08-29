@@ -8,7 +8,8 @@
 | ADE Web | The Next.js browser application at `apps/ade-web`; the only user-facing web service. |
 | ADE API | The FastAPI product API at `services/ade-api`; it owns feature workflows and orchestration. |
 | Model Router | The OpenAI-compatible service at `services/model-router`; it owns provider access, model discovery, and profiles. |
-| Letta | The persistent agent runtime used by Agent Studio. |
+| Letta | The persistent runtime used by the supported Agent Studio v2 path. |
+| Native agent runtime v3 | The disabled-by-default ADE-owned API/worker preview accepted by ADR 0009; it is not the production Agent Studio path. |
 | Feature | A product capability with one owner, such as Agent Studio or Comment Lab. |
 | Platform | ADE API composition concerns: application setup, settings, auth, lifecycle, and dependency injection. It is not a feature. |
 | Integration | An adapter for an external protocol or service, such as Letta or Model Router. |
@@ -41,6 +42,10 @@
 | --- | --- |
 | Agent Studio | The ADE feature for creating, chatting with, inspecting, and maintaining persistent Letta agents. |
 | Persistent state | Agent memory and related state retained by Letta across messages. |
+| Agent definition | An immutable v3 prompt, persona, tools, and exact deployment snapshot reusable across memory subjects. |
+| Memory subject | The explicit v3 identity whose typed durable facts are isolated from other subjects and agents. |
+| Conversation | A v3 binding between one agent-definition version and one memory subject, with immutable messages. |
+| Run | One asynchronous v3 turn execution with attempts, cancellation state, qualification state, and normalized events. |
 | Tool Probe | An Agent Studio operation that invokes or validates a configured tool through the runtime path. |
 | Test Center | The ADE feature for launching maintained checks and viewing their artifacts. |
 | Workflow | A self-contained eval, probe, or smoke check with runner, config, inputs, outputs, docs, and tests. |
