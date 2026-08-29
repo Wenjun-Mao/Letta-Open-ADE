@@ -625,6 +625,30 @@ def test_python_service_images_default_to_the_managed_virtualenv() -> None:
     )
 
 
+def test_images_installing_workflows_copy_shared_workspace_packages() -> None:
+    dockerfiles = (
+        PROJECT_ROOT / "services" / "ade-api" / "Dockerfile",
+        PROJECT_ROOT / "services" / "model-router" / "Dockerfile",
+    )
+    required_copy = (
+        "COPY packages/agent-runtime-eval-contracts ./packages/agent-runtime-eval-contracts",
+        "COPY packages/model-catalog-contracts ./packages/model-catalog-contracts",
+    )
+
+    offenders = []
+    for path in dockerfiles:
+        text = path.read_text(encoding="utf-8")
+        if "--package ade-workflows" in text and any(
+            statement not in text for statement in required_copy
+        ):
+            offenders.append(str(path.relative_to(PROJECT_ROOT)))
+
+    assert offenders == [], (
+        "Images installing ade-workflows must copy its workspace dependencies "
+        f"before uv sync: {offenders}"
+    )
+
+
 def test_letta_runtime_security_and_image_pins_stay_explicit() -> None:
     compose_text = (PROJECT_ROOT / "compose.yaml").read_text(encoding="utf-8")
     env_example = (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8")

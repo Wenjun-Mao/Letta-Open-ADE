@@ -16,6 +16,7 @@ RUN apt-get update \
 COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /uvx /usr/local/bin/
 COPY pyproject.toml uv.lock ./
 COPY services/model-router ./services/model-router
+COPY packages/agent-runtime-eval-contracts ./packages/agent-runtime-eval-contracts
 COPY packages/model-catalog-contracts ./packages/model-catalog-contracts
 COPY workflows/pyproject.toml ./workflows/pyproject.toml
 RUN --mount=type=cache,target=/root/.cache/uv \
