@@ -12,6 +12,12 @@ is recorded as compatibility evidence and is never promotion-eligible.
 
 ## Run
 
+Build the native runtime through `make native-runtime-up` (or
+`make eval-agent-runtime-v3`) so Compose records the exact Git revision and
+clean/dirty state in the API and worker images. A direct `docker compose up`
+uses fail-closed `unknown`/dirty provenance defaults and therefore cannot emit a
+promotion proposal.
+
 Set `AGENT_RUNTIME_V3_ACCEPTANCE_API_KEY` and
 `AGENT_RUNTIME_V3_ACCEPTANCE_DATABASE_URL` before a host-side live run. Inside
 the ADE API container, the runner safely falls back to `ADE_API_OPERATOR_KEY` or

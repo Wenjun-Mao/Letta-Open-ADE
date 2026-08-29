@@ -5,6 +5,7 @@ import json
 from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -188,11 +189,17 @@ class RuntimeV3Client:
         return data
 
     def _url(self, value: str) -> str:
-        return (
-            value
-            if value.startswith(("http://", "https://"))
-            else f"{self.api_base_url}{value}"
-        )
+        candidate = urlsplit(value)
+        base = urlsplit(self.api_base_url)
+        if candidate.scheme or candidate.netloc:
+            if (candidate.scheme, candidate.netloc) != (base.scheme, base.netloc):
+                raise RuntimeClientError(
+                    "v3 API URL must remain on the configured API origin"
+                )
+            return value
+        if not value.startswith("/"):
+            raise RuntimeClientError("v3 API URL must be absolute-path relative")
+        return f"{self.api_base_url}{value}"
 
 
 def parse_sse(lines: Iterable[str]) -> Iterable[SseEvent]:

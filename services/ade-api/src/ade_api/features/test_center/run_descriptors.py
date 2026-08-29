@@ -155,6 +155,11 @@ def _validate_agent_runtime_v3_acceptance(options: RunOptions) -> None:
     rounds = options.get("rounds")
     if rounds is not None and (not isinstance(rounds, int) or not 1 <= rounds <= 3):
         raise ValueError("agent runtime v3 acceptance rounds must be between 1 and 3")
+    timeout_seconds = options.get("timeout_seconds")
+    if timeout_seconds is not None and float(timeout_seconds) < 5:
+        raise ValueError(
+            "agent runtime v3 acceptance timeout_seconds must be between 5 and 600"
+        )
 
 
 def _build_agent_runtime_v3_acceptance(

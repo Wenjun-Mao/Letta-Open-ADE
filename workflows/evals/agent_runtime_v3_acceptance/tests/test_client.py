@@ -8,6 +8,7 @@ import pytest
 
 from workflows.evals.agent_runtime_v3_acceptance.client import (
     ApiResponseError,
+    RuntimeClientError,
     RuntimeV3Client,
     SseEvent,
     parse_sse,
@@ -219,5 +220,20 @@ def test_owned_client_disables_implicit_sse_read_timeout() -> None:
         assert client._client.timeout.read is None
         assert client._client.timeout.connect == 30
         await client.aclose()
+
+    asyncio.run(scenario())
+
+
+def test_runtime_client_rejects_cross_origin_event_url() -> None:
+    async def scenario() -> None:
+        client = RuntimeV3Client("https://ade.test", "operator-key")
+        try:
+            with pytest.raises(RuntimeClientError, match="configured API origin"):
+                async for _event in client.stream_events(
+                    "https://attacker.test/api/v3/runs/run-1/events"
+                ):
+                    pass
+        finally:
+            await client.aclose()
 
     asyncio.run(scenario())

@@ -66,6 +66,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _new_run_id(
+    *, now: datetime | None = None, random_suffix: str | None = None
+) -> str:
+    timestamp = (now or datetime.now(UTC)).astimezone(UTC)
+    suffix = random_suffix or uuid4().hex[:8]
+    return f"agent-runtime-v3-{timestamp.strftime('%Y%m%dT%H%M%SZ')}-{suffix}"
+
+
 async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
     if not config.database_url:
         raise RuntimeError(
@@ -77,10 +85,7 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
         set(canonical_case_keys)
     ):
         raise RuntimeError("shared canonical case matrix is empty or non-unique")
-    run_id = (
-        f"agent-runtime-v3-{datetime.now(UTC).strftime('%Y%m%dt%H%M%sz')}"
-        f"-{uuid4().hex[:8]}"
-    )
+    run_id = _new_run_id()
     source_revision = _source_revision()
     source_dirty = _source_dirty()
     policy_hashes = production_policy_hashes()
@@ -162,32 +167,7 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
             "eligible": proposal is not None,
         }
     finally:
-        await client.aclose()
-        if resource_scopes:
-            if not config.database_url:
-                raise RuntimeError(
-                    "live acceptance created resources but database cleanup is not configured"
-                )
-            cleaner = ScopedPostgresCleanup(
-                database_url=config.database_url,
-                output_dir=config.output_dir,
-                cleanup_owner=config.cleanup_owner,
-            )
-            cleaner.cleanup(
-                CleanupScope(
-                    run_id=run_id,
-                    definition_keys=tuple(
-                        key
-                        for scope in resource_scopes
-                        for key in scope.definition_keys
-                    ),
-                    subject_external_keys=tuple(
-                        key
-                        for scope in resource_scopes
-                        for key in scope.subject_external_keys
-                    ),
-                )
-            )
+        await _close_client_and_cleanup(client, config, run_id, resource_scopes)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -220,6 +200,41 @@ def _interrupt_for_cleanup(_signum: int, _frame: object) -> None:
     # Test Center sends SIGTERM. Raising through the async stack preserves the
     # workflow's fail-closed cleanup instead of abandoning generated rows.
     raise KeyboardInterrupt
+
+
+async def _close_client_and_cleanup(
+    client: RuntimeV3Client,
+    config: AcceptanceConfig,
+    run_id: str,
+    resource_scopes: list[ResourceScope],
+) -> None:
+    try:
+        await client.aclose()
+    finally:
+        if not resource_scopes:
+            return
+        if not config.database_url:
+            raise RuntimeError(
+                "live acceptance created resources but database cleanup is not configured"
+            )
+        cleaner = ScopedPostgresCleanup(
+            database_url=config.database_url,
+            output_dir=config.output_dir,
+            cleanup_owner=config.cleanup_owner,
+        )
+        cleaner.cleanup(
+            CleanupScope(
+                run_id=run_id,
+                definition_keys=tuple(
+                    key for scope in resource_scopes for key in scope.definition_keys
+                ),
+                subject_external_keys=tuple(
+                    key
+                    for scope in resource_scopes
+                    for key in scope.subject_external_keys
+                ),
+            )
+        )
 
 
 def _write_rounds(

@@ -117,6 +117,9 @@ def test_agent_runtime_v3_acceptance_request_accepts_only_focused_fields() -> No
     with pytest.raises(ValidationError, match="rounds must be between 1 and 3"):
         TestRunRequest(run_type="agent_runtime_v3_acceptance", rounds=4)
 
+    with pytest.raises(ValidationError, match="timeout_seconds must be between 5"):
+        TestRunRequest(run_type="agent_runtime_v3_acceptance", timeout_seconds=4.9)
+
 
 def test_chat_memory_eval_create_passes_options(monkeypatch) -> None:
     captured: dict[str, object] = {}

@@ -42,7 +42,9 @@ export function buildTestRunPayload(
       reviewer_model_key: v3Form.reviewerModelKey,
       embedding_model_key: v3Form.embeddingModelKey,
       rounds: Number.isInteger(rounds) ? Math.min(3, Math.max(1, rounds)) : 3,
-      timeout_seconds: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0 ? Math.min(600, timeoutSeconds) : 180,
+      timeout_seconds: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
+        ? Math.min(600, Math.max(5, timeoutSeconds))
+        : 180,
       retry_count: Number.isInteger(retryCount) ? Math.min(5, Math.max(0, retryCount)) : 0,
       include_llama_compatibility: v3Form.includeLlamaCompatibility,
     };

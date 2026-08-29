@@ -87,6 +87,16 @@ describe("Test Center run launcher", () => {
     });
   });
 
+  it("clamps the v3 timeout to the workflow minimum", () => {
+    expect(
+      buildTestRunPayload(
+        "agent_runtime_v3_acceptance",
+        chatMemoryForm,
+        { ...v3AcceptanceForm, timeoutSeconds: "1" },
+      ).timeout_seconds,
+    ).toBe(5);
+  });
+
   it("reconciles changed deployment aliases by role instead of keeping stale defaults", () => {
     const deployment = (deploymentId: string, roles: Array<"conversation" | "reviewer" | "retriever">) => ({
       deployment_id: deploymentId,
