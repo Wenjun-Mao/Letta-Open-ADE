@@ -150,6 +150,11 @@ def test_cleanup_refuses_unsupported_database_or_unscoped_queries(
         index for index, sql in enumerate(sql_order) if "UPDATE ade.memory_facts" in sql
     ) < next(index for index, sql in enumerate(sql_order) if "memory_revisions" in sql)
     assert next(
+        index
+        for index, sql in enumerate(sql_order)
+        if "memory_revision_sources" in sql
+    ) < next(index for index, sql in enumerate(sql_order) if "ade.messages" in sql)
+    assert next(
         index for index, sql in enumerate(sql_order) if "memory_revisions" in sql
     ) < next(index for index, sql in enumerate(sql_order) if "ade.runs" in sql)
     assert next(

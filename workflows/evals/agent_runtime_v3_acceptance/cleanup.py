@@ -187,11 +187,6 @@ WITH target_subjects AS (
                     + "\nDELETE FROM ade.conversation_summaries WHERE conversation_id IN (SELECT id FROM target_conversations)",
                     conversation_params,
                 ),
-                (
-                    target
-                    + "\nDELETE FROM ade.messages WHERE conversation_id IN (SELECT id FROM target_conversations)",
-                    conversation_params,
-                ),
             )
         )
     if scope.subject_external_keys:
@@ -232,6 +227,11 @@ WITH target_subjects AS (
     if scope.definition_keys and scope.subject_external_keys:
         statements.extend(
             (
+                (
+                    target
+                    + "\nDELETE FROM ade.messages WHERE conversation_id IN (SELECT id FROM target_conversations)",
+                    conversation_params,
+                ),
                 (
                     target
                     + "\nDELETE FROM ade.runs WHERE id IN (SELECT id FROM target_runs)",
