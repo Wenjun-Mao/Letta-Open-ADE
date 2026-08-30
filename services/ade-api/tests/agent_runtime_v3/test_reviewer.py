@@ -154,3 +154,77 @@ def test_reviewer_repairs_subject_bound_semantic_validation_once() -> None:
         "style",
         "other",
     ]
+
+
+def test_explicit_forgetting_uses_a_forget_only_schema_on_first_request() -> None:
+    fact_id = "00000000-0000-0000-0000-000000000003"
+    message = {
+        "id": "00000000-0000-0000-0000-000000000002",
+        "content": "请忘掉我喜欢蓝色这件事。",
+    }
+    facts = [
+        {
+            "id": fact_id,
+            "subject_id": SUBJECT_ID,
+            "entity_id": SUBJECT_ID,
+            "normalized_key": f"person.preference|{SUBJECT_ID}|color",
+            "fact_type": "person.preference",
+            "qualifier": "color",
+            "value": "蓝色",
+            "status": "active",
+            "version": 1,
+        }
+    ]
+    entities = [
+        {
+            "id": SUBJECT_ID,
+            "subject_id": SUBJECT_ID,
+            "kind": "subject",
+            "label": "",
+        }
+    ]
+    transport = _Transport(
+        [
+            {
+                "proposals": [
+                    {
+                        "operation": "forget",
+                        "value": None,
+                        "fact_id": fact_id,
+                        "expected_version": 1,
+                        "evidence_quote": "请忘掉我喜欢蓝色这件事。",
+                    }
+                ]
+            }
+        ]
+    )
+
+    def validate(decision) -> None:
+        prepare_memory_review(
+            decision=decision,
+            subject_id=SUBJECT_ID,
+            current_user_message=message,
+            active_facts=facts,
+            entities=entities,
+        )
+
+    result = asyncio.run(
+        MemoryReviewer(transport).review(
+            model_key="source::reviewer",
+            current_user_message=message,
+            recent_user_messages=[],
+            active_facts=facts,
+            entities=entities,
+            timeout_seconds=30,
+            validate_decision=validate,
+        )
+    )
+
+    assert result.model_request_count == 1
+    request = transport.calls[0][0]
+    packet = json.loads(request["messages"][1]["content"])
+    assert packet["review_mode"] == "explicit_forgetting"
+    schema_text = str(request["response_format"]["json_schema"]["schema"])
+    assert "ForgetProposal" in schema_text
+    assert "AddProposal" not in schema_text
+    assert "CorrectProposal" not in schema_text

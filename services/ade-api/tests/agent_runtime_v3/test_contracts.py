@@ -142,6 +142,45 @@ def test_review_schema_discriminates_operation_specific_shapes() -> None:
     assert proposal.operation.value == "add"
 
 
+def test_explicit_forgetting_schema_excludes_other_operations() -> None:
+    schema = review_json_schema(mode="forget")
+    schema_text = str(schema)
+    assert "ForgetProposal" in schema_text
+    assert "AddProposal" not in schema_text
+    assert "CorrectProposal" not in schema_text
+
+    proposal = parse_review_decision(
+        {
+            "proposals": [
+                {
+                    "operation": "forget",
+                    "value": None,
+                    "fact_id": "fact-1",
+                    "expected_version": 1,
+                    "evidence_quote": "forget jazz",
+                }
+            ]
+        },
+        mode="forget",
+    ).proposals[0]
+    assert proposal.operation.value == "forget"
+
+    with pytest.raises(RuntimeValidationError, match="Invalid memory review output"):
+        parse_review_decision(
+            {
+                "proposals": [
+                    {
+                        "operation": "add",
+                        "fact_type": "person.name",
+                        "value": "张伟",
+                        "evidence_quote": "张伟",
+                    }
+                ]
+            },
+            mode="forget",
+        )
+
+
 def test_review_schema_rejects_noncanonical_qualifier_aliases() -> None:
     with pytest.raises(RuntimeValidationError, match="qualifier"):
         parse_review_decision(

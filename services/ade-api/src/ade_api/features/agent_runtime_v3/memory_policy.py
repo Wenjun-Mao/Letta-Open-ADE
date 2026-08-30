@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from .errors import RuntimeValidationError
 from .fact_registry import EntityKind, fact_key, fact_type_spec
+from .memory_intent import is_explicit_forgetting_request
 from .memory_review import (
     AddProposal,
     BoundEvidence,
@@ -29,7 +30,6 @@ _UNCERTAIN_MARKERS = (
     "大概",
     "猜",
 )
-_FORGET_MARKERS = ("forget", "remove", "delete", "忘", "删除", "不要记")
 _VALUE_STOPWORDS = {"a", "an", "and", "as", "is", "my", "the", "to"}
 
 
@@ -169,9 +169,8 @@ def _validate_claim_semantics(
         raise RuntimeValidationError(
             "Uncertain or hypothetical claims cannot become durable memory"
         )
-    evidence = _normalize(proposal.evidence_quote)
-    if isinstance(proposal, ForgetProposal) and not any(
-        marker in evidence for marker in _FORGET_MARKERS
+    if isinstance(proposal, ForgetProposal) and not is_explicit_forgetting_request(
+        proposal.evidence_quote
     ):
         raise RuntimeValidationError("forget requires explicit user removal intent")
     if isinstance(proposal, ForgetProposal):

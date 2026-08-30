@@ -7,6 +7,7 @@ from typing import Any
 
 from .errors import RuntimeValidationError
 from .fact_registry import FACT_TYPE_REGISTRY
+from .memory_intent import is_explicit_forgetting_request
 from .memory_review import ReviewDecision, parse_review_decision, review_json_schema
 from .router_transport import RouterTransport
 
@@ -95,6 +96,13 @@ class MemoryReviewer:
         validate_decision: Callable[[ReviewDecision], None],
     ) -> ReviewerResult:
         entity_kinds = {str(item.get("id")): item.get("kind") for item in entities}
+        review_mode = (
+            "forget"
+            if is_explicit_forgetting_request(
+                str(current_user_message.get("content") or "")
+            )
+            else "all"
+        )
         packet = {
             "current_user_message": {
                 "id": current_user_message.get("id"),
@@ -128,7 +136,14 @@ class MemoryReviewer:
                 for item in entities
                 if item.get("kind") != "subject"
             ],
-            "operation_contracts": OPERATION_CONTRACTS,
+            "review_mode": (
+                "explicit_forgetting" if review_mode == "forget" else "general"
+            ),
+            "operation_contracts": (
+                {"forget": OPERATION_CONTRACTS["forget"]}
+                if review_mode == "forget"
+                else OPERATION_CONTRACTS
+            ),
             "worked_examples": WORKED_EXAMPLES,
             "allowed_fact_contracts": [
                 {
@@ -155,7 +170,7 @@ class MemoryReviewer:
                         "json_schema": {
                             "name": "ade_memory_review",
                             "strict": True,
-                            "schema": review_json_schema(),
+                            "schema": review_json_schema(mode=review_mode),
                         },
                     },
                     "temperature": 0,
@@ -168,7 +183,7 @@ class MemoryReviewer:
             responses.append(response)
             try:
                 content = _response_content(response)
-                decision = parse_review_decision(json.loads(content))
+                decision = parse_review_decision(json.loads(content), mode=review_mode)
                 validate_decision(decision)
             except (RuntimeValidationError, json.JSONDecodeError, ValueError) as exc:
                 if request_number == 2:

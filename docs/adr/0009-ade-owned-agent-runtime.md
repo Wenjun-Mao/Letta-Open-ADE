@@ -87,6 +87,10 @@ passing complete rounds. Focused diagnostics never count as qualification rounds
 - Conversation generation cannot propose memory writes. The required reviewer runs
   after generation, uses a closed discriminated schema, and fails the turn atomically
   if it cannot produce a valid review. Corrections are not treated as forgetting.
+- ADE recognizes explicit forgetting requests with one conservative, bilingual intent
+  contract used by both reviewer selection and evidence validation. Those turns use a
+  forget-only reviewer schema; add/correct memory writes from the same message are
+  deferred rather than mixed with a tombstone operation.
 - An idempotency key is bound to a canonical request hash; different payload reuse is
   `409 Conflict`.
 - SDK/framework/Router retries are zero. `retry_count` means additional ADE attempts.
