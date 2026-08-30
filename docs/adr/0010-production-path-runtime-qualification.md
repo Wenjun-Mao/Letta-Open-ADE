@@ -35,6 +35,10 @@ policy that produced a result.
   passes. Requested compatibility diagnostics may still continue.
 - Focused cases, fake transports, unavailable roles, and compatibility-only runs
   never advance qualification.
+- A non-empty ordered `case_keys` selection is a focused diagnostic: it runs one
+  `live-api-diagnostic` round, skips llama compatibility, records both canonical and
+  executed case keys, and cannot emit a promotion proposal. The selected keys must
+  retain canonical fixture order.
 - Long-history evidence requires both an explicit versioned-summary commitment
   event and preservation of the expected immutable raw-message history.
 - llama-server remains compatibility evidence and does not block a separately
@@ -67,6 +71,8 @@ runner through API-level run cancellation and the same scoped cleanup path.
 - Never copy direct-study counters into a production-path qualification summary.
 - Never weaken a deterministic contract to qualify a less capable model.
 - Never count a partial matrix or a run from a dirty/unidentified build.
+- Never allow a focused diagnostic, even one that selects every case, to claim a
+  qualification round or promotion proposal.
 - Never promote a self-declared case list or a stored pass boolean without
   independently re-scoring the current canonical fixture observations.
 - Never auto-promote from Test Center or a background process.

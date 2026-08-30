@@ -18,7 +18,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import agent_runtime_eval_contracts  # noqa: E402
-from agent_runtime_eval_contracts import load_cases, study_cases_path  # noqa: E402
+from agent_runtime_eval_contracts import (  # noqa: E402
+    FixtureError,
+    load_cases,
+    select_cases,
+    study_cases_path,
+)
 
 from workflows.evals.agent_runtime_v3_acceptance.artifacts import RoundArtifactWriter  # noqa: E402
 from workflows.evals.agent_runtime_v3_acceptance.cleanup import (  # noqa: E402
@@ -62,6 +67,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--rounds", type=int)
     parser.add_argument("--timeout-seconds", type=float)
     parser.add_argument("--retry-count", type=int)
+    parser.add_argument("--case-key", dest="case_keys", action="append", default=[])
     parser.add_argument(
         "--include-llama-compatibility",
         action=argparse.BooleanOptionalAction,
@@ -83,12 +89,26 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
         raise RuntimeError(
             "live acceptance requires database_url for fail-closed cleanup"
         )
-    cases = tuple(load_cases(study_cases_path()))
-    canonical_case_keys = tuple(str(getattr(case, "key")) for case in cases)
+    canonical_cases = tuple(load_cases(study_cases_path()))
+    canonical_case_keys = tuple(str(getattr(case, "key")) for case in canonical_cases)
     if not canonical_case_keys or len(canonical_case_keys) != len(
         set(canonical_case_keys)
     ):
         raise RuntimeError("shared canonical case matrix is empty or non-unique")
+    diagnostic = bool(config.case_keys)
+    try:
+        cases = select_cases(canonical_cases, config.case_keys)
+    except FixtureError as exc:
+        raise RuntimeError(f"invalid diagnostic case selection: {exc}") from exc
+    if diagnostic:
+        selected_case_keys = tuple(str(getattr(case, "key")) for case in cases)
+        expected_order = tuple(
+            key for key in canonical_case_keys if key in set(config.case_keys)
+        )
+        if selected_case_keys != expected_order:
+            raise RuntimeError(
+                "diagnostic case selection must use canonical case order"
+            )
     run_id = _new_run_id()
     source_revision = _source_revision()
     source_dirty = _source_dirty()
@@ -102,7 +122,7 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
             cases=cases,
             canonical_case_keys=canonical_case_keys,
             namespace=run_id,
-            rounds=config.rounds,
+            rounds=1 if diagnostic else config.rounds,
             conversation_model_key=config.conversation_model_key,
             reviewer_model_key=config.reviewer_model_key,
             embedding_model_key=config.embedding_model_key,
@@ -110,10 +130,11 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
             retry_count=config.retry_count,
             resource_scope_sink=resource_scopes,
             on_round_complete=lambda result: _write_rounds(writer, (result,))[0],
+            diagnostic=diagnostic,
         )
         materialized_primary = primary
         compatibility = None
-        if config.include_llama_compatibility:
+        if config.include_llama_compatibility and not diagnostic:
             try:
                 compatibility = await run_llama_compatibility_round(
                     client=client,
@@ -139,6 +160,7 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
                 config,
                 run_id,
                 canonical_case_keys,
+                tuple(str(getattr(case, "key")) for case in cases),
                 materialized_primary,
                 compatibility
                 if isinstance(compatibility, QualificationRound)
@@ -148,17 +170,21 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
                 policy_hashes=policy_hashes,
             )
         )
-        proposal = build_promotion_proposal(
-            output_dir=config.output_dir,
-            run_id=run_id,
-            rounds=materialized_primary,
-            canonical_case_keys=canonical_case_keys,
-            required_rounds=3,
-            provenance_sha256=provenance_sha256,
-            source_revision=source_revision,
-            source_dirty=source_dirty,
-            policy_hashes=policy_hashes,
-            qualification_config=_qualification_config(config),
+        proposal = (
+            None
+            if diagnostic
+            else build_promotion_proposal(
+                output_dir=config.output_dir,
+                run_id=run_id,
+                rounds=materialized_primary,
+                canonical_case_keys=canonical_case_keys,
+                required_rounds=3,
+                provenance_sha256=provenance_sha256,
+                source_revision=source_revision,
+                source_dirty=source_dirty,
+                policy_hashes=policy_hashes,
+                qualification_config=_qualification_config(config),
+            )
         )
         return {
             "run_id": run_id,
@@ -187,6 +213,7 @@ def main(argv: list[str] | None = None) -> int:
         timeout_seconds=args.timeout_seconds,
         retry_count=args.retry_count,
         include_llama_compatibility=args.include_llama_compatibility,
+        case_keys=tuple(args.case_keys) if args.case_keys else None,
     )
     try:
         result = asyncio.run(_run_interruptible(config))
@@ -322,6 +349,7 @@ def _provenance(
     config: AcceptanceConfig,
     run_id: str,
     canonical_case_keys: tuple[str, ...],
+    executed_case_keys: tuple[str, ...],
     primary_rounds: tuple[QualificationRound, ...],
     compatibility_round: QualificationRound | None,
     *,
@@ -340,6 +368,7 @@ def _provenance(
         "effective_config": public_config(config),
         "canonical_case_keys": list(canonical_case_keys),
         "canonical_case_keys_sha256": _sha256_text("\n".join(canonical_case_keys)),
+        "executed_case_keys": list(executed_case_keys),
         "agent_runtime_eval_contracts_version": _contracts_version(),
         "primary_rounds": [_round_summary(item) for item in primary_rounds],
         "llama_compatibility": (
@@ -358,6 +387,7 @@ def _qualification_config(config: AcceptanceConfig) -> dict[str, Any]:
         "rounds": config.rounds,
         "timeout_seconds": config.timeout_seconds,
         "retry_count": config.retry_count,
+        "case_keys": list(config.case_keys),
     }
 
 

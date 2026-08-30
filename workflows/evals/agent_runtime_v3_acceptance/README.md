@@ -38,9 +38,19 @@ uv run --project workflows python workflows/evals/agent_runtime_v3_acceptance/ru
   --include-llama-compatibility
 ```
 
-The runner also accepts `--no-include-llama-compatibility`. Focused,
-fake-transport, incomplete, or non-primary rounds remain diagnostic artifacts
-and cannot generate a proposal.
+The runner also accepts `--no-include-llama-compatibility`. For a focused runtime
+diagnostic, repeat `--case-key` in the canonical fixture order:
+
+```bash
+uv run python workflows/evals/agent_runtime_v3_acceptance/run.py \
+  --case-key old_memory_deep_search \
+  --case-key weather_tool_failure
+```
+
+A non-empty selection is always a single `live-api-diagnostic` round: it skips
+llama compatibility and cannot create a promotion proposal, even if it happens to
+list every canonical case. Focused, fake-transport, incomplete, or non-primary
+rounds remain diagnostic artifacts and cannot generate a proposal.
 
 Only the canonical `3` rounds, `180` second timeout, and zero-retry run can emit
 a proposal. Every round keeps raw SSE JSONL plus normalized turns, attempt counts,
@@ -49,8 +59,9 @@ binds the image source revision, clean-build state, shared contract version,
 production policy hashes, exact role deployments, and effective config.
 
 Canonical cases that declare a conversation summary cannot pass on dialogue
-alone: the production path must emit `summary.committed`, and the conversation
-state must still expose the expected immutable raw-message count.
+alone: the production path must emit `summary.committed` within the same accepted
+turn as the assistant result, and the conversation state must still expose the
+expected immutable raw-message count.
 
 A failed primary round is completed and written in full, then later primary
 rounds are skipped because three consecutive passes are no longer possible in

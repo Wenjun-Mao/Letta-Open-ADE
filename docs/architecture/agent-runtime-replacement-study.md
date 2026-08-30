@@ -414,10 +414,12 @@ turns. If the current message plus mandatory prompt cannot fit, reject before a
 provider call. Every run event records the tokenizer/model profile, section token
 counts, omitted IDs, retrieved IDs, and output cap.
 
-Summarization triggers before a future turn when raw eligible history would exceed
-its section budget. It summarizes only complete turns through a validated sequence,
-emits its own run/events, and never deletes source messages. A failed summary either
-falls back to a previously valid version or produces an explicit context error.
+When an accepted turn crosses the raw-history section budget, summarization is a
+sub-operation of that same turn. It summarizes only complete prior turns through a
+validated sequence and never deletes source messages. Its versioned summary and
+provenance commit atomically with the assistant message, reviewer changes, terminal
+run state, events, and outbox records; a failure commits none of those turn results
+and produces an explicit context error.
 
 ## Memory Review And Write Contract
 
