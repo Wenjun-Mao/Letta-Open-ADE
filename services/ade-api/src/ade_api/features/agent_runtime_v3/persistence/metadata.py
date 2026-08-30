@@ -494,6 +494,11 @@ conversation_summaries = Table(
     Column("through_sequence", Integer, nullable=False),
     Column("content", Text, nullable=False),
     Column("run_id", UUID_ID, nullable=False),
+    Column("previous_summary_id", UUID_ID, nullable=True),
+    Column("model_key", String(300), nullable=False),
+    Column("provider_request_id", String(512), nullable=True),
+    Column("prompt_sha256", String(64), nullable=False),
+    Column("input_sha256", String(64), nullable=False),
     Column("created_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
     PrimaryKeyConstraint("id", name="pk_conversation_summaries"),
     ForeignKeyConstraint(
@@ -503,6 +508,11 @@ conversation_summaries = Table(
     ),
     ForeignKeyConstraint(
         ["run_id"], [f"{SCHEMA_NAME}.runs.id"], name="fk_conversation_summaries_run"
+    ),
+    ForeignKeyConstraint(
+        ["previous_summary_id"],
+        [f"{SCHEMA_NAME}.conversation_summaries.id"],
+        name="fk_conversation_summaries_previous_summary",
     ),
     UniqueConstraint(
         "conversation_id",

@@ -15,7 +15,9 @@ async def append_success_events(
     result: AttemptResult,
     committed: list[dict[str, Any]],
     assistant_message_id: str,
+    summary: dict[str, Any] | None = None,
 ) -> None:
+    compaction = getattr(result, "compaction", None)
     await append_run_event(
         runs,
         run_id=run_id,
@@ -58,6 +60,17 @@ async def append_success_events(
             payload={"role": "reviewer", "repair_count": 1},
             attempt=attempt,
         )
+    if compaction is not None:
+        await _append_model_rounds(
+            runs,
+            run_id=run_id,
+            attempt=attempt,
+            role="compaction",
+            request_count=1,
+            provider_request_ids=[compaction.provider_request_id]
+            if compaction.provider_request_id
+            else [],
+        )
     proposal_events = []
     for operation in result.review.operations:
         proposal_events.append(
@@ -95,18 +108,37 @@ async def append_success_events(
         payload={"message_id": assistant_message_id, "role": "assistant"},
         attempt=attempt,
     )
+    if summary is not None:
+        await append_run_event(
+            runs,
+            run_id=run_id,
+            event_type="conversation.compacted",
+            payload={
+                "summary_id": str(summary["id"]),
+                "previous_summary_id": summary["previous_summary_id"],
+                "version": int(summary["version"]),
+                "through_sequence": int(summary["through_sequence"]),
+                "model_key": summary["model_key"],
+                "provider_request_id": summary["provider_request_id"],
+                "prompt_sha256": summary["prompt_sha256"],
+                "input_sha256": summary["input_sha256"],
+            },
+            attempt=attempt,
+        )
     conversation_requests = result.executor.model_request_count
     reviewer_requests = result.reviewer.model_request_count
+    compaction_requests = 1 if compaction is not None else 0
     await append_run_event(
         runs,
         run_id=run_id,
         event_type="run.completed",
         payload={
             "attempt_count": attempt,
-            "model_request_count": conversation_requests + reviewer_requests,
+            "model_request_count": conversation_requests + reviewer_requests + compaction_requests,
             "model_request_counts": {
                 "conversation": conversation_requests,
                 "reviewer": reviewer_requests,
+                "compaction": compaction_requests,
             },
             "memory_revision_count": len(committed),
             "usage": result.executor.usage,

@@ -9,6 +9,9 @@ from sqlalchemy.dialects.postgresql import dialect
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from ade_api.features.agent_runtime_v3.persistence.base import IdempotencyConflictError
+from ade_api.features.agent_runtime_v3.persistence.conversations import (
+    ConversationRepository,
+)
 from ade_api.features.agent_runtime_v3.persistence.memory import MemoryRepository
 from ade_api.features.agent_runtime_v3.persistence.runs import RunRepository
 
@@ -43,6 +46,38 @@ class _RevisionConnection:
         if len(self.statements) == 1:
             return _Result({"id": "revision", "fact_id": "fact"})
         return cast(Any, type("UpdateResult", (), {"rowcount": 1})())
+
+
+class _RowsResult:
+    def __init__(self, rows: list[dict[str, Any]]) -> None:
+        self._rows = rows
+
+    def mappings(self) -> _RowsResult:
+        return self
+
+    def one_or_none(self) -> dict[str, Any] | None:
+        return self._rows[0] if self._rows else None
+
+    def __iter__(self):
+        return iter(self._rows)
+
+
+class _SummaryConnection:
+    def __init__(self) -> None:
+        self.statements: list[Any] = []
+        self.results = [
+            _RowsResult([]),
+            _RowsResult(
+                [
+                    {"id": "message-1", "sequence": 1},
+                    {"id": "message-2", "sequence": 2},
+                ]
+            ),
+        ]
+
+    async def execute(self, statement: Any) -> _RowsResult:
+        self.statements.append(statement)
+        return self.results.pop(0)
 
 
 def test_run_accept_uses_database_idempotency_and_replays_the_same_hash() -> None:
@@ -133,3 +168,32 @@ def test_memory_revision_exists_before_projection_references_it() -> None:
 
     assert connection.statements[0].is_insert
     assert connection.statements[1].is_update
+
+
+def test_compaction_requires_complete_contiguous_summary_sources() -> None:
+    connection = _SummaryConnection()
+    repository = ConversationRepository(cast(AsyncConnection, connection))
+
+    with pytest.raises(ValueError, match="contiguous history prefix"):
+        asyncio.run(
+            repository.create_compaction(
+                payload={
+                    "id": "summary-1",
+                    "conversation_id": "conversation-1",
+                    "version": 1,
+                    "through_sequence": 2,
+                    "content": "A summary.",
+                    "run_id": "run-1",
+                    "previous_summary_id": None,
+                    "model_key": "source::model",
+                    "provider_request_id": "provider-1",
+                    "prompt_sha256": "a" * 64,
+                    "input_sha256": "b" * 64,
+                },
+                source_message_ids=("message-1",),
+                expected_summary_version=0,
+                expected_previous_summary_id=None,
+            )
+        )
+
+    assert len(connection.statements) == 2

@@ -117,3 +117,43 @@ class ConversationRepository:
                 ],
             )
         return summary
+
+    async def create_compaction(
+        self,
+        *,
+        payload: Mapping[str, Any],
+        source_message_ids: Sequence[str],
+        expected_summary_version: int,
+        expected_previous_summary_id: str | None,
+    ) -> dict[str, Any]:
+        """Persist one model summary with a reconstructable contiguous prefix.
+
+        The caller holds the enclosing terminal-run transaction. This method
+        validates the summary chain before its inserts so an invalid source range
+        rolls back the assistant, memory, summary, and terminal state together.
+        """
+
+        summary_payload = values(payload)
+        conversation_id = str(summary_payload["conversation_id"])
+        current = await self.latest_summary(conversation_id)
+        current_version = int(current["version"]) if current else 0
+        current_id = str(current["id"]) if current else None
+        current_through = int(current["through_sequence"]) if current else 0
+        if current_version != expected_summary_version or current_id != expected_previous_summary_id:
+            raise NotFoundError("conversation summary changed before compaction")
+        if int(summary_payload["version"]) != current_version + 1:
+            raise ValueError("conversation summary version must advance by one")
+        through_sequence = int(summary_payload["through_sequence"])
+        if through_sequence <= current_through:
+            raise ValueError("conversation compaction must advance its source boundary")
+        if summary_payload.get("previous_summary_id") != current_id:
+            raise ValueError("conversation compaction previous summary does not match")
+        history = await self.list_messages(conversation_id)
+        expected_sources = tuple(
+            str(message["id"])
+            for message in history
+            if int(message["sequence"]) <= through_sequence
+        )
+        if tuple(source_message_ids) != expected_sources:
+            raise ValueError("summary sources must cover a contiguous history prefix")
+        return await self.create_summary(summary_payload, source_message_ids)

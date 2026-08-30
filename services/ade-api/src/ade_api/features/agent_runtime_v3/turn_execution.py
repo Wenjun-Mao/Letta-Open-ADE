@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from .compaction import ModelCompaction, plan_compaction
 from .context import BuiltContext, ContextBudget, build_context
 from .embeddings import (
     AUTOMATIC_MAXIMUM_COSINE_DISTANCE,
@@ -14,7 +15,7 @@ from .embeddings import (
     qwen_query_text,
 )
 from .errors import RuntimeValidationError
-from .executor import ConversationExecutor, ExecutorResult
+from .executor import ConversationExecutor, ExecutorResult, curated_tools
 from .memory_policy import PreparedMemoryReview, prepare_memory_review
 from .persistence.conversations import ConversationRepository
 from .persistence.definitions import DefinitionVersionRepository
@@ -34,6 +35,7 @@ class AttemptResult:
     embedding_fingerprint: str
     embedding_dimensions: int
     retrieval_policy_version: str
+    compaction: ModelCompaction | None
 
 
 class TurnExecution:
@@ -119,11 +121,13 @@ class TurnExecution:
         executor_result = await self.executor.execute(
             model_key=str(conversation_deployment["route_alias"]),
             messages=built_context.messages,
-            search_memory=search_memory,
             timeout_seconds=_remaining(deadline),
             max_output_tokens=budget.max_output_tokens,
             max_model_requests=_max_model_requests(conversation_deployment),
-            enable_search_memory="search_memory" in definition["tool_names"],
+            tools=curated_tools(
+                tuple(str(name) for name in definition["tool_names"]),
+                search_memory=search_memory,
+            ),
         )
         recent_users = [
             message
@@ -173,6 +177,22 @@ class TurnExecution:
             raise RuntimeValidationError(
                 "Embedding dimensions do not match the deployment fingerprint"
             )
+        compaction_plan = plan_compaction(
+            messages=state["messages"],
+            current_user_message_id=str(current_user["id"]),
+            summary=summary,
+            omitted_message_ids=built_context.omitted_message_ids,
+        )
+        compaction = (
+            await self.executor.compact(
+                model_key=str(conversation_deployment["route_alias"]),
+                plan=compaction_plan,
+                timeout_seconds=_remaining(deadline),
+                max_output_tokens=budget.max_output_tokens,
+            )
+            if compaction_plan is not None
+            else None
+        )
         return AttemptResult(
             assistant_text=executor_result.assistant_text,
             context=built_context,
@@ -183,6 +203,7 @@ class TurnExecution:
             embedding_fingerprint=str(retriever_deployment["fingerprint"]),
             embedding_dimensions=dimensions,
             retrieval_policy_version=RETRIEVAL_POLICY_VERSION,
+            compaction=compaction,
         )
 
     async def _load_state(self, run: dict[str, Any]) -> dict[str, Any]:

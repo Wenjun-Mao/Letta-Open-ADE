@@ -76,6 +76,41 @@ def test_review_operation_shapes_are_closed_and_explicit() -> None:
         )
 
 
+def test_review_operation_versions_reject_coercion() -> None:
+    with pytest.raises(RuntimeValidationError, match="expected_version"):
+        parse_review_decision(
+            {
+                "proposals": [
+                    {
+                        "operation": "correct",
+                        "fact_type": "person.name",
+                        "fact_id": "fact-1",
+                        "expected_version": "1",
+                        "value": "张伟",
+                        "evidence_quote": "我叫张伟",
+                    }
+                ]
+            }
+        )
+
+    with pytest.raises(RuntimeValidationError, match="expected_versions"):
+        parse_review_decision(
+            {
+                "proposals": [
+                    {
+                        "operation": "merge",
+                        "fact_type": "person.preference",
+                        "qualifier": "music",
+                        "target_fact_ids": ["fact-1", "fact-2"],
+                        "expected_versions": {"fact-1": "1", "fact-2": 1},
+                        "value": "jazz",
+                        "evidence_quote": "jazz",
+                    }
+                ]
+            }
+        )
+
+
 def test_review_schema_discriminates_operation_specific_shapes() -> None:
     schema_text = str(review_json_schema())
     assert "discriminator" in schema_text
