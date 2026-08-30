@@ -120,6 +120,22 @@ def test_reviewer_repairs_subject_bound_semantic_validation_once() -> None:
     repair_message = transport.calls[1][0]["messages"][-1]["content"]
     assert "pet.breed requires existing:<id> or new:<local-ref>" in repair_message
     reviewer_packet = json.loads(transport.calls[0][0]["messages"][1]["content"])
+    assert reviewer_packet["operation_contracts"]["add"]["excludes"] == [
+        "explicit_forgetting"
+    ]
+    assert reviewer_packet["operation_contracts"]["forget"] == {
+        "when": "the current message explicitly asks to remove an active fact",
+        "value": None,
+        "uses_active_fact_id_and_version": True,
+    }
+    assert (
+        reviewer_packet["worked_examples"]["explicit_forgetting"]["current_message"]
+        == "请忘掉我喜欢蓝色这件事。"
+    )
+    assert (
+        reviewer_packet["worked_examples"]["explicit_forgetting"]["operation"]
+        == "forget"
+    )
     preference_contract = next(
         item
         for item in reviewer_packet["allowed_fact_contracts"]

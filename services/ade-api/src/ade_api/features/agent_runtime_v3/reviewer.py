@@ -21,6 +21,10 @@ produce no proposal. Use add when no matching active fact exists. Use correct on
 when replacing a listed active fact, copying its fact_id and version exactly. Use
 forget only for an explicit request to remove retained information. Never output a
 subject ID or free-form key.
+Choose the operation before filling any proposal fields, following
+operation_contracts and worked_examples. An explicit request to forget or remove a
+matching active fact is never an add. It must use forget, copy that active fact's
+fact_id and version, and set value to JSON null rather than the string "null".
 Use only the exact fact types and qualifiers in allowed_fact_contracts. A
 qualifier is required only when that fact contract says so. Qualifiers are
 canonical categories, not free-form labels: for example, a favorite museum is
@@ -32,6 +36,38 @@ of it from their fact IDs. Expected versions must exactly match the
 provided active facts. Example: after pet.name=Rocky, "it is a Husky" adds
 pet.breed=Husky against Rocky's existing entity and preserves both facts.
 """
+
+OPERATION_CONTRACTS = {
+    "add": {
+        "when": "the current message states a durable fact with no matching active fact",
+        "excludes": ["explicit_forgetting"],
+    },
+    "correct": {
+        "when": "the current message replaces or corrects a matching active fact",
+        "uses_active_fact_id_and_version": True,
+    },
+    "forget": {
+        "when": "the current message explicitly asks to remove an active fact",
+        "value": None,
+        "uses_active_fact_id_and_version": True,
+    },
+}
+
+WORKED_EXAMPLES = {
+    "explicit_forgetting": {
+        "current_message": "请忘掉我喜欢蓝色这件事。",
+        "matching_active_fact": {
+            "fact_type": "person.preference",
+            "qualifier": "color",
+            "value": "蓝色",
+        },
+        "operation": "forget",
+        "rule": (
+            "Copy the matching active fact_id and version, set value to JSON null, "
+            "and never emit add."
+        ),
+    }
+}
 
 
 @dataclass(frozen=True)
@@ -92,6 +128,8 @@ class MemoryReviewer:
                 for item in entities
                 if item.get("kind") != "subject"
             ],
+            "operation_contracts": OPERATION_CONTRACTS,
+            "worked_examples": WORKED_EXAMPLES,
             "allowed_fact_contracts": [
                 {
                     "fact_type": spec.name,
