@@ -20,10 +20,14 @@ from .contracts import (
     ConversationStateResponse,
     MemorySubjectResponse,
     RunResponse,
+    RuntimeWorkerHealthResponse,
     SubjectMemoriesResponse,
     TurnAcceptedResponse,
 )
-from .dependencies import AgentRuntimeV3ServiceDependency
+from .dependencies import (
+    AgentRuntimeV3HealthServiceDependency,
+    AgentRuntimeV3ServiceDependency,
+)
 from .errors import AgentRuntimeV3Error
 
 
@@ -43,6 +47,27 @@ async def _call(operation: Awaitable[T]) -> T:
             status_code=exc.status_code,
             detail={"code": exc.code, "message": str(exc)},
         ) from exc
+
+
+@router.get(
+    "/worker-health",
+    response_model=RuntimeWorkerHealthResponse,
+    responses={
+        503: {
+            "model": RuntimeWorkerHealthResponse,
+            "description": "Database or matching runtime worker is not ready",
+        }
+    },
+    summary="Check v3 worker process readiness",
+)
+async def get_worker_health(
+    response: Response,
+    service: AgentRuntimeV3HealthServiceDependency,
+):
+    result = await _call(service.get_health())
+    if not result["worker_ready"]:
+        response.status_code = 503
+    return result
 
 
 @router.post(

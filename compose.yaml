@@ -90,6 +90,7 @@ services:
       args:
         ADE_SOURCE_REVISION: ${ADE_SOURCE_REVISION:-unknown}
         ADE_SOURCE_DIRTY: ${ADE_SOURCE_DIRTY:-true}
+        ADE_SOURCE_FINGERPRINT: ${ADE_SOURCE_FINGERPRINT:-unknown}
     restart: unless-stopped
     env_file:
       - ${LETTA_ENV_FILE:-.env}
@@ -127,6 +128,7 @@ services:
       args:
         ADE_SOURCE_REVISION: ${ADE_SOURCE_REVISION:-unknown}
         ADE_SOURCE_DIRTY: ${ADE_SOURCE_DIRTY:-true}
+        ADE_SOURCE_FINGERPRINT: ${ADE_SOURCE_FINGERPRINT:-unknown}
     restart: "no"
     environment:
       - ADE_REPOSITORY_ROOT=/app
@@ -154,7 +156,9 @@ services:
       args:
         ADE_SOURCE_REVISION: ${ADE_SOURCE_REVISION:-unknown}
         ADE_SOURCE_DIRTY: ${ADE_SOURCE_DIRTY:-true}
+        ADE_SOURCE_FINGERPRINT: ${ADE_SOURCE_FINGERPRINT:-unknown}
     restart: unless-stopped
+    stop_grace_period: ${ADE_API_AGENT_RUNTIME_V3_STOP_GRACE_PERIOD:-650s}
     environment:
       - ADE_REPOSITORY_ROOT=/app
       - ADE_API_AGENT_RUNTIME_V3_ENABLED=true
@@ -166,6 +170,8 @@ services:
       - ADE_API_AGENT_RUNTIME_V3_WORKER_POLL_SECONDS=${ADE_API_AGENT_RUNTIME_V3_WORKER_POLL_SECONDS:-0.5}
       - ADE_API_AGENT_RUNTIME_V3_LEASE_SECONDS=${ADE_API_AGENT_RUNTIME_V3_LEASE_SECONDS:-60}
       - ADE_API_AGENT_RUNTIME_V3_HEARTBEAT_SECONDS=${ADE_API_AGENT_RUNTIME_V3_HEARTBEAT_SECONDS:-15}
+      - ADE_API_AGENT_RUNTIME_V3_WORKER_HEARTBEAT_SECONDS=${ADE_API_AGENT_RUNTIME_V3_WORKER_HEARTBEAT_SECONDS:-5}
+      - ADE_API_AGENT_RUNTIME_V3_WORKER_STALE_SECONDS=${ADE_API_AGENT_RUNTIME_V3_WORKER_STALE_SECONDS:-15}
     command: ["python", "-m", "ade_api.features.agent_runtime_v3.worker"]
     depends_on:
       ade-runtime-migrate:

@@ -33,7 +33,9 @@ six ideas:
 
 For the opt-in Agent Studio runtime direction, read the
 [replacement study](architecture/agent-runtime-replacement-study.md), then
-[ADR 0009](adr/0009-ade-owned-agent-runtime.md), then the
+[ADR 0009](adr/0009-ade-owned-agent-runtime.md),
+[ADR 0010](adr/0010-production-path-runtime-qualification.md), and
+[ADR 0011](adr/0011-agent-runtime-operational-readiness.md), then the
 [`agent_runtime_v3` guide](../services/ade-api/src/ade_api/features/agent_runtime_v3/README.md).
 The implementation decision is accepted, but current product behavior remains
 Letta-backed until a separate cutover is approved.

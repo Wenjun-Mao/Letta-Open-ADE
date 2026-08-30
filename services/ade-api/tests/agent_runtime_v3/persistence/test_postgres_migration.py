@@ -1,15 +1,23 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from uuid import uuid4
 
 import pytest
 from alembic import command
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, delete, inspect, text
 
+from ade_api.features.agent_runtime_v3.persistence.database import (
+    create_persistence_engine,
+)
 from ade_api.features.agent_runtime_v3.persistence.validation import (
     alembic_config,
     validate_database_at_head,
+)
+from ade_api.features.agent_runtime_v3.persistence.metadata import worker_instances
+from ade_api.features.agent_runtime_v3.persistence.workers import (
+    WorkerInstanceRepository,
 )
 
 
@@ -39,6 +47,12 @@ def test_alembic_upgrade_creates_named_ade_pgvector_schema() -> None:
             validate_database_at_head(connection)
             inspector = inspect(connection)
             assert "memory_embeddings" in inspector.get_table_names(schema="ade")
+            assert "worker_instances" in inspector.get_table_names(schema="ade")
+            worker_columns = {
+                column["name"]
+                for column in inspector.get_columns("worker_instances", schema="ade")
+            }
+            assert "source_fingerprint" in worker_columns
             summary_columns = {
                 column["name"]
                 for column in inspector.get_columns(
@@ -65,6 +79,53 @@ def test_alembic_upgrade_creates_named_ade_pgvector_schema() -> None:
             )
     finally:
         engine.dispose()
+
+
+def test_worker_health_snapshot_executes_as_the_application_role() -> None:
+    assert DATABASE_URL is not None
+
+    async def scenario() -> None:
+        engine = create_persistence_engine(DATABASE_URL)
+        instance_id = str(uuid4())
+        try:
+            async with engine.begin() as connection:
+                workers = WorkerInstanceRepository(connection)
+                await workers.register(
+                    {
+                        "instance_id": instance_id,
+                        "worker_id": "postgres-permission-test",
+                        "state": "ready",
+                        "contract_version": "agent-runtime-v3-worker-v1",
+                        "compatibility_fingerprint": "f" * 64,
+                        "runtime_version": "test",
+                        "source_revision": "a" * 40,
+                        "source_dirty": False,
+                        "source_fingerprint": "b" * 64,
+                    }
+                )
+                assert await workers.heartbeat(instance_id) is True
+                snapshot = await workers.health_snapshot(
+                    compatibility_fingerprint="f" * 64,
+                    source_revision="a" * 40,
+                    source_dirty=False,
+                    source_fingerprint="b" * 64,
+                    freshness_seconds=15.0,
+                )
+                assert snapshot["compatible_worker_count"] == 1
+                assert snapshot["matching_build_worker_count"] == 1
+                assert await workers.mark_draining(instance_id) is True
+                assert await workers.mark_stopped(instance_id) is True
+        finally:
+            async with engine.begin() as connection:
+                result = await connection.execute(
+                    delete(worker_instances).where(
+                        worker_instances.c.instance_id == instance_id
+                    )
+                )
+                assert result.rowcount in {0, 1}
+            await engine.dispose()
+
+    asyncio.run(scenario())
 
 
 @pytest.mark.skipif(

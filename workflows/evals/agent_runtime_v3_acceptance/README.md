@@ -5,6 +5,12 @@ creates isolated definitions, subjects, and conversations, executes the full
 canonical matrix through REST/SSE, records content-addressed round evidence,
 and performs scoped PostgreSQL cleanup.
 
+Before creating resources, the runner calls authenticated
+`GET /api/v3/worker-health`. It writes `preflight.json` and stops immediately when
+PostgreSQL, worker freshness, compatibility, or exact source-content matching is not
+ready. Transport, authentication, and malformed responses also produce a safe failed
+receipt. Preflight is diagnostic evidence and never counts as a round.
+
 It never edits `config/model-router/deployment-manifest.json`. A promotion
 proposal is emitted only after exactly three complete, passing `live-api`
 primary rounds with identical deployment fingerprints. The optional llama pass
@@ -13,10 +19,10 @@ is recorded as compatibility evidence and is never promotion-eligible.
 ## Run
 
 Build the native runtime through `make native-runtime-up` (or
-`make eval-agent-runtime-v3`) so Compose records the exact Git revision and
-clean/dirty state in the API and worker images. A direct `docker compose up`
-uses fail-closed `unknown`/dirty provenance defaults and therefore cannot emit a
-promotion proposal.
+`make eval-agent-runtime-v3`) so Compose records the exact Git revision, clean/dirty
+state, and SHA-256 fingerprint of every Git-visible file in the API and worker
+images. A direct `docker compose up` uses fail-closed `unknown` provenance defaults
+and therefore cannot pass preflight.
 
 Set `AGENT_RUNTIME_V3_ACCEPTANCE_API_KEY` and
 `AGENT_RUNTIME_V3_ACCEPTANCE_DATABASE_URL` before a host-side live run. Inside
@@ -55,8 +61,11 @@ rounds remain diagnostic artifacts and cannot generate a proposal.
 Only the canonical `3` rounds, `180` second timeout, and zero-retry run can emit
 a proposal. Every round keeps raw SSE JSONL plus normalized turns, attempt counts,
 tool outcomes, and final facts beside its content-addressed summary. Provenance
-binds the image source revision, clean-build state, shared contract version,
+binds the image source revision, clean-build state, exact source fingerprint, shared contract version,
 production policy hashes, exact role deployments, and effective config.
+Provenance and any proposal also bind the preflight digest. Provider request failure
+or cancellation events are recorded as infrastructure failures and cannot contribute
+behavioral score credit.
 
 Canonical cases that declare a conversation summary cannot pass on dialogue
 alone: the production path must emit `summary.committed` within the same accepted
@@ -89,7 +98,8 @@ uv run python -m workflows.evals.agent_runtime_v3_acceptance.promote \
 ```
 
 Both modes revalidate the clean source revision, current path-bound policy hashes,
-three round and event digests, the exact current case matrix, raw event coverage,
+the preflight digest/readiness/build identity, three round and event digests, the
+exact current case matrix, raw event coverage,
 zero-retry attempt counts, deployment aliases and fingerprints, and all
 conversation/reviewer/retriever role gates. They independently reconstruct and
 re-score every normalized case observation. `--apply` updates the two bound DGX

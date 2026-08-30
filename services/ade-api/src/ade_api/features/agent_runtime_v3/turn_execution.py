@@ -28,6 +28,7 @@ from .memory_policy import PreparedMemoryReview, prepare_memory_review
 from .persistence.conversations import ConversationRepository
 from .persistence.definitions import DefinitionVersionRepository
 from .persistence.memory import MemoryRepository
+from .provider_tracing import AttemptTrace
 from .reviewer import MemoryReviewer, ReviewerResult
 from .router_transport import RouterTransport
 
@@ -57,14 +58,17 @@ class TurnExecution:
         self.engine = engine
         self.transport = transport
         self.settings = settings
-        self.embeddings = EmbeddingClient(transport)
-        self.executor = ConversationExecutor(transport)
-        self.reviewer = MemoryReviewer(transport)
 
-    async def execute(self, run: dict[str, Any], *, deadline: float) -> AttemptResult:
+    async def execute(
+        self,
+        run: dict[str, Any],
+        *,
+        deadline: float,
+        trace: AttemptTrace,
+    ) -> AttemptResult:
         state = await self._load_state(run)
         definition = state["definition"]
-        catalog = await self.transport.catalog(
+        catalog = await trace.transport(self.transport, stage="catalog").catalog(
             timeout_seconds=min(
                 _remaining(deadline),
                 self.settings.model_discovery_timeout_seconds,
@@ -83,6 +87,48 @@ class TurnExecution:
         conversation_deployment = _required_deployment(deployments, "conversation")
         reviewer_deployment = _required_deployment(deployments, "reviewer")
         retriever_deployment = _required_deployment(deployments, "retriever")
+        conversation_executor = ConversationExecutor(
+            trace.transport(
+                self.transport,
+                stage="conversation",
+                model_fingerprint=str(conversation_deployment["fingerprint"]),
+            )
+        )
+        compaction_executor = ConversationExecutor(
+            trace.transport(
+                self.transport,
+                stage="compaction",
+                model_fingerprint=str(conversation_deployment["fingerprint"]),
+            )
+        )
+        reviewer = MemoryReviewer(
+            trace.transport(
+                self.transport,
+                stage="reviewer",
+                model_fingerprint=str(reviewer_deployment["fingerprint"]),
+            )
+        )
+        retrieval_embeddings = EmbeddingClient(
+            trace.transport(
+                self.transport,
+                stage="retrieval_query",
+                model_fingerprint=str(retriever_deployment["fingerprint"]),
+            )
+        )
+        tool_embeddings = EmbeddingClient(
+            trace.transport(
+                self.transport,
+                stage="tool_retrieval",
+                model_fingerprint=str(retriever_deployment["fingerprint"]),
+            )
+        )
+        memory_embeddings = EmbeddingClient(
+            trace.transport(
+                self.transport,
+                stage="memory_embeddings",
+                model_fingerprint=str(retriever_deployment["fingerprint"]),
+            )
+        )
         current_user = _current_user_message(state["messages"], str(run["id"]))
         current_sequence = int(current_user["sequence"])
         summary = state["summary"]
@@ -104,7 +150,7 @@ class TurnExecution:
             compaction_input_token_budget=budget.input_limit,
         )
         compaction = (
-            await self.executor.compact(
+            await compaction_executor.compact(
                 model_key=str(conversation_deployment["route_alias"]),
                 model_fingerprint=str(conversation_deployment["fingerprint"]),
                 plan=compaction_plan,
@@ -117,7 +163,7 @@ class TurnExecution:
         )
 
         query_vector = (
-            await self.embeddings.embed(
+            await retrieval_embeddings.embed(
                 model_key=str(retriever_deployment["route_alias"]),
                 inputs=[qwen_query_text(str(current_user["content"]))],
                 timeout_seconds=_remaining(deadline),
@@ -166,7 +212,7 @@ class TurnExecution:
 
         async def search_memory(query: str, limit: int) -> list[dict[str, Any]]:
             vector = (
-                await self.embeddings.embed(
+                await tool_embeddings.embed(
                     model_key=str(retriever_deployment["route_alias"]),
                     inputs=[qwen_query_text(query)],
                     timeout_seconds=_remaining(deadline),
@@ -181,7 +227,7 @@ class TurnExecution:
             )
             return [_tool_fact(item) for item in rows]
 
-        executor_result = await self.executor.execute(
+        executor_result = await conversation_executor.execute(
             model_key=str(conversation_deployment["route_alias"]),
             messages=built_context.messages,
             timeout_seconds=_remaining(deadline),
@@ -197,7 +243,7 @@ class TurnExecution:
             for message in state["messages"]
             if message["role"] == "user" and int(message["sequence"]) < current_sequence
         ][-8:]
-        reviewer_result = await self.reviewer.review(
+        reviewer_result = await reviewer.review(
             model_key=str(reviewer_deployment["route_alias"]),
             current_user_message=current_user,
             recent_user_messages=recent_users,
@@ -224,7 +270,7 @@ class TurnExecution:
             for operation in prepared.operations
             if operation.value is not None
         ]
-        vectors = await self.embeddings.embed(
+        vectors = await memory_embeddings.embed(
             model_key=str(retriever_deployment["route_alias"]),
             inputs=[_fact_document(item) for item in embeddable],
             timeout_seconds=_remaining(deadline),

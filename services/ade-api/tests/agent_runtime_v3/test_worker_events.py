@@ -3,7 +3,14 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
-from ade_api.features.agent_runtime_v3.worker_events import append_success_events
+import pytest
+
+from ade_api.features.agent_runtime_v3.provider_tracing import AttemptTrace
+from ade_api.features.agent_runtime_v3.router_transport import RouterRequestError
+from ade_api.features.agent_runtime_v3.worker_events import (
+    append_attempt_trace,
+    append_success_events,
+)
 
 
 class _RecordingRunRepository:
@@ -19,6 +26,16 @@ class _RecordingRunRepository:
         }
         self.events.append(row)
         return row
+
+
+class _FailingTransport:
+    async def chat_completion(self, payload, *, timeout_seconds):
+        raise RouterRequestError(
+            "redacted upstream failure",
+            retryable=True,
+            status_code=502,
+            error_code="http_502",
+        )
 
 
 def test_success_events_pair_model_and_tool_boundaries() -> None:
@@ -215,3 +232,33 @@ def test_compaction_events_and_provenance_are_emitted_in_execution_order() -> No
         "prompt_tokens": 14,
         "completion_tokens": 3,
     }
+
+
+def test_failed_attempt_trace_is_persisted_in_causal_request_order() -> None:
+    repository = _RecordingRunRepository()
+    trace = AttemptTrace(attempt=1)
+    transport = trace.transport(_FailingTransport(), stage="conversation")
+    with pytest.raises(RouterRequestError):
+        asyncio.run(
+            transport.chat_completion(
+                {"model": "source::model", "messages": []}, timeout_seconds=3
+            )
+        )
+
+    final_event_id = asyncio.run(
+        append_attempt_trace(
+            repository,
+            run_id="run-1",
+            attempt=1,
+            trace=trace,
+            causation_id="attempt-started-event",
+        )
+    )
+
+    assert [event["event_type"] for event in repository.events] == [
+        "model.request.started",
+        "model.request.failed",
+    ]
+    assert repository.events[0]["causation_id"] == "attempt-started-event"
+    assert repository.events[1]["causation_id"] == repository.events[0]["id"]
+    assert final_event_id == repository.events[1]["id"]

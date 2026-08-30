@@ -9,6 +9,7 @@ from .errors import RuntimeValidationError
 from .fact_registry import FACT_TYPE_REGISTRY
 from .memory_intent import is_explicit_forgetting_request
 from .memory_review import ReviewDecision, parse_review_decision, review_json_schema
+from .provider_tracing import safe_provider_request_id
 from .router_transport import RouterTransport
 
 
@@ -218,7 +219,7 @@ class MemoryReviewer:
                 model_request_count=request_number,
                 protocol_repaired=request_number == 2,
                 provider_request_ids=[
-                    str(item.get("id", "") or "") or None for item in responses
+                    safe_provider_request_id(item.get("id")) for item in responses
                 ],
             )
         raise AssertionError("review loop did not return")

@@ -123,6 +123,37 @@ class RuntimeV3Client:
     async def get_run(self, run_id: str) -> dict[str, Any]:
         return await self._request_json("GET", f"/api/v3/runs/{run_id}")
 
+    async def get_worker_health(self) -> dict[str, Any]:
+        try:
+            response = await self._client.request(
+                "GET",
+                self._url("/api/v3/worker-health"),
+                headers=self._headers,
+            )
+        except httpx.HTTPError:
+            return _unavailable_health(
+                http_status=0,
+                failure_code="health_transport_error",
+            )
+        if response.status_code not in {200, 503}:
+            return _unavailable_health(
+                http_status=response.status_code,
+                failure_code=f"health_http_{response.status_code}",
+            )
+        try:
+            data = _response_json_object(response)
+        except RuntimeClientError:
+            return _unavailable_health(
+                http_status=response.status_code,
+                failure_code="invalid_health_response",
+            )
+        if not _is_health_response(data):
+            return _unavailable_health(
+                http_status=response.status_code,
+                failure_code="invalid_health_response",
+            )
+        return {**data, "http_status": response.status_code}
+
     async def cancel_run(self, run_id: str) -> dict[str, Any]:
         return await self._request_json("POST", f"/api/v3/runs/{run_id}/cancel", {})
 
@@ -182,13 +213,7 @@ class RuntimeV3Client:
             json=payload,
         )
         await _raise_for_response(response)
-        try:
-            data = response.json()
-        except json.JSONDecodeError as exc:
-            raise RuntimeClientError("v3 API returned malformed JSON") from exc
-        if not isinstance(data, dict):
-            raise RuntimeClientError("v3 API returned a non-object JSON response")
-        return data
+        return _response_json_object(response)
 
     def _url(self, value: str) -> str:
         candidate = urlsplit(value)
@@ -286,3 +311,41 @@ def _required_string(payload: dict[str, Any], key: str) -> str:
     if not value:
         raise RuntimeClientError(f"v3 API response is missing {key}")
     return value
+
+
+def _response_json_object(response: httpx.Response) -> dict[str, Any]:
+    try:
+        data = response.json()
+    except json.JSONDecodeError as exc:
+        raise RuntimeClientError("v3 API returned malformed JSON") from exc
+    if not isinstance(data, dict):
+        raise RuntimeClientError("v3 API returned a non-object JSON response")
+    return data
+
+
+def _is_health_response(value: dict[str, Any]) -> bool:
+    return (
+        value.get("status") in {"ready", "not_ready"}
+        and isinstance(value.get("database_ready"), bool)
+        and isinstance(value.get("worker_ready"), bool)
+        and isinstance(value.get("matching_build_worker_count"), int)
+        and not isinstance(value.get("matching_build_worker_count"), bool)
+        and isinstance(value.get("source_revision"), str)
+        and isinstance(value.get("source_dirty"), bool)
+        and isinstance(value.get("source_fingerprint"), str)
+    )
+
+
+def _unavailable_health(*, http_status: int, failure_code: str) -> dict[str, Any]:
+    return {
+        "http_status": http_status,
+        "status": "not_ready",
+        "database_ready": False,
+        "worker_ready": False,
+        "compatible_worker_count": 0,
+        "matching_build_worker_count": 0,
+        "source_revision": "unknown",
+        "source_dirty": True,
+        "source_fingerprint": "unknown",
+        "failure_code": failure_code,
+    }

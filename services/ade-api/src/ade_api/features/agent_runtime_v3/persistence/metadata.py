@@ -577,5 +577,41 @@ Index(
     postgresql_where=conversation_leases.c.released_at.is_(None),
 )
 
+worker_instances = Table(
+    "worker_instances",
+    METADATA,
+    Column("instance_id", UUID_ID, nullable=False),
+    Column("worker_id", String(128), nullable=False),
+    Column("state", String(16), nullable=False),
+    Column("contract_version", String(128), nullable=False),
+    Column("compatibility_fingerprint", String(64), nullable=False),
+    Column("runtime_version", String(64), nullable=False),
+    Column("source_revision", String(128), nullable=False),
+    Column("source_dirty", Boolean, nullable=False),
+    Column("source_fingerprint", String(64), nullable=False),
+    Column("started_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
+    Column("heartbeat_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
+    Column("stopped_at", TIMESTAMP, nullable=True),
+    PrimaryKeyConstraint("instance_id", name="pk_worker_instances"),
+    CheckConstraint(
+        "state IN ('ready', 'draining', 'stopped')",
+        name="ck_worker_instances_state",
+    ),
+    CheckConstraint(
+        "char_length(compatibility_fingerprint) = 64",
+        name="ck_worker_instances_fingerprint_length",
+    ),
+    CheckConstraint(
+        "source_fingerprint = 'unknown' OR char_length(source_fingerprint) = 64",
+        name="ck_worker_instances_source_fingerprint",
+    ),
+)
+Index(
+    "ix_worker_instances_health",
+    worker_instances.c.compatibility_fingerprint,
+    worker_instances.c.state,
+    worker_instances.c.heartbeat_at,
+)
+
 
 ALL_TABLES = tuple(METADATA.tables.values())

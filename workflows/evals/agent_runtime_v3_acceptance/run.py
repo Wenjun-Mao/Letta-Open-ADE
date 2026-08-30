@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -112,11 +113,46 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
     run_id = _new_run_id()
     source_revision = _source_revision()
     source_dirty = _source_dirty()
+    source_fingerprint = _source_fingerprint()
     policy_hashes = production_policy_hashes()
     writer = RoundArtifactWriter(config.output_dir, run_id)
     client = RuntimeV3Client(config.api_base_url, config.api_key)
     resource_scopes: list[ResourceScope] = []
     try:
+        health = await client.get_worker_health()
+        preflight_passed = _worker_preflight_passed(
+            health,
+            source_revision=source_revision,
+            source_dirty=source_dirty,
+            source_fingerprint=source_fingerprint,
+            diagnostic=diagnostic,
+        )
+        preflight = writer.write_preflight(
+            {
+                "schema_version": 1,
+                "kind": "agent-runtime-v3-worker-preflight",
+                "run_id": run_id,
+                "passed": preflight_passed,
+                "source_identity": {
+                    "revision": source_revision,
+                    "dirty": source_dirty,
+                    "fingerprint": source_fingerprint,
+                },
+                "health": health,
+            }
+        )
+        if not preflight_passed:
+            return {
+                "run_id": run_id,
+                "preflight_path": str(preflight.path),
+                "preflight_sha256": preflight.sha256,
+                "provenance_path": None,
+                "primary_rounds": [],
+                "llama_compatibility": None,
+                "promotion_proposal": None,
+                "eligible": False,
+                "passed": False,
+            }
         primary = await run_primary_rounds(
             client=client,
             cases=cases,
@@ -167,7 +203,9 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
                 else None,
                 source_revision=source_revision,
                 source_dirty=source_dirty,
+                source_fingerprint=source_fingerprint,
                 policy_hashes=policy_hashes,
+                preflight_sha256=preflight.sha256,
             )
         )
         proposal = (
@@ -180,14 +218,18 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
                 canonical_case_keys=canonical_case_keys,
                 required_rounds=3,
                 provenance_sha256=provenance_sha256,
+                preflight_sha256=preflight.sha256,
                 source_revision=source_revision,
                 source_dirty=source_dirty,
+                source_fingerprint=source_fingerprint,
                 policy_hashes=policy_hashes,
                 qualification_config=_qualification_config(config),
             )
         )
         return {
             "run_id": run_id,
+            "preflight_path": str(preflight.path),
+            "preflight_sha256": preflight.sha256,
             "provenance_path": str(provenance_path),
             "primary_rounds": [_round_summary(item) for item in materialized_primary],
             "llama_compatibility": _round_summary(compatibility)
@@ -363,7 +405,9 @@ def _provenance(
     *,
     source_revision: str | None,
     source_dirty: bool | None,
+    source_fingerprint: str | None,
     policy_hashes: dict[str, str],
+    preflight_sha256: str,
 ) -> dict[str, Any]:
     return {
         "schema_version": 1,
@@ -372,7 +416,9 @@ def _provenance(
         "run_id": run_id,
         "source_revision": source_revision,
         "source_dirty": source_dirty,
+        "source_fingerprint": source_fingerprint,
         "policy_hashes": dict(sorted(policy_hashes.items())),
+        "preflight_sha256": preflight_sha256,
         "effective_config": public_config(config),
         "canonical_case_keys": list(canonical_case_keys),
         "canonical_case_keys_sha256": _sha256_text("\n".join(canonical_case_keys)),
@@ -397,6 +443,34 @@ def _qualification_config(config: AcceptanceConfig) -> dict[str, Any]:
         "retry_count": config.retry_count,
         "case_keys": list(config.case_keys),
     }
+
+
+def _worker_preflight_passed(
+    health: dict[str, Any],
+    *,
+    source_revision: str | None,
+    source_dirty: bool | None,
+    source_fingerprint: str | None,
+    diagnostic: bool,
+) -> bool:
+    return (
+        source_revision is not None
+        and re.fullmatch(r"[0-9a-f]{40,64}", source_revision) is not None
+        and source_dirty is not None
+        and (diagnostic or source_dirty is False)
+        and source_fingerprint is not None
+        and re.fullmatch(r"[0-9a-f]{64}", source_fingerprint) is not None
+        and health.get("http_status") == 200
+        and health.get("status") == "ready"
+        and health.get("database_ready") is True
+        and health.get("worker_ready") is True
+        and isinstance(health.get("matching_build_worker_count"), int)
+        and not isinstance(health.get("matching_build_worker_count"), bool)
+        and health["matching_build_worker_count"] >= 1
+        and health.get("source_revision") == source_revision
+        and health.get("source_dirty") is source_dirty
+        and health.get("source_fingerprint") == source_fingerprint
+    )
 
 
 def _source_revision() -> str | None:
@@ -426,6 +500,23 @@ def _source_dirty() -> bool | None:
     except (OSError, subprocess.CalledProcessError):
         return None
     return bool(output.strip())
+
+
+def _source_fingerprint() -> str | None:
+    configured = str(os.getenv("ADE_SOURCE_FINGERPRINT") or "").strip().casefold()
+    if configured:
+        return configured
+    script = PROJECT_ROOT / "scripts" / "source_fingerprint.py"
+    if not script.is_file():
+        return None
+    try:
+        return subprocess.check_output(
+            [sys.executable, os.fspath(script), "--root", os.fspath(PROJECT_ROOT)],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None
 
 
 def _sha256_text(value: str) -> str:

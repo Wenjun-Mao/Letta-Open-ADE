@@ -27,6 +27,7 @@ from workflows.evals.agent_runtime_v3_acceptance.promotion_review import (
     GitState,
     PromotionReviewError,
     _validate_raw_events,
+    _validate_worker_preflight,
     review_promotion,
 )
 from workflows.evals.agent_runtime_v3_acceptance.proposal import (
@@ -108,6 +109,70 @@ def test_review_rejects_tampered_events_or_dirty_source(tmp_path: Path) -> None:
         )
 
 
+def test_review_rejects_tampered_or_nonready_worker_preflight(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "deployment-manifest.json"
+    manifest_path.write_bytes(
+        (PROJECT_ROOT / "config/model-router/deployment-manifest.json").read_bytes()
+    )
+    proposal_path = _evidence(tmp_path, manifest_path)
+    preflight_path = proposal_path.parent / "preflight.json"
+    preflight = json.loads(preflight_path.read_text(encoding="utf-8"))
+    preflight["health"]["worker_ready"] = False
+    preflight_path.write_text(
+        json.dumps(preflight, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PromotionReviewError, match="preflight content digest"):
+        review_promotion(
+            proposal_path=proposal_path,
+            manifest_path=manifest_path,
+            project_root=PROJECT_ROOT,
+            apply=False,
+            git_state=GitState(revision="c" * 40, dirty=False),
+        )
+
+
+def test_hash_valid_nonready_preflight_is_not_promotion_evidence(
+    tmp_path: Path,
+) -> None:
+    artifact = RoundArtifactWriter(tmp_path, "run-not-ready").write_preflight(
+        {
+            "schema_version": 1,
+            "kind": "agent-runtime-v3-worker-preflight",
+            "run_id": "run-not-ready",
+            "passed": False,
+            "source_identity": {
+                "revision": "c" * 40,
+                "dirty": False,
+                "fingerprint": "9" * 64,
+            },
+            "health": {
+                "http_status": 503,
+                "status": "not_ready",
+                "database_ready": True,
+                "worker_ready": False,
+                "compatible_worker_count": 0,
+                "matching_build_worker_count": 0,
+                "compatibility_fingerprint": "f" * 64,
+                "source_revision": "c" * 40,
+                "source_dirty": False,
+                "source_fingerprint": "9" * 64,
+            },
+        }
+    )
+    payload = json.loads(artifact.path.read_text(encoding="utf-8"))
+
+    with pytest.raises(PromotionReviewError, match="worker preflight passed"):
+        _validate_worker_preflight(
+            payload,
+            run_id="run-not-ready",
+            source_revision="c" * 40,
+            source_fingerprint="9" * 64,
+        )
+
+
 def test_review_rejects_manifest_fingerprint_with_other_policy_hashes(
     tmp_path: Path,
 ) -> None:
@@ -131,6 +196,40 @@ def test_review_rejects_manifest_fingerprint_with_other_policy_hashes(
 
 
 def test_raw_tool_and_summary_evidence_must_match_normalized_contracts() -> None:
+    failed_provider_request = _raw_event_records(
+        "run-1",
+        (
+            (
+                "model.request.started",
+                {
+                    "stage": "conversation",
+                    "operation": "chat_completion",
+                    "request_id": "request-1",
+                    "request_number": 1,
+                },
+            ),
+            (
+                "model.request.failed",
+                {
+                    "stage": "conversation",
+                    "operation": "chat_completion",
+                    "request_id": "request-1",
+                    "request_number": 1,
+                    "error_code": "provider_timeout",
+                },
+            ),
+        ),
+    )
+    with pytest.raises(PromotionReviewError, match="provider request failure"):
+        _validate_raw_events(
+            failed_provider_request,
+            observed_run_ids={"run-1"},
+            normalized_tools_by_run={"run-1": []},
+            summary_requirements_by_case={},
+            conversation_fingerprint="f" * 64,
+            index=1,
+        )
+
     invalid_causation = _raw_event_records(
         "run-1",
         (
@@ -247,6 +346,31 @@ def _evidence(
     canonical_cases = tuple(load_cases(study_cases_path()))
     case_keys = tuple(case.key for case in canonical_cases)
     writer = RoundArtifactWriter(tmp_path, "run-a")
+    preflight = writer.write_preflight(
+        {
+            "schema_version": 1,
+            "kind": "agent-runtime-v3-worker-preflight",
+            "run_id": "run-a",
+            "passed": True,
+            "source_identity": {
+                "revision": "c" * 40,
+                "dirty": False,
+                "fingerprint": "9" * 64,
+            },
+            "health": {
+                "http_status": 200,
+                "status": "ready",
+                "database_ready": True,
+                "worker_ready": True,
+                "compatible_worker_count": 1,
+                "matching_build_worker_count": 1,
+                "compatibility_fingerprint": "f" * 64,
+                "source_revision": "c" * 40,
+                "source_dirty": False,
+                "source_fingerprint": "9" * 64,
+            },
+        }
+    )
     rounds = []
     round_summaries = []
     for index in range(1, 4):
@@ -303,7 +427,9 @@ def _evidence(
             "run_id": "run-a",
             "source_revision": "c" * 40,
             "source_dirty": False,
+            "source_fingerprint": "9" * 64,
             "policy_hashes": policy_hashes,
+            "preflight_sha256": preflight.sha256,
             "effective_config": qualification_config,
             "canonical_case_keys": list(case_keys),
             "canonical_case_keys_sha256": hashlib.sha256(
@@ -321,8 +447,10 @@ def _evidence(
         canonical_case_keys=case_keys,
         required_rounds=3,
         provenance_sha256=provenance_sha256,
+        preflight_sha256=preflight.sha256,
         source_revision="c" * 40,
         source_dirty=False,
+        source_fingerprint="9" * 64,
         policy_hashes=policy_hashes,
         qualification_config=qualification_config,
     )

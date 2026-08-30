@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -21,11 +22,13 @@ class RouterRequestError(RuntimeError):
         message: str,
         *,
         retryable: bool,
+        error_code: str = "router_request_error",
         status_code: int | None = None,
         retry_after_seconds: float | None = None,
     ):
         super().__init__(message)
         self.retryable = retryable
+        self.error_code = _normalize_error_code(error_code)
         self.status_code = status_code
         self.retry_after_seconds = retry_after_seconds
 
@@ -78,7 +81,12 @@ class RouterTransport:
                         url, headers=self._headers(), json=payload
                     )
         except _TRANSIENT_ERRORS as exc:
-            raise RouterRequestError(str(exc), retryable=True) from exc
+            error_name = type(exc).__name__.removesuffix("Exception")
+            raise RouterRequestError(
+                "Model Router transport request failed",
+                retryable=True,
+                error_code=f"transport_{error_name.casefold()}",
+            ) from exc
         retryable = response.status_code == 429 or response.status_code >= 500
         if response.status_code >= 400:
             retry_after: float | None = None
@@ -87,9 +95,9 @@ class RouterTransport:
             except ValueError:
                 pass
             raise RouterRequestError(
-                f"Model Router request failed ({response.status_code}): "
-                f"{response.text[:1000]}",
+                f"Model Router request failed with status {response.status_code}",
                 retryable=retryable,
+                error_code=f"http_{response.status_code}",
                 status_code=response.status_code,
                 retry_after_seconds=retry_after,
             )
@@ -97,10 +105,21 @@ class RouterTransport:
             value = response.json()
         except ValueError as exc:
             raise RouterRequestError(
-                "Model Router returned non-JSON content", retryable=False
+                "Model Router returned non-JSON content",
+                retryable=False,
+                error_code="invalid_json_response",
             ) from exc
         if not isinstance(value, dict):
             raise RouterRequestError(
-                "Model Router returned a non-object response", retryable=False
+                "Model Router returned a non-object response",
+                retryable=False,
+                error_code="invalid_response_shape",
             )
         return value
+
+
+def _normalize_error_code(value: object) -> str:
+    normalized = str(value or "").strip().casefold()
+    if not re.fullmatch(r"[a-z][a-z0-9_]{0,127}", normalized):
+        return "router_request_error"
+    return normalized

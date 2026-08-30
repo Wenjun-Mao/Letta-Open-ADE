@@ -15,10 +15,11 @@ from .persistence.conversations import ConversationRepository
 from .persistence.leases import ConversationLeaseRepository
 from .persistence.memory import MemoryRepository
 from .persistence.runs import RunRepository
+from .provider_tracing import AttemptTrace
 from .turn_execution import AttemptResult
 from .worker_claims import ClaimedRun
 from .worker_control import LeaseLost, RunCancelled, utc_now, worker_error_code
-from .worker_events import append_success_events
+from .worker_events import append_attempt_trace, append_success_events
 
 
 class RunFinalizer:
@@ -142,7 +143,13 @@ class RunFinalizer:
             await leases.release(claim.lease_token)
 
     async def commit_cancellation(
-        self, claim: ClaimedRun, attempt_id: str | None
+        self,
+        claim: ClaimedRun,
+        attempt_id: str | None,
+        *,
+        causation_id: str | None = None,
+        trace: AttemptTrace | None = None,
+        trace_causation_id: str | None = None,
     ) -> None:
         async with self.engine.begin() as connection:
             runs = RunRepository(connection)
@@ -156,11 +163,14 @@ class RunFinalizer:
                 )
             if run["status"] in {"pending", "running"}:
                 if attempt_id:
-                    await runs.finish_attempt(
-                        attempt_id,
+                    causation_id = await _finish_open_attempt(
+                        runs,
+                        run=run,
+                        attempt_id=attempt_id,
                         status="cancelled",
-                        provider_outcome={"error_code": "run_cancelled"},
-                        finished_at=utc_now(),
+                        error_code="run_cancelled",
+                        trace=trace,
+                        trace_causation_id=trace_causation_id or causation_id,
                     )
                 run = await runs.finish(
                     str(run["id"]),
@@ -172,6 +182,7 @@ class RunFinalizer:
                     run_id=str(run["id"]),
                     event_type="run.cancelled",
                     payload={"attempt_count": int(run["attempt_count"])},
+                    causation_id=causation_id,
                 )
             await leases.release(claim.lease_token)
 
@@ -180,6 +191,10 @@ class RunFinalizer:
         claim: ClaimedRun,
         attempt_id: str | None,
         exc: Exception,
+        *,
+        causation_id: str | None = None,
+        trace: AttemptTrace | None = None,
+        trace_causation_id: str | None = None,
     ) -> None:
         async with self.engine.begin() as connection:
             runs = RunRepository(connection)
@@ -191,11 +206,14 @@ class RunFinalizer:
                 raise LeaseLost("conversation lease was lost before failure commit")
             if run["cancellation_requested_at"] is not None:
                 if attempt_id:
-                    await runs.finish_attempt(
-                        attempt_id,
+                    causation_id = await _finish_open_attempt(
+                        runs,
+                        run=run,
+                        attempt_id=attempt_id,
                         status="cancelled",
-                        provider_outcome={"error_code": "run_cancelled"},
-                        finished_at=utc_now(),
+                        error_code="run_cancelled",
+                        trace=trace,
+                        trace_causation_id=trace_causation_id or causation_id,
                     )
                 await runs.finish(
                     str(run["id"]),
@@ -207,22 +225,26 @@ class RunFinalizer:
                     run_id=str(run["id"]),
                     event_type="run.cancelled",
                     payload={"attempt_count": int(run["attempt_count"])},
+                    causation_id=causation_id,
                 )
             elif run["status"] in {"pending", "running"}:
                 error_code = worker_error_code(exc)
                 if attempt_id:
-                    await runs.finish_attempt(
-                        attempt_id,
+                    causation_id = await _finish_open_attempt(
+                        runs,
+                        run=run,
+                        attempt_id=attempt_id,
                         status="failed",
-                        provider_outcome={"error_code": error_code},
-                        finished_at=utc_now(),
+                        error_code=error_code,
+                        trace=trace,
+                        trace_causation_id=trace_causation_id or causation_id,
                     )
                 await runs.finish(
                     str(run["id"]),
                     status="failed",
                     attempt_count=int(run["attempt_count"]),
                     error_code=error_code,
-                    error_message=str(exc)[:1000],
+                    error_message=f"Agent Runtime v3 run failed ({error_code})",
                 )
                 await append_run_event(
                     runs,
@@ -233,8 +255,36 @@ class RunFinalizer:
                         "error_code": error_code,
                     },
                     attempt=int(run["attempt_count"]) or None,
+                    causation_id=causation_id,
                 )
             await leases.release(claim.lease_token)
+
+
+async def _finish_open_attempt(
+    runs: RunRepository,
+    *,
+    run: dict[str, Any],
+    attempt_id: str,
+    status: str,
+    error_code: str,
+    trace: AttemptTrace | None,
+    trace_causation_id: str | None,
+) -> str | None:
+    await runs.finish_attempt(
+        attempt_id,
+        status=status,
+        provider_outcome={"error_code": error_code},
+        finished_at=utc_now(),
+    )
+    if trace is None:
+        return trace_causation_id
+    return await append_attempt_trace(
+        runs,
+        run_id=str(run["id"]),
+        attempt=int(run["attempt_count"]),
+        trace=trace,
+        causation_id=trace_causation_id,
+    )
 
 
 async def _lock_conversation_and_subject(

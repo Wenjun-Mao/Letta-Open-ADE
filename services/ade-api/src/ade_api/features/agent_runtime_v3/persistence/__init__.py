@@ -8,6 +8,7 @@ from .memory import MemoryRepository
 from .metadata import METADATA, SCHEMA_NAME
 from .runs import RunRepository
 from .workspaces import WorkspaceRepository
+from .workers import WorkerInstanceRepository
 
 __all__ = [
     "ConversationLeaseRepository",
@@ -18,6 +19,7 @@ __all__ = [
     "RunRepository",
     "SCHEMA_NAME",
     "WorkspaceRepository",
+    "WorkerInstanceRepository",
     "async_database_url",
     "create_persistence_engine",
 ]

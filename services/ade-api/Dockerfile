@@ -2,6 +2,7 @@ FROM python:3.12-slim
 
 ARG ADE_SOURCE_REVISION=unknown
 ARG ADE_SOURCE_DIRTY=true
+ARG ADE_SOURCE_FINGERPRINT=unknown
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -10,13 +11,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_LINK_MODE=copy \
     ADE_SOURCE_REVISION=${ADE_SOURCE_REVISION} \
-    ADE_SOURCE_DIRTY=${ADE_SOURCE_DIRTY}
+    ADE_SOURCE_DIRTY=${ADE_SOURCE_DIRTY} \
+    ADE_SOURCE_FINGERPRINT=${ADE_SOURCE_FINGERPRINT}
 
 WORKDIR /app
 
 # Install runtime dependencies at build time so container startup is instant.
 COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /uvx /usr/local/bin/
 COPY pyproject.toml uv.lock ./
+COPY Makefile compose.yaml ./
+COPY scripts/source_fingerprint.py ./scripts/source_fingerprint.py
 COPY services/ade-api ./services/ade-api
 COPY packages/agent-runtime-eval-contracts ./packages/agent-runtime-eval-contracts
 COPY packages/model-catalog-contracts ./packages/model-catalog-contracts

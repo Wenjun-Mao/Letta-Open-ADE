@@ -4855,6 +4855,97 @@
         "title": "RuntimeMessageRequest",
         "type": "object"
       },
+      "RuntimeWorkerHealthResponse": {
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "compatibility_fingerprint": {
+            "title": "Compatibility Fingerprint",
+            "type": "string"
+          },
+          "compatible_worker_count": {
+            "title": "Compatible Worker Count",
+            "type": "integer"
+          },
+          "database_ready": {
+            "title": "Database Ready",
+            "type": "boolean"
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Code"
+          },
+          "freshness_seconds": {
+            "title": "Freshness Seconds",
+            "type": "number"
+          },
+          "latest_heartbeat_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Heartbeat At"
+          },
+          "matching_build_worker_count": {
+            "title": "Matching Build Worker Count",
+            "type": "integer"
+          },
+          "source_dirty": {
+            "title": "Source Dirty",
+            "type": "boolean"
+          },
+          "source_fingerprint": {
+            "title": "Source Fingerprint",
+            "type": "string"
+          },
+          "source_revision": {
+            "title": "Source Revision",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ready",
+              "not_ready"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "worker_ready": {
+            "title": "Worker Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "database_ready",
+          "worker_ready",
+          "checked_at",
+          "freshness_seconds",
+          "compatible_worker_count",
+          "matching_build_worker_count",
+          "compatibility_fingerprint",
+          "source_revision",
+          "source_dirty",
+          "source_fingerprint"
+        ],
+        "title": "RuntimeWorkerHealthResponse",
+        "type": "object"
+      },
       "SdkCapabilitiesResponse": {
         "properties": {
           "agents_update_params": {
@@ -9538,6 +9629,42 @@
           }
         ],
         "summary": "Stream normalized v3 run events",
+        "tags": [
+          "Agent Runtime v3 Preview"
+        ]
+      }
+    },
+    "/api/v3/worker-health": {
+      "get": {
+        "operationId": "get_worker_health_api_v3_worker_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuntimeWorkerHealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuntimeWorkerHealthResponse"
+                }
+              }
+            },
+            "description": "Database or matching runtime worker is not ready"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Check v3 worker process readiness",
         "tags": [
           "Agent Runtime v3 Preview"
         ]

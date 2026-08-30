@@ -18,6 +18,7 @@ from .compaction import (
     parse_compaction_response,
 )
 from .errors import RuntimeValidationError
+from .provider_tracing import safe_provider_request_id
 from .router_transport import RouterTransport
 
 
@@ -168,7 +169,7 @@ class ConversationExecutor:
                 payload, timeout_seconds=timeout_seconds
             )
             _merge_usage(total_usage, response.get("usage"))
-            request_id = str(response.get("id", "") or "") or None
+            request_id = safe_provider_request_id(response.get("id"))
             request_ids.append(request_id)
             message, finish_reason = _first_choice(response)
             tool_calls = message.get("tool_calls")
@@ -260,7 +261,7 @@ class ConversationExecutor:
         )
         usage: dict[str, int] = {}
         _merge_usage(usage, response.get("usage"))
-        provider_request_id = str(response.get("id", "") or "") or None
+        provider_request_id = safe_provider_request_id(response.get("id"))
         return ModelCompaction(
             plan=plan,
             content=content,

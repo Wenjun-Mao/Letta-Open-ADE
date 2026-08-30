@@ -794,3 +794,35 @@ def test_ci_checks_formatting_without_rewriting_the_stable_base() -> None:
         "ruff format --check ade_api model_router model_catalog_contracts evals scripts tests"
         not in workflow
     )
+
+
+def test_native_runtime_migration_rebuilds_before_running_alembic() -> None:
+    makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+    migration_target = makefile.split("native-runtime-migrate:", 1)[1].split(
+        "\nnative-runtime-up:", 1
+    )[0]
+
+    assert (
+        "docker compose --profile native-runtime run --rm --build" in migration_target
+    )
+    assert "ade-runtime-migrate" in migration_target
+
+
+def test_native_runtime_worker_has_attempt_bounded_shutdown_grace() -> None:
+    compose = (PROJECT_ROOT / "compose.yaml").read_text(encoding="utf-8")
+    worker = compose.split("  ade-runtime-worker:", 1)[1].split("\n  ade-web:", 1)[0]
+
+    assert "stop_grace_period:" in worker
+    assert "650s" in worker
+
+
+def test_ade_api_image_contains_runtime_qualification_policy_assets() -> None:
+    dockerfile = (PROJECT_ROOT / "services/ade-api/Dockerfile").read_text(
+        encoding="utf-8"
+    )
+
+    assert "COPY Makefile compose.yaml ./" in dockerfile
+    assert (
+        "COPY scripts/source_fingerprint.py ./scripts/source_fingerprint.py"
+        in dockerfile
+    )

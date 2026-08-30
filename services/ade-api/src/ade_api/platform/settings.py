@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -52,6 +52,8 @@ class AdeApiSettings(BaseSettings):
     agent_runtime_v3_worker_poll_seconds: float = 0.5
     agent_runtime_v3_lease_seconds: int = 60
     agent_runtime_v3_heartbeat_seconds: int = 15
+    agent_runtime_v3_worker_heartbeat_seconds: float = 5.0
+    agent_runtime_v3_worker_stale_seconds: float = 15.0
 
     model_config = SettingsConfigDict(
         env_prefix="ADE_API_",
@@ -114,6 +116,26 @@ class AdeApiSettings(BaseSettings):
     @classmethod
     def _clamp_heartbeat_seconds(cls, value: int) -> int:
         return max(5, min(120, int(value)))
+
+    @field_validator("agent_runtime_v3_worker_heartbeat_seconds")
+    @classmethod
+    def _clamp_worker_health_heartbeat_seconds(cls, value: float) -> float:
+        return max(1.0, min(60.0, float(value)))
+
+    @field_validator("agent_runtime_v3_worker_stale_seconds")
+    @classmethod
+    def _clamp_worker_stale_seconds(cls, value: float) -> float:
+        return max(3.0, min(300.0, float(value)))
+
+    @model_validator(mode="after")
+    def _validate_worker_health_window(self):
+        minimum = self.agent_runtime_v3_worker_heartbeat_seconds * 3
+        if self.agent_runtime_v3_worker_stale_seconds < minimum:
+            raise ValueError(
+                "agent runtime worker stale threshold must be at least three "
+                "heartbeat intervals"
+            )
+        return self
 
     @field_validator("runtime_data_dir", "persona_db_path", "persona_seed_jsonl_path")
     @classmethod

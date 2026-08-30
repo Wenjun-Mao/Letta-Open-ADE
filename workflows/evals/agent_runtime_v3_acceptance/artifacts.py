@@ -16,6 +16,12 @@ class RoundArtifact:
     sha256: str
 
 
+@dataclass(frozen=True)
+class PreflightArtifact:
+    path: Path
+    sha256: str
+
+
 class RoundArtifactWriter:
     def __init__(self, output_dir: Path, run_id: str) -> None:
         self.root = output_dir / run_id
@@ -53,6 +59,19 @@ class RoundArtifactWriter:
         path = self.root / "provenance.json"
         _atomic_write(path, _canonical_bytes({**payload, "provenance_sha256": digest}))
         return path, digest
+
+    def write_preflight(self, payload: dict[str, Any]) -> PreflightArtifact:
+        material = {
+            **payload,
+            "created_at": datetime.now(UTC).isoformat(),
+        }
+        digest = _sha256(_canonical_bytes(material))
+        path = self.root / "preflight.json"
+        _atomic_write(
+            path,
+            _canonical_bytes({**material, "preflight_sha256": digest}),
+        )
+        return PreflightArtifact(path=path, sha256=digest)
 
     @staticmethod
     def _write_json_lines(path: Path, values: list[dict[str, Any]]) -> None:

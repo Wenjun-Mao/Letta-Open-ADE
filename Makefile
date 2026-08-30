@@ -4,8 +4,10 @@ SERVICE ?= ade-api
 SOURCE ?= ark
 ADE_SOURCE_REVISION ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 ADE_SOURCE_DIRTY ?= $(shell test -z "$$(git status --porcelain 2>/dev/null)" && echo false || echo true)
+ADE_SOURCE_FINGERPRINT ?= $(shell python3 scripts/source_fingerprint.py 2>/dev/null || echo unknown)
 export ADE_SOURCE_REVISION
 export ADE_SOURCE_DIRTY
+export ADE_SOURCE_FINGERPRINT
 
 setup:
 	uv sync --all-packages --frozen --group dev
@@ -18,7 +20,7 @@ down:
 	docker compose down
 
 native-runtime-migrate:
-	docker compose --profile native-runtime run --rm ade-runtime-migrate
+	docker compose --profile native-runtime run --rm --build ade-runtime-migrate
 
 native-runtime-up: native-runtime-migrate
 	ADE_API_AGENT_RUNTIME_V3_ENABLED=true ADE_API_AGENT_RUNTIME_V3_MODE=development docker compose --profile native-runtime up -d --build ade-api ade-runtime-worker

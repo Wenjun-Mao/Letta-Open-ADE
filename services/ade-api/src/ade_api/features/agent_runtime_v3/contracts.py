@@ -156,6 +156,22 @@ class RunResponse(BaseModel):
     finished_at: datetime | None = None
 
 
+class RuntimeWorkerHealthResponse(BaseModel):
+    status: Literal["ready", "not_ready"]
+    database_ready: bool
+    worker_ready: bool
+    checked_at: datetime
+    freshness_seconds: float
+    compatible_worker_count: int
+    matching_build_worker_count: int
+    compatibility_fingerprint: str
+    source_revision: str
+    source_dirty: bool
+    source_fingerprint: str
+    latest_heartbeat_at: datetime | None = None
+    failure_code: str | None = None
+
+
 class RunEventResponse(BaseModel):
     id: str
     schema_version: int = 1

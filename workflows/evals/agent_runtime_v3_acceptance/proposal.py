@@ -24,8 +24,10 @@ def build_promotion_proposal(
     canonical_case_keys: tuple[str, ...],
     required_rounds: int,
     provenance_sha256: str,
+    preflight_sha256: str,
     source_revision: str | None,
     source_dirty: bool | None,
+    source_fingerprint: str | None,
     policy_hashes: dict[str, str],
     qualification_config: dict[str, Any],
 ) -> PromotionProposal | None:
@@ -48,7 +50,11 @@ def build_promotion_proposal(
         return None
     if not source_revision or not re.fullmatch(r"[0-9a-f]{40,64}", source_revision):
         return None
+    if not re.fullmatch(r"[0-9a-f]{64}", preflight_sha256):
+        return None
     if source_dirty is not False:
+        return None
+    if not source_fingerprint or not re.fullmatch(r"[0-9a-f]{64}", source_fingerprint):
         return None
     if (
         int(qualification_config.get("rounds") or 0) != 3
@@ -73,8 +79,10 @@ def build_promotion_proposal(
             str(getattr(item, "artifact_sha256")) for item in rounds
         ],
         "provenance_sha256": provenance_sha256,
+        "preflight_sha256": preflight_sha256,
         "source_revision": source_revision,
         "source_dirty": source_dirty,
+        "source_fingerprint": source_fingerprint,
         "policy_hashes": dict(sorted(policy_hashes.items())),
         "qualification_config": qualification_config,
         "deployment_fingerprints": fingerprints[0],

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import re
 import time
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
@@ -13,8 +14,10 @@ from ade_api.platform.settings import AdeApiSettings
 from .events import append_run_event
 from .persistence.leases import ConversationLeaseRepository
 from .persistence.runs import RunRepository
+from .provider_tracing import AttemptTrace
 from .turn_execution import AttemptResult, TurnExecution
 from .worker_claims import ClaimedRun
+from .worker_events import append_attempt_trace
 
 
 class RunCancelled(RuntimeError):
@@ -23,6 +26,16 @@ class RunCancelled(RuntimeError):
 
 class LeaseLost(RuntimeError):
     pass
+
+
+class WorkerDraining(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class StartedAttempt:
+    attempt_id: str
+    started_event_id: str
 
 
 class AttemptController:
@@ -39,7 +52,7 @@ class AttemptController:
         self.settings = settings
         self.execution = execution
 
-    async def start_attempt(self, claim: ClaimedRun, attempt: int) -> str:
+    async def start_attempt(self, claim: ClaimedRun, attempt: int) -> StartedAttempt:
         attempt_id = str(uuid4())
         async with self.engine.begin() as connection:
             runs = RunRepository(connection)
@@ -60,19 +73,23 @@ class AttemptController:
                     "timeout_seconds": claim.run["timeout_seconds"],
                 }
             )
-            await append_run_event(
+            started = await append_run_event(
                 runs,
                 run_id=str(claim.run["id"]),
                 event_type="attempt.started",
                 payload={"timeout_seconds": float(claim.run["timeout_seconds"])},
                 attempt=attempt,
             )
-        return attempt_id
+        return StartedAttempt(
+            attempt_id=attempt_id,
+            started_event_id=str(started["id"]),
+        )
 
     async def execute_attempt(
         self,
         claim: ClaimedRun,
         *,
+        trace: AttemptTrace,
         cancelled: asyncio.Event,
         lease_lost: asyncio.Event,
     ) -> AttemptResult:
@@ -83,7 +100,7 @@ class AttemptController:
         timeout = float(claim.run["timeout_seconds"])
         deadline = time.monotonic() + timeout
         execution_task = asyncio.create_task(
-            self.execution.execute(claim.run, deadline=deadline)
+            self.execution.execute(claim.run, deadline=deadline, trace=trace)
         )
         cancellation_task = asyncio.create_task(cancelled.wait())
         lease_task = asyncio.create_task(lease_lost.wait())
@@ -112,11 +129,13 @@ class AttemptController:
         self,
         claim: ClaimedRun,
         attempt_id: str,
+        started_event_id: str,
         attempt: int,
+        trace: AttemptTrace,
         exc: Exception,
-    ) -> None:
+    ) -> str | None:
         if isinstance(exc, LeaseLost):
-            return
+            return None
         async with self.engine.begin() as connection:
             runs = RunRepository(connection)
             if not await ConversationLeaseRepository(connection).owns(
@@ -129,7 +148,14 @@ class AttemptController:
                 provider_outcome={"error_code": worker_error_code(exc)},
                 finished_at=utc_now(),
             )
-            await append_run_event(
+            trace_event_id = await append_attempt_trace(
+                runs,
+                run_id=str(claim.run["id"]),
+                attempt=attempt,
+                trace=trace,
+                causation_id=started_event_id,
+            )
+            failed = await append_run_event(
                 runs,
                 run_id=str(claim.run["id"]),
                 event_type=(
@@ -139,7 +165,44 @@ class AttemptController:
                 ),
                 payload={"error_code": worker_error_code(exc)},
                 attempt=attempt,
+                causation_id=trace_event_id or started_event_id,
             )
+            return str(failed["id"])
+
+    async def schedule_retry(
+        self,
+        claim: ClaimedRun,
+        *,
+        completed_attempt: int,
+        next_attempt: int,
+        delay: float,
+        exc: Exception,
+        causation_id: str | None,
+    ) -> str:
+        run_id = str(claim.run["id"])
+        async with self.engine.begin() as connection:
+            runs = RunRepository(connection)
+            current = await runs.get_for_update(run_id)
+            if current["cancellation_requested_at"] is not None:
+                raise RunCancelled("run cancellation was requested")
+            if not await ConversationLeaseRepository(connection).owns(
+                claim.lease_token, run_id
+            ):
+                raise LeaseLost("conversation lease was lost before retry scheduling")
+            event = await append_run_event(
+                runs,
+                run_id=run_id,
+                event_type="retry.scheduled",
+                payload={
+                    "completed_attempt": completed_attempt,
+                    "next_attempt": next_attempt,
+                    "delay_seconds": round(delay, 6),
+                    "error_code": worker_error_code(exc),
+                },
+                attempt=completed_attempt,
+                causation_id=causation_id,
+            )
+        return str(event["id"])
 
     async def monitor_cancellation(
         self, run_id: str, cancelled: asyncio.Event, stop: asyncio.Event
@@ -172,23 +235,42 @@ class AttemptController:
 
     @staticmethod
     async def backoff_sleep(
-        delay: float, cancelled: asyncio.Event, lease_lost: asyncio.Event
+        delay: float,
+        cancelled: asyncio.Event,
+        lease_lost: asyncio.Event,
+        stop_requested: asyncio.Event | None = None,
     ) -> None:
         cancellation_task = asyncio.create_task(cancelled.wait())
         lease_task = asyncio.create_task(lease_lost.wait())
+        draining_task = (
+            asyncio.create_task(stop_requested.wait()) if stop_requested else None
+        )
         try:
-            done, _ = await asyncio.wait({cancellation_task, lease_task}, timeout=delay)
+            waiters = {cancellation_task, lease_task}
+            if draining_task is not None:
+                waiters.add(draining_task)
+            done, _ = await asyncio.wait(waiters, timeout=delay)
             if cancellation_task in done:
                 raise RunCancelled("run cancellation was requested")
             if lease_task in done:
                 raise LeaseLost("conversation lease was lost")
+            if draining_task is not None and draining_task in done:
+                raise WorkerDraining("worker is draining before retry")
         finally:
-            for task in (cancellation_task, lease_task):
+            tasks = tuple(
+                task
+                for task in (cancellation_task, lease_task, draining_task)
+                if task is not None
+            )
+            for task in tasks:
                 task.cancel()
-            await asyncio.gather(cancellation_task, lease_task, return_exceptions=True)
+            await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def worker_error_code(exc: Exception) -> str:
+    explicit = str(getattr(exc, "error_code", "") or "")
+    if re.fullmatch(r"[a-z][a-z0-9_]{0,127}", explicit):
+        return explicit
     name = type(exc).__name__
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()[:128]
 

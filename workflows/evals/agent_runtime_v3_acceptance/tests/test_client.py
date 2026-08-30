@@ -132,6 +132,72 @@ def test_http_errors_preserve_status_and_safe_detail() -> None:
     asyncio.run(scenario())
 
 
+def test_worker_health_preserves_typed_503_body_for_preflight() -> None:
+    health = {
+        "status": "not_ready",
+        "database_ready": True,
+        "worker_ready": False,
+        "compatible_worker_count": 0,
+        "matching_build_worker_count": 0,
+        "source_revision": "a" * 40,
+        "source_dirty": False,
+        "source_fingerprint": "b" * 64,
+    }
+
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, json=health)
+
+    async def scenario() -> None:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as raw:
+            client = RuntimeV3Client("https://ade.test", "key", client=raw)
+            result = await client.get_worker_health()
+        assert result == {**health, "http_status": 503}
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize(
+    ("response", "expected_status", "expected_code"),
+    [
+        (httpx.Response(401, json={"detail": "unauthorized"}), 401, "health_http_401"),
+        (httpx.Response(200, content=b"not-json"), 200, "invalid_health_response"),
+    ],
+)
+def test_worker_health_failures_return_safe_receipt_data(
+    response: httpx.Response,
+    expected_status: int,
+    expected_code: str,
+) -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return response
+
+    async def scenario() -> None:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as raw:
+            client = RuntimeV3Client("https://ade.test", "key", client=raw)
+            result = await client.get_worker_health()
+        assert result["http_status"] == expected_status
+        assert result["status"] == "not_ready"
+        assert result["failure_code"] == expected_code
+        assert result["matching_build_worker_count"] == 0
+
+    asyncio.run(scenario())
+
+
+def test_worker_health_transport_failure_returns_safe_receipt_data() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("secret endpoint failed", request=request)
+
+    async def scenario() -> None:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as raw:
+            client = RuntimeV3Client("https://ade.test", "key", client=raw)
+            result = await client.get_worker_health()
+        assert result["http_status"] == 0
+        assert result["failure_code"] == "health_transport_error"
+        assert "secret" not in str(result)
+
+    asyncio.run(scenario())
+
+
 def test_fake_transport_covers_idempotency_concurrency_and_cancellation() -> None:
     seen_keys: set[str] = set()
     active = False

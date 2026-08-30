@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+import signal
 
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from ade_api.platform.settings import AdeApiSettings, get_settings
 
 from .errors import RuntimeNotReady
-from .events import append_run_event
 from .flags import ensure_agent_runtime_v3_enabled
 from .persistence.database import create_persistence_engine
-from .persistence.runs import RunRepository
 from .persistence.validation import validate_database_at_head
+from .provider_tracing import AttemptTrace
 from .retry import execute_with_retries
 from .router_transport import RouterTransport
 from .turn_execution import AttemptResult, TurnExecution
@@ -20,9 +20,10 @@ from .worker_control import (
     AttemptController,
     LeaseLost,
     RunCancelled,
-    worker_error_code,
+    WorkerDraining,
 )
 from .worker_finalization import RunFinalizer
+from .worker_health import WorkerPresence
 
 
 class AgentRuntimeV3Worker:
@@ -43,6 +44,7 @@ class AgentRuntimeV3Worker:
             engine=engine, settings=settings, execution=execution
         )
         self.finalizer = RunFinalizer(engine)
+        self.presence = WorkerPresence(engine=engine, settings=settings)
         self._ready = False
 
     async def aclose(self) -> None:
@@ -60,22 +62,65 @@ class AgentRuntimeV3Worker:
             ) from exc
         self._ready = True
 
-    async def run_forever(self) -> None:
+    async def run_forever(self, stop_requested: asyncio.Event | None = None) -> None:
         await self.ensure_ready()
-        while True:
-            processed = await self.process_once()
-            if not processed:
-                await asyncio.sleep(self.settings.agent_runtime_v3_worker_poll_seconds)
+        stop_requested = stop_requested or asyncio.Event()
+        heartbeat_stop = asyncio.Event()
+        await self.presence.register()
+        heartbeat_task = asyncio.create_task(
+            self.presence.heartbeat_forever(heartbeat_stop),
+            name="v3-worker-presence-heartbeat",
+        )
 
-    async def process_once(self) -> bool:
+        async def mark_draining_when_requested() -> None:
+            await stop_requested.wait()
+            await self.presence.mark_draining()
+
+        draining_task = asyncio.create_task(
+            mark_draining_when_requested(),
+            name="v3-worker-presence-draining",
+        )
+        try:
+            while not stop_requested.is_set():
+                if heartbeat_task.done():
+                    await heartbeat_task
+                processed = await self.process_once(stop_requested)
+                if processed:
+                    continue
+                stop_wait = asyncio.create_task(stop_requested.wait())
+                try:
+                    done, _ = await asyncio.wait(
+                        {heartbeat_task, stop_wait},
+                        timeout=self.settings.agent_runtime_v3_worker_poll_seconds,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    if heartbeat_task in done:
+                        await heartbeat_task
+                finally:
+                    if not stop_wait.done():
+                        stop_wait.cancel()
+                    await asyncio.gather(stop_wait, return_exceptions=True)
+        finally:
+            if stop_requested.is_set():
+                await self.presence.mark_draining()
+            heartbeat_stop.set()
+            await asyncio.gather(heartbeat_task, return_exceptions=True)
+            if not draining_task.done():
+                draining_task.cancel()
+            await asyncio.gather(draining_task, return_exceptions=True)
+            await self.presence.mark_stopped()
+
+    async def process_once(self, stop_requested: asyncio.Event | None = None) -> bool:
         await self.ensure_ready()
         claim, handled = await self.claimer.claim()
         if claim is None:
             return handled
-        await self._process_claim(claim)
+        await self._process_claim(claim, stop_requested or asyncio.Event())
         return True
 
-    async def _process_claim(self, claim: ClaimedRun) -> None:
+    async def _process_claim(
+        self, claim: ClaimedRun, stop_requested: asyncio.Event
+    ) -> None:
         run_id = str(claim.run["id"])
         stop = asyncio.Event()
         cancelled = asyncio.Event()
@@ -93,20 +138,38 @@ class AgentRuntimeV3Worker:
         prior_attempt_count = int(claim.run["attempt_count"])
         remaining_retries = int(claim.run["retry_count"]) - prior_attempt_count
         last_attempt_id: str | None = None
+        last_attempt_started_event_id: str | None = None
+        last_attempt_trace: AttemptTrace | None = None
+        last_failure_event_id: str | None = None
 
         async def operation(local_attempt: int) -> AttemptResult:
             nonlocal last_attempt_id
+            nonlocal last_attempt_started_event_id
+            nonlocal last_attempt_trace
+            nonlocal last_failure_event_id
+            if stop_requested.is_set():
+                raise WorkerDraining("worker is draining before the next attempt")
             attempt = prior_attempt_count + local_attempt
-            last_attempt_id = await self.attempts.start_attempt(claim, attempt)
+            last_attempt_trace = AttemptTrace(attempt=attempt)
+            started = await self.attempts.start_attempt(claim, attempt)
+            last_attempt_id = started.attempt_id
+            last_attempt_started_event_id = started.started_event_id
+            last_failure_event_id = None
             try:
                 return await self.attempts.execute_attempt(
                     claim,
+                    trace=last_attempt_trace,
                     cancelled=cancelled,
                     lease_lost=lease_lost,
                 )
             except Exception as exc:
-                await self.attempts.finish_attempt_failure(
-                    claim, last_attempt_id, attempt, exc
+                last_failure_event_id = await self.attempts.finish_attempt_failure(
+                    claim,
+                    last_attempt_id,
+                    last_attempt_started_event_id,
+                    attempt,
+                    last_attempt_trace,
+                    exc,
                 )
                 last_attempt_id = None
                 raise
@@ -117,21 +180,19 @@ class AgentRuntimeV3Worker:
             delay: float,
             exc: Exception,
         ) -> None:
+            nonlocal last_failure_event_id
             completed = prior_attempt_count + completed_local
             next_attempt = prior_attempt_count + next_local
-            async with self.engine.begin() as connection:
-                await append_run_event(
-                    RunRepository(connection),
-                    run_id=run_id,
-                    event_type="retry.scheduled",
-                    payload={
-                        "completed_attempt": completed,
-                        "next_attempt": next_attempt,
-                        "delay_seconds": round(delay, 6),
-                        "error_code": worker_error_code(exc),
-                    },
-                    attempt=completed,
-                )
+            if stop_requested.is_set():
+                raise WorkerDraining("worker is draining before retry scheduling")
+            last_failure_event_id = await self.attempts.schedule_retry(
+                claim,
+                completed_attempt=completed,
+                next_attempt=next_attempt,
+                delay=delay,
+                exc=exc,
+                causation_id=last_failure_event_id,
+            )
 
         try:
             if remaining_retries < 0:
@@ -141,19 +202,32 @@ class AgentRuntimeV3Worker:
                 retry_count=remaining_retries,
                 on_retry=on_retry,
                 sleep=lambda delay: self.attempts.backoff_sleep(
-                    delay, cancelled, lease_lost
+                    delay, cancelled, lease_lost, stop_requested
                 ),
             )
             if last_attempt_id is None:
                 raise RuntimeError("runtime produced no attempt")
             await self.finalizer.commit_success(claim, last_attempt_id, result)
         except RunCancelled:
-            await self.finalizer.commit_cancellation(claim, last_attempt_id)
+            await self.finalizer.commit_cancellation(
+                claim,
+                last_attempt_id,
+                causation_id=last_failure_event_id,
+                trace=last_attempt_trace if last_attempt_id else None,
+                trace_causation_id=last_attempt_started_event_id,
+            )
         except LeaseLost:
             # Another worker owns recovery. This worker must never terminally commit.
             return
         except Exception as exc:
-            await self.finalizer.commit_failure(claim, last_attempt_id, exc)
+            await self.finalizer.commit_failure(
+                claim,
+                last_attempt_id,
+                exc,
+                causation_id=last_failure_event_id,
+                trace=last_attempt_trace if last_attempt_id else None,
+                trace_causation_id=last_attempt_started_event_id,
+            )
         finally:
             stop.set()
             for monitor in monitors:
@@ -183,9 +257,20 @@ def build_worker() -> AgentRuntimeV3Worker:
 
 async def _main() -> None:
     worker = build_worker()
+    stop_requested = asyncio.Event()
+    loop = asyncio.get_running_loop()
+    installed_signals = []
+    for signal_name in (signal.SIGTERM, signal.SIGINT):
+        try:
+            loop.add_signal_handler(signal_name, stop_requested.set)
+        except (NotImplementedError, RuntimeError):
+            continue
+        installed_signals.append(signal_name)
     try:
-        await worker.run_forever()
+        await worker.run_forever(stop_requested)
     finally:
+        for signal_name in installed_signals:
+            loop.remove_signal_handler(signal_name)
         await worker.aclose()
 
 

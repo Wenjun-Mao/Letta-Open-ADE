@@ -7,6 +7,10 @@ from typing import Any
 
 import pytest
 
+from workflows.evals.agent_runtime_v3_acceptance.client import SseEvent
+from workflows.evals.agent_runtime_v3_acceptance.normalization import (
+    _normalize_run_events,
+)
 from workflows.evals.agent_runtime_v3_acceptance.qualification import (
     is_eligible_primary_matrix,
 )
@@ -366,6 +370,84 @@ def test_reviewer_request_and_response_trace_is_a_required_success_invariant() -
         )
 
     asyncio.run(scenario())
+
+
+@pytest.mark.parametrize(
+    "event_type", ["model.request.failed", "model.request.cancelled"]
+)
+def test_provider_request_terminal_events_are_infrastructure_failures(
+    event_type: str,
+) -> None:
+    request_id = "provider-request-1"
+    started_id = "event-1"
+    events = [
+        SseEvent(
+            event_id=started_id,
+            event_type="model.request.started",
+            data={
+                "id": started_id,
+                "run_id": "run-1",
+                "sequence": 1,
+                "type": "model.request.started",
+                "attempt": 1,
+                "correlation_id": "run-1",
+                "causation_id": None,
+                "payload": {
+                    "stage": "conversation",
+                    "operation": "chat.completions",
+                    "request_id": request_id,
+                    "request_number": 1,
+                },
+            },
+        ),
+        SseEvent(
+            event_id="event-2",
+            event_type=event_type,
+            data={
+                "id": "event-2",
+                "run_id": "run-1",
+                "sequence": 2,
+                "type": event_type,
+                "attempt": 1,
+                "correlation_id": "run-1",
+                "causation_id": started_id,
+                "payload": {
+                    "stage": "conversation",
+                    "operation": "chat.completions",
+                    "request_id": request_id,
+                    "request_number": 1,
+                    "error_code": "provider_timeout",
+                },
+            },
+        ),
+        SseEvent(
+            event_id="event-3",
+            event_type="run.failed",
+            data={
+                "id": "event-3",
+                "run_id": "run-1",
+                "sequence": 3,
+                "type": "run.failed",
+                "attempt": 1,
+                "correlation_id": "run-1",
+                "causation_id": "event-2",
+                "payload": {},
+            },
+        ),
+    ]
+
+    _, _, score_events, _, failures, _ = _normalize_run_events(
+        "run-1", events, "failed"
+    )
+
+    score_event_types = [item.type for item in score_events]
+    assert "model.request" in score_event_types
+    assert event_type not in score_event_types
+    assert any(
+        failure["kind"] == "provider_request_failure"
+        and failure["event_type"] == event_type
+        for failure in failures
+    )
 
 
 def test_uncertain_create_response_is_registered_for_scoped_cleanup() -> None:

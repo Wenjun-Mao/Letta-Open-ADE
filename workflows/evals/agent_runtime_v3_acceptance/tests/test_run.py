@@ -122,6 +122,18 @@ def test_case_selection_is_one_round_without_llama_or_promotion(
         async def aclose(self) -> None:
             pass
 
+        async def get_worker_health(self) -> dict[str, object]:
+            return {
+                "http_status": 200,
+                "status": "ready",
+                "database_ready": True,
+                "worker_ready": True,
+                "matching_build_worker_count": 1,
+                "source_revision": "a" * 40,
+                "source_dirty": False,
+                "source_fingerprint": "b" * 64,
+            }
+
     async def primary(**kwargs: object) -> tuple[QualificationRound, ...]:
         calls.update(kwargs)
         return (
@@ -150,6 +162,7 @@ def test_case_selection_is_one_round_without_llama_or_promotion(
     monkeypatch.setattr(run_module, "build_promotion_proposal", proposal)
     monkeypatch.setattr(run_module, "_source_revision", lambda: "a" * 40)
     monkeypatch.setattr(run_module, "_source_dirty", lambda: False)
+    monkeypatch.setattr(run_module, "_source_fingerprint", lambda: "b" * 64)
 
     config = run_module.AcceptanceConfig(
         api_base_url="https://ade.test",
@@ -187,3 +200,106 @@ def test_case_selection_rejects_noncanonical_order(
 
     with pytest.raises(RuntimeError, match="canonical case order"):
         asyncio.run(run_module.run_acceptance(config))
+
+
+def test_not_ready_worker_preflight_stops_before_primary_work(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: list[str] = []
+
+    class _Client:
+        def __init__(self, *_args: object) -> None:
+            pass
+
+        async def get_worker_health(self) -> dict[str, object]:
+            return {
+                "http_status": 503,
+                "status": "not_ready",
+                "database_ready": True,
+                "worker_ready": False,
+                "matching_build_worker_count": 0,
+            }
+
+        async def aclose(self) -> None:
+            calls.append("close")
+
+    async def primary(**_kwargs: object) -> tuple[QualificationRound, ...]:
+        raise AssertionError("a failed preflight must not launch primary rounds")
+
+    monkeypatch.setattr(
+        run_module,
+        "load_cases",
+        lambda _path: (SimpleNamespace(key="case-a"),),
+    )
+    monkeypatch.setattr(run_module, "RuntimeV3Client", _Client)
+    monkeypatch.setattr(run_module, "run_primary_rounds", primary)
+    monkeypatch.setattr(run_module, "_source_revision", lambda: "a" * 40)
+    monkeypatch.setattr(run_module, "_source_dirty", lambda: False)
+    monkeypatch.setattr(run_module, "_source_fingerprint", lambda: "b" * 64)
+
+    config = run_module.AcceptanceConfig(
+        api_base_url="https://ade.test",
+        api_key="operator-key",
+        output_dir=tmp_path,
+        database_url="postgresql://unused",
+    )
+    result = asyncio.run(run_module.run_acceptance(config))
+
+    assert result["passed"] is False
+    assert result["eligible"] is False
+    assert result["primary_rounds"] == []
+    assert result["promotion_proposal"] is None
+    assert calls == ["close"]
+    preflight = Path(result["preflight_path"])
+    assert preflight.is_file()
+    assert not list(preflight.parent.glob("round-*"))
+
+
+def test_full_run_rejects_dirty_or_mismatched_source_before_primary_work(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    class _Client:
+        def __init__(self, *_args: object) -> None:
+            pass
+
+        async def get_worker_health(self) -> dict[str, object]:
+            return {
+                "http_status": 200,
+                "status": "ready",
+                "database_ready": True,
+                "worker_ready": True,
+                "matching_build_worker_count": 1,
+                "source_revision": "a" * 40,
+                "source_dirty": True,
+                "source_fingerprint": "c" * 64,
+            }
+
+        async def aclose(self) -> None:
+            pass
+
+    async def primary(**_kwargs: object) -> tuple[QualificationRound, ...]:
+        raise AssertionError("source mismatch must stop before primary rounds")
+
+    monkeypatch.setattr(
+        run_module,
+        "load_cases",
+        lambda _path: (SimpleNamespace(key="case-a"),),
+    )
+    monkeypatch.setattr(run_module, "RuntimeV3Client", _Client)
+    monkeypatch.setattr(run_module, "run_primary_rounds", primary)
+    monkeypatch.setattr(run_module, "_source_revision", lambda: "a" * 40)
+    monkeypatch.setattr(run_module, "_source_dirty", lambda: True)
+    monkeypatch.setattr(run_module, "_source_fingerprint", lambda: "b" * 64)
+
+    config = run_module.AcceptanceConfig(
+        api_base_url="https://ade.test",
+        api_key="operator-key",
+        output_dir=tmp_path,
+        database_url="postgresql://unused",
+    )
+    result = asyncio.run(run_module.run_acceptance(config))
+
+    assert result["passed"] is False
+    preflight = Path(result["preflight_path"])
+    assert preflight.is_file()
+    assert not list(preflight.parent.glob("round-*"))

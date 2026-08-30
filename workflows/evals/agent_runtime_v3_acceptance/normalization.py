@@ -23,6 +23,9 @@ SUCCESS_REQUIRED_EVENTS = frozenset(
     }
 )
 MODEL_ROLES = ("conversation", "reviewer")
+PROVIDER_TERMINAL_EVENT_TYPES = frozenset(
+    {"model.request.failed", "model.request.cancelled"}
+)
 
 
 @dataclass(frozen=True)
@@ -194,6 +197,7 @@ def _normalize_run_events(
     usage: dict[str, int] = {}
     last_sequence = 0
     seen_event_ids: set[str] = set()
+    prior_events: dict[str, tuple[str, dict[str, Any]]] = {}
     for event in events:
         payload = dict(event.data.get("payload") or {})
         actual_run_id = str(event.data.get("run_id") or "")
@@ -218,8 +222,32 @@ def _normalize_run_events(
             failures.append({"kind": "event_correlation", "pass": False})
         if causation_id is not None and causation_id not in seen_event_ids:
             failures.append({"kind": "event_causation", "pass": False})
+        if event_type in PROVIDER_TERMINAL_EVENT_TYPES:
+            cause = prior_events.get(causation_id or "")
+            if cause is None or not _provider_request_causation_matches(
+                event_payload=payload,
+                cause_type=cause[0],
+                cause_payload=cause[1],
+            ):
+                failures.append(
+                    {
+                        "kind": "provider_request_causation",
+                        "pass": False,
+                        "event_type": event_type,
+                    }
+                )
+            failures.append(
+                {
+                    "kind": "provider_request_failure",
+                    "pass": False,
+                    "event_type": event_type,
+                    "stage": str(payload.get("stage") or "unknown"),
+                    "error_code": str(payload.get("error_code") or "unknown"),
+                }
+            )
         if event_id:
             seen_event_ids.add(event_id)
+            prior_events[event_id] = (event_type, payload)
         recorded_events.append(
             RecordedEvent(
                 event_id=event_id,
@@ -290,7 +318,9 @@ def _normalize_run_events(
     )
 
 
-def _canonical_event_type(event_type: str, payload: dict[str, Any]) -> str:
+def _canonical_event_type(event_type: str, payload: dict[str, Any]) -> str | None:
+    if event_type in PROVIDER_TERMINAL_EVENT_TYPES:
+        return None
     if event_type == "model.request.started":
         if payload.get("role") == "reviewer":
             return "memory.review.request"
@@ -298,6 +328,18 @@ def _canonical_event_type(event_type: str, payload: dict[str, Any]) -> str:
     if event_type == "model.response.completed":
         return "model.response"
     return event_type
+
+
+def _provider_request_causation_matches(
+    *,
+    event_payload: dict[str, Any],
+    cause_type: str,
+    cause_payload: dict[str, Any],
+) -> bool:
+    return cause_type == "model.request.started" and all(
+        event_payload.get(field) == cause_payload.get(field)
+        for field in ("stage", "operation", "request_id", "request_number")
+    )
 
 
 def _usage(value: object) -> dict[str, int]:

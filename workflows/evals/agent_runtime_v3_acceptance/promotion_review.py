@@ -72,6 +72,9 @@ def review_promotion(
     _require_equal(proposal.get("apply_status"), "proposal-only", "apply status")
     _require_equal(proposal.get("source_dirty"), False, "proposal source_dirty")
     source_revision = _required_revision(proposal.get("source_revision"))
+    source_fingerprint = _required_digest(
+        proposal.get("source_fingerprint"), "proposal source_fingerprint"
+    )
     state = git_state or _read_git_state(project_root)
     if state.revision != source_revision or state.dirty:
         raise PromotionReviewError(
@@ -109,6 +112,18 @@ def review_promotion(
         )
 
     run_dir = proposal_path.parent
+    preflight = _load_json(run_dir / "preflight.json", "worker preflight")
+    preflight_sha256 = _validate_worker_preflight(
+        preflight,
+        run_id=str(proposal.get("run_id") or ""),
+        source_revision=source_revision,
+        source_fingerprint=source_fingerprint,
+    )
+    _require_equal(
+        preflight_sha256,
+        proposal.get("preflight_sha256"),
+        "worker preflight digest",
+    )
     provenance = _load_json(run_dir / "provenance.json", "provenance")
     provenance_sha256 = _verify_content_digest(
         provenance,
@@ -125,7 +140,9 @@ def review_promotion(
         ("run_id", proposal.get("run_id")),
         ("source_revision", source_revision),
         ("source_dirty", False),
+        ("source_fingerprint", source_fingerprint),
         ("policy_hashes", policy_hashes),
+        ("preflight_sha256", preflight_sha256),
     ):
         _require_equal(provenance.get(key), expected, f"provenance {key}")
     effective = _mapping(provenance.get("effective_config"), "effective config")
@@ -238,6 +255,61 @@ def review_promotion(
         ),
         applied=apply,
     )
+
+
+def _validate_worker_preflight(
+    payload: dict[str, Any],
+    *,
+    run_id: str,
+    source_revision: str,
+    source_fingerprint: str,
+) -> str:
+    digest = _verify_content_digest(
+        payload,
+        field="preflight_sha256",
+        label="worker preflight",
+        newline=True,
+    )
+    for key, expected in (
+        ("schema_version", 1),
+        ("kind", "agent-runtime-v3-worker-preflight"),
+        ("run_id", run_id),
+        ("passed", True),
+    ):
+        _require_equal(payload.get(key), expected, f"worker preflight {key}")
+    health = _mapping(payload.get("health"), "worker preflight health")
+    source_identity = _mapping(
+        payload.get("source_identity"), "worker preflight source identity"
+    )
+    for key, expected in (
+        ("revision", source_revision),
+        ("dirty", False),
+        ("fingerprint", source_fingerprint),
+    ):
+        _require_equal(
+            source_identity.get(key), expected, f"worker preflight source {key}"
+        )
+    for key, expected in (
+        ("http_status", 200),
+        ("status", "ready"),
+        ("database_ready", True),
+        ("worker_ready", True),
+        ("source_revision", source_revision),
+        ("source_dirty", False),
+        ("source_fingerprint", source_fingerprint),
+    ):
+        _require_equal(health.get(key), expected, f"worker preflight health {key}")
+    for field in ("compatible_worker_count", "matching_build_worker_count"):
+        count = health.get(field)
+        if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+            raise PromotionReviewError(
+                f"worker preflight health {field} must be a positive integer"
+            )
+    if not _SHA256_RE.fullmatch(str(health.get("compatibility_fingerprint") or "")):
+        raise PromotionReviewError(
+            "worker preflight health compatibility_fingerprint is invalid"
+        )
+    return digest
 
 
 def _load_rounds(run_dir: Path, expected_digests: list[str]) -> list[dict[str, Any]]:
@@ -494,6 +566,8 @@ def _validate_raw_events(
         causation_id = event.get("causation_id")
         if causation_id is None and event.get("event_type") in {
             "model.response.completed",
+            "model.request.failed",
+            "model.request.cancelled",
             "tool.call.requested",
             "tool.call.completed",
             "summary.committed",
@@ -511,6 +585,10 @@ def _validate_raw_events(
         events_by_run.setdefault(run_id, []).append(sequence)
         event_type = event.get("event_type")
         payload = _mapping(event.get("payload"), f"round {index} raw event payload")
+        if event_type in {"model.request.failed", "model.request.cancelled"}:
+            raise PromotionReviewError(
+                f"round {index} includes a provider request failure"
+            )
         if event_type == "tool.call.completed":
             raw_tools_by_run.setdefault(run_id, []).append(
                 (
@@ -611,6 +689,14 @@ def _validate_event_causation(
         ):
             raise PromotionReviewError(
                 f"round {index} model response has invalid request causation"
+            )
+    elif event_type in {"model.request.failed", "model.request.cancelled"}:
+        if cause_type != "model.request.started" or any(
+            payload.get(field) != cause_payload.get(field)
+            for field in ("stage", "operation", "request_id", "request_number")
+        ):
+            raise PromotionReviewError(
+                f"round {index} provider failure has invalid request causation"
             )
     elif event_type == "tool.call.requested":
         if (
@@ -819,6 +905,13 @@ def _required_revision(value: object) -> str:
     if not _REVISION_RE.fullmatch(revision):
         raise PromotionReviewError("proposal source_revision is invalid")
     return revision
+
+
+def _required_digest(value: object, label: str) -> str:
+    digest = str(value or "").strip().casefold()
+    if not _SHA256_RE.fullmatch(digest):
+        raise PromotionReviewError(f"{label} is invalid")
+    return digest
 
 
 def _require_equal(actual: object, expected: object, label: str) -> None:

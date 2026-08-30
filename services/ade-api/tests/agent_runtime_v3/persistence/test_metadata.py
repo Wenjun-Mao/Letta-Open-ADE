@@ -8,6 +8,7 @@ from ade_api.features.agent_runtime_v3.persistence.metadata import (
     conversation_summaries,
     memory_embeddings,
     run_attempts,
+    worker_instances,
 )
 from ade_api.features.agent_runtime_v3.persistence.validation import (
     validate_metadata_contract,
@@ -33,6 +34,7 @@ EXPECTED_TABLES = {
     "runs",
     "summary_sources",
     "workspaces",
+    "worker_instances",
 }
 
 
@@ -59,11 +61,29 @@ def test_active_state_guards_are_partial_unique_indexes() -> None:
         "uq_memory_facts_active_subject_key",
         "uq_runs_active_conversation",
     }
-    assert all(index.unique for index in indexes.values())
+    active_guard_names = {
+        "uq_conversation_leases_active_conversation",
+        "uq_memory_facts_active_subject_key",
+        "uq_runs_active_conversation",
+    }
+    assert all(indexes[name].unique for name in active_guard_names)
     assert all(
-        index.dialect_options["postgresql"]["where"] is not None
-        for index in indexes.values()
+        indexes[name].dialect_options["postgresql"]["where"] is not None
+        for name in active_guard_names
     )
+
+
+def test_worker_health_index_covers_fingerprint_state_and_heartbeat() -> None:
+    health_index = next(
+        index
+        for index in worker_instances.indexes
+        if index.name == "ix_worker_instances_health"
+    )
+    assert [column.name for column in health_index.columns] == [
+        "compatibility_fingerprint",
+        "state",
+        "heartbeat_at",
+    ]
 
 
 def test_conversation_summaries_persist_generation_provenance() -> None:

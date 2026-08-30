@@ -15,6 +15,9 @@ dual-write behavior.
 - `worker.py` coordinates work. `worker_claims.py`, `worker_control.py`,
   `worker_finalization.py`, and `worker_events.py` separately own recovery,
   timeout/cancellation/leases, atomic terminal commits, and normalized traces.
+- `provider_tracing.py` records safe request-level evidence for failed or cancelled
+  attempts; `worker_health.py` and `persistence/workers.py` own boot-scoped worker
+  presence independently of conversation leases.
 - `memory_review.py` defines the closed operation schema; `memory_policy.py` binds
   proposals to the current subject, evidence, entities, and optimistic versions.
 - `persistence/` contains SQLAlchemy Core tables and repositories; Alembic is the only
@@ -51,11 +54,22 @@ make native-runtime-db-test   # run repository contracts as the application role
 make native-runtime-up        # development-mode API + worker preview
 ```
 
+The migration target rebuilds its image before applying Alembic, so a newly checked-
+in migration cannot be skipped by a stale local container image.
+
 Development mode permits fingerprinted but unqualified local deployments and marks
 every run `unqualified`. Release mode rejects them. ADE Web exposes only the focused
 Test Center qualification launcher; Agent Studio has no v3 product UI yet. The
 preview has no legacy importer, dual-write path, arbitrary Python tools, or
-production-cutover approval. Request-level traces for provider calls that fail before
-an attempt result is assembled, plus an explicit API-visible worker-health contract,
-remain release blockers. Disposable live checks must purge the definitions, subjects,
-conversations, runs, messages, and memories they create.
+production-cutover approval.
+
+`GET /api/v3/worker-health` returns `200` only when PostgreSQL is ready and a fresh,
+compatible worker with the same revision, dirty state, and exact Git-visible source
+fingerprint is visible; otherwise it returns the same typed body with `503`. Unknown
+source identity fails closed. A draining worker finishes at most one active attempt
+within Compose's 650-second grace period and never starts another retry. Provider
+failures persist only bounded stage/status/retry metadata,
+never prompts, inputs, response bodies, headers, or exception text. See
+[ADR 0011](../../../../../../docs/adr/0011-agent-runtime-operational-readiness.md).
+Disposable live checks must purge the definitions, subjects, conversations, runs,
+messages, and memories they create.

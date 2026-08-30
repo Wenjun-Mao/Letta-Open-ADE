@@ -22,6 +22,9 @@ policy that produced a result.
 
 - Only complete rounds through the real `/api/v3` API, worker, and PostgreSQL path
   may qualify an ADE-native runtime deployment.
+- Before any resources or rounds are created, acceptance must record a passing,
+  content-addressed `/api/v3/worker-health` preflight for a fresh compatible worker
+  from the same build. Preflight is a gate, not a qualification round.
 - Study results remain research evidence. Their counters become stale when the
   manifest is rebound to production policy hashes.
 - Qualification binds conversation, reviewer, and retriever roles to exact
@@ -53,6 +56,8 @@ policy that produced a result.
 - Production policy bundles have one path-bound registry in
   `workflows/evals/agent_runtime_v3_acceptance/policy.py`. The checked-in manifest
   and promotion reviewer must both reproduce those hashes.
+- A provider request failure or cancellation is infrastructure failure evidence and
+  makes the affected primary round ineligible regardless of normalized model scores.
 
 ## Consequences
 
@@ -71,6 +76,8 @@ runner through API-level run cancellation and the same scoped cleanup path.
 - Never copy direct-study counters into a production-path qualification summary.
 - Never weaken a deterministic contract to qualify a less capable model.
 - Never count a partial matrix or a run from a dirty/unidentified build.
+- Never launch qualification resources after a failed worker-health preflight, and
+  require that receipt to bind the runner to the image's exact source fingerprint.
 - Never allow a focused diagnostic, even one that selects every case, to claim a
   qualification round or promotion proposal.
 - Never promote a self-declared case list or a stored pass boolean without
@@ -79,3 +86,5 @@ runner through API-level run cancellation and the same scoped cleanup path.
 - `promote --check` must be non-mutating; `promote --apply` must re-run the same
   source, artifact, policy, role, and manifest checks before one atomic update.
 - Never purge state unless every target is proven to belong to the acceptance run.
+- Never promote a preflight whose digest, worker compatibility, build identity, or
+  ready status cannot be independently reproduced from its artifact.

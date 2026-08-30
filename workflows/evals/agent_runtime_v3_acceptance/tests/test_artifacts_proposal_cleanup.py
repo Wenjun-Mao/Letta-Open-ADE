@@ -21,6 +21,12 @@ from workflows.evals.agent_runtime_v3_acceptance.proposal import (
 
 def test_round_artifacts_are_atomic_and_content_addressed(tmp_path: Path) -> None:
     writer = RoundArtifactWriter(tmp_path, "run-a")
+    preflight = writer.write_preflight(
+        {"kind": "agent-runtime-v3-preflight", "passed": True}
+    )
+    preflight_payload = json.loads(preflight.path.read_text(encoding="utf-8"))
+    assert preflight_payload["preflight_sha256"] == preflight.sha256
+    assert preflight.path.parent == writer.root
     artifact = writer.write_round(
         1,
         {"kind": "primary", "case_keys": ["a"], "passed": True},
@@ -90,8 +96,10 @@ def test_promotion_proposal_requires_complete_live_primary_matrix(
         canonical_case_keys=("a", "b"),
         required_rounds=3,
         provenance_sha256="b" * 64,
+        preflight_sha256="2" * 64,
         source_revision="c" * 40,
         source_dirty=False,
+        source_fingerprint="9" * 64,
         policy_hashes={
             "prompt": "d" * 64,
             "tool": "e" * 64,
@@ -126,8 +134,10 @@ def test_promotion_proposal_requires_complete_live_primary_matrix(
         canonical_case_keys=("a", "b"),
         required_rounds=3,
         provenance_sha256="b" * 64,
+        preflight_sha256="2" * 64,
         source_revision="c" * 40,
         source_dirty=False,
+        source_fingerprint="9" * 64,
         policy_hashes={
             "prompt": "d" * 64,
             "tool": "e" * 64,

@@ -4,7 +4,32 @@ from typing import Any
 
 from .events import append_run_event
 from .persistence.runs import RunRepository
+from .provider_tracing import AttemptTrace
 from .turn_execution import AttemptResult
+
+
+async def append_attempt_trace(
+    runs: RunRepository,
+    *,
+    run_id: str,
+    attempt: int,
+    trace: AttemptTrace,
+    causation_id: str | None,
+) -> str | None:
+    """Persist the safe partial provider trace inside attempt finalization."""
+
+    last_event_id = causation_id
+    for trace_event in trace.normalized_events():
+        event = await append_run_event(
+            runs,
+            run_id=run_id,
+            event_type=trace_event.event_type,
+            payload=trace_event.payload,
+            attempt=attempt,
+            causation_id=last_event_id,
+        )
+        last_event_id = str(event["id"])
+    return last_event_id
 
 
 async def append_success_events(

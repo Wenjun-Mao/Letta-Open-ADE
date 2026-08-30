@@ -8,7 +8,7 @@ from ade_api.features.agent_runtime_v3.persistence.validation import (
 
 
 def test_migration_has_one_reviewed_head() -> None:
-    assert migration_heads() == ("20260830_0002",)
+    assert migration_heads() == ("20260830_0004",)
 
 
 def test_initial_migration_is_static_not_live_metadata() -> None:
@@ -36,6 +36,33 @@ def test_compaction_migration_preserves_legacy_rows_and_enforces_provenance() ->
     assert "previous_summary_id" in source
     assert "prompt_sha256" in source
     assert "input_sha256" in source
+
+
+def test_worker_health_migration_has_process_level_heartbeat_contract() -> None:
+    migration = (
+        service_root()
+        / "migrations"
+        / "versions"
+        / "20260830_0003_agent_runtime_worker_health.py"
+    )
+    source = migration.read_text(encoding="utf-8")
+    assert "ade.worker_instances" in source
+    assert "contract_version" in source
+    assert "heartbeat_at" in source
+    assert "stopped_at" in source
+
+
+def test_worker_source_fingerprint_migration_preserves_existing_health_rows() -> None:
+    migration = (
+        service_root()
+        / "migrations"
+        / "versions"
+        / "20260830_0004_agent_runtime_source_fingerprint.py"
+    )
+    source = migration.read_text(encoding="utf-8")
+    assert "source_fingerprint" in source
+    assert "DEFAULT 'unknown'" in source
+    assert "DROP DEFAULT" in source
 
 
 def test_alembic_version_table_is_owned_with_runtime_schema() -> None:

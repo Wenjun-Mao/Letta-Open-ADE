@@ -109,17 +109,12 @@ passing complete rounds. Focused diagnostics never count as qualification rounds
   if either the compaction request or the remaining raw suffix cannot fit.
 - The model cannot supply a subject ID or cross a server-bound subject boundary.
 
-## Preview Qualification Blockers
+## Preview Operational Readiness
 
-- Successful attempts persist causal model, tool, reviewer, compaction, memory, and
-  terminal events. A provider request that fails before an `AttemptResult` exists is
-  currently represented only by `attempt.failed` and `run.failed`; request-level
-  failure events and any preceding partial trace must be persisted before a runtime
-  deployment can be considered release-ready.
-- Deployment metadata proves model identity and qualification state, not worker
-  liveness. Qualification must verify that both the v3 API and a lease-heartbeating
-  worker are running; release readiness requires an explicit operational health
-  contract rather than assuming that an enabled API implies a worker is available.
+The request-level provider failure trace and API-visible worker-presence blockers are
+closed by [ADR 0011](0011-agent-runtime-operational-readiness.md). This removes known
+observability gaps but does not qualify a deployment or approve production cutover;
+the production-path rounds and reviewed promotion in ADR 0010 still apply.
 
 ## Rejected Alternatives
 
@@ -193,6 +188,8 @@ cutover is approved.
 - Apply the production qualification and reviewed-promotion rules in
   [ADR 0010](0010-production-path-runtime-qualification.md); direct study rounds do
   not qualify the `/api/v3` implementation.
+- Apply the worker-readiness and safe provider-failure evidence rules in
+  [ADR 0011](0011-agent-runtime-operational-readiness.md).
 
 ## Implementation Status
 
