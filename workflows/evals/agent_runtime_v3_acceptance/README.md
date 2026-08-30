@@ -31,7 +31,7 @@ uv run --project workflows python workflows/evals/agent_runtime_v3_acceptance/ru
   --output-dir workflows/evals/agent_runtime_v3_acceptance/outputs \
   --conversation-model-key dgx_vllm::qwen3.6-35b-a3b-fp8 \
   --reviewer-model-key dgx_vllm::qwen3.6-35b-a3b-fp8 \
-  --embedding-model-key dgx_embedding_sidecar::qwen3-embedding-0.6b \
+  --embedding-model-key dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B \
   --rounds 3 \
   --timeout-seconds 180 \
   --retry-count 0 \

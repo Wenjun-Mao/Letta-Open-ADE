@@ -153,7 +153,7 @@ DEFAULT_CHAT_MEMORY_EVALUATION_CONFIG: Final[dict[str, Any]] = {
 DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_CONFIG: Final[dict[str, Any]] = {
     "conversation_model_key": "dgx_vllm::qwen3.6-35b-a3b-fp8",
     "reviewer_model_key": "dgx_vllm::qwen3.6-35b-a3b-fp8",
-    "embedding_model_key": "dgx_embedding_sidecar::qwen3-embedding-0.6b",
+    "embedding_model_key": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
     "rounds": 3,
     "timeout_seconds": 180.0,
     "retry_count": 0,

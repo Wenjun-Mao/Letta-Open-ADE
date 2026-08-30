@@ -34,7 +34,7 @@ export function canonicalizeAgentRuntimeV3DiagnosticCaseKeys(caseKeys: string[])
 export const DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_FORM: AgentRuntimeV3AcceptanceForm = {
   conversationModelKey: "dgx_vllm::qwen3.6-35b-a3b-fp8",
   reviewerModelKey: "dgx_vllm::qwen3.6-35b-a3b-fp8",
-  embeddingModelKey: "dgx_embedding_sidecar::qwen3-embedding-0.6b",
+  embeddingModelKey: "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
   rounds: "3",
   timeoutSeconds: "180",
   retryCount: "0",

@@ -98,7 +98,7 @@ def test_agent_runtime_v3_acceptance_request_accepts_only_focused_fields() -> No
         run_type="agent_runtime_v3_acceptance",
         conversation_model_key="dgx_vllm::qwen3.6-35b-a3b-fp8",
         reviewer_model_key="dgx_vllm::qwen3.6-35b-a3b-fp8",
-        embedding_model_key="dgx_embedding_sidecar::qwen3-embedding-0.6b",
+        embedding_model_key="dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
         rounds=3,
         timeout_seconds=180,
         retry_count=0,
