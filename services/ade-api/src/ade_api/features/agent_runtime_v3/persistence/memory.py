@@ -241,29 +241,6 @@ class MemoryRepository:
             )
         return created
 
-    async def supersede_facts(
-        self,
-        expected_versions: Mapping[str, int],
-        *,
-        updated_at: datetime,
-    ) -> None:
-        for fact_id, expected_version in expected_versions.items():
-            result = await self._connection.execute(
-                update(memory_facts)
-                .where(
-                    and_(
-                        memory_facts.c.id == fact_id,
-                        memory_facts.c.version == expected_version,
-                        memory_facts.c.status == "active",
-                    )
-                )
-                .values(status="superseded", updated_at=updated_at)
-            )
-            if result.rowcount != 1:
-                raise OptimisticLockError(
-                    "memory fact changed before merge could commit"
-                )
-
     async def create_embedding(self, payload: Mapping[str, Any]) -> dict[str, Any]:
         return await fetch_one(
             self._connection,

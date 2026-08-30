@@ -39,6 +39,13 @@ class DefinitionService:
 
     async def create(self, request: CreateAgentDefinitionRequest) -> dict[str, Any]:
         await self.database.ensure_ready()
+        if (
+            "get_weather" in request.tool_names
+            and self.settings.agent_runtime_v3_mode != "development"
+        ):
+            raise RuntimeValidationError(
+                "get_weather is available only in development and qualification runs"
+            )
         prompt = self.prompt_registry.get_template(
             "prompt", request.prompt_key, scenario="chat"
         )

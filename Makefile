@@ -43,7 +43,7 @@ check: test
 	uv run python scripts/check_python_format.py --base origin/main
 	npm --prefix apps/ade-web run lint
 	npm --prefix apps/ade-web run build
-	docker compose --env-file .env.example config --quiet
+	LETTA_ENV_FILE=.env.example docker compose --env-file .env.example config --quiet
 
 openapi:
 	uv run python scripts/export_openapi.py

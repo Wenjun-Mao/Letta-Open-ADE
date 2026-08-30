@@ -62,6 +62,42 @@ class ContextBudget:
         )
 
 
+def context_budget_from_deployment(deployment: dict[str, Any]) -> ContextBudget:
+    context = dict(deployment.get("fingerprint_payload", {})).get(
+        "context_settings", {}
+    )
+    if not isinstance(context, dict):
+        context = {}
+    context_window = int(
+        context.get("total_tokens") or context.get("context_tokens") or 16_384
+    )
+    max_output = int(
+        context.get("max_output_tokens")
+        or context.get("response_reserve_tokens")
+        or 4_096
+    )
+    return ContextBudget(
+        context_window=max(2_048, context_window),
+        max_output_tokens=max(256, min(max_output, context_window // 2)),
+        tool_schema_tokens=256,
+    )
+
+
+def validate_current_user_message(
+    *,
+    system_prompt: str,
+    persona: str,
+    content: str,
+    budget: ContextBudget,
+) -> None:
+    prompt = truncate_to_tokens(
+        f"{system_prompt}\n\nPersona:\n{persona}\n\n{MEMORY_CONTROL_INSTRUCTIONS}",
+        budget.prompt_tokens,
+    )
+    if estimate_tokens(prompt) + estimate_tokens(content) > budget.input_limit:
+        raise ValueError("Current message plus mandatory prompt exceeds context window")
+
+
 @dataclass(frozen=True)
 class BuiltContext:
     messages: list[dict[str, str]]

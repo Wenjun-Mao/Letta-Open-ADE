@@ -23,42 +23,57 @@ def upgrade() -> None:
     # provenance. Mark only those retained rows as legacy before enforcing the
     # complete provenance contract for every newly generated summary.
     op.execute(
-        "ALTER TABLE ade.conversation_summaries "
-        "ADD COLUMN previous_summary_id UUID"
+        "ALTER TABLE ade.conversation_summaries ADD COLUMN previous_summary_id UUID"
+    )
+    op.execute(
+        "ALTER TABLE ade.conversation_summaries ADD COLUMN model_key VARCHAR(300)"
     )
     op.execute(
         "ALTER TABLE ade.conversation_summaries "
-        "ADD COLUMN model_key VARCHAR(300)"
+        "ADD COLUMN model_fingerprint VARCHAR(64)"
     )
     op.execute(
         "ALTER TABLE ade.conversation_summaries "
         "ADD COLUMN provider_request_id VARCHAR(512)"
     )
     op.execute(
-        "ALTER TABLE ade.conversation_summaries "
-        "ADD COLUMN prompt_sha256 VARCHAR(64)"
+        "ALTER TABLE ade.conversation_summaries ADD COLUMN content_sha256 VARCHAR(64)"
     )
     op.execute(
-        "ALTER TABLE ade.conversation_summaries "
-        "ADD COLUMN input_sha256 VARCHAR(64)"
+        "ALTER TABLE ade.conversation_summaries ADD COLUMN prompt_sha256 VARCHAR(64)"
+    )
+    op.execute(
+        "ALTER TABLE ade.conversation_summaries ADD COLUMN input_sha256 VARCHAR(64)"
+    )
+    op.execute(
+        "ALTER TABLE ade.conversation_summaries ADD COLUMN policy_sha256 VARCHAR(64)"
     )
     op.execute(
         "UPDATE ade.conversation_summaries "
-        f"SET model_key = 'legacy-unattributed', prompt_sha256 = '{_LEGACY_SHA256}', "
-        f"input_sha256 = '{_LEGACY_SHA256}' "
+        f"SET model_key = 'legacy-unattributed', model_fingerprint = '{_LEGACY_SHA256}', "
+        f"content_sha256 = '{_LEGACY_SHA256}', prompt_sha256 = '{_LEGACY_SHA256}', "
+        f"input_sha256 = '{_LEGACY_SHA256}', policy_sha256 = '{_LEGACY_SHA256}' "
         "WHERE model_key IS NULL"
     )
     op.execute(
-        "ALTER TABLE ade.conversation_summaries "
-        "ALTER COLUMN model_key SET NOT NULL"
+        "ALTER TABLE ade.conversation_summaries ALTER COLUMN model_key SET NOT NULL"
     )
     op.execute(
         "ALTER TABLE ade.conversation_summaries "
-        "ALTER COLUMN prompt_sha256 SET NOT NULL"
+        "ALTER COLUMN model_fingerprint SET NOT NULL"
     )
     op.execute(
         "ALTER TABLE ade.conversation_summaries "
-        "ALTER COLUMN input_sha256 SET NOT NULL"
+        "ALTER COLUMN content_sha256 SET NOT NULL"
+    )
+    op.execute(
+        "ALTER TABLE ade.conversation_summaries ALTER COLUMN prompt_sha256 SET NOT NULL"
+    )
+    op.execute(
+        "ALTER TABLE ade.conversation_summaries ALTER COLUMN input_sha256 SET NOT NULL"
+    )
+    op.execute(
+        "ALTER TABLE ade.conversation_summaries ALTER COLUMN policy_sha256 SET NOT NULL"
     )
     op.execute(
         "ALTER TABLE ade.conversation_summaries "
@@ -77,7 +92,10 @@ def downgrade() -> None:
         "ALTER TABLE ade.conversation_summaries "
         "DROP COLUMN input_sha256, "
         "DROP COLUMN prompt_sha256, "
+        "DROP COLUMN policy_sha256, "
+        "DROP COLUMN content_sha256, "
         "DROP COLUMN provider_request_id, "
+        "DROP COLUMN model_fingerprint, "
         "DROP COLUMN model_key, "
         "DROP COLUMN previous_summary_id"
     )

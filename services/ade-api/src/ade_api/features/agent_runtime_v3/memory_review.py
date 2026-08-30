@@ -19,15 +19,18 @@ from .errors import RuntimeValidationError
 from .fact_registry import FactRegistryError, fact_type_spec, normalize_qualifier
 
 
-class _ProposalBase(BaseModel):
+class _EvidenceProposalBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    fact_type: StrictStr
     evidence_quote: StrictStr = Field(min_length=1, max_length=10_000)
+
+
+class _TypedProposalBase(_EvidenceProposalBase):
+    fact_type: StrictStr
     qualifier: StrictStr | None = None
 
     @model_validator(mode="after")
-    def _normalize_fact_contract(self) -> "_ProposalBase":
+    def _normalize_fact_contract(self) -> "_TypedProposalBase":
         try:
             spec = fact_type_spec(self.fact_type)
             self.fact_type = spec.name
@@ -37,7 +40,7 @@ class _ProposalBase(BaseModel):
         return self
 
 
-class AddProposal(_ProposalBase):
+class AddProposal(_TypedProposalBase):
     operation: Literal[MemoryOperation.ADD]
     value: StrictStr = Field(min_length=1, max_length=10_000)
     entity_ref: StrictStr | None = None
@@ -51,7 +54,7 @@ class AddProposal(_ProposalBase):
         return value
 
 
-class CorrectProposal(_ProposalBase):
+class CorrectProposal(_EvidenceProposalBase):
     operation: Literal[MemoryOperation.CORRECT]
     value: StrictStr = Field(min_length=1, max_length=10_000)
     fact_id: StrictStr = Field(min_length=1, max_length=100)
@@ -65,26 +68,7 @@ class CorrectProposal(_ProposalBase):
         return value
 
 
-class MergeProposal(_ProposalBase):
-    operation: Literal[MemoryOperation.MERGE]
-    value: StrictStr = Field(min_length=1, max_length=10_000)
-    target_fact_ids: list[StrictStr] = Field(min_length=2, max_length=20)
-    expected_versions: dict[StrictStr, StrictInt] = Field(min_length=2, max_length=20)
-
-    @model_validator(mode="after")
-    def _matching_targets_and_versions(self) -> "MergeProposal":
-        if len(self.target_fact_ids) != len(set(self.target_fact_ids)):
-            raise ValueError("merge target facts must be unique")
-        if set(self.target_fact_ids) != set(self.expected_versions):
-            raise ValueError("merge requires an expected version for every target")
-        if any(version < 1 for version in self.expected_versions.values()):
-            raise ValueError("merge expected versions must be positive")
-        if not self.value.strip():
-            raise ValueError("merge requires a nonblank value")
-        return self
-
-
-class ForgetProposal(_ProposalBase):
+class ForgetProposal(_EvidenceProposalBase):
     operation: Literal[MemoryOperation.FORGET]
     value: None
     fact_id: StrictStr = Field(min_length=1, max_length=100)
@@ -92,7 +76,7 @@ class ForgetProposal(_ProposalBase):
 
 
 ReviewProposal: TypeAlias = Annotated[
-    AddProposal | CorrectProposal | MergeProposal | ForgetProposal,
+    AddProposal | CorrectProposal | ForgetProposal,
     Field(discriminator="operation"),
 ]
 

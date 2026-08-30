@@ -139,7 +139,10 @@ class ConversationRepository:
         current_version = int(current["version"]) if current else 0
         current_id = str(current["id"]) if current else None
         current_through = int(current["through_sequence"]) if current else 0
-        if current_version != expected_summary_version or current_id != expected_previous_summary_id:
+        if (
+            current_version != expected_summary_version
+            or current_id != expected_previous_summary_id
+        ):
             raise NotFoundError("conversation summary changed before compaction")
         if int(summary_payload["version"]) != current_version + 1:
             raise ValueError("conversation summary version must advance by one")

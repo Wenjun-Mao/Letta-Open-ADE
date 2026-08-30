@@ -26,10 +26,13 @@ dual-write behavior.
 The conversation model may call only its definition-selected curated tools:
 subject-bound `search_memory` and the deterministic preview `get_weather` fixture.
 It cannot write memory or select a subject. A separate reviewer proposes closed
-typed operations bound to user-authored evidence. When context budgeting omits
-unsummarized history, ADE generates a contiguous-prefix summary and atomically
-commits its source links, model/request identity, input hashes, assistant response,
-and memory revisions together.
+typed operations bound to user-authored evidence. ADE generates a contiguous-prefix
+summary before context assembly when more than 64 messages are unsummarized or
+their estimated size exceeds the recent-history budget. It retains up to the newest
+10 raw messages only when they fit; every older unsummarized message must be covered
+by the new summary, and an over-budget compaction fails closed. ADE atomically commits the summary's source
+links, model/request identity, policy/content/input hashes, assistant response, and
+memory revisions together.
 
 ## Local Preview
 
@@ -49,7 +52,10 @@ make native-runtime-up        # development-mode API + worker preview
 ```
 
 Development mode permits fingerprinted but unqualified local deployments and marks
-every run `unqualified`. Release mode rejects them. The preview has no ADE Web UI,
-legacy importer, dual-write path, arbitrary Python tools, or production-cutover
-approval. Disposable live checks must purge the definitions, subjects,
+every run `unqualified`. Release mode rejects them. ADE Web exposes only the focused
+Test Center qualification launcher; Agent Studio has no v3 product UI yet. The
+preview has no legacy importer, dual-write path, arbitrary Python tools, or
+production-cutover approval. Request-level traces for provider calls that fail before
+an attempt result is assembled, plus an explicit API-visible worker-health contract,
+remain release blockers. Disposable live checks must purge the definitions, subjects,
 conversations, runs, messages, and memories they create.

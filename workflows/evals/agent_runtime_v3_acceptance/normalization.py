@@ -36,10 +36,13 @@ class RecordedTurn:
 
 @dataclass(frozen=True)
 class RecordedEvent:
+    event_id: str
     run_id: str
     sequence: int
     event_type: str
     attempt: int | None
+    correlation_id: str
+    causation_id: str | None
     payload: dict[str, Any]
 
 
@@ -73,6 +76,7 @@ def normalize_case(
     case: object,
     turns: list[dict[str, Any]],
     subject_facts: dict[str, list[dict[str, Any]]],
+    auxiliary_turns: list[dict[str, Any]] | None = None,
 ) -> NormalizedCase:
     turn_records: list[RecordedTurn] = []
     event_records: list[RecordedEvent] = []
@@ -80,7 +84,10 @@ def normalize_case(
     failures: list[dict[str, Any]] = []
     statuses: list[str] = []
 
-    for item in turns:
+    staged_turns = [(False, item) for item in (auxiliary_turns or [])] + [
+        (True, item) for item in turns
+    ]
+    for scoreable, item in staged_turns:
         run = item["run"]
         run_id = _required(run, "id")
         status = str(run.get("status") or "unknown")
@@ -96,6 +103,8 @@ def normalize_case(
         event_records.extend(run_events)
         tool_records.extend(run_tools)
         failures.extend(run_failures)
+        if not scoreable:
+            continue
         assistant_content = _assistant_content(item.get("conversation_state") or {})
         turn_records.append(
             RecordedTurn(
@@ -184,9 +193,15 @@ def _normalize_run_events(
     model_events: set[tuple[str, str]] = set()
     usage: dict[str, int] = {}
     last_sequence = 0
+    seen_event_ids: set[str] = set()
     for event in events:
         payload = dict(event.data.get("payload") or {})
         actual_run_id = str(event.data.get("run_id") or "")
+        event_id = str(event.data.get("id") or event.event_id or "")
+        correlation_id = str(event.data.get("correlation_id") or "")
+        causation_id = (
+            str(event.data["causation_id"]) if event.data.get("causation_id") else None
+        )
         sequence = int(event.data.get("sequence") or 0)
         event_type = str(event.data.get("type") or event.event_type)
         event_types.append(event_type)
@@ -197,12 +212,23 @@ def _normalize_run_events(
                 {"kind": "event_sequence", "pass": False, "sequence": sequence}
             )
         last_sequence = sequence
+        if not event_id or event_id in seen_event_ids:
+            failures.append({"kind": "event_identity", "pass": False})
+        if correlation_id != run_id:
+            failures.append({"kind": "event_correlation", "pass": False})
+        if causation_id is not None and causation_id not in seen_event_ids:
+            failures.append({"kind": "event_causation", "pass": False})
+        if event_id:
+            seen_event_ids.add(event_id)
         recorded_events.append(
             RecordedEvent(
+                event_id=event_id,
                 run_id=run_id,
                 sequence=sequence,
                 event_type=event_type,
                 attempt=_optional_int(event.data.get("attempt")),
+                correlation_id=correlation_id,
+                causation_id=causation_id,
                 payload=payload,
             )
         )
@@ -214,15 +240,16 @@ def _normalize_run_events(
             model_events.add((role, event_type))
         if event_type == "tool.call.completed":
             name = str(payload.get("name") or payload.get("tool_name") or "")
+            succeeded = payload.get("succeeded", True) is True
             recorded_tools.append(
                 RecordedTool(
                     run_id=run_id,
                     name=name,
-                    succeeded=True,
+                    succeeded=succeeded,
                     payload=payload,
                 )
             )
-            score_tools.append(ToolObservation(name=name, succeeded=True))
+            score_tools.append(ToolObservation(name=name, succeeded=succeeded))
         if event_type == "run.completed":
             usage = _usage(payload.get("usage"))
 

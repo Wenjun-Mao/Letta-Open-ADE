@@ -70,7 +70,10 @@ def test_conversation_summaries_persist_generation_provenance() -> None:
     assert set(conversation_summaries.c.keys()) >= {
         "previous_summary_id",
         "model_key",
+        "model_fingerprint",
         "provider_request_id",
+        "content_sha256",
         "prompt_sha256",
         "input_sha256",
+        "policy_sha256",
     }

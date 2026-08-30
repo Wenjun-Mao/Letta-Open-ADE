@@ -97,3 +97,63 @@ def resolve_deployment(
         ),
         fingerprint_payload=dict(fingerprint),
     )
+
+
+def validate_definition_execution(
+    definition: dict[str, Any],
+    catalog: dict[str, Any],
+    *,
+    mode: Literal["release", "development"],
+) -> None:
+    if mode == "release":
+        if definition.get("qualification_state") != "qualified":
+            raise UnqualifiedDeployment(
+                "Release mode cannot execute an unqualified agent definition"
+            )
+        if "get_weather" in definition.get("tool_names", []):
+            raise RuntimeValidationError(
+                "get_weather is unavailable when the runtime is in release mode"
+            )
+    snapshots = definition.get("deployment_snapshot")
+    if not isinstance(snapshots, list):
+        raise RuntimeValidationError("Agent definition deployment snapshot is invalid")
+    by_role = {
+        str(snapshot.get("role")): snapshot
+        for snapshot in snapshots
+        if isinstance(snapshot, dict)
+    }
+    expected_roles = {"conversation", "reviewer", "retriever"}
+    if set(by_role) != expected_roles:
+        raise RuntimeValidationError(
+            "Agent definition must bind conversation, reviewer, and retriever deployments"
+        )
+    roles: tuple[DeploymentRole, ...] = (
+        "conversation",
+        "reviewer",
+        "retriever",
+    )
+    for role in roles:
+        stored = by_role[role]
+        current = resolve_deployment(
+            catalog,
+            route_alias=str(stored.get("route_alias") or ""),
+            role=role,
+            mode=mode,
+        )
+        if (
+            current.deployment_id != str(stored.get("deployment_id") or "")
+            or current.fingerprint != str(stored.get("fingerprint") or "")
+            or current.fingerprint_payload != stored.get("fingerprint_payload")
+        ):
+            raise UnqualifiedDeployment(
+                f"Agent definition {role} deployment fingerprint is stale"
+            )
+
+
+def definition_deployment(
+    definition: dict[str, Any], role: DeploymentRole
+) -> dict[str, Any]:
+    for snapshot in definition.get("deployment_snapshot", []):
+        if isinstance(snapshot, dict) and snapshot.get("role") == role:
+            return snapshot
+    raise RuntimeValidationError(f"Agent definition has no {role} deployment snapshot")

@@ -6,12 +6,16 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from .compaction import (
+    COMPACTION_RESPONSE_SCHEMA,
     COMPACTION_SYSTEM,
     CompactionPlan,
     ModelCompaction,
+    compaction_content_sha256,
     compaction_input_sha256,
     compaction_model_input_json,
+    compaction_policy_sha256,
     compaction_prompt_sha256,
+    parse_compaction_response,
 )
 from .errors import RuntimeValidationError
 from .router_transport import RouterTransport
@@ -65,14 +69,18 @@ class ToolResult:
     arguments: dict[str, Any]
     content: dict[str, Any]
     result_count: int = 0
+    succeeded: bool = True
+    error_type: str | None = None
 
 
 ToolHandler = Callable[[dict[str, Any]], Awaitable[ToolResult]]
+ArgumentValidator = Callable[[dict[str, Any]], dict[str, Any]]
 
 
 @dataclass(frozen=True)
 class CuratedTool:
     definition: dict[str, Any]
+    validate_arguments: ArgumentValidator
     handler: ToolHandler
 
     @property
@@ -87,7 +95,7 @@ class ExecutorResult:
     model_request_count: int
     tool_events: list[dict[str, Any]]
     finish_reason: str
-    provider_request_ids: list[str]
+    provider_request_ids: list[str | None]
 
 
 def curated_tools(
@@ -99,7 +107,9 @@ def curated_tools(
 
     requested = tuple(str(name) for name in names)
     if len(requested) != len(set(requested)):
-        raise RuntimeValidationError("Conversation tool names must not contain duplicates")
+        raise RuntimeValidationError(
+            "Conversation tool names must not contain duplicates"
+        )
     available: dict[str, CuratedTool] = {"get_weather": _weather_tool()}
     if search_memory is not None:
         available["search_memory"] = _search_memory_tool(search_memory)
@@ -127,15 +137,19 @@ class ConversationExecutor:
         search_memory: SearchMemoryHandler | None = None,
         enable_search_memory: bool = True,
     ) -> ExecutorResult:
-        enabled_tools = dict(tools) if tools is not None else curated_tools(
-            ("search_memory",) if enable_search_memory else (),
-            search_memory=search_memory,
+        enabled_tools = (
+            dict(tools)
+            if tools is not None
+            else curated_tools(
+                ("search_memory",) if enable_search_memory else (),
+                search_memory=search_memory,
+            )
         )
         _validate_registry(enabled_tools)
         working_messages = [dict(message) for message in messages]
         total_usage: dict[str, int] = {}
         tool_events: list[dict[str, Any]] = []
-        request_ids: list[str] = []
+        request_ids: list[str | None] = []
         for request_number in range(1, max_model_requests + 1):
             payload: dict[str, Any] = {
                 "model": model_key,
@@ -154,24 +168,28 @@ class ConversationExecutor:
                 payload, timeout_seconds=timeout_seconds
             )
             _merge_usage(total_usage, response.get("usage"))
-            request_id = str(response.get("id", "") or "")
-            if request_id:
-                request_ids.append(request_id)
+            request_id = str(response.get("id", "") or "") or None
+            request_ids.append(request_id)
             message, finish_reason = _first_choice(response)
             tool_calls = message.get("tool_calls")
             if isinstance(tool_calls, list) and tool_calls:
                 if not enabled_tools:
-                    raise RuntimeValidationError("Conversation model called a tool that is not enabled")
+                    raise RuntimeValidationError(
+                        "Conversation model called a tool that is not enabled"
+                    )
                 working_messages.append(message)
                 for raw_call in tool_calls:
                     call_id, name, arguments = _parse_tool_call(raw_call, enabled_tools)
                     result = await _execute_tool(enabled_tools[name], arguments)
                     tool_events.append(
                         {
+                            "request_number": request_number,
                             "call_id": call_id,
                             "name": name,
                             "arguments": result.arguments,
                             "result_count": result.result_count,
+                            "succeeded": result.succeeded,
+                            "error_type": result.error_type,
                         }
                     )
                     working_messages.append(
@@ -204,9 +222,11 @@ class ConversationExecutor:
         self,
         *,
         model_key: str,
+        model_fingerprint: str,
         plan: CompactionPlan,
         timeout_seconds: float,
         max_output_tokens: int,
+        summary_token_budget: int,
     ) -> ModelCompaction:
         response = await self.transport.chat_completion(
             {
@@ -221,13 +241,23 @@ class ConversationExecutor:
                 "max_tokens": max(256, min(max_output_tokens, 1024)),
                 "stream": False,
                 "temperature": 0,
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "ade_conversation_compaction",
+                        "strict": True,
+                        "schema": COMPACTION_RESPONSE_SCHEMA,
+                    },
+                },
+                "chat_template_kwargs": {"enable_thinking": False},
             },
             timeout_seconds=timeout_seconds,
         )
         message, _ = _first_choice(response)
-        content = str(message.get("content", "") or "").strip()
-        if not content:
-            raise RuntimeValidationError("Conversation compaction returned no summary text")
+        content = parse_compaction_response(
+            str(message.get("content", "") or "").strip(),
+            summary_token_budget=summary_token_budget,
+        )
         usage: dict[str, int] = {}
         _merge_usage(usage, response.get("usage"))
         provider_request_id = str(response.get("id", "") or "") or None
@@ -235,45 +265,35 @@ class ConversationExecutor:
             plan=plan,
             content=content,
             model_key=model_key,
+            model_fingerprint=model_fingerprint,
             provider_request_id=provider_request_id,
+            content_sha256=compaction_content_sha256(content),
             prompt_sha256=compaction_prompt_sha256(),
             input_sha256=compaction_input_sha256(plan),
+            policy_sha256=compaction_policy_sha256(),
             usage=usage,
         )
 
 
 def _search_memory_tool(search_memory: SearchMemoryHandler) -> CuratedTool:
     async def handler(arguments: dict[str, Any]) -> ToolResult:
-        query = str(arguments.get("query", "")).strip()
-        if not query:
-            raise ValueError("search_memory requires a non-empty query")
-        unknown = set(arguments) - {"query", "limit"}
-        if unknown:
-            raise ValueError(f"search_memory received unexpected arguments: {sorted(unknown)}")
-        raw_limit = arguments.get("limit", 8)
-        if isinstance(raw_limit, bool) or not isinstance(raw_limit, int):
-            raise ValueError("search_memory limit must be an integer")
-        if not 1 <= raw_limit <= 20:
-            raise ValueError("search_memory limit must be between 1 and 20")
-        normalized = {"query": query, "limit": raw_limit}
-        facts = await search_memory(query, raw_limit)
+        facts = await search_memory(arguments["query"], arguments["limit"])
         return ToolResult(
-            arguments=normalized,
+            arguments=arguments,
             content={"ok": True, "facts": facts},
             result_count=len(facts),
         )
 
-    return CuratedTool(definition=SEARCH_MEMORY_TOOL, handler=handler)
+    return CuratedTool(
+        definition=SEARCH_MEMORY_TOOL,
+        validate_arguments=_validate_search_memory_arguments,
+        handler=handler,
+    )
 
 
 def _weather_tool() -> CuratedTool:
     async def handler(arguments: dict[str, Any]) -> ToolResult:
-        unknown = set(arguments) - {"city"}
-        if unknown:
-            raise ValueError(f"get_weather received unexpected arguments: {sorted(unknown)}")
-        city = str(arguments.get("city", "")).strip()
-        if not city:
-            raise ValueError("get_weather requires a non-empty city")
+        city = arguments["city"]
         if city.casefold() in {"fail_city", "failure", "故障城市"}:
             raise RuntimeError("deterministic weather provider failure")
         weather = _WEATHER_FIXTURES.get(city.casefold()) or {
@@ -285,27 +305,66 @@ def _weather_tool() -> CuratedTool:
             content={"ok": True, "city": city, **weather},
         )
 
-    return CuratedTool(definition=WEATHER_TOOL, handler=handler)
+    return CuratedTool(
+        definition=WEATHER_TOOL,
+        validate_arguments=_validate_weather_arguments,
+        handler=handler,
+    )
 
 
 async def _execute_tool(tool: CuratedTool, arguments: dict[str, Any]) -> ToolResult:
     try:
-        return await tool.handler(arguments)
+        validated = tool.validate_arguments(arguments)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeValidationError(
+            f"{tool.name} arguments failed closed validation: {exc}"
+        ) from exc
+    try:
+        return await tool.handler(validated)
     except Exception as exc:
         return ToolResult(
-            arguments=dict(arguments),
+            arguments=validated,
             content={
                 "ok": False,
-                "error_type": type(exc).__name__,
-                "error": str(exc),
+                "error_type": "provider_failure",
+                "error": f"{tool.name} provider is unavailable",
             },
+            succeeded=False,
+            error_type=type(exc).__name__,
         )
+
+
+def _validate_search_memory_arguments(arguments: dict[str, Any]) -> dict[str, Any]:
+    unknown = set(arguments) - {"query", "limit"}
+    if unknown:
+        raise ValueError(f"unexpected fields: {sorted(unknown)}")
+    query = arguments.get("query")
+    if not isinstance(query, str) or not query.strip():
+        raise ValueError("query must be a non-empty string")
+    raw_limit = arguments.get("limit", 8)
+    if isinstance(raw_limit, bool) or not isinstance(raw_limit, int):
+        raise ValueError("limit must be an integer")
+    if not 1 <= raw_limit <= 20:
+        raise ValueError("limit must be between 1 and 20")
+    return {"query": query.strip(), "limit": raw_limit}
+
+
+def _validate_weather_arguments(arguments: dict[str, Any]) -> dict[str, Any]:
+    unknown = set(arguments) - {"city"}
+    if unknown:
+        raise ValueError(f"unexpected fields: {sorted(unknown)}")
+    city = arguments.get("city")
+    if not isinstance(city, str) or not city.strip():
+        raise ValueError("city must be a non-empty string")
+    return {"city": city.strip()}
 
 
 def _validate_registry(tools: Mapping[str, CuratedTool]) -> None:
     for name, tool in tools.items():
         if name != tool.name:
-            raise RuntimeValidationError("Curated tool registry key does not match tool schema")
+            raise RuntimeValidationError(
+                "Curated tool registry key does not match tool schema"
+            )
 
 
 def _first_choice(response: dict[str, Any]) -> tuple[dict[str, Any], str]:
@@ -330,10 +389,16 @@ def _parse_tool_call(
         raise RuntimeValidationError("Tool call requires id and function")
     name = str(function.get("name", "") or "").strip()
     if name not in enabled_tools:
-        raise RuntimeValidationError(f"Tool '{name}' is not enabled for this conversation")
+        raise RuntimeValidationError(
+            f"Tool '{name}' is not enabled for this conversation"
+        )
     raw_arguments = function.get("arguments", "{}")
     try:
-        arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else raw_arguments
+        arguments = (
+            json.loads(raw_arguments)
+            if isinstance(raw_arguments, str)
+            else raw_arguments
+        )
     except json.JSONDecodeError as exc:
         raise RuntimeValidationError(f"{name} arguments are invalid JSON") from exc
     if not isinstance(arguments, dict):

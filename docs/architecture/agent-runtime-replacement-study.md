@@ -271,7 +271,9 @@ and run provenance.
 
 - `add`: creates one active fact.
 - `correct`: advances one fact and supersedes its prior value.
-- `merge`: supersedes two or more active facts and creates one combined fact.
+- `merge` (deferred): requires a typed, server-owned rule for combining distinct
+  facts. It is not exposed by the initial v3 reviewer because one active fact per
+  canonical key makes a generic same-key merge unreachable.
 - `forget`: advances the fact to an auditable forgotten tombstone.
 
 Only explicit durable user facts are committed by default. Inferences remain
@@ -434,11 +436,10 @@ messages. Validation proceeds in this order:
 4. Resolve the requested fact type/entity through the versioned registry; validate
    value shape, cardinality, aliases, size, and operation-specific required fields.
 5. For `correct`/`forget`, lock and verify `fact_id` plus `expected_version`.
-6. For `merge`, verify every target belongs to the subject and every version matches.
-7. Prove a new value is a lossless canonicalization of current evidence plus any
+6. Prove a new value is a lossless canonicalization of current evidence plus any
    explicitly referenced prior facts. Store original-language values by default.
-8. Validate the complete proposal batch, including duplicate/cardinality conflicts.
-9. Commit valid revisions only with the successful assistant message and terminal
+7. Validate the complete proposal batch, including duplicate/cardinality conflicts.
+8. Commit valid revisions only with the successful assistant message and terminal
    run events. Any reviewer or proposal failure aborts the whole candidate turn.
 
 Conflicts are not silently overwritten. A subject write conflict may trigger one
@@ -749,7 +750,8 @@ execute a separate coordinated project rename.
 
 Replacement work may not cut over until all are true:
 
-- Memory add/correct/merge/forget correctness and provenance pass.
+- Memory add/correct/forget correctness and provenance pass. A future typed merge
+  operation requires its own accepted contract and qualification cases.
 - Cross-agent sharing and cross-subject isolation pass under concurrency.
 - Exact timeout, cancellation, idempotency, and retry ownership pass.
 - Tool calls/results correlate and failures preserve complete traces.

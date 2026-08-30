@@ -30,8 +30,11 @@ ADE will eventually own a fresh conversational agent runtime with these boundari
   replaceable derivatives.
 - An immutable agent-definition version is reusable across memory subjects.
 - A conversation explicitly binds one definition version to one subject.
-- Durable memory uses typed `add`, `correct`, `merge`, and `forget` operations with
+- Durable memory initially uses typed `add`, `correct`, and `forget` operations with
   source-message spans, hashes, optimistic versions, and auditable tombstones.
+- `merge` is deferred until the fact registry defines a typed rule whose result can
+  be derived and validated server-side. The active-key uniqueness invariant makes a
+  generic same-key merge unreachable, so exposing it would be a misleading contract.
 - ADE resolves memory keys through a versioned fact-type registry with value shape,
   cardinality, aliases, and entity-binding rules; models cannot invent persisted
   key namespaces.
@@ -93,7 +96,23 @@ passing complete rounds. Focused diagnostics never count as qualification rounds
   event envelope.
 - The current user message is never silently truncated; model-specific token
   accounting and output reservation occur before provider calls.
+- Unsummarized history is never silently omitted. Compaction retains at most the
+  newest ten raw messages that fit the recent-history budget, binds every older
+  message to a contiguous summary boundary, and fails before conversation generation
+  if either the compaction request or the remaining raw suffix cannot fit.
 - The model cannot supply a subject ID or cross a server-bound subject boundary.
+
+## Preview Qualification Blockers
+
+- Successful attempts persist causal model, tool, reviewer, compaction, memory, and
+  terminal events. A provider request that fails before an `AttemptResult` exists is
+  currently represented only by `attempt.failed` and `run.failed`; request-level
+  failure events and any preceding partial trace must be persisted before a runtime
+  deployment can be considered release-ready.
+- Deployment metadata proves model identity and qualification state, not worker
+  liveness. Qualification must verify that both the v3 API and a lease-heartbeating
+  worker are running; release readiness requires an explicit operational health
+  contract rather than assuming that an enabled API implies a worker is available.
 
 ## Rejected Alternatives
 

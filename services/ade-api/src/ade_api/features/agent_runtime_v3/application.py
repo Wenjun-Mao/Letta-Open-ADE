@@ -48,7 +48,11 @@ class AgentRuntimeV3Application:
             router_transport=router_transport,
         )
         self.resources = ResourceService(database)
-        self.runs = RunService(database)
+        self.runs = RunService(
+            database=database,
+            settings=settings,
+            router_transport=router_transport,
+        )
 
     async def aclose(self) -> None:
         await self.engine.dispose()

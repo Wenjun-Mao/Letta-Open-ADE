@@ -119,6 +119,10 @@ class AttemptController:
             return
         async with self.engine.begin() as connection:
             runs = RunRepository(connection)
+            if not await ConversationLeaseRepository(connection).owns(
+                claim.lease_token, str(claim.run["id"])
+            ):
+                raise LeaseLost("conversation lease was lost before attempt failure")
             await runs.finish_attempt(
                 attempt_id,
                 status="cancelled" if isinstance(exc, RunCancelled) else "failed",

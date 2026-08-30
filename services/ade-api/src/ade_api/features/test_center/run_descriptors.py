@@ -106,21 +106,26 @@ def canonicalize_agent_runtime_v3_case_keys(
     """Validate diagnostic cases and preserve the runner's canonical ordering."""
 
     if not isinstance(case_keys, (list, tuple)):
-        raise ValueError("agent runtime v3 case_keys must be a list of canonical case keys")
+        raise ValueError(
+            "agent runtime v3 case_keys must be a list of canonical case keys"
+        )
     if not case_keys:
         raise ValueError("agent runtime v3 case_keys must not be empty")
     if not all(isinstance(case_key, str) for case_key in case_keys):
-        raise ValueError("agent runtime v3 case_keys must contain canonical string values")
+        raise ValueError(
+            "agent runtime v3 case_keys must contain canonical string values"
+        )
 
     selected_keys = tuple(case_keys)
     if len(selected_keys) != len(set(selected_keys)):
         raise ValueError("agent runtime v3 case_keys must not contain duplicates")
 
-    unknown_keys = sorted(set(selected_keys).difference(AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS))
+    unknown_keys = sorted(
+        set(selected_keys).difference(AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS)
+    )
     if unknown_keys:
         raise ValueError(
-            "agent runtime v3 case_keys must be canonical: "
-            + ", ".join(unknown_keys)
+            "agent runtime v3 case_keys must be canonical: " + ", ".join(unknown_keys)
         )
 
     selected = set(selected_keys)
@@ -129,6 +134,7 @@ def canonicalize_agent_runtime_v3_case_keys(
         for case_key in AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS
         if case_key in selected
     )
+
 
 # These mirror the runner TOML so Test Center can render an active run before
 # the runner has written its effective config into the summary artifact.
@@ -234,6 +240,8 @@ def _build_agent_runtime_v3_acceptance(
     if case_keys:
         for case_key in case_keys:
             command.extend(["--case-key", case_key])
+        _append_option(command, "--timeout-seconds", options.get("timeout_seconds"))
+        _append_option(command, "--retry-count", options.get("retry_count"))
         # Focused runs are diagnostics. Their command cannot satisfy promotion
         # qualification requirements, regardless of the submitted form state.
         command.extend(["--rounds", "1", "--no-include-llama-compatibility"])

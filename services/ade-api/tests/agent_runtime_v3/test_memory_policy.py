@@ -169,7 +169,6 @@ def test_correction_requires_the_exact_optimistic_version() -> None:
             decision=_decision(
                 {
                     "operation": "correct",
-                    "fact_type": "pet.name",
                     "value": "Rocky",
                     "evidence_quote": "Rocky",
                     "fact_id": FACT_ID,
@@ -189,7 +188,6 @@ def test_forget_requires_explicit_removal_language() -> None:
             decision=_decision(
                 {
                     "operation": "forget",
-                    "fact_type": "pet.name",
                     "value": None,
                     "evidence_quote": "Rocky",
                     "fact_id": FACT_ID,
@@ -198,6 +196,61 @@ def test_forget_requires_explicit_removal_language() -> None:
             ),
             subject_id=SUBJECT_ID,
             current_user_message=MESSAGE,
+            active_facts=FACTS,
+            entities=ENTITIES,
+        )
+
+
+def test_correction_derives_stored_fact_identity() -> None:
+    prepared = prepare_memory_review(
+        decision=_decision(
+            {
+                "operation": "correct",
+                "value": "Rocky",
+                "evidence_quote": "Rocky",
+                "fact_id": FACT_ID,
+                "expected_version": 1,
+            }
+        ),
+        subject_id=SUBJECT_ID,
+        current_user_message=MESSAGE,
+        active_facts=FACTS,
+        entities=ENTITIES,
+    )
+
+    operation = prepared.operations[0]
+    assert operation.fact_type == "pet.name"
+    assert operation.qualifier is None
+    assert operation.entity_id == PET_ID
+    assert operation.normalized_key == f"pet.name|{PET_ID}"
+
+
+def test_forget_then_add_same_key_is_rejected_instead_of_becoming_correction() -> None:
+    message = {**MESSAGE, "content": "Forget Rocky, my pet is now called Rocky."}
+    with pytest.raises(RuntimeValidationError, match="forget and recreate"):
+        prepare_memory_review(
+            decision=ReviewDecision.model_validate(
+                {
+                    "proposals": [
+                        {
+                            "operation": "forget",
+                            "value": None,
+                            "evidence_quote": "Forget Rocky",
+                            "fact_id": FACT_ID,
+                            "expected_version": 1,
+                        },
+                        {
+                            "operation": "add",
+                            "fact_type": "pet.name",
+                            "value": "Rocky",
+                            "evidence_quote": "called Rocky",
+                            "entity_ref": f"existing:{PET_ID}",
+                        },
+                    ]
+                }
+            ),
+            subject_id=SUBJECT_ID,
+            current_user_message=message,
             active_facts=FACTS,
             entities=ENTITIES,
         )

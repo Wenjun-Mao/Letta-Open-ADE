@@ -28,7 +28,6 @@ class RunStatus(StrEnum):
 class MemoryOperation(StrEnum):
     ADD = "add"
     CORRECT = "correct"
-    MERGE = "merge"
     FORGET = "forget"
 
 

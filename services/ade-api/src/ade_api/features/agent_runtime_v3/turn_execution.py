@@ -6,14 +6,22 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from ade_api.platform.settings import AdeApiSettings
+
 from .compaction import ModelCompaction, plan_compaction
-from .context import BuiltContext, ContextBudget, build_context
+from .context import (
+    BuiltContext,
+    build_context,
+    context_budget_from_deployment,
+    validate_current_user_message,
+)
 from .embeddings import (
     AUTOMATIC_MAXIMUM_COSINE_DISTANCE,
     RETRIEVAL_POLICY_VERSION,
     EmbeddingClient,
     qwen_query_text,
 )
+from .deployments import validate_definition_execution
 from .errors import RuntimeValidationError
 from .executor import ConversationExecutor, ExecutorResult, curated_tools
 from .memory_policy import PreparedMemoryReview, prepare_memory_review
@@ -39,9 +47,16 @@ class AttemptResult:
 
 
 class TurnExecution:
-    def __init__(self, *, engine: AsyncEngine, transport: RouterTransport) -> None:
+    def __init__(
+        self,
+        *,
+        engine: AsyncEngine,
+        transport: RouterTransport,
+        settings: AdeApiSettings,
+    ) -> None:
         self.engine = engine
         self.transport = transport
+        self.settings = settings
         self.embeddings = EmbeddingClient(transport)
         self.executor = ConversationExecutor(transport)
         self.reviewer = MemoryReviewer(transport)
@@ -49,6 +64,17 @@ class TurnExecution:
     async def execute(self, run: dict[str, Any], *, deadline: float) -> AttemptResult:
         state = await self._load_state(run)
         definition = state["definition"]
+        catalog = await self.transport.catalog(
+            timeout_seconds=min(
+                _remaining(deadline),
+                self.settings.model_discovery_timeout_seconds,
+            )
+        )
+        validate_definition_execution(
+            definition,
+            catalog,
+            mode=self.settings.agent_runtime_v3_mode,
+        )
         conversation = state["conversation"]
         subject_id = str(conversation["memory_subject_id"])
         deployments = {
@@ -58,6 +84,37 @@ class TurnExecution:
         reviewer_deployment = _required_deployment(deployments, "reviewer")
         retriever_deployment = _required_deployment(deployments, "retriever")
         current_user = _current_user_message(state["messages"], str(run["id"]))
+        current_sequence = int(current_user["sequence"])
+        summary = state["summary"]
+        budget = context_budget_from_deployment(conversation_deployment)
+        try:
+            validate_current_user_message(
+                system_prompt=str(definition["prompt_content"]),
+                persona=str(definition["persona_content"]),
+                content=str(current_user["content"]),
+                budget=budget,
+            )
+        except ValueError as exc:
+            raise RuntimeValidationError(str(exc)) from exc
+        compaction_plan = plan_compaction(
+            messages=state["messages"],
+            current_user_message_id=str(current_user["id"]),
+            summary=summary,
+            recent_token_budget=budget.recent_tokens,
+            compaction_input_token_budget=budget.input_limit,
+        )
+        compaction = (
+            await self.executor.compact(
+                model_key=str(conversation_deployment["route_alias"]),
+                model_fingerprint=str(conversation_deployment["fingerprint"]),
+                plan=compaction_plan,
+                timeout_seconds=_remaining(deadline),
+                max_output_tokens=budget.max_output_tokens,
+                summary_token_budget=budget.summary_tokens,
+            )
+            if compaction_plan is not None
+            else None
+        )
 
         query_vector = (
             await self.embeddings.embed(
@@ -78,21 +135,23 @@ class TurnExecution:
             key=lambda item: (item["updated_at"], str(item["id"])),
             reverse=True,
         )
-        summary = state["summary"]
         summary_boundary = int(summary["through_sequence"]) if summary else 0
+        summary_content = str(summary["content"]) if summary else ""
+        if compaction is not None:
+            summary_boundary = compaction.plan.through_sequence
+            summary_content = compaction.content
         recent_messages = [
             message
             for message in state["messages"]
             if int(message["sequence"]) > summary_boundary
-            and str(message["id"]) != str(current_user["id"])
+            and int(message["sequence"]) < current_sequence
         ]
-        budget = _context_budget(conversation_deployment)
         try:
             built_context = build_context(
                 system_prompt=str(definition["prompt_content"]),
                 persona=str(definition["persona_content"]),
                 active_facts=[_context_fact(item) for item in active_facts[:12]],
-                conversation_summary=str(summary["content"]) if summary else "",
+                conversation_summary=summary_content,
                 retrieved_facts=[_context_fact(item) for item in retrieved],
                 recent_messages=recent_messages,
                 current_user_content=str(current_user["content"]),
@@ -100,6 +159,10 @@ class TurnExecution:
             )
         except ValueError as exc:
             raise RuntimeValidationError(str(exc)) from exc
+        if built_context.omitted_message_ids:
+            raise RuntimeValidationError(
+                "Context construction omitted unsummarized conversation history"
+            )
 
         async def search_memory(query: str, limit: int) -> list[dict[str, Any]]:
             vector = (
@@ -132,7 +195,7 @@ class TurnExecution:
         recent_users = [
             message
             for message in state["messages"]
-            if message["role"] == "user" and message["id"] != current_user["id"]
+            if message["role"] == "user" and int(message["sequence"]) < current_sequence
         ][-8:]
         reviewer_result = await self.reviewer.review(
             model_key=str(reviewer_deployment["route_alias"]),
@@ -159,7 +222,7 @@ class TurnExecution:
         embeddable = [
             operation
             for operation in prepared.operations
-            if operation.proposal.value is not None
+            if operation.value is not None
         ]
         vectors = await self.embeddings.embed(
             model_key=str(retriever_deployment["route_alias"]),
@@ -168,7 +231,7 @@ class TurnExecution:
         )
         vector_iterator = iter(vectors)
         operation_embeddings = tuple(
-            None if operation.proposal.value is None else next(vector_iterator)
+            None if operation.value is None else next(vector_iterator)
             for operation in prepared.operations
         )
         expected_dimensions = _embedding_dimensions(retriever_deployment)
@@ -177,22 +240,6 @@ class TurnExecution:
             raise RuntimeValidationError(
                 "Embedding dimensions do not match the deployment fingerprint"
             )
-        compaction_plan = plan_compaction(
-            messages=state["messages"],
-            current_user_message_id=str(current_user["id"]),
-            summary=summary,
-            omitted_message_ids=built_context.omitted_message_ids,
-        )
-        compaction = (
-            await self.executor.compact(
-                model_key=str(conversation_deployment["route_alias"]),
-                plan=compaction_plan,
-                timeout_seconds=_remaining(deadline),
-                max_output_tokens=budget.max_output_tokens,
-            )
-            if compaction_plan is not None
-            else None
-        )
         return AttemptResult(
             assistant_text=executor_result.assistant_text,
             context=built_context,
@@ -270,27 +317,6 @@ def _current_user_message(
     return matches[0]
 
 
-def _context_budget(deployment: dict[str, Any]) -> ContextBudget:
-    context = dict(deployment.get("fingerprint_payload", {})).get(
-        "context_settings", {}
-    )
-    if not isinstance(context, dict):
-        context = {}
-    context_window = int(
-        context.get("total_tokens") or context.get("context_tokens") or 16_384
-    )
-    max_output = int(
-        context.get("max_output_tokens")
-        or context.get("response_reserve_tokens")
-        or 4_096
-    )
-    return ContextBudget(
-        context_window=max(2_048, context_window),
-        max_output_tokens=max(256, min(max_output, context_window // 2)),
-        tool_schema_tokens=256,
-    )
-
-
 def _max_model_requests(deployment: dict[str, Any]) -> int:
     context = dict(deployment.get("fingerprint_payload", {})).get(
         "context_settings", {}
@@ -329,9 +355,9 @@ def _tool_fact(fact: dict[str, Any]) -> dict[str, Any]:
 
 def _fact_document(operation) -> str:
     return (
-        f"fact_type: {operation.proposal.fact_type}\n"
-        f"qualifier: {operation.proposal.qualifier or ''}\n"
-        f"value: {operation.proposal.value or ''}"
+        f"fact_type: {operation.fact_type}\n"
+        f"qualifier: {operation.qualifier or ''}\n"
+        f"value: {operation.value or ''}"
     )
 
 

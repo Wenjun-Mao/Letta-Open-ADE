@@ -51,7 +51,6 @@ def test_review_operation_shapes_are_closed_and_explicit() -> None:
                 "proposals": [
                     {
                         "operation": "correct",
-                        "fact_type": "person.name",
                         "fact_id": "fact-1",
                         "value": "张伟",
                         "evidence_quote": "我叫张伟",
@@ -83,7 +82,6 @@ def test_review_operation_versions_reject_coercion() -> None:
                 "proposals": [
                     {
                         "operation": "correct",
-                        "fact_type": "person.name",
                         "fact_id": "fact-1",
                         "expected_version": "1",
                         "value": "张伟",
@@ -93,16 +91,16 @@ def test_review_operation_versions_reject_coercion() -> None:
             }
         )
 
-    with pytest.raises(RuntimeValidationError, match="expected_versions"):
+
+def test_review_rejects_deferred_merge_operation() -> None:
+    with pytest.raises(RuntimeValidationError, match="Input tag 'merge'"):
         parse_review_decision(
             {
                 "proposals": [
                     {
                         "operation": "merge",
-                        "fact_type": "person.preference",
-                        "qualifier": "music",
                         "target_fact_ids": ["fact-1", "fact-2"],
-                        "expected_versions": {"fact-1": "1", "fact-2": 1},
+                        "expected_versions": {"fact-1": 1, "fact-2": 1},
                         "value": "jazz",
                         "evidence_quote": "jazz",
                     }
@@ -129,6 +127,32 @@ def test_review_schema_discriminates_operation_specific_shapes() -> None:
         }
     ).proposals[0]
     assert proposal.operation.value == "add"
+
+
+@pytest.mark.parametrize("operation", ["correct", "forget"])
+def test_existing_fact_operations_reject_model_selected_metadata(
+    operation: str,
+) -> None:
+    payloads = {
+        "correct": {
+            "operation": "correct",
+            "fact_id": "fact-1",
+            "expected_version": 1,
+            "value": "张伟",
+            "evidence_quote": "我叫张伟",
+        },
+        "forget": {
+            "operation": "forget",
+            "fact_id": "fact-1",
+            "expected_version": 1,
+            "value": None,
+            "evidence_quote": "forget jazz",
+        },
+    }
+    proposal = {**payloads[operation], "fact_type": "person.name"}
+
+    with pytest.raises(RuntimeValidationError, match="fact_type"):
+        parse_review_decision({"proposals": [proposal]})
 
 
 def test_evidence_must_bind_one_user_authored_span() -> None:

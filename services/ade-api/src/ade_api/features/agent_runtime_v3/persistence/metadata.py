@@ -496,9 +496,12 @@ conversation_summaries = Table(
     Column("run_id", UUID_ID, nullable=False),
     Column("previous_summary_id", UUID_ID, nullable=True),
     Column("model_key", String(300), nullable=False),
+    Column("model_fingerprint", String(64), nullable=False),
     Column("provider_request_id", String(512), nullable=True),
+    Column("content_sha256", String(64), nullable=False),
     Column("prompt_sha256", String(64), nullable=False),
     Column("input_sha256", String(64), nullable=False),
+    Column("policy_sha256", String(64), nullable=False),
     Column("created_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
     PrimaryKeyConstraint("id", name="pk_conversation_summaries"),
     ForeignKeyConstraint(

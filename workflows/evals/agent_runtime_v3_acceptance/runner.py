@@ -29,6 +29,7 @@ class CaseExecution:
     facts: tuple[Any, ...]
     infrastructure: dict[str, Any]
     resources: ResourceScope
+    setup_run_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -71,6 +72,7 @@ async def execute_case(
     subject_external_keys: list[str] = []
     fingerprints: dict[str, str] = {}
     deployment_snapshots: list[dict[str, Any]] = []
+    definition_tools = _case_tool_names(case)
     for agent_key in tuple(getattr(case, "agent_keys", ("primary",))):
         definition_key = _resource_key(
             namespace, str(getattr(case, "key")), f"agent-{agent_key}"
@@ -88,6 +90,7 @@ async def execute_case(
                 model_key=conversation_model_key,
                 reviewer_model_key=reviewer_model_key,
                 embedding_model_key=embedding_model_key,
+                tool_names=definition_tools,
             ),
         )
         fingerprints.update(_deployment_fingerprints(created))
@@ -130,11 +133,12 @@ async def execute_case(
 
     # v3 deliberately has no mutable seed endpoint. Setup is expressed as normal
     # user turns so the black-box workflow does not bypass the runtime contract.
+    auxiliary_turns: list[dict[str, Any]] = []
     for fact in tuple(getattr(case, "initial_facts", ())):
         subject_key = str(getattr(fact, "subject_key", "primary"))
         conversation_key = _first_conversation_for_subject(case, subject_key)
         content = _natural_fact_setup_message(fact)
-        await _complete_setup_turn(
+        setup_run, setup_events = await _complete_setup_turn(
             client,
             conversations[conversation_key],
             content,
@@ -142,6 +146,13 @@ async def execute_case(
             timeout_seconds,
             retry_count,
             stage="initial_fact_setup",
+        )
+        auxiliary_turns.append(
+            {
+                "conversation_key": conversation_key,
+                "run": setup_run,
+                "events": setup_events,
+            }
         )
         response = await _run_stage(
             "initial_fact_memory_verification",
@@ -156,7 +167,7 @@ async def execute_case(
         conversation_key = str(getattr(prelude, "conversation_key"))
         for number in range(1, int(getattr(prelude, "count", 0)) + 1):
             template = str(getattr(prelude, "user_template"))
-            await _complete_setup_turn(
+            setup_run, setup_events = await _complete_setup_turn(
                 client,
                 conversations[conversation_key],
                 template.format(index=number),
@@ -164,6 +175,13 @@ async def execute_case(
                 timeout_seconds,
                 retry_count,
                 stage="prelude_setup",
+            )
+            auxiliary_turns.append(
+                {
+                    "conversation_key": conversation_key,
+                    "run": setup_run,
+                    "events": setup_events,
+                }
             )
 
     completed_turns: list[dict[str, Any]] = []
@@ -206,7 +224,12 @@ async def execute_case(
         )
         values = response.get("facts")
         facts[subject_key] = list(values) if isinstance(values, list) else []
-    normalized = _normalize_case(case=case, turns=completed_turns, subject_facts=facts)
+    normalized = _normalize_case(
+        case=case,
+        turns=completed_turns,
+        auxiliary_turns=auxiliary_turns,
+        subject_facts=facts,
+    )
     capability_checks = _capability_checks(case, normalized.events, completed_turns)
     capability_failures = [check for check in capability_checks if not check["pass"]]
     infrastructure = {
@@ -236,6 +259,7 @@ async def execute_case(
         facts=normalized.facts,
         infrastructure=infrastructure,
         resources=scope,
+        setup_run_ids=tuple(str(item["run"]["id"]) for item in auxiliary_turns),
     )
 
 
@@ -252,12 +276,23 @@ def _normalize_case(
     *,
     case: object,
     turns: list[dict[str, Any]],
+    auxiliary_turns: list[dict[str, Any]],
     subject_facts: dict[str, list[dict[str, Any]]],
 ) -> Any:
     try:
-        return normalize_case(case=case, turns=turns, subject_facts=subject_facts)
+        return normalize_case(
+            case=case,
+            turns=turns,
+            auxiliary_turns=auxiliary_turns,
+            subject_facts=subject_facts,
+        )
     except Exception as exc:
         raise CaseStageError("normalization") from exc
+
+
+def _case_tool_names(case: object) -> tuple[str, ...]:
+    requested = ("search_memory", *tuple(getattr(case, "required_tools", ())))
+    return tuple(dict.fromkeys(str(name) for name in requested))
 
 
 def _natural_fact_setup_message(fact: object) -> str:
@@ -475,7 +510,7 @@ async def _complete_setup_turn(
     retry_count: int,
     *,
     stage: str,
-) -> None:
+) -> tuple[dict[str, Any], tuple[Any, ...]]:
     accepted = await _run_stage(
         stage,
         client.accept_turn(
@@ -486,7 +521,7 @@ async def _complete_setup_turn(
             retry_count=retry_count,
         ),
     )
-    run, _events = await _run_stage(
+    run, events = await _run_stage(
         stage,
         _await_terminal_with_cancellation(
             client,
@@ -496,6 +531,7 @@ async def _complete_setup_turn(
     )
     if run.get("status") != "succeeded":
         raise CaseStageError(stage) from AssertionError()
+    return run, events
 
 
 async def _await_terminal_with_cancellation(

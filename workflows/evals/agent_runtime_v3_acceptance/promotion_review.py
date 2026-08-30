@@ -21,7 +21,7 @@ from agent_runtime_eval_contracts import (
 )
 from model_catalog_contracts.deployment_manifest import DeploymentManifest
 
-from .policy import production_policy_hashes
+from .policy import fingerprint_policy_hashes, production_policy_hashes
 from .qualification import requires_versioned_summary
 
 
@@ -221,6 +221,10 @@ def review_promotion(
             raise PromotionReviewError(
                 f"manifest fingerprint or alias changed for deployment role {role}"
             )
+        if fingerprint_policy_hashes(entry.fingerprint) != policy_hashes:
+            raise PromotionReviewError(
+                f"manifest {role} fingerprint is not bound to the evaluated policies"
+            )
 
     updated = _qualified_manifest(manifest_payload, bindings)
     DeploymentManifest.from_payload(updated)
@@ -302,19 +306,33 @@ def _validate_round(
     ):
         raise PromotionReviewError(f"round {index} includes failed case evidence")
     observed_run_ids: set[str] = set()
+    normalized_tools_by_run: dict[str, list[tuple[str, bool]]] = {}
+    summary_requirements_by_case: dict[str, tuple[set[str], int]] = {}
     for case_payload in cases:
         case_key = str(case_payload["case_key"])
-        observed_run_ids.update(
-            _validate_and_rescore_case(case_payload, cases_by_key[case_key], index)
+        case_run_ids, case_tools_by_run = _validate_and_rescore_case(
+            case_payload, cases_by_key[case_key], index
         )
+        observed_run_ids.update(case_run_ids)
+        normalized_tools_by_run.update(case_tools_by_run)
+        if requires_versioned_summary(cases_by_key[case_key]):
+            summary_requirements_by_case[case_key] = (
+                case_run_ids,
+                _required_summary_boundary(cases_by_key[case_key]),
+            )
     _validate_raw_events(
-        payload.get("_raw_events"), observed_run_ids=observed_run_ids, index=index
+        payload.get("_raw_events"),
+        observed_run_ids=observed_run_ids,
+        normalized_tools_by_run=normalized_tools_by_run,
+        summary_requirements_by_case=summary_requirements_by_case,
+        conversation_fingerprint=deployment_fingerprints["conversation"],
+        index=index,
     )
 
 
 def _validate_and_rescore_case(
     payload: dict[str, Any], case: Any, round_index: int
-) -> set[str]:
+) -> tuple[set[str], dict[str, list[tuple[str, bool]]]]:
     raw_facts = payload.get("facts")
     raw_turns = payload.get("turns")
     if not isinstance(raw_facts, list) or not isinstance(raw_turns, list):
@@ -343,6 +361,7 @@ def _validate_and_rescore_case(
         conversation_key: [] for conversation_key in case.conversations
     }
     run_ids: set[str] = set()
+    normalized_tools_by_run: dict[str, list[tuple[str, bool]]] = {}
     for raw_turn in raw_turns:
         turn = _mapping(raw_turn, f"{case.key} turn observation")
         _require_equal(turn.get("case_key"), case.key, f"{case.key} turn case key")
@@ -372,6 +391,9 @@ def _validate_and_rescore_case(
             )
             for item in _mapping_list(observation.get("tools"), f"{case.key} tools")
         )
+        normalized_tools_by_run[run_id] = [
+            (tool.name, tool.succeeded) for tool in tools
+        ]
         usage = _mapping(observation.get("usage"), f"{case.key} usage")
         if any(
             not isinstance(value, int) or isinstance(value, bool)
@@ -402,24 +424,52 @@ def _validate_and_rescore_case(
         results_by_conversation=results_by_conversation,
     )
     _require_equal(payload.get("score"), rescored, f"{case.key} deterministic score")
-    if requires_versioned_summary(case) and not any(
-        event.type == "summary.committed"
-        for values in results_by_conversation.values()
-        for result in values
-        for event in result.events
+    setup_run_ids = _string_list(
+        payload.get("setup_run_ids"), f"{case.key} setup run ids"
+    )
+    if len(setup_run_ids) != len(set(setup_run_ids)) or run_ids.intersection(
+        setup_run_ids
     ):
-        raise PromotionReviewError(
-            f"{case.key} lacks a versioned summary commitment event"
-        )
-    return run_ids
+        raise PromotionReviewError(f"{case.key} setup run ids are duplicated")
+    expected_tool_records = [
+        {"run_id": run_id, "name": name, "succeeded": succeeded}
+        for run_id, tools in normalized_tools_by_run.items()
+        for name, succeeded in tools
+    ]
+    actual_tool_records = [
+        {
+            "run_id": _required_text(item, "run_id", f"{case.key} recorded tool"),
+            "name": _required_text(item, "name", f"{case.key} recorded tool"),
+            "succeeded": _required_bool(item, "succeeded", f"{case.key} recorded tool"),
+        }
+        for item in _mapping_list(payload.get("tools"), f"{case.key} recorded tools")
+    ]
+    _require_equal(
+        actual_tool_records,
+        expected_tool_records,
+        f"{case.key} normalized tool records",
+    )
+    run_ids.update(setup_run_ids)
+    for run_id in setup_run_ids:
+        normalized_tools_by_run[run_id] = []
+    return run_ids, normalized_tools_by_run
 
 
 def _validate_raw_events(
-    value: object, *, observed_run_ids: set[str], index: int
+    value: object,
+    *,
+    observed_run_ids: set[str],
+    normalized_tools_by_run: dict[str, list[tuple[str, bool]]],
+    summary_requirements_by_case: dict[str, tuple[set[str], int]],
+    conversation_fingerprint: str,
+    index: int,
 ) -> None:
     if not isinstance(value, list):
         raise PromotionReviewError(f"round {index} raw events are missing")
     events_by_run: dict[str, list[int]] = {}
+    events_by_id: dict[str, dict[str, Any]] = {}
+    raw_tools_by_run: dict[str, list[tuple[str, bool]]] = {}
+    summary_boundaries_by_run: dict[str, list[int]] = {}
     for raw_event in value:
         event = _mapping(raw_event, f"round {index} raw event")
         run_id = str(event.get("run_id") or "")
@@ -433,7 +483,49 @@ def _validate_raw_events(
             raise PromotionReviewError(
                 f"round {index} raw events violate zero-retry ownership"
             )
+        event_id = _required_text(event, "event_id", f"round {index} raw event")
+        if event_id in events_by_id:
+            raise PromotionReviewError(f"round {index} raw event id is duplicated")
+        _require_equal(
+            event.get("correlation_id"),
+            run_id,
+            f"round {index} raw event correlation",
+        )
+        causation_id = event.get("causation_id")
+        if causation_id is None and event.get("event_type") in {
+            "model.response.completed",
+            "tool.call.requested",
+            "tool.call.completed",
+            "summary.committed",
+        }:
+            raise PromotionReviewError(
+                f"round {index} raw event is missing required causation"
+            )
+        if causation_id is not None:
+            cause = events_by_id.get(str(causation_id))
+            if cause is None or cause.get("run_id") != run_id:
+                raise PromotionReviewError(
+                    f"round {index} raw event causation is not a prior same-run event"
+                )
+            _validate_event_causation(event, cause, index=index)
         events_by_run.setdefault(run_id, []).append(sequence)
+        event_type = event.get("event_type")
+        payload = _mapping(event.get("payload"), f"round {index} raw event payload")
+        if event_type == "tool.call.completed":
+            raw_tools_by_run.setdefault(run_id, []).append(
+                (
+                    _required_text(payload, "name", "raw completed tool"),
+                    _required_bool(payload, "succeeded", "raw completed tool"),
+                )
+            )
+        if event_type == "summary.committed":
+            boundary = _validate_summary_event(
+                payload,
+                run_id=run_id,
+                conversation_fingerprint=conversation_fingerprint,
+            )
+            summary_boundaries_by_run.setdefault(run_id, []).append(boundary)
+        events_by_id[event_id] = event
     _require_equal(
         set(events_by_run), observed_run_ids, f"round {index} raw event run coverage"
     )
@@ -443,6 +535,114 @@ def _validate_raw_events(
             list(range(1, len(sequences) + 1)),
             f"round {index} raw event sequence for {run_id}",
         )
+        _require_equal(
+            raw_tools_by_run.get(run_id, []),
+            normalized_tools_by_run.get(run_id, []),
+            f"round {index} raw tool evidence for {run_id}",
+        )
+    for case_key, (
+        case_run_ids,
+        required_boundary,
+    ) in summary_requirements_by_case.items():
+        observed_boundaries = [
+            boundary
+            for run_id in case_run_ids
+            for boundary in summary_boundaries_by_run.get(run_id, [])
+        ]
+        if not observed_boundaries or max(observed_boundaries) < required_boundary:
+            raise PromotionReviewError(
+                f"{case_key} lacks a complete versioned summary commitment event"
+            )
+
+
+def _validate_summary_event(
+    payload: dict[str, Any], *, run_id: str, conversation_fingerprint: str
+) -> int:
+    _required_text(payload, "summary_id", "summary commitment")
+    _required_text(payload, "model_key", "summary commitment")
+    _require_equal(payload.get("run_id"), run_id, "summary commitment run id")
+    _require_equal(
+        payload.get("model_fingerprint"),
+        conversation_fingerprint,
+        "summary commitment model fingerprint",
+    )
+    version = payload.get("version")
+    boundary = payload.get("through_sequence")
+    if (
+        not isinstance(version, int)
+        or isinstance(version, bool)
+        or version < 1
+        or not isinstance(boundary, int)
+        or isinstance(boundary, bool)
+        or boundary < 1
+    ):
+        raise PromotionReviewError("summary commitment version or boundary is invalid")
+    for field in (
+        "content_sha256",
+        "prompt_sha256",
+        "input_sha256",
+        "policy_sha256",
+    ):
+        if not _SHA256_RE.fullmatch(str(payload.get(field) or "")):
+            raise PromotionReviewError(f"summary commitment {field} is invalid")
+    source_message_ids = _string_list(
+        payload.get("source_message_ids"), "summary source message ids"
+    )
+    if not source_message_ids or len(source_message_ids) != len(
+        set(source_message_ids)
+    ):
+        raise PromotionReviewError(
+            "summary commitment source messages are missing or duplicated"
+        )
+    return boundary
+
+
+def _validate_event_causation(
+    event: dict[str, Any], cause: dict[str, Any], *, index: int
+) -> None:
+    event_type = str(event.get("event_type") or "")
+    cause_type = str(cause.get("event_type") or "")
+    payload = _mapping(event.get("payload"), "caused event payload")
+    cause_payload = _mapping(cause.get("payload"), "causing event payload")
+    if event_type == "model.response.completed":
+        if cause_type != "model.request.started" or any(
+            payload.get(field) != cause_payload.get(field)
+            for field in ("role", "request_number")
+        ):
+            raise PromotionReviewError(
+                f"round {index} model response has invalid request causation"
+            )
+    elif event_type == "tool.call.requested":
+        if (
+            cause_type != "model.response.completed"
+            or cause_payload.get("role") != "conversation"
+            or payload.get("request_number") != cause_payload.get("request_number")
+        ):
+            raise PromotionReviewError(
+                f"round {index} tool request has invalid model causation"
+            )
+    elif event_type == "tool.call.completed":
+        if cause_type != "tool.call.requested" or any(
+            payload.get(field) != cause_payload.get(field)
+            for field in ("call_id", "name", "request_number")
+        ):
+            raise PromotionReviewError(
+                f"round {index} tool result has invalid request causation"
+            )
+    elif event_type == "summary.committed" and (
+        cause_type != "model.response.completed"
+        or cause_payload.get("role") != "compaction"
+    ):
+        raise PromotionReviewError(
+            f"round {index} summary has invalid compaction causation"
+        )
+
+
+def _required_summary_boundary(case: Any) -> int:
+    return max(
+        int(getattr(prelude, "summary_through_sequence", 0))
+        for prelude in tuple(getattr(case, "prelude_messages", ()))
+    )
 
 
 def _round_contains_binding(

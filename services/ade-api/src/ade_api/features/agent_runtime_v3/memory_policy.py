@@ -12,7 +12,6 @@ from .memory_review import (
     BoundEvidence,
     CorrectProposal,
     ForgetProposal,
-    MergeProposal,
     ReviewDecision,
     ReviewProposal,
     bind_evidence,
@@ -44,11 +43,13 @@ class NewEntity:
 @dataclass(frozen=True)
 class PreparedMemoryOperation:
     proposal: ReviewProposal
+    fact_type: str
+    qualifier: str | None
+    value: str | None
     normalized_key: str
     entity_id: str
     evidence: BoundEvidence
     existing_fact: dict[str, Any] | None = None
-    merge_facts: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -76,14 +77,12 @@ def prepare_memory_review(
         str(fact["normalized_key"]): str(fact["id"]) for fact in active_facts
     }
     mutated_fact_ids: set[str] = set()
+    forgotten_keys: set[str] = set()
 
     for index, proposal in enumerate(decision.proposals):
         evidence = bind_evidence(proposal, user_messages=[current_user_message])
         _validate_claim_semantics(proposal, content, facts_by_id)
-        spec = fact_type_spec(proposal.fact_type)
         existing_fact: dict[str, Any] | None = None
-        merge_facts: tuple[dict[str, Any], ...] = ()
-
         if isinstance(proposal, (CorrectProposal, ForgetProposal)):
             existing_fact = facts_by_id.get(proposal.fact_id)
             if existing_fact is None:
@@ -91,22 +90,14 @@ def prepare_memory_review(
                     f"{proposal.operation.value} requires an active subject fact"
                 )
             _validate_existing_fact(proposal, existing_fact, subject_id)
+            fact_type = str(existing_fact["fact_type"])
+            qualifier = existing_fact.get("qualifier")
             entity_id = str(existing_fact["entity_id"])
             target_ids = {str(existing_fact["id"])}
-        elif isinstance(proposal, MergeProposal):
-            merge_facts = tuple(
-                facts_by_id.get(fact_id) for fact_id in proposal.target_fact_ids
-            )
-            if len(merge_facts) < 2 or any(fact is None for fact in merge_facts):
-                raise RuntimeValidationError(
-                    "merge requires at least two active subject facts"
-                )
-            typed_merge_facts = tuple(fact for fact in merge_facts if fact is not None)
-            _validate_merge(proposal, typed_merge_facts, subject_id)
-            merge_facts = typed_merge_facts
-            entity_id = str(merge_facts[0]["entity_id"])
-            target_ids = {str(fact["id"]) for fact in merge_facts}
         elif isinstance(proposal, AddProposal):
+            spec = fact_type_spec(proposal.fact_type)
+            fact_type = proposal.fact_type
+            qualifier = proposal.qualifier
             entity_id = _resolve_add_entity(
                 proposal=proposal,
                 subject_id=subject_id,
@@ -127,9 +118,15 @@ def prepare_memory_review(
         mutated_fact_ids.update(target_ids)
         for fact_id in target_ids:
             projected_keys.pop(str(facts_by_id[fact_id]["normalized_key"]), None)
+        if isinstance(proposal, ForgetProposal) and existing_fact is not None:
+            forgotten_keys.add(str(existing_fact["normalized_key"]))
 
-        key = fact_key(proposal.fact_type, entity_id, proposal.qualifier)
+        key = fact_key(fact_type, entity_id, qualifier)
         if not isinstance(proposal, ForgetProposal):
+            if key in forgotten_keys:
+                raise RuntimeValidationError(
+                    "A review cannot forget and recreate the same memory key"
+                )
             collision = projected_keys.get(key)
             if collision is not None:
                 raise RuntimeValidationError(
@@ -144,11 +141,13 @@ def prepare_memory_review(
         operations.append(
             PreparedMemoryOperation(
                 proposal=proposal,
+                fact_type=fact_type,
+                qualifier=qualifier,
+                value=proposal.value,
                 normalized_key=key,
                 entity_id=entity_id,
                 evidence=evidence,
                 existing_fact=existing_fact,
-                merge_facts=merge_facts,
             )
         )
 
@@ -180,11 +179,6 @@ def _validate_claim_semantics(
     support = [proposal.evidence_quote]
     if isinstance(proposal, CorrectProposal) and proposal.fact_id in facts_by_id:
         support.append(str(facts_by_id[proposal.fact_id].get("value") or ""))
-    if isinstance(proposal, MergeProposal):
-        for fact_id in proposal.target_fact_ids:
-            fact = facts_by_id.get(fact_id)
-            if fact is not None:
-                support.append(str(fact.get("value") or ""))
     if not _value_supported(proposal.value, " ".join(support)):
         raise RuntimeValidationError(
             "Memory value is not supported by current evidence and referenced facts"
@@ -200,33 +194,6 @@ def _validate_existing_fact(
         raise RuntimeValidationError("Memory fact is not active for the bound subject")
     if int(fact["version"]) != proposal.expected_version:
         raise RuntimeValidationError("Memory fact version changed before review")
-    if (
-        fact["fact_type"] != proposal.fact_type
-        or fact.get("qualifier") != proposal.qualifier
-    ):
-        raise RuntimeValidationError(
-            "Reviewed fact metadata does not match the selected fact"
-        )
-
-
-def _validate_merge(
-    proposal: MergeProposal,
-    facts: tuple[dict[str, Any], ...],
-    subject_id: str,
-) -> None:
-    entity_ids = {str(fact["entity_id"]) for fact in facts}
-    if len(entity_ids) != 1:
-        raise RuntimeValidationError("merge targets must belong to one entity")
-    for fact in facts:
-        fact_id = str(fact["id"])
-        if str(fact["subject_id"]) != subject_id or fact["status"] != "active":
-            raise RuntimeValidationError("merge target is outside the bound subject")
-        if proposal.expected_versions.get(fact_id) != int(fact["version"]):
-            raise RuntimeValidationError("merge target version changed before review")
-        if fact["fact_type"] != proposal.fact_type:
-            raise RuntimeValidationError(
-                "merge targets must use the reviewed fact type"
-            )
 
 
 def _resolve_add_entity(

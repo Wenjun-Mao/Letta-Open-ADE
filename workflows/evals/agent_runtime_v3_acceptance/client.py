@@ -64,6 +64,7 @@ class RuntimeV3Client:
         model_key: str,
         reviewer_model_key: str,
         embedding_model_key: str,
+        tool_names: tuple[str, ...] = ("search_memory",),
     ) -> dict[str, Any]:
         return await self._request_json(
             "POST",
@@ -74,6 +75,7 @@ class RuntimeV3Client:
                 "model_key": model_key,
                 "reviewer_model_key": reviewer_model_key,
                 "embedding_model_key": embedding_model_key,
+                "tool_names": list(tool_names),
             },
         )
 

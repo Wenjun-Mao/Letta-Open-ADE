@@ -3587,10 +3587,13 @@
           },
           "tool_names": {
             "items": {
-              "const": "search_memory",
+              "enum": [
+                "search_memory",
+                "get_weather"
+              ],
               "type": "string"
             },
-            "maxItems": 1,
+            "maxItems": 2,
             "title": "Tool Names",
             "type": "array"
           }
@@ -4057,7 +4060,6 @@
         "enum": [
           "add",
           "correct",
-          "merge",
           "forget"
         ],
         "title": "MemoryOperation",

@@ -8,30 +8,83 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
+from ade_api.platform.settings import AdeApiSettings
+
 from .contracts import AcceptTurnRequest
+from .context import context_budget_from_deployment, validate_current_user_message
 from .database_boundary import (
     DEFAULT_WORKSPACE_ID,
     RuntimeDatabase,
     require_default_workspace,
 )
-from .errors import ConversationBusy, IdempotencyConflict
+from .deployments import definition_deployment, validate_definition_execution
+from .errors import (
+    ConversationBusy,
+    IdempotencyConflict,
+    RuntimeValidationError,
+)
 from .events import TERMINAL_RUN_STATUSES, append_run_event, event_response
 from .persistence.conversations import ConversationRepository
 from .persistence.definitions import DefinitionVersionRepository
 from .persistence.leases import ConversationLeaseRepository
 from .persistence.runs import RunRepository
 from .presenters import run_response, turn_accepted_response
+from .router_transport import RouterTransport
 
 
 class RunService:
-    def __init__(self, database: RuntimeDatabase) -> None:
+    def __init__(
+        self,
+        *,
+        database: RuntimeDatabase,
+        settings: AdeApiSettings,
+        router_transport: RouterTransport,
+    ) -> None:
         self.database = database
+        self.settings = settings
+        self.router_transport = router_transport
 
     async def accept_turn(
         self, conversation_id: str, request: AcceptTurnRequest
     ) -> dict[str, Any]:
         await self.database.ensure_ready()
         async with self.database.translated_errors():
+            async with self.database.engine.connect() as connection:
+                conversations = ConversationRepository(connection)
+                runs = RunRepository(connection)
+                conversation = await conversations.get(conversation_id)
+                require_default_workspace(conversation)
+                definition = await DefinitionVersionRepository(connection).get(
+                    str(conversation["agent_definition_version_id"])
+                )
+                request_hash = _turn_request_hash(request, conversation, definition)
+                prior = await runs.get_by_idempotency(
+                    conversation_id, request.idempotency_key
+                )
+                if prior is not None:
+                    if prior["request_hash"] != request_hash:
+                        raise IdempotencyConflict(
+                            "idempotency key is already bound to another turn"
+                        )
+                    return turn_accepted_response(prior, replayed=True)
+            catalog = await self.router_transport.catalog(
+                timeout_seconds=self.settings.model_discovery_timeout_seconds
+            )
+            validate_definition_execution(
+                definition,
+                catalog,
+                mode=self.settings.agent_runtime_v3_mode,
+            )
+            conversation_deployment = definition_deployment(definition, "conversation")
+            try:
+                validate_current_user_message(
+                    system_prompt=str(definition["prompt_content"]),
+                    persona=str(definition["persona_content"]),
+                    content=request.content,
+                    budget=context_budget_from_deployment(conversation_deployment),
+                )
+            except ValueError as exc:
+                raise RuntimeValidationError(str(exc)) from exc
             async with self.database.engine.begin() as connection:
                 conversations = ConversationRepository(connection)
                 runs = RunRepository(connection)

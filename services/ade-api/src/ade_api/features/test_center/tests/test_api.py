@@ -122,6 +122,14 @@ def test_agent_runtime_v3_acceptance_request_accepts_only_focused_fields() -> No
 
 
 def test_agent_runtime_v3_diagnostic_case_keys_are_canonical_and_strict() -> None:
+    from agent_runtime_eval_contracts import load_cases, study_cases_path
+    from ade_api.features.test_center.run_descriptors import (
+        AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS,
+    )
+
+    assert AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS == tuple(
+        case.key for case in load_cases(study_cases_path())
+    )
     request = TestRunRequest(
         run_type="agent_runtime_v3_acceptance",
         case_keys=["weather_tool_failure", "chat_memory_baseline"],
@@ -275,6 +283,8 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
         options={
             "case_keys": ["weather_tool_failure", "chat_memory_baseline"],
             "rounds": 3,
+            "timeout_seconds": 75,
+            "retry_count": 2,
             "include_llama_compatibility": True,
         },
     )
@@ -289,6 +299,10 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
         "chat_memory_baseline",
         "--case-key",
         "weather_tool_failure",
+        "--timeout-seconds",
+        "75",
+        "--retry-count",
+        "2",
         "--rounds",
         "1",
         "--no-include-llama-compatibility",

@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import json
 
 import pytest
 
 from ade_api.features.agent_runtime_v3.errors import RuntimeValidationError
-from ade_api.features.agent_runtime_v3.executor import ConversationExecutor, curated_tools
+from ade_api.features.agent_runtime_v3.executor import (
+    ConversationExecutor,
+    curated_tools,
+)
 
 
 class _Transport:
@@ -168,9 +172,116 @@ def test_executor_dispatches_the_enabled_curated_weather_tool() -> None:
     ]
     assert result.tool_events == [
         {
+            "request_number": 1,
             "call_id": "weather-1",
             "name": "get_weather",
             "arguments": {"city": "Toronto"},
             "result_count": 0,
+            "succeeded": True,
+            "error_type": None,
         }
     ]
+
+
+def test_weather_provider_failure_is_visible_and_conversation_continues() -> None:
+    transport = _Transport(
+        [
+            {
+                "id": "request-1",
+                "choices": [
+                    {
+                        "finish_reason": "tool_calls",
+                        "message": {
+                            "role": "assistant",
+                            "tool_calls": [
+                                {
+                                    "id": "weather-failure",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "get_weather",
+                                        "arguments": '{"city":"FAIL_CITY"}',
+                                    },
+                                }
+                            ],
+                        },
+                    }
+                ],
+            },
+            {
+                "id": "request-2",
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {
+                            "role": "assistant",
+                            "content": "The weather provider is unavailable.",
+                        },
+                    }
+                ],
+            },
+        ]
+    )
+
+    async def search(query: str, limit: int):
+        raise AssertionError("weather must not invoke memory search")
+
+    result = asyncio.run(
+        ConversationExecutor(transport).execute(
+            model_key="source::model",
+            messages=[{"role": "user", "content": "Weather in FAIL_CITY?"}],
+            tools=curated_tools(("get_weather",), search_memory=search),
+            timeout_seconds=30,
+            max_output_tokens=100,
+        )
+    )
+
+    tool_payload = json.loads(transport.calls[1][0]["messages"][-1]["content"])
+    assert tool_payload["ok"] is False
+    assert tool_payload == {
+        "ok": False,
+        "error_type": "provider_failure",
+        "error": "get_weather provider is unavailable",
+    }
+    assert result.assistant_text == "The weather provider is unavailable."
+    assert result.tool_events[0]["succeeded"] is False
+    assert result.tool_events[0]["error_type"] == "RuntimeError"
+
+
+def test_malformed_curated_tool_arguments_fail_the_attempt() -> None:
+    transport = _Transport(
+        [
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "role": "assistant",
+                            "tool_calls": [
+                                {
+                                    "id": "weather-invalid",
+                                    "function": {
+                                        "name": "get_weather",
+                                        "arguments": '{"city":"Toronto","unit":"C"}',
+                                    },
+                                }
+                            ],
+                        }
+                    }
+                ]
+            }
+        ]
+    )
+
+    async def search(query: str, limit: int):
+        return []
+
+    with pytest.raises(RuntimeValidationError, match="failed closed validation"):
+        asyncio.run(
+            ConversationExecutor(transport).execute(
+                model_key="source::model",
+                messages=[{"role": "user", "content": "hello"}],
+                tools=curated_tools(("get_weather",), search_memory=search),
+                timeout_seconds=30,
+                max_output_tokens=100,
+            )
+        )
+    assert len(transport.calls) == 1

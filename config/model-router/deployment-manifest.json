@@ -17,10 +17,10 @@
         "runtime_implementation": "vLLM",
         "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
-        "prompt_policy_sha256": "68bfc1aff8644990c43fd7233d83eca54c84f676fe8bed0338b583559cb4b341",
-        "tool_policy_sha256": "71b2f2d746212a55702a0b2c71624cb816c974ce45fe83b741d7b7420982eb32",
-        "schema_policy_sha256": "6db2bbf158cdcab5b2ae842615b6d944d7a37f8b55ee1a6bc7633ed3243d24e2",
-        "retrieval_policy_sha256": "9e8658f6ca8c599f8ac58cb997a946d3855ff1dfa5a1713e6342cd3e9cb6076b",
+        "prompt_policy_sha256": "11d47666d4d824b6695785c76c01d06a71ce74d30617241adb86ccea0c6b0f51",
+        "tool_policy_sha256": "77ce58b5db671279cc33497311ac5d6996f2722d6a740d0a632e35f2735709ee",
+        "schema_policy_sha256": "172f01bec7f061acbcfe827faa451979f2b65a11dfbfae370f5794d42ec2b8a0",
+        "retrieval_policy_sha256": "9f60a4d407407ed00a462440254344506fe00ead67272a23f76a4b86e1a3fab1",
         "sampling_settings": {
           "temperature": 1.0,
           "top_p": 0.95,
@@ -43,9 +43,9 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "d72ab26691e907672ff8c240fa02db0c74a2ea14722bceb1ed2b25fa83a96c31",
+        "fingerprint_sha256": "9adabf28f0f71fa53611ccfd031bfb09aee3922916a61aaec642b3d09a35bd00",
         "qualified": false,
-        "stale_round_count": 3,
+        "stale_round_count": 0,
         "role_results": [
           {
             "role": "conversation",
@@ -81,10 +81,10 @@
         "runtime_implementation": "vLLM",
         "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
-        "prompt_policy_sha256": "68bfc1aff8644990c43fd7233d83eca54c84f676fe8bed0338b583559cb4b341",
-        "tool_policy_sha256": "71b2f2d746212a55702a0b2c71624cb816c974ce45fe83b741d7b7420982eb32",
-        "schema_policy_sha256": "6db2bbf158cdcab5b2ae842615b6d944d7a37f8b55ee1a6bc7633ed3243d24e2",
-        "retrieval_policy_sha256": "9e8658f6ca8c599f8ac58cb997a946d3855ff1dfa5a1713e6342cd3e9cb6076b",
+        "prompt_policy_sha256": "11d47666d4d824b6695785c76c01d06a71ce74d30617241adb86ccea0c6b0f51",
+        "tool_policy_sha256": "77ce58b5db671279cc33497311ac5d6996f2722d6a740d0a632e35f2735709ee",
+        "schema_policy_sha256": "172f01bec7f061acbcfe827faa451979f2b65a11dfbfae370f5794d42ec2b8a0",
+        "retrieval_policy_sha256": "9f60a4d407407ed00a462440254344506fe00ead67272a23f76a4b86e1a3fab1",
         "sampling_settings": {
           "dimensions": 1024,
           "query_instruction_enabled": true,
@@ -101,9 +101,9 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "92dc4f5d3df529ea689fe6bcdbaf345311c6e0ad0b2157d18b03abafefb0240e",
+        "fingerprint_sha256": "c3209eebebc70af126e318518fa8dd36cf482a1eb1201699f0ca0fde91492fc2",
         "qualified": false,
-        "stale_round_count": 2,
+        "stale_round_count": 0,
         "role_results": [
           {
             "role": "retriever",
@@ -130,10 +130,10 @@
         "runtime_implementation": "llama-server",
         "runtime_version": "b1-225088e",
         "runtime_image_digest": null,
-        "prompt_policy_sha256": "68bfc1aff8644990c43fd7233d83eca54c84f676fe8bed0338b583559cb4b341",
-        "tool_policy_sha256": "71b2f2d746212a55702a0b2c71624cb816c974ce45fe83b741d7b7420982eb32",
-        "schema_policy_sha256": "6db2bbf158cdcab5b2ae842615b6d944d7a37f8b55ee1a6bc7633ed3243d24e2",
-        "retrieval_policy_sha256": "9e8658f6ca8c599f8ac58cb997a946d3855ff1dfa5a1713e6342cd3e9cb6076b",
+        "prompt_policy_sha256": "11d47666d4d824b6695785c76c01d06a71ce74d30617241adb86ccea0c6b0f51",
+        "tool_policy_sha256": "77ce58b5db671279cc33497311ac5d6996f2722d6a740d0a632e35f2735709ee",
+        "schema_policy_sha256": "172f01bec7f061acbcfe827faa451979f2b65a11dfbfae370f5794d42ec2b8a0",
+        "retrieval_policy_sha256": "9f60a4d407407ed00a462440254344506fe00ead67272a23f76a4b86e1a3fab1",
         "sampling_settings": {
           "thinking_enabled": false,
           "temperature": 0.6,
@@ -146,7 +146,9 @@
         },
         "context_settings": {
           "context_tokens": 8192,
-          "context_shift_enabled": false
+          "context_shift_enabled": false,
+          "max_output_tokens": 2048,
+          "max_model_requests": 6
         },
         "hardware_metadata": {
           "runtime_host": "windows-llama-server",
@@ -154,7 +156,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "90b8520643c572a4587676605fad4caa31d245f7d3f9f8f80f9b2e67466e8e94",
+        "fingerprint_sha256": "5155438180e0320d926942a8903f9cb859f1cdedc66f56231bd4217be1d3b71c",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [

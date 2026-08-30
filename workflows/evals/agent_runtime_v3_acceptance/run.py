@@ -195,6 +195,8 @@ async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
             else compatibility,
             "promotion_proposal": str(proposal.path) if proposal else None,
             "eligible": proposal is not None,
+            "passed": bool(materialized_primary)
+            and all(item.passed for item in materialized_primary),
         }
     finally:
         await _close_client_and_cleanup(client, config, run_id, resource_scopes)
@@ -224,6 +226,8 @@ def main(argv: list[str] | None = None) -> int:
         print("Acceptance run cancelled before startup completed.", file=sys.stderr)
         return 130
     print(result)
+    if config.case_keys:
+        return 0 if result["passed"] else 1
     return 0 if result["eligible"] else 1
 
 
@@ -296,10 +300,13 @@ def _write_rounds(
     for round_result in rounds:
         events = [
             {
+                "event_id": str(getattr(event, "event_id", "")),
                 "run_id": str(getattr(event, "run_id", "")),
                 "sequence": int(getattr(event, "sequence", 0)),
                 "event_type": str(getattr(event, "event_type", "")),
                 "attempt": getattr(event, "attempt", None),
+                "correlation_id": str(getattr(event, "correlation_id", "")),
+                "causation_id": getattr(event, "causation_id", None),
                 "payload": getattr(event, "payload", {}),
             }
             for case in round_result.cases
@@ -335,6 +342,7 @@ def _round_summary(round_result: QualificationRound) -> dict[str, Any]:
                 "turns": [asdict(item) for item in case.turns],
                 "tools": [asdict(item) for item in case.tools],
                 "facts": [asdict(item) for item in case.facts],
+                "setup_run_ids": list(case.setup_run_ids),
                 "resources": {
                     "definition_keys": list(case.resources.definition_keys),
                     "subject_external_keys": list(case.resources.subject_external_keys),

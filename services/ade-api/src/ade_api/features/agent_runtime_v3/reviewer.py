@@ -21,10 +21,11 @@ when replacing a listed active fact, copying its fact_id and version exactly. Us
 forget only for an explicit request to remove retained information. Never output a
 subject ID or free-form key.
 For subject facts leave entity_ref null. Existing non-subject entities use
-existing:<id>; related facts for one new entity reuse new:<local-ref>. Correct,
-forget, and merge derive their entity from fact IDs. Expected versions must exactly
-match the provided active facts. Example: after pet.name=Rocky, "it is a Husky"
-adds pet.breed=Husky against Rocky's existing entity and preserves both facts.
+existing:<id>; related facts for one new entity reuse new:<local-ref>. Correct and
+forget must not provide type, qualifier, entity, or key metadata; ADE derives all
+of it from their fact IDs. Expected versions must exactly match the
+provided active facts. Example: after pet.name=Rocky, "it is a Husky" adds
+pet.breed=Husky against Rocky's existing entity and preserves both facts.
 """
 
 
@@ -34,7 +35,7 @@ class ReviewerResult:
     usage: dict[str, int]
     model_request_count: int
     protocol_repaired: bool
-    provider_request_ids: list[str]
+    provider_request_ids: list[str | None]
 
 
 class MemoryReviewer:
@@ -153,7 +154,7 @@ class MemoryReviewer:
                 model_request_count=request_number,
                 protocol_repaired=request_number == 2,
                 provider_request_ids=[
-                    str(item.get("id")) for item in responses if item.get("id")
+                    str(item.get("id", "") or "") or None for item in responses
                 ],
             )
         raise AssertionError("review loop did not return")

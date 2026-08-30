@@ -37,7 +37,7 @@ class AgentRuntimeV3Worker:
     ) -> None:
         self.engine = engine
         self.settings = settings
-        execution = TurnExecution(engine=engine, transport=transport)
+        execution = TurnExecution(engine=engine, transport=transport, settings=settings)
         self.claimer = RunClaimer(engine=engine, settings=settings)
         self.attempts = AttemptController(
             engine=engine, settings=settings, execution=execution

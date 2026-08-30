@@ -65,8 +65,10 @@ class _FakeClient:
         self.reviewed = reviewed
         self.counter = 0
         self.cancelled: list[str] = []
+        self.definition_payloads: list[dict[str, Any]] = []
 
-    async def create_definition(self, **_payload: Any) -> dict[str, Any]:
+    async def create_definition(self, **payload: Any) -> dict[str, Any]:
+        self.definition_payloads.append(payload)
         self.counter += 1
         return {"id": f"definition-{self.counter}", "deployments": []}
 
@@ -90,31 +92,56 @@ class _FakeClient:
         run_id = url.split("/")[-2]
         events = [
             ("run.started", {}),
-            ("model.request.started", {"role": "conversation"}),
-            ("model.response.completed", {"role": "conversation"}),
+            (
+                "model.request.started",
+                {"role": "conversation", "request_number": 1},
+            ),
+            (
+                "model.response.completed",
+                {"role": "conversation", "request_number": 1},
+            ),
         ]
         if self.retry:
             events.append(("retry.scheduled", {}))
-        events.append(("model.request.started", {"role": "reviewer"}))
+        events.append(
+            ("model.request.started", {"role": "reviewer", "request_number": 1})
+        )
         if self.reviewed:
-            events.append(("model.response.completed", {"role": "reviewer"}))
+            events.append(
+                (
+                    "model.response.completed",
+                    {"role": "reviewer", "request_number": 1},
+                )
+            )
         if self.status == "succeeded":
             events.append(("message.committed", {"role": "assistant"}))
         terminal_type = (
             "run.completed" if self.status == "succeeded" else f"run.{self.status}"
         )
         events.append((terminal_type, {"usage": {"total_tokens": 12}}))
+        prior_event_id = None
+        request_ids: dict[tuple[str, int], str] = {}
         for sequence, (event_type, payload) in enumerate(events, start=1):
+            event_id = f"{run_id}-event-{sequence}"
+            causation_id = prior_event_id
+            if event_type == "model.request.started":
+                request_ids[(payload["role"], payload["request_number"])] = event_id
+            elif event_type == "model.response.completed":
+                causation_id = request_ids[(payload["role"], payload["request_number"])]
             yield SimpleNamespace(
-                event_id=str(sequence),
+                event_id=event_id,
                 event_type=event_type,
                 data={
+                    "id": event_id,
                     "run_id": run_id,
                     "sequence": sequence,
                     "type": event_type,
+                    "correlation_id": run_id,
+                    "causation_id": causation_id,
                     "payload": payload,
                 },
             )
+            prior_event_id = event_id
 
     async def get_run(self, run_id: str) -> dict[str, Any]:
         return {
@@ -166,6 +193,35 @@ def test_normal_turn_and_retry_are_normalized_against_shared_contracts() -> None
         assert result.score["pass"] is True
         assert result.turns[0].attempt_count == 2
         assert any(event.event_type == "retry.scheduled" for event in result.events)
+
+    asyncio.run(scenario())
+
+
+def test_case_definitions_enable_search_and_only_required_curated_tools() -> None:
+    async def scenario() -> None:
+        client = _FakeClient()
+        case = _Case(
+            key="weather",
+            conversations={"primary": ("primary", "primary")},
+            turns=(_Turn("primary", "Weather in Toronto?"),),
+            required_tools=("get_weather",),
+        )
+
+        await execute_case(
+            client=client,
+            case=case,
+            namespace="acceptance-tools",
+            conversation_model_key="chat",
+            reviewer_model_key="reviewer",
+            embedding_model_key="embedding",
+            timeout_seconds=180,
+            retry_count=0,
+        )
+
+        assert client.definition_payloads[0]["tool_names"] == (
+            "search_memory",
+            "get_weather",
+        )
 
     asyncio.run(scenario())
 

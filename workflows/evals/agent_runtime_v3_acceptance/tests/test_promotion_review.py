@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from collections import defaultdict
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,13 +16,17 @@ from agent_runtime_eval_contracts import (
     score_case,
     study_cases_path,
 )
-from model_catalog_contracts.deployment_manifest import load_deployment_manifest
+from model_catalog_contracts.deployment_manifest import (
+    DeploymentFingerprint,
+    load_deployment_manifest,
+)
 
 from workflows.evals.agent_runtime_v3_acceptance.artifacts import RoundArtifactWriter
 from workflows.evals.agent_runtime_v3_acceptance.policy import production_policy_hashes
 from workflows.evals.agent_runtime_v3_acceptance.promotion_review import (
     GitState,
     PromotionReviewError,
+    _validate_raw_events,
     review_promotion,
 )
 from workflows.evals.agent_runtime_v3_acceptance.proposal import (
@@ -103,7 +108,123 @@ def test_review_rejects_tampered_events_or_dirty_source(tmp_path: Path) -> None:
         )
 
 
-def _evidence(tmp_path: Path, manifest_path: Path) -> Path:
+def test_review_rejects_manifest_fingerprint_with_other_policy_hashes(
+    tmp_path: Path,
+) -> None:
+    manifest_path = tmp_path / "deployment-manifest.json"
+    manifest_path.write_bytes(
+        (PROJECT_ROOT / "config/model-router/deployment-manifest.json").read_bytes()
+    )
+    wrong_policy = production_policy_hashes(PROJECT_ROOT)
+    wrong_policy["prompt"] = "0" * 64
+    _synchronize_manifest_policy(manifest_path, wrong_policy)
+    proposal_path = _evidence(tmp_path, manifest_path, synchronize_policy=False)
+
+    with pytest.raises(PromotionReviewError, match="evaluated policies"):
+        review_promotion(
+            proposal_path=proposal_path,
+            manifest_path=manifest_path,
+            project_root=PROJECT_ROOT,
+            apply=False,
+            git_state=GitState(revision="c" * 40, dirty=False),
+        )
+
+
+def test_raw_tool_and_summary_evidence_must_match_normalized_contracts() -> None:
+    invalid_causation = _raw_event_records(
+        "run-1",
+        (
+            (
+                "model.request.started",
+                {"role": "conversation", "request_number": 1},
+            ),
+            (
+                "model.response.completed",
+                {"role": "conversation", "request_number": 1},
+            ),
+        ),
+    )
+    invalid_causation[1]["causation_id"] = "missing-event"
+    with pytest.raises(PromotionReviewError, match="prior same-run"):
+        _validate_raw_events(
+            invalid_causation,
+            observed_run_ids={"run-1"},
+            normalized_tools_by_run={"run-1": []},
+            summary_requirements_by_case={},
+            conversation_fingerprint="f" * 64,
+            index=1,
+        )
+
+    with pytest.raises(PromotionReviewError, match="raw tool evidence"):
+        _validate_raw_events(
+            _raw_event_records(
+                "run-1",
+                (
+                    (
+                        "model.request.started",
+                        {"role": "conversation", "request_number": 1},
+                    ),
+                    (
+                        "model.response.completed",
+                        {"role": "conversation", "request_number": 1},
+                    ),
+                    (
+                        "tool.call.requested",
+                        {
+                            "call_id": "call-1",
+                            "name": "get_weather",
+                            "request_number": 1,
+                        },
+                    ),
+                    (
+                        "tool.call.completed",
+                        {
+                            "call_id": "call-1",
+                            "name": "get_weather",
+                            "request_number": 1,
+                            "succeeded": True,
+                        },
+                    ),
+                ),
+            ),
+            observed_run_ids={"run-1"},
+            normalized_tools_by_run={"run-1": [("get_weather", False)]},
+            summary_requirements_by_case={},
+            conversation_fingerprint="f" * 64,
+            index=1,
+        )
+
+    with pytest.raises(PromotionReviewError, match="summary commitment summary_id"):
+        _validate_raw_events(
+            _raw_event_records(
+                "run-1",
+                (
+                    (
+                        "model.request.started",
+                        {"role": "compaction", "request_number": 1},
+                    ),
+                    (
+                        "model.response.completed",
+                        {"role": "compaction", "request_number": 1},
+                    ),
+                    ("summary.committed", {}),
+                ),
+            ),
+            observed_run_ids={"run-1"},
+            normalized_tools_by_run={"run-1": []},
+            summary_requirements_by_case={"long": ({"run-1"}, 70)},
+            conversation_fingerprint="f" * 64,
+            index=1,
+        )
+
+
+def _evidence(
+    tmp_path: Path, manifest_path: Path, *, synchronize_policy: bool = True
+) -> Path:
+    if synchronize_policy:
+        _synchronize_manifest_policy(
+            manifest_path, production_policy_hashes(PROJECT_ROOT)
+        )
     manifest = load_deployment_manifest(manifest_path)
     by_id = {item.deployment_id: item for item in manifest.deployments}
     chat = by_id["dgx-qwen3_6-chat"]
@@ -132,7 +253,9 @@ def _evidence(tmp_path: Path, manifest_path: Path) -> Path:
         case_payloads = []
         raw_events = []
         for case in canonical_cases:
-            case_payload, case_events = _passing_case_evidence(case, index)
+            case_payload, case_events = _passing_case_evidence(
+                case, index, fingerprints["conversation"]
+            )
             case_payloads.append(case_payload)
             raw_events.extend(case_events)
         summary = {
@@ -216,7 +339,7 @@ def _snapshot(deployment, role: str) -> dict[str, str]:
     }
 
 
-def _passing_case_evidence(case, round_index: int):
+def _passing_case_evidence(case, round_index: int, conversation_fingerprint: str):
     fact_records = []
     facts_by_subject = {subject_key: [] for subject_key in case.subject_keys}
     for fact_index, assertion in enumerate(case.fact_assertions, start=1):
@@ -247,6 +370,55 @@ def _passing_case_evidence(case, round_index: int):
     turn_records = []
     tool_records = []
     raw_events = []
+    setup_run_ids = []
+    if case.prelude_messages:
+        setup_run_id = f"run-{round_index}-{case.key}-setup"
+        setup_run_ids.append(setup_run_id)
+        setup_event_types = (
+            ("run.started", {}),
+            ("model.request.started", {"role": "compaction", "request_number": 1}),
+            (
+                "model.response.completed",
+                {"role": "compaction", "request_number": 1},
+            ),
+            ("context.built", {}),
+            (
+                "model.request.started",
+                {"role": "conversation", "request_number": 1},
+            ),
+            (
+                "model.response.completed",
+                {"role": "conversation", "request_number": 1},
+            ),
+            ("model.request.started", {"role": "reviewer", "request_number": 1}),
+            (
+                "model.response.completed",
+                {"role": "reviewer", "request_number": 1},
+            ),
+            (
+                "summary.committed",
+                {
+                    "summary_id": f"summary-{round_index}-{case.key}",
+                    "previous_summary_id": None,
+                    "version": 1,
+                    "through_sequence": 70,
+                    "run_id": setup_run_id,
+                    "model_key": "dgx_vllm::qwen3.6-35b-a3b-fp8",
+                    "model_fingerprint": conversation_fingerprint,
+                    "provider_request_id": "summary-request",
+                    "content_sha256": "1" * 64,
+                    "prompt_sha256": "2" * 64,
+                    "input_sha256": "3" * 64,
+                    "policy_sha256": "4" * 64,
+                    "source_message_ids": [
+                        f"message-{index}" for index in range(1, 71)
+                    ],
+                },
+            ),
+            ("message.committed", {}),
+            ("run.completed", {"usage": {}}),
+        )
+        raw_events.extend(_raw_event_records(setup_run_id, setup_event_types))
     for turn_index, fixture_turn in enumerate(case.turns, start=1):
         run_id = f"run-{round_index}-{case.key}-{turn_index}"
         tool_observations = ()
@@ -262,11 +434,6 @@ def _passing_case_evidence(case, round_index: int):
             EventObservation(type="model.request"),
             EventObservation(type="model.response"),
             EventObservation(type="memory.review.request"),
-            *(
-                (EventObservation(type="summary.committed"),)
-                if case.prelude_messages
-                else ()
-            ),
         )
         assistant_text = " ".join(
             assistant_fragments.get(fixture_turn.conversation_key) or ["ok"]
@@ -312,32 +479,62 @@ def _passing_case_evidence(case, round_index: int):
             )
         raw_types = [
             ("run.started", {}),
-            ("model.request.started", {"role": "conversation"}),
-            ("model.response.completed", {"role": "conversation"}),
-            ("model.request.started", {"role": "reviewer"}),
-            ("model.response.completed", {"role": "reviewer"}),
+            ("context.built", {}),
+            (
+                "model.request.started",
+                {"role": "conversation", "request_number": 1},
+            ),
+            (
+                "model.response.completed",
+                {"role": "conversation", "request_number": 1},
+            ),
         ]
-        if case.prelude_messages:
-            raw_types.append(
+        for tool_index, tool in enumerate(tool_observations, start=1):
+            raw_types.extend(
                 (
-                    "summary.committed",
-                    {"version": 1, "through_sequence": 70},
+                    (
+                        "tool.call.requested",
+                        {
+                            "call_id": f"call-{tool_index}",
+                            "name": tool.name,
+                            "request_number": 1,
+                        },
+                    ),
+                    (
+                        "tool.call.completed",
+                        {
+                            "call_id": f"call-{tool_index}",
+                            "name": tool.name,
+                            "request_number": 1,
+                            "succeeded": tool.succeeded,
+                        },
+                    ),
+                )
+            )
+        if tool_observations:
+            raw_types.extend(
+                (
+                    (
+                        "model.request.started",
+                        {"role": "conversation", "request_number": 2},
+                    ),
+                    (
+                        "model.response.completed",
+                        {"role": "conversation", "request_number": 2},
+                    ),
                 )
             )
         raw_types.extend(
-            ("tool.call.completed", {"name": tool.name}) for tool in tool_observations
+            (
+                ("model.request.started", {"role": "reviewer", "request_number": 1}),
+                (
+                    "model.response.completed",
+                    {"role": "reviewer", "request_number": 1},
+                ),
+            )
         )
         raw_types.extend((("message.committed", {}), ("run.completed", {"usage": {}})))
-        raw_events.extend(
-            {
-                "run_id": run_id,
-                "sequence": sequence,
-                "event_type": event_type,
-                "attempt": 1,
-                "payload": payload,
-            }
-            for sequence, (event_type, payload) in enumerate(raw_types, start=1)
-        )
+        raw_events.extend(_raw_event_records(run_id, tuple(raw_types)))
     score = score_case(
         case=case,
         facts_by_subject=facts_by_subject,
@@ -356,6 +553,7 @@ def _passing_case_evidence(case, round_index: int):
             "turns": turn_records,
             "tools": tool_records,
             "facts": fact_records,
+            "setup_run_ids": setup_run_ids,
             "resources": {
                 "definition_keys": [f"definition-{case.key}"],
                 "subject_external_keys": [f"subject-{case.key}"],
@@ -363,3 +561,61 @@ def _passing_case_evidence(case, round_index: int):
         },
         raw_events,
     )
+
+
+def _synchronize_manifest_policy(
+    manifest_path: Path, policy_hashes: dict[str, str]
+) -> None:
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    fields = {
+        "prompt": "prompt_policy_sha256",
+        "tool": "tool_policy_sha256",
+        "schema": "schema_policy_sha256",
+        "retrieval": "retrieval_policy_sha256",
+    }
+    for deployment in payload["deployments"]:
+        fingerprint = deployment["fingerprint"]
+        for policy, field in fields.items():
+            fingerprint[field] = policy_hashes[policy]
+        fingerprint_sha256 = DeploymentFingerprint.from_payload(fingerprint).sha256
+        deployment["qualification"]["fingerprint_sha256"] = fingerprint_sha256
+    manifest_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+def _raw_event_records(
+    run_id: str, event_types: tuple[tuple[str, dict], ...]
+) -> list[dict]:
+    records: list[dict] = []
+    compaction_response_id: str | None = None
+    conversation_response_id: str | None = None
+    for sequence, (event_type, payload) in enumerate(event_types, start=1):
+        event_id = f"{run_id}-event-{sequence}"
+        causation_id = records[-1]["event_id"] if records else None
+        if event_type == "summary.committed":
+            causation_id = compaction_response_id
+        elif event_type == "tool.call.requested":
+            causation_id = conversation_response_id
+        record = {
+            "event_id": event_id,
+            "run_id": run_id,
+            "sequence": sequence,
+            "event_type": event_type,
+            "attempt": 1,
+            "correlation_id": run_id,
+            "causation_id": causation_id,
+            "payload": payload,
+        }
+        records.append(record)
+        if (
+            event_type == "model.response.completed"
+            and payload.get("role") == "compaction"
+        ):
+            compaction_response_id = event_id
+        if (
+            event_type == "model.response.completed"
+            and payload.get("role") == "conversation"
+        ):
+            conversation_response_id = event_id
+    return records

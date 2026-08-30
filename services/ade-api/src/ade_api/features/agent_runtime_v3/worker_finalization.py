@@ -97,9 +97,12 @@ class RunFinalizer:
                         "run_id": run_id,
                         "previous_summary_id": compaction.plan.previous_summary_id,
                         "model_key": compaction.model_key,
+                        "model_fingerprint": compaction.model_fingerprint,
                         "provider_request_id": compaction.provider_request_id,
+                        "content_sha256": compaction.content_sha256,
                         "prompt_sha256": compaction.prompt_sha256,
                         "input_sha256": compaction.input_sha256,
+                        "policy_sha256": compaction.policy_sha256,
                     },
                     source_message_ids=compaction.plan.source_message_ids,
                     expected_summary_version=compaction.plan.expected_summary_version,
@@ -145,8 +148,12 @@ class RunFinalizer:
             runs = RunRepository(connection)
             leases = ConversationLeaseRepository(connection)
             run = await runs.get_for_update(str(claim.run["id"]))
-            if run["status"] == "succeeded":
+            if run["status"] not in {"pending", "running"}:
                 return
+            if not await leases.owns(claim.lease_token, str(run["id"])):
+                raise LeaseLost(
+                    "conversation lease was lost before cancellation commit"
+                )
             if run["status"] in {"pending", "running"}:
                 if attempt_id:
                     await runs.finish_attempt(
@@ -166,7 +173,7 @@ class RunFinalizer:
                     event_type="run.cancelled",
                     payload={"attempt_count": int(run["attempt_count"])},
                 )
-            await leases.release_for_run(str(run["id"]))
+            await leases.release(claim.lease_token)
 
     async def commit_failure(
         self,
@@ -178,6 +185,10 @@ class RunFinalizer:
             runs = RunRepository(connection)
             leases = ConversationLeaseRepository(connection)
             run = await runs.get_for_update(str(claim.run["id"]))
+            if run["status"] not in {"pending", "running"}:
+                return
+            if not await leases.owns(claim.lease_token, str(run["id"])):
+                raise LeaseLost("conversation lease was lost before failure commit")
             if run["cancellation_requested_at"] is not None:
                 if attempt_id:
                     await runs.finish_attempt(
@@ -223,7 +234,7 @@ class RunFinalizer:
                     },
                     attempt=int(run["attempt_count"]) or None,
                 )
-            await leases.release_for_run(str(run["id"]))
+            await leases.release(claim.lease_token)
 
 
 async def _lock_conversation_and_subject(

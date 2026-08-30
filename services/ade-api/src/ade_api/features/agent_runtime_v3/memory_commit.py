@@ -60,14 +60,6 @@ async def commit_memory_review(
                 run_id=run_id,
                 operation=operation,
             )
-        elif operation.proposal.operation is MemoryOperation.MERGE:
-            fact, revision = await _merge_facts(
-                repository,
-                workspace_id=workspace_id,
-                subject_id=subject_id,
-                run_id=run_id,
-                operation=operation,
-            )
         else:  # pragma: no cover - MemoryOperation is closed by Pydantic.
             raise AssertionError("unsupported memory operation")
         if embedding is not None:
@@ -117,9 +109,9 @@ async def _create_fact(
             "subject_id": subject_id,
             "entity_id": operation.entity_id,
             "normalized_key": operation.normalized_key,
-            "fact_type": operation.proposal.fact_type,
-            "qualifier": operation.proposal.qualifier,
-            "value": operation.proposal.value,
+            "fact_type": operation.fact_type,
+            "qualifier": operation.qualifier,
+            "value": operation.value,
             "status": "active",
             "version": 1,
             "current_revision_id": None,
@@ -131,7 +123,7 @@ async def _create_fact(
             "subject_id": subject_id,
             "operation": operation.proposal.operation.value,
             "fact_version": 1,
-            "value": operation.proposal.value,
+            "value": operation.value,
             "run_id": run_id,
         },
         evidence=[_evidence_payload(operation)],
@@ -159,7 +151,7 @@ async def _revise_fact(
             "subject_id": subject_id,
             "operation": operation.proposal.operation.value,
             "fact_version": next_version,
-            "value": operation.proposal.value,
+            "value": operation.value,
             "run_id": run_id,
         },
         expected_fact_version=int(fact["version"]),
@@ -175,7 +167,7 @@ async def _revise_fact(
     next_fact = dict(fact)
     next_fact.update(
         {
-            "value": operation.proposal.value,
+            "value": operation.value,
             "status": (
                 "forgotten"
                 if operation.proposal.operation is MemoryOperation.FORGET
@@ -186,30 +178,6 @@ async def _revise_fact(
         }
     )
     return next_fact, revision
-
-
-async def _merge_facts(
-    repository: MemoryRepository,
-    *,
-    workspace_id: str,
-    subject_id: str,
-    run_id: str,
-    operation: PreparedMemoryOperation,
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    expected_versions = {
-        str(fact["id"]): int(fact["version"]) for fact in operation.merge_facts
-    }
-    await repository.supersede_facts(expected_versions, updated_at=datetime.now(UTC))
-    return await _create_fact(
-        repository,
-        workspace_id=workspace_id,
-        subject_id=subject_id,
-        run_id=run_id,
-        operation=operation,
-        predecessor_revision_ids=tuple(
-            str(fact["current_revision_id"]) for fact in operation.merge_facts
-        ),
-    )
 
 
 def _evidence_payload(operation: PreparedMemoryOperation) -> dict[str, Any]:
