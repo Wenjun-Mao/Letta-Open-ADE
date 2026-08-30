@@ -101,6 +101,8 @@ class MemoryReviewer:
             if is_explicit_forgetting_request(
                 str(current_user_message.get("content") or "")
             )
+            else "add"
+            if not active_facts
             else "all"
         )
         packet = {
@@ -137,14 +139,18 @@ class MemoryReviewer:
                 if item.get("kind") != "subject"
             ],
             "review_mode": (
-                "explicit_forgetting" if review_mode == "forget" else "general"
+                "explicit_forgetting"
+                if review_mode == "forget"
+                else "add_only_no_active_facts"
+                if review_mode == "add"
+                else "general"
             ),
             "operation_contracts": (
-                {"forget": OPERATION_CONTRACTS["forget"]}
-                if review_mode == "forget"
+                {review_mode: OPERATION_CONTRACTS[review_mode]}
+                if review_mode in {"add", "forget"}
                 else OPERATION_CONTRACTS
             ),
-            "worked_examples": WORKED_EXAMPLES,
+            "worked_examples": WORKED_EXAMPLES if review_mode == "forget" else {},
             "allowed_fact_contracts": [
                 {
                     "fact_type": spec.name,

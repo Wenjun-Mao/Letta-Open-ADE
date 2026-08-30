@@ -91,6 +91,9 @@ passing complete rounds. Focused diagnostics never count as qualification rounds
   contract used by both reviewer selection and evidence validation. Those turns use a
   forget-only reviewer schema; add/correct memory writes from the same message are
   deferred rather than mixed with a tombstone operation.
+- When a subject has no active facts, the reviewer uses an add-only schema because
+  correct and forget have no reachable target. Other turns retain the full typed
+  operation schema and server-side semantic validation.
 - An idempotency key is bound to a canonical request hash; different payload reuse is
   `409 Conflict`.
 - SDK/framework/Router retries are zero. `retry_count` means additional ADE attempts.

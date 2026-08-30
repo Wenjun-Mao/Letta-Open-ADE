@@ -120,22 +120,12 @@ def test_reviewer_repairs_subject_bound_semantic_validation_once() -> None:
     repair_message = transport.calls[1][0]["messages"][-1]["content"]
     assert "pet.breed requires existing:<id> or new:<local-ref>" in repair_message
     reviewer_packet = json.loads(transport.calls[0][0]["messages"][1]["content"])
+    assert reviewer_packet["review_mode"] == "add_only_no_active_facts"
+    assert set(reviewer_packet["operation_contracts"]) == {"add"}
     assert reviewer_packet["operation_contracts"]["add"]["excludes"] == [
         "explicit_forgetting"
     ]
-    assert reviewer_packet["operation_contracts"]["forget"] == {
-        "when": "the current message explicitly asks to remove an active fact",
-        "value": None,
-        "uses_active_fact_id_and_version": True,
-    }
-    assert (
-        reviewer_packet["worked_examples"]["explicit_forgetting"]["current_message"]
-        == "请忘掉我喜欢蓝色这件事。"
-    )
-    assert (
-        reviewer_packet["worked_examples"]["explicit_forgetting"]["operation"]
-        == "forget"
-    )
+    assert reviewer_packet["worked_examples"] == {}
     preference_contract = next(
         item
         for item in reviewer_packet["allowed_fact_contracts"]
@@ -224,6 +214,18 @@ def test_explicit_forgetting_uses_a_forget_only_schema_on_first_request() -> Non
     request = transport.calls[0][0]
     packet = json.loads(request["messages"][1]["content"])
     assert packet["review_mode"] == "explicit_forgetting"
+    assert packet["operation_contracts"] == {
+        "forget": {
+            "when": "the current message explicitly asks to remove an active fact",
+            "value": None,
+            "uses_active_fact_id_and_version": True,
+        }
+    }
+    assert (
+        packet["worked_examples"]["explicit_forgetting"]["current_message"]
+        == "请忘掉我喜欢蓝色这件事。"
+    )
+    assert packet["worked_examples"]["explicit_forgetting"]["operation"] == "forget"
     schema_text = str(request["response_format"]["json_schema"]["schema"])
     assert "ForgetProposal" in schema_text
     assert "AddProposal" not in schema_text

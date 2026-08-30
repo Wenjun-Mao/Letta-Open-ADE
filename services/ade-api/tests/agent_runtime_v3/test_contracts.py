@@ -181,6 +181,29 @@ def test_explicit_forgetting_schema_excludes_other_operations() -> None:
         )
 
 
+def test_no_active_facts_schema_excludes_existing_fact_operations() -> None:
+    schema_text = str(review_json_schema(mode="add"))
+    assert "AddProposal" in schema_text
+    assert "CorrectProposal" not in schema_text
+    assert "ForgetProposal" not in schema_text
+
+    proposal = parse_review_decision(
+        {
+            "proposals": [
+                {
+                    "operation": "add",
+                    "fact_type": "person.preference",
+                    "qualifier": "color",
+                    "value": "蓝色",
+                    "evidence_quote": "蓝色",
+                }
+            ]
+        },
+        mode="add",
+    ).proposals[0]
+    assert proposal.operation.value == "add"
+
+
 def test_review_schema_rejects_noncanonical_qualifier_aliases() -> None:
     with pytest.raises(RuntimeValidationError, match="qualifier"):
         parse_review_decision(
