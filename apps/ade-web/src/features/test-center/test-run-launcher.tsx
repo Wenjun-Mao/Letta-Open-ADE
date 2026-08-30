@@ -8,6 +8,7 @@ import { fetchModelCatalog, fetchOptions, type OptionEntry } from "@/features/mo
 import type { ModelCatalogEntry } from "@/features/model-catalog/contracts";
 import {
   AgentRuntimeV3AcceptanceFields,
+  canonicalizeAgentRuntimeV3DiagnosticCaseKeys,
   DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_FORM,
   hasAgentRuntimeV3AcceptanceDeployments,
   reconcileAgentRuntimeV3AcceptanceForm,
@@ -33,6 +34,8 @@ export function buildTestRunPayload(
   v3Form: AgentRuntimeV3AcceptanceFormState = DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_FORM,
 ): CreateTestRunPayload {
   if (runType === "agent_runtime_v3_acceptance") {
+    const caseKeys = canonicalizeAgentRuntimeV3DiagnosticCaseKeys(v3Form.caseKeys);
+    const isFocusedDiagnostic = caseKeys.length > 0;
     const rounds = Number.parseInt(v3Form.rounds, 10);
     const timeoutSeconds = Number.parseFloat(v3Form.timeoutSeconds);
     const retryCount = Number.parseInt(v3Form.retryCount, 10);
@@ -41,12 +44,13 @@ export function buildTestRunPayload(
       conversation_model_key: v3Form.conversationModelKey,
       reviewer_model_key: v3Form.reviewerModelKey,
       embedding_model_key: v3Form.embeddingModelKey,
-      rounds: Number.isInteger(rounds) ? Math.min(3, Math.max(1, rounds)) : 3,
+      ...(isFocusedDiagnostic ? { case_keys: caseKeys } : {}),
+      rounds: isFocusedDiagnostic ? 1 : (Number.isInteger(rounds) ? Math.min(3, Math.max(1, rounds)) : 3),
       timeout_seconds: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
         ? Math.min(600, Math.max(5, timeoutSeconds))
         : 180,
       retry_count: Number.isInteger(retryCount) ? Math.min(5, Math.max(0, retryCount)) : 0,
-      include_llama_compatibility: v3Form.includeLlamaCompatibility,
+      include_llama_compatibility: isFocusedDiagnostic ? false : v3Form.includeLlamaCompatibility,
     };
   }
   if (runType !== "chat_memory_eval") {

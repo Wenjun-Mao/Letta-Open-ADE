@@ -5110,6 +5110,21 @@
       "TestRunRequest": {
         "additionalProperties": false,
         "properties": {
+          "case_keys": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Keys"
+          },
           "conversation_model_key": {
             "anyOf": [
               {

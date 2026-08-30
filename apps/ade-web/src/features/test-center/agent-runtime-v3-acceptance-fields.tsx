@@ -10,7 +10,26 @@ export type AgentRuntimeV3AcceptanceForm = {
   timeoutSeconds: string;
   retryCount: string;
   includeLlamaCompatibility: boolean;
+  caseKeys: string[];
 };
+
+export const AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS = [
+  "chat_memory_baseline",
+  "correction_chain",
+  "explicit_forgetting",
+  "cross_agent_subject_sharing",
+  "cross_subject_isolation",
+  "old_memory_deep_search",
+  "long_history_compaction",
+  "false_memory_prevention",
+  "weather_tool_selection",
+  "weather_tool_failure",
+] as const;
+
+export function canonicalizeAgentRuntimeV3DiagnosticCaseKeys(caseKeys: string[]): string[] {
+  const selectedKeys = new Set(caseKeys);
+  return AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS.filter((caseKey) => selectedKeys.has(caseKey));
+}
 
 export const DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_FORM: AgentRuntimeV3AcceptanceForm = {
   conversationModelKey: "dgx_vllm::qwen3.6-35b-a3b-fp8",
@@ -20,6 +39,7 @@ export const DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_FORM: AgentRuntimeV3AcceptanceF
   timeoutSeconds: "180",
   retryCount: "0",
   includeLlamaCompatibility: true,
+  caseKeys: [],
 };
 
 function chooseRoleDeployment(
@@ -101,6 +121,8 @@ export function AgentRuntimeV3AcceptanceFields({ copy, deployments, form, onChan
     key: Key,
     value: AgentRuntimeV3AcceptanceForm[Key],
   ) => onChange({ ...form, [key]: value });
+  const diagnosticCaseKeys = canonicalizeAgentRuntimeV3DiagnosticCaseKeys(form.caseKeys);
+  const isFocusedDiagnostic = diagnosticCaseKeys.length > 0;
 
   return (
     <>
@@ -136,9 +158,29 @@ export function AgentRuntimeV3AcceptanceFields({ copy, deployments, form, onChan
           ))}
         </select>
       </label>
+      <label className="field" style={{ gridColumn: "1 / -1" }}>
+        <span>{copy.diagnosticCases}</span>
+        <select
+          className="input"
+          multiple
+          size={Math.min(6, AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS.length)}
+          value={diagnosticCaseKeys}
+          onChange={(event) => set(
+            "caseKeys",
+            canonicalizeAgentRuntimeV3DiagnosticCaseKeys(
+              Array.from(event.currentTarget.selectedOptions, (option) => option.value),
+            ),
+          )}
+        >
+          {AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS.map((caseKey) => (
+            <option key={caseKey} value={caseKey}>{caseKey}</option>
+          ))}
+        </select>
+        <span className="muted">{copy.diagnosticCasesHelp}</span>
+      </label>
       <label className="field">
         <span>{copy.rounds}</span>
-        <input className="input" type="number" min={1} max={3} value={form.rounds} onChange={(event) => set("rounds", event.target.value)} />
+        <input className="input" type="number" min={1} max={3} value={isFocusedDiagnostic ? "1" : form.rounds} onChange={(event) => set("rounds", event.target.value)} disabled={isFocusedDiagnostic} />
       </label>
       <label className="field">
         <span>{copy.timeoutSeconds}</span>
@@ -149,7 +191,7 @@ export function AgentRuntimeV3AcceptanceFields({ copy, deployments, form, onChan
         <input className="input" type="number" min={0} max={5} value={form.retryCount} onChange={(event) => set("retryCount", event.target.value)} />
       </label>
       <label className="field checkbox-field">
-        <input type="checkbox" checked={form.includeLlamaCompatibility} onChange={(event) => set("includeLlamaCompatibility", event.target.checked)} />
+        <input type="checkbox" checked={isFocusedDiagnostic ? false : form.includeLlamaCompatibility} onChange={(event) => set("includeLlamaCompatibility", event.target.checked)} disabled={isFocusedDiagnostic} />
         <span>{copy.llamaCompatibility}</span>
       </label>
     </>

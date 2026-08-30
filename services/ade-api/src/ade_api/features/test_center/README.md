@@ -32,6 +32,11 @@ workflow and exposes its raw evidence through the ordinary run-owned artifact vi
 The workflow may propose promotion, but Test Center never edits the deployment
 manifest.
 
+Operators can select one or more canonical `case_keys` for focused v3 diagnostics.
+Test Center rejects unknown or duplicate keys, emits the runner's repeated
+`--case-key` arguments in canonical order, and forces a one-round no-llama command.
+These focused runs are diagnostic-only and cannot be promotion eligible.
+
 ## Chat-memory evaluation reads
 
 `GET /api/v2/test-center/chat-memory-evaluations` lists persisted

@@ -126,6 +126,7 @@ export type CreateTestRunPayload = {
   reviewer_model_key?: string;
   embedding_model_key?: string;
   include_llama_compatibility?: boolean;
+  case_keys?: string[];
 };
 
 export function listTestRuns(options?: ApiRequestOptions) {

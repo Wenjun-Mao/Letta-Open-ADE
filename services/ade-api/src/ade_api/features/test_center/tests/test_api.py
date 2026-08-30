@@ -121,6 +121,27 @@ def test_agent_runtime_v3_acceptance_request_accepts_only_focused_fields() -> No
         TestRunRequest(run_type="agent_runtime_v3_acceptance", timeout_seconds=4.9)
 
 
+def test_agent_runtime_v3_diagnostic_case_keys_are_canonical_and_strict() -> None:
+    request = TestRunRequest(
+        run_type="agent_runtime_v3_acceptance",
+        case_keys=["weather_tool_failure", "chat_memory_baseline"],
+    )
+
+    assert request.case_keys == ["chat_memory_baseline", "weather_tool_failure"]
+
+    with pytest.raises(ValidationError, match="must be canonical"):
+        TestRunRequest(
+            run_type="agent_runtime_v3_acceptance",
+            case_keys=["unknown_case"],
+        )
+
+    with pytest.raises(ValidationError, match="must not contain duplicates"):
+        TestRunRequest(
+            run_type="agent_runtime_v3_acceptance",
+            case_keys=["chat_memory_baseline", "chat_memory_baseline"],
+        )
+
+
 def test_chat_memory_eval_create_passes_options(monkeypatch) -> None:
     captured: dict[str, object] = {}
 
@@ -245,6 +266,31 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
         "180",
         "--retry-count",
         "0",
+        "--no-include-llama-compatibility",
+    ]
+
+    diagnostic_command = orchestrator._build_command(
+        run_type="agent_runtime_v3_acceptance",
+        output_dir=tmp_path / "diagnostic-output",
+        options={
+            "case_keys": ["weather_tool_failure", "chat_memory_baseline"],
+            "rounds": 3,
+            "include_llama_compatibility": True,
+        },
+    )
+    assert diagnostic_command == [
+        sys.executable,
+        "workflows/evals/agent_runtime_v3_acceptance/run.py",
+        "--config",
+        "workflows/evals/agent_runtime_v3_acceptance/config.toml",
+        "--output-dir",
+        str(tmp_path / "diagnostic-output"),
+        "--case-key",
+        "chat_memory_baseline",
+        "--case-key",
+        "weather_tool_failure",
+        "--rounds",
+        "1",
         "--no-include-llama-compatibility",
     ]
     with pytest.raises(

@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from typing import Any, ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from ade_api.features.test_center.run_descriptors import validate_test_run_options
+from ade_api.features.test_center.run_descriptors import (
+    canonicalize_agent_runtime_v3_case_keys,
+    validate_test_run_options,
+)
 
 
 class TestRunRequest(BaseModel):
@@ -32,6 +35,16 @@ class TestRunRequest(BaseModel):
     reviewer_model_key: str | None = None
     embedding_model_key: str | None = None
     include_llama_compatibility: bool | None = None
+    case_keys: list[str] | None = Field(default=None, min_length=1)
+
+    @field_validator("case_keys")
+    @classmethod
+    def _canonicalize_agent_runtime_v3_case_keys(
+        cls, case_keys: list[str] | None
+    ) -> list[str] | None:
+        if case_keys is None:
+            return None
+        return list(canonicalize_agent_runtime_v3_case_keys(case_keys))
 
     @model_validator(mode="after")
     def _validate_run_descriptor_options(self) -> TestRunRequest:

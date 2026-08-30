@@ -30,6 +30,7 @@ const v3AcceptanceForm: AgentRuntimeV3AcceptanceFormState = {
   timeoutSeconds: "180",
   retryCount: "0",
   includeLlamaCompatibility: true,
+  caseKeys: [],
 };
 
 describe("Test Center run launcher", () => {
@@ -95,6 +96,31 @@ describe("Test Center run launcher", () => {
         { ...v3AcceptanceForm, timeoutSeconds: "1" },
       ).timeout_seconds,
     ).toBe(5);
+  });
+
+  it("builds a canonical focused diagnostic payload that cannot claim promotion evidence", () => {
+    expect(
+      buildTestRunPayload(
+        "agent_runtime_v3_acceptance",
+        chatMemoryForm,
+        {
+          ...v3AcceptanceForm,
+          caseKeys: ["weather_tool_failure", "chat_memory_baseline"],
+          rounds: "3",
+          includeLlamaCompatibility: true,
+        },
+      ),
+    ).toEqual({
+      run_type: "agent_runtime_v3_acceptance",
+      conversation_model_key: "dgx_vllm::qwen3.6-35b-a3b-fp8",
+      reviewer_model_key: "dgx_vllm::qwen3.6-35b-a3b-fp8",
+      embedding_model_key: "dgx_embedding_sidecar::qwen3-embedding-0.6b",
+      case_keys: ["chat_memory_baseline", "weather_tool_failure"],
+      rounds: 1,
+      timeout_seconds: 180,
+      retry_count: 0,
+      include_llama_compatibility: false,
+    });
   });
 
   it("reconciles changed deployment aliases by role instead of keeping stale defaults", () => {
