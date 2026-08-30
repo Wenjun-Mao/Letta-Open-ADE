@@ -6,6 +6,9 @@ from pydantic import ValidationError
 from ade_api.features.agent_runtime_v3.contracts import AcceptTurnRequest
 from ade_api.features.agent_runtime_v3.errors import RuntimeValidationError
 from ade_api.features.agent_runtime_v3.fact_registry import (
+    FACT_TYPE_REGISTRY,
+    PREFERENCE_QUALIFIERS,
+    RELATIONSHIP_QUALIFIERS,
     FactRegistryError,
     fact_key,
     fact_type_spec,
@@ -110,9 +113,19 @@ def test_review_rejects_deferred_merge_operation() -> None:
 
 
 def test_review_schema_discriminates_operation_specific_shapes() -> None:
-    schema_text = str(review_json_schema())
+    schema = review_json_schema()
+    schema_text = str(schema)
     assert "discriminator" in schema_text
     assert "oneOf" in schema_text
+
+    add_properties = schema["$defs"]["AddProposal"]["properties"]
+    assert set(add_properties["fact_type"]["enum"]) == set(FACT_TYPE_REGISTRY)
+    qualifier_variants = add_properties["qualifier"]["anyOf"]
+    qualifier_enum = next(item["enum"] for item in qualifier_variants if "enum" in item)
+    assert set(qualifier_enum) == set(
+        (*PREFERENCE_QUALIFIERS, *RELATIONSHIP_QUALIFIERS)
+    )
+    assert "favorite_place" not in qualifier_enum
 
     proposal = parse_review_decision(
         {
@@ -127,6 +140,23 @@ def test_review_schema_discriminates_operation_specific_shapes() -> None:
         }
     ).proposals[0]
     assert proposal.operation.value == "add"
+
+
+def test_review_schema_rejects_noncanonical_qualifier_aliases() -> None:
+    with pytest.raises(RuntimeValidationError, match="qualifier"):
+        parse_review_decision(
+            {
+                "proposals": [
+                    {
+                        "operation": "add",
+                        "fact_type": "person.preference",
+                        "qualifier": "favorite_place",
+                        "value": "Royal Ontario Museum",
+                        "evidence_quote": "Royal Ontario Museum",
+                    }
+                ]
+            }
+        )
 
 
 @pytest.mark.parametrize("operation", ["correct", "forget"])

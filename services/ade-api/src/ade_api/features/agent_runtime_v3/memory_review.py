@@ -19,6 +19,36 @@ from .errors import RuntimeValidationError
 from .fact_registry import FactRegistryError, fact_type_spec, normalize_qualifier
 
 
+FactTypeName: TypeAlias = Literal[
+    "person.name",
+    "person.current_location",
+    "person.preference",
+    "person.shoe_size",
+    "pet.name",
+    "pet.breed",
+    "relationship.person",
+]
+QualifierName: TypeAlias = Literal[
+    "activity",
+    "color",
+    "drink",
+    "food",
+    "language",
+    "media",
+    "music",
+    "place",
+    "season",
+    "style",
+    "other",
+    "child",
+    "colleague",
+    "friend",
+    "parent",
+    "partner",
+    "sibling",
+]
+
+
 class _EvidenceProposalBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -26,8 +56,8 @@ class _EvidenceProposalBase(BaseModel):
 
 
 class _TypedProposalBase(_EvidenceProposalBase):
-    fact_type: StrictStr
-    qualifier: StrictStr | None = None
+    fact_type: FactTypeName
+    qualifier: QualifierName | None = None
 
     @model_validator(mode="after")
     def _normalize_fact_contract(self) -> "_TypedProposalBase":

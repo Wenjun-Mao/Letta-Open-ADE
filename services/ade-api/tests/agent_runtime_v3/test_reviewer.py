@@ -119,3 +119,22 @@ def test_reviewer_repairs_subject_bound_semantic_validation_once() -> None:
     assert len({operation.entity_id for operation in prepared.operations}) == 1
     repair_message = transport.calls[1][0]["messages"][-1]["content"]
     assert "pet.breed requires existing:<id> or new:<local-ref>" in repair_message
+    reviewer_packet = json.loads(transport.calls[0][0]["messages"][1]["content"])
+    preference_contract = next(
+        item
+        for item in reviewer_packet["allowed_fact_contracts"]
+        if item["fact_type"] == "person.preference"
+    )
+    assert preference_contract["allowed_qualifiers"] == [
+        "activity",
+        "color",
+        "drink",
+        "food",
+        "language",
+        "media",
+        "music",
+        "place",
+        "season",
+        "style",
+        "other",
+    ]

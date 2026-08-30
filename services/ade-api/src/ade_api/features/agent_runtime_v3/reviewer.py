@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .errors import RuntimeValidationError
+from .fact_registry import FACT_TYPE_REGISTRY
 from .memory_review import ReviewDecision, parse_review_decision, review_json_schema
 from .router_transport import RouterTransport
 
@@ -20,6 +21,10 @@ produce no proposal. Use add when no matching active fact exists. Use correct on
 when replacing a listed active fact, copying its fact_id and version exactly. Use
 forget only for an explicit request to remove retained information. Never output a
 subject ID or free-form key.
+Use only the exact fact types and qualifiers in allowed_fact_contracts. A
+qualifier is required only when that fact contract says so. Qualifiers are
+canonical categories, not free-form labels: for example, a favorite museum is
+person.preference with qualifier place, never favorite_place.
 For subject facts leave entity_ref null. Existing non-subject entities use
 existing:<id>; related facts for one new entity reuse new:<local-ref>. Correct and
 forget must not provide type, qualifier, entity, or key metadata; ADE derives all
@@ -87,14 +92,14 @@ class MemoryReviewer:
                 for item in entities
                 if item.get("kind") != "subject"
             ],
-            "allowed_fact_types": [
-                "person.name",
-                "person.current_location",
-                "person.preference",
-                "person.shoe_size",
-                "pet.name",
-                "pet.breed",
-                "relationship.person",
+            "allowed_fact_contracts": [
+                {
+                    "fact_type": spec.name,
+                    "entity_kind": spec.entity_kind.value,
+                    "qualifier_required": spec.qualifier_required,
+                    "allowed_qualifiers": list(spec.allowed_qualifiers),
+                }
+                for spec in FACT_TYPE_REGISTRY.values()
             ],
         }
         messages: list[dict[str, str]] = [
