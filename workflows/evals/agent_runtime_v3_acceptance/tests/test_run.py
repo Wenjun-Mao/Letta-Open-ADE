@@ -8,6 +8,7 @@ import pytest
 from workflows.evals.agent_runtime_v3_acceptance import run as run_module
 from workflows.evals.agent_runtime_v3_acceptance.cleanup import CleanupScope
 from workflows.evals.agent_runtime_v3_acceptance.runner import (
+    QualificationRound,
     ResourceScope,
     _resource_key,
 )
@@ -103,3 +104,86 @@ def test_client_close_failure_cannot_skip_scoped_cleanup(
     assert len(cleanup_calls) == 1
     assert cleanup_calls[0].definition_keys == ("run-definition",)
     assert cleanup_calls[0].subject_external_keys == ("run-subject",)
+
+
+def test_case_selection_is_one_round_without_llama_or_promotion(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    calls: dict[str, object] = {}
+    cases = (
+        SimpleNamespace(key="case-a"),
+        SimpleNamespace(key="case-b"),
+    )
+
+    class _Client:
+        def __init__(self, *_args: object) -> None:
+            pass
+
+        async def aclose(self) -> None:
+            pass
+
+    async def primary(**kwargs: object) -> tuple[QualificationRound, ...]:
+        calls.update(kwargs)
+        return (
+            QualificationRound(
+                index=1,
+                kind="diagnostic",
+                execution_mode="live-api-diagnostic",
+                complete_matrix=False,
+                passed=True,
+                case_keys=("case-b",),
+                cases=(),
+                deployment_fingerprints={},
+            ),
+        )
+
+    async def llama(**_kwargs: object) -> QualificationRound:
+        raise AssertionError("diagnostics must not launch llama compatibility")
+
+    def proposal(**_kwargs: object) -> object:
+        raise AssertionError("diagnostics must not build a promotion proposal")
+
+    monkeypatch.setattr(run_module, "load_cases", lambda _path: cases)
+    monkeypatch.setattr(run_module, "RuntimeV3Client", _Client)
+    monkeypatch.setattr(run_module, "run_primary_rounds", primary)
+    monkeypatch.setattr(run_module, "run_llama_compatibility_round", llama)
+    monkeypatch.setattr(run_module, "build_promotion_proposal", proposal)
+    monkeypatch.setattr(run_module, "_source_revision", lambda: "a" * 40)
+    monkeypatch.setattr(run_module, "_source_dirty", lambda: False)
+
+    config = run_module.AcceptanceConfig(
+        api_base_url="https://ade.test",
+        api_key="operator-key",
+        output_dir=tmp_path,
+        database_url="postgresql://example",
+        case_keys=("case-b",),
+    )
+    result = asyncio.run(run_module.run_acceptance(config))
+
+    assert calls["rounds"] == 1
+    assert calls["diagnostic"] is True
+    assert [case.key for case in calls["cases"]] == ["case-b"]
+    assert result["llama_compatibility"] is None
+    assert result["promotion_proposal"] is None
+    assert result["eligible"] is False
+
+
+def test_case_selection_rejects_noncanonical_order(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    cases = (
+        SimpleNamespace(key="case-a"),
+        SimpleNamespace(key="case-b"),
+    )
+    monkeypatch.setattr(run_module, "load_cases", lambda _path: cases)
+
+    config = run_module.AcceptanceConfig(
+        api_base_url="https://ade.test",
+        api_key="operator-key",
+        output_dir=tmp_path,
+        database_url="postgresql://example",
+        case_keys=("case-b", "case-a"),
+    )
+
+    with pytest.raises(RuntimeError, match="canonical case order"):
+        asyncio.run(run_module.run_acceptance(config))

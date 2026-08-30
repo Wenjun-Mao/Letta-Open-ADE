@@ -170,6 +170,7 @@ def _evidence(tmp_path: Path, manifest_path: Path) -> Path:
         "rounds": 3,
         "timeout_seconds": 180.0,
         "retry_count": 0,
+        "case_keys": [],
     }
     _provenance_path, provenance_sha256 = writer.write_provenance(
         {

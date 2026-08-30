@@ -38,8 +38,9 @@ ADE will eventually own a fresh conversational agent runtime with these boundari
 - A required memory reviewer runs after conversation generation. It receives only
   subject-bound active facts/entities and user-authored evidence, never assistant
   prose or a model-selectable subject ID. There is no fallback reviewer.
-- Assistant output and validated memory revisions commit atomically. Reviewer,
-  evidence, or optimistic-version failure commits neither output nor memory.
+- Assistant output, validated memory revisions, and any summary required for that
+  same turn commit atomically. Reviewer, summary, evidence, or optimistic-version
+  failure commits neither output, memory, nor a partial summary.
 - Raw messages are immutable. Summaries and optional episodes are versioned
   derivatives and never replace their source history.
 - Context construction, memory policy, retries/timeouts, tools, and normalized events
@@ -77,6 +78,9 @@ passing complete rounds. Focused diagnostics never count as qualification rounds
 - A database-backed conversation lease serializes accepted turns across workers.
 - Shared-subject writes serialize transactionally and use optimistic fact versions.
 - State changes, terminal run state/events, and outbox records commit atomically.
+- When context compaction is required, summary generation is a sub-operation of the
+  accepted turn. Its versioned summary, provenance, assistant message, reviewer
+  changes, terminal state, events, and outbox records commit together or none do.
 - Conversation generation cannot propose memory writes. The required reviewer runs
   after generation, uses a closed discriminated schema, and fails the turn atomically
   if it cannot produce a valid review. Corrections are not treated as forgetting.

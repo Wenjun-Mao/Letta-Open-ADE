@@ -11,6 +11,7 @@ from workflows.evals.agent_runtime_v3_acceptance.qualification import (
     is_eligible_primary_matrix,
 )
 from workflows.evals.agent_runtime_v3_acceptance.runner import (
+    CaseStageError,
     execute_case,
     run_primary_rounds,
 )
@@ -29,6 +30,15 @@ class _Prelude:
     user_template: str
     summary: str
     summary_through_sequence: int
+
+
+@dataclass(frozen=True)
+class _InitialFact:
+    subject_key: str
+    value: str
+    fact_type: str
+    qualifier: str | None = None
+    key: str = ""
 
 
 @dataclass(frozen=True)
@@ -199,6 +209,30 @@ def test_failed_or_focused_or_fake_rounds_never_qualify() -> None:
     )
 
 
+def test_case_filtered_rounds_are_explicit_diagnostics() -> None:
+    async def scenario() -> None:
+        rounds = await run_primary_rounds(
+            client=_FakeClient(),
+            cases=(_case("weather_tool_failure"),),
+            canonical_case_keys=("old_memory_deep_search", "weather_tool_failure"),
+            namespace="acceptance-diagnostic",
+            rounds=1,
+            conversation_model_key="chat",
+            reviewer_model_key="reviewer",
+            embedding_model_key="embedding",
+            timeout_seconds=180,
+            retry_count=0,
+            diagnostic=True,
+        )
+
+        assert rounds[0].kind == "diagnostic"
+        assert rounds[0].execution_mode == "live-api-diagnostic"
+        assert rounds[0].complete_matrix is False
+        assert rounds[0].case_keys == ("weather_tool_failure",)
+
+    asyncio.run(scenario())
+
+
 def test_cancellation_and_concurrent_requests_are_recorded_as_diagnostics() -> None:
     async def scenario() -> None:
         client = _FakeClient(status="cancelled")
@@ -285,7 +319,7 @@ def test_uncertain_create_response_is_registered_for_scoped_cleanup() -> None:
 
     async def scenario() -> None:
         scopes = []
-        with pytest.raises(TimeoutError, match="unknown"):
+        with pytest.raises(CaseStageError, match="definition_setup"):
             await execute_case(
                 client=_UncertainCreateClient(),
                 case=_case(),
@@ -397,5 +431,112 @@ def test_compaction_case_cannot_pass_without_a_versioned_summary_event() -> None
             check["kind"] == "versioned_summary_committed"
             for check in result.infrastructure["failures"]
         )
+
+    asyncio.run(scenario())
+
+
+def test_initial_facts_use_natural_language_and_verify_public_typed_memory() -> None:
+    class _SetupMemoryClient(_FakeClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.setup_content: list[str] = []
+
+        async def accept_turn(
+            self, conversation_id: str, content: str, *args: Any, **kwargs: Any
+        ) -> dict[str, Any]:
+            del conversation_id, args, kwargs
+            self.setup_content.append(content)
+            return await super().accept_turn()
+
+        async def get_subject_memories(self, subject_id: str) -> dict[str, Any]:
+            return {
+                "subject_id": subject_id,
+                "facts": [
+                    {
+                        "id": "fact-1",
+                        "fact_type": "person.preference",
+                        "entity_id": subject_id,
+                        "qualifier": "place",
+                        "value": "Royal Ontario Museum",
+                        "status": "active",
+                    }
+                ],
+            }
+
+    async def scenario() -> None:
+        client = _SetupMemoryClient()
+        case = _Case(
+            key="typed-setup",
+            conversations={"primary": ("primary", "primary")},
+            turns=(_Turn("primary", "hello"),),
+            initial_facts=(
+                _InitialFact(
+                    subject_key="primary",
+                    fact_type="person.preference",
+                    qualifier="place",
+                    value="Royal Ontario Museum",
+                ),
+            ),
+        )
+
+        result = await execute_case(
+            client=client,
+            case=case,
+            namespace="acceptance-typed-setup",
+            conversation_model_key="chat",
+            reviewer_model_key="reviewer",
+            embedding_model_key="embedding",
+            timeout_seconds=180,
+            retry_count=0,
+        )
+
+        assert result.score["pass"] is True
+        assert client.setup_content[0] == (
+            "My favorite place is Royal Ontario Museum. Please remember it."
+        )
+
+    asyncio.run(scenario())
+
+
+def test_missing_public_setup_memory_is_a_safe_stage_specific_failure() -> None:
+    class _MissingSetupMemoryClient(_FakeClient):
+        async def get_subject_memories(self, subject_id: str) -> dict[str, Any]:
+            return {"subject_id": subject_id, "facts": []}
+
+    async def scenario() -> None:
+        case = _Case(
+            key="typed-setup-missing",
+            conversations={"primary": ("primary", "primary")},
+            turns=(_Turn("primary", "hello"),),
+            initial_facts=(
+                _InitialFact(
+                    subject_key="primary",
+                    fact_type="person.preference",
+                    qualifier="place",
+                    value="Royal Ontario Museum",
+                ),
+            ),
+        )
+        rounds = await run_primary_rounds(
+            client=_MissingSetupMemoryClient(),
+            cases=(case,),
+            canonical_case_keys=(case.key,),
+            namespace="acceptance-typed-setup-missing",
+            rounds=1,
+            conversation_model_key="chat",
+            reviewer_model_key="reviewer",
+            embedding_model_key="embedding",
+            timeout_seconds=180,
+            retry_count=0,
+        )
+
+        failure = rounds[0].cases[0].infrastructure["failures"][0]
+        assert failure == {
+            "kind": "case_execution_error",
+            "stage": "initial_fact_memory_verification",
+            "pass": False,
+            "error_type": "AssertionError",
+            "message": "initial fact memory verification failed",
+        }
 
     asyncio.run(scenario())

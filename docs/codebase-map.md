@@ -41,7 +41,7 @@ provider-facing boundary for normal discovery and generation.
 | Evals and provider probes | `workflows/evals/` | workflow-local `README.md` and `run.py` |
 | Native agent-runtime preview | `services/ade-api/src/ade_api/features/agent_runtime_v3/` | feature README, thin application/worker coordinators, and owning service modules |
 | Native agent-runtime research evidence | `workflows/evals/agent_runtime_study/` | workflow README, [study report](architecture/agent-runtime-replacement-study.md), and accepted [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
-| Native agent-runtime production qualification | `workflows/evals/agent_runtime_v3_acceptance/` | workflow README, policy registry, reviewed promotion command, and [ADR 0010](adr/0010-production-path-runtime-qualification.md) |
+| Native agent-runtime production qualification | `workflows/evals/agent_runtime_v3_acceptance/` | workflow README, case-filtered diagnostic CLI, policy registry, reviewed promotion command, and [ADR 0010](adr/0010-production-path-runtime-qualification.md) |
 | Live smoke coverage | `workflows/smoke/` | named smoke script or `make smoke` |
 | Compose support files | `infra/` | `compose.yaml` and the relevant `infra/` asset |
 

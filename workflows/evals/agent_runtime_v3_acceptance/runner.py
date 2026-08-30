@@ -44,6 +44,14 @@ class QualificationRound:
     artifact_sha256: str = ""
 
 
+class CaseStageError(RuntimeError):
+    """A safe, artifact-ready failure from one observable case stage."""
+
+    def __init__(self, stage: str) -> None:
+        super().__init__(stage)
+        self.stage = stage
+
+
 async def execute_case(
     *,
     client: RuntimeV3Client,
@@ -72,12 +80,15 @@ async def execute_case(
             # Register the deterministic key before the request. A timeout can
             # leave creation outcome unknown, but cleanup must still cover it.
             resource_scope_sink.append(ResourceScope((definition_key,), (), {}, ()))
-        created = await client.create_definition(
-            definition_key=definition_key,
-            name=f"v3 acceptance {getattr(case, 'key')} {agent_key}",
-            model_key=conversation_model_key,
-            reviewer_model_key=reviewer_model_key,
-            embedding_model_key=embedding_model_key,
+        created = await _run_stage(
+            "definition_setup",
+            client.create_definition(
+                definition_key=definition_key,
+                name=f"v3 acceptance {getattr(case, 'key')} {agent_key}",
+                model_key=conversation_model_key,
+                reviewer_model_key=reviewer_model_key,
+                embedding_model_key=embedding_model_key,
+            ),
         )
         fingerprints.update(_deployment_fingerprints(created))
         deployment_snapshots.extend(_deployment_snapshots(created))
@@ -98,14 +109,16 @@ async def execute_case(
         subject_external_keys.append(external_key)
         if resource_scope_sink is not None:
             resource_scope_sink.append(ResourceScope((), (external_key,), {}, ()))
-        created = await client.create_subject(
-            external_key, f"v3 acceptance {subject_key}"
+        created = await _run_stage(
+            "subject_setup",
+            client.create_subject(external_key, f"v3 acceptance {subject_key}"),
         )
         subjects[str(subject_key)] = _id(created, "subject")
     for conversation_key, binding in dict(getattr(case, "conversations")).items():
         agent_key, subject_key = binding
-        created = await client.create_conversation(
-            definitions[agent_key], subjects[subject_key]
+        created = await _run_stage(
+            "conversation_setup",
+            client.create_conversation(definitions[agent_key], subjects[subject_key]),
         )
         conversations[str(conversation_key)] = _id(created, "conversation")
     scope = ResourceScope(
@@ -120,9 +133,7 @@ async def execute_case(
     for fact in tuple(getattr(case, "initial_facts", ())):
         subject_key = str(getattr(fact, "subject_key", "primary"))
         conversation_key = _first_conversation_for_subject(case, subject_key)
-        content = (
-            f"Please remember this exact durable fact: {getattr(fact, 'value', '')}"
-        )
+        content = _natural_fact_setup_message(fact)
         await _complete_setup_turn(
             client,
             conversations[conversation_key],
@@ -130,6 +141,16 @@ async def execute_case(
             namespace,
             timeout_seconds,
             retry_count,
+            stage="initial_fact_setup",
+        )
+        response = await _run_stage(
+            "initial_fact_memory_verification",
+            client.get_subject_memories(subjects[subject_key]),
+        )
+        _verify_public_initial_fact(
+            response=response,
+            subject_id=subjects[subject_key],
+            fact=fact,
         )
     for prelude in tuple(getattr(case, "prelude_messages", ())):
         conversation_key = str(getattr(prelude, "conversation_key"))
@@ -142,25 +163,34 @@ async def execute_case(
                 namespace,
                 timeout_seconds,
                 retry_count,
+                stage="prelude_setup",
             )
 
     completed_turns: list[dict[str, Any]] = []
     for index, turn in enumerate(tuple(getattr(case, "turns")), start=1):
         conversation_key = str(getattr(turn, "conversation_key"))
         conversation_id = conversations[conversation_key]
-        accepted = await client.accept_turn(
-            conversation_id,
-            str(getattr(turn, "user")),
-            _idempotency_key(namespace, str(getattr(case, "key")), index),
-            timeout_seconds=timeout_seconds,
-            retry_count=retry_count,
+        accepted = await _run_stage(
+            "turn_execution",
+            client.accept_turn(
+                conversation_id,
+                str(getattr(turn, "user")),
+                _idempotency_key(namespace, str(getattr(case, "key")), index),
+                timeout_seconds=timeout_seconds,
+                retry_count=retry_count,
+            ),
         )
-        run, events = await _await_terminal_with_cancellation(
-            client,
-            accepted,
-            timeout_seconds=timeout_seconds * (retry_count + 1) + 30,
+        run, events = await _run_stage(
+            "turn_execution",
+            _await_terminal_with_cancellation(
+                client,
+                accepted,
+                timeout_seconds=timeout_seconds * (retry_count + 1) + 30,
+            ),
         )
-        state = await client.get_conversation_state(conversation_id)
+        state = await _run_stage(
+            "turn_state_observation", client.get_conversation_state(conversation_id)
+        )
         completed_turns.append(
             {
                 "conversation_key": conversation_key,
@@ -171,10 +201,12 @@ async def execute_case(
         )
     facts: dict[str, list[dict[str, Any]]] = {}
     for subject_key, subject_id in subjects.items():
-        response = await client.get_subject_memories(subject_id)
+        response = await _run_stage(
+            "final_memory_observation", client.get_subject_memories(subject_id)
+        )
         values = response.get("facts")
         facts[subject_key] = list(values) if isinstance(values, list) else []
-    normalized = normalize_case(case=case, turns=completed_turns, subject_facts=facts)
+    normalized = _normalize_case(case=case, turns=completed_turns, subject_facts=facts)
     capability_checks = _capability_checks(case, normalized.events, completed_turns)
     capability_failures = [check for check in capability_checks if not check["pass"]]
     infrastructure = {
@@ -205,6 +237,78 @@ async def execute_case(
         infrastructure=infrastructure,
         resources=scope,
     )
+
+
+async def _run_stage(stage: str, operation: Any) -> Any:
+    try:
+        return await operation
+    except CaseStageError:
+        raise
+    except Exception as exc:
+        raise CaseStageError(stage) from exc
+
+
+def _normalize_case(
+    *,
+    case: object,
+    turns: list[dict[str, Any]],
+    subject_facts: dict[str, list[dict[str, Any]]],
+) -> Any:
+    try:
+        return normalize_case(case=case, turns=turns, subject_facts=subject_facts)
+    except Exception as exc:
+        raise CaseStageError("normalization") from exc
+
+
+def _natural_fact_setup_message(fact: object) -> str:
+    value = str(getattr(fact, "value", "")).strip()
+    fact_type = str(getattr(fact, "fact_type", "")).strip()
+    qualifier = str(getattr(fact, "qualifier", "") or "").strip()
+    if fact_type == "person.name":
+        return f"My name is {value}. Please remember it."
+    if fact_type == "person.current_location":
+        return f"I currently live in {value}. Please remember it."
+    if fact_type == "person.preference" and qualifier:
+        return f"My favorite {qualifier} is {value}. Please remember it."
+    if fact_type == "person.shoe_size":
+        return f"My shoe size is {value}. Please remember it."
+    if fact_type == "pet.name":
+        return f"My pet's name is {value}. Please remember it."
+    if fact_type == "pet.breed":
+        return f"My pet's breed is {value}. Please remember it."
+    if fact_type == "relationship.person" and qualifier:
+        return f"My {qualifier} is {value}. Please remember it."
+    return f"Please remember this detail: {value}."
+
+
+def _verify_public_initial_fact(
+    *, response: dict[str, Any], subject_id: str, fact: object
+) -> None:
+    fact_type = str(getattr(fact, "fact_type", "")).strip()
+    qualifier = str(getattr(fact, "qualifier", "") or "").strip() or None
+    value = str(getattr(fact, "value", "")).strip()
+    key = str(getattr(fact, "key", "")).strip()
+    facts = response.get("facts")
+    if not isinstance(facts, list):
+        raise CaseStageError("initial_fact_memory_verification") from AssertionError()
+    for observed in facts:
+        if not isinstance(observed, dict):
+            continue
+        if observed.get("status") != "active" or observed.get("value") != value:
+            continue
+        if fact_type:
+            observed_qualifier = (
+                str(observed.get("qualifier") or "").strip().casefold() or None
+            )
+            if (
+                observed.get("fact_type") == fact_type
+                and observed_qualifier == qualifier
+                and observed.get("entity_id") == subject_id
+            ):
+                return
+        elif key and observed.get("key") == key:
+            return
+    raise CaseStageError("initial_fact_memory_verification") from AssertionError()
 
 
 def _capability_checks(
@@ -264,6 +368,7 @@ async def run_primary_rounds(
     timeout_seconds: float,
     retry_count: int,
     execution_mode: str = "live-api",
+    diagnostic: bool = False,
     resource_scope_sink: list[ResourceScope] | None = None,
     on_round_complete: Callable[[QualificationRound], QualificationRound] | None = None,
 ) -> tuple[QualificationRound, ...]:
@@ -295,9 +400,9 @@ async def run_primary_rounds(
         case_keys = tuple(item.case_key for item in materialized_executions)
         result = QualificationRound(
             index=index,
-            kind="primary",
-            execution_mode=execution_mode,
-            complete_matrix=case_keys == canonical_case_keys,
+            kind="diagnostic" if diagnostic else "primary",
+            execution_mode=("live-api-diagnostic" if diagnostic else execution_mode),
+            complete_matrix=not diagnostic and case_keys == canonical_case_keys,
             passed=all(
                 bool(item.score.get("pass")) for item in materialized_executions
             ),
@@ -368,21 +473,29 @@ async def _complete_setup_turn(
     namespace: str,
     timeout_seconds: float,
     retry_count: int,
+    *,
+    stage: str,
 ) -> None:
-    accepted = await client.accept_turn(
-        conversation_id,
-        content,
-        _idempotency_key(namespace, "setup", _stable_content_index(content)),
-        timeout_seconds=timeout_seconds,
-        retry_count=retry_count,
+    accepted = await _run_stage(
+        stage,
+        client.accept_turn(
+            conversation_id,
+            content,
+            _idempotency_key(namespace, "setup", _stable_content_index(content)),
+            timeout_seconds=timeout_seconds,
+            retry_count=retry_count,
+        ),
     )
-    run, _events = await _await_terminal_with_cancellation(
-        client,
-        accepted,
-        timeout_seconds=timeout_seconds * (retry_count + 1) + 30,
+    run, _events = await _run_stage(
+        stage,
+        _await_terminal_with_cancellation(
+            client,
+            accepted,
+            timeout_seconds=timeout_seconds * (retry_count + 1) + 30,
+        ),
     )
     if run.get("status") != "succeeded":
-        raise RuntimeError("canonical setup turn did not succeed")
+        raise CaseStageError(stage) from AssertionError()
 
 
 async def _await_terminal_with_cancellation(
@@ -471,11 +584,15 @@ def _failed_case_execution(
             snapshot for scope in scopes for snapshot in scope.deployment_snapshots
         ),
     )
+    stage_error = exc if isinstance(exc, CaseStageError) else None
+    cause = stage_error.__cause__ if stage_error is not None else exc
+    stage = stage_error.stage if stage_error is not None else "case_execution"
     failure = {
         "kind": "case_execution_error",
+        "stage": stage,
         "pass": False,
-        "error_type": type(exc).__name__,
-        "message": str(exc),
+        "error_type": type(cause).__name__,
+        "message": f"{stage.replace('_', ' ')} failed",
     }
     return CaseExecution(
         case_key=str(getattr(case, "key")),

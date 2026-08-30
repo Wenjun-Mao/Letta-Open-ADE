@@ -31,6 +31,7 @@ class AcceptanceConfig:
     timeout_seconds: float = 180.0
     retry_count: int = 0
     include_llama_compatibility: bool = True
+    case_keys: tuple[str, ...] = ()
 
     def validate(self) -> None:
         if not self.api_base_url.strip():
@@ -49,6 +50,10 @@ class AcceptanceConfig:
             raise ConfigError("timeout_seconds must be between 5 and 600")
         if not 0 <= self.retry_count <= 5:
             raise ConfigError("retry_count must be between 0 and 5")
+        if any(not key.strip() for key in self.case_keys):
+            raise ConfigError("case_keys cannot include empty values")
+        if len(set(self.case_keys)) != len(self.case_keys):
+            raise ConfigError("case_keys must be unique")
 
 
 def load_config(path: Path | None = None) -> AcceptanceConfig:
@@ -105,6 +110,7 @@ def load_config(path: Path | None = None) -> AcceptanceConfig:
         include_llama_compatibility=_bool_value(
             "INCLUDE_LLAMA_COMPATIBILITY", payload, "include_llama_compatibility", True
         ),
+        case_keys=_case_keys_value(payload),
     )
     config.validate()
     return config
@@ -130,6 +136,7 @@ def public_config(config: AcceptanceConfig) -> dict[str, object]:
         "timeout_seconds": config.timeout_seconds,
         "retry_count": config.retry_count,
         "include_llama_compatibility": config.include_llama_compatibility,
+        "case_keys": list(config.case_keys),
     }
 
 
@@ -185,3 +192,15 @@ def _bool_value(env_key: str, payload: dict[str, Any], key: str, default: bool) 
     if normalized in {"0", "false", "no", "off"}:
         return False
     raise ConfigError(f"{key} must be a boolean")
+
+
+def _case_keys_value(payload: dict[str, Any]) -> tuple[str, ...]:
+    configured = os.getenv("AGENT_RUNTIME_V3_ACCEPTANCE_CASE_KEYS")
+    raw: object = configured if configured is not None else payload.get("case_keys", ())
+    if isinstance(raw, str):
+        values = raw.split(",")
+    elif isinstance(raw, (list, tuple)):
+        values = raw
+    else:
+        raise ConfigError("case_keys must be a string or list of strings")
+    return tuple(str(value).strip() for value in values if str(value).strip())

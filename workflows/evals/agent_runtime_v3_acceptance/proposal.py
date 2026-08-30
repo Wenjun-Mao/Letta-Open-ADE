@@ -29,6 +29,8 @@ def build_promotion_proposal(
     policy_hashes: dict[str, str],
     qualification_config: dict[str, Any],
 ) -> PromotionProposal | None:
+    if not _is_full_matrix_qualification_config(qualification_config):
+        return None
     if not is_eligible_primary_matrix(
         rounds,
         canonical_case_keys=canonical_case_keys,
@@ -85,6 +87,19 @@ def build_promotion_proposal(
     path = root / f"promotion-proposal-{digest}.json"
     path.write_bytes(_canonical_bytes(payload))
     return PromotionProposal(path=path, payload=payload)
+
+
+def _is_full_matrix_qualification_config(config: dict[str, Any]) -> bool:
+    required_keys = {
+        "conversation_model_key",
+        "reviewer_model_key",
+        "embedding_model_key",
+        "rounds",
+        "timeout_seconds",
+        "retry_count",
+        "case_keys",
+    }
+    return set(config) == required_keys and config.get("case_keys") == []
 
 
 def _deployment_bindings(rounds: tuple[object, ...]) -> dict[str, dict[str, str]]:

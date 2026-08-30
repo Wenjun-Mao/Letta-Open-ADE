@@ -105,6 +105,7 @@ def test_promotion_proposal_requires_complete_live_primary_matrix(
             "rounds": 3,
             "timeout_seconds": 180,
             "retry_count": 0,
+            "case_keys": [],
         },
     )
 
@@ -117,6 +118,33 @@ def test_promotion_proposal_requires_complete_live_primary_matrix(
     }
     assert proposal.path.is_file()
     assert not (tmp_path / "deployment-manifest.json").exists()
+
+    filtered = build_promotion_proposal(
+        output_dir=tmp_path,
+        run_id="run-filtered",
+        rounds=rounds,
+        canonical_case_keys=("a", "b"),
+        required_rounds=3,
+        provenance_sha256="b" * 64,
+        source_revision="c" * 40,
+        source_dirty=False,
+        policy_hashes={
+            "prompt": "d" * 64,
+            "tool": "e" * 64,
+            "schema": "f" * 64,
+            "retrieval": "1" * 64,
+        },
+        qualification_config={
+            "conversation_model_key": "router::chat",
+            "reviewer_model_key": "router::chat",
+            "embedding_model_key": "router::embedding",
+            "rounds": 3,
+            "timeout_seconds": 180,
+            "retry_count": 0,
+            "case_keys": ["a"],
+        },
+    )
+    assert filtered is None
 
 
 def test_cleanup_refuses_unsupported_database_or_unscoped_queries(

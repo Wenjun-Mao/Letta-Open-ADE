@@ -33,6 +33,22 @@ def test_defaults_match_production_qualification_contract(
     assert config.timeout_seconds == 180
     assert config.retry_count == 0
     assert config.include_llama_compatibility is True
+    assert config.case_keys == ()
+
+
+def test_case_keys_are_an_explicit_diagnostic_selection(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("AGENT_RUNTIME_V3_ACCEPTANCE_API_BASE_URL", "https://ade.test")
+    monkeypatch.setenv("AGENT_RUNTIME_V3_ACCEPTANCE_API_KEY", "operator-key")
+    monkeypatch.setenv(
+        "AGENT_RUNTIME_V3_ACCEPTANCE_CASE_KEYS",
+        "old_memory_deep_search,weather_tool_failure",
+    )
+
+    config = load_config(tmp_path / "missing.toml")
+
+    assert config.case_keys == ("old_memory_deep_search", "weather_tool_failure")
 
 
 def test_container_environment_is_a_safe_fallback_for_ui_launched_runs(
@@ -83,6 +99,10 @@ def test_runner_exposes_exact_test_center_flags() -> None:
             "180",
             "--retry-count",
             "0",
+            "--case-key",
+            "old_memory_deep_search",
+            "--case-key",
+            "weather_tool_failure",
             "--no-include-llama-compatibility",
         ]
     )
@@ -95,6 +115,7 @@ def test_runner_exposes_exact_test_center_flags() -> None:
     assert args.rounds == 3
     assert args.timeout_seconds == 180
     assert args.retry_count == 0
+    assert args.case_keys == ["old_memory_deep_search", "weather_tool_failure"]
     assert args.include_llama_compatibility is False
 
 

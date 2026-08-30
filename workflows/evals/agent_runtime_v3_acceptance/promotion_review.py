@@ -84,6 +84,21 @@ def review_promotion(
     qualification_config = _mapping(
         proposal.get("qualification_config"), "qualification config"
     )
+    expected_qualification_keys = {
+        "conversation_model_key",
+        "reviewer_model_key",
+        "embedding_model_key",
+        "rounds",
+        "timeout_seconds",
+        "retry_count",
+        "case_keys",
+    }
+    if set(qualification_config) != expected_qualification_keys:
+        raise PromotionReviewError("promotion qualification config is incomplete")
+    if qualification_config.get("case_keys") != []:
+        raise PromotionReviewError(
+            "promotion cannot use a case-filtered diagnostic selection"
+        )
     if (
         qualification_config.get("rounds") != 3
         or float(qualification_config.get("timeout_seconds") or 0) != 180.0
