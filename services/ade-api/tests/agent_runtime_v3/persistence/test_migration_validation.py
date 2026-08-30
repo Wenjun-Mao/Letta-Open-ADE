@@ -8,7 +8,7 @@ from ade_api.features.agent_runtime_v3.persistence.validation import (
 
 
 def test_migration_has_one_reviewed_head() -> None:
-    assert migration_heads() == ("20260829_0001",)
+    assert migration_heads() == ("20260830_0002",)
 
 
 def test_initial_migration_is_static_not_live_metadata() -> None:
@@ -22,6 +22,20 @@ def test_initial_migration_is_static_not_live_metadata() -> None:
     assert "CREATE EXTENSION IF NOT EXISTS vector" in source
     assert "CREATE SCHEMA IF NOT EXISTS ade" in source
     assert "persistence.metadata" not in source
+
+
+def test_compaction_migration_preserves_legacy_rows_and_enforces_provenance() -> None:
+    migration = (
+        service_root()
+        / "migrations"
+        / "versions"
+        / "20260830_0002_ade_conversation_compaction.py"
+    )
+    source = migration.read_text(encoding="utf-8")
+    assert "legacy-unattributed" in source
+    assert "previous_summary_id" in source
+    assert "prompt_sha256" in source
+    assert "input_sha256" in source
 
 
 def test_alembic_version_table_is_owned_with_runtime_schema() -> None:

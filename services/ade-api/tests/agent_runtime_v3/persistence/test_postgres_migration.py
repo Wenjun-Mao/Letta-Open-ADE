@@ -35,6 +35,17 @@ def test_alembic_upgrade_creates_named_ade_pgvector_schema() -> None:
             validate_database_at_head(connection)
             inspector = inspect(connection)
             assert "memory_embeddings" in inspector.get_table_names(schema="ade")
+            summary_columns = {
+                column["name"]
+                for column in inspector.get_columns("conversation_summaries", schema="ade")
+            }
+            assert {
+                "previous_summary_id",
+                "model_key",
+                "provider_request_id",
+                "prompt_sha256",
+                "input_sha256",
+            } <= summary_columns
             assert "uq_runs_active_conversation" in {
                 index["name"] for index in inspector.get_indexes("runs", schema="ade")
             }

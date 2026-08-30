@@ -4,7 +4,15 @@ import hashlib
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal, TypeAlias
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictInt,
+    StrictStr,
+    field_validator,
+    model_validator,
+)
 
 from .contracts import MemoryOperation
 from .errors import RuntimeValidationError
@@ -14,9 +22,9 @@ from .fact_registry import FactRegistryError, fact_type_spec, normalize_qualifie
 class _ProposalBase(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    fact_type: str
-    evidence_quote: str = Field(min_length=1, max_length=10_000)
-    qualifier: str | None = None
+    fact_type: StrictStr
+    evidence_quote: StrictStr = Field(min_length=1, max_length=10_000)
+    qualifier: StrictStr | None = None
 
     @model_validator(mode="after")
     def _normalize_fact_contract(self) -> "_ProposalBase":
@@ -31,9 +39,9 @@ class _ProposalBase(BaseModel):
 
 class AddProposal(_ProposalBase):
     operation: Literal[MemoryOperation.ADD]
-    value: str = Field(min_length=1, max_length=10_000)
-    entity_ref: str | None = None
-    new_entity_label: str = Field(default="", max_length=500)
+    value: StrictStr = Field(min_length=1, max_length=10_000)
+    entity_ref: StrictStr | None = None
+    new_entity_label: StrictStr = Field(default="", max_length=500)
 
     @field_validator("value")
     @classmethod
@@ -45,9 +53,9 @@ class AddProposal(_ProposalBase):
 
 class CorrectProposal(_ProposalBase):
     operation: Literal[MemoryOperation.CORRECT]
-    value: str = Field(min_length=1, max_length=10_000)
-    fact_id: str = Field(min_length=1, max_length=100)
-    expected_version: int = Field(ge=1)
+    value: StrictStr = Field(min_length=1, max_length=10_000)
+    fact_id: StrictStr = Field(min_length=1, max_length=100)
+    expected_version: StrictInt = Field(ge=1)
 
     @field_validator("value")
     @classmethod
@@ -59,9 +67,9 @@ class CorrectProposal(_ProposalBase):
 
 class MergeProposal(_ProposalBase):
     operation: Literal[MemoryOperation.MERGE]
-    value: str = Field(min_length=1, max_length=10_000)
-    target_fact_ids: list[str] = Field(min_length=2, max_length=20)
-    expected_versions: dict[str, int] = Field(min_length=2, max_length=20)
+    value: StrictStr = Field(min_length=1, max_length=10_000)
+    target_fact_ids: list[StrictStr] = Field(min_length=2, max_length=20)
+    expected_versions: dict[StrictStr, StrictInt] = Field(min_length=2, max_length=20)
 
     @model_validator(mode="after")
     def _matching_targets_and_versions(self) -> "MergeProposal":
@@ -79,8 +87,8 @@ class MergeProposal(_ProposalBase):
 class ForgetProposal(_ProposalBase):
     operation: Literal[MemoryOperation.FORGET]
     value: None
-    fact_id: str = Field(min_length=1, max_length=100)
-    expected_version: int = Field(ge=1)
+    fact_id: StrictStr = Field(min_length=1, max_length=100)
+    expected_version: StrictInt = Field(ge=1)
 
 
 ReviewProposal: TypeAlias = Annotated[

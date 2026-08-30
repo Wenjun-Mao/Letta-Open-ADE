@@ -23,10 +23,13 @@ dual-write behavior.
 - `executor.py`, `reviewer.py`, and `fact_registry.py` contain the model/tool loop,
   dedicated review protocol, and allowed durable-fact vocabulary.
 
-The conversation model may call only `search_memory`. It cannot write memory or
-select a subject. A separate reviewer proposes closed typed operations bound to
-user-authored evidence, and ADE commits a successful assistant response and memory
-revisions together.
+The conversation model may call only its definition-selected curated tools:
+subject-bound `search_memory` and the deterministic preview `get_weather` fixture.
+It cannot write memory or select a subject. A separate reviewer proposes closed
+typed operations bound to user-authored evidence. When context budgeting omits
+unsummarized history, ADE generates a contiguous-prefix summary and atomically
+commits its source links, model/request identity, input hashes, assistant response,
+and memory revisions together.
 
 ## Local Preview
 

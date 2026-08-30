@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from ade_api.features.agent_runtime_v3.errors import RuntimeValidationError
-from ade_api.features.agent_runtime_v3.executor import ConversationExecutor
+from ade_api.features.agent_runtime_v3.executor import ConversationExecutor, curated_tools
 
 
 class _Transport:
@@ -99,7 +99,7 @@ def test_executor_rejects_arbitrary_tool_names() -> None:
     async def search(query: str, limit: int):
         return []
 
-    with pytest.raises(RuntimeValidationError, match="Only search_memory"):
+    with pytest.raises(RuntimeValidationError, match="not enabled"):
         asyncio.run(
             ConversationExecutor(transport).execute(
                 model_key="source::model",
@@ -109,3 +109,68 @@ def test_executor_rejects_arbitrary_tool_names() -> None:
                 max_output_tokens=100,
             )
         )
+
+
+def test_executor_dispatches_the_enabled_curated_weather_tool() -> None:
+    transport = _Transport(
+        [
+            {
+                "id": "request-1",
+                "choices": [
+                    {
+                        "finish_reason": "tool_calls",
+                        "message": {
+                            "role": "assistant",
+                            "tool_calls": [
+                                {
+                                    "id": "weather-1",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "get_weather",
+                                        "arguments": '{"city":"Toronto"}',
+                                    },
+                                }
+                            ],
+                        },
+                    }
+                ],
+            },
+            {
+                "id": "request-2",
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {
+                            "role": "assistant",
+                            "content": "Toronto is clear at 21 C.",
+                        },
+                    }
+                ],
+            },
+        ]
+    )
+
+    async def search(query: str, limit: int):
+        raise AssertionError("weather must not invoke memory search")
+
+    result = asyncio.run(
+        ConversationExecutor(transport).execute(
+            model_key="source::model",
+            messages=[{"role": "user", "content": "Weather in Toronto?"}],
+            tools=curated_tools(("get_weather",), search_memory=search),
+            timeout_seconds=30,
+            max_output_tokens=100,
+        )
+    )
+
+    assert [tool["function"]["name"] for tool in transport.calls[0][0]["tools"]] == [
+        "get_weather"
+    ]
+    assert result.tool_events == [
+        {
+            "call_id": "weather-1",
+            "name": "get_weather",
+            "arguments": {"city": "Toronto"},
+            "result_count": 0,
+        }
+    ]

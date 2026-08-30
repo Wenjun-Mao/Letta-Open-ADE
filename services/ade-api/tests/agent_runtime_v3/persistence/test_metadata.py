@@ -5,6 +5,7 @@ from pgvector.sqlalchemy import Vector
 from ade_api.features.agent_runtime_v3.persistence.metadata import (
     METADATA,
     SCHEMA_NAME,
+    conversation_summaries,
     memory_embeddings,
     run_attempts,
 )
@@ -63,3 +64,13 @@ def test_active_state_guards_are_partial_unique_indexes() -> None:
         index.dialect_options["postgresql"]["where"] is not None
         for index in indexes.values()
     )
+
+
+def test_conversation_summaries_persist_generation_provenance() -> None:
+    assert set(conversation_summaries.c.keys()) >= {
+        "previous_summary_id",
+        "model_key",
+        "provider_request_id",
+        "prompt_sha256",
+        "input_sha256",
+    }

@@ -1,9 +1,18 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Awaitable, Callable, Collection, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from .compaction import (
+    COMPACTION_SYSTEM,
+    CompactionPlan,
+    ModelCompaction,
+    compaction_input_sha256,
+    compaction_model_input_json,
+    compaction_prompt_sha256,
+)
 from .errors import RuntimeValidationError
 from .router_transport import RouterTransport
 
@@ -25,9 +34,50 @@ SEARCH_MEMORY_TOOL = {
     },
 }
 
+WEATHER_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Return deterministic preview weather for a named city.",
+        "parameters": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {"city": {"type": "string", "minLength": 1}},
+            "required": ["city"],
+        },
+    },
+}
+
+_WEATHER_FIXTURES = {
+    "toronto": {"condition": "clear", "temperature_c": 21},
+    "beijing": {"condition": "partly cloudy", "temperature_c": 26},
+    "北京": {"condition": "partly cloudy", "temperature_c": 26},
+    "多伦多": {"condition": "clear", "temperature_c": 21},
+}
+
 
 class SearchMemoryHandler(Protocol):
     async def __call__(self, query: str, limit: int) -> list[dict[str, Any]]: ...
+
+
+@dataclass(frozen=True)
+class ToolResult:
+    arguments: dict[str, Any]
+    content: dict[str, Any]
+    result_count: int = 0
+
+
+ToolHandler = Callable[[dict[str, Any]], Awaitable[ToolResult]]
+
+
+@dataclass(frozen=True)
+class CuratedTool:
+    definition: dict[str, Any]
+    handler: ToolHandler
+
+    @property
+    def name(self) -> str:
+        return str(self.definition["function"]["name"])
 
 
 @dataclass(frozen=True)
@@ -40,6 +90,25 @@ class ExecutorResult:
     provider_request_ids: list[str]
 
 
+def curated_tools(
+    names: Collection[str],
+    *,
+    search_memory: SearchMemoryHandler | None = None,
+) -> dict[str, CuratedTool]:
+    """Construct the exact allow-list for one bound conversation execution."""
+
+    requested = tuple(str(name) for name in names)
+    if len(requested) != len(set(requested)):
+        raise RuntimeValidationError("Conversation tool names must not contain duplicates")
+    available: dict[str, CuratedTool] = {"get_weather": _weather_tool()}
+    if search_memory is not None:
+        available["search_memory"] = _search_memory_tool(search_memory)
+    unknown = sorted(set(requested) - set(available))
+    if unknown:
+        raise RuntimeValidationError(f"Unknown or unavailable curated tools: {unknown}")
+    return {name: available[name] for name in requested}
+
+
 class ConversationExecutor:
     def __init__(self, transport: RouterTransport) -> None:
         self.transport = transport
@@ -49,12 +118,20 @@ class ConversationExecutor:
         *,
         model_key: str,
         messages: list[dict[str, Any]],
-        search_memory: SearchMemoryHandler,
         timeout_seconds: float,
         max_output_tokens: int,
+        tools: Mapping[str, CuratedTool] | None = None,
         max_model_requests: int = 6,
+        # Kept only for callers of the original preview API. Runtime execution
+        # supplies ``tools`` and therefore never selects behavior by a boolean.
+        search_memory: SearchMemoryHandler | None = None,
         enable_search_memory: bool = True,
     ) -> ExecutorResult:
+        enabled_tools = dict(tools) if tools is not None else curated_tools(
+            ("search_memory",) if enable_search_memory else (),
+            search_memory=search_memory,
+        )
+        _validate_registry(enabled_tools)
         working_messages = [dict(message) for message in messages]
         total_usage: dict[str, int] = {}
         tool_events: list[dict[str, Any]] = []
@@ -66,8 +143,13 @@ class ConversationExecutor:
                 "max_tokens": max_output_tokens,
                 "stream": False,
             }
-            if enable_search_memory:
-                payload.update({"tools": [SEARCH_MEMORY_TOOL], "tool_choice": "auto"})
+            if enabled_tools:
+                payload.update(
+                    {
+                        "tools": [tool.definition for tool in enabled_tools.values()],
+                        "tool_choice": "auto",
+                    }
+                )
             response = await self.transport.chat_completion(
                 payload, timeout_seconds=timeout_seconds
             )
@@ -78,31 +160,27 @@ class ConversationExecutor:
             message, finish_reason = _first_choice(response)
             tool_calls = message.get("tool_calls")
             if isinstance(tool_calls, list) and tool_calls:
-                if not enable_search_memory:
-                    raise RuntimeValidationError(
-                        "Conversation model called a tool that is not enabled"
-                    )
+                if not enabled_tools:
+                    raise RuntimeValidationError("Conversation model called a tool that is not enabled")
                 working_messages.append(message)
                 for raw_call in tool_calls:
-                    call_id, arguments = _parse_search_call(raw_call)
-                    result = await search_memory(
-                        str(arguments["query"]), int(arguments.get("limit", 8))
-                    )
+                    call_id, name, arguments = _parse_tool_call(raw_call, enabled_tools)
+                    result = await _execute_tool(enabled_tools[name], arguments)
                     tool_events.append(
                         {
                             "call_id": call_id,
-                            "name": "search_memory",
-                            "arguments": arguments,
-                            "result_count": len(result),
+                            "name": name,
+                            "arguments": result.arguments,
+                            "result_count": result.result_count,
                         }
                     )
                     working_messages.append(
                         {
                             "role": "tool",
                             "tool_call_id": call_id,
-                            "name": "search_memory",
+                            "name": name,
                             "content": json.dumps(
-                                {"facts": result}, ensure_ascii=False, default=str
+                                result.content, ensure_ascii=False, default=str
                             ),
                         }
                     )
@@ -122,6 +200,113 @@ class ConversationExecutor:
             )
         raise RuntimeValidationError("Conversation model exceeded its tool-step budget")
 
+    async def compact(
+        self,
+        *,
+        model_key: str,
+        plan: CompactionPlan,
+        timeout_seconds: float,
+        max_output_tokens: int,
+    ) -> ModelCompaction:
+        response = await self.transport.chat_completion(
+            {
+                "model": model_key,
+                "messages": [
+                    {"role": "system", "content": COMPACTION_SYSTEM},
+                    {
+                        "role": "user",
+                        "content": compaction_model_input_json(plan),
+                    },
+                ],
+                "max_tokens": max(256, min(max_output_tokens, 1024)),
+                "stream": False,
+                "temperature": 0,
+            },
+            timeout_seconds=timeout_seconds,
+        )
+        message, _ = _first_choice(response)
+        content = str(message.get("content", "") or "").strip()
+        if not content:
+            raise RuntimeValidationError("Conversation compaction returned no summary text")
+        usage: dict[str, int] = {}
+        _merge_usage(usage, response.get("usage"))
+        provider_request_id = str(response.get("id", "") or "") or None
+        return ModelCompaction(
+            plan=plan,
+            content=content,
+            model_key=model_key,
+            provider_request_id=provider_request_id,
+            prompt_sha256=compaction_prompt_sha256(),
+            input_sha256=compaction_input_sha256(plan),
+            usage=usage,
+        )
+
+
+def _search_memory_tool(search_memory: SearchMemoryHandler) -> CuratedTool:
+    async def handler(arguments: dict[str, Any]) -> ToolResult:
+        query = str(arguments.get("query", "")).strip()
+        if not query:
+            raise ValueError("search_memory requires a non-empty query")
+        unknown = set(arguments) - {"query", "limit"}
+        if unknown:
+            raise ValueError(f"search_memory received unexpected arguments: {sorted(unknown)}")
+        raw_limit = arguments.get("limit", 8)
+        if isinstance(raw_limit, bool) or not isinstance(raw_limit, int):
+            raise ValueError("search_memory limit must be an integer")
+        if not 1 <= raw_limit <= 20:
+            raise ValueError("search_memory limit must be between 1 and 20")
+        normalized = {"query": query, "limit": raw_limit}
+        facts = await search_memory(query, raw_limit)
+        return ToolResult(
+            arguments=normalized,
+            content={"ok": True, "facts": facts},
+            result_count=len(facts),
+        )
+
+    return CuratedTool(definition=SEARCH_MEMORY_TOOL, handler=handler)
+
+
+def _weather_tool() -> CuratedTool:
+    async def handler(arguments: dict[str, Any]) -> ToolResult:
+        unknown = set(arguments) - {"city"}
+        if unknown:
+            raise ValueError(f"get_weather received unexpected arguments: {sorted(unknown)}")
+        city = str(arguments.get("city", "")).strip()
+        if not city:
+            raise ValueError("get_weather requires a non-empty city")
+        if city.casefold() in {"fail_city", "failure", "故障城市"}:
+            raise RuntimeError("deterministic weather provider failure")
+        weather = _WEATHER_FIXTURES.get(city.casefold()) or {
+            "condition": "unknown",
+            "temperature_c": None,
+        }
+        return ToolResult(
+            arguments={"city": city},
+            content={"ok": True, "city": city, **weather},
+        )
+
+    return CuratedTool(definition=WEATHER_TOOL, handler=handler)
+
+
+async def _execute_tool(tool: CuratedTool, arguments: dict[str, Any]) -> ToolResult:
+    try:
+        return await tool.handler(arguments)
+    except Exception as exc:
+        return ToolResult(
+            arguments=dict(arguments),
+            content={
+                "ok": False,
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            },
+        )
+
+
+def _validate_registry(tools: Mapping[str, CuratedTool]) -> None:
+    for name, tool in tools.items():
+        if name != tool.name:
+            raise RuntimeValidationError("Curated tool registry key does not match tool schema")
+
 
 def _first_choice(response: dict[str, Any]) -> tuple[dict[str, Any], str]:
     choices = response.get("choices")
@@ -134,37 +319,26 @@ def _first_choice(response: dict[str, Any]) -> tuple[dict[str, Any], str]:
     return dict(message), str(choice.get("finish_reason", "") or "")
 
 
-def _parse_search_call(raw_call: object) -> tuple[str, dict[str, Any]]:
+def _parse_tool_call(
+    raw_call: object, enabled_tools: Mapping[str, CuratedTool]
+) -> tuple[str, str, dict[str, Any]]:
     if not isinstance(raw_call, dict):
         raise RuntimeValidationError("Tool call must be an object")
     call_id = str(raw_call.get("id", "") or "").strip()
     function = raw_call.get("function")
     if not call_id or not isinstance(function, dict):
         raise RuntimeValidationError("Tool call requires id and function")
-    if str(function.get("name", "")) != "search_memory":
-        raise RuntimeValidationError("Only search_memory is available in v3 preview")
+    name = str(function.get("name", "") or "").strip()
+    if name not in enabled_tools:
+        raise RuntimeValidationError(f"Tool '{name}' is not enabled for this conversation")
     raw_arguments = function.get("arguments", "{}")
     try:
-        arguments = (
-            json.loads(raw_arguments)
-            if isinstance(raw_arguments, str)
-            else raw_arguments
-        )
+        arguments = json.loads(raw_arguments) if isinstance(raw_arguments, str) else raw_arguments
     except json.JSONDecodeError as exc:
-        raise RuntimeValidationError(
-            "search_memory arguments are invalid JSON"
-        ) from exc
-    if not isinstance(arguments, dict) or not str(arguments.get("query", "")).strip():
-        raise RuntimeValidationError("search_memory requires a non-empty query")
-    unknown = set(arguments) - {"query", "limit"}
-    if unknown:
-        raise RuntimeValidationError(
-            f"search_memory received unexpected arguments: {sorted(unknown)}"
-        )
-    limit = int(arguments.get("limit", 8))
-    if not 1 <= limit <= 20:
-        raise RuntimeValidationError("search_memory limit must be between 1 and 20")
-    return call_id, {"query": str(arguments["query"]), "limit": limit}
+        raise RuntimeValidationError(f"{name} arguments are invalid JSON") from exc
+    if not isinstance(arguments, dict):
+        raise RuntimeValidationError(f"{name} arguments must be an object")
+    return call_id, name, arguments
 
 
 def _merge_usage(total: dict[str, int], raw_usage: object) -> None:

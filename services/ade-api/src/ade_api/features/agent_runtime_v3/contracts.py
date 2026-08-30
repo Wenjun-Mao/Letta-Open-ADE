@@ -46,8 +46,8 @@ class CreateAgentDefinitionRequest(StrictRequest):
     embedding_model_key: str = Field(min_length=1, max_length=300)
     prompt_key: str = Field(default="chat_v20260516", min_length=1, max_length=128)
     persona_key: str = Field(default="chat_linxiaotang", min_length=1, max_length=128)
-    tool_names: list[Literal["search_memory"]] = Field(
-        default_factory=lambda: ["search_memory"], max_length=1
+    tool_names: list[Literal["search_memory", "get_weather"]] = Field(
+        default_factory=lambda: ["search_memory"], max_length=2
     )
 
     @field_validator("tool_names")

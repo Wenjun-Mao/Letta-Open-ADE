@@ -84,6 +84,27 @@ class RunFinalizer:
                     "run_id": run_id,
                 }
             )
+            summary = None
+            if result.compaction is not None:
+                compaction = result.compaction
+                summary = await conversations.create_compaction(
+                    payload={
+                        "id": str(uuid4()),
+                        "conversation_id": conversation_id,
+                        "version": compaction.plan.expected_summary_version + 1,
+                        "through_sequence": compaction.plan.through_sequence,
+                        "content": compaction.content,
+                        "run_id": run_id,
+                        "previous_summary_id": compaction.plan.previous_summary_id,
+                        "model_key": compaction.model_key,
+                        "provider_request_id": compaction.provider_request_id,
+                        "prompt_sha256": compaction.prompt_sha256,
+                        "input_sha256": compaction.input_sha256,
+                    },
+                    source_message_ids=compaction.plan.source_message_ids,
+                    expected_summary_version=compaction.plan.expected_summary_version,
+                    expected_previous_summary_id=compaction.plan.previous_summary_id,
+                )
             await conversations.advance_version(
                 conversation_id, int(run["accepted_conversation_version"])
             )
@@ -93,6 +114,11 @@ class RunFinalizer:
                 provider_outcome={
                     "conversation_request_ids": result.executor.provider_request_ids,
                     "reviewer_request_ids": result.reviewer.provider_request_ids,
+                    "compaction_request_id": (
+                        result.compaction.provider_request_id
+                        if result.compaction is not None
+                        else None
+                    ),
                 },
                 finished_at=utc_now(),
             )
@@ -108,6 +134,7 @@ class RunFinalizer:
                 result=result,
                 committed=committed,
                 assistant_message_id=str(assistant["id"]),
+                summary=summary,
             )
             await leases.release(claim.lease_token)
 
