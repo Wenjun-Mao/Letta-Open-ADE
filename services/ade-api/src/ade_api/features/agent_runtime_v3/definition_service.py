@@ -17,6 +17,14 @@ from .deployments import ResolvedDeployment, resolve_deployment
 from .errors import RuntimeValidationError
 from .persistence.definitions import DefinitionVersionRepository
 from .presenters import definition_response
+from .release_policy import (
+    PREVIEW_RELEASE_PERSONA_KEY,
+    PREVIEW_RELEASE_PROMPT_KEY,
+    PREVIEW_RELEASE_ROUTES,
+    PREVIEW_RELEASE_TOOL_NAMES,
+    current_production_policy_hashes,
+    source_tree_is_clean,
+)
 from .router_transport import RouterTransport
 
 
@@ -38,6 +46,19 @@ class DefinitionService:
         self.router_transport = router_transport
 
     async def create(self, request: CreateAgentDefinitionRequest) -> dict[str, Any]:
+        prepared = await self.prepare(request)
+        async with self.database.translated_errors():
+            async with self.database.engine.begin() as connection:
+                await self.database.ensure_workspace(connection)
+                row = await DefinitionVersionRepository(connection).create_next(
+                    DEFAULT_WORKSPACE_ID,
+                    {"id": str(uuid4()), **prepared},
+                )
+        return definition_response(row)
+
+    async def prepare(self, request: CreateAgentDefinitionRequest) -> dict[str, Any]:
+        """Resolve external snapshots without writing a partial definition."""
+
         await self.database.ensure_ready()
         if (
             "get_weather" in request.tool_names
@@ -45,6 +66,15 @@ class DefinitionService:
         ):
             raise RuntimeValidationError(
                 "get_weather is available only in development and qualification runs"
+            )
+        if self.settings.agent_runtime_v3_mode == "release" and (
+            request.prompt_key != PREVIEW_RELEASE_PROMPT_KEY
+            or request.persona_key != PREVIEW_RELEASE_PERSONA_KEY
+            or tuple(request.tool_names) != PREVIEW_RELEASE_TOOL_NAMES
+        ):
+            raise RuntimeValidationError(
+                "Release preview definitions must use the exact qualified prompt, "
+                "persona, and tool contract"
             )
         prompt = self.prompt_registry.get_template(
             "prompt", request.prompt_key, scenario="chat"
@@ -74,33 +104,23 @@ class DefinitionService:
         )
         prompt_content = str(prompt.get("content", ""))
         persona_content = str(persona.get("content", ""))
-        async with self.database.translated_errors():
-            async with self.database.engine.begin() as connection:
-                await self.database.ensure_workspace(connection)
-                row = await DefinitionVersionRepository(connection).create_next(
-                    DEFAULT_WORKSPACE_ID,
-                    {
-                        "id": str(uuid4()),
-                        "definition_key": request.definition_key,
-                        "name": request.name,
-                        "model_key": deployments[0].route_alias,
-                        "reviewer_model_key": deployments[1].route_alias,
-                        "embedding_model_key": deployments[2].route_alias,
-                        "prompt_key": request.prompt_key,
-                        "prompt_sha256": _sha256(prompt_content),
-                        "prompt_content": prompt_content,
-                        "persona_key": request.persona_key,
-                        "persona_sha256": _sha256(persona_content),
-                        "persona_content": persona_content,
-                        "tool_names": list(request.tool_names),
-                        "memory_policy_version": MEMORY_POLICY_VERSION,
-                        "qualification_state": qualification.value,
-                        "deployment_snapshot": [
-                            item.as_snapshot() for item in deployments
-                        ],
-                    },
-                )
-        return definition_response(row)
+        return {
+            "definition_key": request.definition_key,
+            "name": request.name,
+            "model_key": deployments[0].route_alias,
+            "reviewer_model_key": deployments[1].route_alias,
+            "embedding_model_key": deployments[2].route_alias,
+            "prompt_key": request.prompt_key,
+            "prompt_sha256": _sha256(prompt_content),
+            "prompt_content": prompt_content,
+            "persona_key": request.persona_key,
+            "persona_sha256": _sha256(persona_content),
+            "persona_content": persona_content,
+            "tool_names": list(request.tool_names),
+            "memory_policy_version": MEMORY_POLICY_VERSION,
+            "qualification_state": qualification.value,
+            "deployment_snapshot": [item.as_snapshot() for item in deployments],
+        }
 
     async def get(self, definition_id: str) -> dict[str, Any]:
         await self.database.ensure_ready()
@@ -116,24 +136,44 @@ class DefinitionService:
         catalog: dict[str, Any],
     ) -> tuple[ResolvedDeployment, ResolvedDeployment, ResolvedDeployment]:
         mode = self.settings.agent_runtime_v3_mode
+        requested_routes = {
+            "conversation": normalize_route_alias(request.model_key),
+            "reviewer": normalize_route_alias(request.reviewer_model_key),
+            "retriever": normalize_route_alias(request.embedding_model_key),
+        }
+        if mode == "release" and requested_routes != PREVIEW_RELEASE_ROUTES:
+            raise RuntimeValidationError(
+                "Release preview sessions must use the exact qualified deployment routes"
+            )
+        release_checks = (
+            {
+                "expected_policy_hashes": current_production_policy_hashes(),
+                "source_clean": source_tree_is_clean(),
+            }
+            if mode == "release"
+            else {}
+        )
         return (
             resolve_deployment(
                 catalog,
-                route_alias=_route_alias(request.model_key),
+                route_alias=requested_routes["conversation"],
                 role="conversation",
                 mode=mode,
+                **release_checks,
             ),
             resolve_deployment(
                 catalog,
-                route_alias=_route_alias(request.reviewer_model_key),
+                route_alias=requested_routes["reviewer"],
                 role="reviewer",
                 mode=mode,
+                **release_checks,
             ),
             resolve_deployment(
                 catalog,
-                route_alias=_route_alias(request.embedding_model_key),
+                route_alias=requested_routes["retriever"],
                 role="retriever",
                 mode=mode,
+                **release_checks,
             ),
         )
 
@@ -142,7 +182,7 @@ def _sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def _route_alias(value: str) -> str:
+def normalize_route_alias(value: str) -> str:
     normalized = str(value or "").strip()
     lowered = normalized.casefold()
     for prefix in ("openai-proxy/", "lmstudio_openai/", "openai/"):

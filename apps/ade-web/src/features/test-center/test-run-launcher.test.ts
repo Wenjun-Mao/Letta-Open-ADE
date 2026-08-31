@@ -9,6 +9,13 @@ import {
   hasAgentRuntimeV3AcceptanceDeployments,
   reconcileAgentRuntimeV3AcceptanceForm,
 } from "./agent-runtime-v3-acceptance-fields";
+import {
+  BEHAVIOR_EVALUATION_RUN_TYPES,
+  getTestCenterCopy,
+  getTestRunTypeLabel,
+  OPERATIONAL_RUN_TYPES,
+  TEST_RUN_TYPES,
+} from "./test-center-copy";
 
 const chatMemoryForm: ChatMemoryEvalFormState = {
   model: "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
@@ -34,6 +41,28 @@ const v3AcceptanceForm: AgentRuntimeV3AcceptanceFormState = {
 };
 
 describe("Test Center run launcher", () => {
+  it("keeps product-behavior evaluation separate from platform operations", () => {
+    expect(BEHAVIOR_EVALUATION_RUN_TYPES).toEqual(["chat_memory_eval"]);
+    expect(OPERATIONAL_RUN_TYPES).toEqual([
+      "ade_api_e2e_check",
+      "ade_mvp_smoke_e2e_check",
+      "agent_runtime_v3_acceptance",
+    ]);
+    expect(TEST_RUN_TYPES).toEqual([
+      "chat_memory_eval",
+      "ade_api_e2e_check",
+      "ade_mvp_smoke_e2e_check",
+      "agent_runtime_v3_acceptance",
+    ]);
+  });
+
+  it("uses operator-facing labels instead of raw run-type identifiers", () => {
+    const copy = getTestCenterCopy("en");
+
+    expect(getTestRunTypeLabel(copy, "chat_memory_eval")).toBe("Chat-memory behavior evaluation");
+    expect(getTestRunTypeLabel(copy, "agent_runtime_v3_acceptance")).toBe("Native runtime qualification");
+  });
+
   it("does not leak chat-memory fields into standard run payloads", () => {
     expect(buildTestRunPayload("ade_api_e2e_check", chatMemoryForm)).toEqual({
       run_type: "ade_api_e2e_check",

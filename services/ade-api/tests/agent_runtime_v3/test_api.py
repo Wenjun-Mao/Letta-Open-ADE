@@ -11,7 +11,7 @@ from ade_api.features.agent_runtime_v3.dependencies import (
     get_agent_runtime_v3_health_service,
     get_agent_runtime_v3_service,
 )
-from ade_api.main import app
+from ade_api.native_main import app
 from ade_api.platform.auth import AdePrincipal, AdeRole, authenticate_ade_request
 
 
@@ -47,6 +47,42 @@ class _FakeService:
             "idempotent_replay": False,
         }
 
+    async def create_preview_session(self, request):
+        assert request.idempotency_key == "preview-1"
+        assert request.subject_display_name == "Zhang Wei"
+        return {
+            "session_id": "00000000-0000-0000-0000-000000000001",
+            "idempotent_replay": False,
+            "agent_definition": {
+                "id": "00000000-0000-0000-0000-000000000002",
+                "definition_key": "preview_test",
+                "version": 1,
+                "name": "Native Runtime Preview",
+                "prompt_key": "chat_v20260516",
+                "prompt_sha256": "a" * 64,
+                "persona_key": "chat_linxiaotang",
+                "persona_sha256": "b" * 64,
+                "tool_names": ["search_memory"],
+                "memory_policy_version": "typed-user-facts-v1",
+                "qualification_state": "unqualified",
+                "deployments": [],
+                "created_at": NOW,
+            },
+            "memory_subject": {
+                "id": "00000000-0000-0000-0000-000000000003",
+                "external_key": "preview-session:test",
+                "display_name": "Zhang Wei",
+                "created_at": NOW,
+            },
+            "conversation": {
+                "id": "00000000-0000-0000-0000-000000000004",
+                "agent_definition_id": "00000000-0000-0000-0000-000000000002",
+                "memory_subject_id": "00000000-0000-0000-0000-000000000003",
+                "version": 1,
+                "created_at": NOW,
+            },
+        }
+
     async def get_run(self, run_id):
         return {
             "id": run_id,
@@ -54,6 +90,8 @@ class _FakeService:
             "status": "pending",
             "qualification_state": "unqualified",
             "attempt_count": 0,
+            "timeout_seconds": 180,
+            "retry_count": 0,
             "created_at": NOW,
         }
 
@@ -94,6 +132,32 @@ def test_turn_acceptance_is_async_and_uses_backend_defaults() -> None:
     assert response.json()["idempotent_replay"] is False
 
 
+def test_preview_session_is_one_bounded_server_operation() -> None:
+    app.dependency_overrides[authenticate_ade_request] = _principal
+    app.dependency_overrides[get_agent_runtime_v3_service] = lambda: _FakeService()
+    try:
+        response = TestClient(app).post(
+            "/api/v3/preview-sessions",
+            json={
+                "idempotency_key": "preview-1",
+                "subject_display_name": "Zhang Wei",
+                "model_key": "dgx_vllm::qwen",
+                "reviewer_model_key": "dgx_vllm::qwen",
+                "embedding_model_key": "dgx_embedding::qwen",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 201
+    assert response.json()["idempotent_replay"] is False
+    assert response.json()["agent_definition"]["tool_names"] == ["search_memory"]
+    assert (
+        response.json()["conversation"]["memory_subject_id"]
+        == response.json()["memory_subject"]["id"]
+    )
+
+
 def test_turn_rejects_model_and_subject_overrides() -> None:
     app.dependency_overrides[authenticate_ade_request] = _principal
     app.dependency_overrides[get_agent_runtime_v3_service] = lambda: _FakeService()
@@ -111,6 +175,19 @@ def test_turn_rejects_model_and_subject_overrides() -> None:
         app.dependency_overrides.clear()
 
     assert response.status_code == 422
+
+
+def test_run_response_exposes_the_controls_accepted_for_execution() -> None:
+    app.dependency_overrides[authenticate_ade_request] = _principal
+    app.dependency_overrides[get_agent_runtime_v3_service] = lambda: _FakeService()
+    try:
+        response = TestClient(app).get("/api/v3/runs/run-1")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()["timeout_seconds"] == 180
+    assert response.json()["retry_count"] == 0
 
 
 def test_runtime_health_is_200_only_when_a_fresh_worker_is_visible() -> None:

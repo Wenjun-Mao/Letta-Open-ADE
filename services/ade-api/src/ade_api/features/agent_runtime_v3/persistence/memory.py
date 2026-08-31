@@ -43,6 +43,13 @@ class MemoryRepository:
             "memory subject does not exist",
         )
 
+    async def find_subject(self, subject_id: str) -> dict[str, Any] | None:
+        result = await self._connection.execute(
+            select(memory_subjects).where(memory_subjects.c.id == subject_id)
+        )
+        row = result.mappings().one_or_none()
+        return dict(row) if row is not None else None
+
     async def lock_subject(self, subject_id: str) -> dict[str, Any]:
         return await fetch_one(
             self._connection,
@@ -104,6 +111,28 @@ class MemoryRepository:
         )
         return [dict(row) for row in result.mappings()]
 
+    async def list_facts_with_entities(self, subject_id: str) -> list[dict[str, Any]]:
+        """Read facts with only the entity metadata from the same subject/workspace."""
+
+        result = await self._connection.execute(
+            select(
+                memory_facts,
+                memory_entities.c.kind.label("entity_kind"),
+                memory_entities.c.label.label("entity_label"),
+            )
+            .join(
+                memory_entities,
+                and_(
+                    memory_entities.c.id == memory_facts.c.entity_id,
+                    memory_entities.c.subject_id == memory_facts.c.subject_id,
+                    memory_entities.c.workspace_id == memory_facts.c.workspace_id,
+                ),
+            )
+            .where(memory_facts.c.subject_id == subject_id)
+            .order_by(memory_facts.c.created_at, memory_facts.c.id)
+        )
+        return [dict(row) for row in result.mappings()]
+
     async def list_revisions(self, fact_id: str) -> list[dict[str, Any]]:
         result = await self._connection.execute(
             select(memory_revisions)
@@ -122,6 +151,14 @@ class MemoryRepository:
             )
         )
         return [dict(row) for row in result.mappings()]
+
+    async def list_revision_predecessor_ids(self, revision_id: str) -> list[str]:
+        result = await self._connection.execute(
+            select(memory_revision_predecessors.c.predecessor_revision_id)
+            .where(memory_revision_predecessors.c.revision_id == revision_id)
+            .order_by(memory_revision_predecessors.c.predecessor_revision_id)
+        )
+        return [str(value) for value in result.scalars()]
 
     async def create_initial_revision(
         self,

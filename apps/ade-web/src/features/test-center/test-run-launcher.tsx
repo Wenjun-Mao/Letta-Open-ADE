@@ -23,7 +23,7 @@ import {
   resolveChatMemoryEvaluationLaunchState,
   type ChatMemoryEvaluationForm,
 } from "./chat-memory-evaluation-helpers";
-import { TEST_RUN_TYPES, type TestCenterCopy } from "./test-center-copy";
+import { getTestRunTypeLabel, type TestCenterCopy } from "./test-center-copy";
 
 export type ChatMemoryEvalFormState = ChatMemoryEvaluationForm;
 export type AgentRuntimeV3AcceptanceFormState = AgentRuntimeV3AcceptanceForm;
@@ -58,7 +58,6 @@ export function buildTestRunPayload(
   }
   const rounds = Number.parseInt(form.rounds, 10);
   const timeoutSeconds = Number.parseFloat(form.timeoutSeconds);
-  const retryCount = Number.parseInt(form.retryCount, 10);
   return {
     run_type: runType,
     model: form.model,
@@ -68,7 +67,7 @@ export function buildTestRunPayload(
     fixture_key: form.fixtureKey,
     rounds: Number.isInteger(rounds) ? Math.min(100, Math.max(1, rounds)) : 1,
     timeout_seconds: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0 ? Math.min(600, timeoutSeconds) : 180,
-    retry_count: Number.isInteger(retryCount) ? Math.min(5, Math.max(0, retryCount)) : 0,
+    retry_count: 0,
     judge_enabled: form.judgeEnabled,
   };
 }
@@ -79,6 +78,11 @@ function toErrorMessage(exc: unknown): string {
 
 type Props = {
   copy: TestCenterCopy;
+  title: string;
+  intro: string;
+  availableRunTypes: readonly TestRunType[];
+  initialRunType: TestRunType;
+  hydrateLaunchState?: boolean;
   busy: boolean;
   loading: boolean;
   preset: ChatMemoryEvaluationForm | null;
@@ -88,7 +92,7 @@ type Props = {
 };
 
 export function TestRunLauncher(props: Props) {
-  const [runType, setRunType] = useState<TestRunType>("ade_api_e2e_check");
+  const [runType, setRunType] = useState<TestRunType>(props.initialRunType);
   const [optionsLoading, setOptionsLoading] = useState(true);
   const [chatModels, setChatModels] = useState<OptionEntry[]>([]);
   const [chatPrompts, setChatPrompts] = useState<OptionEntry[]>([]);
@@ -117,6 +121,7 @@ export function TestRunLauncher(props: Props) {
     retryCount: evalRetryCount,
     judgeEnabled: evalJudgeEnabled,
   };
+  const supportsChatMemoryEvaluation = props.availableRunTypes.includes("chat_memory_eval");
 
   const applyForm = (nextForm: ChatMemoryEvaluationForm) => {
     setEvalModel(nextForm.model);
@@ -131,10 +136,15 @@ export function TestRunLauncher(props: Props) {
   };
 
   const refreshChatOptions = async (requestedForm: ChatMemoryEvaluationForm) => {
-    const [payload, catalog] = await Promise.all([
-      fetchOptions("chat"),
-      fetchModelCatalog().catch(() => ({ items: [] })),
-    ]);
+    const catalog = await fetchModelCatalog().catch(() => ({ items: [] }));
+    const deployments = (Array.isArray(catalog.items) ? catalog.items : []).filter((item) => item.deployment);
+    setRuntimeDeployments(deployments);
+    setV3Form((current) => reconcileAgentRuntimeV3AcceptanceForm(current, deployments));
+    if (!supportsChatMemoryEvaluation) {
+      return;
+    }
+
+    const payload = await fetchOptions("chat");
     const models = Array.isArray(payload.models) ? payload.models.filter((item) => item.available !== false) : [];
     const prompts = Array.isArray(payload.prompts) ? payload.prompts : [];
     const personas = Array.isArray(payload.personas) ? payload.personas : [];
@@ -143,9 +153,6 @@ export function TestRunLauncher(props: Props) {
     setChatPrompts(prompts);
     setChatPersonas(personas);
     setChatEmbeddings(embeddings);
-    const deployments = (Array.isArray(catalog.items) ? catalog.items : []).filter((item) => item.deployment);
-    setRuntimeDeployments(deployments);
-    setV3Form((current) => reconcileAgentRuntimeV3AcceptanceForm(current, deployments));
     applyForm(reconcileChatMemoryEvaluationForm(requestedForm, {
       models,
       prompts,
@@ -159,19 +166,22 @@ export function TestRunLauncher(props: Props) {
   const reportError = useEffectEvent(props.onError);
 
   useEffect(() => {
-    if (!props.preset) {
+    if (!props.preset || !props.availableRunTypes.includes("chat_memory_eval")) {
       return;
     }
     setRunType("chat_memory_eval");
     applyForm(props.preset);
-  }, [props.preset]);
+  }, [props.availableRunTypes, props.preset]);
 
   useEffect(() => {
     let cancelled = false;
-    const launchState = resolveChatMemoryEvaluationLaunchState(
-      typeof window === "undefined" ? "" : window.location.search,
-    );
-    setRunType(launchState.runType);
+    const launchState = props.hydrateLaunchState
+      ? resolveChatMemoryEvaluationLaunchState(typeof window === "undefined" ? "" : window.location.search)
+      : { runType: props.initialRunType, form: DEFAULT_CHAT_MEMORY_EVALUATION_FORM };
+    const requestedRunType = props.availableRunTypes.includes(launchState.runType)
+      ? launchState.runType
+      : props.initialRunType;
+    setRunType(requestedRunType);
     applyForm(launchState.form);
     void refreshChatOptionsEffect(launchState.form)
       .catch((exc) => {
@@ -187,7 +197,7 @@ export function TestRunLauncher(props: Props) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [props.availableRunTypes, props.hydrateLaunchState, props.initialRunType]);
 
   const disabled = props.busy
     || props.loading
@@ -199,14 +209,15 @@ export function TestRunLauncher(props: Props) {
 
   return (
     <div className="card">
-      <h3>{props.copy.createRunTitle}</h3>
+      <h3>{props.title}</h3>
+      <p className="muted">{props.intro}</p>
       <div className="form-grid">
         <label className="field">
           <span>{props.copy.runType}</span>
           <select className="input" value={runType} onChange={(e) => setRunType(e.target.value as TestRunType)}>
-            {TEST_RUN_TYPES.map((item) => (
+            {props.availableRunTypes.map((item) => (
               <option key={item} value={item}>
-                {item}
+                {getTestRunTypeLabel(props.copy, item)}
               </option>
             ))}
           </select>
@@ -234,7 +245,6 @@ export function TestRunLauncher(props: Props) {
             setEvalFixtureKey={setEvalFixtureKey}
             setEvalRounds={setEvalRounds}
             setEvalTimeoutSeconds={setEvalTimeoutSeconds}
-            setEvalRetryCount={setEvalRetryCount}
             setEvalJudgeEnabled={setEvalJudgeEnabled}
           />
         ) : null}

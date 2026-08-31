@@ -3,8 +3,13 @@
   "deployments": [
     {
       "id": "dgx-qwen3_6-chat",
-      "route_aliases": ["dgx_vllm::qwen3.6-35b-a3b-fp8"],
-      "roles": ["conversation", "reviewer"],
+      "route_aliases": [
+        "dgx_vllm::qwen3.6-35b-a3b-fp8"
+      ],
+      "roles": [
+        "conversation",
+        "reviewer"
+      ],
       "lifecycle": "candidate",
       "fingerprint": {
         "provider": "dgx_vllm",
@@ -17,10 +22,10 @@
         "runtime_implementation": "vLLM",
         "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
-        "prompt_policy_sha256": "303e89917f706911bb8ab5b20e2aa09c514c86d99b799c23f4132ccf7e018a3f",
-        "tool_policy_sha256": "29964adfcb1efe5146f79b6e601905ddb43e270f935ffdb0596802a155eda87d",
-        "schema_policy_sha256": "2db841d19aeff67f54bc14dedb2d08df03da0c62651fc98bb79be06ae34f96ea",
-        "retrieval_policy_sha256": "26ea3000ead625c4ce248919e5b03eccbf183c489c0c95422c5902e9d5672a55",
+        "prompt_policy_sha256": "e320c39676c887cf199809eb7f0dc8a94545529596fbb459ae9de1200f4dd12b",
+        "tool_policy_sha256": "41325ca6433bfe0d4f09d02c64b3c575c580ce9d3b37ef212f87b9b2dfcae565",
+        "schema_policy_sha256": "26fa589630aa9c054e024d1ea19f50f331901728ffd106ae1498daf1498c64bb",
+        "retrieval_policy_sha256": "90a244c56e33e64db5a9ef4a7b4a41f4148fdc681ffa736dec4d9490bcbb07c5",
         "sampling_settings": {
           "temperature": 1.0,
           "top_p": 0.95,
@@ -43,7 +48,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "2409be431000fa575c2609c155fa5e1b5ca146309c5fec050dac48452ee5bac1",
+        "fingerprint_sha256": "bd781fc6126fa1cf8c12cc11598923ac251fe2af21046738bae11a135d4a3933",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [
@@ -68,7 +73,9 @@
         "dgx_embedding_sidecar::qwen3-embedding-0.6b",
         "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B"
       ],
-      "roles": ["retriever"],
+      "roles": [
+        "retriever"
+      ],
       "lifecycle": "candidate",
       "fingerprint": {
         "provider": "dgx_embedding_sidecar",
@@ -81,10 +88,10 @@
         "runtime_implementation": "vLLM",
         "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
-        "prompt_policy_sha256": "303e89917f706911bb8ab5b20e2aa09c514c86d99b799c23f4132ccf7e018a3f",
-        "tool_policy_sha256": "29964adfcb1efe5146f79b6e601905ddb43e270f935ffdb0596802a155eda87d",
-        "schema_policy_sha256": "2db841d19aeff67f54bc14dedb2d08df03da0c62651fc98bb79be06ae34f96ea",
-        "retrieval_policy_sha256": "26ea3000ead625c4ce248919e5b03eccbf183c489c0c95422c5902e9d5672a55",
+        "prompt_policy_sha256": "e320c39676c887cf199809eb7f0dc8a94545529596fbb459ae9de1200f4dd12b",
+        "tool_policy_sha256": "41325ca6433bfe0d4f09d02c64b3c575c580ce9d3b37ef212f87b9b2dfcae565",
+        "schema_policy_sha256": "26fa589630aa9c054e024d1ea19f50f331901728ffd106ae1498daf1498c64bb",
+        "retrieval_policy_sha256": "90a244c56e33e64db5a9ef4a7b4a41f4148fdc681ffa736dec4d9490bcbb07c5",
         "sampling_settings": {
           "dimensions": 1024,
           "query_instruction_enabled": true,
@@ -101,7 +108,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "e53c71367da35cf9f2d24436808f0ba0f27422f5301793b6929556a70bb0dbdf",
+        "fingerprint_sha256": "638a9e141e3236bf0c38f664d6bf85bac61fafd0fc9f5197da6ecf49f90e3202",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [
@@ -116,8 +123,12 @@
     },
     {
       "id": "llama-server-qwen3_5-27b",
-      "route_aliases": ["local_llama_server::gemma4"],
-      "roles": ["conversation"],
+      "route_aliases": [
+        "local_llama_server::gemma4"
+      ],
+      "roles": [
+        "conversation"
+      ],
       "lifecycle": "discovered",
       "fingerprint": {
         "provider": "local_llama_server",
@@ -130,10 +141,10 @@
         "runtime_implementation": "llama-server",
         "runtime_version": "b1-225088e",
         "runtime_image_digest": null,
-        "prompt_policy_sha256": "303e89917f706911bb8ab5b20e2aa09c514c86d99b799c23f4132ccf7e018a3f",
-        "tool_policy_sha256": "29964adfcb1efe5146f79b6e601905ddb43e270f935ffdb0596802a155eda87d",
-        "schema_policy_sha256": "2db841d19aeff67f54bc14dedb2d08df03da0c62651fc98bb79be06ae34f96ea",
-        "retrieval_policy_sha256": "26ea3000ead625c4ce248919e5b03eccbf183c489c0c95422c5902e9d5672a55",
+        "prompt_policy_sha256": "e320c39676c887cf199809eb7f0dc8a94545529596fbb459ae9de1200f4dd12b",
+        "tool_policy_sha256": "41325ca6433bfe0d4f09d02c64b3c575c580ce9d3b37ef212f87b9b2dfcae565",
+        "schema_policy_sha256": "26fa589630aa9c054e024d1ea19f50f331901728ffd106ae1498daf1498c64bb",
+        "retrieval_policy_sha256": "90a244c56e33e64db5a9ef4a7b4a41f4148fdc681ffa736dec4d9490bcbb07c5",
         "sampling_settings": {
           "thinking_enabled": false,
           "temperature": 0.6,
@@ -156,7 +167,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "9f8d4937f5b0abed85c6570e49dd611c55536dbbfcd06bc4e0aeb3e434035d1d",
+        "fingerprint_sha256": "e54cf434f491e886d27a7eec2a098517318f95acfb39f96af4b5c8fc97f26451",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [

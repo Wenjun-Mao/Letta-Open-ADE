@@ -80,6 +80,34 @@ class _SummaryConnection:
         return self.results.pop(0)
 
 
+class _ScalarResult:
+    def __init__(self, values: list[str]) -> None:
+        self._values = values
+
+    def scalars(self):
+        return iter(self._values)
+
+
+class _ScalarConnection:
+    def __init__(self, values: list[str]) -> None:
+        self.values = values
+        self.statements: list[Any] = []
+
+    async def execute(self, statement: Any) -> _ScalarResult:
+        self.statements.append(statement)
+        return _ScalarResult(self.values)
+
+
+class _RowsConnection:
+    def __init__(self, rows: list[dict[str, Any]]) -> None:
+        self.rows = rows
+        self.statements: list[Any] = []
+
+    async def execute(self, statement: Any) -> _RowsResult:
+        self.statements.append(statement)
+        return _RowsResult(self.rows)
+
+
 def test_run_accept_uses_database_idempotency_and_replays_the_same_hash() -> None:
     connection = _RecordingConnection(
         [None, {"id": "existing-run", "request_hash": "request-hash"}]
@@ -197,3 +225,46 @@ def test_compaction_requires_complete_contiguous_summary_sources() -> None:
         )
 
     assert len(connection.statements) == 2
+
+
+def test_memory_read_join_keeps_entity_subject_and_workspace_matched() -> None:
+    connection = _RowsConnection(
+        [
+            {
+                "id": "fact-1",
+                "subject_id": "subject-1",
+                "entity_id": "entity-1",
+                "entity_kind": "pet",
+                "entity_label": "Rocky",
+            }
+        ]
+    )
+    repository = MemoryRepository(cast(AsyncConnection, connection))
+
+    facts = asyncio.run(repository.list_facts_with_entities("subject-1"))
+
+    statement = str(connection.statements[0].compile(dialect=dialect()))
+    assert facts[0]["entity_kind"] == "pet"
+    assert facts[0]["entity_label"] == "Rocky"
+    assert "memory_entities.subject_id = ade.memory_facts.subject_id" in statement
+    assert "memory_entities.workspace_id = ade.memory_facts.workspace_id" in statement
+
+
+def test_read_repository_orders_lineage_and_summary_sources_deterministically() -> None:
+    lineage_connection = _ScalarConnection(["revision-1", "revision-2"])
+    memory = MemoryRepository(cast(AsyncConnection, lineage_connection))
+    source_connection = _ScalarConnection(["message-1", "message-2"])
+    conversations = ConversationRepository(cast(AsyncConnection, source_connection))
+
+    predecessor_ids = asyncio.run(memory.list_revision_predecessor_ids("revision-3"))
+    source_ids = asyncio.run(conversations.list_summary_source_message_ids("summary-1"))
+
+    lineage_sql = str(lineage_connection.statements[0].compile(dialect=dialect()))
+    sources_sql = str(source_connection.statements[0].compile(dialect=dialect()))
+    assert predecessor_ids == ["revision-1", "revision-2"]
+    assert source_ids == ["message-1", "message-2"]
+    assert (
+        "ORDER BY ade.memory_revision_predecessors.predecessor_revision_id"
+        in lineage_sql
+    )
+    assert "ORDER BY ade.messages.sequence" in sources_sql

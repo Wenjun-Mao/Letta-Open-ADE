@@ -46,7 +46,6 @@ type Props = {
   setEvalFixtureKey: (value: string) => void;
   setEvalRounds: (value: string) => void;
   setEvalTimeoutSeconds: (value: string) => void;
-  setEvalRetryCount: (value: string) => void;
   setEvalJudgeEnabled: (value: boolean) => void;
 };
 
@@ -128,7 +127,7 @@ export function ChatMemoryEvalFields(props: Props) {
       </label>
       <label className="field">
         <span>{copy.retryCount}</span>
-        <input className="input" value={props.evalRetryCount} onChange={(e) => props.setEvalRetryCount(e.target.value)} />
+        <input className="input" value={props.evalRetryCount} disabled readOnly />
       </label>
       <label className="field" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
         <input

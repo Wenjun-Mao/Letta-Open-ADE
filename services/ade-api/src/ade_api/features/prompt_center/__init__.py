@@ -48,6 +48,7 @@ _EXPORT_MODULES = {
     "read_prompt_persona_revisions": ".revision_log",
     "resolve_default_persona_key": ".template_options",
     "resolve_default_prompt_key": ".template_options",
+    "template_content_sha256": ".content_identity",
 }
 __all__ = [
     *_EXPORT_MODULES,

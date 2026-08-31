@@ -30,6 +30,13 @@ class ConversationRepository:
             "conversation does not exist",
         )
 
+    async def find(self, conversation_id: str) -> dict[str, Any] | None:
+        result = await self._connection.execute(
+            select(conversations).where(conversations.c.id == conversation_id)
+        )
+        row = result.mappings().one_or_none()
+        return dict(row) if row is not None else None
+
     async def get_for_update(self, conversation_id: str) -> dict[str, Any]:
         return await fetch_one(
             self._connection,
@@ -97,6 +104,17 @@ class ConversationRepository:
         )
         row = result.mappings().one_or_none()
         return dict(row) if row is not None else None
+
+    async def list_summary_source_message_ids(self, summary_id: str) -> list[str]:
+        """Return summary sources in the immutable conversation order."""
+
+        result = await self._connection.execute(
+            select(summary_sources.c.message_id)
+            .join(messages, messages.c.id == summary_sources.c.message_id)
+            .where(summary_sources.c.summary_id == summary_id)
+            .order_by(messages.c.sequence)
+        )
+        return [str(value) for value in result.scalars()]
 
     async def create_summary(
         self, payload: Mapping[str, Any], source_message_ids: Sequence[str]

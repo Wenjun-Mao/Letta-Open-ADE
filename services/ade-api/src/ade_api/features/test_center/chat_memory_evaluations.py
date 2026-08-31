@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,8 +15,16 @@ from ade_api.features.test_center.contracts import (
     ChatMemoryEvaluationListItemResponse,
     ChatMemoryEvaluationMemoryBlockResponse,
     ChatMemoryEvaluationMetricsResponse,
+    ChatMemoryEvaluationProvenanceResponse,
+    ChatMemoryEvaluationProvenanceSummaryResponse,
     ChatMemoryEvaluationRoundResponse,
     ChatMemoryEvaluationTurnResponse,
+)
+from ade_api.features.test_center.chat_memory_evaluation_decisions import (
+    latest_evaluation_decision,
+)
+from ade_api.features.test_center.chat_memory_evaluation_verification import (
+    recompute_deterministic_score,
 )
 from ade_api.features.test_center.run_descriptors import (
     DEFAULT_CHAT_MEMORY_EVALUATION_CONFIG,
@@ -30,6 +39,7 @@ class ChatMemoryEvaluationArtifactUnavailable(RuntimeError):
 class _SummaryArtifact(BaseModel):
     model_config = ConfigDict(extra="ignore", strict=True)
 
+    run_id: str
     rounds_total: int
     rounds_passed: int
     rounds_failed: int
@@ -37,6 +47,7 @@ class _SummaryArtifact(BaseModel):
     pass_rate: float
     config: dict[str, Any]
     fixture: ChatMemoryEvaluationFixtureResponse
+    provenance: ChatMemoryEvaluationProvenanceResponse | None = None
 
 
 @dataclass(frozen=True)
@@ -45,6 +56,8 @@ class _EvaluationArtifacts:
     fixture: ChatMemoryEvaluationFixtureResponse
     metrics: ChatMemoryEvaluationMetricsResponse
     rounds: list[ChatMemoryEvaluationRoundResponse]
+    provenance: ChatMemoryEvaluationProvenanceResponse | None
+    evidence_sha256: str
 
 
 class ChatMemoryEvaluationReader:
@@ -52,29 +65,41 @@ class ChatMemoryEvaluationReader:
 
     _SUMMARY_GLOB = "chat_memory_eval_*_summary.json"
     _JSONL_GLOB = "chat_memory_eval_*.jsonl"
+    _PROVENANCE_GLOB = "chat_memory_eval_*_provenance.json"
 
     def __init__(self, state_root: Path):
         self._state_root = Path(state_root).resolve()
 
-    def list_item(self, run: RunRecord) -> dict[str, Any]:
+    def list_item(
+        self, run: RunRecord, *, preferred_baseline: bool = False
+    ) -> dict[str, Any]:
         request_config = self._config_from_mapping(run.get("options"))
-        response = self._base_response(run, config=request_config, ready=False)
+        response = self._base_response(
+            run,
+            config=request_config,
+            ready=False,
+            preferred_baseline=preferred_baseline,
+        )
         if str(run.get("status", "")) in {"queued", "running"}:
             return response.model_dump()
 
         try:
             artifacts = self._read_artifacts(run)
+            return self._base_response(
+                run,
+                config=artifacts.config,
+                ready=True,
+                metrics=artifacts.metrics,
+                provenance=artifacts.provenance,
+                evidence_sha256=artifacts.evidence_sha256,
+                preferred_baseline=preferred_baseline,
+            ).model_dump()
         except ChatMemoryEvaluationArtifactUnavailable:
             return response.model_dump()
 
-        return self._base_response(
-            run,
-            config=artifacts.config,
-            ready=True,
-            metrics=artifacts.metrics,
-        ).model_dump()
-
-    def detail(self, run: RunRecord) -> dict[str, Any]:
+    def detail(
+        self, run: RunRecord, *, preferred_baseline: bool = False
+    ) -> dict[str, Any]:
         if str(run.get("status", "")) in {"queued", "running"}:
             raise ChatMemoryEvaluationArtifactUnavailable(
                 "Chat-memory evaluation artifacts are not ready while the run is active"
@@ -87,9 +112,13 @@ class ChatMemoryEvaluationReader:
                 config=artifacts.config,
                 ready=True,
                 metrics=artifacts.metrics,
+                provenance=artifacts.provenance,
+                evidence_sha256=artifacts.evidence_sha256,
+                preferred_baseline=preferred_baseline,
             ).model_dump(),
             fixture=artifacts.fixture,
             rounds=artifacts.rounds,
+            provenance_detail=artifacts.provenance,
         )
         return detail.model_dump()
 
@@ -100,15 +129,38 @@ class ChatMemoryEvaluationReader:
         config: ChatMemoryEvaluationConfigResponse,
         ready: bool,
         metrics: ChatMemoryEvaluationMetricsResponse | None = None,
+        provenance: ChatMemoryEvaluationProvenanceResponse | None = None,
+        evidence_sha256: str | None = None,
+        preferred_baseline: bool = False,
     ) -> ChatMemoryEvaluationListItemResponse:
+        decision = latest_evaluation_decision(run)
+        if decision is not None:
+            if provenance is None:
+                if ready:
+                    raise ChatMemoryEvaluationArtifactUnavailable(
+                        "Chat-memory evaluation decision has no verifiable provenance"
+                    )
+                decision = None
+            elif decision.candidate_provenance_sha256 != provenance.provenance_sha256:
+                raise ChatMemoryEvaluationArtifactUnavailable(
+                    "Chat-memory evaluation decision does not match its provenance"
+                )
+            elif decision.candidate_evidence_sha256 != evidence_sha256:
+                raise ChatMemoryEvaluationArtifactUnavailable(
+                    "Chat-memory evaluation decision does not match its evidence"
+                )
         return ChatMemoryEvaluationListItemResponse(
             run_id=str(run.get("run_id", "")),
             run_status=str(run.get("status", "")),
             created_at=str(run.get("created_at", "")),
             finished_at=str(run.get("finished_at", "")),
             ready=ready,
+            evidence_sha256=evidence_sha256,
             config=config,
             metrics=metrics,
+            provenance=(self._provenance_summary(provenance) if provenance else None),
+            decision=decision,
+            preferred_baseline=preferred_baseline,
         )
 
     def _read_artifacts(self, run: RunRecord) -> _EvaluationArtifacts:
@@ -116,7 +168,32 @@ class ChatMemoryEvaluationReader:
         summary_path = self._single_artifact(output_dir, self._SUMMARY_GLOB, "summary")
         jsonl_path = self._single_artifact(output_dir, self._JSONL_GLOB, "JSONL")
         summary = self._read_summary(summary_path)
-        rounds = self._read_rounds(jsonl_path)
+        manifest_run_id = str(run.get("run_id", ""))
+        provenance = self._read_and_validate_provenance(
+            output_dir,
+            summary,
+            manifest_run_id=manifest_run_id,
+        )
+        if provenance is not None and summary.run_id != manifest_run_id:
+            raise ChatMemoryEvaluationArtifactUnavailable(
+                "Chat-memory evaluation summary does not match its Test Center run"
+            )
+        rounds = self._read_rounds(
+            jsonl_path,
+            provenance=provenance,
+            manifest_run_id=manifest_run_id if provenance is not None else None,
+        )
+
+        summary_config = self._config_from_mapping(summary.config)
+        if provenance is not None:
+            verified_config = self._config_from_provenance(provenance, summary.fixture)
+            if summary_config != verified_config:
+                raise ChatMemoryEvaluationArtifactUnavailable(
+                    "Chat-memory evaluation summary config does not match provenance"
+                )
+            self._validate_round_scores(rounds, summary.fixture)
+        else:
+            verified_config = summary_config
 
         if summary.rounds_total != len(rounds):
             raise ChatMemoryEvaluationArtifactUnavailable(
@@ -124,21 +201,113 @@ class ChatMemoryEvaluationReader:
             )
         rounds_passed = sum(1 for round_ in rounds if round_.passed)
         errors = sum(1 for round_ in rounds if round_.status == "error")
+        expected_pass_rate = round(rounds_passed / len(rounds), 3) if rounds else 0.0
+        if any(
+            type(round_.deterministic_score.get("pass")) is not bool
+            or round_.deterministic_score["pass"] is not round_.passed
+            for round_ in rounds
+        ):
+            raise ChatMemoryEvaluationArtifactUnavailable(
+                "Chat-memory evaluation round outcomes do not match deterministic evidence"
+            )
         if (
             summary.rounds_passed != rounds_passed
             or summary.rounds_failed != len(rounds) - rounds_passed
             or summary.errors != errors
+            or summary.pass_rate != expected_pass_rate
         ):
             raise ChatMemoryEvaluationArtifactUnavailable(
                 "Chat-memory evaluation summary metrics do not match its JSONL artifact"
             )
 
         return _EvaluationArtifacts(
-            config=self._config_from_mapping(summary.config),
+            config=verified_config,
             fixture=summary.fixture,
             metrics=self._metrics(summary, rounds),
             rounds=rounds,
+            provenance=provenance,
+            evidence_sha256=self._artifact_set_sha256(
+                summary_path,
+                jsonl_path,
+                *(
+                    [
+                        self._single_artifact(
+                            output_dir, self._PROVENANCE_GLOB, "provenance"
+                        )
+                    ]
+                    if summary.provenance is not None
+                    else []
+                ),
+            ),
         )
+
+    @staticmethod
+    def _artifact_set_sha256(*paths: Path) -> str:
+        entries: list[dict[str, str]] = []
+        try:
+            for path in paths:
+                entries.append(
+                    {
+                        "name": path.name,
+                        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                    }
+                )
+        except OSError as exc:
+            raise ChatMemoryEvaluationArtifactUnavailable(
+                "Unable to hash chat-memory evaluation artifacts"
+            ) from exc
+        return _canonical_sha256(entries)
+
+    @staticmethod
+    def _validate_round_scores(
+        rounds: list[ChatMemoryEvaluationRoundResponse],
+        fixture: ChatMemoryEvaluationFixtureResponse,
+    ) -> None:
+        expected_facts = [item.model_dump() for item in fixture.expected_facts]
+        for round_ in rounds:
+            recomputed = recompute_deterministic_score(
+                assistant_texts=[
+                    reply for turn in round_.turns for reply in turn.assistant_replies
+                ],
+                initial_human_memory=round_.initial_human_memory,
+                final_human_memory=round_.final_human_memory,
+                expected_facts=expected_facts,
+                forbidden_reply_substrings=fixture.forbidden_reply_substrings,
+            )
+            if round_.deterministic_score != recomputed:
+                raise ChatMemoryEvaluationArtifactUnavailable(
+                    f"Chat-memory evaluation round {round_.round} deterministic score "
+                    "does not match its persisted evidence"
+                )
+
+    @staticmethod
+    def _config_from_provenance(
+        provenance: ChatMemoryEvaluationProvenanceResponse,
+        fixture: ChatMemoryEvaluationFixtureResponse,
+    ) -> ChatMemoryEvaluationConfigResponse:
+        controls = provenance.controls
+        try:
+            return ChatMemoryEvaluationConfigResponse.model_validate(
+                {
+                    "model": provenance.model.key,
+                    "prompt_key": provenance.prompt.key,
+                    "persona_key": provenance.persona.key,
+                    "embedding": (
+                        provenance.embedding.key
+                        if provenance.embedding is not None
+                        else ""
+                    ),
+                    "fixture_key": fixture.key,
+                    "rounds": controls["rounds"],
+                    "timeout_seconds": controls["timeout_seconds"],
+                    "retry_count": controls["retry_count"],
+                    "judge_enabled": controls["judge_enabled"],
+                }
+            )
+        except (KeyError, ValidationError) as exc:
+            raise ChatMemoryEvaluationArtifactUnavailable(
+                "Chat-memory evaluation provenance controls are incomplete"
+            ) from exc
 
     def _output_directory(self, run: RunRecord) -> Path:
         output_dir = Path(str(run.get("output_dir", ""))).resolve()
@@ -186,7 +355,13 @@ class ChatMemoryEvaluationReader:
                 "Chat-memory evaluation summary artifact is invalid"
             ) from exc
 
-    def _read_rounds(self, jsonl_path: Path) -> list[ChatMemoryEvaluationRoundResponse]:
+    def _read_rounds(
+        self,
+        jsonl_path: Path,
+        *,
+        provenance: ChatMemoryEvaluationProvenanceResponse | None,
+        manifest_run_id: str | None,
+    ) -> list[ChatMemoryEvaluationRoundResponse]:
         try:
             lines = jsonl_path.read_text(encoding="utf-8").splitlines()
         except (OSError, UnicodeDecodeError) as exc:
@@ -202,12 +377,144 @@ class ChatMemoryEvaluationReader:
                 raw = json.loads(line)
                 if not isinstance(raw, dict):
                     raise ValueError("JSONL row must be an object")
+                if provenance is not None and (
+                    raw.get("configuration_sha256") != provenance.configuration_sha256
+                    or raw.get("provenance_sha256") != provenance.provenance_sha256
+                ):
+                    raise ValueError("JSONL row provenance does not match summary")
+                if manifest_run_id is not None and raw.get("run_id") != manifest_run_id:
+                    raise ValueError("JSONL row does not match the Test Center run")
                 rounds.append(self._round_from_raw(raw))
             except (ValueError, ValidationError, json.JSONDecodeError) as exc:
                 raise ChatMemoryEvaluationArtifactUnavailable(
                     f"Chat-memory evaluation JSONL artifact is invalid at line {line_number}"
                 ) from exc
         return rounds
+
+    def _read_and_validate_provenance(
+        self,
+        output_dir: Path,
+        summary: _SummaryArtifact,
+        *,
+        manifest_run_id: str,
+    ) -> ChatMemoryEvaluationProvenanceResponse | None:
+        provenance = summary.provenance
+        if provenance is None:
+            return None
+        provenance_path = self._single_artifact(
+            output_dir, self._PROVENANCE_GLOB, "provenance"
+        )
+        try:
+            artifact = ChatMemoryEvaluationProvenanceResponse.model_validate_json(
+                provenance_path.read_text(encoding="utf-8")
+            )
+        except (OSError, UnicodeDecodeError, ValidationError) as exc:
+            raise ChatMemoryEvaluationArtifactUnavailable(
+                "Chat-memory evaluation provenance artifact is invalid"
+            ) from exc
+        if artifact != provenance:
+            raise ChatMemoryEvaluationArtifactUnavailable(
+                "Chat-memory evaluation provenance artifacts do not match"
+            )
+        if provenance.schema_version == 1:
+            return None
+        if provenance.run_id != manifest_run_id:
+            raise ChatMemoryEvaluationArtifactUnavailable(
+                "Chat-memory evaluation provenance does not match its Test Center run"
+            )
+        self._validate_provenance(provenance, summary.fixture)
+        return provenance
+
+    @staticmethod
+    def _validate_provenance(
+        provenance: ChatMemoryEvaluationProvenanceResponse,
+        fixture: ChatMemoryEvaluationFixtureResponse,
+    ) -> None:
+        prompt_hash = hashlib.sha256(
+            provenance.prompt.content.encode("utf-8")
+        ).hexdigest()
+        persona_hash = hashlib.sha256(
+            provenance.persona.content.encode("utf-8")
+        ).hexdigest()
+        if (
+            prompt_hash != provenance.prompt.content_sha256
+            or persona_hash != provenance.persona.content_sha256
+        ):
+            raise ChatMemoryEvaluationArtifactUnavailable(
+                "Chat-memory evaluation template provenance is invalid"
+            )
+
+        for option in (provenance.model, provenance.embedding):
+            if option is None:
+                continue
+            option_payload = {
+                field: getattr(option, field)
+                for field in (
+                    "key",
+                    "source_id",
+                    "provider_model_id",
+                    "upstream_provider_model_id",
+                    "sampling_defaults",
+                    "scenario_sampling_defaults",
+                    "supports_top_k",
+                    "supports_thinking",
+                    "thinking_default_enabled",
+                    "profile_applied",
+                    "profile_source",
+                    "agent_studio_candidate",
+                    "agent_studio_compatible",
+                    "deployment",
+                )
+            }
+            if _canonical_sha256(option_payload) != option.identity_sha256:
+                raise ChatMemoryEvaluationArtifactUnavailable(
+                    "Chat-memory evaluation model provenance is invalid"
+                )
+
+        fixture_hash = _canonical_sha256(fixture.model_dump())
+        configuration_payload = {
+            "scenario": "chat",
+            "model_identity_sha256": provenance.model.identity_sha256,
+            "embedding_identity_sha256": (
+                provenance.embedding.identity_sha256
+                if provenance.embedding is not None
+                else None
+            ),
+            "prompt_content_sha256": provenance.prompt.content_sha256,
+            "persona_content_sha256": provenance.persona.content_sha256,
+            "fixture_sha256": fixture_hash,
+            "controls": provenance.controls,
+        }
+        provenance_payload = provenance.model_dump(exclude={"provenance_sha256"})
+        if (
+            fixture_hash != provenance.fixture_sha256
+            or _canonical_sha256(configuration_payload)
+            != provenance.configuration_sha256
+            or _canonical_sha256(provenance_payload) != provenance.provenance_sha256
+        ):
+            raise ChatMemoryEvaluationArtifactUnavailable(
+                "Chat-memory evaluation provenance digest is invalid"
+            )
+
+    @staticmethod
+    def _provenance_summary(
+        provenance: ChatMemoryEvaluationProvenanceResponse,
+    ) -> ChatMemoryEvaluationProvenanceSummaryResponse:
+        return ChatMemoryEvaluationProvenanceSummaryResponse(
+            run_id=str(provenance.run_id),
+            captured_at=provenance.captured_at,
+            configuration_sha256=provenance.configuration_sha256,
+            provenance_sha256=provenance.provenance_sha256,
+            fixture_sha256=provenance.fixture_sha256,
+            prompt_content_sha256=provenance.prompt.content_sha256,
+            persona_content_sha256=provenance.persona.content_sha256,
+            model_identity_sha256=provenance.model.identity_sha256,
+            embedding_identity_sha256=(
+                provenance.embedding.identity_sha256
+                if provenance.embedding is not None
+                else None
+            ),
+        )
 
     def _round_from_raw(self, raw: dict[str, Any]) -> ChatMemoryEvaluationRoundResponse:
         raw_turns = raw.get("turns", [])
@@ -404,3 +711,13 @@ class ChatMemoryEvaluationReader:
 
 def _nonnegative_int(value: Any) -> int:
     return value if type(value) is int and value >= 0 else 0
+
+
+def _canonical_sha256(payload: object) -> str:
+    canonical = json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()

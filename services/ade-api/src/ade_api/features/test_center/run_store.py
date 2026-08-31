@@ -92,6 +92,11 @@ class TestRunStore:
         snapshot["command"] = list(run.get("command", []))
         snapshot["options"] = dict(run.get("options", {}))
         snapshot["output_tail"] = list(run.get("output_tail", []))
+        snapshot["evaluation_decisions"] = [
+            dict(decision)
+            for decision in run.get("evaluation_decisions", [])
+            if isinstance(decision, dict)
+        ]
         return snapshot
 
     def persist(self, run: RunRecord) -> None:

@@ -112,7 +112,7 @@ export function resolveChatMemoryEvaluationLaunchState(search: string): {
       fixtureKey: queryString(params, "fixtureKey", DEFAULT_CHAT_MEMORY_EVALUATION_FORM.fixtureKey),
       rounds: queryInteger(params, "rounds", DEFAULT_CHAT_MEMORY_EVALUATION_FORM.rounds, 1, 100),
       timeoutSeconds: queryNumber(params, "timeoutSeconds", DEFAULT_CHAT_MEMORY_EVALUATION_FORM.timeoutSeconds, 1, 600),
-      retryCount: queryInteger(params, "retryCount", DEFAULT_CHAT_MEMORY_EVALUATION_FORM.retryCount, 0, 5),
+      retryCount: "0",
       judgeEnabled: queryBoolean(params, "judgeEnabled", DEFAULT_CHAT_MEMORY_EVALUATION_FORM.judgeEnabled),
     },
   };
@@ -154,6 +154,7 @@ export function reconcileChatMemoryEvaluationForm(
     fixtureKey: CHAT_MEMORY_FIXTURES.includes(current.fixtureKey)
       ? current.fixtureKey
       : DEFAULT_CHAT_MEMORY_EVALUATION_FORM.fixtureKey,
+    retryCount: "0",
   };
 }
 
@@ -168,7 +169,7 @@ export function toChatMemoryEvaluationForm(config: ChatMemoryEvaluationConfig): 
       : DEFAULT_CHAT_MEMORY_EVALUATION_FORM.fixtureKey,
     rounds: String(config.rounds || DEFAULT_CHAT_MEMORY_EVALUATION_FORM.rounds),
     timeoutSeconds: String(config.timeout_seconds || DEFAULT_CHAT_MEMORY_EVALUATION_FORM.timeoutSeconds),
-    retryCount: String(config.retry_count ?? DEFAULT_CHAT_MEMORY_EVALUATION_FORM.retryCount),
+    retryCount: "0",
     judgeEnabled: config.judge_enabled,
   };
 }

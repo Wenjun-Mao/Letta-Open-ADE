@@ -5,6 +5,7 @@ import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import {
   type ChatMemoryEvaluationConfig,
   type CreateTestRunPayload,
+  type EvaluationDecisionOutcome,
   type TestArtifact,
   type TestRunRecord,
   cancelTestRun,
@@ -13,6 +14,7 @@ import {
   listRunArtifacts,
   listTestRuns,
   readRunArtifact,
+  recordChatMemoryEvaluationDecision,
 } from "./api";
 import { isAbortError } from "@/shared/api/client";
 import { useI18n } from "@/shared/i18n";
@@ -124,6 +126,7 @@ export default function TestCenterPage() {
   const refreshSelectedRunEffect = useEffectEvent(refreshSelectedRun);
   const refreshEvaluationsEffect = useEffectEvent(evaluations.refreshEvaluations);
   const refreshSelectedEvaluationEffect = useEffectEvent(evaluations.refreshSelectedEvaluation);
+  const refreshComparisonEffect = useEffectEvent(evaluations.refreshComparison);
   const loadSelectedEvaluationEffect = useEffectEvent((runId: string, ready: boolean) => {
     if (!ready || !runId) {
       return;
@@ -198,6 +201,30 @@ export default function TestCenterPage() {
     evaluations.selectedEvaluationId,
     evaluations.selectedEvaluationSummary?.ready,
     evaluations.selectedEvaluationSummary?.run_status,
+  ]);
+
+  useEffect(() => {
+    const candidate = evaluations.selectedEvaluationSummary;
+    if (
+      !candidate?.ready
+      || !candidate.provenance
+      || !evaluations.baselineRunId
+      || evaluations.baselineRunId === candidate.run_id
+    ) {
+      void refreshComparisonEffect("", "");
+      return;
+    }
+    void refreshComparisonEffect(evaluations.baselineRunId, candidate.run_id).catch((exc) => {
+      if (!isAbortError(exc)) {
+        setError(toErrorMessage(exc));
+      }
+    });
+  }, [
+    evaluations.baselineRunId,
+    evaluations.selectedEvaluationSummary,
+    evaluations.selectedEvaluationSummary?.provenance?.provenance_sha256,
+    evaluations.selectedEvaluationSummary?.ready,
+    evaluations.selectedEvaluationSummary?.run_id,
   ]);
 
   const onCreateRun = async (payload: CreateTestRunPayload) => {
@@ -285,6 +312,64 @@ export default function TestCenterPage() {
     setError("");
   };
 
+  const onRecordEvaluationDecision = async (
+    outcome: EvaluationDecisionOutcome,
+    note: string,
+  ) => {
+    const evaluation = evaluations.selectedEvaluation;
+    const provenance = evaluation?.provenance;
+    if (!evaluation || !provenance || !evaluation.evidence_sha256) {
+      setError(copy.decisionNeedsProvenance);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setStatus("");
+    try {
+      const selectedBaseline = evaluations.items.find(
+        (item) => item.run_id === evaluations.baselineRunId,
+      );
+      const baselineProvenanceSha256 =
+        selectedBaseline?.provenance?.provenance_sha256;
+      const baselineEvidenceSha256 = selectedBaseline?.evidence_sha256;
+      const baselineRunId = (
+        selectedBaseline
+        && baselineProvenanceSha256
+        && baselineEvidenceSha256
+        && selectedBaseline.run_id !== evaluation.run_id
+          ? selectedBaseline.run_id
+          : undefined
+      );
+      await recordChatMemoryEvaluationDecision(evaluation.run_id, {
+        outcome,
+        expected_provenance_sha256: provenance.provenance_sha256,
+        expected_evidence_sha256: evaluation.evidence_sha256,
+        baseline_run_id: baselineRunId,
+        expected_baseline_provenance_sha256: baselineRunId
+          ? baselineProvenanceSha256 ?? undefined
+          : undefined,
+        expected_baseline_evidence_sha256: baselineRunId
+          ? baselineEvidenceSha256 ?? undefined
+          : undefined,
+        note,
+      });
+      setStatus(copy.decisionRecorded);
+      await evaluations.refreshEvaluations();
+      if (outcome === "promote") {
+        evaluations.selectBaseline(evaluation.run_id);
+      }
+      await evaluations.refreshSelectedEvaluation(evaluation.run_id);
+      await evaluations.refreshComparison(
+        outcome === "promote" ? evaluation.run_id : evaluations.baselineRunId,
+        evaluation.run_id,
+      );
+    } catch (exc) {
+      setError(toErrorMessage(exc));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <TestCenterView
       copy={copy}
@@ -303,6 +388,8 @@ export default function TestCenterPage() {
       selectedEvaluationId={evaluations.selectedEvaluationId}
       selectedEvaluationSummary={evaluations.selectedEvaluationSummary}
       selectedEvaluation={evaluations.selectedEvaluation}
+      evaluationBaselineRunId={evaluations.baselineRunId}
+      evaluationComparison={evaluations.comparison}
       launcherPreset={launcherPreset}
       onCreateRun={onCreateRun}
       onRefreshRuns={refreshRuns}
@@ -318,6 +405,8 @@ export default function TestCenterPage() {
           selectRun(runId);
         }
       }}
+      onSelectEvaluationBaseline={evaluations.selectBaseline}
+      onRecordEvaluationDecision={(outcome, note) => void onRecordEvaluationDecision(outcome, note)}
       onRefreshEvaluations={() => void evaluations.refreshEvaluations().catch((exc) => setError(toErrorMessage(exc)))}
       onRerunEvaluationSetup={onRerunEvaluationSetup}
     />

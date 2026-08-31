@@ -3,10 +3,63 @@ import type { Locale } from "@/shared/i18n";
 
 const COPY = {
   en: {
-    kicker: "MVP Module",
+    kicker: "Evaluation Workspace",
     title: "Test Center",
+    intro: "Start by evaluating agent behavior. Platform health checks and native-runtime qualification are kept in a separate operations area below.",
+    behaviorKicker: "Product Behavior",
+    behaviorTitle: "Improve Agent Behavior",
+    behaviorIntro: "Run a controlled chat-memory evaluation, inspect the evidence behind each result, then refine the prompt or persona from what the agent actually did.",
+    behaviorLaunchTitle: "Run a Behavior Evaluation",
+    behaviorLaunchIntro: "This measures agent behavior. It is not a platform health check or a runtime qualification result.",
+    experimentDecisionTitle: "Compare and Decide",
+    experimentDecisionIntro: "Compare verified content-addressed inputs and behavior signals, then record what this candidate means for the next iteration.",
+    baselineEvaluation: "Baseline evaluation",
+    candidateEvaluation: "Candidate evaluation",
+    preferredBaseline: "Preferred baseline",
+    noComparisonBaseline: "Choose another verified run to compare, or promote this passing run to establish the first baseline.",
+    verifiedProvenance: "Verified content-addressed inputs",
+    legacyProvenanceMissing: "This historical run predates content-addressed input snapshots. It remains readable, but cannot be trusted for comparison or decisions.",
+    sameConfiguration: "Same effective configuration",
+    differentConfiguration: "Configuration changed",
+    configurationChanges: "Configuration changes",
+    noConfigurationChanges: "No effective input changes were detected.",
+    baselineValue: "Baseline",
+    candidateValue: "Candidate",
+    metricChanges: "Behavior signal deltas",
+    exactPromptDiff: "Exact prompt snapshots",
+    exactPersonaDiff: "Exact persona snapshots",
+    modelIdentity: "Model identity",
+    promptIdentity: "Prompt identity",
+    personaIdentity: "Persona identity",
+    evaluationIdentity: "Evaluation identity",
+    evidenceIdentity: "Output evidence identity",
+    capturedPromptSnapshot: "Captured prompt used by this run",
+    capturedPersonaSnapshot: "Captured persona used by this run",
+    currentDecision: "Current decision",
+    noDecision: "No decision recorded",
+    decisionNote: "Decision note",
+    decisionNotePlaceholder: "Why should we keep, promote, or reject this candidate?",
+    keepDecision: "Keep for reference",
+    promoteDecision: "Promote as baseline",
+    rejectDecision: "Reject candidate",
+    keepDecisionHelp: "Retain the evidence without changing the preferred baseline.",
+    promoteDecisionHelp: "Make this complete deterministic pass the default comparison baseline.",
+    rejectDecisionHelp: "Mark this configuration unsuitable for further use.",
+    decisionRecorded: "Evaluation decision recorded.",
+    decisionNeedsProvenance: "This run has no verified content-addressed provenance and cannot receive a decision.",
+    decisionKeep: "Kept for reference",
+    decisionPromote: "Promoted baseline",
+    decisionReject: "Rejected",
+    operationsTitle: "Platform Diagnostics and Runtime Qualification",
+    operationsIntro: "Use these runs to diagnose API and stack health, or to gather native-runtime qualification evidence. A passing operational check does not score agent behavior.",
+    operationsLaunchTitle: "Run an Operational Check",
+    operationsLaunchIntro: "These checks verify platform behavior and runtime readiness rather than prompt, persona, or memory quality.",
     createRunTitle: "Create Test Run",
     runType: "Run type",
+    chatMemoryEvaluationRun: "Chat-memory behavior evaluation",
+    adeApiE2eCheckRun: "ADE API end-to-end check",
+    adeMvpSmokeCheckRun: "ADE MVP smoke check",
+    nativeRuntimeQualificationRun: "Native runtime qualification",
     model: "Model",
     prompt: "Prompt",
     persona: "Persona",
@@ -14,7 +67,7 @@ const COPY = {
     fixture: "Fixture",
     rounds: "Rounds",
     timeoutSeconds: "Timeout (seconds)",
-    retryCount: "Retry Count",
+    retryCount: "Retry Count (fixed at 0 for evidence integrity)",
     judgeEnabled: "Advisory LLM judge",
     conversationModel: "Conversation deployment",
     reviewerModel: "Reviewer deployment",
@@ -124,10 +177,63 @@ const COPY = {
     action: "Action",
   },
   zh: {
-    kicker: "MVP 模块",
+    kicker: "评估工作区",
     title: "测试中心",
+    intro: "请先评估智能体行为。平台健康检查和原生运行时资格验证位于下方独立的运维区域。",
+    behaviorKicker: "产品行为",
+    behaviorTitle: "改善智能体行为",
+    behaviorIntro: "运行受控的聊天记忆评估，查看每项结果背后的证据，再根据智能体的实际表现迭代提示词或人设。",
+    behaviorLaunchTitle: "运行行为评估",
+    behaviorLaunchIntro: "此运行衡量智能体行为，不是平台健康检查，也不是运行时资格验证结果。",
+    experimentDecisionTitle: "对比并决策",
+    experimentDecisionIntro: "对比已验证、内容寻址的输入与行为信号，然后记录该候选结果对下一轮迭代的意义。",
+    baselineEvaluation: "基线评估",
+    candidateEvaluation: "候选评估",
+    preferredBaseline: "首选基线",
+    noComparisonBaseline: "请选择另一个已验证运行进行对比，或将本次通过的运行提升为第一个基线。",
+    verifiedProvenance: "已验证的内容寻址输入",
+    legacyProvenanceMissing: "该历史运行早于内容寻址输入快照。它仍可查看，但不能用于可信对比或决策。",
+    sameConfiguration: "有效配置相同",
+    differentConfiguration: "配置已变化",
+    configurationChanges: "配置变化",
+    noConfigurationChanges: "未检测到有效输入变化。",
+    baselineValue: "基线",
+    candidateValue: "候选",
+    metricChanges: "行为信号变化",
+    exactPromptDiff: "精确提示词快照",
+    exactPersonaDiff: "精确人设快照",
+    modelIdentity: "模型标识",
+    promptIdentity: "提示词标识",
+    personaIdentity: "人设标识",
+    evaluationIdentity: "评估标识",
+    evidenceIdentity: "输出证据标识",
+    capturedPromptSnapshot: "本次运行使用的提示词快照",
+    capturedPersonaSnapshot: "本次运行使用的人设快照",
+    currentDecision: "当前决策",
+    noDecision: "尚未记录决策",
+    decisionNote: "决策说明",
+    decisionNotePlaceholder: "为什么要保留、提升或拒绝该候选？",
+    keepDecision: "保留作参考",
+    promoteDecision: "提升为基线",
+    rejectDecision: "拒绝候选",
+    keepDecisionHelp: "保留证据，但不改变首选基线。",
+    promoteDecisionHelp: "将本次完整确定性通过的运行设为默认对比基线。",
+    rejectDecisionHelp: "将该配置标记为不适合继续使用。",
+    decisionRecorded: "已记录评估决策。",
+    decisionNeedsProvenance: "该运行没有已验证的内容寻址来源，无法记录决策。",
+    decisionKeep: "已保留作参考",
+    decisionPromote: "已提升为基线",
+    decisionReject: "已拒绝",
+    operationsTitle: "平台诊断与运行时资格验证",
+    operationsIntro: "使用这些运行诊断 API 与技术栈健康状态，或收集原生运行时资格验证证据。通过运维检查并不代表智能体行为得分通过。",
+    operationsLaunchTitle: "运行运维检查",
+    operationsLaunchIntro: "这些检查验证平台行为与运行时就绪情况，不评估提示词、人设或记忆质量。",
     createRunTitle: "创建测试运行",
     runType: "运行类型",
+    chatMemoryEvaluationRun: "聊天记忆行为评估",
+    adeApiE2eCheckRun: "ADE API 端到端检查",
+    adeMvpSmokeCheckRun: "ADE MVP 烟雾检查",
+    nativeRuntimeQualificationRun: "原生运行时资格验证",
     model: "模型",
     prompt: "提示词",
     persona: "人设",
@@ -135,7 +241,7 @@ const COPY = {
     fixture: "对话样本",
     rounds: "轮数",
     timeoutSeconds: "超时（秒）",
-    retryCount: "重试次数",
+    retryCount: "重试次数（为保证证据完整性固定为 0）",
     judgeEnabled: "启用辅助 LLM 评审",
     conversationModel: "对话模型部署",
     reviewerModel: "记忆评审模型部署",
@@ -250,13 +356,34 @@ export type TestCenterCopy = {
   [Key in keyof (typeof COPY)["en"]]: string;
 };
 
-export const TEST_RUN_TYPES: TestRunType[] = [
+export const BEHAVIOR_EVALUATION_RUN_TYPES = [
+  "chat_memory_eval",
+] as const satisfies readonly TestRunType[];
+
+export const OPERATIONAL_RUN_TYPES = [
   "ade_api_e2e_check",
   "ade_mvp_smoke_e2e_check",
-  "chat_memory_eval",
   "agent_runtime_v3_acceptance",
+] as const satisfies readonly TestRunType[];
+
+export const TEST_RUN_TYPES: readonly TestRunType[] = [
+  ...BEHAVIOR_EVALUATION_RUN_TYPES,
+  ...OPERATIONAL_RUN_TYPES,
 ];
 
 export function getTestCenterCopy(locale: Locale): TestCenterCopy {
   return COPY[locale];
+}
+
+export function getTestRunTypeLabel(copy: TestCenterCopy, runType: TestRunType): string {
+  switch (runType) {
+    case "chat_memory_eval":
+      return copy.chatMemoryEvaluationRun;
+    case "ade_api_e2e_check":
+      return copy.adeApiE2eCheckRun;
+    case "ade_mvp_smoke_e2e_check":
+      return copy.adeMvpSmokeCheckRun;
+    case "agent_runtime_v3_acceptance":
+      return copy.nativeRuntimeQualificationRun;
+  }
 }

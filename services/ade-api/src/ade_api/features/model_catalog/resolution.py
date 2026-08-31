@@ -16,6 +16,7 @@ from .defaults import (
     PROVIDER_MODEL_OPTION_OVERRIDES,
     PROVIDER_MODEL_OPTION_PRIORITY,
 )
+from .identity import attach_model_option_identity
 from .utils import dedupe_options
 
 
@@ -64,6 +65,7 @@ def embedding_options(letta_client: Letta) -> list[dict[str, Any]]:
         option["available"] = (not embedding_catalog_known) or option[
             "key"
         ] in discovered_embedding_handles
+        attach_model_option_identity(option)
     return options
 
 
@@ -117,30 +119,38 @@ def runtime_options(
             item, chat_key=key if scenario == "chat" else None
         )
         model_options.append(
-            {
-                "key": key,
-                "label": label,
-                "description": description,
-                "available": True,
-                "source_id": item["source_id"],
-                "source_label": item["source_label"],
-                "provider_model_id": item["provider_model_id"],
-                "upstream_provider_model_id": item.get("upstream_provider_model_id"),
-                "label_lab_available": item["label_lab_available"],
-                "structured_output_mode": item["structured_output_mode"],
-                "sampling_defaults": item.get("sampling_defaults", {}),
-                "scenario_sampling_defaults": item.get(
-                    "scenario_sampling_defaults", {}
-                ),
-                "supports_top_k": item.get("supports_top_k", False),
-                "supports_thinking": item.get("supports_thinking", False),
-                "thinking_default_enabled": item.get("thinking_default_enabled", False),
-                "profile_applied": item.get("profile_applied", False),
-                "profile_source": item.get("profile_source", ""),
-                "agent_studio_candidate": item.get("agent_studio_candidate", False),
-                "agent_studio_compatible": item.get("agent_studio_compatible", True),
-                "deployment": item.get("deployment"),
-            }
+            attach_model_option_identity(
+                {
+                    "key": key,
+                    "label": label,
+                    "description": description,
+                    "available": True,
+                    "source_id": item["source_id"],
+                    "source_label": item["source_label"],
+                    "provider_model_id": item["provider_model_id"],
+                    "upstream_provider_model_id": item.get(
+                        "upstream_provider_model_id"
+                    ),
+                    "label_lab_available": item["label_lab_available"],
+                    "structured_output_mode": item["structured_output_mode"],
+                    "sampling_defaults": item.get("sampling_defaults", {}),
+                    "scenario_sampling_defaults": item.get(
+                        "scenario_sampling_defaults", {}
+                    ),
+                    "supports_top_k": item.get("supports_top_k", False),
+                    "supports_thinking": item.get("supports_thinking", False),
+                    "thinking_default_enabled": item.get(
+                        "thinking_default_enabled", False
+                    ),
+                    "profile_applied": item.get("profile_applied", False),
+                    "profile_source": item.get("profile_source", ""),
+                    "agent_studio_candidate": item.get("agent_studio_candidate", False),
+                    "agent_studio_compatible": item.get(
+                        "agent_studio_compatible", True
+                    ),
+                    "deployment": item.get("deployment"),
+                }
+            )
         )
 
     if scenario == "chat":

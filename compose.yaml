@@ -98,8 +98,6 @@ services:
       - ADE_REPOSITORY_ROOT=/app
       - LETTA_BASE_URL=http://letta:8283
       - ADE_API_MODEL_ROUTER_BASE_URL=http://model-router:8010
-      - ADE_API_AGENT_RUNTIME_V3_ENABLED=${ADE_API_AGENT_RUNTIME_V3_ENABLED:-false}
-      - ADE_API_AGENT_RUNTIME_V3_MODE=${ADE_API_AGENT_RUNTIME_V3_MODE:-release}
       - ADE_API_DATABASE_URL=postgresql+psycopg://${ADE_PG_APP_USER:-ade_app}:${ADE_PG_APP_PASSWORD:-ade}@postgres:5432/${ADE_PG_DB:-ade}
     volumes:
       - ./content:/app/content
@@ -148,6 +146,78 @@ services:
       postgres:
         condition: service_healthy
 
+  ade-runtime-db-test:
+    profiles: ["native-runtime"]
+    build:
+      context: .
+      dockerfile: services/ade-api/Dockerfile
+      target: test
+      args:
+        ADE_SOURCE_REVISION: ${ADE_SOURCE_REVISION:-unknown}
+        ADE_SOURCE_DIRTY: ${ADE_SOURCE_DIRTY:-true}
+        ADE_SOURCE_FINGERPRINT: ${ADE_SOURCE_FINGERPRINT:-unknown}
+    restart: "no"
+    environment:
+      - ADE_REPOSITORY_ROOT=/app
+      - ADE_TEST_DATABASE_URL=postgresql+psycopg://${ADE_PG_APP_USER:-ade_app}:${ADE_PG_APP_PASSWORD:?Set ADE_PG_APP_PASSWORD in .env}@postgres:5432/${ADE_PG_DB:-ade}
+    command:
+      - /opt/venv/bin/python
+      - -m
+      - pytest
+      - services/ade-api/tests/agent_runtime_v3/persistence
+      - workflows/evals/agent_runtime_v3_acceptance/tests/test_cleanup_postgres.py
+      - -q
+    depends_on:
+      ade-runtime-migrate:
+        condition: service_completed_successfully
+
+  ade-native-api:
+    profiles: ["native-runtime"]
+    build:
+      context: .
+      dockerfile: services/ade-api/Dockerfile
+      args:
+        ADE_SOURCE_REVISION: ${ADE_SOURCE_REVISION:-unknown}
+        ADE_SOURCE_DIRTY: ${ADE_SOURCE_DIRTY:-true}
+        ADE_SOURCE_FINGERPRINT: ${ADE_SOURCE_FINGERPRINT:-unknown}
+    restart: unless-stopped
+    environment:
+      - ADE_REPOSITORY_ROOT=/app
+      - ADE_API_AUTH_ENABLED=${ADE_API_AUTH_ENABLED:-true}
+      - ADE_API_ADMIN_KEY=${ADE_API_ADMIN_KEY:?Set ADE_API_ADMIN_KEY in .env}
+      - ADE_API_OPERATOR_KEY=${ADE_API_OPERATOR_KEY:-}
+      - ADE_API_READER_KEY=${ADE_API_READER_KEY:-}
+      - ADE_API_CORS_ORIGINS=${ADE_API_CORS_ORIGINS:-}
+      - ADE_API_AGENT_RUNTIME_V3_ENABLED=true
+      - ADE_API_AGENT_RUNTIME_V3_MODE=${ADE_API_AGENT_RUNTIME_V3_MODE:-development}
+      - ADE_API_DATABASE_URL=postgresql+psycopg://${ADE_PG_APP_USER:-ade_app}:${ADE_PG_APP_PASSWORD:?Set ADE_PG_APP_PASSWORD in .env}@postgres:5432/${ADE_PG_DB:-ade}
+      - ADE_API_MODEL_ROUTER_BASE_URL=http://model-router:8010
+      - ADE_API_MODEL_ROUTER_API_KEY_ENV=${ADE_API_MODEL_ROUTER_API_KEY_ENV:-MODEL_ROUTER_API_KEY}
+      - ADE_API_MODEL_ROUTER_API_KEY_SECRET=${ADE_API_MODEL_ROUTER_API_KEY_SECRET:-model-router-api-key}
+      - MODEL_ROUTER_API_KEY=${MODEL_ROUTER_API_KEY:-local-router-dev-key}
+      - ADE_API_AGENT_RUNTIME_V3_WORKER_ID=${ADE_API_AGENT_RUNTIME_V3_WORKER_ID:-ade-runtime-worker}
+      - ADE_API_AGENT_RUNTIME_V3_WORKER_HEARTBEAT_SECONDS=${ADE_API_AGENT_RUNTIME_V3_WORKER_HEARTBEAT_SECONDS:-5}
+      - ADE_API_AGENT_RUNTIME_V3_WORKER_STALE_SECONDS=${ADE_API_AGENT_RUNTIME_V3_WORKER_STALE_SECONDS:-15}
+      - AGENT_RUNTIME_V3_ACCEPTANCE_API_BASE_URL=http://ade-native-api:8000
+    volumes:
+      - ./workflows/evals/agent_runtime_v3_acceptance/outputs:/app/workflows/evals/agent_runtime_v3_acceptance/outputs
+    ports:
+      - "${ADE_NATIVE_API_BIND_HOST:-127.0.0.1}:${ADE_NATIVE_API_PORT:-8002}:8000"
+    command: ["/opt/venv/bin/uvicorn", "ade_api.native_main:app", "--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test: ["CMD", "/opt/venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).read()"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+    depends_on:
+      ade-runtime-migrate:
+        condition: service_completed_successfully
+      ade-runtime-worker:
+        condition: service_started
+      model-router:
+        condition: service_healthy
+
   ade-runtime-worker:
     profiles: ["native-runtime"]
     build:
@@ -186,13 +256,13 @@ services:
       args:
         NEXT_PUBLIC_ADE_WEB_VERSION: ${ADE_WEB_VERSION:-}
         NEXT_PUBLIC_ADE_WEB_BUILD: ${ADE_WEB_BUILD:-}
+        NEXT_PUBLIC_ADE_NATIVE_PREVIEW_ENABLED: ${ADE_NATIVE_PREVIEW_ENABLED:-false}
     restart: unless-stopped
     environment:
       - ADE_API_BASE_URL=http://ade-api:8000
+      - ADE_NATIVE_API_BASE_URL=http://ade-native-api:8000
+      - ADE_NATIVE_PREVIEW_ENABLED=${ADE_NATIVE_PREVIEW_ENABLED:-false}
       - ADE_API_ADMIN_KEY=${ADE_API_ADMIN_KEY:?Set ADE_API_ADMIN_KEY in .env}
       - PORT=3000
     ports:
       - "${ADE_WEB_BIND_HOST:-127.0.0.1}:${ADE_WEB_PORT:-3000}:3000"
-    depends_on:
-      ade-api:
-        condition: service_healthy

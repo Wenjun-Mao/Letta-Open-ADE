@@ -5,8 +5,10 @@ architecture. Start with the [Codebase Map](codebase-map.md) to find the
 owner of a change, then use this guide to understand the system boundaries.
 
 For the active product outcome, read the [Product Roadmap](product-roadmap.md).
-The [Maintenance Roadmap](maintenance-roadmap.md) is retained only as a
-historical cleanup record and must not be used to select current work.
+For a concise statement of current authority and direction, read the
+[ADE System Status Map](architecture/system-status.md). The
+[Maintenance Roadmap](maintenance-roadmap.md) is retained only as a historical
+cleanup record and must not be used to select current work.
 
 ## Five-Minute System Model
 
@@ -24,18 +26,20 @@ six ideas:
 
 | Time | Read | Learn |
 | --- | --- | --- |
-| 0-4 min | [Product Roadmap](product-roadmap.md) | The current Agent Behavior Evaluation Loop outcome and its boundaries. |
-| 4-8 min | [ADR 0006](adr/0006-comprehension-first-service-and-feature-architecture.md) | Why the architecture exists and its breaking-change rules. |
-| 8-13 min | [Architecture Overview](architecture/overview.md) | Services, repository shape, dependency rules, and exposure boundary. |
-| 13-20 min | [Request Flows](architecture/request-flows.md) | How Agent Studio, generation labs, content centers, and workflows execute. |
-| 20-26 min | One feature's `README.md` | Its user value, endpoints, storage, integrations, and tests. |
-| 26-30 min | [Feature README Template](feature-readme-template.md) and [Glossary](glossary.md) | How to add work without recreating cross-cutting ambiguity. |
+| 0-3 min | [ADE System Status Map](architecture/system-status.md) | Current product authority, native-runtime status, and decision gates. |
+| 3-7 min | [Product Roadmap](product-roadmap.md) | The behavior-improvement outcome and Now/Next/Later milestones. |
+| 7-11 min | [ADR 0006](adr/0006-comprehension-first-service-and-feature-architecture.md) | Why the architecture exists and its breaking-change rules. |
+| 11-16 min | [Architecture Overview](architecture/overview.md) | Services, repository shape, dependency rules, and exposure boundary. |
+| 16-23 min | [Request Flows](architecture/request-flows.md) | How Agent Studio, generation labs, content centers, and workflows execute. |
+| 23-27 min | One feature's `README.md` | Its user value, endpoints, storage, integrations, and tests. |
+| 27-30 min | [Feature README Template](feature-readme-template.md) and [Glossary](glossary.md) | How to add work without recreating cross-cutting ambiguity. |
 
 For the opt-in Agent Studio runtime direction, read the
 [replacement study](architecture/agent-runtime-replacement-study.md), then
 [ADR 0009](adr/0009-ade-owned-agent-runtime.md),
 [ADR 0010](adr/0010-production-path-runtime-qualification.md), and
-[ADR 0011](adr/0011-agent-runtime-operational-readiness.md), then the
+[ADR 0011](adr/0011-agent-runtime-operational-readiness.md), and
+[ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md), then the
 [`agent_runtime_v3` guide](../services/ade-api/src/ade_api/features/agent_runtime_v3/README.md).
 The implementation decision is accepted, but current product behavior remains
 Letta-backed until a separate cutover is approved.

@@ -16,9 +16,11 @@ from .contracts import (
     CreateAgentDefinitionRequest,
     CreateConversationRequest,
     CreateMemorySubjectRequest,
+    CreatePreviewSessionRequest,
     ConversationResponse,
     ConversationStateResponse,
     MemorySubjectResponse,
+    PreviewSessionResponse,
     RunResponse,
     RuntimeWorkerHealthResponse,
     SubjectMemoriesResponse,
@@ -93,6 +95,23 @@ async def get_agent_definition(
     service: AgentRuntimeV3ServiceDependency,
 ):
     return await _call(service.get_agent_definition(definition_id))
+
+
+@router.post(
+    "/preview-sessions",
+    response_model=PreviewSessionResponse,
+    status_code=201,
+    summary="Create an atomic native-runtime preview session",
+)
+async def create_preview_session(
+    request: CreatePreviewSessionRequest,
+    response: Response,
+    service: AgentRuntimeV3ServiceDependency,
+):
+    result = await _call(service.create_preview_session(request))
+    if bool(result.get("idempotent_replay")):
+        response.headers["Idempotent-Replay"] = "true"
+    return result
 
 
 @router.post(

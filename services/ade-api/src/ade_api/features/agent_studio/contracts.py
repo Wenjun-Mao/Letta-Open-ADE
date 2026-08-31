@@ -23,6 +23,12 @@ class AgentCreateRequest(BaseModel):
     temperature: float | None = Field(default=None, ge=0, le=2)
     top_p: float | None = Field(default=None, gt=0, le=1)
     top_k: int | None = Field(default=None, gt=0)
+    model_identity_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    embedding_identity_sha256: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
+    prompt_content_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    persona_content_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
 
 class ApiAgentListItemResponse(BaseModel):
@@ -48,6 +54,10 @@ class ApiAgentCreateResponse(BaseModel):
     embedding: str | None = None
     prompt_key: str
     persona_key: str
+    model_identity_sha256: str
+    embedding_identity_sha256: str | None = None
+    prompt_content_sha256: str
+    persona_content_sha256: str
 
 
 class ApiAgentLifecycleResponse(BaseModel):

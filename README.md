@@ -37,10 +37,13 @@ workflows/smoke/                      # Live stack smoke checks
 infra/                                # Container support assets
 ```
 
-For the rationale and dependency rules, read the [architecture overview](docs/architecture/overview.md).
+For current product and runtime authority, read the
+[ADE System Status Map](docs/architecture/system-status.md). For the rationale
+and dependency rules, read the [architecture overview](docs/architecture/overview.md).
 For an end-to-end view of browser, API, Letta, router, and workflow calls, read
-the [request flows](docs/architecture/request-flows.md). The [codebase map](docs/codebase-map.md)
-is the practical "where do I change this?" guide.
+the [request flows](docs/architecture/request-flows.md). The
+[codebase map](docs/codebase-map.md) is the practical "where do I change this?"
+guide.
 
 ## Daily Commands
 
@@ -88,13 +91,18 @@ The native runtime preview is a separate operator path:
 ```text
 make native-runtime-migrate
 make native-runtime-db-test
+make native-runtime-lane-check
 make native-runtime-up
+make native-runtime-preview-gate  # expected to fail until reviewed promotion
+make native-runtime-preview-up    # release-only; runs the gate first
 ```
 
-These commands create/migrate the ADE-owned database and enable the profile in
-development mode. Ordinary `make up` keeps v3 disabled. See the
+The development target creates/migrates the ADE-owned database and enables the
+native-only profile with unqualified runs marked as such. The release preview target
+first requires exact promoted conversation, reviewer, retriever, and current policy
+identities. Ordinary `make up` keeps v3 and its navigation disabled. See the
 [`agent_runtime_v3` guide](services/ade-api/src/ade_api/features/agent_runtime_v3/README.md)
-and [ADR 0009](docs/adr/0009-ade-owned-agent-runtime.md) before using it.
+and [ADR 0013](docs/adr/0013-narrow-native-runtime-product-pilot.md) before using it.
 
 See [workflows/evals](workflows/evals/) for each evaluation's inputs, outputs,
 and interpretation. See [workflows/smoke](workflows/smoke/) for live API and
@@ -117,7 +125,8 @@ describes the persona source/projection boundary.
 
 ## Further Reading
 
-- [Product roadmap](docs/product-roadmap.md): current outcome, acceptance criteria, and explicit non-goals.
+- [Product roadmap](docs/product-roadmap.md): outcome-oriented Now/Next/Later direction and decision gates.
+- [ADE System Status Map](docs/architecture/system-status.md): current product authority and native-runtime status at a glance.
 - [Operational manual](MANUAL.md): lifecycle, recovery, and live verification.
 - [Maintainer reading guide](docs/reading-guide.md): a short route into the codebase.
 - [Development conventions](docs/development-conventions.md): feature, workflow, and ADR rules.

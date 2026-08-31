@@ -20,12 +20,14 @@ from ade_api.features.agent_studio.contracts import (
 )
 from ade_api.features.model_catalog import (
     agent_studio_llm_config_for_model,
+    model_option_identity_sha256,
     runtime_options,
 )
 from ade_api.features.prompt_center import (
     normalize_scenario,
     persona_content_map,
     prompt_content_map,
+    template_content_sha256,
 )
 from ade_api.platform.openapi_metadata import TAG_AGENT_STUDIO
 from content.personas import HUMAN_TEMPLATE
@@ -153,6 +155,32 @@ async def api_create_agent(
             status_code=400, detail=f"Invalid embedding handle: {request.embedding}"
         )
 
+    model_option = next(
+        option for option in model_options if option["key"] == request.model
+    )
+    embedding_option = (
+        next(
+            option for option in embedding_options if option["key"] == request.embedding
+        )
+        if request.embedding
+        else None
+    )
+    resolved_identities = {
+        "model_identity_sha256": model_option_identity_sha256(model_option),
+        "embedding_identity_sha256": (
+            model_option_identity_sha256(embedding_option)
+            if embedding_option is not None
+            else None
+        ),
+        "prompt_content_sha256": template_content_sha256(
+            prompt_map[request.prompt_key]
+        ),
+        "persona_content_sha256": template_content_sha256(
+            persona_map[request.persona_key]
+        ),
+    }
+    _verify_expected_identities(request, resolved_identities)
+
     create_args: dict[str, Any] = {
         "name": request.name,
         "system": prompt_map[request.prompt_key],
@@ -189,6 +217,30 @@ async def api_create_agent(
             ) from exc
         raise HTTPException(status_code=400, detail=error_text) from exc
 
+    try:
+        effective_identities = _verify_created_agent_state(
+            client=client,
+            agent_id=str(agent.id),
+            request=request,
+            prompt_content=prompt_map[request.prompt_key],
+            persona_content=persona_map[request.persona_key],
+            catalog_identities=resolved_identities,
+        )
+    except Exception as exc:
+        try:
+            client.agents.delete(agent_id=str(agent.id))
+        except Exception:
+            pass
+        if isinstance(exc, HTTPException):
+            raise
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "The created Letta agent could not be verified against the selected "
+                f"evaluation inputs and was purged: {exc}"
+            ),
+        ) from exc
+
     return {
         "id": agent.id,
         "name": agent.name,
@@ -197,4 +249,74 @@ async def api_create_agent(
         "embedding": request.embedding,
         "prompt_key": request.prompt_key,
         "persona_key": request.persona_key,
+        **effective_identities,
     }
+
+
+def _verify_created_agent_state(
+    *,
+    client: Any,
+    agent_id: str,
+    request: AgentCreateRequest,
+    prompt_content: str,
+    persona_content: str,
+    catalog_identities: dict[str, str | None],
+) -> dict[str, str | None]:
+    agent = client.agents.retrieve(agent_id=agent_id)
+    blocks = list(client.agents.blocks.list(agent_id=agent_id))
+    memory = {
+        str(getattr(block, "label", "")): str(getattr(block, "value", ""))
+        for block in blocks
+    }
+    effective_model = str(getattr(agent, "model", "") or "")
+    effective_embedding = str(getattr(agent, "embedding", "") or "")
+    mismatches: list[str] = []
+    if effective_model != request.model:
+        mismatches.append("model handle")
+    if request.embedding and effective_embedding != request.embedding:
+        mismatches.append("embedding handle")
+    if template_content_sha256(str(getattr(agent, "system", "") or "")) != (
+        template_content_sha256(prompt_content)
+    ):
+        mismatches.append("system prompt content")
+    if template_content_sha256(memory.get("persona", "")) != (
+        template_content_sha256(persona_content)
+    ):
+        mismatches.append("persona memory content")
+    if mismatches:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Created Letta agent state does not match the selected inputs: "
+                + ", ".join(mismatches)
+            ),
+        )
+    return {
+        **catalog_identities,
+        "prompt_content_sha256": template_content_sha256(
+            str(getattr(agent, "system", "") or "")
+        ),
+        "persona_content_sha256": template_content_sha256(memory["persona"]),
+    }
+
+
+def _verify_expected_identities(
+    request: AgentCreateRequest,
+    resolved: dict[str, str | None],
+) -> None:
+    labels = {
+        "model_identity_sha256": "Model option",
+        "embedding_identity_sha256": "Embedding option",
+        "prompt_content_sha256": "Prompt template",
+        "persona_content_sha256": "Persona template",
+    }
+    for field, label in labels.items():
+        expected = getattr(request, field)
+        if expected is not None and expected != resolved[field]:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    f"{label} changed after the caller selected it. "
+                    "Refresh the configuration and start a new run."
+                ),
+            )

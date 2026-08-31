@@ -3,19 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import packageJson from "../../../package.json";
+import { HOME_NAVIGATION_ITEM, NAVIGATION_GROUPS } from "./navigation-items";
 import { useI18n } from "@/shared/i18n";
-
-const NAV_ITEMS = [
-  { href: "/", key: "dashboard" },
-  { href: "/agent-studio", key: "agentStudio" },
-  { href: "/comment-lab", key: "commentLab" },
-  { href: "/label-lab", key: "labelLab" },
-  { href: "/schema-center", key: "schemaCenter" },
-  { href: "/prompt-center", key: "promptCenter" },
-  { href: "/tool-center", key: "toolCenter" },
-  { href: "/test-center", key: "testCenter" },
-  { href: "/api-docs", key: "apiDocs" },
-] as const;
 
 const COPY = {
   en: {
@@ -24,6 +13,10 @@ const COPY = {
     releaseAriaLabel: "UI release",
     releaseTag: "UI",
     dashboard: "Dashboard",
+    build: "Build",
+    content: "Content",
+    evaluate: "Evaluate",
+    operations: "Operations",
     agentStudio: "Agent Studio",
     commentLab: "Comment Lab",
     labelLab: "Label Lab",
@@ -31,6 +24,7 @@ const COPY = {
     promptCenter: "Prompt Center",
     toolCenter: "Tool Center",
     testCenter: "Test Center",
+    nativeRuntimePreview: "Native Runtime Preview",
     apiDocs: "API Docs",
   },
   zh: {
@@ -39,6 +33,10 @@ const COPY = {
     releaseAriaLabel: "界面版本",
     releaseTag: "版本",
     dashboard: "仪表盘",
+    build: "构建",
+    content: "内容",
+    evaluate: "评估",
+    operations: "运维",
     agentStudio: "智能体工作台",
     commentLab: "评论实验室",
     labelLab: "标注实验室",
@@ -46,6 +44,7 @@ const COPY = {
     promptCenter: "提示词中心",
     toolCenter: "工具中心",
     testCenter: "测试中心",
+    nativeRuntimePreview: "原生运行时预览",
     apiDocs: "API 文档",
   },
 } as const;
@@ -74,14 +73,27 @@ export function TopNav() {
   return (
     <div className="top-nav-group">
       <nav className="nav" aria-label={copy.navAriaLabel}>
-        {NAV_ITEMS.map((item) => {
-          const active = isActivePath(pathname, item.href);
-          return (
-            <Link className={active ? "nav-link nav-link-active" : "nav-link"} key={item.href} href={item.href}>
-              {copy[item.key]}
-            </Link>
-          );
-        })}
+        <Link
+          className={isActivePath(pathname, HOME_NAVIGATION_ITEM.href) ? "nav-link nav-link-active" : "nav-link"}
+          href={HOME_NAVIGATION_ITEM.href}
+        >
+          {copy[HOME_NAVIGATION_ITEM.key]}
+        </Link>
+        {NAVIGATION_GROUPS.map((group) => (
+          <div className="nav-section" key={group.key}>
+            <span className="nav-section-label">{copy[group.key]}</span>
+            <div className="nav-section-links">
+              {group.items.map((item) => {
+                const active = isActivePath(pathname, item.href);
+                return (
+                  <Link className={active ? "nav-link nav-link-active" : "nav-link"} key={item.href} href={item.href}>
+                    {copy[item.key]}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
       <div className="release-chip" role="status" aria-label={copy.releaseAriaLabel} title={releaseLabel}>
         <span className="release-chip-tag">{copy.releaseTag}</span>

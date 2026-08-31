@@ -13,6 +13,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW_ROOT = Path(__file__).resolve().parent
 DEFAULT_ROUTER_MODEL_KEY = "dgx_vllm::qwen3.6-35b-a3b-fp8"
 DEFAULT_AGENT_MODEL_HANDLE = f"openai-proxy/{DEFAULT_ROUTER_MODEL_KEY}"
+ADE_API_TRANSPORT_RETRIES = 0
+JUDGE_TRANSPORT_RETRIES = 0
 
 
 class ConfigError(ValueError):
@@ -39,7 +41,6 @@ class ChatMemoryEvalConfig:
     judge_enabled: bool = True
     judge_model_key: str = ""
     judge_timeout_seconds: float = 120.0
-    api_retry_count: int = 2
 
 
 def _project_path(value: str | Path) -> Path:
@@ -110,9 +111,6 @@ def load_config(path: Path) -> ChatMemoryEvalConfig:
                 "judge_timeout_seconds", ChatMemoryEvalConfig.judge_timeout_seconds
             )
         ),
-        api_retry_count=int(
-            payload.get("api_retry_count", ChatMemoryEvalConfig.api_retry_count)
-        ),
     )
     validate_config(config)
     return config
@@ -135,12 +133,13 @@ def validate_config(config: ChatMemoryEvalConfig) -> None:
         raise ConfigError("persona_key must start with chat_")
     if config.timeout_seconds <= 0 or config.timeout_seconds > 600:
         raise ConfigError("timeout_seconds must be > 0 and <= 600")
-    if not 0 <= config.retry_count <= 5:
-        raise ConfigError("retry_count must be between 0 and 5")
+    if config.retry_count != 0:
+        raise ConfigError(
+            "retry_count must be 0 because Agent Studio message requests do not have "
+            "a server-owned idempotency contract"
+        )
     if config.judge_timeout_seconds <= 0 or config.judge_timeout_seconds > 600:
         raise ConfigError("judge_timeout_seconds must be > 0 and <= 600")
-    if config.api_retry_count < 0:
-        raise ConfigError("api_retry_count must be >= 0")
 
 
 def apply_cli_overrides(
@@ -191,3 +190,13 @@ def router_model_key_from_agent_handle(model: str) -> str:
     if "::" in handle:
         return handle
     return DEFAULT_ROUTER_MODEL_KEY
+
+
+def effective_judge_model_key(config: ChatMemoryEvalConfig) -> str:
+    return config.judge_model_key or router_model_key_from_agent_handle(config.model)
+
+
+def ade_api_timeout_seconds(config: ChatMemoryEvalConfig) -> float:
+    """Leave room for the API's model timeout without retrying a request."""
+
+    return max(config.timeout_seconds + 60, 90)

@@ -22,6 +22,3 @@ retry_count = 0
 judge_enabled = true
 judge_model_key = ""
 judge_timeout_seconds = 120
-
-# Transport retry for script-to-ADE-API requests.
-api_retry_count = 2

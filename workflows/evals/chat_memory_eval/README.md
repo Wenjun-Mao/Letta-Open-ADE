@@ -16,7 +16,7 @@ Run the default matrix:
 uv run python workflows/evals/chat_memory_eval/run.py --config workflows/evals/chat_memory_eval/config.toml
 ```
 
-Outputs stream to `workflows/evals/chat_memory_eval/outputs/` as timestamped CSV, JSONL, and summary JSON files. The JSONL preserves the full turn records, final memory, deterministic score, and optional judge payload.
+Outputs stream to `workflows/evals/chat_memory_eval/outputs/` as timestamped CSV, JSONL, summary JSON, and provenance JSON files. The JSONL preserves the full turn records, final memory, deterministic score, optional judge payload, and the run ID that binds it to the summary and provenance record.
 
 ## What It Checks
 
@@ -50,11 +50,14 @@ The default config is `workflows/evals/chat_memory_eval/config.toml`.
 | `retry_count` | `0` | Runtime retry count sent with each Agent Studio message. |
 | `judge_enabled` | `true` | Run advisory router-backed LLM judge. |
 | `judge_model_key` | blank | Router model key for judge; blank derives it from `model`. |
-| `api_retry_count` | `2` | Transport retry count for script-to-API calls. |
+
+The evaluator makes exactly one HTTP attempt for every ADE API and advisory-judge request. It does not retry a timed-out or failed POST because the server may already have accepted a state-changing request. `retry_count` remains the explicit Agent Studio runtime setting for each chat turn.
+
+Each run captures immutable provenance: the requested run ID, prompt/persona snapshots, catalog deployment identities, every effective execution control, and `ADE_SOURCE_REVISION`, `ADE_SOURCE_DIRTY`, and `ADE_SOURCE_FINGERPRINT`. The configuration digest excludes the run ID and capture time, so equivalent runs remain comparable.
 
 ## Test Center
 
-ADE Test Center can launch this workflow with a focused form. UI-launched runs write artifacts under `data/runtime/test-runs/<run_id>/` so the manifest, log, CSV, JSONL, and summary are all visible from the run artifact panel and survive an API restart.
+ADE Test Center can launch this workflow with a focused form. It passes its allocated `<run_id>` directory name through `--run-id`, and the workflow writes that same value into the provenance, summary, CSV, and every JSONL row. UI-launched runs write artifacts under `data/runtime/test-runs/<run_id>/` so the manifest, log, CSV, JSONL, summary, and provenance are all visible from the run artifact panel and survive an API restart. Direct CLI runs generate a run ID when `--run-id` is omitted.
 
 ## Troubleshooting
 

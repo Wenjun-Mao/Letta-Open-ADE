@@ -1,87 +1,131 @@
 # ADE Product Roadmap
 
-This is the current, outcome-oriented direction for Letta Open ADE. It is
-deliberately separate from the [historical maintenance record](maintenance-roadmap.md),
-which preserves completed cleanup context but does not define current product work.
+This is the authoritative product direction for Letta Open ADE. It describes
+outcomes and decision gates, not a record of every completed task. For the
+current authority and runtime boundary, start with the
+[ADE System Status Map](architecture/system-status.md). The
+[maintenance roadmap](maintenance-roadmap.md) remains a historical cleanup
+record and must not be used to choose current product work.
 
-## Baseline: v0.3.0
+## Product Outcome
 
-`v0.3.0` is the comprehension-first baseline. The repository now has clear
-service, feature, content, workflow, and infrastructure ownership. The next
-milestone should prove that this structure helps an operator improve real agent
-behavior, not add another round of structural work.
+ADE helps an operator improve agent behavior with evidence. The intended loop
+is: configure an experience, evaluate it against a representative scenario,
+inspect the evidence, refine the relevant content, compare the result, and make
+a clear keep, promote, or reject decision.
 
-The representative live results captured before this milestone are recorded in
-the [v0.3.0 live behavior baseline](baselines/v0.3.0-live-baseline.md).
+The labs and centers are supporting capabilities, not competing destinations.
+Agent Studio, Prompt Center, Model Catalog, and Test Center should make this
+one improvement loop easier to complete.
 
-## Current Milestone: Agent Behavior Evaluation Loop
+## Delivered Baseline: Agent Behavior Evaluation Loop
 
-Build one coherent loop across Agent Studio, Test Center, and Prompt Center:
+The initial Agent Behavior Evaluation Loop is delivered. An operator can
+configure a chat evaluation, replay a conversation, inspect turn-level reply,
+tool, and memory evidence, review deterministic checks, open the selected
+prompt or persona for refinement, and rerun the scenario. The representative
+live baseline is recorded in the
+[v0.3.0 live behavior baseline](baselines/v0.3.0-live-baseline.md).
 
-1. Configure an agent with a model, prompt, persona, and embedding.
-2. Replay a conversation fixture from the product UI.
-3. Inspect each turn's reply, tool activity, persistent-memory layers, and
-   before/after memory changes.
-4. Score the run for self-disclosure and expected fact capture.
-5. Compare runs across model, prompt, and persona choices.
-6. Open the relevant prompt or persona in Prompt Center to refine it, then run
-   the same fixture again.
+Deterministic checks own the official pass/fail outcome. Optional LLM judging is
+diagnostic only and must not make a result non-deterministic.
 
-The user outcome is simple: an operator can tell whether an agent behaved as
-intended, understand why it passed or failed, and make the next prompt or
-persona decision without reconstructing the run from raw files or logs.
+## Now: Make Evaluation The Product Spine
 
-### Acceptance Criteria
+Turn the delivered loop into ADE's primary operator journey rather than one
+technical surface among peers.
 
-The milestone is complete when a maintainer can use ADE Web to:
+- Make the behavior-improvement path clear from the dashboard and navigation:
+  build an experience, choose content and a model, evaluate, inspect, refine,
+  compare, then decide.
+- Preserve verified, content-addressed evaluation provenance at run start: resolved model
+  identity/capability, prompt and persona revision or content hash, fixture,
+  controls, and scoring policy.
+- Make baseline-versus-candidate comparisons and the keep/promote/reject
+  decision readable without reconstructing raw artifacts.
+- Separate behavior-quality evaluation from stack health, smoke checks, runtime
+  qualification, and raw diagnostics. Those operational checks remain valuable,
+  but they answer a different question.
+- Extend the same outcome-oriented evaluation approach to Comment Lab and Label
+  Lab only when each has a concrete, task-specific success contract.
 
-- Choose a model, prompt, persona, embedding, fixture, timeout, and retry
-  setting for an evaluation run.
-- Start the run from Test Center and see a stable run record linked to its
-  artifacts.
-- Review every replayed turn with the assistant response, visible tool signals,
-  memory state before and after the turn, and a readable memory diff when state
-  changed.
-- See deterministic checks for forbidden self-disclosure, memory mutation, and
-  expected user facts, including a clear pass/fail result and failure reasons.
-- Compare completed runs using their explicit model, prompt, persona, fixture,
-  and scoring metadata.
-- Navigate from a run's selected prompt or persona to its editable Prompt
-  Center record, then rerun the same configuration after a change.
-- Confirm that temporary evaluation agents are safely archived and purged, with
-  cleanup failures visible in the run result.
+### Now Decision Gate
 
-Deterministic checks own the official pass/fail outcome. An optional LLM judge
-may add diagnostic commentary or an advisory score, but it must never override
-or make the official result non-deterministic.
+This milestone is ready to close when an operator can make a trustworthy
+behavior decision from ADE: the run records the exact evaluated inputs, shows
+the relevant turn and memory evidence, compares a candidate with a baseline,
+and states the resulting keep, promote, or reject decision. Operations and
+qualification views must not be confused with that product-quality decision.
 
-## Non-Goals
+## Next: Qualify The ADE-Native Runtime And Prove A Narrow Product Pilot
 
-This milestone does not include:
+The ADE-native runtime is an accepted implementation candidate, not the current
+product runtime. It has a separate PostgreSQL model, worker, typed-memory
+contracts, a breaking `/api/v3` API, and an implemented separate preview route,
+but it remains disabled by default and unqualified. Current Agent Studio,
+`/api/v2`, and Letta `0.16.8` remain the product authority.
 
-- Broad repository or service restructuring.
-- Adding providers merely to increase the catalog.
-- A generic evaluation framework beyond the concrete Agent Studio workflow.
-- A visual redesign or broad UI overhaul.
-- Replacing existing API contracts before the evaluation workflow requires a
-  narrowly defined addition.
+Next runtime work is evidence and product-contract work, not another broad
+rewrite:
 
-## Likely Next Milestones
+- Complete the production-path qualification required by
+  [ADR 0010](adr/0010-production-path-runtime-qualification.md), retaining
+  reviewed evidence for the exact deployment fingerprints.
+- Retain the accepted first-pilot tool scope from
+  [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md): subject-bound
+  `search_memory` only, with no arbitrary Tool Center execution.
+- Demonstrate a native-only operational path, including worker readiness,
+  recovery, cancellation, and the absence of a Letta or Redis dependency for
+  that path.
+- Qualify and then expose the implemented, deliberately separate v3 pilot around
+  agent definitions, memory subjects, conversations, typed memory, and run events.
 
-These are candidates for discussion after the current milestone, not committed
-delivery promises:
+### Next Decision Gate
 
-- Curated evaluation suites for Comment Lab and Label Lab, using their own
-  task-specific success criteria.
-- Repeatable baseline reports for the supported local and cloud models.
-- Review and promotion workflow for validated prompts, personas, schemas, and
-  tools.
-- Focused operational visibility for model availability, latency, and failed
-  evaluations.
+The runtime can enter a product pilot only after the required role deployments
+have passed three consecutive complete, zero-retry qualification rounds and
+reviewed promotion; the first tool contract is approved; and a native-only
+operational path has been demonstrated. Passing unit tests, study fixtures, or
+focused diagnostics do not satisfy this gate.
 
-## Working Rule
+## Later: Fresh-Start Cutover And Simplification
 
-Prefer one end-to-end improvement to this loop over a cross-cutting abstraction.
-For every change, keep the UI, API contract, deterministic checks, workflow
-artifacts, and documentation owned by the relevant feature. Record durable
-contract or behavior decisions as ADRs when they are made.
+Only after the native pilot proves the same operator outcome and a later cutover
+ADR is accepted should new Agent Studio usage move to v3. The cutover is
+fresh-start: there is no Letta importer, compatibility path, or dual-write
+authority. Letta, Redis, v2 Agent Studio execution, and associated Tool Center
+runtime behavior are removed only after no product traffic or deployment
+dependency remains.
+
+### Later Decision Gate
+
+Cutover requires both the runtime qualification gate and an accepted cutover
+ADR that records the product contract, operational rollback/reset boundary,
+and removal sequence. Until then, no alias, fallback, or UI default may make
+the candidate runtime appear to be the supported Agent Studio path.
+
+## Explicit Non-Goals
+
+- Do not claim or attempt native-runtime cutover through roadmap wording alone.
+- Do not add a generic evaluation framework before a concrete product workflow
+  needs it.
+- Do not mix behavioral quality decisions with infrastructure diagnostics.
+- Do not preserve duplicate runtime authority, legacy import, or compatibility
+  aliases for a future v3 cutover.
+- Do not start another repository-wide restructuring before an outcome or
+  authority boundary requires it.
+
+## Durable Sources
+
+- [ADE System Status Map](architecture/system-status.md): current authority,
+  runtime status, and direction at a glance.
+- [ADR 0009](adr/0009-ade-owned-agent-runtime.md): accepted native-runtime
+  design and no-cutover guardrails.
+- [ADR 0010](adr/0010-production-path-runtime-qualification.md): production
+  qualification and promotion requirements.
+- [ADR 0011](adr/0011-agent-runtime-operational-readiness.md): worker and
+  provider-failure evidence requirements.
+- [ADR 0012](adr/0012-content-addressed-behavior-evaluation-decisions.md):
+  evaluated-input provenance and decision ledger trust boundary.
+- [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md): separate pilot,
+  atomic session, curated-tool, and exposure-gate contract.

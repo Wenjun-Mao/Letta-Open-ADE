@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS base
 
 ARG ADE_SOURCE_REVISION=unknown
 ARG ADE_SOURCE_DIRTY=true
@@ -32,6 +32,15 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY config ./config
 COPY content ./content
 COPY workflows ./workflows
+
+FROM base AS test
+
+# Database contracts run in a dedicated test image using the committed workspace lock.
+COPY services/model-router ./services/model-router
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --all-packages --frozen --group dev
+
+FROM base AS runtime
 
 EXPOSE 8000
 

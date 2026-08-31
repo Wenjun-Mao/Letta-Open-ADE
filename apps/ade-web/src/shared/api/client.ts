@@ -7,8 +7,8 @@ export type RequestOptions = {
 export type ApiRequestOptions = Pick<RequestOptions, "signal">;
 
 function requireApiPath(path: string): string {
-  if (!path.startsWith("/api/v2/")) {
-    throw new Error(`API path must start with /api/v2/: ${path}`);
+  if (!path.startsWith("/api/v2/") && !path.startsWith("/api/v3/")) {
+    throw new Error(`API path must start with /api/v2/ or /api/v3/: ${path}`);
   }
   return path;
 }

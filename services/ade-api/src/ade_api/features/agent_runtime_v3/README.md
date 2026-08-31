@@ -8,7 +8,8 @@ dual-write behavior.
 
 - `api.py` owns the focused `/api/v3` resource and SSE contracts.
 - `application.py` is a thin facade over `definition_service.py`,
-  `resource_service.py`, and `run_service.py`; `database_boundary.py` centralizes
+  `preview_session_service.py`, `resource_service.py`, and `run_service.py`;
+  `database_boundary.py` centralizes
   readiness, workspace isolation, and repository error translation.
 - `turn_execution.py` assembles context and coordinates the conversation executor,
   required memory reviewer, and semantic retrieval for one attempt.
@@ -52,16 +53,40 @@ worker use the least-privilege application role.
 make native-runtime-migrate   # bootstrap roles/database and apply Alembic
 make native-runtime-db-test   # run repository contracts as the application role
 make native-runtime-up        # development-mode API + worker preview
+make native-runtime-lane-check # prove the selected Compose dependency graph is native-only
+make native-runtime-preview-gate # require exact promoted role/policy identities
+make native-runtime-preview-up # release-mode native lane + gated ADE Web preview
 ```
 
 The migration target rebuilds its image before applying Alembic, so a newly checked-
 in migration cannot be skipped by a stale local container image.
 
 Development mode permits fingerprinted but unqualified local deployments and marks
-every run `unqualified`. Release mode rejects them. ADE Web exposes only the focused
-Test Center qualification launcher; Agent Studio has no v3 product UI yet. The
-preview has no legacy importer, dual-write path, arbitrary Python tools, or
-production-cutover approval.
+every run `unqualified`. Release mode rejects them. ADE Web has a separate,
+build-gated `/native-runtime-preview` pilot; it is never an Agent Studio mode and its
+navigation cannot be enabled by the release Make target until the exact role and
+policy qualification gate passes. The preview has no legacy importer, dual-write
+path, arbitrary Python tools, or production-cutover approval. Its atomic
+`POST /api/v3/preview-sessions` operation fixes the pilot tool scope to
+subject-bound `search_memory` and creates the definition, subject, and conversation
+in one transaction. See [ADR 0013](../../../../../../docs/adr/0013-narrow-native-runtime-product-pilot.md).
+
+### Native-only Compose lane
+
+`make native-runtime-up` targets the profile-gated `ade-native-api` service, not
+the normal `ade-api` service. It binds `127.0.0.1:${ADE_NATIVE_API_PORT:-8002}` and
+runs `ade_api.native_main:app`. Its transitive Compose dependencies are
+only PostgreSQL, Model Router, the one-shot migration service, and
+`ade-runtime-worker`; it does not start or initialize Letta or Redis. The legacy
+`ade-api` process does not mount `/api/v3`, and ADE Web has no Compose dependency on
+that service in the native preview lane.
+
+`GET /health` is an unauthenticated container-liveness probe only. All `/api/v3`
+operations, including the readiness check below, retain the configured operator
+authentication. `/api/v3/worker-health` is the actual readiness gate, so a healthy
+container alone never means the runtime may accept a preview session or evaluation.
+`make native-runtime-lane-check` resolves the Compose configuration and fails if
+that service's dependency graph changes to include Letta or Redis.
 
 `GET /api/v3/worker-health` returns `200` only when PostgreSQL is ready and a fresh,
 compatible worker with the same revision, dirty state, and exact Git-visible source
@@ -73,3 +98,14 @@ never prompts, inputs, response bodies, headers, or exception text. See
 [ADR 0011](../../../../../../docs/adr/0011-agent-runtime-operational-readiness.md).
 Disposable live checks must purge the definitions, subjects, conversations, runs,
 messages, and memories they create.
+
+### Release identity
+
+Release mode is deliberately narrower than development mode. The preview accepts
+only the aliases, prompt, persona, and tool set named in `release_policy.py`. Those
+constants and the executable runtime, migration, Compose, prompt, tool, schema, and
+retrieval inputs form four content-addressed policy bundles. Definition creation and
+every turn compare the promoted deployment fingerprints against the current bundle
+hashes. The preview gate also requires a clean, known Git-visible source identity.
+Changing release behavior therefore requires a fresh qualification and reviewed
+promotion; changing an unrelated committed document does not.

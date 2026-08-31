@@ -8,8 +8,8 @@ ownership and operational details.
 Letta Open ADE has one simple system story: **ADE Web** presents the product,
 **ADE API** owns product workflows, **Model Router** owns model access, and
 **Letta** provides the supported persistent Agent Studio runtime. An accepted,
-disabled-by-default native v3 preview lets ADE API and a separate worker exercise
-ADE-owned persistence without changing that product path.
+disabled-by-default native v3 preview uses an isolated API and separate worker to
+exercise ADE-owned persistence without changing that product path.
 
 ```mermaid
 flowchart LR
@@ -21,8 +21,9 @@ flowchart LR
     R --> P[Local and cloud\nmodel providers]
     A --> C[content/\nprompts, personas, schemas, tools]
     L --> S[(PostgreSQL / Redis\nLetta state)]
-    A -. opt-in /api/v3 .-> D[(PostgreSQL\nADE v3 state)]
-    A -. accepted runs .-> V[ade-runtime-worker\noptional profile]
+    W -. gated /api/v3 .-> N[ADE Native API\nade-native-api]
+    N --> D[(PostgreSQL\nADE v3 state)]
+    N -. accepted runs .-> V[ade-runtime-worker\noptional profile]
     V --> D
     V --> R
 ```
@@ -84,7 +85,9 @@ features/<feature>/
 ```
 
 The feature set is: `agent-studio`, `comment-lab`, `label-lab`, `prompt-center`,
-`schema-center`, `tool-center`, `test-center`, and `model-catalog`.
+`schema-center`, `tool-center`, `test-center`, and `model-catalog`. The separately
+gated `native-runtime-preview` feature is an evaluation-backed pilot, not a mode of
+Agent Studio or part of the supported v2 product contract.
 
 Feature code may depend on `platform/` contracts and `integrations/`; it must
 not import another feature's internal modules. If two features need to interact,
@@ -110,6 +113,7 @@ flowchart TD
 | Model Router | Provider access | Compose network only | `model-router`, `MODEL_ROUTER_*` |
 | Letta | Agent runtime | Compose network only | `letta`, `LETTA_*` |
 | Native runtime worker | Opt-in v3 run execution | Compose profile only | `ade-runtime-worker`, `ADE_API_AGENT_RUNTIME_V3_*` |
+| ADE Native API | Isolated v3 preview surface | Loopback `8002`, Compose profile only | `ade-native-api`, `ADE_NATIVE_API_*` |
 | PostgreSQL | Letta and separate ADE v3 databases | Compose network only | `postgres`, `LETTA_PG_*`, `ADE_PG_*` |
 | Redis | Current Letta runtime storage | Compose network only | `redis`, `LETTA_REDIS_*` |
 
@@ -152,7 +156,9 @@ schema, tool, and model-selection keys remain stable across this structure.
 Model Router retains its OpenAI-compatible `/v1` API.
 
 The opt-in native preview exposes a breaking `/api/v3` resource model for agent
-definitions, memory subjects, conversations, turns, runs/events, and typed memories.
-It has no ADE Web UI or compatibility promise and must remain disabled in the normal
-stack until a later cutover ADR is accepted. Any future public-contract change
-requires an ADR and regenerated OpenAPI artifacts.
+definitions, atomic preview sessions, memory subjects, conversations, turns,
+runs/events, and typed memories. Its separate ADE Web page and navigation remain
+build-gated until exact deployment promotion; it has no compatibility promise and
+is never an Agent Studio mode. See
+[ADR 0013](../adr/0013-narrow-native-runtime-product-pilot.md). Any future
+public-contract change requires an ADR and regenerated OpenAPI artifacts.

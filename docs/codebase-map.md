@@ -1,9 +1,10 @@
 # Codebase Map
 
 Use this page to find the first owner of a change. Read the
-[architecture overview](architecture/overview.md) for dependency rules and the
-[request flows](architecture/request-flows.md) before crossing a service or
-feature boundary.
+[ADE System Status Map](architecture/system-status.md) for current product and
+runtime authority, then the [architecture overview](architecture/overview.md)
+for dependency rules and the [request flows](architecture/request-flows.md)
+before crossing a service or feature boundary.
 
 ## Runtime Map
 
@@ -17,7 +18,7 @@ Agent Studio adds:
 services/ade-api -> letta -> services/model-router -> configured providers
 
 Opt-in native v3 preview adds:
-services/ade-api -> PostgreSQL
+apps/ade-web -> ade-native-api -> PostgreSQL
 ade-runtime-worker -> PostgreSQL + services/model-router -> configured providers
 ```
 
@@ -54,7 +55,7 @@ tests with the owning feature.
 | Feature | ADE Web | ADE API | Primary dependency |
 | --- | --- | --- | --- |
 | Agent Studio | `src/features/agent-studio/` | `features/agent_studio/` | Letta |
-| Native agent runtime v3 preview | Test Center qualification only | `features/agent_runtime_v3/` | PostgreSQL and Model Router |
+| Native agent runtime v3 preview | `src/features/native-runtime-preview/` (build-gated) | `features/agent_runtime_v3/` through isolated `ade-native-api` | PostgreSQL and Model Router |
 | Comment Lab | `src/features/comment-lab/` | `features/comment_lab/` | Model Router |
 | Label Lab | `src/features/label-lab/` | `features/label_lab/` | Model Router and label schemas |
 | Prompt Center | `src/features/prompt-center/` | `features/prompt_center/` | prompt and persona content |
@@ -100,6 +101,7 @@ for the persona projection contract.
 | Reproduce runtime research evidence | `workflows/evals/agent_runtime_study/` |
 | Diagnose v3 worker/provider readiness | authenticated `/api/v3/worker-health`, run events, and [ADR 0011](adr/0011-agent-runtime-operational-readiness.md) |
 | Qualify the production v3 path | `workflows/evals/agent_runtime_v3_acceptance/` through Test Center or its CLI |
+| Change the separate v3 product pilot | web `native-runtime-preview/`, API `preview_session_service.py`, and [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md) |
 | Regenerate API artifacts | `uv run python scripts/export_openapi.py` |
 | Diagnose the Compose stack | `scripts/collect_diagnostics.sh .env` |
 

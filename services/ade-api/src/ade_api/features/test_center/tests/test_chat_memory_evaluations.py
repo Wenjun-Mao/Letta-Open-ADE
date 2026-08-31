@@ -327,14 +327,14 @@ def test_orchestrator_persists_chat_memory_request_options(tmp_path: Path) -> No
     created = orchestrator.create_run(
         run_type="chat_memory_eval",
         model="openai-proxy/test::model",
-        retry_count=1,
+        retry_count=0,
     )
 
     manifest_path = state_root / created["run_id"] / "run.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["options"] == {
         "model": "openai-proxy/test::model",
-        "retry_count": 1,
+        "retry_count": 0,
     }
 
 

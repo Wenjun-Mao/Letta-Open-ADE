@@ -31,3 +31,12 @@ def test_checked_in_manifest_is_bound_to_current_production_policy() -> None:
         fingerprint_policy_hashes(deployment.fingerprint) == expected
         for deployment in manifest.deployments
     )
+
+
+def test_policy_hash_snapshot_cannot_mutate_the_cached_policy() -> None:
+    first = production_policy_hashes()
+    expected_prompt = first["prompt"]
+
+    first["prompt"] = "0" * 64
+
+    assert production_policy_hashes()["prompt"] == expected_prompt

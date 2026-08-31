@@ -93,6 +93,11 @@ def test_chat_memory_eval_request_accepts_focused_fields() -> None:
     assert request.judge_enabled is False
 
 
+def test_chat_memory_eval_request_rejects_non_idempotent_retries() -> None:
+    with pytest.raises(ValidationError, match="server-owned idempotency"):
+        TestRunRequest(run_type="chat_memory_eval", retry_count=1)
+
+
 def test_agent_runtime_v3_acceptance_request_accepts_only_focused_fields() -> None:
     request = TestRunRequest(
         run_type="agent_runtime_v3_acceptance",
@@ -218,9 +223,11 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
         options={},
     ) == [sys.executable, "workflows/smoke/ade_mvp_smoke_e2e_check.py"]
 
+    chat_memory_run_id = "00000000-0000-0000-0000-000000000001"
+    chat_memory_output_dir = tmp_path / chat_memory_run_id
     command = orchestrator._build_command(
         run_type="chat_memory_eval",
-        output_dir=tmp_path / "run-output",
+        output_dir=chat_memory_output_dir,
         options={
             "model": "openai-proxy/test::model",
             "rounds": 2,
@@ -234,7 +241,9 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
         "--config",
         "workflows/evals/chat_memory_eval/config.toml",
         "--output-dir",
-        str(tmp_path / "run-output"),
+        str(chat_memory_output_dir),
+        "--run-id",
+        chat_memory_run_id,
         "--model",
         "openai-proxy/test::model",
         "--rounds",

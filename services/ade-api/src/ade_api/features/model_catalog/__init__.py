@@ -13,6 +13,7 @@ _EXPORT_MODULES = {
     "enriched_catalog_items": ".catalog",
     "labeling_runtime_defaults": ".runtime_defaults",
     "missing_required_capabilities": ".capabilities",
+    "model_option_identity_sha256": ".identity",
     "model_catalog": ".catalog",
     "resolve_comment_model_selection": ".selection",
     "resolve_label_model_selection": ".selection",

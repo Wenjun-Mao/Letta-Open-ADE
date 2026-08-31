@@ -7,6 +7,13 @@ from ade_api.features.test_center.artifact_access import TestRunArtifactAccess
 from ade_api.features.test_center.chat_memory_evaluations import (
     ChatMemoryEvaluationReader,
 )
+from ade_api.features.test_center.chat_memory_evaluation_comparisons import (
+    build_chat_memory_evaluation_comparison,
+)
+from ade_api.features.test_center.chat_memory_evaluation_decisions import (
+    ChatMemoryEvaluationDecisionConflict,
+    append_evaluation_decision,
+)
 from ade_api.features.test_center.process_executor import TestRunProcessExecutor
 from ade_api.features.test_center.run_descriptors import get_run_descriptor
 from ade_api.features.test_center.run_store import RunRecord, TestRunStore
@@ -94,13 +101,117 @@ class TestRunOrchestrator:
             if run.get("run_type") == "chat_memory_eval"
         ]
         runs.sort(key=lambda run: str(run.get("created_at", "")), reverse=True)
-        return [self._chat_memory_evaluations.list_item(run) for run in runs]
+        items = [self._chat_memory_evaluations.list_item(run) for run in runs]
+        preferred_run_id = self._preferred_verified_baseline_run_id(items)
+        for item in items:
+            item["preferred_baseline"] = item.get("run_id") == preferred_run_id
+        return items
 
     def get_chat_memory_evaluation(self, run_id: str) -> dict[str, Any] | None:
         run = self._run_store.get_snapshot(run_id)
         if not run or run.get("run_type") != "chat_memory_eval":
             return None
-        return self._chat_memory_evaluations.detail(run)
+        preferred_run_id = self._preferred_verified_baseline_run_id(
+            self.list_chat_memory_evaluations()
+        )
+        return self._chat_memory_evaluations.detail(
+            run,
+            preferred_baseline=(run_id == preferred_run_id),
+        )
+
+    def compare_chat_memory_evaluations(
+        self, baseline_run_id: str, candidate_run_id: str
+    ) -> dict[str, Any] | None:
+        baseline = self.get_chat_memory_evaluation(baseline_run_id)
+        candidate = self.get_chat_memory_evaluation(candidate_run_id)
+        if baseline is None or candidate is None:
+            return None
+        return build_chat_memory_evaluation_comparison(baseline, candidate)
+
+    def record_chat_memory_evaluation_decision(
+        self,
+        run_id: str,
+        *,
+        outcome: str,
+        expected_provenance_sha256: str,
+        expected_evidence_sha256: str,
+        baseline_run_id: str | None = None,
+        expected_baseline_provenance_sha256: str | None = None,
+        expected_baseline_evidence_sha256: str | None = None,
+        note: str = "",
+    ) -> dict[str, Any] | None:
+        if baseline_run_id == run_id:
+            raise ChatMemoryEvaluationDecisionConflict(
+                "A candidate cannot be compared with itself"
+            )
+        detail = self.get_chat_memory_evaluation(run_id)
+        if detail is None:
+            return None
+        baseline_provenance_sha256: str | None = None
+        baseline_evidence_sha256: str | None = None
+        if baseline_run_id is not None:
+            baseline = self.get_chat_memory_evaluation(baseline_run_id)
+            if baseline is None:
+                raise ChatMemoryEvaluationDecisionConflict(
+                    "The selected baseline run does not exist"
+                )
+            if baseline.get("provenance_detail") is None:
+                raise ChatMemoryEvaluationDecisionConflict(
+                    "The selected baseline has no immutable provenance"
+                )
+            baseline_provenance_sha256 = str(
+                baseline["provenance_detail"]["provenance_sha256"]
+            )
+            if expected_baseline_provenance_sha256 != baseline_provenance_sha256:
+                raise ChatMemoryEvaluationDecisionConflict(
+                    "Baseline evidence changed after it was reviewed; refresh before deciding"
+                )
+            baseline_evidence_sha256 = str(baseline.get("evidence_sha256") or "")
+            if expected_baseline_evidence_sha256 != baseline_evidence_sha256:
+                raise ChatMemoryEvaluationDecisionConflict(
+                    "Baseline output evidence changed after it was reviewed; refresh before deciding"
+                )
+        elif (
+            expected_baseline_provenance_sha256 is not None
+            or expected_baseline_evidence_sha256 is not None
+        ):
+            raise ChatMemoryEvaluationDecisionConflict(
+                "Baseline provenance/evidence cannot be supplied without a baseline run"
+            )
+        return append_evaluation_decision(
+            run_store=self._run_store,
+            run_id=run_id,
+            detail=detail,
+            outcome=outcome,
+            expected_provenance_sha256=expected_provenance_sha256,
+            expected_evidence_sha256=expected_evidence_sha256,
+            baseline_run_id=baseline_run_id,
+            baseline_provenance_sha256=baseline_provenance_sha256,
+            baseline_evidence_sha256=baseline_evidence_sha256,
+            note=note,
+        )
+
+    @staticmethod
+    def _preferred_verified_baseline_run_id(
+        items: list[dict[str, Any]],
+    ) -> str | None:
+        promoted = [
+            item
+            for item in items
+            if item.get("ready") is True
+            and isinstance(item.get("decision"), dict)
+            and item["decision"].get("outcome") == "promote"
+        ]
+        if not promoted:
+            return None
+        promoted.sort(
+            key=lambda item: (
+                str(item["decision"].get("recorded_at", "")),
+                str(item["decision"].get("decision_id", "")),
+            ),
+            reverse=True,
+        )
+        return str(promoted[0].get("run_id", "")) or None
 
     def list_artifacts(self, run_id: str) -> list[dict[str, Any]] | None:
         run = self._run_store.get_snapshot(run_id)

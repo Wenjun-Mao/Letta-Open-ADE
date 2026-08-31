@@ -68,6 +68,7 @@ class ApiTemplateRecordResponse(BaseModel):
     label: str
     description: str
     content: str
+    content_sha256: str
     preview: str
     length: int
     archived: bool

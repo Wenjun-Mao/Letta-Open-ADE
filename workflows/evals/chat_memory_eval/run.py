@@ -20,6 +20,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", default=str(WORKFLOW_ROOT / "config.toml"))
     parser.add_argument("--api-base-url", default="")
     parser.add_argument("--output-dir", default="")
+    parser.add_argument("--run-id", default="")
     parser.add_argument("--model", default="")
     parser.add_argument("--prompt-key", default="")
     parser.add_argument("--persona-key", default="")
@@ -36,7 +37,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     config = apply_cli_overrides(load_config(Path(args.config)), args)
-    summary = run_evaluation(config)
+    summary = run_evaluation(config, run_id=args.run_id or None)
     return 0 if summary.get("rounds_total") == summary.get("rounds_passed") else 1
 
 

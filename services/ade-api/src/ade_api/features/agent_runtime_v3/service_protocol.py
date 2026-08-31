@@ -8,6 +8,7 @@ from .contracts import (
     CreateAgentDefinitionRequest,
     CreateConversationRequest,
     CreateMemorySubjectRequest,
+    CreatePreviewSessionRequest,
 )
 
 
@@ -17,6 +18,10 @@ class AgentRuntimeV3Service(Protocol):
     ) -> dict[str, Any]: ...
 
     async def get_agent_definition(self, definition_id: str) -> dict[str, Any]: ...
+
+    async def create_preview_session(
+        self, request: CreatePreviewSessionRequest
+    ) -> dict[str, Any]: ...
 
     async def create_memory_subject(
         self, request: CreateMemorySubjectRequest

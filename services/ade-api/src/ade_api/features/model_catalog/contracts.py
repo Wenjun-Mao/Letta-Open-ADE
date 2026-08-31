@@ -21,6 +21,7 @@ class ApiOptionEntryResponse(BaseModel):
     source_id: str | None = None
     source_label: str | None = None
     provider_model_id: str | None = None
+    upstream_provider_model_id: str | None = None
     label_lab_available: bool | None = None
     structured_output_mode: LabelingOutputMode | None = None
     sampling_defaults: dict[str, Any] = Field(default_factory=dict)
@@ -33,6 +34,7 @@ class ApiOptionEntryResponse(BaseModel):
     agent_studio_candidate: bool | None = None
     agent_studio_compatible: bool | None = None
     deployment: dict[str, Any] | None = None
+    identity_sha256: str | None = None
 
 
 class ApiOptionsDefaultsResponse(BaseModel):

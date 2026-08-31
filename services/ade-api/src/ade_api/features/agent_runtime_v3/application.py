@@ -10,7 +10,7 @@ from ade_api.features.prompt_center import (
     PromptTemplateReader,
     build_prompt_template_reader,
 )
-from ade_api.platform.dependencies import PROJECT_ROOT
+from ade_api.platform.project_paths import PROJECT_ROOT
 from ade_api.platform.settings import AdeApiSettings, get_settings
 
 from .contracts import (
@@ -18,11 +18,13 @@ from .contracts import (
     CreateAgentDefinitionRequest,
     CreateConversationRequest,
     CreateMemorySubjectRequest,
+    CreatePreviewSessionRequest,
 )
 from .database_boundary import RuntimeDatabase
 from .definition_service import DefinitionService
 from .errors import RuntimeNotReady
 from .persistence.database import create_persistence_engine
+from .preview_session_service import PreviewSessionService
 from .resource_service import ResourceService
 from .router_transport import RouterTransport
 from .run_service import RunService
@@ -40,16 +42,20 @@ class AgentRuntimeV3Application:
         router_transport: RouterTransport,
     ) -> None:
         self.engine = engine
-        database = RuntimeDatabase(engine)
+        self.database = RuntimeDatabase(engine)
         self.definitions = DefinitionService(
-            database=database,
+            database=self.database,
             settings=settings,
             prompt_registry=prompt_registry,
             router_transport=router_transport,
         )
-        self.resources = ResourceService(database)
+        self.resources = ResourceService(self.database)
+        self.preview_sessions = PreviewSessionService(
+            database=self.database,
+            definitions=self.definitions,
+        )
         self.runs = RunService(
-            database=database,
+            database=self.database,
             settings=settings,
             router_transport=router_transport,
         )
@@ -64,6 +70,11 @@ class AgentRuntimeV3Application:
 
     async def get_agent_definition(self, definition_id: str) -> dict[str, Any]:
         return await self.definitions.get(definition_id)
+
+    async def create_preview_session(
+        self, request: CreatePreviewSessionRequest
+    ) -> dict[str, Any]:
+        return await self.preview_sessions.create(request)
 
     async def create_memory_subject(
         self, request: CreateMemorySubjectRequest

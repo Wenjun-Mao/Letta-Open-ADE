@@ -108,6 +108,34 @@ class ConversationResponse(BaseModel):
     created_at: datetime
 
 
+class CreatePreviewSessionRequest(StrictRequest):
+    """Create the bounded resources needed by the separate native pilot."""
+
+    idempotency_key: str = Field(min_length=1, max_length=200)
+    name: str = Field(default="Native Runtime Preview", min_length=1, max_length=120)
+    subject_display_name: str = Field(default="Preview User", max_length=200)
+    model_key: str = Field(min_length=1, max_length=300)
+    reviewer_model_key: str = Field(min_length=1, max_length=300)
+    embedding_model_key: str = Field(min_length=1, max_length=300)
+    prompt_key: str = Field(default="chat_v20260516", min_length=1, max_length=128)
+    persona_key: str = Field(default="chat_linxiaotang", min_length=1, max_length=128)
+
+    @field_validator("idempotency_key", "name")
+    @classmethod
+    def _reject_blank_preview_identity(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("value must not be blank")
+        return value.strip()
+
+
+class PreviewSessionResponse(BaseModel):
+    session_id: str
+    idempotent_replay: bool = False
+    agent_definition: AgentDefinitionResponse
+    memory_subject: MemorySubjectResponse
+    conversation: ConversationResponse
+
+
 class MessageResponse(BaseModel):
     id: str
     sequence: int
@@ -117,8 +145,37 @@ class MessageResponse(BaseModel):
     created_at: datetime
 
 
+class ConversationSummarySourceBoundaryResponse(BaseModel):
+    """The immutable raw-message prefix represented by a summary version."""
+
+    through_sequence: int
+    message_ids: list[str]
+
+
+class ConversationSummaryProvenanceResponse(BaseModel):
+    run_id: str
+    model_key: str
+    model_fingerprint: str
+    provider_request_id: str | None = None
+    content_sha256: str
+    prompt_sha256: str
+    input_sha256: str
+    policy_sha256: str
+
+
+class ConversationSummaryResponse(BaseModel):
+    id: str
+    version: int
+    previous_summary_id: str | None = None
+    content: str
+    source_boundary: ConversationSummarySourceBoundaryResponse
+    provenance: ConversationSummaryProvenanceResponse
+    created_at: datetime
+
+
 class ConversationStateResponse(ConversationResponse):
     messages: list[MessageResponse]
+    summary: ConversationSummaryResponse | None = None
 
 
 class AcceptTurnRequest(StrictRequest):
@@ -148,6 +205,8 @@ class RunResponse(BaseModel):
     status: RunStatus
     qualification_state: QualificationState
     attempt_count: int
+    timeout_seconds: float
+    retry_count: int
     cancellation_requested_at: datetime | None = None
     error_code: str | None = None
     error_message: str | None = None
@@ -200,6 +259,7 @@ class MemoryRevisionResponse(BaseModel):
     fact_version: int
     value: str | None
     run_id: str
+    predecessor_revision_ids: list[str] = Field(default_factory=list)
     evidence: list[MemoryEvidenceResponse]
     created_at: datetime
 
@@ -209,6 +269,8 @@ class MemoryFactResponse(BaseModel):
     key: str
     fact_type: str
     entity_id: str
+    entity_kind: str
+    entity_label: str
     qualifier: str | None = None
     value: str | None
     status: Literal["active", "superseded", "forgotten"]

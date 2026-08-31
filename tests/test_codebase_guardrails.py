@@ -808,6 +808,149 @@ def test_native_runtime_migration_rebuilds_before_running_alembic() -> None:
     assert "ade-runtime-migrate" in migration_target
 
 
+def test_native_runtime_compose_lane_isolated_from_letta_and_redis() -> None:
+    result = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "--env-file",
+            ".env.example",
+            "--profile",
+            "native-runtime",
+            "config",
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    services = json.loads(result.stdout)["services"]
+
+    native_api = services["ade-native-api"]
+    worker = services["ade-runtime-worker"]
+    assert native_api["profiles"] == ["native-runtime"]
+    assert "env_file" not in native_api
+    assert set(native_api["depends_on"]) == {
+        "ade-runtime-migrate",
+        "ade-runtime-worker",
+        "model-router",
+    }
+    assert native_api["build"]["args"] == worker["build"]["args"]
+    assert native_api["command"] == [
+        "/opt/venv/bin/uvicorn",
+        "ade_api.native_main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+    ]
+    assert not {
+        key
+        for key in native_api["environment"]
+        if "letta" in key.casefold() or "redis" in key.casefold()
+    }
+    assert native_api["ports"] == [
+        {
+            "mode": "ingress",
+            "target": 8000,
+            "published": "8002",
+            "protocol": "tcp",
+            "host_ip": "127.0.0.1",
+        }
+    ]
+
+    def transitive_dependencies(service_name: str) -> set[str]:
+        discovered: set[str] = set()
+        pending = [service_name]
+        while pending:
+            current = pending.pop()
+            dependencies = services[current].get("depends_on", {})
+            names = dependencies if isinstance(dependencies, dict) else dependencies
+            for dependency in names:
+                if dependency not in discovered:
+                    discovered.add(dependency)
+                    pending.append(dependency)
+        return discovered
+
+    assert transitive_dependencies("ade-native-api") == {
+        "ade-runtime-migrate",
+        "ade-runtime-worker",
+        "model-router",
+        "postgres",
+    }
+    assert {"letta", "redis"}.isdisjoint(transitive_dependencies("ade-native-api"))
+    assert transitive_dependencies("ade-web") == set()
+
+    preview_closure = {
+        "ade-native-api",
+        "ade-runtime-worker",
+        "ade-web",
+    }
+    for service_name in tuple(preview_closure):
+        preview_closure.update(transitive_dependencies(service_name))
+    assert {"letta", "redis", "ade-api"}.isdisjoint(preview_closure)
+
+    makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+    native_up = makefile.split("native-runtime-up:", 1)[1].split(
+        "\nnative-runtime-db-test:", 1
+    )[0]
+    acceptance = makefile.split("eval-agent-runtime-v3:", 1)[1].split(
+        "\nprobe-models:", 1
+    )[0]
+    assert "ade-native-api ade-runtime-worker" in native_up
+    assert "exec ade-native-api python" in acceptance
+
+
+def test_native_runtime_db_test_uses_the_locked_container_test_image() -> None:
+    makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+    target = makefile.split("native-runtime-db-test:", 1)[1].split("\nstatus:", 1)[0]
+    compose = (PROJECT_ROOT / "compose.yaml").read_text(encoding="utf-8")
+    dockerfile = (PROJECT_ROOT / "services/ade-api/Dockerfile").read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "docker compose --profile native-runtime run --rm --build --no-deps ade-runtime-db-test"
+        in target
+    )
+    assert "uv pip install" not in target
+    assert "  ade-runtime-db-test:" in compose
+    assert "      target: test" in compose
+    assert "FROM base AS test" in dockerfile
+    assert "COPY services/model-router ./services/model-router" in dockerfile
+    assert "uv sync --all-packages --frozen --group dev" in dockerfile
+
+
+def test_diagnostics_probe_uses_the_canonical_router_service_and_container_key() -> (
+    None
+):
+    diagnostics = (PROJECT_ROOT / "scripts/collect_diagnostics.sh").read_text(
+        encoding="utf-8"
+    )
+
+    assert "get_service_cid model-router" in diagnostics
+    assert "get_service_cid model_router" not in diagnostics
+    assert "probe_model_catalog_from_model_router" in diagnostics
+    assert "os.environ['MODEL_ROUTER_API_KEY']" in diagnostics
+    assert "'Authorization': 'Bearer '" in diagnostics
+    assert "resolve_host_port ade-web 3000 ADE_WEB_PORT 3000" in diagnostics
+    assert "resolve_host_port ade-api 8000 ADE_API_PORT 8000" in diagnostics
+    assert "command -v sw_vers" in diagnostics
+
+
+def test_test_center_uses_admin_authority_for_evaluation_content() -> None:
+    test_center_api = (
+        PROJECT_ROOT / "services/ade-api/src/ade_api/features/test_center/api.py"
+    ).read_text(encoding="utf-8")
+
+    assert "from ade_api.platform.auth import require_admin" in test_center_api
+    assert "APIRouter(dependencies=[Depends(require_admin)])" in test_center_api
+    assert "require_operator" not in test_center_api
+
+
 def test_native_runtime_worker_has_attempt_bounded_shutdown_grace() -> None:
     compose = (PROJECT_ROOT / "compose.yaml").read_text(encoding="utf-8")
     worker = compose.split("  ade-runtime-worker:", 1)[1].split("\n  ade-web:", 1)[0]

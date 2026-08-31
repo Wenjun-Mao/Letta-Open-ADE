@@ -20,8 +20,10 @@ is recorded as compatibility evidence and is never promotion-eligible.
 
 Build the native runtime through `make native-runtime-up` (or
 `make eval-agent-runtime-v3`) so Compose records the exact Git revision, clean/dirty
-state, and SHA-256 fingerprint of every Git-visible file in the API and worker
-images. A direct `docker compose up` uses fail-closed `unknown` provenance defaults
+state, and SHA-256 fingerprint of every Git-visible file in the native API and worker
+images. The Make target runs this workflow inside the isolated `ade-native-api`
+service against `http://ade-native-api:8000`; it never uses the normal v2 API
+service. A direct `docker compose up` uses fail-closed `unknown` provenance defaults
 and therefore cannot pass preflight.
 
 Set `AGENT_RUNTIME_V3_ACCEPTANCE_API_KEY` and
@@ -57,6 +59,17 @@ A non-empty selection is always a single `live-api-diagnostic` round: it skips
 llama compatibility and cannot create a promotion proposal, even if it happens to
 list every canonical case. Focused, fake-transport, incomplete, or non-primary
 rounds remain diagnostic artifacts and cannot generate a proposal.
+
+When any path-bound runtime policy input changes, explicitly rebind the checked-in
+deployment fingerprints before collecting new evidence:
+
+```bash
+make native-runtime-policy-rebind
+```
+
+Rebinding resets prior qualification rounds only for deployments whose policy
+identity changed. It never silently carries evidence across a behavior change and
+does not erase valid qualification when all four policy hashes are already current.
 
 Only the canonical `3` rounds, `180` second timeout, and zero-retry run can emit
 a proposal. Every round keeps raw SSE JSONL plus normalized turns, attempt counts,

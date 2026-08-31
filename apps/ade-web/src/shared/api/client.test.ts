@@ -32,6 +32,20 @@ describe("requestJson", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it("allows the isolated native v3 same-origin proxy", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ status: "ready" }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await requestJson("/api/v3/worker-health");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v3/worker-health",
+      expect.objectContaining({ method: "GET", cache: "no-store" }),
+    );
+  });
+
   it("preserves backend detail messages", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ detail: "Agent is archived" }), { status: 409 })));
 

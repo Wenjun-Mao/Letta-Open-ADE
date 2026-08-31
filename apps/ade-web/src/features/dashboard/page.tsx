@@ -12,9 +12,29 @@ const DOCS_HREF = "/api-docs";
 
 const COPY = {
   en: {
-    kicker: "ADE",
-    title: "Agent Development Environment",
-    intro: "ADE Web is the primary workspace for agent, prompt, schema, tool, and model workflows.",
+    kicker: "ADE Operator Workspace",
+    title: "Improve Agent Behavior",
+    intro: "Build an agent, inspect behavioral evidence, then refine the prompt, persona, or tool configuration with confidence.",
+    journeyKicker: "Primary workflow",
+    journeyTitle: "Improve Agent Behavior",
+    journeyIntro: "Start with a real agent configuration, evaluate its memory and self-disclosure behavior, then make the next change from evidence.",
+    startJourney: "Start in Agent Studio",
+    reviewBehavior: "Review Behavior Evaluations",
+    journeySteps: {
+      buildTitle: "1. Build a configuration",
+      buildDescription: "Set the model, prompt, persona, memory, and tools in Agent Studio.",
+      evaluateTitle: "2. Evaluate behavior",
+      evaluateDescription: "Run chat-memory evaluation and inspect facts, memory changes, tool use, and disclosure signals.",
+      refineTitle: "3. Refine with evidence",
+      refineDescription: "Open the selected prompt or persona, make a focused change, then rerun the setup.",
+    },
+    workspacesTitle: "Workspaces by Purpose",
+    workspacesIntro: "Use the focused workspaces below when you need to build, manage content, or operate the platform.",
+    workspaceGroups: {
+      build: "Build and Experiment",
+      content: "Content Configuration",
+      operations: "Platform Operations",
+    },
     backendHealth: "Backend Health",
     checking: "Checking...",
     statusPrefix: "Status",
@@ -53,15 +73,35 @@ const COPY = {
       toolCenterTitle: "Tool Center",
       toolCenterDescription: "Create and maintain managed custom tools, then attach them in Agent Studio without restart.",
       testCenterTitle: "Test Center",
-      testCenterDescription: "Create and monitor backend orchestrated checks and runners, including run artifacts.",
+      testCenterDescription: "Evaluate agent behavior with evidence, or open a separate operations area for health checks and qualification.",
       apiDocsTitle: "API Docs",
       apiDocsDescription: "OpenAPI-backed interactive API documentation rendered directly inside ADE.",
     },
   },
   zh: {
-    kicker: "ADE",
-    title: "智能体开发环境",
-    intro: "ADE Web 是智能体、提示词、结构、工具和模型工作流的主要操作空间。",
+    kicker: "ADE 运营工作台",
+    title: "改善智能体行为",
+    intro: "构建智能体、查看行为证据，再基于证据迭代提示词、人设或工具配置。",
+    journeyKicker: "主要工作流",
+    journeyTitle: "改善智能体行为",
+    journeyIntro: "从真实的智能体配置开始，评估记忆与自我暴露行为，再基于证据完成下一次改动。",
+    startJourney: "从智能体工作台开始",
+    reviewBehavior: "查看行为评估",
+    journeySteps: {
+      buildTitle: "1. 构建配置",
+      buildDescription: "在智能体工作台设置模型、提示词、人设、记忆和工具。",
+      evaluateTitle: "2. 评估行为",
+      evaluateDescription: "运行聊天记忆评估，查看事实、记忆变更、工具使用和自我暴露信号。",
+      refineTitle: "3. 基于证据迭代",
+      refineDescription: "打开所选提示词或人设，完成聚焦改动后再运行同一配置。",
+    },
+    workspacesTitle: "按目的浏览工作区",
+    workspacesIntro: "需要构建、管理内容或运维平台时，可使用下方对应的聚焦工作区。",
+    workspaceGroups: {
+      build: "构建与试验",
+      content: "内容配置",
+      operations: "平台运维",
+    },
     backendHealth: "后端健康状态",
     checking: "检查中...",
     statusPrefix: "状态",
@@ -97,7 +137,7 @@ const COPY = {
       toolCenterTitle: "工具中心",
       toolCenterDescription: "创建并维护受管自定义工具，无需重启即可在智能体工作台挂载使用。",
       testCenterTitle: "测试中心",
-      testCenterDescription: "创建并监控后端编排检查与运行任务，包括产物查看。",
+      testCenterDescription: "用证据评估智能体行为，或进入独立的运维区域执行健康检查与运行时资格验证。",
       apiDocsTitle: "API 文档",
       apiDocsDescription: "基于 OpenAPI 的交互式 API 文档，直接在 ADE 内渲染。",
     },
@@ -214,6 +254,24 @@ export default function DashboardPage() {
     [copy.modules],
   );
 
+  const workspaceGroups = useMemo(
+    () => [
+      {
+        title: copy.workspaceGroups.build,
+        hrefs: ["/agent-studio", "/comment-lab", "/label-lab"],
+      },
+      {
+        title: copy.workspaceGroups.content,
+        hrefs: ["/schema-center", "/prompt-center", "/tool-center"],
+      },
+      {
+        title: copy.workspaceGroups.operations,
+        hrefs: [DOCS_HREF],
+      },
+    ],
+    [copy.workspaceGroups],
+  );
+
   return (
     <section>
       <div className="kicker">{copy.kicker}</div>
@@ -222,7 +280,75 @@ export default function DashboardPage() {
         {copy.intro}
       </p>
 
-      <div className="card-grid" style={{ marginTop: 16 }}>
+      <section className="card dashboard-journey" aria-labelledby="improve-agent-behavior-title">
+        <div className="dashboard-journey-copy">
+          <div className="kicker">{copy.journeyKicker}</div>
+          <h2 id="improve-agent-behavior-title">{copy.journeyTitle}</h2>
+          <p>{copy.journeyIntro}</p>
+          <div className="dashboard-journey-actions">
+            <Link className="button" href="/agent-studio">{copy.startJourney}</Link>
+            <Link className="button muted" href="/test-center">{copy.reviewBehavior}</Link>
+          </div>
+        </div>
+        <div className="dashboard-journey-steps">
+          <div className="dashboard-journey-step">
+            <strong>{copy.journeySteps.buildTitle}</strong>
+            <span>{copy.journeySteps.buildDescription}</span>
+          </div>
+          <div className="dashboard-journey-step">
+            <strong>{copy.journeySteps.evaluateTitle}</strong>
+            <span>{copy.journeySteps.evaluateDescription}</span>
+          </div>
+          <div className="dashboard-journey-step">
+            <strong>{copy.journeySteps.refineTitle}</strong>
+            <span>{copy.journeySteps.refineDescription}</span>
+          </div>
+        </div>
+      </section>
+
+      <div className="dashboard-workspace-heading">
+        <div className="kicker">{copy.workspacesTitle}</div>
+        <h2>{copy.workspacesTitle}</h2>
+        <p className="muted">{copy.workspacesIntro}</p>
+      </div>
+
+      {workspaceGroups.map((group) => (
+        <section className="dashboard-workspace-group" key={group.title}>
+          <h3>{group.title}</h3>
+          <div className="card-grid">
+            {modules.filter((module) => group.hrefs.includes(module.href)).map((module) => {
+              const content = (
+                <>
+                  <h3>{module.title}</h3>
+                  <p>{module.description}</p>
+                  <p className="dashboard-module-hint">{copy.openModule}</p>
+                </>
+              );
+
+              if (isExternalLink(module.href)) {
+                return (
+                  <a key={module.title} className="card dashboard-module-link" href={module.href} target="_blank" rel="noreferrer">
+                    {content}
+                  </a>
+                );
+              }
+
+              return (
+                <Link key={module.title} className="card dashboard-module-link" href={module.href}>
+                  {content}
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+
+      <div className="dashboard-workspace-heading">
+        <div className="kicker">{copy.operationalSnapshot}</div>
+        <h2>{copy.operationalSnapshot}</h2>
+      </div>
+
+      <div className="card-grid" style={{ marginTop: 14 }}>
         <div className="card">
           <h3>{copy.backendHealth}</h3>
           <p className="muted">{loading ? copy.checking : `${copy.statusPrefix}: ${healthLabel}`}</p>
@@ -256,32 +382,6 @@ export default function DashboardPage() {
           <p className="muted">{error}</p>
         </div>
       ) : null}
-
-      <div className="card-grid" style={{ marginTop: 18 }}>
-        {modules.map((module) => {
-          const content = (
-            <>
-              <h3>{module.title}</h3>
-              <p>{module.description}</p>
-              <p className="dashboard-module-hint">{copy.openModule}</p>
-            </>
-          );
-
-          if (isExternalLink(module.href)) {
-            return (
-              <a key={module.title} className="card dashboard-module-link" href={module.href} target="_blank" rel="noreferrer">
-                {content}
-              </a>
-            );
-          }
-
-          return (
-            <Link key={module.title} className="card dashboard-module-link" href={module.href}>
-              {content}
-            </Link>
-          );
-        })}
-      </div>
     </section>
   );
 }

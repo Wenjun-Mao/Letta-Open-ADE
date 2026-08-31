@@ -1,5 +1,7 @@
 import type {
   ChatMemoryEvaluationConfig,
+  EvaluationComparison,
+  EvaluationDecisionOutcome,
   EvaluationDetail,
   EvaluationListItem,
   EvaluationMemoryBlock,
@@ -15,15 +17,21 @@ import {
   metricFraction,
   summarizeDeterministicFailures,
 } from "./chat-memory-evaluation-helpers";
+import { EvaluationDecisionPanel } from "./evaluation-decision-panel";
 import type { TestCenterCopy } from "./test-center-copy";
 
 type Props = {
   copy: TestCenterCopy;
+  busy: boolean;
   items: EvaluationListItem[];
   selectedEvaluationId: string;
   selectedEvaluationSummary: EvaluationListItem | null;
   selectedEvaluation: EvaluationDetail | null;
+  baselineRunId: string;
+  comparison: EvaluationComparison | null;
   onSelectEvaluation: (runId: string) => void;
+  onSelectBaseline: (runId: string) => void;
+  onRecordDecision: (outcome: EvaluationDecisionOutcome, note: string) => void;
   onRefreshEvaluations: () => void;
   onRerunSetup: (config: ChatMemoryEvaluationConfig) => void;
 };
@@ -103,6 +111,14 @@ function EvaluationComparison(props: Props) {
                   <tr key={item.run_id} style={selected ? { background: "#eff6ff" } : undefined}>
                     <td>
                       <strong>{item.run_id}</strong>
+                      {item.preferred_baseline ? (
+                        <div style={{ color: "#166534", fontSize: 12 }}>{props.copy.preferredBaseline}</div>
+                      ) : null}
+                      {item.decision ? (
+                        <div className="muted" style={{ fontSize: 12 }}>
+                          {props.copy.currentDecision}: {item.decision.outcome}
+                        </div>
+                      ) : null}
                       <div className="muted" style={{ fontSize: 12 }}>{formatDateTime(item.created_at)}</div>
                     </td>
                     <td><EvaluationSetup config={item.config} copy={props.copy} /></td>
@@ -412,6 +428,16 @@ export function ChatMemoryEvaluationView(props: Props) {
   return (
     <>
       <EvaluationComparison {...props} />
+      <EvaluationDecisionPanel
+        copy={props.copy}
+        busy={props.busy}
+        items={props.items}
+        candidate={props.selectedEvaluation}
+        baselineRunId={props.baselineRunId}
+        comparison={props.comparison}
+        onSelectBaseline={props.onSelectBaseline}
+        onRecordDecision={props.onRecordDecision}
+      />
       <EvaluationScorecard props={props} />
     </>
   );

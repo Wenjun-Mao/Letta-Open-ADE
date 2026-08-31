@@ -13,7 +13,10 @@ from .persistence.conversations import ConversationRepository
 from .persistence.definitions import DefinitionVersionRepository
 from .persistence.memory import MemoryRepository
 from .presenters import (
+    conversation_summary_response,
     conversation_response,
+    memory_fact_response,
+    memory_revision_response,
     message_response,
     subject_response,
 )
@@ -68,7 +71,7 @@ class ResourceService:
                 require_default_workspace(subject)
                 facts = [
                     await _memory_fact_response(repository, fact)
-                    for fact in await repository.list_facts(subject_id)
+                    for fact in await repository.list_facts_with_entities(subject_id)
                 ]
         return {"subject_id": subject_id, "facts": facts}
 
@@ -105,9 +108,21 @@ class ResourceService:
                 row = await repository.get(conversation_id)
                 require_default_workspace(row)
                 messages = await repository.list_messages(conversation_id)
+                summary = await repository.latest_summary(conversation_id)
+                summary_response = (
+                    conversation_summary_response(
+                        summary,
+                        source_message_ids=await repository.list_summary_source_message_ids(
+                            str(summary["id"])
+                        ),
+                    )
+                    if summary is not None
+                    else None
+                )
         return {
             **conversation_response(row),
             "messages": [message_response(message) for message in messages],
+            "summary": summary_response,
         }
 
 
@@ -118,13 +133,12 @@ async def _memory_fact_response(
     for revision in await repository.list_revisions(str(fact["id"])):
         sources = await repository.list_revision_sources(str(revision["id"]))
         revisions.append(
-            {
-                "id": str(revision["id"]),
-                "operation": revision["operation"],
-                "fact_version": revision["fact_version"],
-                "value": revision["value"],
-                "run_id": str(revision["run_id"]),
-                "evidence": [
+            memory_revision_response(
+                revision,
+                predecessor_revision_ids=await repository.list_revision_predecessor_ids(
+                    str(revision["id"])
+                ),
+                evidence=[
                     {
                         "message_id": str(source["message_id"]),
                         "start_char": source["start_char"],
@@ -134,18 +148,6 @@ async def _memory_fact_response(
                     }
                     for source in sources
                 ],
-                "created_at": revision["created_at"],
-            }
+            )
         )
-    return {
-        "id": str(fact["id"]),
-        "key": fact["normalized_key"],
-        "fact_type": fact["fact_type"],
-        "entity_id": str(fact["entity_id"]),
-        "qualifier": fact["qualifier"],
-        "value": fact["value"],
-        "status": fact["status"],
-        "version": fact["version"],
-        "revisions": revisions,
-        "updated_at": fact["updated_at"],
-    }
+    return memory_fact_response(fact, revisions=revisions)

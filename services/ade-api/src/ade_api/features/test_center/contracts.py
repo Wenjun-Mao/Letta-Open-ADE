@@ -118,6 +118,120 @@ class ChatMemoryEvaluationConfigResponse(_ChatMemoryEvaluationResponseModel):
     judge_enabled: bool
 
 
+class ChatMemoryEvaluationTemplateSnapshotResponse(_ChatMemoryEvaluationResponseModel):
+    kind: Literal["prompt", "persona"]
+    scenario: Literal["chat"]
+    key: str
+    label: str
+    description: str
+    content: str
+    content_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    updated_at: str
+
+
+class ChatMemoryEvaluationOptionSnapshotResponse(_ChatMemoryEvaluationResponseModel):
+    key: str
+    label: str
+    source_id: str
+    source_label: str
+    provider_model_id: str
+    upstream_provider_model_id: str | None
+    sampling_defaults: dict[str, Any]
+    scenario_sampling_defaults: dict[str, Any]
+    supports_top_k: bool | None
+    supports_thinking: bool | None
+    thinking_default_enabled: bool | None
+    profile_applied: bool | None
+    profile_source: str
+    agent_studio_candidate: bool | None
+    agent_studio_compatible: bool | None
+    deployment: dict[str, Any] | None
+    identity_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class ChatMemoryEvaluationProvenanceResponse(_ChatMemoryEvaluationResponseModel):
+    schema_version: Literal[1, 2]
+    run_id: str | None = None
+    captured_at: str
+    configuration_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    provenance_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    fixture_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    controls: dict[str, Any]
+    prompt: ChatMemoryEvaluationTemplateSnapshotResponse
+    persona: ChatMemoryEvaluationTemplateSnapshotResponse
+    model: ChatMemoryEvaluationOptionSnapshotResponse
+    embedding: ChatMemoryEvaluationOptionSnapshotResponse | None = None
+
+    @model_validator(mode="after")
+    def _require_run_binding_in_schema_v2(
+        self,
+    ) -> ChatMemoryEvaluationProvenanceResponse:
+        if self.schema_version == 2 and not str(self.run_id or "").strip():
+            raise ValueError("schema v2 evaluation provenance requires run_id")
+        if self.schema_version == 1 and self.run_id is not None:
+            raise ValueError("schema v1 evaluation provenance cannot include run_id")
+        return self
+
+
+class ChatMemoryEvaluationProvenanceSummaryResponse(_ChatMemoryEvaluationResponseModel):
+    run_id: str
+    captured_at: str
+    configuration_sha256: str
+    provenance_sha256: str
+    fixture_sha256: str
+    prompt_content_sha256: str
+    persona_content_sha256: str
+    model_identity_sha256: str
+    embedding_identity_sha256: str | None = None
+
+
+class ChatMemoryEvaluationDecisionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    outcome: Literal["keep", "promote", "reject"]
+    expected_provenance_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    expected_evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    baseline_run_id: str | None = Field(default=None, min_length=1)
+    expected_baseline_provenance_sha256: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
+    expected_baseline_evidence_sha256: str | None = Field(
+        default=None, pattern=r"^[0-9a-f]{64}$"
+    )
+    note: str = Field(default="", max_length=2000)
+
+    @model_validator(mode="after")
+    def _bind_baseline_to_reviewed_evidence(
+        self,
+    ) -> ChatMemoryEvaluationDecisionRequest:
+        baseline_fields = (
+            self.baseline_run_id,
+            self.expected_baseline_provenance_sha256,
+            self.expected_baseline_evidence_sha256,
+        )
+        if any(item is None for item in baseline_fields) and not all(
+            item is None for item in baseline_fields
+        ):
+            raise ValueError(
+                "baseline_run_id and expected baseline provenance/evidence hashes must be provided together"
+            )
+        return self
+
+
+class ChatMemoryEvaluationDecisionResponse(_ChatMemoryEvaluationResponseModel):
+    decision_id: str
+    outcome: Literal["keep", "promote", "reject"]
+    candidate_run_id: str
+    baseline_run_id: str | None = None
+    baseline_provenance_sha256: str | None = None
+    baseline_evidence_sha256: str | None = None
+    candidate_provenance_sha256: str
+    candidate_evidence_sha256: str
+    candidate_configuration_sha256: str
+    note: str
+    recorded_at: str
+
+
 class ChatMemoryEvaluationMetricsResponse(_ChatMemoryEvaluationResponseModel):
     rounds_total: int
     rounds_passed: int
@@ -191,8 +305,12 @@ class ChatMemoryEvaluationListItemResponse(_ChatMemoryEvaluationResponseModel):
     created_at: str
     finished_at: str
     ready: bool
+    evidence_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     config: ChatMemoryEvaluationConfigResponse
     metrics: ChatMemoryEvaluationMetricsResponse | None = None
+    provenance: ChatMemoryEvaluationProvenanceSummaryResponse | None = None
+    decision: ChatMemoryEvaluationDecisionResponse | None = None
+    preferred_baseline: bool = False
 
 
 class ChatMemoryEvaluationListResponse(_ChatMemoryEvaluationResponseModel):
@@ -202,3 +320,18 @@ class ChatMemoryEvaluationListResponse(_ChatMemoryEvaluationResponseModel):
 class ChatMemoryEvaluationDetailResponse(ChatMemoryEvaluationListItemResponse):
     fixture: ChatMemoryEvaluationFixtureResponse
     rounds: list[ChatMemoryEvaluationRoundResponse]
+    provenance_detail: ChatMemoryEvaluationProvenanceResponse | None = None
+
+
+class ChatMemoryEvaluationComparisonValueResponse(_ChatMemoryEvaluationResponseModel):
+    baseline: Any
+    candidate: Any
+    changed: bool
+
+
+class ChatMemoryEvaluationComparisonResponse(_ChatMemoryEvaluationResponseModel):
+    baseline: ChatMemoryEvaluationListItemResponse
+    candidate: ChatMemoryEvaluationListItemResponse
+    same_configuration: bool
+    configuration_changes: dict[str, ChatMemoryEvaluationComparisonValueResponse]
+    metric_deltas: dict[str, float]

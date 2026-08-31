@@ -19,10 +19,6 @@ from ade_api.features.prompt_center import api as prompt_center
 from ade_api.features.schema_center import api as schema_center
 from ade_api.features.test_center import api as test_center
 from ade_api.features.tool_center import api as tool_center
-from ade_api.features.agent_runtime_v3 import (
-    router as agent_runtime_v3_router,
-    shutdown_agent_runtime_v3,
-)
 from ade_api.platform.openapi_metadata import OPENAPI_TAGS
 from ade_api.platform.settings import get_settings
 
@@ -34,7 +30,6 @@ async def app_lifespan(_: FastAPI):
     try:
         yield
     finally:
-        await shutdown_agent_runtime_v3()
         shutdown_dependencies()
 
 
@@ -73,7 +68,6 @@ def create_app() -> FastAPI:
     app.include_router(schema_center.router)
     app.include_router(test_center.router)
     app.include_router(tool_center.router)
-    app.include_router(agent_runtime_v3_router)
     return app
 
 

@@ -19,17 +19,14 @@ from ade_api.features.prompt_center.registry import PromptPersonaRegistry
 from ade_api.features.comment_lab.service import CommentingService
 from ade_api.features.label_lab.service import LabelingService
 from ade_api.platform.settings import AdeApiSettings, get_settings
+from ade_api.platform.project_paths import PROJECT_ROOT, resolve_project_path
 from ade_api.features.test_center.orchestrator import TestRunOrchestrator
 
 APP_VERSION = os.getenv("ADE_API_VERSION", "0.3.0")
-PROJECT_ROOT = Path(os.getenv("ADE_REPOSITORY_ROOT", Path.cwd())).resolve()
 
 
 def _resolve_project_path(value: str) -> Path:
-    path = Path(str(value or "").strip())
-    if path.is_absolute():
-        return path
-    return PROJECT_ROOT / path
+    return resolve_project_path(value)
 
 
 _initial_settings = get_settings()

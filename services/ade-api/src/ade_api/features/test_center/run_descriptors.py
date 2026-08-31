@@ -185,6 +185,8 @@ def _build_chat_memory_eval(output_dir: Path, options: RunOptions) -> list[str]:
         "workflows/evals/chat_memory_eval/config.toml",
         "--output-dir",
         str(output_dir),
+        "--run-id",
+        output_dir.name,
     ]
     _append_option(command, "--model", options.get("model"))
     _append_option(command, "--prompt-key", options.get("prompt_key"))
@@ -200,6 +202,15 @@ def _build_chat_memory_eval(output_dir: Path, options: RunOptions) -> list[str]:
     if options.get("judge_enabled") is False:
         command.append("--no-judge-enabled")
     return command
+
+
+def _validate_chat_memory_eval(options: RunOptions) -> None:
+    retry_count = options.get("retry_count")
+    if retry_count not in {None, 0}:
+        raise ValueError(
+            "chat memory evaluation retry_count must be 0 because message requests "
+            "do not have a server-owned idempotency contract"
+        )
 
 
 def _validate_agent_runtime_v3_acceptance(options: RunOptions) -> None:
@@ -337,6 +348,7 @@ RUN_DESCRIPTORS: Final[dict[str, TestRunDescriptor]] = {
         unexpected_field_message="Unsupported fields for run_type='chat_memory_eval'",
         command_builder=_build_chat_memory_eval,
         artifact_discoverer=discover_run_directory_artifacts,
+        option_validator=_validate_chat_memory_eval,
     ),
     "agent_runtime_v3_acceptance": TestRunDescriptor(
         run_type="agent_runtime_v3_acceptance",

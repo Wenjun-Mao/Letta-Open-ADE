@@ -52,7 +52,7 @@ async function proxy(request: NextRequest, context: RouteContext): Promise<Respo
   });
   responseHeaders.set("Cache-Control", "no-store");
 
-  return new Response(await upstream.arrayBuffer(), {
+  return new Response(upstream.body, {
     status: upstream.status,
     statusText: upstream.statusText,
     headers: responseHeaders,

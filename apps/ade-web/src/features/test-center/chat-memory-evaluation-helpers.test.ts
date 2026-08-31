@@ -29,7 +29,7 @@ describe("chat-memory evaluation launch state", () => {
         fixtureKey: "fixture-b",
         rounds: "4",
         timeoutSeconds: "240.5",
-        retryCount: "2",
+        retryCount: "0",
         judgeEnabled: false,
       },
     });
@@ -136,7 +136,7 @@ describe("chat-memory evaluation display helpers", () => {
       fixtureKey: "recent_user_chat_turns",
       rounds: "5",
       timeoutSeconds: "240",
-      retryCount: "2",
+      retryCount: "0",
       judgeEnabled: false,
     });
   });

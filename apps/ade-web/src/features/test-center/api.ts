@@ -57,14 +57,91 @@ export type ChatMemoryEvaluationMetrics = {
   cleanup_passed_rounds: number;
 };
 
+export type EvaluationProvenanceSummary = {
+  run_id: string;
+  captured_at: string;
+  configuration_sha256: string;
+  provenance_sha256: string;
+  fixture_sha256: string;
+  prompt_content_sha256: string;
+  persona_content_sha256: string;
+  model_identity_sha256: string;
+  embedding_identity_sha256: string | null;
+};
+
+export type EvaluationTemplateSnapshot = {
+  kind: "prompt" | "persona";
+  scenario: "chat";
+  key: string;
+  label: string;
+  description: string;
+  content: string;
+  content_sha256: string;
+  updated_at: string;
+};
+
+export type EvaluationOptionSnapshot = {
+  key: string;
+  label: string;
+  source_id: string;
+  source_label: string;
+  provider_model_id: string;
+  upstream_provider_model_id: string | null;
+  sampling_defaults: Record<string, unknown>;
+  scenario_sampling_defaults: Record<string, unknown>;
+  supports_top_k: boolean | null;
+  supports_thinking: boolean | null;
+  thinking_default_enabled: boolean | null;
+  profile_applied: boolean | null;
+  profile_source: string;
+  agent_studio_candidate: boolean | null;
+  agent_studio_compatible: boolean | null;
+  deployment: Record<string, unknown> | null;
+  identity_sha256: string;
+};
+
+export type EvaluationProvenance = {
+  schema_version: 1 | 2;
+  run_id: string | null;
+  captured_at: string;
+  configuration_sha256: string;
+  provenance_sha256: string;
+  fixture_sha256: string;
+  controls: Record<string, unknown>;
+  prompt: EvaluationTemplateSnapshot;
+  persona: EvaluationTemplateSnapshot;
+  model: EvaluationOptionSnapshot;
+  embedding: EvaluationOptionSnapshot | null;
+};
+
+export type EvaluationDecisionOutcome = "keep" | "promote" | "reject";
+
+export type EvaluationDecision = {
+  decision_id: string;
+  outcome: EvaluationDecisionOutcome;
+  candidate_run_id: string;
+  baseline_run_id: string | null;
+  baseline_provenance_sha256: string | null;
+  baseline_evidence_sha256: string | null;
+  candidate_provenance_sha256: string;
+  candidate_evidence_sha256: string;
+  candidate_configuration_sha256: string;
+  note: string;
+  recorded_at: string;
+};
+
 export type EvaluationListItem = {
   run_id: string;
   run_status: string;
   created_at: string;
   finished_at: string;
   ready: boolean;
+  evidence_sha256: string | null;
   config: ChatMemoryEvaluationConfig;
   metrics: ChatMemoryEvaluationMetrics | null;
+  provenance: EvaluationProvenanceSummary | null;
+  decision: EvaluationDecision | null;
+  preferred_baseline: boolean;
 };
 
 export type EvaluationToolCall = Record<string, unknown>;
@@ -108,6 +185,21 @@ export type EvaluationRound = {
 export type EvaluationDetail = EvaluationListItem & {
   fixture: Record<string, unknown>;
   rounds: EvaluationRound[];
+  provenance_detail: EvaluationProvenance | null;
+};
+
+export type EvaluationComparisonValue = {
+  baseline: unknown;
+  candidate: unknown;
+  changed: boolean;
+};
+
+export type EvaluationComparison = {
+  baseline: EvaluationListItem;
+  candidate: EvaluationListItem;
+  same_configuration: boolean;
+  configuration_changes: Record<string, EvaluationComparisonValue>;
+  metric_deltas: Record<string, number>;
 };
 
 export type CreateTestRunPayload = {
@@ -165,4 +257,37 @@ export function listChatMemoryEvaluations(options?: ApiRequestOptions) {
 
 export function getChatMemoryEvaluation(runId: string, options?: ApiRequestOptions) {
   return requestJson<EvaluationDetail>(`/api/v2/test-center/chat-memory-evaluations/${runId}`, options);
+}
+
+export function compareChatMemoryEvaluations(
+  baselineRunId: string,
+  candidateRunId: string,
+  options?: ApiRequestOptions,
+) {
+  const query = new URLSearchParams({
+    baseline_run_id: baselineRunId,
+    candidate_run_id: candidateRunId,
+  });
+  return requestJson<EvaluationComparison>(
+    `/api/v2/test-center/chat-memory-evaluations/comparison?${query.toString()}`,
+    options,
+  );
+}
+
+export function recordChatMemoryEvaluationDecision(
+  runId: string,
+  payload: {
+    outcome: EvaluationDecisionOutcome;
+    expected_provenance_sha256: string;
+    expected_evidence_sha256: string;
+    baseline_run_id?: string;
+    expected_baseline_provenance_sha256?: string;
+    expected_baseline_evidence_sha256?: string;
+    note: string;
+  },
+) {
+  return requestJson<EvaluationDecision>(
+    `/api/v2/test-center/chat-memory-evaluations/${runId}/decisions`,
+    { method: "POST", body: payload },
+  );
 }

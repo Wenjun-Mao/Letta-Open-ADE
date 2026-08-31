@@ -29,6 +29,9 @@ from .persistence.conversations import ConversationRepository
 from .persistence.definitions import DefinitionVersionRepository
 from .persistence.memory import MemoryRepository
 from .provider_tracing import AttemptTrace
+from .release_policy import (
+    release_validation_kwargs,
+)
 from .reviewer import MemoryReviewer, ReviewerResult
 from .router_transport import RouterTransport
 
@@ -78,6 +81,7 @@ class TurnExecution:
             definition,
             catalog,
             mode=self.settings.agent_runtime_v3_mode,
+            **release_validation_kwargs(self.settings.agent_runtime_v3_mode),
         )
         conversation = state["conversation"]
         subject_id = str(conversation["memory_subject_id"])

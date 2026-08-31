@@ -68,22 +68,9 @@ def test_labeling_generate_example_documents_model_key_and_schema_key() -> None:
     assert all(value.get("timeout_seconds", 0) >= 30 for value in values)
 
 
-def test_agent_runtime_v3_focused_preview_routes_are_documented() -> None:
+def test_legacy_api_openapi_does_not_claim_native_v3_routes() -> None:
     paths = _openapi()["paths"]
-    expected = {
-        "/api/v3/agent-definitions",
-        "/api/v3/agent-definitions/{definition_id}",
-        "/api/v3/memory-subjects",
-        "/api/v3/memory-subjects/{subject_id}",
-        "/api/v3/memory-subjects/{subject_id}/memories",
-        "/api/v3/conversations",
-        "/api/v3/conversations/{conversation_id}/state",
-        "/api/v3/conversations/{conversation_id}/turns",
-        "/api/v3/runs/{run_id}",
-        "/api/v3/runs/{run_id}/cancel",
-        "/api/v3/runs/{run_id}/events",
-    }
-    assert expected <= set(paths)
+    assert not any(path.startswith("/api/v3") for path in paths)
 
 
 def test_commenting_generate_schema_marks_legacy_model_deprecated() -> None:

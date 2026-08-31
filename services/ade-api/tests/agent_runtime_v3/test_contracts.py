@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import ValidationError
 
-from ade_api.features.agent_runtime_v3.contracts import AcceptTurnRequest
+from ade_api.features.agent_runtime_v3.contracts import (
+    AcceptTurnRequest,
+    ConversationStateResponse,
+    MemoryFactResponse,
+    RunResponse,
+)
 from ade_api.features.agent_runtime_v3.errors import RuntimeValidationError
 from ade_api.features.agent_runtime_v3.fact_registry import (
     FACT_TYPE_REGISTRY,
@@ -25,6 +32,87 @@ def test_turn_defaults_have_one_attempt_and_180_second_timeout() -> None:
     request = AcceptTurnRequest(content="hello", idempotency_key="turn-1")
     assert request.timeout_seconds == 180
     assert request.retry_count == 0
+
+
+def test_read_models_expose_summary_provenance_and_run_controls() -> None:
+    now = datetime(2026, 8, 30, tzinfo=UTC)
+    state = ConversationStateResponse.model_validate(
+        {
+            "id": "conversation-1",
+            "agent_definition_id": "definition-1",
+            "memory_subject_id": "subject-1",
+            "version": 2,
+            "created_at": now,
+            "messages": [],
+            "summary": {
+                "id": "summary-2",
+                "version": 2,
+                "previous_summary_id": "summary-1",
+                "content": "The user has a dog named Rocky.",
+                "source_boundary": {
+                    "through_sequence": 4,
+                    "message_ids": ["message-1", "message-2"],
+                },
+                "provenance": {
+                    "run_id": "run-2",
+                    "model_key": "dgx_vllm::qwen",
+                    "model_fingerprint": "a" * 64,
+                    "provider_request_id": "provider-2",
+                    "content_sha256": "b" * 64,
+                    "prompt_sha256": "c" * 64,
+                    "input_sha256": "d" * 64,
+                    "policy_sha256": "e" * 64,
+                },
+                "created_at": now,
+            },
+        }
+    )
+    run = RunResponse.model_validate(
+        {
+            "id": "run-2",
+            "conversation_id": "conversation-1",
+            "status": "succeeded",
+            "qualification_state": "unqualified",
+            "attempt_count": 2,
+            "timeout_seconds": 180.0,
+            "retry_count": 1,
+            "created_at": now,
+        }
+    )
+    fact = MemoryFactResponse.model_validate(
+        {
+            "id": "fact-1",
+            "key": "pet.name|entity-1|",
+            "fact_type": "pet.name",
+            "entity_id": "entity-1",
+            "entity_kind": "pet",
+            "entity_label": "Rocky",
+            "value": "Rocky",
+            "status": "active",
+            "version": 2,
+            "revisions": [
+                {
+                    "id": "revision-2",
+                    "operation": "correct",
+                    "fact_version": 2,
+                    "value": "Rocky",
+                    "run_id": "run-2",
+                    "predecessor_revision_ids": ["revision-1"],
+                    "evidence": [],
+                    "created_at": now,
+                }
+            ],
+            "updated_at": now,
+        }
+    )
+
+    assert state.summary is not None
+    assert state.summary.source_boundary.through_sequence == 4
+    assert state.summary.provenance.model_key == "dgx_vllm::qwen"
+    assert run.timeout_seconds == 180.0
+    assert run.retry_count == 1
+    assert fact.entity_label == "Rocky"
+    assert fact.revisions[0].predecessor_revision_ids == ["revision-1"]
 
 
 @pytest.mark.parametrize("field", ["content", "idempotency_key"])

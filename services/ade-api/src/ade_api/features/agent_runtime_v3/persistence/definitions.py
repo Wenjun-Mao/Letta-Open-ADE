@@ -36,6 +36,15 @@ class DefinitionVersionRepository:
             "definition version does not exist",
         )
 
+    async def find(self, definition_version_id: str) -> dict[str, Any] | None:
+        result = await self._connection.execute(
+            select(agent_definition_versions).where(
+                agent_definition_versions.c.id == definition_version_id
+            )
+        )
+        row = result.mappings().one_or_none()
+        return dict(row) if row is not None else None
+
     async def create_next(
         self, workspace_id: str, payload: Mapping[str, Any]
     ) -> dict[str, Any]:

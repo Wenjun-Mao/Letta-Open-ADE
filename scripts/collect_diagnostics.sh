@@ -71,6 +71,44 @@ read_compose_project_name() {
     | xargs
 }
 
+read_env_value() {
+  local name="$1"
+  local env_path="${PROJECT_ROOT}/${ENV_FILE}"
+  if [[ ! -f "${env_path}" ]]; then
+    return
+  fi
+
+  grep -E "^[[:space:]]*${name}=" "${env_path}" \
+    | tail -n1 \
+    | cut -d'=' -f2- \
+    | tr -d '"' \
+    | tr -d '\r' \
+    | xargs
+}
+
+resolve_host_port() {
+  local service="$1"
+  local container_port="$2"
+  local env_name="$3"
+  local fallback="$4"
+  local endpoint=""
+  local port=""
+
+  endpoint="$(cd "${PROJECT_ROOT}" && ${COMPOSE_CMD} --env-file "${ENV_FILE}" port "${service}" "${container_port}" 2>/dev/null | tail -n1 || true)"
+  port="${endpoint##*:}"
+  if [[ "${port}" =~ ^[0-9]+$ ]]; then
+    printf '%s\n' "${port}"
+    return
+  fi
+
+  port="$(read_env_value "${env_name}" || true)"
+  if [[ "${port}" =~ ^[0-9]+$ ]]; then
+    printf '%s\n' "${port}"
+  else
+    printf '%s\n' "${fallback}"
+  fi
+}
+
 get_service_cid() {
   local svc="$1"
   local cid=""
@@ -104,7 +142,7 @@ else
 fi
 
 run_cmd "host_os" "uname -a; date; whoami; uptime"
-run_cmd "host_release" "lsb_release -a 2>/dev/null || cat /etc/os-release"
+run_cmd "host_release" "if command -v sw_vers >/dev/null 2>&1; then sw_vers; elif command -v lsb_release >/dev/null 2>&1; then lsb_release -a; elif [[ -r /etc/os-release ]]; then cat /etc/os-release; else uname -a; fi"
 run_cmd "docker_version" "docker version"
 run_cmd "docker_info" "docker info"
 run_cmd "docker_ps_all" "docker ps -a --no-trunc"
@@ -160,20 +198,22 @@ if [[ -n "${ADE_API_CID}" ]]; then
   run_cmd "ade_api_env_selected" "docker exec '${ADE_API_CID}' /bin/sh -lc \"env | grep -E '^(ADE_API_MODEL_ROUTER_BASE_URL|ADE_API_COMMENT_LAB_|ADE_API_LABEL_LAB_|ADE_API_AGENT_STUDIO_|LETTA_BASE_URL)=' || true\""
 fi
 
-MODEL_ROUTER_CID="$(get_service_cid model_router)"
+MODEL_ROUTER_CID="$(get_service_cid model-router)"
 if [[ -n "${MODEL_ROUTER_CID}" ]]; then
   run_cmd "model_router_env_selected" "docker exec '${MODEL_ROUTER_CID}' /bin/sh -lc \"env | grep -E '^(MODEL_ROUTER_SOURCES_FILE|MODEL_ROUTER_MODEL_PROFILES_FILE|MODEL_ROUTER_CACHE_TTL_SECONDS|MODEL_ROUTER_DISCOVERY_TIMEOUT_SECONDS|MODEL_ROUTER_REQUEST_TIMEOUT_SECONDS)='\""
   run_cmd "model_router_sources_file" "docker exec '${MODEL_ROUTER_CID}' /bin/sh -lc \"python -m json.tool \\\"\${MODEL_ROUTER_SOURCES_FILE:-config/model-router/sources.json}\\\"\""
   run_cmd "model_router_model_profiles_file" "docker exec '${MODEL_ROUTER_CID}' /bin/sh -lc \"python -m json.tool \\\"\${MODEL_ROUTER_MODEL_PROFILES_FILE:-config/model-router/model-profiles.json}\\\"\""
+  run_cmd "probe_model_catalog_from_model_router" "docker exec '${MODEL_ROUTER_CID}' python -c \"import json, os, urllib.request; request=urllib.request.Request('http://127.0.0.1:8010/v1/router/model-catalog', headers={'Authorization': 'Bearer ' + os.environ['MODEL_ROUTER_API_KEY']}); payload=json.load(urllib.request.urlopen(request, timeout=10)); print(json.dumps({'generated_at': payload.get('generated_at'), 'source_count': len(payload.get('sources', [])), 'model_count': len(payload.get('items', []))}, indent=2))\""
 fi
 
-run_cmd "probe_ade_web" "curl -fsS --max-time 10 -o /dev/null -w 'status=%{http_code}\\n' 'http://127.0.0.1:3000/'"
-run_cmd "probe_ade_api_health" "python3 -c \"import json,urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:8000/api/v2/health', timeout=10); print(json.dumps(json.load(resp), indent=2))\""
-run_cmd "probe_ade_api_openapi" "curl -fsS -D '${OUT_DIR}/probe_ade_api_openapi_headers.txt' -o '${OUT_DIR}/probe_ade_api_openapi_body.json' 'http://127.0.0.1:8000/openapi.json'"
+ADE_WEB_HOST_PORT="$(resolve_host_port ade-web 3000 ADE_WEB_PORT 3000)"
+ADE_API_HOST_PORT="$(resolve_host_port ade-api 8000 ADE_API_PORT 8000)"
+log "Resolved host ports: ade-web=${ADE_WEB_HOST_PORT}, ade-api=${ADE_API_HOST_PORT}"
+
+run_cmd "probe_ade_web" "curl -fsS --max-time 10 -o /dev/null -w 'status=%{http_code}\\n' 'http://127.0.0.1:${ADE_WEB_HOST_PORT}/'"
+run_cmd "probe_ade_api_health" "python3 -c \"import json,urllib.request; opener=urllib.request.build_opener(urllib.request.ProxyHandler({})); resp=opener.open('http://127.0.0.1:${ADE_API_HOST_PORT}/api/v2/health', timeout=10); print(json.dumps(json.load(resp), indent=2))\""
+run_cmd "probe_ade_api_openapi" "curl -fsS -D '${OUT_DIR}/probe_ade_api_openapi_headers.txt' -o '${OUT_DIR}/probe_ade_api_openapi_body.json' 'http://127.0.0.1:${ADE_API_HOST_PORT}/openapi.json'"
 run_cmd "probe_dns_ark" "python3 -c \"import socket; print(socket.getaddrinfo('ark.cn-beijing.volces.com', 443)[0][4][0])\""
-if [[ -n "${ADE_API_CID}" ]]; then
-  run_cmd "probe_model_router_from_ade_api" "docker exec '${ADE_API_CID}' python -c \"import json,urllib.request; resp=urllib.request.urlopen('http://model-router:8010/v1/router/model-catalog', timeout=10); payload=json.load(resp); print(json.dumps({'generated_at': payload.get('generated_at'), 'source_count': len(payload.get('sources', [])), 'model_count': len(payload.get('items', []))}, indent=2))\""
-fi
 run_cmd "model_catalog_report_summary" "python3 -c \"import json, pathlib; path=pathlib.Path('content/model-catalog/ark_chat_probe_report.json'); payload=json.loads(path.read_text(encoding='utf-8')) if path.is_file() else {'missing': True}; summary={'path': str(path), 'source_id': payload.get('source_id'), 'checked_at': payload.get('checked_at'), 'probe_mode': payload.get('probe_mode'), 'raw_model_count': payload.get('raw_model_count'), 'usable_models': payload.get('usable_models', [])}; print(json.dumps(summary, indent=2, ensure_ascii=False))\""
 
 ARCHIVE="${OUT_DIR}.tar.gz"

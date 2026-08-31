@@ -136,6 +136,36 @@ that proposal is a separate reviewed operator action under
 provider failures and process-readiness evidence follow
 [ADR 0011](../adr/0011-agent-runtime-operational-readiness.md).
 
+## Gated Native Runtime Pilot
+
+```mermaid
+sequenceDiagram
+    participant B as Browser / native-runtime-preview
+    participant W as ADE Web v3 proxy
+    participant N as ade-native-api
+    participant D as ADE PostgreSQL
+    participant K as ade-runtime-worker
+    participant R as Model Router
+    B->>W: Create preview session
+    W->>N: POST /api/v3/preview-sessions
+    N->>D: Atomic definition + subject + conversation
+    B->>W: Accept turn and open SSE
+    W->>N: /api/v3/conversations/.../turns + /runs/.../events
+    N->>D: Persist accepted run
+    K->>D: Claim exact run
+    K->>R: Conversation, retrieval, and reviewer requests
+    K->>D: Atomic output, memory, summary, terminal events
+    N-->>W: Normalized SSE and read models
+    W-->>B: Messages, typed memory lineage, summary, and event evidence
+```
+
+The v3 proxy points only to `ade-native-api`; it never falls back to the supported
+v2 service. The browser cannot assemble a partial session with three writes. The
+server binds a request idempotency key to one atomic resource set and fixes the
+pilot's tool scope to `search_memory`. Navigation remains off until the exact role
+deployments pass the reviewed gate in
+[ADR 0013](../adr/0013-narrow-native-runtime-product-pilot.md).
+
 ## Model Catalog
 
 The Model Catalog feature is the one ADE-facing interpretation boundary for

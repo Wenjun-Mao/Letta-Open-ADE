@@ -29,6 +29,9 @@ from .persistence.definitions import DefinitionVersionRepository
 from .persistence.leases import ConversationLeaseRepository
 from .persistence.runs import RunRepository
 from .presenters import run_response, turn_accepted_response
+from .release_policy import (
+    release_validation_kwargs,
+)
 from .router_transport import RouterTransport
 
 
@@ -74,6 +77,7 @@ class RunService:
                 definition,
                 catalog,
                 mode=self.settings.agent_runtime_v3_mode,
+                **release_validation_kwargs(self.settings.agent_runtime_v3_mode),
             )
             conversation_deployment = definition_deployment(definition, "conversation")
             try:

@@ -12,11 +12,18 @@ from .artifacts import ArtifactWriter, build_summary, print_summary, write_summa
 from .client import AdeApiClient
 from .config import (
     ChatMemoryEvalConfig,
-    router_model_key_from_agent_handle,
+    ade_api_timeout_seconds,
+    effective_judge_model_key,
     router_v1_base_url,
 )
 from .fixtures import ConversationFixture, load_fixture
 from .judge import judge_round
+from .provenance import (
+    assert_created_agent_identities,
+    capture_evaluation_provenance,
+    expected_agent_identities,
+    write_provenance,
+)
 from .scoring import (
     DEFAULT_FORBIDDEN_REPLY_SUBSTRINGS,
     assistant_replies,
@@ -27,25 +34,38 @@ from .scoring import (
 
 
 def run_evaluation(
-    config: ChatMemoryEvalConfig, *, now: datetime | None = None
+    config: ChatMemoryEvalConfig,
+    *,
+    run_id: str | None = None,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     run_timestamp = (now or datetime.now()).strftime("%Y%m%d_%H%M%S")
-    run_id = f"chat-memory-eval-{run_timestamp}-{uuid4().hex[:8]}"
+    run_id = _resolve_run_id(run_id, run_timestamp)
     csv_path = config.output_dir / f"chat_memory_eval_{run_timestamp}.csv"
     jsonl_path = config.output_dir / f"chat_memory_eval_{run_timestamp}.jsonl"
     summary_path = config.output_dir / f"chat_memory_eval_{run_timestamp}_summary.json"
+    provenance_path = (
+        config.output_dir / f"chat_memory_eval_{run_timestamp}_provenance.json"
+    )
     config.output_dir.mkdir(parents=True, exist_ok=True)
 
     fixture = load_fixture(config.fixtures_dir, config.fixture_key)
     rows: list[dict[str, Any]] = []
-    client_timeout = max(config.timeout_seconds + 60, 90)
     with AdeApiClient(
         base_url=config.api_base_url,
-        timeout_seconds=client_timeout,
-        retry_count=config.api_retry_count,
+        timeout_seconds=ade_api_timeout_seconds(config),
         api_key=os.getenv("ADE_API_ADMIN_KEY", ""),
     ) as api:
-        validate_chat_options(api.options(), config)
+        options = api.options()
+        validate_chat_options(options, config)
+        provenance = capture_evaluation_provenance(
+            run_id=run_id,
+            api=api,
+            options=options,
+            config=config,
+            fixture=fixture,
+        )
+        write_provenance(provenance_path, provenance)
         total = config.rounds
         print(
             f"[INFO] Running {total} chat-memory rounds with {len(fixture.turns)} turns each."
@@ -60,6 +80,7 @@ def run_evaluation(
                     fixture=fixture,
                     run_id=run_id,
                     round_index=round_index,
+                    provenance=provenance,
                 )
                 rows.append(row)
                 writer.write_round(row, raw)
@@ -79,6 +100,8 @@ def run_evaluation(
     )
     summary["config"] = _config_payload(config)
     summary["fixture"] = _fixture_payload(fixture)
+    summary["provenance"] = provenance
+    summary["provenance_path"] = str(provenance_path)
     write_summary(summary_path, summary)
     print_summary(summary)
     return summary
@@ -116,6 +139,7 @@ def run_round(
     fixture: ConversationFixture,
     run_id: str,
     round_index: int,
+    provenance: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     started = time.time()
     agent_id = ""
@@ -124,10 +148,13 @@ def run_round(
     row: dict[str, Any]
     raw: dict[str, Any]
     try:
-        created = api.create_agent(_create_agent_payload(config, round_index))
+        created = api.create_agent(
+            _create_agent_payload(config, round_index, provenance)
+        )
         agent_id = str(created.get("id", "") or "")
         if not agent_id:
             raise RuntimeError("Agent creation did not return id")
+        assert_created_agent_identities(created, provenance)
 
         turn_records, assistant_texts, initial_human_memory = _run_turns(
             api=api,
@@ -168,9 +195,12 @@ def run_round(
             judge_payload=judge_payload,
             turn_records=turn_records,
             error="",
+            provenance=provenance,
         )
         raw = {
             **row,
+            "configuration_sha256": provenance["configuration_sha256"],
+            "provenance_sha256": provenance["provenance_sha256"],
             "turns": turn_records,
             "initial_human_memory": initial_human_memory,
             "final_human_memory": final_human_memory,
@@ -179,6 +209,13 @@ def run_round(
             "persistent_state": state,
         }
     except Exception as exc:
+        score = deterministic_round_score(
+            assistant_texts=[],
+            initial_human_memory="",
+            final_human_memory="",
+            expected_facts=fixture.expected_facts,
+            forbidden_reply_substrings=_forbidden_substrings(fixture),
+        )
         row = _error_row(
             run_id,
             round_index,
@@ -187,8 +224,19 @@ def run_round(
             time.time() - started,
             agent_id,
             str(exc),
+            provenance,
+            score,
         )
-        raw = {**row, "error": str(exc)}
+        raw = {
+            **row,
+            "error": str(exc),
+            "turns": [],
+            "initial_human_memory": "",
+            "final_human_memory": "",
+            "deterministic_score": score,
+            "judge": {"ok": False, "skipped": True},
+            "persistent_state": {},
+        }
     finally:
         if agent_id and not config.keep_agents:
             try:
@@ -268,9 +316,7 @@ def _run_judge_if_enabled(
 ) -> dict[str, Any]:
     if not config.judge_enabled:
         return {"ok": False, "skipped": True}
-    model_key = config.judge_model_key or router_model_key_from_agent_handle(
-        config.model
-    )
+    model_key = effective_judge_model_key(config)
     return judge_round(
         router_v1_base_url=router_v1_base_url(config),
         router_api_key=config.model_router_api_key,
@@ -283,7 +329,9 @@ def _run_judge_if_enabled(
 
 
 def _create_agent_payload(
-    config: ChatMemoryEvalConfig, round_index: int
+    config: ChatMemoryEvalConfig,
+    round_index: int,
+    provenance: dict[str, Any],
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "scenario": "chat",
@@ -291,6 +339,7 @@ def _create_agent_payload(
         "model": config.model,
         "prompt_key": config.prompt_key,
         "persona_key": config.persona_key,
+        **expected_agent_identities(provenance),
     }
     if config.embedding:
         payload["embedding"] = config.embedding
@@ -305,6 +354,7 @@ def _round_row(**kwargs: Any) -> dict[str, Any]:
         len(item.get("memory_tool_calls", [])) for item in turn_records
     )
     tool_count = sum(len(item.get("tool_calls", [])) for item in turn_records)
+    identities = expected_agent_identities(kwargs["provenance"])
     return {
         "run_id": kwargs["run_id"],
         "round": kwargs["round_index"],
@@ -316,6 +366,12 @@ def _round_row(**kwargs: Any) -> dict[str, Any]:
         "persona_key": kwargs["config"].persona_key,
         "embedding": kwargs["config"].embedding,
         "fixture_key": kwargs["fixture"].key,
+        "configuration_sha256": kwargs["provenance"]["configuration_sha256"],
+        "provenance_sha256": kwargs["provenance"]["provenance_sha256"],
+        "model_identity_sha256": identities["model_identity_sha256"],
+        "embedding_identity_sha256": identities["embedding_identity_sha256"],
+        "prompt_content_sha256": identities["prompt_content_sha256"],
+        "persona_content_sha256": identities["persona_content_sha256"],
         "turn_count": len(turn_records),
         "assistant_reply_count": sum(
             len(item.get("assistant_replies", [])) for item in turn_records
@@ -345,7 +401,10 @@ def _error_row(
     elapsed_seconds: float,
     agent_id: str,
     error: str,
+    provenance: dict[str, Any],
+    score: dict[str, Any],
 ) -> dict[str, Any]:
+    identities = expected_agent_identities(provenance)
     return {
         "run_id": run_id,
         "round": round_index,
@@ -357,12 +416,18 @@ def _error_row(
         "persona_key": config.persona_key,
         "embedding": config.embedding,
         "fixture_key": fixture.key,
+        "configuration_sha256": provenance["configuration_sha256"],
+        "provenance_sha256": provenance["provenance_sha256"],
+        "model_identity_sha256": identities["model_identity_sha256"],
+        "embedding_identity_sha256": identities["embedding_identity_sha256"],
+        "prompt_content_sha256": identities["prompt_content_sha256"],
+        "persona_content_sha256": identities["persona_content_sha256"],
         "turn_count": len(fixture.turns),
         "assistant_reply_count": 0,
-        "forbidden_hit_count": 0,
-        "human_memory_changed": False,
-        "expected_facts_passed": False,
-        "missing_expected_facts": "",
+        "forbidden_hit_count": int(score["forbidden_hit_count"]),
+        "human_memory_changed": bool(score["human_memory_changed"]),
+        "expected_facts_passed": bool(score["expected_facts_passed"]),
+        "missing_expected_facts": ",".join(score["missing_expected_facts"]),
         "memory_tool_call_count": 0,
         "total_tool_call_count": 0,
         "judge_enabled": config.judge_enabled,
@@ -428,3 +493,10 @@ def _config_payload(config: ChatMemoryEvalConfig) -> dict[str, Any]:
     if payload.get("model_router_api_key"):
         payload["model_router_api_key"] = "***"
     return payload
+
+
+def _resolve_run_id(run_id: str | None, run_timestamp: str) -> str:
+    provided = str(run_id or "").strip()
+    if provided:
+        return provided
+    return f"chat-memory-eval-{run_timestamp}-{uuid4().hex[:8]}"

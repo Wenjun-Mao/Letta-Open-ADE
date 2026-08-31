@@ -35,24 +35,30 @@ docker inspect <container-name> --format '{{ index .Config.Labels "com.docker.co
 docker compose -p <old-project-name> down --remove-orphans
 ```
 
-The optional `native-runtime` profile adds one-shot `ade-runtime-migrate` and the
-long-running `ade-runtime-worker`. It is not started by the ordinary stack.
+The optional `native-runtime` profile adds one-shot `ade-runtime-migrate`, isolated
+`ade-native-api`, and the long-running `ade-runtime-worker`. It is not started by
+the ordinary stack.
 
 ```text
 make native-runtime-migrate
 make native-runtime-db-test
+make native-runtime-lane-check
 make native-runtime-up
+make native-runtime-preview-gate
+make native-runtime-preview-up
 ```
 
-`native-runtime-up` explicitly enables unqualified development-mode runs. Release
-mode rejects unqualified deployment fingerprints, and no production cutover has
-been approved.
+`native-runtime-up` explicitly enables unqualified development-mode runs.
+`native-runtime-preview-up` runs the exact promotion/policy gate before enabling the
+separate ADE Web route in release mode. Release mode rejects unqualified deployment
+fingerprints, and no production cutover has been approved.
 
 ## Endpoints And Network Boundary
 
 - ADE Web: `http://127.0.0.1:3000`
 - ADE API health: `http://127.0.0.1:8000/api/v2/health`
 - ADE API OpenAPI: `http://127.0.0.1:8000/openapi.json`
+- Native API liveness when its profile is active: `http://127.0.0.1:8002/health`
 
 `model-router`, `letta`, `postgres`, and `redis` are intentionally not exposed
 on host ports. Diagnose them through Compose:
