@@ -673,7 +673,8 @@ def test_missing_public_setup_memory_is_a_safe_stage_specific_failure() -> None:
             retry_count=0,
         )
 
-        failure = rounds[0].cases[0].infrastructure["failures"][0]
+        failed_case = rounds[0].cases[0]
+        failure = failed_case.infrastructure["failures"][0]
         assert failure == {
             "kind": "case_execution_error",
             "stage": "initial_fact_memory_verification",
@@ -681,5 +682,47 @@ def test_missing_public_setup_memory_is_a_safe_stage_specific_failure() -> None:
             "error_type": "AssertionError",
             "message": "initial fact memory verification failed",
         }
+        assert failed_case.setup_run_ids
+        assert failed_case.events
+        assert failed_case.infrastructure["terminal_statuses"] == ["succeeded"]
+        assert failed_case.infrastructure["all_terminal"] is True
+
+    asyncio.run(scenario())
+
+
+def test_failed_setup_run_preserves_terminal_evidence_before_cleanup() -> None:
+    async def scenario() -> None:
+        case = _Case(
+            key="typed-setup-run-failed",
+            conversations={"primary": ("primary", "primary")},
+            turns=(_Turn("primary", "hello"),),
+            initial_facts=(
+                _InitialFact(
+                    subject_key="primary",
+                    fact_type="person.preference",
+                    qualifier="color",
+                    value="青色",
+                ),
+            ),
+        )
+        rounds = await run_primary_rounds(
+            client=_FakeClient(status="failed"),
+            cases=(case,),
+            canonical_case_keys=(case.key,),
+            namespace="acceptance-typed-setup-run-failed",
+            rounds=1,
+            conversation_model_key="chat",
+            reviewer_model_key="reviewer",
+            embedding_model_key="embedding",
+            timeout_seconds=180,
+            retry_count=0,
+        )
+
+        failed_case = rounds[0].cases[0]
+        assert failed_case.score["pass"] is False
+        assert len(failed_case.setup_run_ids) == 1
+        assert "run.failed" in {event.event_type for event in failed_case.events}
+        assert failed_case.infrastructure["terminal_statuses"] == ["failed"]
+        assert failed_case.infrastructure["all_terminal"] is True
 
     asyncio.run(scenario())

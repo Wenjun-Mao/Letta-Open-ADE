@@ -76,6 +76,8 @@ a proposal. Every round keeps raw SSE JSONL plus normalized turns, attempt count
 tool outcomes, and final facts beside its content-addressed summary. Provenance
 binds the image source revision, clean-build state, exact source fingerprint, shared contract version,
 production policy hashes, exact role deployments, and effective config.
+Accepted setup runs are written to the same evidence stream even when setup fails,
+so scoped cleanup never erases the terminal trace needed to diagnose the failure.
 Provenance and any proposal also bind the preflight digest. Provider request failure
 or cancellation events are recorded as infrastructure failures and cannot contribute
 behavioral score credit.

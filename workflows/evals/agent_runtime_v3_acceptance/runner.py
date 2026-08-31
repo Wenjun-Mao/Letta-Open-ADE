@@ -64,6 +64,7 @@ async def execute_case(
     timeout_seconds: float,
     retry_count: int,
     resource_scope_sink: list[ResourceScope] | None = None,
+    auxiliary_turn_sink: list[dict[str, Any]] | None = None,
 ) -> CaseExecution:
     definitions: dict[str, str] = {}
     subjects: dict[str, str] = {}
@@ -160,13 +161,14 @@ async def execute_case(
             retry_count,
             stage="initial_fact_setup",
         )
-        auxiliary_turns.append(
-            {
-                "conversation_key": f"initial-facts:{subject_key}",
-                "run": setup_run,
-                "events": setup_events,
-            }
+        _record_auxiliary_turn(
+            auxiliary_turns,
+            auxiliary_turn_sink,
+            conversation_key=f"initial-facts:{subject_key}",
+            run=setup_run,
+            events=setup_events,
         )
+        _require_setup_succeeded(setup_run, "initial_fact_setup")
         response = await _run_stage(
             "initial_fact_memory_verification",
             client.get_subject_memories(subjects[subject_key]),
@@ -189,13 +191,14 @@ async def execute_case(
                 retry_count,
                 stage="prelude_setup",
             )
-            auxiliary_turns.append(
-                {
-                    "conversation_key": conversation_key,
-                    "run": setup_run,
-                    "events": setup_events,
-                }
+            _record_auxiliary_turn(
+                auxiliary_turns,
+                auxiliary_turn_sink,
+                conversation_key=conversation_key,
+                run=setup_run,
+                events=setup_events,
             )
+            _require_setup_succeeded(setup_run, "prelude_setup")
 
     completed_turns: list[dict[str, Any]] = []
     for index, turn in enumerate(tuple(getattr(case, "turns")), start=1):
@@ -425,6 +428,7 @@ async def run_primary_rounds(
         executions: list[CaseExecution] = []
         for case in cases:
             case_scopes: list[ResourceScope] = []
+            auxiliary_turns: list[dict[str, Any]] = []
             try:
                 execution = await execute_case(
                     client=client,
@@ -436,9 +440,12 @@ async def run_primary_rounds(
                     timeout_seconds=timeout_seconds,
                     retry_count=retry_count,
                     resource_scope_sink=case_scopes,
+                    auxiliary_turn_sink=auxiliary_turns,
                 )
             except Exception as exc:
-                execution = _failed_case_execution(case, exc, case_scopes)
+                execution = _failed_case_execution(
+                    case, exc, case_scopes, auxiliary_turns
+                )
             finally:
                 if resource_scope_sink is not None:
                     resource_scope_sink.extend(case_scopes)
@@ -482,6 +489,7 @@ async def run_llama_compatibility_round(
     executions: list[CaseExecution] = []
     for case in cases:
         case_scopes: list[ResourceScope] = []
+        auxiliary_turns: list[dict[str, Any]] = []
         try:
             execution = await execute_case(
                 client=client,
@@ -493,9 +501,10 @@ async def run_llama_compatibility_round(
                 timeout_seconds=timeout_seconds,
                 retry_count=retry_count,
                 resource_scope_sink=case_scopes,
+                auxiliary_turn_sink=auxiliary_turns,
             )
         except Exception as exc:
-            execution = _failed_case_execution(case, exc, case_scopes)
+            execution = _failed_case_execution(case, exc, case_scopes, auxiliary_turns)
         finally:
             if resource_scope_sink is not None:
                 resource_scope_sink.extend(case_scopes)
@@ -542,9 +551,30 @@ async def _complete_setup_turn(
             timeout_seconds=timeout_seconds * (retry_count + 1) + 30,
         ),
     )
+    return run, events
+
+
+def _record_auxiliary_turn(
+    case_turns: list[dict[str, Any]],
+    evidence_sink: list[dict[str, Any]] | None,
+    *,
+    conversation_key: str,
+    run: dict[str, Any],
+    events: tuple[Any, ...],
+) -> None:
+    observation = {
+        "conversation_key": conversation_key,
+        "run": run,
+        "events": events,
+    }
+    case_turns.append(observation)
+    if evidence_sink is not None:
+        evidence_sink.append(observation)
+
+
+def _require_setup_succeeded(run: dict[str, Any], stage: str) -> None:
     if run.get("status") != "succeeded":
         raise CaseStageError(stage) from AssertionError()
-    return run, events
 
 
 async def _await_terminal_with_cancellation(
@@ -619,7 +649,10 @@ def _combined_fingerprints(executions: tuple[CaseExecution, ...]) -> dict[str, s
 
 
 def _failed_case_execution(
-    case: object, exc: Exception, scopes: list[ResourceScope]
+    case: object,
+    exc: Exception,
+    scopes: list[ResourceScope],
+    auxiliary_turns: list[dict[str, Any]] | None = None,
 ) -> CaseExecution:
     resources = ResourceScope(
         definition_keys=tuple(key for scope in scopes for key in scope.definition_keys),
@@ -641,6 +674,16 @@ def _failed_case_execution(
         "error_type": type(cause).__name__,
         "message": f"{stage.replace('_', ' ')} failed",
     }
+    partial = (
+        normalize_case(
+            case=case,
+            turns=[],
+            auxiliary_turns=auxiliary_turns,
+            subject_facts={},
+        )
+        if auxiliary_turns
+        else None
+    )
     return CaseExecution(
         case_key=str(getattr(case, "key")),
         score={
@@ -650,15 +693,29 @@ def _failed_case_execution(
             "failed_checks": [failure],
         },
         turns=(),
-        events=(),
-        tools=(),
-        facts=(),
+        events=partial.events if partial is not None else (),
+        tools=partial.tools if partial is not None else (),
+        facts=partial.facts if partial is not None else (),
         infrastructure={
-            "failures": [failure],
-            "terminal_statuses": [],
-            "all_terminal": False,
+            "failures": [
+                failure,
+                *(partial.infrastructure["failures"] if partial is not None else []),
+            ],
+            "terminal_statuses": (
+                partial.infrastructure["terminal_statuses"]
+                if partial is not None
+                else []
+            ),
+            "all_terminal": (
+                partial.infrastructure["all_terminal"] if partial is not None else False
+            ),
         },
         resources=resources,
+        setup_run_ids=(
+            tuple(str(item["run"]["id"]) for item in auxiliary_turns)
+            if auxiliary_turns
+            else ()
+        ),
     )
 
 
