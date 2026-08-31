@@ -1,17 +1,13 @@
 from __future__ import annotations
 
 import re
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
-from tenacity import (
-    Retrying,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 from model_router.settings import (
     ModelRouterSettings,
@@ -28,13 +24,6 @@ from model_catalog_contracts.deployment_manifest import (
 from model_catalog_contracts.model_allowlist import load_configured_source_allowlist
 
 
-_RETRYABLE_DISCOVERY_EXCEPTIONS = (
-    httpx.TimeoutException,
-    httpx.ConnectError,
-    httpx.ReadError,
-    httpx.RemoteProtocolError,
-    httpx.WriteError,
-)
 _KNOWN_HANDLE_PREFIXES = ("lmstudio_openai/", "openai-proxy/", "openai/", "anthropic/")
 _WINDOWS_PATH_RE = re.compile(r"^[A-Za-z]:[\\/]")
 
@@ -44,10 +33,6 @@ class RouterAuthError(RuntimeError):
         self.status_code = int(status_code)
         self.body = str(body or "")
         super().__init__(f"Authentication failed ({self.status_code})")
-
-
-class RetryableRouterDiscoveryError(RuntimeError):
-    """Raised when a source discovery request should be retried."""
 
 
 @dataclass(frozen=True)
@@ -173,6 +158,7 @@ class RouterCatalogService:
         self._settings_factory = settings_factory
         self._snapshot: RouterCatalogSnapshot | None = None
         self._expires_at = 0.0
+        self._refresh_lock = threading.Lock()
 
     def invalidate(self) -> None:
         self._snapshot = None
@@ -180,23 +166,35 @@ class RouterCatalogService:
 
     def snapshot(self, *, force_refresh: bool = False) -> RouterCatalogSnapshot:
         settings = self._settings_factory()
-        if (
-            not force_refresh
-            and self._snapshot is not None
-            and time.monotonic() < self._expires_at
-        ):
+        if not force_refresh and self._snapshot_is_fresh():
             return self._snapshot
 
-        generated_at = time.time()
-        sources = tuple(
-            self._discover_source(source, settings=settings)
-            for source in settings.sources
-            if source.enabled
-        )
-        snapshot = RouterCatalogSnapshot(generated_at=generated_at, sources=sources)
-        self._snapshot = snapshot
-        self._expires_at = time.monotonic() + settings.cache_ttl_seconds
-        return snapshot
+        with self._refresh_lock:
+            settings = self._settings_factory()
+            if not force_refresh and self._snapshot_is_fresh():
+                return self._snapshot
+            enabled_sources = tuple(
+                source for source in settings.sources if source.enabled
+            )
+            if enabled_sources:
+                with ThreadPoolExecutor(max_workers=len(enabled_sources)) as executor:
+                    sources = tuple(
+                        executor.map(
+                            lambda source: self._discover_source(
+                                source, settings=settings
+                            ),
+                            enabled_sources,
+                        )
+                    )
+            else:
+                sources = ()
+            snapshot = RouterCatalogSnapshot(generated_at=time.time(), sources=sources)
+            self._snapshot = snapshot
+            self._expires_at = time.monotonic() + settings.cache_ttl_seconds
+            return snapshot
+
+    def _snapshot_is_fresh(self) -> bool:
+        return self._snapshot is not None and time.monotonic() < self._expires_at
 
     def flatten(self, snapshot: RouterCatalogSnapshot) -> list[RoutedModel]:
         models: list[RoutedModel] = []
@@ -414,20 +412,7 @@ class RouterCatalogService:
         *,
         settings: ModelRouterSettings,
     ) -> dict[str, Any]:
-        retrying = Retrying(
-            stop=stop_after_attempt(2),
-            wait=wait_exponential(multiplier=1, min=1, max=4),
-            retry=retry_if_exception_type(
-                (RetryableRouterDiscoveryError, *_RETRYABLE_DISCOVERY_EXCEPTIONS)
-            ),
-            reraise=True,
-        )
-        for attempt in retrying:
-            with attempt:
-                return self._fetch_models_payload_once(source, settings=settings)
-        raise RuntimeError(
-            "Model-router discovery retry execution did not produce a result"
-        )
+        return self._fetch_models_payload_once(source, settings=settings)
 
     def _fetch_models_payload_once(
         self,
@@ -446,7 +431,7 @@ class RouterCatalogService:
         if response.status_code in {401, 403}:
             raise RouterAuthError(response.status_code, response.text)
         if response.status_code >= 500 or response.status_code == 429:
-            raise RetryableRouterDiscoveryError(
+            raise RuntimeError(
                 f"Provider catalog temporary failure ({response.status_code}): {response.text}"
             )
         if response.status_code >= 400:

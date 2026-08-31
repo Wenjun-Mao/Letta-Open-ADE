@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import secrets
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Request
@@ -22,13 +25,22 @@ from model_router.forwarding import (
 from model_router.settings import RouterSourceConfig, get_settings
 
 
+catalog_service = RouterCatalogService()
+
+
+@asynccontextmanager
+async def app_lifespan(application: FastAPI) -> AsyncIterator[None]:
+    async with upstream_client_lifespan(application):
+        await asyncio.to_thread(catalog_service.snapshot)
+        yield
+
+
 app = FastAPI(
     title="ADE Model Router",
     version="0.1.0",
     description="First-party OpenAI-compatible router for ADE model sources.",
-    lifespan=upstream_client_lifespan,
+    lifespan=app_lifespan,
 )
-catalog_service = RouterCatalogService()
 
 
 def _require_router_auth(authorization: str | None) -> None:

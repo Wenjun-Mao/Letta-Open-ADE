@@ -11,6 +11,7 @@ from ade_api.features.agent_runtime_v3.dependencies import (
     get_agent_runtime_v3_health_service,
     get_agent_runtime_v3_service,
 )
+from ade_api.features.agent_runtime_v3.router_transport import RouterRequestError
 from ade_api.native_main import app
 from ade_api.platform.auth import AdePrincipal, AdeRole, authenticate_ade_request
 
@@ -130,6 +131,35 @@ def test_turn_acceptance_is_async_and_uses_backend_defaults() -> None:
     assert response.status_code == 202
     assert response.json()["status"] == "pending"
     assert response.json()["idempotent_replay"] is False
+
+
+def test_router_catalog_transport_failure_returns_stable_not_ready_error() -> None:
+    class _UnavailableService(_FakeService):
+        async def accept_turn(self, conversation_id, request):
+            del conversation_id, request
+            raise RouterRequestError(
+                "transport timeout",
+                retryable=True,
+                error_code="transport_readtimeout",
+            )
+
+    app.dependency_overrides[authenticate_ade_request] = _principal
+    app.dependency_overrides[get_agent_runtime_v3_service] = lambda: (
+        _UnavailableService()
+    )
+    try:
+        response = TestClient(app, raise_server_exceptions=False).post(
+            "/api/v3/conversations/conversation-1/turns",
+            json={"content": "hello", "idempotency_key": "turn-1"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == {
+        "code": "model_router_unavailable",
+        "message": "Model Router is not ready",
+    }
 
 
 def test_preview_session_is_one_bounded_server_operation() -> None:

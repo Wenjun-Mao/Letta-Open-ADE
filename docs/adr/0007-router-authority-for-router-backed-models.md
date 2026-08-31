@@ -36,6 +36,11 @@ does not gate router-backed model availability.
 
 - Router health and compatibility profiles must remain conservative because they now
   control Agent Studio model visibility.
+- Model Router discovers enabled sources concurrently with one bounded request per
+  source and warms the first catalog snapshot before application startup completes.
+  Compose readiness therefore cannot precede the catalog contract used by ADE.
+- Catalog transport failures at the ADE v3 boundary return a stable `503` rather
+  than leaking an internal exception or reporting a behavioral model failure.
 - Agent creation must continue passing explicit router `llm_config` for scoped model
   handles.
 - Tests cover repository-relative profile loading and availability when the Letta

@@ -31,6 +31,7 @@ from .dependencies import (
     AgentRuntimeV3ServiceDependency,
 )
 from .errors import AgentRuntimeV3Error
+from .router_transport import RouterRequestError
 
 
 router = APIRouter(
@@ -48,6 +49,14 @@ async def _call(operation: Awaitable[T]) -> T:
         raise HTTPException(
             status_code=exc.status_code,
             detail={"code": exc.code, "message": str(exc)},
+        ) from exc
+    except RouterRequestError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "code": "model_router_unavailable",
+                "message": "Model Router is not ready",
+            },
         ) from exc
 
 

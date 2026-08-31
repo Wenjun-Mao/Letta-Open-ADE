@@ -113,6 +113,22 @@ def test_router_health_remains_public(monkeypatch) -> None:
     assert response.json()["status"] == "ok"
 
 
+def test_router_warms_catalog_before_lifespan_reports_ready(monkeypatch) -> None:
+    class _WarmCatalog(_FakeCatalog):
+        snapshot_calls = 0
+
+        def snapshot(self, *, force_refresh: bool = False) -> RouterCatalogSnapshot:
+            self.snapshot_calls += 1
+            return super().snapshot(force_refresh=force_refresh)
+
+    catalog = _WarmCatalog()
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(router_app, "catalog_service", catalog)
+
+    with TestClient(router_app.app):
+        assert catalog.snapshot_calls == 1
+
+
 def test_router_lists_agent_studio_models(monkeypatch) -> None:
     monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
     monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())

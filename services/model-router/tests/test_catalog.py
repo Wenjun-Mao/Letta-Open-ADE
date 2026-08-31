@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import threading
 from types import SimpleNamespace
+
+import httpx
 
 from model_router.catalog import (
     RouterCatalogService,
@@ -517,3 +520,63 @@ def test_extract_model_records_normalizes_gguf_paths() -> None:
     assert records == [
         RouterModelRecord(provider_model_id="gemma-4-26B-it-Q4_K_M", model_type="llm")
     ]
+
+
+def test_catalog_discovers_enabled_sources_concurrently(monkeypatch) -> None:
+    sources = tuple(
+        RouterSourceConfig(
+            id=f"source_{index}",
+            label=f"Source {index}",
+            base_url=f"http://source-{index}.test/v1",
+            enabled_for=["agent_studio"],
+        )
+        for index in range(2)
+    )
+    service = RouterCatalogService(
+        settings_factory=lambda: _settings_with_sources(*sources)
+    )
+    barrier = threading.Barrier(2)
+    thread_ids: set[int] = set()
+
+    def fake_fetch(source, *, settings):
+        del settings
+        thread_ids.add(threading.get_ident())
+        barrier.wait(timeout=1)
+        return {"data": [{"id": f"{source.id}-model"}]}
+
+    monkeypatch.setattr(
+        router_catalog_module,
+        "load_configured_source_allowlist",
+        lambda source_id: None,
+    )
+    monkeypatch.setattr(service, "_fetch_models_payload", fake_fetch)
+
+    snapshot = service.snapshot(force_refresh=True)
+
+    assert [source.status for source in snapshot.sources] == ["healthy", "healthy"]
+    assert len(thread_ids) == 2
+
+
+def test_catalog_discovery_does_not_hide_transport_retries(monkeypatch) -> None:
+    source = RouterSourceConfig(
+        id="source_one",
+        label="Source One",
+        base_url="http://source-one.test/v1",
+        enabled_for=["agent_studio"],
+    )
+    settings = _settings_with_sources(source)
+    service = RouterCatalogService(settings_factory=lambda: settings)
+    calls = 0
+
+    def fail_once(source, *, settings):
+        nonlocal calls
+        del source, settings
+        calls += 1
+        raise httpx.ReadTimeout("catalog unavailable")
+
+    monkeypatch.setattr(service, "_fetch_models_payload_once", fail_once)
+
+    snapshot = service.snapshot(force_refresh=True)
+
+    assert calls == 1
+    assert snapshot.sources[0].status == "unreachable"
