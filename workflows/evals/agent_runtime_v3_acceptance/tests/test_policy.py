@@ -40,3 +40,13 @@ def test_policy_hash_snapshot_cannot_mutate_the_cached_policy() -> None:
     first["prompt"] = "0" * 64
 
     assert production_policy_hashes()["prompt"] == expected_prompt
+
+
+def test_policy_scripts_are_available_inside_the_ade_api_image() -> None:
+    dockerfile = (PROJECT_ROOT / "services/ade-api/Dockerfile").read_text(
+        encoding="utf-8"
+    )
+
+    for relative_path in PRODUCTION_POLICY_INPUTS["schema"]:
+        if relative_path.startswith("scripts/"):
+            assert f"COPY {relative_path} ./{relative_path}" in dockerfile
