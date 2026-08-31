@@ -578,11 +578,13 @@ def test_initial_facts_use_natural_language_and_verify_public_typed_memory() -> 
         def __init__(self) -> None:
             super().__init__()
             self.setup_content: list[str] = []
+            self.accepted_conversation_ids: list[str] = []
 
         async def accept_turn(
             self, conversation_id: str, content: str, *args: Any, **kwargs: Any
         ) -> dict[str, Any]:
-            del conversation_id, args, kwargs
+            del args, kwargs
+            self.accepted_conversation_ids.append(conversation_id)
             self.setup_content.append(content)
             return await super().accept_turn()
 
@@ -631,6 +633,9 @@ def test_initial_facts_use_natural_language_and_verify_public_typed_memory() -> 
         assert result.score["pass"] is True
         assert client.setup_content[0] == (
             "My favorite place is Royal Ontario Museum. Please remember it."
+        )
+        assert (
+            client.accepted_conversation_ids[0] != client.accepted_conversation_ids[1]
         )
 
     asyncio.run(scenario())

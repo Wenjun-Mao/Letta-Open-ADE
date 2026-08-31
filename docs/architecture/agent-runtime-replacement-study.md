@@ -579,7 +579,11 @@ Subject isolation also passed. Automatic retrieval uses the calibrated threshold
 (`0.6311` in this run). Explicit `search_memory` intentionally returns top
 subject-bound candidates without that threshold because short deliberate queries
 otherwise traded away recall. This difference is an explicit product contract, not
-a hidden tuning exception.
+a hidden tuning exception. The acceptance case for this boundary writes more facts
+than the compact profile can hold through a separate same-subject conversation, then
+uses a measured below-threshold query from a fresh conversation. This prevents raw
+setup history or the active profile from satisfying the case before the explicit
+search tool is exercised.
 
 Semantic fact retrieval now satisfies the study gate without persisted episodes, so
 episodes are deferred from initial v3. The prototype currently re-embeds its

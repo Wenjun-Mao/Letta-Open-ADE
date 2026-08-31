@@ -115,11 +115,16 @@
         {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "music", "value": "爵士乐"},
         {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "drink", "value": "拿铁"},
         {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "language", "value": "中文"},
-        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "activity", "value": "骑车"}
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "activity", "value": "骑车"},
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "color", "value": "青色"},
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "media", "value": "牡丹亭"},
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "style", "value": "简约"},
+        {"subject_key": "primary", "fact_type": "person.preference", "qualifier": "other", "value": "桂花"},
+        {"subject_key": "primary", "fact_type": "person.current_location", "value": "多伦多"}
       ],
       "profile_token_override": 48,
       "turns": [
-        {"conversation_key": "primary", "user": "我最喜欢哪一家博物馆？如果看不到请搜索记忆。"}
+        {"conversation_key": "primary", "user": "我曾说过一个英文名字的博物馆，是什么？如果当前资料没有，请搜索记忆。"}
       ],
       "assistant_assertions": [
         {"conversation_key": "primary", "contains_any": ["Royal Ontario Museum", "皇家安大略博物馆"]}

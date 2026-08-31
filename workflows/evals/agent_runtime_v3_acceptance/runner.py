@@ -132,15 +132,28 @@ async def execute_case(
     )
 
     # v3 deliberately has no mutable seed endpoint. Setup is expressed as normal
-    # user turns so the black-box workflow does not bypass the runtime contract.
+    # user turns in a separate same-subject conversation so the black-box workflow
+    # exercises durable memory without leaking setup dialogue into the case history.
     auxiliary_turns: list[dict[str, Any]] = []
-    for fact in tuple(getattr(case, "initial_facts", ())):
+    initial_facts = tuple(getattr(case, "initial_facts", ()))
+    setup_conversations: dict[str, str] = {}
+    for fact in initial_facts:
         subject_key = str(getattr(fact, "subject_key", "primary"))
-        conversation_key = _first_conversation_for_subject(case, subject_key)
+        setup_conversation_id = setup_conversations.get(subject_key)
+        if setup_conversation_id is None:
+            agent_key = _first_agent_for_subject(case, subject_key)
+            created = await _run_stage(
+                "initial_fact_conversation_setup",
+                client.create_conversation(
+                    definitions[agent_key], subjects[subject_key]
+                ),
+            )
+            setup_conversation_id = _id(created, "conversation")
+            setup_conversations[subject_key] = setup_conversation_id
         content = _natural_fact_setup_message(fact)
         setup_run, setup_events = await _complete_setup_turn(
             client,
-            conversations[conversation_key],
+            setup_conversation_id,
             content,
             namespace,
             timeout_seconds,
@@ -149,7 +162,7 @@ async def execute_case(
         )
         auxiliary_turns.append(
             {
-                "conversation_key": conversation_key,
+                "conversation_key": f"initial-facts:{subject_key}",
                 "run": setup_run,
                 "events": setup_events,
             }
@@ -569,12 +582,10 @@ async def _cancel_and_await_terminal(
     return run, events
 
 
-def _first_conversation_for_subject(case: object, subject_key: str) -> str:
-    for conversation_key, (_agent, subject) in dict(
-        getattr(case, "conversations")
-    ).items():
+def _first_agent_for_subject(case: object, subject_key: str) -> str:
+    for agent, subject in dict(getattr(case, "conversations")).values():
         if subject == subject_key:
-            return str(conversation_key)
+            return str(agent)
     raise RuntimeError(f"case has no conversation for subject {subject_key}")
 
 

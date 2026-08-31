@@ -94,5 +94,5 @@ def test_seeded_old_memory_does_not_leak_into_test_conversation_history() -> Non
                 world.subject_ids["primary"], active_only=True
             )
         )
-        == 8
+        == 13
     )
