@@ -23,6 +23,11 @@ produce no proposal. Use add when no matching active fact exists. Use correct on
 when replacing a listed active fact, copying its fact_id and version exactly. Use
 forget only for an explicit request to remove retained information. Never output a
 subject ID or free-form key.
+A matching active fact means the same entity, exact fact_type, and exact canonical
+qualifier. Never correct one qualifier into another, one entity into another, or a
+subject fact into a pet/related-person fact. Words such as "called" or "叫" do not
+imply person.name: use the grammatical owner to distinguish the user's own name from
+a pet or related person's name.
 Choose the operation before filling any proposal fields, following
 operation_contracts and worked_examples. An explicit request to forget or remove a
 matching active fact is never an add. It must use forget, copy that active fact's
@@ -41,12 +46,23 @@ pet.breed=Husky against Rocky's existing entity and preserves both facts.
 
 OPERATION_CONTRACTS = {
     "add": {
-        "when": "the current message states a durable fact with no matching active fact",
+        "when": (
+            "the current message states a durable fact with no active fact in the "
+            "same exact entity + fact_type + qualifier slot"
+        ),
         "excludes": ["explicit_forgetting"],
     },
     "correct": {
-        "when": "the current message replaces or corrects a matching active fact",
+        "when": (
+            "the current message replaces the value in the same exact entity + "
+            "fact_type + qualifier slot"
+        ),
         "uses_active_fact_id_and_version": True,
+        "forbidden": [
+            "changing_entity",
+            "changing_fact_type",
+            "changing_qualifier",
+        ],
     },
     "forget": {
         "when": "the current message explicitly asks to remove an active fact",
@@ -56,6 +72,59 @@ OPERATION_CONTRACTS = {
 }
 
 WORKED_EXAMPLES = {
+    "subject_name_then_pet_name": {
+        "active_facts": [
+            {
+                "fact_type": "person.name",
+                "entity_ref": None,
+                "value": "张伟",
+            }
+        ],
+        "current_message": "我有一只小狗叫Rocky。",
+        "proposal": {
+            "operation": "add",
+            "fact_type": "pet.name",
+            "entity_ref": "new:rocky",
+            "new_entity_label": "Rocky",
+            "value": "Rocky",
+        },
+        "never": "correct person.name; Rocky names the pet, not the subject",
+    },
+    "existing_pet_breed": {
+        "active_facts": [
+            {
+                "fact_type": "pet.name",
+                "entity_ref": "existing:<rocky-entity-id>",
+                "value": "Rocky",
+            }
+        ],
+        "current_message": "是一只哈士奇。",
+        "proposal": {
+            "operation": "add",
+            "fact_type": "pet.breed",
+            "entity_ref": "existing:<rocky-entity-id>",
+            "value": "哈士奇",
+        },
+        "rule": "preserve pet.name and attach the breed to the same pet entity",
+    },
+    "preference_qualifiers_are_distinct_slots": {
+        "active_facts": [
+            {
+                "fact_type": "person.preference",
+                "qualifier": "place",
+                "value": "Royal Ontario Museum",
+            }
+        ],
+        "current_message": "My favorite food is 豆浆.",
+        "proposal": {
+            "operation": "add",
+            "fact_type": "person.preference",
+            "qualifier": "food",
+            "entity_ref": None,
+            "value": "豆浆",
+        },
+        "never": "correct the place preference; place and food are distinct slots",
+    },
     "explicit_forgetting": {
         "current_message": "请忘掉我喜欢蓝色这件事。",
         "matching_active_fact": {
@@ -68,8 +137,20 @@ WORKED_EXAMPLES = {
             "Copy the matching active fact_id and version, set value to JSON null, "
             "and never emit add."
         ),
-    }
+    },
 }
+
+
+def _worked_examples(review_mode: str) -> dict[str, dict[str, Any]]:
+    if review_mode == "forget":
+        return {"explicit_forgetting": WORKED_EXAMPLES["explicit_forgetting"]}
+    if review_mode == "add":
+        return {
+            key: value
+            for key, value in WORKED_EXAMPLES.items()
+            if key != "explicit_forgetting"
+        }
+    return WORKED_EXAMPLES
 
 
 @dataclass(frozen=True)
@@ -151,13 +232,15 @@ class MemoryReviewer:
                 if review_mode in {"add", "forget"}
                 else OPERATION_CONTRACTS
             ),
-            "worked_examples": WORKED_EXAMPLES if review_mode == "forget" else {},
+            "worked_examples": _worked_examples(review_mode),
             "allowed_fact_contracts": [
                 {
                     "fact_type": spec.name,
                     "entity_kind": spec.entity_kind.value,
                     "qualifier_required": spec.qualifier_required,
                     "allowed_qualifiers": list(spec.allowed_qualifiers),
+                    "defines_entity_identity": spec.defines_entity_identity,
+                    "cardinality": spec.cardinality,
                 }
                 for spec in FACT_TYPE_REGISTRY.values()
             ],

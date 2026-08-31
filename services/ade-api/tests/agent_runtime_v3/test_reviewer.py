@@ -125,7 +125,17 @@ def test_reviewer_repairs_subject_bound_semantic_validation_once() -> None:
     assert reviewer_packet["operation_contracts"]["add"]["excludes"] == [
         "explicit_forgetting"
     ]
-    assert reviewer_packet["worked_examples"] == {}
+    assert (
+        reviewer_packet["worked_examples"]["subject_name_then_pet_name"]["never"]
+        == "correct person.name; Rocky names the pet, not the subject"
+    )
+    assert (
+        reviewer_packet["worked_examples"]["preference_qualifiers_are_distinct_slots"][
+            "proposal"
+        ]["qualifier"]
+        == "food"
+    )
+    assert "explicit_forgetting" not in reviewer_packet["worked_examples"]
     preference_contract = next(
         item
         for item in reviewer_packet["allowed_fact_contracts"]
@@ -144,6 +154,13 @@ def test_reviewer_repairs_subject_bound_semantic_validation_once() -> None:
         "style",
         "other",
     ]
+    assert preference_contract["cardinality"] == "one_per_entity_per_qualifier"
+    pet_name_contract = next(
+        item
+        for item in reviewer_packet["allowed_fact_contracts"]
+        if item["fact_type"] == "pet.name"
+    )
+    assert pet_name_contract["defines_entity_identity"] is True
 
 
 def test_explicit_forgetting_uses_a_forget_only_schema_on_first_request() -> None:

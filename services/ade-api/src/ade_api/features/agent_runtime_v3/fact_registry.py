@@ -58,6 +58,7 @@ FACT_TYPE_REGISTRY: dict[str, FactTypeSpec] = {
         EntityKind.SUBJECT,
         qualifier_required=True,
         allowed_qualifiers=PREFERENCE_QUALIFIERS,
+        cardinality="one_per_entity_per_qualifier",
     ),
     "person.shoe_size": FactTypeSpec("person.shoe_size", EntityKind.SUBJECT),
     "pet.name": FactTypeSpec("pet.name", EntityKind.PET, defines_entity_identity=True),
