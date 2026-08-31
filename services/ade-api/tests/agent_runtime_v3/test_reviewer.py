@@ -247,3 +247,160 @@ def test_explicit_forgetting_uses_a_forget_only_schema_on_first_request() -> Non
     assert "ForgetProposal" in schema_text
     assert "AddProposal" not in schema_text
     assert "CorrectProposal" not in schema_text
+
+
+def test_ordinary_new_fact_uses_add_only_schema_when_other_facts_exist() -> None:
+    message = {
+        "id": "00000000-0000-0000-0000-000000000002",
+        "content": "My favorite food is 豆浆. Please remember it.",
+    }
+    facts = [
+        {
+            "id": "00000000-0000-0000-0000-000000000003",
+            "subject_id": SUBJECT_ID,
+            "entity_id": SUBJECT_ID,
+            "normalized_key": f"person.preference|{SUBJECT_ID}|place",
+            "fact_type": "person.preference",
+            "qualifier": "place",
+            "value": "Royal Ontario Museum",
+            "status": "active",
+            "version": 1,
+        }
+    ]
+    entities = [
+        {
+            "id": SUBJECT_ID,
+            "subject_id": SUBJECT_ID,
+            "kind": "subject",
+            "label": "",
+        }
+    ]
+    transport = _Transport(
+        [
+            {
+                "proposals": [
+                    {
+                        "operation": "add",
+                        "fact_type": "person.preference",
+                        "qualifier": "food",
+                        "value": "豆浆",
+                        "evidence_quote": "豆浆",
+                        "entity_ref": None,
+                        "new_entity_label": "",
+                    }
+                ]
+            }
+        ]
+    )
+
+    def validate(decision) -> None:
+        prepare_memory_review(
+            decision=decision,
+            subject_id=SUBJECT_ID,
+            current_user_message=message,
+            active_facts=facts,
+            entities=entities,
+        )
+
+    result = asyncio.run(
+        MemoryReviewer(transport).review(
+            model_key="source::reviewer",
+            current_user_message=message,
+            recent_user_messages=[],
+            active_facts=facts,
+            entities=entities,
+            timeout_seconds=30,
+            validate_decision=validate,
+        )
+    )
+
+    assert result.model_request_count == 1
+    request = transport.calls[0][0]
+    packet = json.loads(request["messages"][1]["content"])
+    assert packet["review_mode"] == "add_only_no_explicit_correction"
+    assert set(packet["operation_contracts"]) == {"add"}
+    schema_text = str(request["response_format"]["json_schema"]["schema"])
+    assert "AddProposal" in schema_text
+    assert "CorrectProposal" not in schema_text
+    assert "ForgetProposal" not in schema_text
+
+
+def test_explicit_correction_uses_correct_only_schema() -> None:
+    fact_id = "00000000-0000-0000-0000-000000000003"
+    message = {
+        "id": "00000000-0000-0000-0000-000000000002",
+        "content": "更正一下，我现在住在多伦多。",
+    }
+    facts = [
+        {
+            "id": fact_id,
+            "subject_id": SUBJECT_ID,
+            "entity_id": SUBJECT_ID,
+            "normalized_key": f"person.current_location|{SUBJECT_ID}",
+            "fact_type": "person.current_location",
+            "qualifier": None,
+            "value": "北京",
+            "status": "active",
+            "version": 1,
+        }
+    ]
+    entities = [
+        {
+            "id": SUBJECT_ID,
+            "subject_id": SUBJECT_ID,
+            "kind": "subject",
+            "label": "",
+        }
+    ]
+    transport = _Transport(
+        [
+            {
+                "proposals": [
+                    {
+                        "operation": "correct",
+                        "value": "多伦多",
+                        "fact_id": fact_id,
+                        "expected_version": 1,
+                        "evidence_quote": "多伦多",
+                    }
+                ]
+            }
+        ]
+    )
+
+    def validate(decision) -> None:
+        prepare_memory_review(
+            decision=decision,
+            subject_id=SUBJECT_ID,
+            current_user_message=message,
+            active_facts=facts,
+            entities=entities,
+        )
+
+    result = asyncio.run(
+        MemoryReviewer(transport).review(
+            model_key="source::reviewer",
+            current_user_message=message,
+            recent_user_messages=[],
+            active_facts=facts,
+            entities=entities,
+            timeout_seconds=30,
+            validate_decision=validate,
+        )
+    )
+
+    assert result.model_request_count == 1
+    request = transport.calls[0][0]
+    packet = json.loads(request["messages"][1]["content"])
+    assert packet["review_mode"] == "explicit_correction"
+    assert set(packet["operation_contracts"]) == {"correct"}
+    assert (
+        packet["worked_examples"]["explicit_location_correction"]["proposal"][
+            "operation"
+        ]
+        == "correct"
+    )
+    schema_text = str(request["response_format"]["json_schema"]["schema"])
+    assert "CorrectProposal" in schema_text
+    assert "AddProposal" not in schema_text
+    assert "ForgetProposal" not in schema_text

@@ -7,7 +7,10 @@ from typing import Any
 
 from .errors import RuntimeValidationError
 from .fact_registry import FACT_TYPE_REGISTRY
-from .memory_intent import is_explicit_forgetting_request
+from .memory_intent import (
+    is_explicit_correction_request,
+    is_explicit_forgetting_request,
+)
 from .memory_review import ReviewDecision, parse_review_decision, review_json_schema
 from .provider_tracing import safe_provider_request_id
 from .router_transport import RouterTransport
@@ -20,9 +23,11 @@ message excerpt and value must preserve the user's wording. Prior user messages 
 active facts may resolve references but are not evidence for a new write. Never use
 assistant prose, guesses, hypotheticals, or temporary plans. Questions about memory
 produce no proposal. Use add when no matching active fact exists. Use correct only
-when replacing a listed active fact, copying its fact_id and version exactly. Use
-forget only for an explicit request to remove retained information. Never output a
-subject ID or free-form key.
+when the current message explicitly corrects or replaces a listed active fact,
+copying its fact_id and version exactly. Ordinary new statements use add-only review;
+if they conflict with an existing slot, fail closed instead of guessing a correction.
+Use forget only for an explicit request to remove retained information. Never output
+a subject ID or free-form key.
 A matching active fact means the same entity, exact fact_type, and exact canonical
 qualifier. Never correct one qualifier into another, one entity into another, or a
 subject fact into a pet/related-person fact. Words such as "called" or "叫" do not
@@ -125,6 +130,21 @@ WORKED_EXAMPLES = {
         },
         "never": "correct the place preference; place and food are distinct slots",
     },
+    "explicit_location_correction": {
+        "active_fact": {
+            "fact_id": "<location-fact-id>",
+            "fact_type": "person.current_location",
+            "value": "北京",
+            "version": 1,
+        },
+        "current_message": "更正一下，我现在住在多伦多。",
+        "proposal": {
+            "operation": "correct",
+            "fact_id": "<location-fact-id>",
+            "expected_version": 1,
+            "value": "多伦多",
+        },
+    },
     "explicit_forgetting": {
         "current_message": "请忘掉我喜欢蓝色这件事。",
         "matching_active_fact": {
@@ -148,7 +168,13 @@ def _worked_examples(review_mode: str) -> dict[str, dict[str, Any]]:
         return {
             key: value
             for key, value in WORKED_EXAMPLES.items()
-            if key != "explicit_forgetting"
+            if key not in {"explicit_forgetting", "explicit_location_correction"}
+        }
+    if review_mode == "correct":
+        return {
+            "explicit_location_correction": WORKED_EXAMPLES[
+                "explicit_location_correction"
+            ]
         }
     return WORKED_EXAMPLES
 
@@ -178,14 +204,13 @@ class MemoryReviewer:
         validate_decision: Callable[[ReviewDecision], None],
     ) -> ReviewerResult:
         entity_kinds = {str(item.get("id")): item.get("kind") for item in entities}
+        current_content = str(current_user_message.get("content") or "")
         review_mode = (
             "forget"
-            if is_explicit_forgetting_request(
-                str(current_user_message.get("content") or "")
-            )
+            if is_explicit_forgetting_request(current_content)
+            else "correct"
+            if active_facts and is_explicit_correction_request(current_content)
             else "add"
-            if not active_facts
-            else "all"
         )
         packet = {
             "current_user_message": {
@@ -223,13 +248,17 @@ class MemoryReviewer:
             "review_mode": (
                 "explicit_forgetting"
                 if review_mode == "forget"
+                else "explicit_correction"
+                if review_mode == "correct"
                 else "add_only_no_active_facts"
+                if review_mode == "add" and not active_facts
+                else "add_only_no_explicit_correction"
                 if review_mode == "add"
                 else "general"
             ),
             "operation_contracts": (
                 {review_mode: OPERATION_CONTRACTS[review_mode]}
-                if review_mode in {"add", "forget"}
+                if review_mode in {"add", "correct", "forget"}
                 else OPERATION_CONTRACTS
             ),
             "worked_examples": _worked_examples(review_mode),

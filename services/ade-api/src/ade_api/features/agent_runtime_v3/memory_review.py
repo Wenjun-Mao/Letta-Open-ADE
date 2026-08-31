@@ -47,7 +47,7 @@ QualifierName: TypeAlias = Literal[
     "partner",
     "sibling",
 ]
-ReviewMode: TypeAlias = Literal["all", "add", "forget"]
+ReviewMode: TypeAlias = Literal["all", "add", "correct", "forget"]
 
 
 class _EvidenceProposalBase(BaseModel):
@@ -122,6 +122,11 @@ class AddReviewDecision(BaseModel):
     proposals: list[AddProposal] = Field(default_factory=list, max_length=20)
 
 
+class CorrectReviewDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    proposals: list[CorrectProposal] = Field(default_factory=list, max_length=20)
+
+
 class ForgetReviewDecision(BaseModel):
     model_config = ConfigDict(extra="forbid")
     proposals: list[ForgetProposal] = Field(default_factory=list, max_length=20)
@@ -182,11 +187,18 @@ def parse_review_decision(
 
 def _review_model(
     mode: ReviewMode,
-) -> type[ReviewDecision] | type[AddReviewDecision] | type[ForgetReviewDecision]:
+) -> (
+    type[ReviewDecision]
+    | type[AddReviewDecision]
+    | type[CorrectReviewDecision]
+    | type[ForgetReviewDecision]
+):
     if mode == "all":
         return ReviewDecision
     if mode == "add":
         return AddReviewDecision
+    if mode == "correct":
+        return CorrectReviewDecision
     if mode == "forget":
         return ForgetReviewDecision
     raise ValueError(f"Unknown memory review mode: {mode}")

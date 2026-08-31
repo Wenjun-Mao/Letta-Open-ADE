@@ -92,8 +92,12 @@ passing complete rounds. Focused diagnostics never count as qualification rounds
   forget-only reviewer schema; add/correct memory writes from the same message are
   deferred rather than mixed with a tombstone operation.
 - When a subject has no active facts, the reviewer uses an add-only schema because
-  correct and forget have no reachable target. Other turns retain the full typed
-  operation schema and server-side semantic validation.
+  correct and forget have no reachable target. Ordinary durable-fact statements also
+  use add-only review even when other facts exist. A conservative bilingual intent
+  contract enables the correct-only schema only for explicit correction language;
+  an unmarked conflicting statement fails closed rather than silently overwriting a
+  fact. Exact memory slots are `(entity, fact_type, qualifier)`, so one preference
+  qualifier or entity can never be corrected into another.
 - An idempotency key is bound to a canonical request hash; different payload reuse is
   `409 Conflict`.
 - SDK/framework/Router retries are zero. `retry_count` means additional ADE attempts.

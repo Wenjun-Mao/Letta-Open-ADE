@@ -43,6 +43,19 @@ _ENGLISH_FORGETTING_REQUESTS = (
     ),
 )
 
+_CHINESE_CORRECTION_REQUESTS = (
+    re.compile(r"(?:^|[。！？!?]\s*)(?:更正|纠正)(?:一下|下)?"),
+    re.compile(r"(?:^|[。！？!?]\s*)(?:我|刚才)?说错了"),
+    re.compile(r"(?:不是|不对)[^。！？!?]+(?:而是|应该是)"),
+)
+_ENGLISH_CORRECTION_REQUESTS = (
+    re.compile(
+        r"(?:^|[.!?]\s*)(?:correction|actually|i\s+meant|i\s+was\s+wrong)\b",
+        re.IGNORECASE,
+    ),
+    re.compile(r"\bnot\s+[^.!?]+\s+but\s+[^.!?]+", re.IGNORECASE),
+)
+
 
 def is_explicit_forgetting_request(content: str) -> bool:
     normalized = re.sub(r"\s+", " ", str(content or "")).strip()
@@ -51,4 +64,14 @@ def is_explicit_forgetting_request(content: str) -> bool:
     return any(
         pattern.search(normalized)
         for pattern in (*_CHINESE_FORGETTING_REQUESTS, *_ENGLISH_FORGETTING_REQUESTS)
+    )
+
+
+def is_explicit_correction_request(content: str) -> bool:
+    normalized = re.sub(r"\s+", " ", str(content or "")).strip()
+    if not normalized:
+        return False
+    return any(
+        pattern.search(normalized)
+        for pattern in (*_CHINESE_CORRECTION_REQUESTS, *_ENGLISH_CORRECTION_REQUESTS)
     )
