@@ -657,6 +657,7 @@ def test_initial_facts_use_natural_language_and_verify_public_typed_memory() -> 
             key="typed-setup",
             conversations={"primary": ("primary", "primary")},
             turns=(_Turn("primary", "hello"),),
+            enabled_tools=("get_weather",),
             initial_facts=(
                 _InitialFact(
                     subject_key="primary",
@@ -684,6 +685,15 @@ def test_initial_facts_use_natural_language_and_verify_public_typed_memory() -> 
         )
         assert (
             client.accepted_conversation_ids[0] != client.accepted_conversation_ids[1]
+        )
+        assert [payload["tool_names"] for payload in client.definition_payloads] == [
+            ("search_memory", "get_weather"),
+            (),
+        ]
+        assert len(result.resources.definition_keys) == 2
+        assert "setup-agent" in result.resources.definition_keys[1]
+        assert (
+            result.resources.definition_keys[1] != result.resources.definition_keys[0]
         )
 
     asyncio.run(scenario())
@@ -772,6 +782,8 @@ def test_failed_setup_run_preserves_terminal_evidence_before_cleanup() -> None:
         assert "run.failed" in {event.event_type for event in failed_case.events}
         assert failed_case.infrastructure["terminal_statuses"] == ["failed"]
         assert failed_case.infrastructure["all_terminal"] is True
+        assert len(failed_case.resources.definition_keys) == 2
+        assert len(set(failed_case.resources.definition_keys)) == 2
         assert {
             "kind": "run_failure",
             "pass": False,

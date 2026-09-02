@@ -125,29 +125,60 @@ async def execute_case(
             client.create_conversation(definitions[agent_key], subjects[subject_key]),
         )
         conversations[str(conversation_key)] = _id(created, "conversation")
-    scope = ResourceScope(
-        definition_keys=tuple(definition_keys),
-        subject_external_keys=tuple(subject_external_keys),
-        deployment_fingerprints=fingerprints,
-        deployment_snapshots=tuple(deployment_snapshots),
-    )
-
     # v3 deliberately has no mutable seed endpoint. Setup is expressed as normal
-    # user turns in a separate same-subject conversation so the black-box workflow
-    # exercises durable memory without leaking setup dialogue into the case history.
+    # user turns in a separate same-subject conversation and a no-tool definition.
+    # This exercises durable memory without leaking setup dialogue into the scored
+    # history or allowing an empty setup conversation to loop on retrieval tools.
     auxiliary_turns: list[dict[str, Any]] = []
     initial_facts = tuple(getattr(case, "initial_facts", ()))
+    setup_definitions: dict[str, str] = {}
     setup_conversations: dict[str, str] = {}
     for fact in initial_facts:
         subject_key = str(getattr(fact, "subject_key", "primary"))
         setup_conversation_id = setup_conversations.get(subject_key)
         if setup_conversation_id is None:
             agent_key = _first_agent_for_subject(case, subject_key)
+            setup_definition_id = setup_definitions.get(agent_key)
+            if setup_definition_id is None:
+                setup_definition_key = _resource_key(
+                    namespace,
+                    str(getattr(case, "key")),
+                    f"setup-agent-{agent_key}",
+                )
+                definition_keys.append(setup_definition_key)
+                if resource_scope_sink is not None:
+                    resource_scope_sink.append(
+                        ResourceScope((setup_definition_key,), (), {}, ())
+                    )
+                setup_definition = await _run_stage(
+                    "initial_fact_definition_setup",
+                    client.create_definition(
+                        definition_key=setup_definition_key,
+                        name=f"v3 acceptance {getattr(case, 'key')} setup {agent_key}",
+                        model_key=conversation_model_key,
+                        reviewer_model_key=reviewer_model_key,
+                        embedding_model_key=embedding_model_key,
+                        tool_names=(),
+                    ),
+                )
+                setup_fingerprints = _deployment_fingerprints(setup_definition)
+                setup_snapshots = _deployment_snapshots(setup_definition)
+                fingerprints.update(setup_fingerprints)
+                deployment_snapshots.extend(setup_snapshots)
+                if resource_scope_sink is not None:
+                    resource_scope_sink.append(
+                        ResourceScope(
+                            (),
+                            (),
+                            setup_fingerprints,
+                            setup_snapshots,
+                        )
+                    )
+                setup_definition_id = _id(setup_definition, "definition")
+                setup_definitions[agent_key] = setup_definition_id
             created = await _run_stage(
                 "initial_fact_conversation_setup",
-                client.create_conversation(
-                    definitions[agent_key], subjects[subject_key]
-                ),
+                client.create_conversation(setup_definition_id, subjects[subject_key]),
             )
             setup_conversation_id = _id(created, "conversation")
             setup_conversations[subject_key] = setup_conversation_id
@@ -266,6 +297,12 @@ async def execute_case(
             *capability_failures,
         ],
     }
+    scope = ResourceScope(
+        definition_keys=tuple(definition_keys),
+        subject_external_keys=tuple(subject_external_keys),
+        deployment_fingerprints=fingerprints,
+        deployment_snapshots=tuple(deployment_snapshots),
+    )
     return CaseExecution(
         case_key=str(getattr(case, "key")),
         score=score,
