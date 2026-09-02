@@ -65,7 +65,7 @@ make agent-studio-policy-rebind
 Commit the implementation and rebound candidate manifest together. The resulting
 clean commit is the qualification source.
 
-## 2. Qualify And Promote The Native Bundle
+## 2. Qualify The Native Bundle
 
 Start the explicit development lane and run the full canonical matrix:
 
@@ -74,20 +74,18 @@ make agent-studio-qualification
 ```
 
 The runner must emit a promotion proposal, three distinct passing primary round
-digests, and a passing llama-compatibility artifact. Review and apply it while
-still on the exact clean qualification commit:
+digests, and a passing llama-compatibility artifact. Review the proposal without
+applying it while still on the exact clean qualification commit:
 
 ```text
-make agent-studio-promotion-apply \
-  AGENT_STUDIO_QUALIFICATION_PROPOSAL=<promotion-proposal.json>
+uv run python -m workflows.evals.agent_runtime_v3_acceptance.promote \
+  --proposal <promotion-proposal.json>
 ```
 
-Commit only the promoted deployment manifest. Rebuild the development lane from
-that clean promotion commit before collecting product evidence:
-
-```text
-make agent-studio-development-up
-```
+Do not apply or commit the promotion yet. Paired parity, conformance, and rollback
+must report the exact same source revision, clean-tree state, and source fingerprint
+as this proposal. A manifest-only promotion commit necessarily has a different Git
+revision and therefore cannot be used to collect those artifacts.
 
 ## 3. Collect Paired Baseline Evidence
 
@@ -117,8 +115,9 @@ data/runtime/test-runs/<test-center-run-id>/parity-<test-center-run-id>
 
 ## 4. Record Conformance And Rehearse Rollback
 
-Both commands require the same clean promotion commit that produced the paired
-baseline artifacts. Receipts are written under ignored `tests/outputs/` state.
+Both commands require the same clean qualification commit that produced the
+proposal and paired-baseline artifacts. Receipts are written under ignored
+`tests/outputs/` state.
 
 ```text
 make agent-studio-conformance
@@ -133,9 +132,22 @@ create, read persistent state, update and re-read `human` memory, and purge. It
 removes the image, stops the native API and worker, verifies v2 health, restores
 the native lane, and compares complete native state snapshots.
 
-## 5. Approve The Single Release Ledger
+## 5. Promote And Approve The Single Release Ledger
 
-Create the reviewed ledger only after all four evidence sources pass:
+After all four evidence sources pass on the exact qualification source, apply the
+reviewed proposal and commit only the promoted deployment manifest:
+
+```text
+make agent-studio-promotion-apply \
+  AGENT_STUDIO_QUALIFICATION_PROPOSAL=<promotion-proposal.json>
+git add config/model-router/deployment-manifest.json
+git commit -m "release: qualify Agent Studio native routes"
+```
+
+The manifest-only commit is an allowed post-evidence descendant. Do not rebuild and
+collect new parity, conformance, or rollback evidence from it; those receipts must
+remain bound to the proposal's evaluated source. Create the reviewed ledger from
+the promoted manifest and the four matching evidence sources:
 
 ```text
 make agent-studio-cutover-review \
