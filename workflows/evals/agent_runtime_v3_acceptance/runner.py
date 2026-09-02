@@ -385,8 +385,18 @@ def _capability_checks(
         state_messages = (turn.get("conversation_state") or {}).get("messages")
         if isinstance(state_messages, list):
             observed_messages[str(turn["conversation_key"])] = len(state_messages)
-    summary_observed = any(
-        str(getattr(event, "event_type", "")) == "summary.committed" for event in events
+    summary_boundaries = sorted(
+        {
+            int(getattr(event, "payload", {}).get("through_sequence", 0))
+            for event in events
+            if str(getattr(event, "event_type", "")) == "summary.committed"
+            and isinstance(getattr(event, "payload", None), dict)
+            and isinstance(getattr(event, "payload", {}).get("through_sequence"), int)
+            and not isinstance(
+                getattr(event, "payload", {}).get("through_sequence"), bool
+            )
+            and int(getattr(event, "payload", {}).get("through_sequence", 0)) > 0
+        }
     )
     raw_history_preserved = all(
         observed_messages.get(key, 0) >= expected
@@ -395,7 +405,8 @@ def _capability_checks(
     return [
         {
             "kind": "versioned_summary_committed",
-            "pass": summary_observed,
+            "observed_through_sequences": summary_boundaries,
+            "pass": bool(summary_boundaries),
         },
         {
             "kind": "raw_history_preserved",

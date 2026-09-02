@@ -16,6 +16,7 @@ from workflows.evals.agent_runtime_v3_acceptance.qualification import (
 )
 from workflows.evals.agent_runtime_v3_acceptance.runner import (
     CaseStageError,
+    _capability_checks,
     execute_case,
     run_primary_rounds,
 )
@@ -580,6 +581,44 @@ def test_compaction_case_cannot_pass_without_a_versioned_summary_event() -> None
         )
 
     asyncio.run(scenario())
+
+
+def test_compaction_capability_records_live_boundary_not_study_seed_boundary() -> None:
+    case = _Case(
+        key="long-history",
+        conversations={"primary": ("primary", "primary")},
+        turns=(_Turn("primary", "confirm our history"),),
+        prelude_messages=(
+            _Prelude(
+                conversation_key="primary",
+                count=40,
+                user_template="history {index}",
+                summary="A synthetic study summary",
+                summary_through_sequence=70,
+            ),
+        ),
+    )
+    events = (
+        SimpleNamespace(
+            event_type="summary.committed",
+            payload={"through_sequence": 42},
+        ),
+    )
+    completed_turns = [
+        {
+            "conversation_key": "primary",
+            "conversation_state": {"messages": [{}] * 82},
+        }
+    ]
+
+    checks = _capability_checks(case, events, completed_turns)
+
+    assert checks[0] == {
+        "kind": "versioned_summary_committed",
+        "observed_through_sequences": [42],
+        "pass": True,
+    }
+    assert checks[1]["pass"] is True
 
 
 def test_initial_facts_use_natural_language_and_verify_public_typed_memory() -> None:

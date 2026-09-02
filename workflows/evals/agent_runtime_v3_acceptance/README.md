@@ -89,6 +89,12 @@ expected immutable raw-message count. The long-history count check also rejects
 approximate answers such as “more than forty”; containing the expected numeral alone
 is insufficient.
 
+The shared fixture's `summary_through_sequence` is an in-memory study seeding hint,
+not a required live compaction boundary. Live boundaries depend on the exact token
+sizes of model responses. Promotion independently validates that at least one
+positive, contiguous, fully provenanced `summary.committed` event exists while the
+raw-history count remains complete.
+
 A failed primary round is completed and written in full, then later primary
 rounds are skipped because three consecutive passes are no longer possible in
 that run. The requested llama compatibility round remains diagnostic and still

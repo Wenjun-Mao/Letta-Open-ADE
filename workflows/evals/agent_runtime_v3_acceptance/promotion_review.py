@@ -379,7 +379,7 @@ def _validate_round(
         raise PromotionReviewError(f"round {index} includes failed case evidence")
     observed_run_ids: set[str] = set()
     normalized_tools_by_run: dict[str, list[tuple[str, bool]]] = {}
-    summary_requirements_by_case: dict[str, tuple[set[str], int]] = {}
+    summary_run_ids_by_case: dict[str, set[str]] = {}
     for case_payload in cases:
         case_key = str(case_payload["case_key"])
         case_run_ids, case_tools_by_run = _validate_and_rescore_case(
@@ -388,15 +388,12 @@ def _validate_round(
         observed_run_ids.update(case_run_ids)
         normalized_tools_by_run.update(case_tools_by_run)
         if requires_versioned_summary(cases_by_key[case_key]):
-            summary_requirements_by_case[case_key] = (
-                case_run_ids,
-                _required_summary_boundary(cases_by_key[case_key]),
-            )
+            summary_run_ids_by_case[case_key] = case_run_ids
     _validate_raw_events(
         payload.get("_raw_events"),
         observed_run_ids=observed_run_ids,
         normalized_tools_by_run=normalized_tools_by_run,
-        summary_requirements_by_case=summary_requirements_by_case,
+        summary_run_ids_by_case=summary_run_ids_by_case,
         conversation_fingerprint=deployment_fingerprints["conversation"],
         index=index,
     )
@@ -552,7 +549,7 @@ def _validate_raw_events(
     *,
     observed_run_ids: set[str],
     normalized_tools_by_run: dict[str, list[tuple[str, bool]]],
-    summary_requirements_by_case: dict[str, tuple[set[str], int]],
+    summary_run_ids_by_case: dict[str, set[str]],
     conversation_fingerprint: str,
     index: int,
 ) -> None:
@@ -638,16 +635,13 @@ def _validate_raw_events(
             normalized_tools_by_run.get(run_id, []),
             f"round {index} raw tool evidence for {run_id}",
         )
-    for case_key, (
-        case_run_ids,
-        required_boundary,
-    ) in summary_requirements_by_case.items():
+    for case_key, case_run_ids in summary_run_ids_by_case.items():
         observed_boundaries = [
             boundary
             for run_id in case_run_ids
             for boundary in summary_boundaries_by_run.get(run_id, [])
         ]
-        if not observed_boundaries or max(observed_boundaries) < required_boundary:
+        if not observed_boundaries:
             raise PromotionReviewError(
                 f"{case_key} lacks a complete versioned summary commitment event"
             )
@@ -691,6 +685,10 @@ def _validate_summary_event(
     ):
         raise PromotionReviewError(
             "summary commitment source messages are missing or duplicated"
+        )
+    if len(source_message_ids) != boundary:
+        raise PromotionReviewError(
+            "summary commitment source coverage does not match its boundary"
         )
     return boundary
 
@@ -742,13 +740,6 @@ def _validate_event_causation(
         raise PromotionReviewError(
             f"round {index} summary has invalid compaction causation"
         )
-
-
-def _required_summary_boundary(case: Any) -> int:
-    return max(
-        int(getattr(prelude, "summary_through_sequence", 0))
-        for prelude in tuple(getattr(case, "prelude_messages", ()))
-    )
 
 
 def _round_contains_binding(

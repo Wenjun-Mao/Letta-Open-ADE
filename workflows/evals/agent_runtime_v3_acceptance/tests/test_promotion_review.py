@@ -226,7 +226,7 @@ def test_raw_tool_and_summary_evidence_must_match_normalized_contracts() -> None
             failed_provider_request,
             observed_run_ids={"run-1"},
             normalized_tools_by_run={"run-1": []},
-            summary_requirements_by_case={},
+            summary_run_ids_by_case={},
             conversation_fingerprint="f" * 64,
             index=1,
         )
@@ -250,7 +250,7 @@ def test_raw_tool_and_summary_evidence_must_match_normalized_contracts() -> None
             invalid_causation,
             observed_run_ids={"run-1"},
             normalized_tools_by_run={"run-1": []},
-            summary_requirements_by_case={},
+            summary_run_ids_by_case={},
             conversation_fingerprint="f" * 64,
             index=1,
         )
@@ -289,7 +289,7 @@ def test_raw_tool_and_summary_evidence_must_match_normalized_contracts() -> None
             ),
             observed_run_ids={"run-1"},
             normalized_tools_by_run={"run-1": [("get_weather", False)]},
-            summary_requirements_by_case={},
+            summary_run_ids_by_case={},
             conversation_fingerprint="f" * 64,
             index=1,
         )
@@ -312,7 +312,7 @@ def test_raw_tool_and_summary_evidence_must_match_normalized_contracts() -> None
             ),
             observed_run_ids={"run-1"},
             normalized_tools_by_run={"run-1": []},
-            summary_requirements_by_case={"long": ({"run-1"}, 70)},
+            summary_run_ids_by_case={"long": {"run-1"}},
             conversation_fingerprint="f" * 64,
             index=1,
         )
@@ -341,6 +341,48 @@ def test_promotion_review_preserves_auxiliary_run_tool_evidence() -> None:
 
     assert setup_run_id in run_ids
     assert tools_by_run[setup_run_id] == [("search_memory", True)]
+
+
+def test_summary_commitment_source_coverage_must_match_boundary() -> None:
+    run_id = "run-summary"
+    events = _raw_event_records(
+        run_id,
+        (
+            ("model.request.started", {"role": "compaction", "request_number": 1}),
+            (
+                "model.response.completed",
+                {"role": "compaction", "request_number": 1},
+            ),
+            (
+                "summary.committed",
+                {
+                    "summary_id": "summary-1",
+                    "previous_summary_id": None,
+                    "version": 1,
+                    "through_sequence": 2,
+                    "run_id": run_id,
+                    "model_key": "model",
+                    "model_fingerprint": "f" * 64,
+                    "provider_request_id": "request-1",
+                    "content_sha256": "1" * 64,
+                    "prompt_sha256": "2" * 64,
+                    "input_sha256": "3" * 64,
+                    "policy_sha256": "4" * 64,
+                    "source_message_ids": ["message-1"],
+                },
+            ),
+        ),
+    )
+
+    with pytest.raises(PromotionReviewError, match="source coverage"):
+        _validate_raw_events(
+            events,
+            observed_run_ids={run_id},
+            normalized_tools_by_run={run_id: []},
+            summary_run_ids_by_case={"long": {run_id}},
+            conversation_fingerprint="f" * 64,
+            index=1,
+        )
 
 
 def _evidence(
@@ -555,7 +597,7 @@ def _passing_case_evidence(case, round_index: int, conversation_fingerprint: str
                     "summary_id": f"summary-{round_index}-{case.key}",
                     "previous_summary_id": None,
                     "version": 1,
-                    "through_sequence": 70,
+                    "through_sequence": 42,
                     "run_id": setup_run_id,
                     "model_key": "dgx_vllm::qwen3.6-35b-a3b-fp8",
                     "model_fingerprint": conversation_fingerprint,
@@ -565,7 +607,7 @@ def _passing_case_evidence(case, round_index: int, conversation_fingerprint: str
                     "input_sha256": "3" * 64,
                     "policy_sha256": "4" * 64,
                     "source_message_ids": [
-                        f"message-{index}" for index in range(1, 71)
+                        f"message-{index}" for index in range(1, 43)
                     ],
                 },
             ),
