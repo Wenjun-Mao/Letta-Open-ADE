@@ -14,12 +14,12 @@ Browser
   -> services/ade-api
   -> services/model-router -> configured providers
 
-Agent Studio adds:
-services/ade-api -> letta -> services/model-router -> configured providers
-
-Opt-in native v3 preview adds:
+Agent Studio uses the ADE-native runtime:
 apps/ade-web -> ade-native-api -> PostgreSQL
 ade-runtime-worker -> PostgreSQL + services/model-router -> configured providers
+
+The legacy v2 ADE API still uses:
+services/ade-api -> letta -> services/model-router -> configured providers
 ```
 
 ADE Web and ADE API are host-facing on `3000` and `8000`. Model Router, Letta,
@@ -39,8 +39,9 @@ provider-facing boundary for normal discovery and generation.
 | Shared agent-runtime eval contracts | `packages/agent-runtime-eval-contracts/` | package README and `src/agent_runtime_eval_contracts/` |
 | Prompts, personas, schemas, tools, reports | `content/` | owning center's adapter and its matching content subdirectory |
 | Model source configuration | `config/model-router/` | `sources.json`, local overlay, and `model-profiles.json` |
+| Agent Studio release evidence | `config/agent-studio/` | reviewed cutover ledger and [cutover runbook](operations/agent-studio-cutover.md) |
 | Evals and provider probes | `workflows/evals/` | workflow-local `README.md` and `run.py` |
-| Native agent-runtime preview | `services/ade-api/src/ade_api/features/agent_runtime_v3/` | feature README, thin application/worker coordinators, and owning service modules |
+| ADE-native Agent Studio runtime | `services/ade-api/src/ade_api/features/agent_runtime_v3/` | feature README, thin application/worker coordinators, and owning service modules |
 | Native agent-runtime research evidence | `workflows/evals/agent_runtime_study/` | workflow README, [study report](architecture/agent-runtime-replacement-study.md), and accepted [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
 | Native agent-runtime production qualification | `workflows/evals/agent_runtime_v3_acceptance/` | workflow README, worker-health preflight, case-filtered diagnostic CLI, policy registry, reviewed promotion command, [ADR 0010](adr/0010-production-path-runtime-qualification.md), [ADR 0011](adr/0011-agent-runtime-operational-readiness.md), and curated invocation [ADR 0014](adr/0014-curated-tool-invocation-and-external-source-authority.md) |
 | Live smoke coverage | `workflows/smoke/` | named smoke script or `make smoke` |
@@ -54,8 +55,7 @@ tests with the owning feature.
 
 | Feature | ADE Web | ADE API | Primary dependency |
 | --- | --- | --- | --- |
-| Agent Studio | `src/features/agent-studio/` | `features/agent_studio/` | Letta |
-| Native agent runtime v3 preview | `src/features/native-runtime-preview/` (build-gated) | `features/agent_runtime_v3/` through isolated `ade-native-api` | PostgreSQL and Model Router |
+| Agent Studio | `src/features/agent-studio/` | `features/agent_runtime_v3/` through isolated `ade-native-api` | PostgreSQL and Model Router |
 | Comment Lab | `src/features/comment-lab/` | `features/comment_lab/` | Model Router |
 | Label Lab | `src/features/label-lab/` | `features/label_lab/` | Model Router and label schemas |
 | Prompt Center | `src/features/prompt-center/` | `features/prompt_center/` | prompt and persona content |
@@ -97,24 +97,29 @@ for the persona projection contract.
 | Change custom tools | Tool Center feature and `content/custom-tools/` |
 | Add a Test Center run type | Test Center feature plus its workflow entrypoint and artifacts |
 | Add an eval/probe | a self-contained `workflows/evals/<workflow>/` folder |
-| Change the opt-in native runtime | `features/agent_runtime_v3/` plus accepted [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
+| Change the ADE-native Agent Studio runtime | `features/agent_runtime_v3/` plus accepted [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
 | Reproduce runtime research evidence | `workflows/evals/agent_runtime_study/` |
 | Diagnose v3 worker/provider readiness | authenticated `/api/v3/worker-health`, run events, and [ADR 0011](adr/0011-agent-runtime-operational-readiness.md) |
 | Qualify the production v3 path | `workflows/evals/agent_runtime_v3_acceptance/` through Test Center or its CLI |
-| Change the separate v3 product pilot | web `native-runtime-preview/`, API `preview_session_service.py`, and [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md) |
+| Execute or rehearse Agent Studio cutover | [Agent Studio cutover runbook](operations/agent-studio-cutover.md) and `scripts/*agent_studio*` release utilities |
+| Change the Agent Studio product flow | `src/features/agent-studio/`, `features/agent_runtime_v3/`, and [ADR 0016](adr/0016-ade-native-agent-studio-cutover.md) |
 | Change curated tool availability or required invocation | `features/agent_runtime_v3/tool_policy.py`, eval availability/observation contracts, and [ADR 0014](adr/0014-curated-tool-invocation-and-external-source-authority.md) |
 | Change a model's tool-call thinking mode | `config/model-router/model-profiles.json`, deployment fingerprint sampling settings, and [ADR 0015](adr/0015-model-scoped-tool-call-thinking-mode.md) |
 | Regenerate API artifacts | `uv run python scripts/export_openapi.py` |
 | Diagnose the Compose stack | `scripts/collect_diagnostics.sh .env` |
 
+Remote source URLs in tracked router config must resolve from the Linux container,
+not only from the host. Use a Compose network alias such as `dgx-spark` and bind its
+address with `DGX_SPARK_HOST`; do not use `.local` mDNS names in `sources.json`.
+
 ## Guardrails
 
 - Do not call providers directly from ADE Web, ADE API features, or workflows.
 - The agent-runtime study may call its declared embedding sidecar directly for
-  fingerprinted historical evidence only; the v3 preview routes generation and
+  fingerprinted historical evidence only; the v3 runtime routes generation and
   embeddings through Model Router and this exception must not spread to product code.
-- Keep native v3 disabled in the ordinary Compose stack until a separate production
-  cutover is reviewed and accepted.
+- Keep the native v3 lane independent of direct Letta and Redis dependencies. Letta
+  and Redis remain only for legacy v2 product paths until their later removal.
 - Do not let one feature import another feature's internal implementation.
 - Do not create generic `utils` or a catch-all shared package.
 - Keep workflow runner, config, fixtures, outputs, documentation, and tests

@@ -56,54 +56,54 @@ relevant turn and memory evidence, compare a candidate with a baseline, and
 state a keep, promote, or reject decision without reconstructing raw artifacts.
 Operations and qualification views remain separate from product-quality decisions.
 
-## Now: Operate The Qualified ADE-Native Runtime Pilot
+## Now: Complete Native Runtime Product Parity
 
 The ADE-native runtime is an accepted implementation candidate, not the current
-product runtime. It has a separate PostgreSQL model, worker, typed-memory
-contracts, a breaking `/api/v3` API, and a separate preview route. Its checked-in
-conversation, reviewer, and retriever deployments passed three consecutive complete
-zero-retry rounds and independent reviewed promotion on 2026-09-02. The ordinary
-stack still disables the preview by default; current Agent Studio, `/api/v2`, and
-Letta `0.16.8` remain the product authority.
+product runtime. It has a separate PostgreSQL model, worker, typed-memory contracts,
+and a breaking `/api/v3` API. Current Agent Studio, `/api/v2`, and Letta `0.16.8`
+remain the product authority until the evidence-gated cutover in
+[ADR 0016](adr/0016-ade-native-agent-studio-cutover.md) takes effect.
 
-The next runtime work is pilot evidence and product-contract learning, not another
-broad rewrite:
+Phase 4 is a product-outcome comparison, not an attempt to reproduce Letta's internal
+blocks or compaction format. Test Center must own content-addressed paired artifacts
+for native v3 and Letta v2 using the same fixture, controls, and scoring policy.
 
-- Exercise the separate preview with representative conversations and operators,
-  preserving evidence about memory correctness, usability, latency, cancellation,
-  and recovery.
-- Compare the pilot with the supported Agent Studio path on the same product
-  outcomes; do not mistake runtime qualification for user-value evidence.
-- Retain the accepted first-pilot tool scope from
-  [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md): subject-bound
-  `search_memory` only, with no arbitrary Tool Center execution.
-- Requalify before exposure whenever any bound deployment, prompt, tool, schema,
-  retrieval policy, or runtime identity changes.
-- Use the evidence to decide whether to iterate, reject the candidate, or propose
-  a fresh-start cutover ADR.
+- Run three clean paired DGX rounds after every relevant qualification change.
+- Pair the common chat and memory outcome against Letta. Prove native-only isolation,
+  retrieval, compaction, false-memory prevention, tool behavior, and trace guarantees
+  through the canonical native matrix, and prove retry/cancellation/idempotency
+  semantics through deterministic conformance tests.
+- Keep llama-server as compatibility evidence, not an initial selectable product
+  bundle, until it independently qualifies.
+- Retain the initial native tool scope: subject-bound `search_memory` only.
 
 ### Now Decision Gate
 
-This milestone closes only when representative pilot evidence supports an explicit
-iterate, reject, or cutover-proposal decision. A cutover proposal must explain the
-product benefit, operational boundary, reset/rollback plan, and removal sequence;
-the completed qualification gate alone does not authorize cutover.
+Phase 4 closes only when current qualification, three clean paired DGX rounds, and
+deterministic conformance provide one reviewed, content-addressed capability ledger.
+Runtime qualification alone does not prove product parity.
 
-## Later: Fresh-Start Cutover And Simplification
+## Next: Fresh-Start Agent Studio Cutover
 
-Only after the native pilot proves the same operator outcome and a later cutover
-ADR is accepted should new Agent Studio usage move to v3. The cutover is
-fresh-start: there is no Letta importer, compatibility path, or dual-write
-authority. Letta, Redis, v2 Agent Studio execution, and associated Tool Center
-runtime behavior are removed only after no product traffic or deployment
-dependency remains.
+Phase 5 implements the cutover contract in
+[ADR 0016](adr/0016-ade-native-agent-studio-cutover.md), but activation remains
+evidence-gated. When the Phase 4 gate passes, new Agent Studio usage moves exclusively
+to the qualified native DGX bundle and a fresh ADE PostgreSQL store. There is no Letta
+importer, UI/runtime toggle, compatibility authority, per-request fallback, or dual
+write. The admin-only reset boundary is idempotent, transactional, scoped to
+`purpose=agent_studio`, and auditable.
 
-### Later Decision Gate
+### Next Decision Gate
 
-Cutover requires both the runtime qualification gate and an accepted cutover
-ADR that records the product contract, operational rollback/reset boundary,
-and removal sequence. Until then, no alias, fallback, or UI default may make
-the candidate runtime appear to be the supported Agent Studio path.
+Effective cutover requires the Phase 4 evidence gate, the exact qualified DGX bundle,
+release readiness, and a rehearsed prior-v2 web/API rollback that preserves native
+state. Rollback never falls back per request and does not merge or delete v3 state.
+
+## Later: Remove Legacy Runtime Dependencies
+
+Letta, Redis, v2 Agent Studio endpoints, and legacy evidence remain throughout Phase
+5. Phase 6 removes them only after no product traffic or deployment dependency
+remains, with the removal backed by a separate operational completion check.
 
 ## Explicit Non-Goals
 
@@ -130,3 +130,5 @@ the candidate runtime appear to be the supported Agent Studio path.
   evaluated-input provenance and decision ledger trust boundary.
 - [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md): separate pilot,
   atomic session, curated-tool, and exposure-gate contract.
+- [ADR 0016](adr/0016-ade-native-agent-studio-cutover.md): fresh-start cutover,
+  paired-evidence, reset, rollback, and legacy-removal contract.

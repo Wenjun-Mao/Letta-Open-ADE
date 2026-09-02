@@ -27,6 +27,7 @@ import {
   type ChatMemoryEvaluationForm,
 } from "./chat-memory-evaluation-helpers";
 import { useChatMemoryEvaluations } from "./use-chat-memory-evaluations";
+import { useAgentRuntimeParityEvaluations } from "./use-agent-runtime-parity-evaluations";
 
 function toErrorMessage(exc: unknown): string {
   return exc instanceof Error ? exc.message : String(exc);
@@ -54,6 +55,12 @@ export default function TestCenterPage() {
   const [artifactContent, setArtifactContent] = useState("");
   const [launcherPreset, setLauncherPreset] = useState<ChatMemoryEvaluationForm | null>(null);
   const evaluations = useChatMemoryEvaluations();
+  const parityEvaluations = useAgentRuntimeParityEvaluations();
+  const selectedParityEvaluationId = parityEvaluations.selectedId;
+  const selectedParityEvaluationSummary = parityEvaluations.selectedSummary;
+  const selectedParityRunId = selectedParityEvaluationSummary?.run_id || "";
+  const selectedParityReady = Boolean(selectedParityEvaluationSummary?.ready);
+  const selectedParityEvidenceSha256 = selectedParityEvaluationSummary?.artifact_digests?.evidence_sha256 || "";
 
   const selectedRunSummary = useMemo(() => {
     if (selectedRun) {
@@ -127,6 +134,14 @@ export default function TestCenterPage() {
   const refreshEvaluationsEffect = useEffectEvent(evaluations.refreshEvaluations);
   const refreshSelectedEvaluationEffect = useEffectEvent(evaluations.refreshSelectedEvaluation);
   const refreshComparisonEffect = useEffectEvent(evaluations.refreshComparison);
+  const refreshParityEvaluationsEffect = useEffectEvent(parityEvaluations.refresh);
+  const refreshSelectedParityEvaluationEffect = useEffectEvent(parityEvaluations.refreshSelected);
+  const loadSelectedParityEvaluationEffect = useEffectEvent((runId: string) => {
+    const identity = parityEvaluations.currentRequest(runId);
+    void refreshSelectedParityEvaluationEffect(runId, identity).catch((exc) => {
+      if (parityEvaluations.isCurrent(identity) && !isAbortError(exc)) setError(toErrorMessage(exc));
+    });
+  });
   const loadSelectedEvaluationEffect = useEffectEvent((runId: string, ready: boolean) => {
     if (!ready || !runId) {
       return;
@@ -145,7 +160,11 @@ export default function TestCenterPage() {
       setLoading(true);
       setError("");
       try {
-        await Promise.all([refreshRunsEffect(), refreshEvaluationsEffect()]);
+        await Promise.all([
+          refreshRunsEffect(),
+          refreshEvaluationsEffect(),
+          refreshParityEvaluationsEffect(),
+        ]);
       } catch (exc) {
         if (!cancelled) {
           setError(toErrorMessage(exc));
@@ -172,13 +191,16 @@ export default function TestCenterPage() {
       if (evaluations.items.some(isEvaluationRunning)) {
         void refreshEvaluationsEffect().catch(() => undefined);
       }
+      if (parityEvaluations.items.some((item) => ["queued", "running"].includes(item.run_status))) {
+        void refreshParityEvaluationsEffect().catch(() => undefined);
+      }
       const selectedEvaluation = evaluations.selectedEvaluationSummary;
       if (selectedEvaluation?.ready && isEvaluationRunning(selectedEvaluation)) {
         loadSelectedEvaluationEffect(selectedEvaluation.run_id, true);
       }
     }, 4000);
     return () => clearInterval(timer);
-  }, [evaluations.items, evaluations.selectedEvaluationSummary, selectedRunId]);
+  }, [evaluations.items, evaluations.selectedEvaluationSummary, parityEvaluations.items, selectedRunId]);
 
   useEffect(() => {
     if (!selectedRunId) {
@@ -191,6 +213,22 @@ export default function TestCenterPage() {
       }
     });
   }, [selectedRunId]);
+
+  useEffect(() => {
+    if (!selectedParityReady || !selectedParityRunId) return;
+    loadSelectedParityEvaluationEffect(selectedParityRunId);
+  }, [
+    selectedParityEvaluationId,
+    selectedParityRunId,
+    selectedParityReady,
+    selectedParityEvidenceSha256,
+  ]);
+
+  useEffect(() => {
+    if (selectedParityEvaluationId && selectedParityEvaluationId !== selectedRunIdRef.current) {
+      selectRun(selectedParityEvaluationId);
+    }
+  }, [selectedParityEvaluationId]);
 
   useEffect(() => {
     loadSelectedEvaluationEffect(
@@ -242,6 +280,9 @@ export default function TestCenterPage() {
         if (evaluationItems.some((item) => item.run_id === created.run_id)) {
           evaluations.selectEvaluation(created.run_id);
         }
+      } else if (payload.run_type === "agent_runtime_parity_eval") {
+        await parityEvaluations.refresh();
+        parityEvaluations.select(created.run_id);
       }
     } catch (exc) {
       setError(toErrorMessage(exc));
@@ -390,6 +431,10 @@ export default function TestCenterPage() {
       selectedEvaluation={evaluations.selectedEvaluation}
       evaluationBaselineRunId={evaluations.baselineRunId}
       evaluationComparison={evaluations.comparison}
+      parityEvaluationItems={parityEvaluations.items}
+      selectedParityEvaluationId={parityEvaluations.selectedId}
+      selectedParityEvaluationSummary={parityEvaluations.selectedSummary}
+      selectedParityEvaluation={parityEvaluations.selected}
       launcherPreset={launcherPreset}
       onCreateRun={onCreateRun}
       onRefreshRuns={refreshRuns}
@@ -409,6 +454,17 @@ export default function TestCenterPage() {
       onRecordEvaluationDecision={(outcome, note) => void onRecordEvaluationDecision(outcome, note)}
       onRefreshEvaluations={() => void evaluations.refreshEvaluations().catch((exc) => setError(toErrorMessage(exc)))}
       onRerunEvaluationSetup={onRerunEvaluationSetup}
+      onSelectParityEvaluation={(runId) => {
+        parityEvaluations.select(runId);
+        if (runId) selectRun(runId);
+      }}
+      onRefreshParityEvaluation={() => {
+        void parityEvaluations.refresh().then(() => {
+          const runId = parityEvaluations.selectedId;
+          if (!runId) return;
+          return parityEvaluations.refreshSelected(runId);
+        }).catch((exc) => setError(toErrorMessage(exc)));
+      }}
     />
   );
 }

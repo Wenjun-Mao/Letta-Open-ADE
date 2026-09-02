@@ -152,7 +152,7 @@ def validate_definition_execution(
             or str(stored.get("route_alias") or "") != expected_route_aliases.get(role)
         ):
             raise UnqualifiedDeployment(
-                f"Agent definition {role} route is outside the qualified preview contract"
+                f"Agent definition {role} route is outside the qualified Agent Studio contract"
             )
         current = resolve_deployment(
             catalog,

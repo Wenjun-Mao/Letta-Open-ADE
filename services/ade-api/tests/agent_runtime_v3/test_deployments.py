@@ -235,7 +235,7 @@ def test_release_execution_rejects_development_definitions_and_tools() -> None:
                     "retriever": "source::embedding",
                 }
             },
-            "outside the qualified preview contract",
+            "outside the qualified Agent Studio contract",
         ),
     ],
 )

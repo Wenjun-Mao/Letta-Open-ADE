@@ -1,12 +1,17 @@
 # Agent Studio
 
-Persistent-agent workspace for creation, chat, memory inspection, prompt updates, lifecycle actions, and tool probes.
+Agent Studio is the ADE-native v3 workspace. It does not edit Letta agents, free-text memory blocks, prompts, models, or arbitrary tool attachments.
 
 - Entry route: `/agent-studio`
-- API client: `api.ts`
-- Main view: `page.tsx`; it composes creation, lifecycle, chat, execution trace, and inspection hooks.
-- Setup controls: `agent-creation-form.tsx` owns new-agent configuration, while `agent-selection-controls.tsx` owns selecting, refreshing, and lifecycle actions. `agent-setup-controls.tsx` places both in the inspector.
-- Evaluation handoff: `agent-evaluation-handoff-card.tsx` sends the current new-agent setup to `/test-center` through the pure `evaluation-handoff.ts` URL contract. It never uses or mutates the selected persisted agent.
-- Inspector tabs: `agent-details-inspector.tsx` selects the model, prompt, and tool tabs. Each tab has its own view module: `model-inspector-tab.tsx`, `prompt-inspector-tab.tsx`, and `tool-inspector-tab.tsx`.
-- Inspection hooks: `use-agent-inspection.ts` coordinates tab state and selection cleanup. `use-agent-model-editor.ts`, `use-prompt-inspection.ts`, and `use-tool-inspection.ts` own their respective requests and view state.
-- Tests: colocated beside deterministic view-model helpers.
+- `api.ts` owns the typed browser calls to `/api/v3/agent-studio` and the asynchronous v3 run endpoints.
+- `use-agent-studio.ts` owns URL-backed conversation selection, resource lifecycle, event-stream monitoring, polling fallback, cancellation, and state refresh.
+- `agent-studio-view.tsx` presents the product model: immutable definition versions, explicit memory subjects, conversations, typed fact lineage, summaries, and run evidence.
+- `selection.ts` contains the pure URL and resource-selection rules with colocated tests.
+
+## Product Boundaries
+
+Creating a conversation binds exactly one immutable definition version to exactly one memory subject. Selecting an existing subject deliberately shares that subject's durable memory across conversations; creating a new subject creates an isolated memory boundary.
+
+Definitions are created from a qualified release bundle. The UI displays frozen prompt, persona, deployment, policy, and curated-tool snapshots, but never mutates them in place. It supports archive and restore actions where the API exposes them. The operator-only fresh-start reset is intentionally absent from the browser UI.
+
+Turns are asynchronous. The browser opens an SSE event stream, continues status/event-log polling if it reconnects, exposes timeout and additional retry controls, and allows cancellation. Immutable messages, typed memory revisions with evidence, versioned summaries, and normalized run events remain inspectable after the run finishes.

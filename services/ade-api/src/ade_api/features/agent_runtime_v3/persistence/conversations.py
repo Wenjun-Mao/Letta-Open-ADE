@@ -37,6 +37,59 @@ class ConversationRepository:
         row = result.mappings().one_or_none()
         return dict(row) if row is not None else None
 
+    async def list_for_workspace(
+        self,
+        workspace_id: str,
+        *,
+        purpose: str,
+        include_archived: bool,
+        limit: int,
+        offset: int,
+    ) -> tuple[int, list[dict[str, Any]]]:
+        conditions = [
+            conversations.c.workspace_id == workspace_id,
+            conversations.c.purpose == purpose,
+        ]
+        if not include_archived:
+            conditions.append(conversations.c.archived_at.is_(None))
+        total = int(
+            await self._connection.scalar(
+                select(func.count()).select_from(conversations).where(*conditions)
+            )
+            or 0
+        )
+        result = await self._connection.execute(
+            select(conversations)
+            .where(*conditions)
+            .order_by(conversations.c.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return total, [dict(row) for row in result.mappings().all()]
+
+    async def set_archived(
+        self, conversation_id: str, *, archived: bool
+    ) -> dict[str, Any]:
+        return await fetch_one(
+            self._connection,
+            update(conversations)
+            .where(conversations.c.id == conversation_id)
+            .values(archived_at=func.now() if archived else None)
+            .returning(*conversations.c),
+            "conversation does not exist",
+        )
+
+    async def has_unarchived_for_subject(self, subject_id: str) -> bool:
+        count = await self._connection.scalar(
+            select(func.count())
+            .select_from(conversations)
+            .where(
+                conversations.c.memory_subject_id == subject_id,
+                conversations.c.archived_at.is_(None),
+            )
+        )
+        return bool(count)
+
     async def get_for_update(self, conversation_id: str) -> dict[str, Any]:
         return await fetch_one(
             self._connection,
@@ -94,6 +147,34 @@ class ConversationRepository:
             .order_by(messages.c.sequence)
         )
         return [dict(row) for row in result.mappings()]
+
+    async def list_message_page(
+        self,
+        conversation_id: str,
+        *,
+        limit: int,
+        before_sequence: int | None,
+    ) -> tuple[int, list[dict[str, Any]]]:
+        total = int(
+            await self._connection.scalar(
+                select(func.count())
+                .select_from(messages)
+                .where(messages.c.conversation_id == conversation_id)
+            )
+            or 0
+        )
+        conditions = [messages.c.conversation_id == conversation_id]
+        if before_sequence is not None:
+            conditions.append(messages.c.sequence < before_sequence)
+        result = await self._connection.execute(
+            select(messages)
+            .where(*conditions)
+            .order_by(messages.c.sequence.desc())
+            .limit(limit)
+        )
+        rows = [dict(row) for row in result.mappings().all()]
+        rows.reverse()
+        return total, rows
 
     async def latest_summary(self, conversation_id: str) -> dict[str, Any] | None:
         result = await self._connection.execute(

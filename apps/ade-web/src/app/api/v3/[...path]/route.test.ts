@@ -13,24 +13,7 @@ afterEach(() => {
 });
 
 describe("native v3 route proxy", () => {
-  it("fails closed before contacting the native service", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
-    vi.stubEnv("ADE_NATIVE_PREVIEW_ENABLED", "false");
-
-    const response = await GET(
-      new NextRequest("http://localhost/api/v3/runs/run-1/events"),
-      routeContext,
-    );
-
-    expect(response.status).toBe(404);
-    await expect(response.json()).resolves.toEqual({
-      detail: "ADE native runtime preview is not enabled.",
-    });
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it("forwards SSE resume state and exposes upstream chunks without buffering", async () => {
+  it("always forwards to the dedicated native service and exposes SSE chunks without buffering", async () => {
     const encoder = new TextEncoder();
     let streamController: ReadableStreamDefaultController<Uint8Array> | undefined;
     const upstreamBody = new ReadableStream<Uint8Array>({
@@ -45,7 +28,6 @@ describe("native v3 route proxy", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubEnv("ADE_NATIVE_PREVIEW_ENABLED", "true");
     vi.stubEnv("ADE_NATIVE_API_BASE_URL", "http://ade-native-api:8000");
     vi.stubEnv("ADE_API_ADMIN_KEY", "server-secret");
 

@@ -23,8 +23,9 @@ make logs SERVICE=ade-api
 make down
 ```
 
-The Compose services are `ade-web`, `ade-api`, `model-router`, `letta`,
-`postgres`, and `redis`. Do not run two Compose projects from the same checkout:
+The Compose services are `ade-web`, `ade-api`, `ade-native-api`,
+`ade-runtime-worker`, `ade-runtime-migrate`, `model-router`, `letta`, `postgres`,
+and `redis`. Do not run two Compose projects from the same checkout:
 they would both mount `data/pgdata`. If a previous checkout used another Compose
 project name, inspect its working directory before stopping it and do not use
 `-v` unless a database reset is intentional.
@@ -35,30 +36,37 @@ docker inspect <container-name> --format '{{ index .Config.Labels "com.docker.co
 docker compose -p <old-project-name> down --remove-orphans
 ```
 
-The optional `native-runtime` profile adds one-shot `ade-runtime-migrate`, isolated
-`ade-native-api`, and the long-running `ade-runtime-worker`. It is not started by
-the ordinary stack.
+The one-shot migration, isolated native API, and long-running native worker are
+part of the ordinary stack because Agent Studio uses them. Letta and Redis remain
+for the v2 product areas that have not yet migrated.
 
 ```text
-make native-runtime-migrate
-make native-runtime-db-test
-make native-runtime-lane-check
-make native-runtime-up
-make native-runtime-preview-gate
-make native-runtime-preview-up
+make agent-studio-migrate
+make agent-studio-db-test
+make agent-studio-lane-check
+make agent-studio-development-up
+make agent-studio-qualification
+make agent-studio-conformance
+make agent-studio-rollback-rehearsal AGENT_STUDIO_LEGACY_REVISION=<commit>
+make agent-studio-release-gate
+make agent-studio-release-up
 ```
 
-`native-runtime-up` explicitly enables unqualified development-mode runs.
-`native-runtime-preview-up` runs the exact promotion/policy gate before enabling the
-separate ADE Web route in release mode. Release mode rejects unqualified deployment
-fingerprints, and no production cutover has been approved.
+`agent-studio-development-up` explicitly enables unqualified development runs.
+`agent-studio-release-up` validates the exact promotion and policy identity before
+starting the supported stack. Release mode rejects unqualified deployment
+fingerprints and never falls back to Letta.
+Follow the [Agent Studio cutover runbook](docs/operations/agent-studio-cutover.md)
+for promotion, Test Center parity evidence, conformance, rollback rehearsal, and
+the reviewed release ledger. Qualification runs in the explicit development lane;
+it cannot depend on the release gate it is intended to satisfy.
 
 ## Endpoints And Network Boundary
 
 - ADE Web: `http://127.0.0.1:3000`
 - ADE API health: `http://127.0.0.1:8000/api/v2/health`
 - ADE API OpenAPI: `http://127.0.0.1:8000/openapi.json`
-- Native API liveness when its profile is active: `http://127.0.0.1:8002/health`
+- Native Agent Studio API liveness: `http://127.0.0.1:8002/health`
 
 `model-router`, `letta`, `postgres`, and `redis` are intentionally not exposed
 on host ports. Diagnose them through Compose:
@@ -135,8 +143,9 @@ delete reviewed `content/` or `config/` assets.
   `content/`.
 - Model sources and profiles live under `config/model-router/`.
 - Runtime SQLite, test runs, and local service state live under `data/runtime/`.
-- Browser requests use ADE Web's same-origin `/api/v2/...` proxy; the proxy keeps
-  the `ADE_API_ADMIN_KEY` server-side.
+- Browser requests use ADE Web's same-origin `/api/v2/...` and `/api/v3/...`
+  proxies; both keep the `ADE_API_ADMIN_KEY` server-side and route to their fixed
+  backend authority without fallback.
 
 The backend resolves scenario defaults through
 `/api/v2/model-catalog/options`. Query that endpoint rather than hard-coding a

@@ -6,6 +6,9 @@ from typing import Any
 def definition_response(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": str(row["id"]),
+        "agent_definition_id": (
+            str(row["agent_definition_id"]) if row.get("agent_definition_id") else None
+        ),
         "definition_key": row["definition_key"],
         "version": row["version"],
         "name": row["name"],
@@ -17,6 +20,7 @@ def definition_response(row: dict[str, Any]) -> dict[str, Any]:
         "memory_policy_version": row["memory_policy_version"],
         "qualification_state": row["qualification_state"],
         "deployments": list(row["deployment_snapshot"]),
+        "archived_at": row.get("definition_archived_at"),
         "created_at": row["created_at"],
     }
 
@@ -26,7 +30,10 @@ def subject_response(row: dict[str, Any]) -> dict[str, Any]:
         "id": str(row["id"]),
         "external_key": row["external_key"],
         "display_name": row["display_name"],
+        "version": int(row.get("version", 1)),
+        "archived_at": row.get("archived_at"),
         "created_at": row["created_at"],
+        "updated_at": row.get("updated_at", row["created_at"]),
     }
 
 
@@ -35,7 +42,10 @@ def conversation_response(row: dict[str, Any]) -> dict[str, Any]:
         "id": str(row["id"]),
         "agent_definition_id": str(row["agent_definition_version_id"]),
         "memory_subject_id": str(row["memory_subject_id"]),
+        "title": row.get("title", "Conversation"),
+        "purpose": row.get("purpose", "development"),
         "version": row["version"],
+        "archived_at": row.get("archived_at"),
         "created_at": row["created_at"],
     }
 

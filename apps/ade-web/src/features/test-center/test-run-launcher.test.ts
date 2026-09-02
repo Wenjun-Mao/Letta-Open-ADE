@@ -10,10 +10,16 @@ import {
   reconcileAgentRuntimeV3AcceptanceForm,
 } from "./agent-runtime-v3-acceptance-fields";
 import {
+  hasAgentRuntimeParityInputs,
+  reconcileAgentRuntimeParityForm,
+  type AgentRuntimeParityOptions,
+} from "./agent-runtime-parity-fields";
+import {
   BEHAVIOR_EVALUATION_RUN_TYPES,
   getTestCenterCopy,
   getTestRunTypeLabel,
   OPERATIONAL_RUN_TYPES,
+  PARITY_EVALUATION_RUN_TYPES,
   TEST_RUN_TYPES,
 } from "./test-center-copy";
 
@@ -40,6 +46,43 @@ const v3AcceptanceForm: AgentRuntimeV3AcceptanceFormState = {
   caseKeys: [],
 };
 
+const parityOptions: AgentRuntimeParityOptions = {
+  legacyModels: [{ key: "legacy::chat", label: "Legacy chat", description: "", available: true }],
+  legacyEmbeddings: [{ key: "legacy::embedding", label: "Legacy embedding", description: "", available: true }],
+  prompts: [{ key: "parity_prompt", label: "Parity prompt", description: "", available: true }],
+  personas: [{ key: "parity_persona", label: "Parity persona", description: "", available: true }],
+  nativeDeployments: [
+    {
+      model_key: "native::chat",
+      source_id: "native",
+      source_label: "Native",
+      provider_model_id: "chat",
+      model_type: "llm",
+      deployment: {
+        deployment_id: "native-chat",
+        roles: ["conversation", "reviewer"],
+        lifecycle: "candidate",
+        fingerprint: { sha256: "native-chat-fingerprint" },
+        qualification: { qualified: false, role_results: [] },
+      },
+    },
+    {
+      model_key: "native::embedding",
+      source_id: "native",
+      source_label: "Native",
+      provider_model_id: "embedding",
+      model_type: "embedding",
+      deployment: {
+        deployment_id: "native-embedding",
+        roles: ["retriever"],
+        lifecycle: "candidate",
+        fingerprint: { sha256: "native-embedding-fingerprint" },
+        qualification: { qualified: false, role_results: [] },
+      },
+    },
+  ],
+};
+
 describe("Test Center run launcher", () => {
   it("keeps product-behavior evaluation separate from platform operations", () => {
     expect(BEHAVIOR_EVALUATION_RUN_TYPES).toEqual(["chat_memory_eval"]);
@@ -48,8 +91,10 @@ describe("Test Center run launcher", () => {
       "ade_mvp_smoke_e2e_check",
       "agent_runtime_v3_acceptance",
     ]);
+    expect(PARITY_EVALUATION_RUN_TYPES).toEqual(["agent_runtime_parity_eval"]);
     expect(TEST_RUN_TYPES).toEqual([
       "chat_memory_eval",
+      "agent_runtime_parity_eval",
       "ade_api_e2e_check",
       "ade_mvp_smoke_e2e_check",
       "agent_runtime_v3_acceptance",
@@ -61,6 +106,7 @@ describe("Test Center run launcher", () => {
 
     expect(getTestRunTypeLabel(copy, "chat_memory_eval")).toBe("Chat-memory behavior evaluation");
     expect(getTestRunTypeLabel(copy, "agent_runtime_v3_acceptance")).toBe("Native runtime qualification");
+    expect(getTestRunTypeLabel(copy, "agent_runtime_parity_eval")).toBe("Letta v2 ↔ ADE-native v3 product parity");
   });
 
   it("does not leak chat-memory fields into standard run payloads", () => {
@@ -150,6 +196,40 @@ describe("Test Center run launcher", () => {
       retry_count: 0,
       include_llama_compatibility: false,
     });
+  });
+
+  it("builds a paired parity payload with immutable evidence controls", () => {
+    const parityForm = reconcileAgentRuntimeParityForm({
+      legacyModel: "stale legacy model",
+      legacyEmbedding: "stale legacy embedding",
+      promptKey: "stale prompt",
+      personaKey: "stale persona",
+      nativeConversationModel: "stale conversation",
+      nativeReviewerModel: "stale reviewer",
+      nativeEmbeddingModel: "stale retriever",
+      rounds: "9",
+      timeoutSeconds: "240",
+    }, parityOptions);
+
+    expect(buildTestRunPayload("agent_runtime_parity_eval", chatMemoryForm, v3AcceptanceForm, parityForm)).toEqual({
+      run_type: "agent_runtime_parity_eval",
+      legacy_model: "legacy::chat",
+      legacy_embedding: "legacy::embedding",
+      prompt_key: "parity_prompt",
+      persona_key: "parity_persona",
+      native_conversation_model: "native::chat",
+      native_reviewer_model: "native::chat",
+      native_embedding_model: "native::embedding",
+      rounds: 3,
+      timeout_seconds: 240,
+      retry_count: 0,
+    });
+  });
+
+  it("requires every shared and native input before enabling a parity run", () => {
+    expect(hasAgentRuntimeParityInputs(parityOptions)).toBe(true);
+    expect(hasAgentRuntimeParityInputs({ ...parityOptions, legacyModels: [] })).toBe(false);
+    expect(hasAgentRuntimeParityInputs({ ...parityOptions, nativeDeployments: parityOptions.nativeDeployments.slice(0, 1) })).toBe(false);
   });
 
   it("reconciles changed deployment aliases by role instead of keeping stale defaults", () => {

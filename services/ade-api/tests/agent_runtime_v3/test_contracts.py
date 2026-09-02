@@ -7,7 +7,11 @@ from pydantic import ValidationError
 
 from ade_api.features.agent_runtime_v3.contracts import (
     AcceptTurnRequest,
+    AgentStudioResetRequest,
     ConversationStateResponse,
+    CreateAgentDefinitionRequest,
+    CreateAgentStudioSessionRequest,
+    CreateMemorySubjectRequest,
     MemoryFactResponse,
     RunResponse,
 )
@@ -32,6 +36,61 @@ def test_turn_defaults_have_one_attempt_and_180_second_timeout() -> None:
     request = AcceptTurnRequest(content="hello", idempotency_key="turn-1")
     assert request.timeout_seconds == 180
     assert request.retry_count == 0
+
+
+def test_agent_studio_session_requires_exactly_one_definition_and_subject_source() -> (
+    None
+):
+    definition = CreateAgentDefinitionRequest(
+        definition_key="companion",
+        name="Companion",
+        model_key="dgx_vllm::qwen",
+        reviewer_model_key="dgx_vllm::qwen",
+        embedding_model_key="dgx_embedding::qwen",
+    )
+    subject = CreateMemorySubjectRequest(
+        external_key="person:zhang-wei",
+        display_name="Zhang Wei",
+    )
+    request = CreateAgentStudioSessionRequest(
+        idempotency_key="studio-session-1",
+        title="First conversation",
+        new_definition=definition,
+        new_subject=subject,
+    )
+
+    assert request.new_definition == definition
+    assert request.new_subject == subject
+
+    with pytest.raises(ValidationError, match="exactly one definition source"):
+        CreateAgentStudioSessionRequest(
+            idempotency_key="studio-session-2",
+            title="Invalid",
+            agent_definition_id="definition-1",
+            new_definition=definition,
+            new_subject=subject,
+        )
+
+    with pytest.raises(ValidationError, match="exactly one subject source"):
+        CreateAgentStudioSessionRequest(
+            idempotency_key="studio-session-3",
+            title="Invalid",
+            new_definition=definition,
+        )
+
+
+def test_agent_studio_reset_requires_the_explicit_confirmation_phrase() -> None:
+    request = AgentStudioResetRequest(
+        idempotency_key="reset-1",
+        confirmation="RESET ADE AGENT STUDIO",
+    )
+    assert request.confirmation == "RESET ADE AGENT STUDIO"
+
+    with pytest.raises(ValidationError):
+        AgentStudioResetRequest(
+            idempotency_key="reset-2",
+            confirmation="reset",
+        )
 
 
 def test_read_models_expose_summary_provenance_and_run_controls() -> None:

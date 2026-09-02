@@ -100,18 +100,29 @@ class _ConversationRepository:
             "created_at": NOW,
         }
 
-    async def list_messages(self, conversation_id: str) -> list[dict[str, Any]]:
+    async def list_message_page(
+        self,
+        conversation_id: str,
+        *,
+        limit: int,
+        before_sequence: int | None,
+    ) -> tuple[int, list[dict[str, Any]]]:
         assert conversation_id == "conversation-1"
-        return [
-            {
-                "id": "message-1",
-                "sequence": 1,
-                "role": "user",
-                "content": "My dog is Rocky.",
-                "run_id": None,
-                "created_at": NOW,
-            }
-        ]
+        assert limit == 200
+        assert before_sequence is None
+        return (
+            1,
+            [
+                {
+                    "id": "message-1",
+                    "sequence": 1,
+                    "role": "user",
+                    "content": "My dog is Rocky.",
+                    "run_id": None,
+                    "created_at": NOW,
+                }
+            ],
+        )
 
     async def latest_summary(self, conversation_id: str) -> dict[str, Any]:
         assert conversation_id == "conversation-1"

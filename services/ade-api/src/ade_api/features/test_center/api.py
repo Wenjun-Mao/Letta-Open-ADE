@@ -8,6 +8,7 @@ from ade_api.platform.feature_flags import ensure_ade_api_enabled
 from ade_api.platform.openapi_metadata import TAG_TEST_CENTER
 
 from .chat_memory_evaluations import ChatMemoryEvaluationArtifactUnavailable
+from .agent_runtime_parity_evaluations import AgentRuntimeParityArtifactUnavailable
 from .chat_memory_evaluation_comparisons import (
     ChatMemoryEvaluationComparisonUnavailable,
 )
@@ -20,6 +21,8 @@ from .contracts import (
     ChatMemoryEvaluationDecisionResponse,
     ChatMemoryEvaluationDetailResponse,
     ChatMemoryEvaluationListResponse,
+    AgentRuntimeParityDetailResponse,
+    AgentRuntimeParityListResponse,
     TestRunArtifactListResponse,
     TestRunArtifactReadResponse,
     TestRunListResponse,
@@ -29,6 +32,43 @@ from .contracts import (
 
 
 router = APIRouter(dependencies=[Depends(require_admin)])
+
+
+@router.get(
+    "/api/v2/test-center/agent-runtime-parity-evaluations",
+    response_model=AgentRuntimeParityListResponse,
+    tags=[TAG_TEST_CENTER],
+    summary="List paired Agent Runtime product parity evaluations",
+)
+async def list_agent_runtime_parity_evaluations(
+    test_orchestrator: TestOrchestratorDependency,
+):
+    ensure_ade_api_enabled()
+    return {"items": test_orchestrator.list_agent_runtime_parity_evaluations()}
+
+
+@router.get(
+    "/api/v2/test-center/agent-runtime-parity-evaluations/{run_id}",
+    response_model=AgentRuntimeParityDetailResponse,
+    response_model_exclude_none=True,
+    tags=[TAG_TEST_CENTER],
+    summary="Get paired Agent Runtime product parity evidence",
+)
+async def get_agent_runtime_parity_evaluation(
+    run_id: str,
+    test_orchestrator: TestOrchestratorDependency,
+):
+    ensure_ade_api_enabled()
+    try:
+        evaluation = test_orchestrator.get_agent_runtime_parity_evaluation(run_id)
+    except AgentRuntimeParityArtifactUnavailable as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if evaluation is None:
+        raise HTTPException(
+            status_code=404,
+            detail="agent-runtime parity evaluation run_id not found",
+        )
+    return evaluation
 
 
 @router.get(

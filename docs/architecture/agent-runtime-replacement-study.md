@@ -2,9 +2,11 @@
 
 - Study date: 2026-08-29
 - Production impact: none
-- Decision state: implementation accepted; production cutover not approved
+- Decision state: implementation accepted; Phase 4 paired parity and Phase 5
+  effective cutover evidence remain pending
 - Reproducible workflow: [`workflows/evals/agent_runtime_study/`](../../workflows/evals/agent_runtime_study/README.md)
 - Accepted implementation decision: [ADR 0009](../adr/0009-ade-owned-agent-runtime.md)
+- Cutover contract: [ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md)
 
 ## Executive Conclusion
 
@@ -35,13 +37,12 @@ assistant commit, multilingual semantic retrieval, and exact deployment
 qualification. These additions strengthen the custom loop recommendation without
 making it production-ready.
 
-No runtime deployment is approved for cutover. Under the current exact fingerprints,
-the complete DGX matrix passed `12/12`. The complete llama-server compatibility
-matrix passed `11/12`; its conversation model claimed a weather-tool failure without
-calling the tool. Role-specific scoring attributed that failure only to the llama
-conversation deployment, while the shared DGX reviewer passed independently. The
-three-round release gate is not yet satisfied. ADR 0009 is accepted for a disabled
-implementation preview, but no deployment or production cutover is approved.
+The study establishes a candidate architecture, not effective product cutover
+evidence. Qualification and compatibility artifacts are necessary technical inputs,
+but they do not prove native and Letta-backed Agent Studio produce equivalent operator
+outcomes. Under [ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md), three
+clean content-addressed paired DGX rounds, current requalification, and reviewed Test
+Center comparison artifacts are still required before any cutover claim.
 
 The follow-up implementation lives under
 `services/ade-api/src/ade_api/features/agent_runtime_v3/`. It adds an opt-in
@@ -734,14 +735,26 @@ new mental model. Keep v2/Letta as the current product until v3 passes acceptanc
 
 ### Phase 4: Eval Parity
 
-Require deterministic and live parity for memory correctness, isolation, old-memory
-retrieval, compaction, false-memory prevention, tools, retries, cancellation, and
-both local models. Test Center owns comparison artifacts.
+Require three complementary evidence classes rather than forcing incomparable domain
+models into one score. Test Center owns content-addressed paired v2/v3 artifacts for
+the common conversational and durable-user-fact outcome. The canonical native matrix
+proves v3-only subject isolation, retrieval, compaction, false-memory prevention,
+tools, and trace semantics. Deterministic conformance proves retry, cancellation, and
+idempotency contracts. Three clean paired DGX rounds, three native qualification
+rounds, conformance, and a rollback rehearsal are all required before a release claim;
+llama-server remains compatibility evidence until independently qualified.
 
 ### Phase 5: Fresh-Start Cutover
 
-Switch new Agent Studio to v3 with a fresh store. Do not import legacy Letta agents.
-Provide an explicit operator reset boundary and archive old evidence as needed.
+After the Phase 4 gate, switch new Agent Studio exclusively to v3 with a fresh ADE
+PostgreSQL store. Do not import legacy Letta agents, dual-write, add a UI/runtime
+toggle, or fall back per request. The initial selectable deployment is the exact
+qualified DGX conversation/reviewer/retriever bundle; llama-server is compatibility
+only. Provide an admin-only, idempotent, transactional reset scoped to
+`purpose=agent_studio`; it refuses active runs, records a receipt, and increments the
+workspace generation. Rollback is release-level to the prior v2 deployment while v3
+state remains isolated. Retain Letta, Redis, v2 endpoints, and old evidence until
+Phase 6 verifies that no product traffic or dependency remains.
 
 ### Phase 6: Remove Letta And Redis
 
@@ -771,7 +784,8 @@ Replacement work may not cut over until all are true:
   disclosure.
 - llama-server passes the defined compatibility protocol and memory gate.
 - Full Python tests, Ruff, `make check`, and live artifacts pass.
-- A later production-cutover ADR is explicitly reviewed and accepted by the user.
+- ADR 0016's evidence gate is satisfied with current requalification and three clean
+  paired DGX Test Center rounds; implementation authorization is not evidence.
 
 ## Open Questions
 

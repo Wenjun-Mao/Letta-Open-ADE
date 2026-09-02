@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class RuntimeMode(StrEnum):
@@ -31,6 +31,13 @@ class MemoryOperation(StrEnum):
     FORGET = "forget"
 
 
+class RuntimeResourcePurpose(StrEnum):
+    DEVELOPMENT = "development"
+    AGENT_STUDIO = "agent_studio"
+    EVALUATION = "evaluation"
+    PREVIEW = "preview"
+
+
 class StrictRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -48,6 +55,7 @@ class CreateAgentDefinitionRequest(StrictRequest):
     tool_names: list[Literal["search_memory", "get_weather"]] = Field(
         default_factory=lambda: ["search_memory"], max_length=2
     )
+    expected_current_version: int | None = Field(default=None, ge=0)
 
     @field_validator("tool_names")
     @classmethod
@@ -69,6 +77,7 @@ class DeploymentSnapshotResponse(BaseModel):
 
 class AgentDefinitionResponse(BaseModel):
     id: str
+    agent_definition_id: str | None = None
     definition_key: str
     version: int
     name: str
@@ -80,7 +89,36 @@ class AgentDefinitionResponse(BaseModel):
     memory_policy_version: str
     qualification_state: QualificationState
     deployments: list[DeploymentSnapshotResponse]
+    archived_at: datetime | None = None
     created_at: datetime
+
+
+class AgentDefinitionListResponse(BaseModel):
+    total: int
+    items: list[AgentDefinitionResponse]
+
+
+class AgentStudioBundleResponse(BaseModel):
+    key: str
+    name: str
+    model_key: str
+    reviewer_model_key: str
+    embedding_model_key: str
+    prompt_key: str
+    persona_key: str
+    tool_names: list[str]
+    memory_policy_version: str
+    qualification_state: QualificationState
+    deployments: list[DeploymentSnapshotResponse]
+
+
+class AgentStudioOptionsResponse(BaseModel):
+    runtime: Literal["ade_native_v3"] = "ade_native_v3"
+    default_bundle_key: str
+    bundles: list[AgentStudioBundleResponse]
+    default_timeout_seconds: float = 180.0
+    default_retry_count: int = 0
+    max_retry_count: int = 5
 
 
 class CreateMemorySubjectRequest(StrictRequest):
@@ -92,48 +130,86 @@ class MemorySubjectResponse(BaseModel):
     id: str
     external_key: str
     display_name: str
+    version: int = 1
+    archived_at: datetime | None = None
     created_at: datetime
+    updated_at: datetime | None = None
+
+
+class MemorySubjectListResponse(BaseModel):
+    total: int
+    items: list[MemorySubjectResponse]
+
+
+class UpdateMemorySubjectRequest(StrictRequest):
+    display_name: str = Field(min_length=1, max_length=200)
+    expected_version: int = Field(ge=1)
 
 
 class CreateConversationRequest(StrictRequest):
     agent_definition_id: str = Field(min_length=1, max_length=100)
     memory_subject_id: str = Field(min_length=1, max_length=100)
+    title: str = Field(default="Conversation", min_length=1, max_length=120)
 
 
 class ConversationResponse(BaseModel):
     id: str
     agent_definition_id: str
     memory_subject_id: str
+    title: str = "Conversation"
+    purpose: RuntimeResourcePurpose = RuntimeResourcePurpose.DEVELOPMENT
     version: int
+    archived_at: datetime | None = None
     created_at: datetime
 
 
-class CreatePreviewSessionRequest(StrictRequest):
-    """Create the bounded resources needed by the separate native pilot."""
+class ConversationListResponse(BaseModel):
+    total: int
+    items: list[ConversationResponse]
 
+
+class CreateAgentStudioSessionRequest(StrictRequest):
     idempotency_key: str = Field(min_length=1, max_length=200)
-    name: str = Field(default="Native Runtime Preview", min_length=1, max_length=120)
-    subject_display_name: str = Field(default="Preview User", max_length=200)
-    model_key: str = Field(min_length=1, max_length=300)
-    reviewer_model_key: str = Field(min_length=1, max_length=300)
-    embedding_model_key: str = Field(min_length=1, max_length=300)
-    prompt_key: str = Field(default="chat_v20260516", min_length=1, max_length=128)
-    persona_key: str = Field(default="chat_linxiaotang", min_length=1, max_length=128)
+    title: str = Field(default="New conversation", min_length=1, max_length=120)
+    agent_definition_id: str | None = Field(default=None, min_length=1, max_length=100)
+    new_definition: CreateAgentDefinitionRequest | None = None
+    memory_subject_id: str | None = Field(default=None, min_length=1, max_length=100)
+    new_subject: CreateMemorySubjectRequest | None = None
 
-    @field_validator("idempotency_key", "name")
+    @field_validator("idempotency_key", "title")
     @classmethod
-    def _reject_blank_preview_identity(cls, value: str) -> str:
+    def _reject_blank_session_text(cls, value: str) -> str:
         if not value.strip():
             raise ValueError("value must not be blank")
         return value.strip()
 
+    @model_validator(mode="after")
+    def _require_one_resource_source(self) -> CreateAgentStudioSessionRequest:
+        if (self.agent_definition_id is None) == (self.new_definition is None):
+            raise ValueError("exactly one definition source is required")
+        if (self.memory_subject_id is None) == (self.new_subject is None):
+            raise ValueError("exactly one subject source is required")
+        if (
+            self.new_definition is not None
+            and self.new_definition.expected_current_version not in {None, 0}
+        ):
+            raise ValueError(
+                "a session-created definition must start at expected version 0"
+            )
+        return self
 
-class PreviewSessionResponse(BaseModel):
-    session_id: str
+
+class AgentStudioResetRequest(StrictRequest):
+    idempotency_key: str = Field(min_length=1, max_length=200)
+    confirmation: Literal["RESET ADE AGENT STUDIO"]
+
+
+class AgentStudioResetResponse(BaseModel):
+    receipt_id: str
     idempotent_replay: bool = False
-    agent_definition: AgentDefinitionResponse
-    memory_subject: MemorySubjectResponse
-    conversation: ConversationResponse
+    reset_generation: int
+    deleted_counts: dict[str, int]
+    reset_at: datetime
 
 
 class MessageResponse(BaseModel):
@@ -175,6 +251,9 @@ class ConversationSummaryResponse(BaseModel):
 
 class ConversationStateResponse(ConversationResponse):
     messages: list[MessageResponse]
+    message_total: int = 0
+    messages_truncated: bool = False
+    next_before_sequence: int | None = None
     summary: ConversationSummaryResponse | None = None
 
 
@@ -215,6 +294,25 @@ class RunResponse(BaseModel):
     finished_at: datetime | None = None
 
 
+class RunListResponse(BaseModel):
+    total: int
+    items: list[RunResponse]
+
+
+class AgentStudioSessionResponse(BaseModel):
+    session_id: str
+    idempotent_replay: bool = False
+    agent_definition: AgentDefinitionResponse
+    memory_subject: MemorySubjectResponse
+    conversation: ConversationResponse
+    latest_run: RunResponse | None = None
+
+
+class AgentStudioSessionListResponse(BaseModel):
+    total: int
+    items: list[AgentStudioSessionResponse]
+
+
 class RuntimeWorkerHealthResponse(BaseModel):
     status: Literal["ready", "not_ready"]
     database_ready: bool
@@ -243,6 +341,11 @@ class RunEventResponse(BaseModel):
     causation_id: str | None = None
     visibility: Literal["operator"] = "operator"
     payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class RunEventListResponse(BaseModel):
+    total: int
+    items: list[RunEventResponse]
 
 
 class MemoryEvidenceResponse(BaseModel):

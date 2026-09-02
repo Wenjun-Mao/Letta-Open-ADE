@@ -29,6 +29,7 @@ def test_scoped_cleanup_honors_the_complete_provenance_fk_graph(
     run_id = f"agent-runtime-v3-cleanup-{uuid4().hex[:8]}"
     definition_key = f"{run_id}-definition"
     subject_external_key = f"{run_id}-subject"
+    unrelated_definition_key = f"{run_id}-unrelated-definition"
     ids = {name: uuid4() for name in _ID_NAMES}
 
     with psycopg.connect(_psycopg_url(DATABASE_URL)) as connection:
@@ -41,6 +42,7 @@ def test_scoped_cleanup_honors_the_complete_provenance_fk_graph(
                 workspace_id=workspace_id,
                 definition_key=definition_key,
                 subject_external_key=subject_external_key,
+                unrelated_definition_key=unrelated_definition_key,
                 ids=ids,
             )
 
@@ -60,6 +62,13 @@ def test_scoped_cleanup_honors_the_complete_provenance_fk_graph(
         with connection.cursor() as cursor:
             assert (
                 cursor.execute(
+                    "SELECT count(*) FROM ade.agent_definitions WHERE definition_key = %s",
+                    (definition_key,),
+                ).fetchone()[0]
+                == 0
+            )
+            assert (
+                cursor.execute(
                     "SELECT count(*) FROM ade.agent_definition_versions WHERE definition_key = %s",
                     (definition_key,),
                 ).fetchone()[0]
@@ -72,10 +81,27 @@ def test_scoped_cleanup_honors_the_complete_provenance_fk_graph(
                 ).fetchone()[0]
                 == 0
             )
+            assert (
+                cursor.execute(
+                    "SELECT count(*) FROM ade.agent_definitions WHERE definition_key = %s",
+                    (unrelated_definition_key,),
+                ).fetchone()[0]
+                == 1
+            )
+            assert (
+                cursor.execute(
+                    "SELECT count(*) FROM ade.agent_definition_versions WHERE definition_key = %s",
+                    (unrelated_definition_key,),
+                ).fetchone()[0]
+                == 1
+            )
 
 
 _ID_NAMES = (
-    "definition",
+    "definition_root",
+    "definition_version",
+    "unrelated_definition_root",
+    "unrelated_definition_version",
     "subject",
     "entity",
     "conversation",
@@ -93,34 +119,31 @@ def _insert_cleanup_graph(
     workspace_id: object,
     definition_key: str,
     subject_external_key: str,
+    unrelated_definition_key: str,
     ids: dict[str, object],
 ) -> None:
-    cursor.execute(
-        """
-        INSERT INTO ade.agent_definition_versions (
-            id, workspace_id, definition_key, version, name, model_key,
-            reviewer_model_key, embedding_model_key, prompt_key, prompt_sha256,
-            prompt_content, persona_key, persona_sha256, persona_content,
-            tool_names, memory_policy_version, qualification_state,
-            deployment_snapshot
-        ) VALUES (
-            %s, %s, %s, 1, 'cleanup test', 'chat', 'reviewer', 'embedding',
-            'prompt', %s, 'prompt', 'persona', %s, 'persona', %s, 'v1',
-            'unqualified', %s
-        )
-        """,
-        (
-            ids["definition"],
-            workspace_id,
-            definition_key,
-            "a" * 64,
-            "b" * 64,
-            Jsonb([]),
-            Jsonb({}),
-        ),
+    _insert_definition(
+        cursor,
+        workspace_id=workspace_id,
+        definition_id=ids["definition_root"],
+        version_id=ids["definition_version"],
+        definition_key=definition_key,
+        purpose="development",
+    )
+    _insert_definition(
+        cursor,
+        workspace_id=workspace_id,
+        definition_id=ids["unrelated_definition_root"],
+        version_id=ids["unrelated_definition_version"],
+        definition_key=unrelated_definition_key,
+        purpose="agent_studio",
     )
     cursor.execute(
-        "INSERT INTO ade.memory_subjects (id, workspace_id, external_key, display_name) VALUES (%s, %s, %s, 'cleanup test')",
+        """
+        INSERT INTO ade.memory_subjects (
+            id, workspace_id, external_key, display_name, purpose
+        ) VALUES (%s, %s, %s, 'cleanup test', 'development')
+        """,
         (ids["subject"], workspace_id, subject_external_key),
     )
     cursor.execute(
@@ -128,8 +151,18 @@ def _insert_cleanup_graph(
         (ids["entity"], workspace_id, ids["subject"]),
     )
     cursor.execute(
-        "INSERT INTO ade.conversations (id, workspace_id, agent_definition_version_id, memory_subject_id) VALUES (%s, %s, %s, %s)",
-        (ids["conversation"], workspace_id, ids["definition"], ids["subject"]),
+        """
+        INSERT INTO ade.conversations (
+            id, workspace_id, agent_definition_version_id, memory_subject_id, title,
+            purpose
+        ) VALUES (%s, %s, %s, %s, 'cleanup test', 'development')
+        """,
+        (
+            ids["conversation"],
+            workspace_id,
+            ids["definition_version"],
+            ids["subject"],
+        ),
     )
     cursor.execute(
         """
@@ -199,4 +232,54 @@ def _insert_cleanup_graph(
         ) VALUES (%s, %s, %s, 0, 8, 'remember', %s)
         """,
         (ids["source"], ids["revision"], ids["message"], "d" * 64),
+    )
+
+
+def _insert_definition(
+    cursor: psycopg.Cursor,
+    *,
+    workspace_id: object,
+    definition_id: object,
+    version_id: object,
+    definition_key: str,
+    purpose: str,
+) -> None:
+    cursor.execute(
+        """
+        INSERT INTO ade.agent_definitions (
+            id, workspace_id, definition_key, name, purpose
+        ) VALUES (%s, %s, %s, 'cleanup test', %s)
+        """,
+        (definition_id, workspace_id, definition_key, purpose),
+    )
+    cursor.execute(
+        """
+        INSERT INTO ade.agent_definition_versions (
+            id, workspace_id, agent_definition_id, definition_key, version, name,
+            purpose, model_key,
+            reviewer_model_key, embedding_model_key, prompt_key, prompt_sha256,
+            prompt_content, persona_key, persona_sha256, persona_content,
+            tool_names, memory_policy_version, qualification_state,
+            deployment_snapshot
+        ) VALUES (
+            %s, %s, %s, %s, 1, 'cleanup test', %s, 'chat', 'reviewer',
+            'embedding', 'prompt', %s, 'prompt', 'persona', %s, 'persona', %s,
+            'v1', 'unqualified', %s
+        )
+        """,
+        (
+            version_id,
+            workspace_id,
+            definition_id,
+            definition_key,
+            purpose,
+            "a" * 64,
+            "b" * 64,
+            Jsonb([]),
+            Jsonb({}),
+        ),
+    )
+    cursor.execute(
+        "UPDATE ade.agent_definitions SET current_version_id = %s WHERE id = %s",
+        (version_id, definition_id),
     )

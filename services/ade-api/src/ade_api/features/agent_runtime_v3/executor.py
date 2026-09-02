@@ -48,7 +48,7 @@ WEATHER_TOOL = {
     "function": {
         "name": "get_weather",
         "description": (
-            "Return deterministic preview weather for a named city. Call this for "
+            "Return deterministic fixture weather for a named city. Call this for "
             "every explicit weather lookup, including unfamiliar cities or requests "
             "expected to fail; do not invent a result."
         ),
@@ -148,7 +148,7 @@ class ConversationExecutor:
         tools: Mapping[str, CuratedTool] | None = None,
         tool_requirement: ToolRequirement | None = None,
         max_model_requests: int = 6,
-        # Kept only for callers of the original preview API. Runtime execution
+        # Kept for focused executor tests and study adapters. Product execution
         # supplies ``tools`` and therefore never selects behavior by a boolean.
         search_memory: SearchMemoryHandler | None = None,
         enable_search_memory: bool = True,

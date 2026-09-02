@@ -18,7 +18,7 @@ is recorded as compatibility evidence and is never promotion-eligible.
 
 ## Run
 
-Build the native runtime through `make native-runtime-up` (or
+Build the native runtime through `make agent-studio-release-up` (or
 `make eval-agent-runtime-v3`) so Compose records the exact Git revision, clean/dirty
 state, and SHA-256 fingerprint of every Git-visible file in the native API and worker
 images. The Make target runs this workflow inside the isolated `ade-native-api`
@@ -64,7 +64,7 @@ When any path-bound runtime policy input changes, explicitly rebind the checked-
 deployment fingerprints before collecting new evidence:
 
 ```bash
-make native-runtime-policy-rebind
+make agent-studio-policy-rebind
 ```
 
 Rebinding resets prior qualification rounds only for deployments whose policy

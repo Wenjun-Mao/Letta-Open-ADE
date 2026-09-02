@@ -97,6 +97,26 @@ class RunRepository:
         row = result.mappings().one_or_none()
         return dict(row) if row is not None else None
 
+    async def list_for_conversation(
+        self, conversation_id: str, *, limit: int, offset: int
+    ) -> tuple[int, list[dict[str, Any]]]:
+        total = int(
+            await self._connection.scalar(
+                select(func.count())
+                .select_from(runs)
+                .where(runs.c.conversation_id == conversation_id)
+            )
+            or 0
+        )
+        result = await self._connection.execute(
+            select(runs)
+            .where(runs.c.conversation_id == conversation_id)
+            .order_by(runs.c.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return total, [dict(row) for row in result.mappings().all()]
+
     async def claim_pending(self) -> dict[str, Any] | None:
         """Claim one pending run without holding the transaction during model I/O."""
 
@@ -326,3 +346,26 @@ class RunRepository:
             .order_by(run_events.c.sequence)
         )
         return [dict(row) for row in result.mappings()]
+
+    async def list_event_page(
+        self, run_id: str, *, limit: int, after_sequence: int = 0
+    ) -> tuple[int, list[dict[str, Any]]]:
+        await self.get(run_id)
+        total = int(
+            await self._connection.scalar(
+                select(func.count())
+                .select_from(run_events)
+                .where(run_events.c.run_id == run_id)
+            )
+            or 0
+        )
+        result = await self._connection.execute(
+            select(run_events)
+            .where(
+                run_events.c.run_id == run_id,
+                run_events.c.sequence > after_sequence,
+            )
+            .order_by(run_events.c.sequence)
+            .limit(limit)
+        )
+        return total, [dict(row) for row in result.mappings().all()]

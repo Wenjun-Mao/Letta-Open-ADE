@@ -1,6 +1,5 @@
 const API_BASE_URL_ENV = "ADE_API_BASE_URL";
 const NATIVE_API_BASE_URL_ENV = "ADE_NATIVE_API_BASE_URL";
-const NATIVE_PREVIEW_ENABLED_ENV = "ADE_NATIVE_PREVIEW_ENABLED";
 const API_KEY_ENV = "ADE_API_ADMIN_KEY";
 
 export function adeApiBaseUrl(value = process.env[API_BASE_URL_ENV]): URL {
@@ -33,12 +32,6 @@ export function adeApiAuthorization(value = process.env[API_KEY_ENV]): string {
     throw new Error(`${API_KEY_ENV} must be configured for the ADE API proxy.`);
   }
   return `Bearer ${apiKey}`;
-}
-
-export function nativePreviewProxyEnabled(
-  value = process.env[NATIVE_PREVIEW_ENABLED_ENV],
-): boolean {
-  return value?.trim().toLowerCase() === "true";
 }
 
 export function buildAdeApiUrl(

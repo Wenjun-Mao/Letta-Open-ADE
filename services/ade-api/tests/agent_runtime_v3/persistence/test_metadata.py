@@ -16,7 +16,9 @@ from ade_api.features.agent_runtime_v3.persistence.validation import (
 
 
 EXPECTED_TABLES = {
+    "agent_definitions",
     "agent_definition_versions",
+    "agent_studio_reset_receipts",
     "conversation_leases",
     "conversation_summaries",
     "conversations",

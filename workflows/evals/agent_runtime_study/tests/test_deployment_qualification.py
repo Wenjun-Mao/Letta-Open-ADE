@@ -317,29 +317,44 @@ def test_canonical_manifest_tracks_actual_identity_separately_from_aliases() -> 
         ("endpoint_port", 8001),
         ("request_timeout_seconds", 15),
     )
-    assert [item.lifecycle for item in deployments] == [
-        DeploymentLifecycle.QUALIFIED,
-        DeploymentLifecycle.QUALIFIED,
-        DeploymentLifecycle.DISCOVERED,
-    ]
+    assert all(
+        item.lifecycle in {DeploymentLifecycle.CANDIDATE, DeploymentLifecycle.QUALIFIED}
+        for item in deployments[:2]
+    )
+    assert llama.lifecycle is DeploymentLifecycle.DISCOVERED
     assert deployments[0].fingerprint.provenance_complete is True
     assert retriever.fingerprint.provenance_complete is True
     assert llama.fingerprint.provenance_complete is False
 
     manifest = load_deployment_manifest(registry_path)
-    qualified = {
-        item.deployment_id: item.qualification
+    release_entries = {
+        item.deployment_id: item
         for item in manifest.deployments
-        if item.lifecycle == "qualified"
+        if item.deployment_id != "llama-server-qwen3_5-27b"
     }
-    assert set(qualified) == {"dgx-qwen3_6-chat", "dgx-qwen3-embedding-0_6b"}
-    assert all(summary.qualified for summary in qualified.values())
-    assert all(summary.stale_round_count == 0 for summary in qualified.values())
-    assert [
-        (result.role, result.observed_rounds, result.consecutive_passing_rounds)
-        for result in qualified["dgx-qwen3_6-chat"].role_results
-    ] == [("conversation", 3, 3), ("reviewer", 3, 3)]
-    assert [
-        (result.role, result.observed_rounds, result.consecutive_passing_rounds)
-        for result in qualified["dgx-qwen3-embedding-0_6b"].role_results
-    ] == [("retriever", 3, 3)]
+    expected_roles = {
+        "dgx-qwen3_6-chat": ["conversation", "reviewer"],
+        "dgx-qwen3-embedding-0_6b": ["retriever"],
+    }
+    assert set(release_entries) == set(expected_roles)
+    for deployment_id, deployment in release_entries.items():
+        summary = deployment.qualification
+        assert [result.role for result in summary.role_results] == expected_roles[
+            deployment_id
+        ]
+        assert summary.stale_round_count == 0
+        if deployment.lifecycle == "qualified":
+            assert summary.qualified is True
+            assert all(
+                (result.observed_rounds, result.consecutive_passing_rounds) == (3, 3)
+                and result.qualified
+                for result in summary.role_results
+            )
+        else:
+            assert deployment.lifecycle == "candidate"
+            assert summary.qualified is False
+            assert all(
+                (result.observed_rounds, result.consecutive_passing_rounds) == (0, 0)
+                and not result.qualified
+                for result in summary.role_results
+            )

@@ -46,6 +46,10 @@ def test_alembic_upgrade_creates_named_ade_pgvector_schema() -> None:
         with engine.connect() as connection:
             validate_database_at_head(connection)
             inspector = inspect(connection)
+            assert "agent_definitions" in inspector.get_table_names(schema="ade")
+            assert "agent_studio_reset_receipts" in inspector.get_table_names(
+                schema="ade"
+            )
             assert "memory_embeddings" in inspector.get_table_names(schema="ade")
             assert "worker_instances" in inspector.get_table_names(schema="ade")
             worker_columns = {
@@ -53,6 +57,25 @@ def test_alembic_upgrade_creates_named_ade_pgvector_schema() -> None:
                 for column in inspector.get_columns("worker_instances", schema="ade")
             }
             assert "source_fingerprint" in worker_columns
+            definition_version_columns = {
+                column["name"]
+                for column in inspector.get_columns(
+                    "agent_definition_versions", schema="ade"
+                )
+            }
+            assert "agent_definition_id" in definition_version_columns
+            subject_columns = {
+                column["name"]
+                for column in inspector.get_columns("memory_subjects", schema="ade")
+            }
+            assert {"purpose", "version", "archived_at", "updated_at"} <= (
+                subject_columns
+            )
+            conversation_columns = {
+                column["name"]
+                for column in inspector.get_columns("conversations", schema="ade")
+            }
+            assert {"title", "purpose"} <= conversation_columns
             summary_columns = {
                 column["name"]
                 for column in inspector.get_columns(

@@ -147,6 +147,655 @@
         "title": "智能体 模型 更新 请求",
         "type": "object"
       },
+      "AgentRuntimeParityArtifactDigestsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "comparison_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "比较 SHA 256",
+            "type": "string"
+          },
+          "evidence_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "证据 SHA 256",
+            "type": "string"
+          },
+          "normalized_turns_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "规范化 轮次 SHA 256",
+            "type": "string"
+          },
+          "parity_spec_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "对等性 规格 SHA 256",
+            "type": "string"
+          },
+          "provenance_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "来源证明 SHA 256",
+            "type": "string"
+          },
+          "summary_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "摘要 SHA 256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parity_spec_sha256",
+          "provenance_sha256",
+          "normalized_turns_sha256",
+          "comparison_sha256",
+          "summary_sha256",
+          "evidence_sha256"
+        ],
+        "title": "智能体 运行时 对等性 产物 摘要值 响应",
+        "type": "object"
+      },
+      "AgentRuntimeParityCleanupResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "completed": {
+            "title": "已完成",
+            "type": "boolean"
+          },
+          "legacy_completed": {
+            "title": "旧运行时已完成",
+            "type": "boolean"
+          },
+          "legacy_creation_indeterminate": {
+            "title": "旧运行时创建状态不确定",
+            "type": "boolean"
+          },
+          "native_completed": {
+            "title": "原生运行时已完成",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "completed",
+          "legacy_completed",
+          "native_completed",
+          "legacy_creation_indeterminate"
+        ],
+        "title": "智能体 运行时 对等性 清理 响应",
+        "type": "object"
+      },
+      "AgentRuntimeParityConfigResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "legacy_embedding": {
+            "title": "旧运行时 向量模型",
+            "type": "string"
+          },
+          "legacy_model": {
+            "title": "旧运行时 模型",
+            "type": "string"
+          },
+          "native_conversation_model": {
+            "title": "原生运行时 会话 模型",
+            "type": "string"
+          },
+          "native_embedding_model": {
+            "title": "原生运行时 向量模型 模型",
+            "type": "string"
+          },
+          "native_reviewer_model": {
+            "title": "原生运行时 评审器 模型",
+            "type": "string"
+          },
+          "persona_key": {
+            "title": "Persona 键",
+            "type": "string"
+          },
+          "prompt_key": {
+            "title": "提示词键",
+            "type": "string"
+          },
+          "retry_count": {
+            "const": 0,
+            "title": "重试次数",
+            "type": "integer"
+          },
+          "rounds": {
+            "title": "轮数",
+            "type": "integer"
+          },
+          "timeout_seconds": {
+            "title": "超时秒数",
+            "type": "number"
+          }
+        },
+        "required": [
+          "prompt_key",
+          "persona_key",
+          "legacy_model",
+          "legacy_embedding",
+          "native_conversation_model",
+          "native_reviewer_model",
+          "native_embedding_model",
+          "rounds",
+          "timeout_seconds",
+          "retry_count"
+        ],
+        "title": "智能体 运行时 对等性 配置 响应",
+        "type": "object"
+      },
+      "AgentRuntimeParityDetailResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_digests": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentRuntimeParityArtifactDigestsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "检查项",
+            "type": "object"
+          },
+          "cleanup": {
+            "$ref": "#/components/schemas/AgentRuntimeParityCleanupResponse"
+          },
+          "cleanup_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "清理完成"
+          },
+          "comparability_checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "可比性检查",
+            "type": "object"
+          },
+          "config": {
+            "$ref": "#/components/schemas/AgentRuntimeParityConfigResponse"
+          },
+          "created_at": {
+            "title": "创建时间",
+            "type": "string"
+          },
+          "finished_at": {
+            "title": "结束时间",
+            "type": "string"
+          },
+          "inputs_comparable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "输入可比"
+          },
+          "passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "是否通过"
+          },
+          "preflight_error": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "预检 错误"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/AgentRuntimeParityProvenanceResponse"
+          },
+          "ready": {
+            "title": "已就绪",
+            "type": "boolean"
+          },
+          "rounds": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRuntimeParityRoundResponse"
+            },
+            "title": "轮数",
+            "type": "array"
+          },
+          "rounds_completed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "轮次 已完成"
+          },
+          "rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "通过轮数"
+          },
+          "rounds_requested": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "轮次 请求的"
+          },
+          "run_id": {
+            "title": "运行 ID",
+            "type": "string"
+          },
+          "run_status": {
+            "title": "运行 状态",
+            "type": "string"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRuntimeParityTurnResponse"
+            },
+            "title": "对话轮次",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run_id",
+          "run_status",
+          "created_at",
+          "finished_at",
+          "ready",
+          "config",
+          "checks",
+          "comparability_checks",
+          "cleanup",
+          "provenance",
+          "rounds",
+          "turns"
+        ],
+        "title": "智能体 运行时 对等性 详情 响应",
+        "type": "object"
+      },
+      "AgentRuntimeParityListItemResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_digests": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentRuntimeParityArtifactDigestsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cleanup_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "清理完成"
+          },
+          "config": {
+            "$ref": "#/components/schemas/AgentRuntimeParityConfigResponse"
+          },
+          "created_at": {
+            "title": "创建时间",
+            "type": "string"
+          },
+          "finished_at": {
+            "title": "结束时间",
+            "type": "string"
+          },
+          "inputs_comparable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "输入可比"
+          },
+          "passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "是否通过"
+          },
+          "ready": {
+            "title": "已就绪",
+            "type": "boolean"
+          },
+          "rounds_completed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "轮次 已完成"
+          },
+          "rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "通过轮数"
+          },
+          "rounds_requested": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "轮次 请求的"
+          },
+          "run_id": {
+            "title": "运行 ID",
+            "type": "string"
+          },
+          "run_status": {
+            "title": "运行 状态",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "run_status",
+          "created_at",
+          "finished_at",
+          "ready",
+          "config"
+        ],
+        "title": "智能体 运行时 对等性 列表 条目 响应",
+        "type": "object"
+      },
+      "AgentRuntimeParityListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRuntimeParityListItemResponse"
+            },
+            "title": "条目",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "智能体 运行时 对等性 列表 响应",
+        "type": "object"
+      },
+      "AgentRuntimeParityProvenanceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "fixture_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "测试数据集 SHA 256"
+          },
+          "native_worker_build_matches": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时 工作器 构建 匹配"
+          },
+          "native_worker_ready": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时 工作器 就绪"
+          },
+          "persona_content_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona 内容 SHA 256"
+          },
+          "prompt_content_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "提示词 内容 SHA 256"
+          },
+          "source_dirty": {
+            "title": "来源 脏状态",
+            "type": "boolean"
+          },
+          "source_fingerprint": {
+            "title": "来源 指纹",
+            "type": "string"
+          },
+          "source_revision": {
+            "title": "来源 修订",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_revision",
+          "source_dirty",
+          "source_fingerprint"
+        ],
+        "title": "智能体 运行时 对等性 来源证明 响应",
+        "type": "object"
+      },
+      "AgentRuntimeParityRoundResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "legacy_checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "旧运行时检查",
+            "type": "object"
+          },
+          "legacy_passed": {
+            "title": "旧运行时 通过",
+            "type": "boolean"
+          },
+          "native_checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "原生运行时检查",
+            "type": "object"
+          },
+          "native_passed": {
+            "title": "原生运行时 通过",
+            "type": "boolean"
+          },
+          "passed": {
+            "title": "是否通过",
+            "type": "boolean"
+          },
+          "round": {
+            "title": "轮次",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "round",
+          "passed",
+          "legacy_passed",
+          "native_passed",
+          "legacy_checks",
+          "native_checks"
+        ],
+        "title": "智能体 运行时 对等性 轮次 响应",
+        "type": "object"
+      },
+      "AgentRuntimeParityTurnResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "assistant_replies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "助手回复",
+            "type": "array"
+          },
+          "attempt_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "尝试 计数"
+          },
+          "elapsed_seconds": {
+            "title": "耗时秒数",
+            "type": "number"
+          },
+          "engine": {
+            "enum": [
+              "letta-v2",
+              "ade-native-v3"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "event_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "事件 Types",
+            "type": "array"
+          },
+          "memory_changed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "记忆 已变更"
+          },
+          "round": {
+            "title": "轮次",
+            "type": "integer"
+          },
+          "terminal_status": {
+            "title": "Terminal 状态",
+            "type": "string"
+          },
+          "tool_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "工具 名称",
+            "type": "array"
+          },
+          "turn_index": {
+            "title": "轮次 索引",
+            "type": "integer"
+          },
+          "user_content": {
+            "title": "用户 内容",
+            "type": "string"
+          }
+        },
+        "required": [
+          "engine",
+          "round",
+          "turn_index",
+          "terminal_status",
+          "user_content",
+          "assistant_replies",
+          "elapsed_seconds",
+          "tool_names",
+          "event_types"
+        ],
+        "title": "智能体 运行时 对等性 轮次 响应",
+        "type": "object"
+      },
       "ApiAgentCreateResponse": {
         "properties": {
           "embedding": {
@@ -5238,6 +5887,28 @@
             ],
             "title": "评审模型 模型 键"
           },
+          "legacy_embedding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "旧运行时 向量模型"
+          },
+          "legacy_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "旧运行时 模型"
+          },
           "model": {
             "anyOf": [
               {
@@ -5248,6 +5919,39 @@
               }
             ],
             "title": "模型"
+          },
+          "native_conversation_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时 会话 模型"
+          },
+          "native_embedding_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时 向量模型 模型"
+          },
+          "native_reviewer_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时 评审器 模型"
           },
           "persona_key": {
             "anyOf": [
@@ -5313,7 +6017,8 @@
               "ade_api_e2e_check",
               "ade_mvp_smoke_e2e_check",
               "chat_memory_eval",
-              "agent_runtime_v3_acceptance"
+              "agent_runtime_v3_acceptance",
+              "agent_runtime_parity_eval"
             ],
             "title": "运行类型",
             "type": "string"
@@ -8174,6 +8879,79 @@
         ]
       }
     },
+    "/api/v2/test-center/agent-runtime-parity-evaluations": {
+      "get": {
+        "operationId": "list_agent_runtime_parity_evaluations_api_v2_test_center_agent_runtime_parity_evaluations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRuntimeParityListResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "列出成对智能体运行时产品对等性评估",
+        "tags": [
+          "测试中心"
+        ]
+      }
+    },
+    "/api/v2/test-center/agent-runtime-parity-evaluations/{run_id}": {
+      "get": {
+        "operationId": "get_agent_runtime_parity_evaluation_api_v2_test_center_agent_runtime_parity_evaluations__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "运行 ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRuntimeParityDetailResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "获取成对智能体运行时产品对等性证据",
+        "tags": [
+          "测试中心"
+        ]
+      }
+    },
     "/api/v2/test-center/chat-memory-evaluations": {
       "get": {
         "operationId": "list_chat_memory_evaluations_api_v2_test_center_chat_memory_evaluations_get",
@@ -9169,10 +9947,6 @@
     {
       "description": "模型能力、目录诊断和场景运行时选项。",
       "name": "Model Catalog"
-    },
-    {
-      "description": "默认禁用的 ADE 自有智能体运行时预览 API。",
-      "name": "智能体运行时 v3 预览"
     }
   ]
 }

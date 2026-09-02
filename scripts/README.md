@@ -15,9 +15,10 @@ make logs SERVICE=ade-api
 make down
 ```
 
-The Compose service names are `ade-web`, `ade-api`, `model-router`, `letta`,
-`postgres`, and `redis`. Model Router and Letta are internal services; inspect
-them through `docker compose logs` or `docker compose exec`, not stale host ports.
+The Compose service names include `ade-web`, `ade-api`, `ade-native-api`,
+`ade-runtime-worker`, `model-router`, `letta`, `postgres`, and `redis`. Model
+Router, Letta, and the worker are internal services; inspect them through
+`docker compose logs` or `docker compose exec`, not stale host ports.
 
 ## OpenAPI Artifacts
 
@@ -27,7 +28,8 @@ uv run python scripts/export_openapi.py --check
 uv run python scripts/generate_openapi_zh_manual.py
 ```
 
-The English artifact is copied to `apps/ade-web/public/openapi/`. The Chinese
+The command exports both the retained v2 API and the ADE-native Agent Studio v3
+API, with copies under `apps/ade-web/public/openapi/`. The Chinese
 generator updates its matching web copy and missing-term report.
 
 ## Content Utilities
@@ -40,6 +42,18 @@ uv run python scripts/persona_library.py --help
 ```
 
 ## Diagnostics And Recovery
+
+The Agent Studio release utilities are intentionally separate and fail closed:
+
+- `check_agent_studio_release_gate.py` validates the final content-addressed ledger.
+- `record_agent_studio_conformance.py` records exact deterministic runtime contracts.
+- `rehearse_agent_studio_rollback.py` proves the prior v2 web/API artifact and native
+  state preservation.
+- `review_agent_studio_cutover.py` composes reviewed qualification, parity,
+  conformance, and rollback evidence.
+
+Run them through the Make targets and sequence documented in the
+[Agent Studio cutover runbook](../docs/operations/agent-studio-cutover.md).
 
 Create a redacted diagnostics bundle:
 

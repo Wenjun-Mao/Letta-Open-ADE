@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, insert, select, update
+from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from .base import OptimisticLockError, fetch_one, values
@@ -49,6 +49,96 @@ class MemoryRepository:
         )
         row = result.mappings().one_or_none()
         return dict(row) if row is not None else None
+
+    async def find_subject_by_external_key(
+        self, workspace_id: str, external_key: str
+    ) -> dict[str, Any] | None:
+        result = await self._connection.execute(
+            select(memory_subjects).where(
+                memory_subjects.c.workspace_id == workspace_id,
+                memory_subjects.c.external_key == external_key,
+            )
+        )
+        row = result.mappings().one_or_none()
+        return dict(row) if row is not None else None
+
+    async def list_subjects(
+        self,
+        workspace_id: str,
+        *,
+        purpose: str,
+        include_archived: bool,
+        limit: int,
+        offset: int,
+    ) -> tuple[int, list[dict[str, Any]]]:
+        conditions = [
+            memory_subjects.c.workspace_id == workspace_id,
+            memory_subjects.c.purpose == purpose,
+        ]
+        if not include_archived:
+            conditions.append(memory_subjects.c.archived_at.is_(None))
+        total = int(
+            await self._connection.scalar(
+                select(func.count()).select_from(memory_subjects).where(*conditions)
+            )
+            or 0
+        )
+        result = await self._connection.execute(
+            select(memory_subjects)
+            .where(*conditions)
+            .order_by(memory_subjects.c.updated_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        return total, [dict(row) for row in result.mappings().all()]
+
+    async def update_subject_name(
+        self,
+        subject_id: str,
+        *,
+        display_name: str,
+        expected_version: int,
+    ) -> dict[str, Any]:
+        result = await self._connection.execute(
+            update(memory_subjects)
+            .where(
+                memory_subjects.c.id == subject_id,
+                memory_subjects.c.version == expected_version,
+            )
+            .values(
+                display_name=display_name,
+                version=expected_version + 1,
+                updated_at=func.now(),
+            )
+            .returning(*memory_subjects.c)
+        )
+        row = result.mappings().one_or_none()
+        if row is None:
+            raise OptimisticLockError("memory subject version changed before update")
+        await self._connection.execute(
+            update(memory_entities)
+            .where(
+                memory_entities.c.id == subject_id,
+                memory_entities.c.subject_id == subject_id,
+            )
+            .values(label=display_name)
+        )
+        return dict(row)
+
+    async def set_subject_archived(
+        self, subject_id: str, *, archived: bool
+    ) -> dict[str, Any]:
+        return await fetch_one(
+            self._connection,
+            update(memory_subjects)
+            .where(memory_subjects.c.id == subject_id)
+            .values(
+                archived_at=func.now() if archived else None,
+                updated_at=func.now(),
+            )
+            .returning(*memory_subjects.c),
+            "memory subject does not exist",
+        )
 
     async def lock_subject(self, subject_id: str) -> dict[str, Any]:
         return await fetch_one(

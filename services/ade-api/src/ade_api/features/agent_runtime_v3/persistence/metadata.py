@@ -50,9 +50,48 @@ workspaces = Table(
     Column("id", UUID_ID, nullable=False),
     Column("workspace_key", String(120), nullable=False),
     Column("name", String(200), nullable=False),
+    Column("state_generation", Integer, nullable=False, server_default=text("1")),
     Column("created_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
+    Column("updated_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
     PrimaryKeyConstraint("id", name="pk_workspaces"),
     UniqueConstraint("workspace_key", name="uq_workspaces_workspace_key"),
+    CheckConstraint(
+        "state_generation > 0", name="ck_workspaces_positive_state_generation"
+    ),
+)
+
+agent_definitions = Table(
+    "agent_definitions",
+    METADATA,
+    Column("id", UUID_ID, nullable=False),
+    Column("workspace_id", UUID_ID, nullable=False),
+    Column("definition_key", String(64), nullable=False),
+    Column("name", String(120), nullable=False),
+    Column("purpose", String(32), nullable=False, server_default=text("'development'")),
+    Column("current_version_id", UUID_ID, nullable=True),
+    Column("archived_at", TIMESTAMP, nullable=True),
+    Column("created_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
+    Column("updated_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
+    PrimaryKeyConstraint("id", name="pk_agent_definitions"),
+    ForeignKeyConstraint(
+        ["workspace_id"],
+        [f"{SCHEMA_NAME}.workspaces.id"],
+        name="fk_agent_definitions_workspace",
+    ),
+    ForeignKeyConstraint(
+        ["current_version_id"],
+        [f"{SCHEMA_NAME}.agent_definition_versions.id"],
+        name="fk_agent_definitions_current_version",
+        use_alter=True,
+    ),
+    UniqueConstraint("id", "workspace_id", name="uq_agent_definitions_id_workspace"),
+    UniqueConstraint(
+        "workspace_id", "definition_key", name="uq_agent_definitions_workspace_key"
+    ),
+    CheckConstraint(
+        "purpose IN ('development', 'agent_studio', 'evaluation', 'preview')",
+        name="ck_agent_definitions_purpose",
+    ),
 )
 
 agent_definition_versions = Table(
@@ -60,6 +99,7 @@ agent_definition_versions = Table(
     METADATA,
     Column("id", UUID_ID, nullable=False),
     Column("workspace_id", UUID_ID, nullable=False),
+    Column("agent_definition_id", UUID_ID, nullable=False),
     Column("definition_key", String(64), nullable=False),
     Column("version", Integer, nullable=False),
     Column("name", String(120), nullable=False),
@@ -76,12 +116,21 @@ agent_definition_versions = Table(
     Column("memory_policy_version", String(128), nullable=False),
     Column("qualification_state", String(32), nullable=False),
     Column("deployment_snapshot", JSONB, nullable=False),
+    Column("purpose", String(32), nullable=False, server_default=text("'development'")),
     Column("created_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
     PrimaryKeyConstraint("id", name="pk_agent_definition_versions"),
     ForeignKeyConstraint(
         ["workspace_id"],
         [f"{SCHEMA_NAME}.workspaces.id"],
         name="fk_definition_versions_workspace",
+    ),
+    ForeignKeyConstraint(
+        ["agent_definition_id", "workspace_id"],
+        [
+            f"{SCHEMA_NAME}.agent_definitions.id",
+            f"{SCHEMA_NAME}.agent_definitions.workspace_id",
+        ],
+        name="fk_definition_versions_definition_workspace",
     ),
     UniqueConstraint("id", "workspace_id", name="uq_definition_versions_id_workspace"),
     UniqueConstraint(
@@ -90,7 +139,16 @@ agent_definition_versions = Table(
         "version",
         name="uq_definition_versions_workspace_key_version",
     ),
+    UniqueConstraint(
+        "agent_definition_id",
+        "version",
+        name="uq_definition_versions_root_version",
+    ),
     CheckConstraint("version > 0", name="ck_definition_versions_positive_version"),
+    CheckConstraint(
+        "purpose IN ('development', 'agent_studio', 'evaluation', 'preview')",
+        name="ck_definition_versions_purpose",
+    ),
 )
 
 memory_subjects = Table(
@@ -100,7 +158,11 @@ memory_subjects = Table(
     Column("workspace_id", UUID_ID, nullable=False),
     Column("external_key", String(200), nullable=False),
     Column("display_name", String(200), nullable=False, server_default=text("''")),
+    Column("purpose", String(32), nullable=False, server_default=text("'development'")),
+    Column("version", Integer, nullable=False, server_default=text("1")),
+    Column("archived_at", TIMESTAMP, nullable=True),
     Column("created_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
+    Column("updated_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
     PrimaryKeyConstraint("id", name="pk_memory_subjects"),
     ForeignKeyConstraint(
         ["workspace_id"],
@@ -111,6 +173,17 @@ memory_subjects = Table(
     UniqueConstraint(
         "workspace_id", "external_key", name="uq_memory_subjects_workspace_external_key"
     ),
+    CheckConstraint(
+        "purpose IN ('development', 'agent_studio', 'evaluation', 'preview')",
+        name="ck_memory_subjects_purpose",
+    ),
+    CheckConstraint("version > 0", name="ck_memory_subjects_positive_version"),
+)
+Index(
+    "ix_memory_subjects_workspace_purpose_updated",
+    memory_subjects.c.workspace_id,
+    memory_subjects.c.purpose,
+    memory_subjects.c.updated_at.desc(),
 )
 
 memory_entities = Table(
@@ -141,6 +214,8 @@ conversations = Table(
     Column("workspace_id", UUID_ID, nullable=False),
     Column("agent_definition_version_id", UUID_ID, nullable=False),
     Column("memory_subject_id", UUID_ID, nullable=False),
+    Column("title", String(120), nullable=False, server_default=text("'Conversation'")),
+    Column("purpose", String(32), nullable=False, server_default=text("'development'")),
     Column("version", Integer, nullable=False, server_default=text("1")),
     Column("archived_at", TIMESTAMP, nullable=True),
     Column("created_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
@@ -163,6 +238,47 @@ conversations = Table(
     ),
     UniqueConstraint("id", "workspace_id", name="uq_conversations_id_workspace"),
     CheckConstraint("version > 0", name="ck_conversations_positive_version"),
+    CheckConstraint(
+        "purpose IN ('development', 'agent_studio', 'evaluation', 'preview')",
+        name="ck_conversations_purpose",
+    ),
+)
+Index(
+    "ix_conversations_workspace_purpose_created",
+    conversations.c.workspace_id,
+    conversations.c.purpose,
+    conversations.c.created_at.desc(),
+)
+
+agent_studio_reset_receipts = Table(
+    "agent_studio_reset_receipts",
+    METADATA,
+    Column("id", UUID_ID, nullable=False),
+    Column("workspace_id", UUID_ID, nullable=False),
+    Column("idempotency_key", String(200), nullable=False),
+    Column("request_sha256", String(64), nullable=False),
+    Column("reset_generation", Integer, nullable=False),
+    Column("deleted_counts", JSONB, nullable=False),
+    Column("reset_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
+    PrimaryKeyConstraint("id", name="pk_agent_studio_reset_receipts"),
+    ForeignKeyConstraint(
+        ["workspace_id"],
+        [f"{SCHEMA_NAME}.workspaces.id"],
+        name="fk_agent_studio_reset_receipts_workspace",
+    ),
+    UniqueConstraint(
+        "workspace_id",
+        "idempotency_key",
+        name="uq_agent_studio_reset_receipts_workspace_key",
+    ),
+    CheckConstraint(
+        "char_length(request_sha256) = 64",
+        name="ck_agent_studio_reset_receipts_request_sha256",
+    ),
+    CheckConstraint(
+        "reset_generation > 1",
+        name="ck_agent_studio_reset_receipts_generation",
+    ),
 )
 
 runs = Table(

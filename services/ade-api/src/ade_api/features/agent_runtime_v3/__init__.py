@@ -1,7 +1,7 @@
-"""ADE-owned conversational runtime preview.
+"""ADE-owned conversational runtime.
 
-The v3 package is intentionally independent from Agent Studio's Letta-backed
-implementation. It remains disabled unless explicitly enabled by configuration.
+The v3 package is intentionally independent from the retained Letta-backed v2
+surface. Agent Studio uses this package without fallback or dual-write behavior.
 """
 
 from .api import router

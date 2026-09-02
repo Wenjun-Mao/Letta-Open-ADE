@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 import threading
+from collections.abc import Mapping
 from pathlib import Path
 
 from ade_api.features.test_center.run_store import TestRunStore, utc_now_iso
@@ -13,10 +14,16 @@ class TestRunProcessExecutor:
     def __init__(self, project_root: Path, run_store: TestRunStore):
         self._project_root = Path(project_root).resolve()
         self._run_store = run_store
+        self._run_environments: dict[str, dict[str, str]] = {}
 
     def start(self, run_id: str) -> None:
         worker = threading.Thread(target=self._run_worker, args=(run_id,), daemon=True)
         worker.start()
+
+    def set_environment(self, run_id: str, environment: Mapping[str, str]) -> None:
+        """Retain launch-only variables in memory, never in the run manifest."""
+
+        self._run_environments[run_id] = dict(environment)
 
     def cancel(self, run_id: str) -> bool:
         with self._run_store.locked_run(run_id) as run:
@@ -33,11 +40,13 @@ class TestRunProcessExecutor:
         """Persist terminal state and terminate child processes during API shutdown."""
 
         for run in self._run_store.list_snapshots():
+            run_id = str(run["run_id"])
             if run.get("status") not in {"queued", "running"}:
                 continue
-            with self._run_store.locked_run(str(run["run_id"])) as tracked:
+            with self._run_store.locked_run(run_id) as tracked:
                 if not tracked or tracked.get("status") not in {"queued", "running"}:
                     continue
+                self._run_environments.pop(run_id, None)
                 tracked["cancel_requested"] = True
                 tracked["status"] = "cancelled"
                 tracked["finished_at"] = utc_now_iso()
@@ -50,8 +59,10 @@ class TestRunProcessExecutor:
     def _run_worker(self, run_id: str) -> None:
         with self._run_store.locked_run(run_id) as run:
             if not run:
+                self._run_environments.pop(run_id, None)
                 return
             if run.get("cancel_requested"):
+                self._run_environments.pop(run_id, None)
                 run["status"] = "cancelled"
                 run["finished_at"] = utc_now_iso()
                 self._run_store.persist(run)
@@ -62,6 +73,7 @@ class TestRunProcessExecutor:
             command = list(run["command"])
             log_file = str(run["log_file"])
             started_at = str(run["started_at"])
+            environment = self._run_environments.pop(run_id, None)
 
         try:
             with open(log_file, "w", encoding="utf-8") as log:
@@ -76,6 +88,7 @@ class TestRunProcessExecutor:
                     text=True,
                     encoding="utf-8",
                     errors="replace",
+                    env=environment,
                 )
 
                 with self._run_store.locked_run(run_id) as tracked:

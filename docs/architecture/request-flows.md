@@ -28,25 +28,33 @@ ADE API.
 sequenceDiagram
     participant B as Browser
     participant W as ADE Web / agent-studio
-    participant A as ADE API / agent_studio
-    participant L as Letta
+    participant N as ADE Native API
+    participant D as ADE PostgreSQL
+    participant K as Runtime Worker
     participant R as Model Router
     participant M as Selected model
-    B->>W: Create agent or send message
-    W->>A: /api/v2/agent-studio/...
-    A->>L: Create or continue persistent agent
-    L->>R: Model completion or tool loop
+    B->>W: Create definition, subject, and conversation
+    W->>N: POST /api/v3/agent-studio/sessions
+    N->>D: Atomic product resource creation
+    B->>W: Send a turn
+    W->>N: POST /api/v3/conversations/.../turns
+    N->>D: Persist accepted run
+    K->>D: Claim the exact conversation run
+    K->>R: Conversation, retrieval, and reviewer requests
     R->>M: One provider request
     M-->>R: Completion
-    R-->>L: Normalized response
-    L-->>A: Agent reply and persistent state
-    A-->>W: Agent Studio response
-    W-->>B: Chat, memory, tool, and lifecycle view
+    R-->>K: Normalized response
+    K->>D: Atomic messages, typed memory, summary, and events
+    N-->>W: SSE events and persisted read models
+    W-->>B: Chat, memory lineage, summary, and run trace
 ```
 
-`agent_studio` is the sole ADE feature that owns agent lifecycle, persistent
-state, and Letta orchestration. It requests a resolved model capability from the
-Model Router integration; it does not inspect provider files or call providers.
+The native runtime is the sole Agent Studio lifecycle, memory, retry, and event
+authority. Definitions are reusable behavior snapshots, subjects own durable
+facts, conversations own immutable history, and runs explain execution. The v3
+web proxy routes only to `ade-native-api`; it never falls back to Letta. The
+retained v2 Agent Studio API exists only as a release rollback boundary during
+Phase 5.
 
 ## Comment Lab And Label Lab
 
@@ -135,36 +143,6 @@ that proposal is a separate reviewed operator action under
 [ADR 0010](../adr/0010-production-path-runtime-qualification.md). Request-level
 provider failures and process-readiness evidence follow
 [ADR 0011](../adr/0011-agent-runtime-operational-readiness.md).
-
-## Gated Native Runtime Pilot
-
-```mermaid
-sequenceDiagram
-    participant B as Browser / native-runtime-preview
-    participant W as ADE Web v3 proxy
-    participant N as ade-native-api
-    participant D as ADE PostgreSQL
-    participant K as ade-runtime-worker
-    participant R as Model Router
-    B->>W: Create preview session
-    W->>N: POST /api/v3/preview-sessions
-    N->>D: Atomic definition + subject + conversation
-    B->>W: Accept turn and open SSE
-    W->>N: /api/v3/conversations/.../turns + /runs/.../events
-    N->>D: Persist accepted run
-    K->>D: Claim exact run
-    K->>R: Conversation, retrieval, and reviewer requests
-    K->>D: Atomic output, memory, summary, terminal events
-    N-->>W: Normalized SSE and read models
-    W-->>B: Messages, typed memory lineage, summary, and event evidence
-```
-
-The v3 proxy points only to `ade-native-api`; it never falls back to the supported
-v2 service. The browser cannot assemble a partial session with three writes. The
-server binds a request idempotency key to one atomic resource set and fixes the
-pilot's tool scope to `search_memory`. Navigation remains off until the exact role
-deployments pass the reviewed gate in
-[ADR 0013](../adr/0013-narrow-native-runtime-product-pilot.md).
 
 ## Model Catalog
 

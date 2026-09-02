@@ -183,6 +183,8 @@ def test_cleanup_refuses_unsupported_database_or_unscoped_queries(
     assert executed
     assert all("WHERE" in sql for sql, _params in executed)
     assert all(params for _sql, params in executed)
+    assert all("workspace.workspace_key = 'default'" in sql for sql, _ in executed)
+    assert all("purpose IN ('development', 'evaluation')" in sql for sql, _ in executed)
     sql_order = [sql.rsplit("\n", maxsplit=1)[-1] for sql, _params in executed]
     assert next(
         index for index, sql in enumerate(sql_order) if "UPDATE ade.memory_facts" in sql
@@ -196,6 +198,24 @@ def test_cleanup_refuses_unsupported_database_or_unscoped_queries(
     assert next(
         index for index, sql in enumerate(sql_order) if "ade.runs" in sql
     ) < next(index for index, sql in enumerate(sql_order) if "ade.conversations" in sql)
+    assert (
+        next(index for index, sql in enumerate(sql_order) if "ade.conversations" in sql)
+        < next(
+            index
+            for index, (sql, _params) in enumerate(executed)
+            if "SET current_version_id = NULL" in sql
+        )
+        < next(
+            index
+            for index, (sql, _params) in enumerate(executed)
+            if "DELETE FROM ade.agent_definition_versions" in sql
+        )
+        < next(
+            index
+            for index, (sql, _params) in enumerate(executed)
+            if "DELETE FROM ade.agent_definitions AS definition" in sql
+        )
+    )
     assert (
         _psycopg_url("postgresql+psycopg://ade_app:secret@postgres:5432/ade")
         == "postgresql://ade_app:secret@postgres:5432/ade"

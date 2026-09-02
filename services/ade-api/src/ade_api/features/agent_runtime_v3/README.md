@@ -1,128 +1,86 @@
-# Agent Runtime v3 Preview
+# ADE-Native Agent Runtime
 
-This feature is the disabled-by-default ADE-owned conversational runtime. It is
-independent from the Letta-backed Agent Studio v2 path and has no compatibility or
-dual-write behavior.
+This package owns Agent Studio's `/api/v3` runtime. It is deliberately isolated
+from the retained Letta-backed `/api/v2` service graph: it uses PostgreSQL and
+Model Router, does not use Redis, and has no importer, dual-write path, or
+per-request fallback to Letta.
 
-## Boundaries
+## Domain Map
 
-- `api.py` owns the focused `/api/v3` resource and SSE contracts.
-- `application.py` is a thin facade over `definition_service.py`,
-  `preview_session_service.py`, `resource_service.py`, and `run_service.py`;
-  `database_boundary.py` centralizes
-  readiness, workspace isolation, and repository error translation.
-- `turn_execution.py` assembles context and coordinates the conversation executor,
-  required memory reviewer, and semantic retrieval for one attempt.
-- `worker.py` coordinates work. `worker_claims.py`, `worker_control.py`,
-  `worker_finalization.py`, and `worker_events.py` separately own recovery,
-  timeout/cancellation/leases, atomic terminal commits, and normalized traces.
-- `provider_tracing.py` records safe request-level evidence for failed or cancelled
-  attempts; `worker_health.py` and `persistence/workers.py` own boot-scoped worker
-  presence independently of conversation leases.
-- `memory_review.py` defines the closed operation schema; `memory_policy.py` binds
-  proposals to the current subject, evidence, entities, and optimistic versions.
-- `persistence/` contains SQLAlchemy Core tables and repositories; Alembic is the only
-  schema creation path. `metadata.py` intentionally keeps the reviewed relational
-  graph together while repositories remain split by domain.
-- `executor.py`, `reviewer.py`, and `fact_registry.py` contain the model/tool loop,
-  dedicated review protocol, and allowed durable-fact vocabulary. `tool_policy.py`
-  resolves versioned explicit external-action requirements independently of model
-  inference and evaluation expectations.
+- `agent_studio_api.py` exposes the product-level definitions, subjects,
+  sessions, state, and reset operations.
+- `api.py` exposes lower-level conversations, turns, runs, events, and health.
+- `agent_studio_sessions.py`, `definition_service.py`, `resource_service.py`, and
+  `run_service.py` own application behavior; `application.py` is their thin
+  facade.
+- `agent_studio_reset.py` owns the admin-only, purpose-scoped fresh-start
+  boundary and its durable idempotency receipt.
+- `database_boundary.py` centralizes readiness, workspace isolation, and
+  repository error translation.
+- `turn_execution.py` assembles context and coordinates the conversation model,
+  required memory reviewer, semantic retrieval, and one ADE-owned attempt.
+- `worker.py` coordinates work. The `worker_*` modules separately own claims,
+  cancellation and leases, event recording, finalization, and health.
+- `memory_review.py` defines the closed operation schema; `memory_policy.py`
+  validates subject-bound, evidence-backed, optimistic memory proposals.
+- `persistence/` contains SQLAlchemy Core tables and repositories. Alembic is the
+  only schema creation path.
 
-The conversation model may call only its definition-selected curated tools:
-subject-bound `search_memory` and the deterministic preview `get_weather` fixture.
-Available tools remain discretionary unless the current request unambiguously
-matches the versioned explicit-action policy. A required action uses exact named
-function selection and fails closed without a hidden repair if the model returns
-final text, another tool, or malformed arguments. Tool results, including typed
-failures, are authoritative and requirement events contain no user text. Evaluation
-availability and expected observations are separate fields. See
-[ADR 0014](../../../../../../docs/adr/0014-curated-tool-invocation-and-external-source-authority.md).
-The model cannot write memory or select a subject. A separate reviewer proposes closed
-typed operations bound to user-authored evidence. ADE generates a contiguous-prefix
-summary before context assembly when more than 64 messages are unsummarized or
-their estimated size exceeds the recent-history budget. It retains up to the newest
-10 raw messages only when they fit; every older unsummarized message must be covered
-by the new summary, and an over-budget compaction fails closed. The narrative summary
-is a lossy derivative: exact completed-turn counts are derived from user messages
-whose run has a committed assistant reply, while summary boundaries come directly
-from immutable history. ADE injects both as authoritative history metadata.
-ADE atomically commits the summary's source links, model/request identity,
-policy/content/input hashes, assistant response, and memory revisions together.
+Agent definitions bind immutable prompt, persona, deployment, tool, and policy
+snapshots. Memory subjects own durable typed facts and revisions. Conversations
+own immutable history and summaries. Runs and normalized events explain each
+execution without persisting private reasoning or provider response bodies.
 
-## Local Preview
+The release product exposes only subject-bound `search_memory`. The deterministic
+`get_weather` fixture remains available for development and qualification tests,
+not release Agent Studio definitions. A separate reviewer proposes typed memory
+operations; the conversation model cannot write memory or choose another subject.
 
-Run `make native-runtime-up` after setting the ADE database password and selecting
-qualified Router deployments, or explicitly use development mode for unqualified
-local experiments. Development runs remain marked `unqualified` in persisted state
-and events.
+## Running Locally
 
-The normal Compose stack leaves this feature disabled. Database administrator
-credentials are available only to the one-shot migration service; ADE API and the
-worker use the least-privilege application role.
+The supported Compose stack starts migration, native API, worker, and ADE Web by
+default. It runs the native API and worker in release mode, which rejects unknown,
+dirty, stale, or unqualified deployment identities.
 
 ```text
-make native-runtime-migrate   # bootstrap roles/database and apply Alembic
-make native-runtime-db-test   # run repository contracts as the application role
-make native-runtime-up        # development-mode API + worker preview
-make native-runtime-lane-check # prove the selected Compose dependency graph is native-only
-make native-runtime-preview-gate # require exact promoted role/policy identities
-make native-runtime-preview-up # release-mode native lane + gated ADE Web preview
+make up                         # supported stack, including native Agent Studio
+make agent-studio-db-test       # real PostgreSQL repository and migration checks
+make agent-studio-lane-check    # prove the native dependency boundary
+make agent-studio-release-gate  # require the exact promoted release identities
+make agent-studio-development-up # explicit unqualified local-development lane
 ```
 
-The migration target rebuilds its image before applying Alembic, so a newly checked-
-in migration cannot be skipped by a stale local container image.
+Database administrator credentials are available only to the one-shot migration
+service. The API and worker use the least-privilege application role. The
+migration target rebuilds before applying Alembic so a new migration cannot be
+skipped by a stale image.
 
-Development mode permits fingerprinted but unqualified local deployments and marks
-every run `unqualified`. Release mode rejects them. ADE Web has a separate,
-build-gated `/native-runtime-preview` pilot; it is never an Agent Studio mode and its
-navigation cannot be enabled by the release Make target until the exact role and
-policy qualification gate passes. The preview has no legacy importer, dual-write
-path, arbitrary Python tools, or production-cutover approval. Its atomic
-`POST /api/v3/preview-sessions` operation fixes the pilot tool scope to
-subject-bound `search_memory` and creates the definition, subject, and conversation
-in one transaction. See [ADR 0013](../../../../../../docs/adr/0013-narrow-native-runtime-product-pilot.md).
+`GET /health` is unauthenticated container liveness only. Authenticated
+`GET /api/v3/worker-health` is the readiness authority: it succeeds only when
+PostgreSQL is ready and a fresh worker has the same compatibility and source
+identity as the API. A draining worker finishes at most one active attempt and
+does not begin another retry.
 
-### Native-only Compose lane
+## Release Identity
 
-`make native-runtime-up` targets the profile-gated `ade-native-api` service, not
-the normal `ade-api` service. It binds `127.0.0.1:${ADE_NATIVE_API_PORT:-8002}` and
-runs `ade_api.native_main:app`. Its transitive Compose dependencies are
-only PostgreSQL, Model Router, the one-shot migration service, and
-`ade-runtime-worker`; it does not start or initialize Letta or Redis. The legacy
-`ade-api` process does not mount `/api/v3`, and ADE Web has no Compose dependency on
-that service in the native preview lane.
+Release mode accepts only the aliases, prompt, persona, and tool set in
+`release_policy.py`. Executable runtime, migration, Compose, content, schema, and
+retrieval files are grouped into content-addressed policy bundles. Definition
+creation and every turn compare promoted deployment fingerprints with those
+current bundles and require a clean, known source identity.
 
-`GET /health` is an unauthenticated container-liveness probe only. All `/api/v3`
-operations, including the readiness check below, retain the configured operator
-authentication. `/api/v3/worker-health` is the actual readiness gate, so a healthy
-container alone never means the runtime may accept a preview session or evaluation.
-`make native-runtime-lane-check` resolves the Compose configuration and fails if
-that service's dependency graph changes to include Letta or Redis.
+Any change to a bound source, model deployment, prompt, tool, schema, or retrieval
+policy invalidates qualification. Rebind and rerun qualification before promotion;
+do not weaken release checks or switch to development mode to bypass that gate.
+Product Agent Studio routes additionally fail closed until the reviewed cutover
+ledger binds three-round qualification, paired Test Center evidence, deterministic
+conformance, and rollback rehearsal. Generic v3 resources remain available in the
+development lane so evidence can be collected without creating a fallback path.
+See [ADR 0010](../../../../../../docs/adr/0010-production-path-runtime-qualification.md),
+[ADR 0011](../../../../../../docs/adr/0011-agent-runtime-operational-readiness.md),
+and [ADR 0016](../../../../../../docs/adr/0016-ade-native-agent-studio-cutover.md).
+The exact operator sequence lives in the
+[cutover runbook](../../../../../../docs/operations/agent-studio-cutover.md).
 
-`GET /api/v3/worker-health` returns `200` only when PostgreSQL is ready and a fresh,
-compatible worker with the same revision, dirty state, and exact Git-visible source
-fingerprint is visible; otherwise it returns the same typed body with `503`. Unknown
-source identity fails closed. A draining worker finishes at most one active attempt
-within Compose's 650-second grace period and never starts another retry. Provider
-failures persist only bounded stage/status/retry metadata,
-never prompts, inputs, response bodies, headers, or exception text. Completed chat
-requests in a failed attempt additionally retain only allowlisted envelope states,
-capped choice/tool counts, bounded token usage, and a normalized finish reason.
-Local validation failures add a stable detail code, and acceptance normalization
-preserves that code with the run ID and last provider stage so cleanup does not erase
-the causal category. See
-[ADR 0011](../../../../../../docs/adr/0011-agent-runtime-operational-readiness.md).
-Disposable live checks must purge the definitions, subjects, conversations, runs,
-messages, and memories they create.
-
-### Release identity
-
-Release mode is deliberately narrower than development mode. The preview accepts
-only the aliases, prompt, persona, and tool set named in `release_policy.py`. Those
-constants and the executable runtime, migration, Compose, prompt, tool, schema, and
-retrieval inputs form four content-addressed policy bundles. Definition creation and
-every turn compare the promoted deployment fingerprints against the current bundle
-hashes. The preview gate also requires a clean, known Git-visible source identity.
-Changing release behavior therefore requires a fresh qualification and reviewed
-promotion; changing an unrelated committed document does not.
+The persisted `preview` purpose is retained only to classify and clean up data
+created by the superseded pilot. It is not a product mode or public route.

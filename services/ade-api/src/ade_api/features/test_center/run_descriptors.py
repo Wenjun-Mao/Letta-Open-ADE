@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -23,10 +24,17 @@ class ArtifactDiscoveryContext:
 CommandBuilder = Callable[[Path, RunOptions], list[str]]
 ArtifactDiscoverer = Callable[[ArtifactDiscoveryContext], list[ArtifactRecord]]
 OptionValidator = Callable[[RunOptions], None]
+EnvironmentBuilder = Callable[[RunOptions, Mapping[str, str]], dict[str, str]]
 
 
 def _accept_any_values(_: RunOptions) -> None:
     return None
+
+
+def _inherit_environment(
+    _: RunOptions, parent_environment: Mapping[str, str]
+) -> dict[str, str]:
+    return dict(parent_environment)
 
 
 @dataclass(frozen=True)
@@ -39,6 +47,7 @@ class TestRunDescriptor:
     command_builder: CommandBuilder
     artifact_discoverer: ArtifactDiscoverer
     option_validator: OptionValidator = _accept_any_values
+    environment_builder: EnvironmentBuilder = _inherit_environment
 
     def validate_options(self, options: RunOptions) -> None:
         unexpected = sorted(set(options).difference(self.accepted_fields))
@@ -56,6 +65,13 @@ class TestRunDescriptor:
         self, context: ArtifactDiscoveryContext
     ) -> list[ArtifactRecord]:
         return self.artifact_discoverer(context)
+
+    def build_environment(
+        self, options: RunOptions, parent_environment: Mapping[str, str] | None = None
+    ) -> dict[str, str]:
+        self.validate_options(options)
+        environment = os.environ if parent_environment is None else parent_environment
+        return self.environment_builder(options, environment)
 
 
 CHAT_MEMORY_EVAL_FIELDS: Final[frozenset[str]] = frozenset(
@@ -83,6 +99,21 @@ AGENT_RUNTIME_V3_ACCEPTANCE_FIELDS: Final[frozenset[str]] = frozenset(
         "retry_count",
         "include_llama_compatibility",
         "case_keys",
+    }
+)
+
+AGENT_RUNTIME_PARITY_FIELDS: Final[frozenset[str]] = frozenset(
+    {
+        "prompt_key",
+        "persona_key",
+        "legacy_model",
+        "legacy_embedding",
+        "native_conversation_model",
+        "native_reviewer_model",
+        "native_embedding_model",
+        "rounds",
+        "timeout_seconds",
+        "retry_count",
     }
 )
 
@@ -158,6 +189,19 @@ DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_CONFIG: Final[dict[str, Any]] = {
     "timeout_seconds": 180.0,
     "retry_count": 0,
     "include_llama_compatibility": True,
+}
+
+DEFAULT_AGENT_RUNTIME_PARITY_CONFIG: Final[dict[str, Any]] = {
+    "prompt_key": "chat_v20260516",
+    "persona_key": "chat_linxiaotang",
+    "legacy_model": "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
+    "legacy_embedding": "letta/letta-free",
+    "native_conversation_model": "dgx_vllm::qwen3.6-35b-a3b-fp8",
+    "native_reviewer_model": "dgx_vllm::qwen3.6-35b-a3b-fp8",
+    "native_embedding_model": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+    "rounds": 3,
+    "timeout_seconds": 180.0,
+    "retry_count": 0,
 }
 
 
@@ -268,6 +312,112 @@ def _build_agent_runtime_v3_acceptance(
     return command
 
 
+def _validate_agent_runtime_parity(options: RunOptions) -> None:
+    rounds = options.get("rounds")
+    if rounds is not None and (not isinstance(rounds, int) or not 1 <= rounds <= 3):
+        raise ValueError("agent runtime parity rounds must be between 1 and 3")
+    timeout_seconds = options.get("timeout_seconds")
+    if timeout_seconds is not None and not 5 <= float(timeout_seconds) <= 600:
+        raise ValueError(
+            "agent runtime parity timeout_seconds must be between 5 and 600"
+        )
+    if options.get("retry_count", 0) != 0:
+        raise ValueError(
+            "agent runtime parity retry_count must be 0 because paired turns "
+            "must not be duplicated"
+        )
+    for field, prefix in (("prompt_key", "chat_"), ("persona_key", "chat_")):
+        value = options.get(field)
+        if value is not None and not str(value).startswith(prefix):
+            raise ValueError(f"agent runtime parity {field} must start with {prefix}")
+
+
+def _build_agent_runtime_parity(output_dir: Path, options: RunOptions) -> list[str]:
+    command = [
+        sys.executable,
+        "workflows/evals/agent_runtime_parity/run.py",
+        "--config",
+        "workflows/evals/agent_runtime_parity/config.toml",
+        "--output-dir",
+        str(output_dir),
+        "--run-id",
+        # The workflow's scoped resource keys require a leading letter; Test
+        # Center UUID directory names may begin with a digit.
+        f"parity-{output_dir.name}",
+    ]
+    option_flags = (
+        ("prompt_key", "--prompt-key"),
+        ("persona_key", "--persona-key"),
+        ("legacy_model", "--legacy-model"),
+        ("legacy_embedding", "--legacy-embedding"),
+        ("native_conversation_model", "--native-conversation-model"),
+        ("native_reviewer_model", "--native-reviewer-model"),
+        ("native_embedding_model", "--native-embedding-model"),
+        ("rounds", "--rounds"),
+        ("timeout_seconds", "--timeout-seconds"),
+    )
+    for option, flag in option_flags:
+        _append_option(command, flag, options.get(option))
+    # This explicitly binds the evaluator to the no-retry product contract even
+    # when the launch form uses all defaults.
+    command.extend(["--retry-count", "0"])
+    return command
+
+
+def _parity_environment_value(
+    environment: Mapping[str, str],
+    *,
+    parity_key: str,
+    fallback_keys: tuple[str, ...],
+    default: str = "",
+) -> str:
+    for key in (parity_key, *fallback_keys):
+        value = str(environment.get(key) or "").strip()
+        if value:
+            return value
+    return default
+
+
+def _build_agent_runtime_parity_environment(
+    _: RunOptions, parent_environment: Mapping[str, str]
+) -> dict[str, str]:
+    """Supply service-local credentials without adding them to a run manifest."""
+
+    environment = dict(parent_environment)
+    environment.update(
+        {
+            "AGENT_RUNTIME_PARITY_LEGACY_API_BASE_URL": _parity_environment_value(
+                parent_environment,
+                parity_key="AGENT_RUNTIME_PARITY_LEGACY_API_BASE_URL",
+                fallback_keys=(),
+                default="http://127.0.0.1:8000",
+            ),
+            "AGENT_RUNTIME_PARITY_NATIVE_API_BASE_URL": _parity_environment_value(
+                parent_environment,
+                parity_key="AGENT_RUNTIME_PARITY_NATIVE_API_BASE_URL",
+                fallback_keys=(),
+                default="http://ade-native-api:8000",
+            ),
+            "AGENT_RUNTIME_PARITY_LEGACY_API_KEY": _parity_environment_value(
+                parent_environment,
+                parity_key="AGENT_RUNTIME_PARITY_LEGACY_API_KEY",
+                fallback_keys=("ADE_API_ADMIN_KEY",),
+            ),
+            "AGENT_RUNTIME_PARITY_NATIVE_API_KEY": _parity_environment_value(
+                parent_environment,
+                parity_key="AGENT_RUNTIME_PARITY_NATIVE_API_KEY",
+                fallback_keys=("ADE_API_OPERATOR_KEY", "ADE_API_ADMIN_KEY"),
+            ),
+            "AGENT_RUNTIME_PARITY_DATABASE_URL": _parity_environment_value(
+                parent_environment,
+                parity_key="AGENT_RUNTIME_PARITY_DATABASE_URL",
+                fallback_keys=("ADE_API_DATABASE_URL",),
+            ),
+        }
+    )
+    return environment
+
+
 def discover_run_directory_artifacts(
     context: ArtifactDiscoveryContext,
 ) -> list[ArtifactRecord]:
@@ -359,6 +509,17 @@ RUN_DESCRIPTORS: Final[dict[str, TestRunDescriptor]] = {
         command_builder=_build_agent_runtime_v3_acceptance,
         artifact_discoverer=discover_run_directory_artifacts,
         option_validator=_validate_agent_runtime_v3_acceptance,
+    ),
+    "agent_runtime_parity_eval": TestRunDescriptor(
+        run_type="agent_runtime_parity_eval",
+        accepted_fields=AGENT_RUNTIME_PARITY_FIELDS,
+        unexpected_field_message=(
+            "Unsupported fields for run_type='agent_runtime_parity_eval'"
+        ),
+        command_builder=_build_agent_runtime_parity,
+        artifact_discoverer=discover_run_directory_artifacts,
+        option_validator=_validate_agent_runtime_parity,
+        environment_builder=_build_agent_runtime_parity_environment,
     ),
 }
 

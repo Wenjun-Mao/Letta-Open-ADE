@@ -147,6 +147,655 @@
         "title": "AgentModelUpdateRequest",
         "type": "object"
       },
+      "AgentRuntimeParityArtifactDigestsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "comparison_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Comparison Sha256",
+            "type": "string"
+          },
+          "evidence_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Evidence Sha256",
+            "type": "string"
+          },
+          "normalized_turns_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Normalized Turns Sha256",
+            "type": "string"
+          },
+          "parity_spec_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Parity Spec Sha256",
+            "type": "string"
+          },
+          "provenance_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Provenance Sha256",
+            "type": "string"
+          },
+          "summary_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Summary Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parity_spec_sha256",
+          "provenance_sha256",
+          "normalized_turns_sha256",
+          "comparison_sha256",
+          "summary_sha256",
+          "evidence_sha256"
+        ],
+        "title": "AgentRuntimeParityArtifactDigestsResponse",
+        "type": "object"
+      },
+      "AgentRuntimeParityCleanupResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "boolean"
+          },
+          "legacy_completed": {
+            "title": "Legacy Completed",
+            "type": "boolean"
+          },
+          "legacy_creation_indeterminate": {
+            "title": "Legacy Creation Indeterminate",
+            "type": "boolean"
+          },
+          "native_completed": {
+            "title": "Native Completed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "completed",
+          "legacy_completed",
+          "native_completed",
+          "legacy_creation_indeterminate"
+        ],
+        "title": "AgentRuntimeParityCleanupResponse",
+        "type": "object"
+      },
+      "AgentRuntimeParityConfigResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "legacy_embedding": {
+            "title": "Legacy Embedding",
+            "type": "string"
+          },
+          "legacy_model": {
+            "title": "Legacy Model",
+            "type": "string"
+          },
+          "native_conversation_model": {
+            "title": "Native Conversation Model",
+            "type": "string"
+          },
+          "native_embedding_model": {
+            "title": "Native Embedding Model",
+            "type": "string"
+          },
+          "native_reviewer_model": {
+            "title": "Native Reviewer Model",
+            "type": "string"
+          },
+          "persona_key": {
+            "title": "Persona Key",
+            "type": "string"
+          },
+          "prompt_key": {
+            "title": "Prompt Key",
+            "type": "string"
+          },
+          "retry_count": {
+            "const": 0,
+            "title": "Retry Count",
+            "type": "integer"
+          },
+          "rounds": {
+            "title": "Rounds",
+            "type": "integer"
+          },
+          "timeout_seconds": {
+            "title": "Timeout Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "prompt_key",
+          "persona_key",
+          "legacy_model",
+          "legacy_embedding",
+          "native_conversation_model",
+          "native_reviewer_model",
+          "native_embedding_model",
+          "rounds",
+          "timeout_seconds",
+          "retry_count"
+        ],
+        "title": "AgentRuntimeParityConfigResponse",
+        "type": "object"
+      },
+      "AgentRuntimeParityDetailResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_digests": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentRuntimeParityArtifactDigestsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Checks",
+            "type": "object"
+          },
+          "cleanup": {
+            "$ref": "#/components/schemas/AgentRuntimeParityCleanupResponse"
+          },
+          "cleanup_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cleanup Complete"
+          },
+          "comparability_checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Comparability Checks",
+            "type": "object"
+          },
+          "config": {
+            "$ref": "#/components/schemas/AgentRuntimeParityConfigResponse"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "title": "Finished At",
+            "type": "string"
+          },
+          "inputs_comparable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputs Comparable"
+          },
+          "passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passed"
+          },
+          "preflight_error": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preflight Error"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/AgentRuntimeParityProvenanceResponse"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "rounds": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRuntimeParityRoundResponse"
+            },
+            "title": "Rounds",
+            "type": "array"
+          },
+          "rounds_completed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rounds Completed"
+          },
+          "rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rounds Passed"
+          },
+          "rounds_requested": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rounds Requested"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "run_status": {
+            "title": "Run Status",
+            "type": "string"
+          },
+          "turns": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRuntimeParityTurnResponse"
+            },
+            "title": "Turns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run_id",
+          "run_status",
+          "created_at",
+          "finished_at",
+          "ready",
+          "config",
+          "checks",
+          "comparability_checks",
+          "cleanup",
+          "provenance",
+          "rounds",
+          "turns"
+        ],
+        "title": "AgentRuntimeParityDetailResponse",
+        "type": "object"
+      },
+      "AgentRuntimeParityListItemResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_digests": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentRuntimeParityArtifactDigestsResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cleanup_complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cleanup Complete"
+          },
+          "config": {
+            "$ref": "#/components/schemas/AgentRuntimeParityConfigResponse"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "title": "Finished At",
+            "type": "string"
+          },
+          "inputs_comparable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inputs Comparable"
+          },
+          "passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passed"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "rounds_completed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rounds Completed"
+          },
+          "rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rounds Passed"
+          },
+          "rounds_requested": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rounds Requested"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "run_status": {
+            "title": "Run Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "run_status",
+          "created_at",
+          "finished_at",
+          "ready",
+          "config"
+        ],
+        "title": "AgentRuntimeParityListItemResponse",
+        "type": "object"
+      },
+      "AgentRuntimeParityListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRuntimeParityListItemResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AgentRuntimeParityListResponse",
+        "type": "object"
+      },
+      "AgentRuntimeParityProvenanceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "fixture_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Sha256"
+          },
+          "native_worker_build_matches": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Worker Build Matches"
+          },
+          "native_worker_ready": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Worker Ready"
+          },
+          "persona_content_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Persona Content Sha256"
+          },
+          "prompt_content_sha256": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Content Sha256"
+          },
+          "source_dirty": {
+            "title": "Source Dirty",
+            "type": "boolean"
+          },
+          "source_fingerprint": {
+            "title": "Source Fingerprint",
+            "type": "string"
+          },
+          "source_revision": {
+            "title": "Source Revision",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_revision",
+          "source_dirty",
+          "source_fingerprint"
+        ],
+        "title": "AgentRuntimeParityProvenanceResponse",
+        "type": "object"
+      },
+      "AgentRuntimeParityRoundResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "legacy_checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Legacy Checks",
+            "type": "object"
+          },
+          "legacy_passed": {
+            "title": "Legacy Passed",
+            "type": "boolean"
+          },
+          "native_checks": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Native Checks",
+            "type": "object"
+          },
+          "native_passed": {
+            "title": "Native Passed",
+            "type": "boolean"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "round": {
+            "title": "Round",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "round",
+          "passed",
+          "legacy_passed",
+          "native_passed",
+          "legacy_checks",
+          "native_checks"
+        ],
+        "title": "AgentRuntimeParityRoundResponse",
+        "type": "object"
+      },
+      "AgentRuntimeParityTurnResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "assistant_replies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Assistant Replies",
+            "type": "array"
+          },
+          "attempt_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempt Count"
+          },
+          "elapsed_seconds": {
+            "title": "Elapsed Seconds",
+            "type": "number"
+          },
+          "engine": {
+            "enum": [
+              "letta-v2",
+              "ade-native-v3"
+            ],
+            "title": "Engine",
+            "type": "string"
+          },
+          "event_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Event Types",
+            "type": "array"
+          },
+          "memory_changed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Changed"
+          },
+          "round": {
+            "title": "Round",
+            "type": "integer"
+          },
+          "terminal_status": {
+            "title": "Terminal Status",
+            "type": "string"
+          },
+          "tool_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tool Names",
+            "type": "array"
+          },
+          "turn_index": {
+            "title": "Turn Index",
+            "type": "integer"
+          },
+          "user_content": {
+            "title": "User Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "engine",
+          "round",
+          "turn_index",
+          "terminal_status",
+          "user_content",
+          "assistant_replies",
+          "elapsed_seconds",
+          "tool_names",
+          "event_types"
+        ],
+        "title": "AgentRuntimeParityTurnResponse",
+        "type": "object"
+      },
       "ApiAgentCreateResponse": {
         "properties": {
           "embedding": {
@@ -5238,6 +5887,28 @@
             ],
             "title": "Judge Model Key"
           },
+          "legacy_embedding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Embedding"
+          },
+          "legacy_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Model"
+          },
           "model": {
             "anyOf": [
               {
@@ -5248,6 +5919,39 @@
               }
             ],
             "title": "Model"
+          },
+          "native_conversation_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Conversation Model"
+          },
+          "native_embedding_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Embedding Model"
+          },
+          "native_reviewer_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Reviewer Model"
           },
           "persona_key": {
             "anyOf": [
@@ -5313,7 +6017,8 @@
               "ade_api_e2e_check",
               "ade_mvp_smoke_e2e_check",
               "chat_memory_eval",
-              "agent_runtime_v3_acceptance"
+              "agent_runtime_v3_acceptance",
+              "agent_runtime_parity_eval"
             ],
             "title": "Run Type",
             "type": "string"
@@ -8174,6 +8879,79 @@
         ]
       }
     },
+    "/api/v2/test-center/agent-runtime-parity-evaluations": {
+      "get": {
+        "operationId": "list_agent_runtime_parity_evaluations_api_v2_test_center_agent_runtime_parity_evaluations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRuntimeParityListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List paired Agent Runtime product parity evaluations",
+        "tags": [
+          "Test Center"
+        ]
+      }
+    },
+    "/api/v2/test-center/agent-runtime-parity-evaluations/{run_id}": {
+      "get": {
+        "operationId": "get_agent_runtime_parity_evaluation_api_v2_test_center_agent_runtime_parity_evaluations__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRuntimeParityDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get paired Agent Runtime product parity evidence",
+        "tags": [
+          "Test Center"
+        ]
+      }
+    },
     "/api/v2/test-center/chat-memory-evaluations": {
       "get": {
         "operationId": "list_chat_memory_evaluations_api_v2_test_center_chat_memory_evaluations_get",
@@ -9169,10 +9947,6 @@
     {
       "description": "Model capabilities, catalog diagnostics, and scenario runtime options.",
       "name": "Model Catalog"
-    },
-    {
-      "description": "Disabled-by-default ADE-owned agent runtime preview APIs.",
-      "name": "Agent Runtime v3 Preview"
     }
   ]
 }

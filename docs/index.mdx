@@ -11,7 +11,8 @@ workflows.
 
 - Local development defaults:
 	- ADE Web: `http://127.0.0.1:3000`
-	- ADE API: `http://127.0.0.1:8000`
+	- ADE API v2: `http://127.0.0.1:8000`
+	- ADE-native Agent Studio v3: `http://127.0.0.1:8002`
 	- Model Router and Letta: Compose-network services, not host endpoints.
 - Browser requests use ADE's same-origin proxy. Direct API clients authenticate
   with the configured reader, operator, or admin Bearer key.
@@ -21,9 +22,10 @@ workflows.
 
 ## What this includes
 
-- Runtime endpoints for agent interaction.
-- Control endpoints for prompt, model, memory block, and tool mutations.
-- Two-step safe agent deletion lifecycle (archive -> restore -> purge).
+- ADE-native Agent Studio definitions, explicit subjects, conversations, turns,
+  typed memories, summaries, runs, and events.
+- Archive and restore lifecycle for Agent Studio conversations, definitions, and
+  subjects, plus an admin-only fresh-start reset.
 - Test orchestration endpoints for checks and runners.
 - Stateless Comment Lab and schema-driven Label Lab generation endpoints.
 - Prompt, persona, schema, and custom-tool lifecycle endpoints.
@@ -36,27 +38,41 @@ conversations, inspecting memory and tool behavior, and making evidence-based
 prompt or persona improvements. This is distinct from the
 [historical maintenance record](maintenance-roadmap.md).
 
-## Agent lifecycle (safe delete)
+## Agent Studio lifecycle
 
-The recommended deletion path is intentionally two-step:
+Agent Studio separates reusable behavior, user memory ownership, and conversation
+history. A session binds one immutable definition version to one memory subject.
+Archiving a conversation does not delete its subject memories or definition.
 
-1. Archive agent (soft delete, hidden from default list)
-2. Optional restore if deletion was accidental
-3. Purge archived agent (hard delete)
+The normal lifecycle is intentionally reversible:
+
+1. Create or reuse an immutable agent definition.
+2. Create or select an explicit memory subject.
+3. Create, archive, or restore a conversation session.
+4. Inspect typed fact revisions and source-message evidence independently of chat.
 
 Key endpoints:
 
-- `POST /api/v2/agent-studio/agents/{agent_id}/archive`
-- `POST /api/v2/agent-studio/agents/{agent_id}/restore`
-- `DELETE /api/v2/agent-studio/agents/{agent_id}/purge`
-- `DELETE /api/v2/agent-studio/agents/{agent_id}` (alias for purging archived agents)
-- `GET /api/v2/agent-studio/agents?include_archived=true`
+- `GET|POST /api/v3/agent-studio/sessions`
+- `GET|DELETE /api/v3/agent-studio/sessions/{conversation_id}`
+- `POST /api/v3/agent-studio/sessions/{conversation_id}/restore`
+- `GET /api/v3/agent-studio/sessions/{conversation_id}/state`
+- `GET|POST /api/v3/agent-studio/definitions`
+- `GET|POST /api/v3/agent-studio/subjects`
+- `GET /api/v3/agent-studio/subjects/{subject_id}/memories`
+- `POST /api/v3/conversations/{conversation_id}/turns`
+- `GET /api/v3/runs/{run_id}/events`
 
 Behavior notes:
 
-- Archived agents are excluded from `GET /api/v2/agent-studio/agents` by default.
-- Runtime and control mutations against archived agents return `409` until restored.
-- Purge requires archived state and returns `400` for non-archived agents.
+- Archived resources are excluded from default lists and reject new execution until
+  explicitly restored.
+- Turns are asynchronous and expose normalized run events without private model
+  reasoning or raw provider bodies.
+- The native store starts fresh; no Letta importer, dual write, runtime toggle, or
+  per-request fallback exists.
+- The retained v2 Letta endpoints are a Phase 5 release-level rollback lane, not the
+  active browser contract after cutover.
 
 ## Error handling shape
 
@@ -84,6 +100,7 @@ Common status patterns:
 - Historical maintenance record: `docs/maintenance-roadmap.md`
 - Upstream references: `docs/references.md`
 - OpenAPI artifact: `docs/openapi/ade-api-openapi.json`
+- Native OpenAPI artifact: `docs/openapi/ade-native-api-openapi.json`
 - Frontend artifact: `apps/ade-web/public/openapi/ade-api-openapi.json`
 - Chinese OpenAPI artifact: `docs/openapi/ade-api-openapi-zh.json`
 - Chinese docs pages: `docs/zh/`

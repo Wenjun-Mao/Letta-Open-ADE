@@ -10,17 +10,22 @@ def _canonical_json(payload: dict) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
 
-def _build_openapi_schema(project_root: Path) -> dict:
+def _build_openapi_schema(project_root: Path, *, native: bool = False) -> dict:
     sys.path.insert(0, str(project_root))
-    from ade_api.main import app  # Imported lazily so script can run from any cwd.
+    if native:
+        from ade_api.native_main import app
+    else:
+        from ade_api.main import app
 
     schema = app.openapi()
 
     if not schema.get("servers"):
         schema["servers"] = [
             {
-                "url": "http://127.0.0.1:8000",
-                "description": "Local ADE API",
+                "url": "http://127.0.0.1:8002" if native else "http://127.0.0.1:8000",
+                "description": (
+                    "Local ADE Native Runtime API" if native else "Local ADE API"
+                ),
             }
         ]
 
@@ -62,6 +67,16 @@ def main() -> int:
         help="Secondary OpenAPI JSON path used by the ADE frontend.",
     )
     parser.add_argument(
+        "--native-output",
+        default="docs/openapi/ade-native-api-openapi.json",
+        help="Output path for the ADE-native Agent Studio OpenAPI JSON.",
+    )
+    parser.add_argument(
+        "--native-frontend-output",
+        default="apps/ade-web/public/openapi/ade-native-api-openapi.json",
+        help="Secondary native OpenAPI JSON path used by the ADE frontend.",
+    )
+    parser.add_argument(
         "--check",
         action="store_true",
         help="Check mode: fail if committed artifact differs from generated schema.",
@@ -71,25 +86,40 @@ def main() -> int:
     project_root = Path(__file__).resolve().parents[1]
     output_path = (project_root / args.output).resolve()
     frontend_output_path = (project_root / args.frontend_output).resolve()
-    output_paths = [output_path, frontend_output_path]
-
-    schema = _build_openapi_schema(project_root)
-    rendered = _canonical_json(schema)
+    native_output_path = (project_root / args.native_output).resolve()
+    native_frontend_output_path = (project_root / args.native_frontend_output).resolve()
+    artifacts = (
+        (
+            _build_openapi_schema(project_root),
+            (output_path, frontend_output_path),
+        ),
+        (
+            _build_openapi_schema(project_root, native=True),
+            (native_output_path, native_frontend_output_path),
+        ),
+    )
 
     if args.check:
-        results = [_check_artifact(path, rendered) for path in output_paths]
+        results = [
+            _check_artifact(path, _canonical_json(schema))
+            for schema, paths in artifacts
+            for path in paths
+        ]
         if not all(results):
             print("Run: uv run python scripts/export_openapi.py")
             return 1
 
         return 0
 
-    for path in output_paths:
-        _write_artifact(path, rendered)
-
-    print(
-        f"[INFO] paths={len(schema.get('paths', {}))} schemas={len(schema.get('components', {}).get('schemas', {}))}"
-    )
+    for schema, paths in artifacts:
+        rendered = _canonical_json(schema)
+        for path in paths:
+            _write_artifact(path, rendered)
+        print(
+            f"[INFO] title={schema.get('info', {}).get('title')} "
+            f"paths={len(schema.get('paths', {}))} "
+            f"schemas={len(schema.get('components', {}).get('schemas', {}))}"
+        )
     return 0
 
 

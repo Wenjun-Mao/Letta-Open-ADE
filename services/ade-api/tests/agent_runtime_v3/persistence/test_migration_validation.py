@@ -8,7 +8,7 @@ from ade_api.features.agent_runtime_v3.persistence.validation import (
 
 
 def test_migration_has_one_reviewed_head() -> None:
-    assert migration_heads() == ("20260830_0004",)
+    assert migration_heads() == ("20260902_0005",)
 
 
 def test_initial_migration_is_static_not_live_metadata() -> None:
@@ -63,6 +63,22 @@ def test_worker_source_fingerprint_migration_preserves_existing_health_rows() ->
     assert "source_fingerprint" in source
     assert "DEFAULT 'unknown'" in source
     assert "DROP DEFAULT" in source
+
+
+def test_agent_studio_cutover_migration_adds_lifecycle_and_reset_boundaries() -> None:
+    migration = (
+        service_root()
+        / "migrations"
+        / "versions"
+        / "20260902_0005_agent_studio_cutover.py"
+    )
+    source = migration.read_text(encoding="utf-8")
+    assert "ade.agent_definitions" in source
+    assert "agent_definition_id" in source
+    assert "purpose" in source
+    assert "archived_at" in source
+    assert "state_generation" in source
+    assert "ade.agent_studio_reset_receipts" in source
 
 
 def test_alembic_version_table_is_owned_with_runtime_schema() -> None:

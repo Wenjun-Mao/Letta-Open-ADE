@@ -27,20 +27,20 @@ async def native_app_lifespan(_: FastAPI):
 
 
 def create_native_app() -> FastAPI:
-    """Create the isolated API surface used by the opt-in native runtime lane."""
+    """Create Agent Studio's isolated ADE-owned runtime API surface."""
     app = FastAPI(
         title="ADE Native Runtime API",
         version=APP_VERSION,
-        summary="Isolated ADE-owned agent runtime preview API",
+        summary="ADE-owned Agent Studio runtime API",
         description=(
-            "Serves only the disabled-by-default ADE-native runtime. It does not "
-            "initialize Letta-backed v2 services or depend on Redis."
+            "Serves the ADE-native Agent Studio runtime. It does not initialize "
+            "Letta-backed v2 services or depend on Redis."
         ),
         lifespan=native_app_lifespan,
         openapi_tags=[
             {
                 "name": TAG_AGENT_RUNTIME_V3,
-                "description": "Disabled-by-default ADE-owned agent runtime preview APIs.",
+                "description": "ADE-owned Agent Studio runtime APIs.",
             }
         ],
         docs_url=None,

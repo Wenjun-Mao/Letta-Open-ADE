@@ -15,6 +15,14 @@ import {
   type AgentRuntimeV3AcceptanceForm,
 } from "./agent-runtime-v3-acceptance-fields";
 import {
+  AgentRuntimeParityFields,
+  DEFAULT_AGENT_RUNTIME_PARITY_FORM,
+  hasAgentRuntimeParityInputs,
+  reconcileAgentRuntimeParityForm,
+  type AgentRuntimeParityForm,
+  type AgentRuntimeParityOptions,
+} from "./agent-runtime-parity-fields";
+import {
   ChatMemoryEvalFields,
 } from "./chat-memory-eval-fields";
 import {
@@ -27,11 +35,13 @@ import { getTestRunTypeLabel, type TestCenterCopy } from "./test-center-copy";
 
 export type ChatMemoryEvalFormState = ChatMemoryEvaluationForm;
 export type AgentRuntimeV3AcceptanceFormState = AgentRuntimeV3AcceptanceForm;
+export type AgentRuntimeParityFormState = AgentRuntimeParityForm;
 
 export function buildTestRunPayload(
   runType: TestRunType,
   form: ChatMemoryEvalFormState,
   v3Form: AgentRuntimeV3AcceptanceFormState = DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_FORM,
+  parityForm: AgentRuntimeParityFormState = DEFAULT_AGENT_RUNTIME_PARITY_FORM,
 ): CreateTestRunPayload {
   if (runType === "agent_runtime_v3_acceptance") {
     const caseKeys = canonicalizeAgentRuntimeV3DiagnosticCaseKeys(v3Form.caseKeys);
@@ -51,6 +61,25 @@ export function buildTestRunPayload(
         : 180,
       retry_count: Number.isInteger(retryCount) ? Math.min(5, Math.max(0, retryCount)) : 0,
       include_llama_compatibility: isFocusedDiagnostic ? false : v3Form.includeLlamaCompatibility,
+    };
+  }
+  if (runType === "agent_runtime_parity_eval") {
+    const requestedRounds = Number.parseInt(parityForm.rounds, 10);
+    const timeoutSeconds = Number.parseFloat(parityForm.timeoutSeconds);
+    return {
+      run_type: runType,
+      legacy_model: parityForm.legacyModel,
+      legacy_embedding: parityForm.legacyEmbedding,
+      prompt_key: parityForm.promptKey,
+      persona_key: parityForm.personaKey,
+      native_conversation_model: parityForm.nativeConversationModel,
+      native_reviewer_model: parityForm.nativeReviewerModel,
+      native_embedding_model: parityForm.nativeEmbeddingModel,
+      rounds: Number.isInteger(requestedRounds) ? Math.min(3, Math.max(1, requestedRounds)) : 3,
+      timeout_seconds: Number.isFinite(timeoutSeconds)
+        ? Math.min(600, Math.max(5, timeoutSeconds))
+        : 180,
+      retry_count: 0,
     };
   }
   if (runType !== "chat_memory_eval") {
@@ -100,6 +129,7 @@ export function TestRunLauncher(props: Props) {
   const [chatEmbeddings, setChatEmbeddings] = useState<OptionEntry[]>([]);
   const [runtimeDeployments, setRuntimeDeployments] = useState<ModelCatalogEntry[]>([]);
   const [v3Form, setV3Form] = useState(DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_FORM);
+  const [parityForm, setParityForm] = useState(DEFAULT_AGENT_RUNTIME_PARITY_FORM);
   const [evalModel, setEvalModel] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.model);
   const [evalPromptKey, setEvalPromptKey] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.promptKey);
   const [evalPersonaKey, setEvalPersonaKey] = useState(DEFAULT_CHAT_MEMORY_EVALUATION_FORM.personaKey);
@@ -122,6 +152,14 @@ export function TestRunLauncher(props: Props) {
     judgeEnabled: evalJudgeEnabled,
   };
   const supportsChatMemoryEvaluation = props.availableRunTypes.includes("chat_memory_eval");
+  const supportsAgentRuntimeParity = props.availableRunTypes.includes("agent_runtime_parity_eval");
+  const parityOptions: AgentRuntimeParityOptions = {
+    legacyModels: chatModels,
+    legacyEmbeddings: chatEmbeddings,
+    prompts: chatPrompts,
+    personas: chatPersonas,
+    nativeDeployments: runtimeDeployments,
+  };
 
   const applyForm = (nextForm: ChatMemoryEvaluationForm) => {
     setEvalModel(nextForm.model);
@@ -140,7 +178,7 @@ export function TestRunLauncher(props: Props) {
     const deployments = (Array.isArray(catalog.items) ? catalog.items : []).filter((item) => item.deployment);
     setRuntimeDeployments(deployments);
     setV3Form((current) => reconcileAgentRuntimeV3AcceptanceForm(current, deployments));
-    if (!supportsChatMemoryEvaluation) {
+    if (!supportsChatMemoryEvaluation && !supportsAgentRuntimeParity) {
       return;
     }
 
@@ -153,13 +191,24 @@ export function TestRunLauncher(props: Props) {
     setChatPrompts(prompts);
     setChatPersonas(personas);
     setChatEmbeddings(embeddings);
-    applyForm(reconcileChatMemoryEvaluationForm(requestedForm, {
-      models,
-      prompts,
-      personas,
-      embeddings,
-      defaults: payload.defaults,
-    }));
+    if (supportsChatMemoryEvaluation) {
+      applyForm(reconcileChatMemoryEvaluationForm(requestedForm, {
+        models,
+        prompts,
+        personas,
+        embeddings,
+        defaults: payload.defaults,
+      }));
+    }
+    if (supportsAgentRuntimeParity) {
+      setParityForm((current) => reconcileAgentRuntimeParityForm(current, {
+        legacyModels: models,
+        legacyEmbeddings: embeddings,
+        prompts,
+        personas,
+        nativeDeployments: deployments,
+      }));
+    }
   };
 
   const refreshChatOptionsEffect = useEffectEvent(refreshChatOptions);
@@ -205,6 +254,10 @@ export function TestRunLauncher(props: Props) {
     || (
       runType === "agent_runtime_v3_acceptance"
       && !hasAgentRuntimeV3AcceptanceDeployments(runtimeDeployments)
+    )
+    || (
+      runType === "agent_runtime_parity_eval"
+      && !hasAgentRuntimeParityInputs(parityOptions)
     );
 
   return (
@@ -256,11 +309,19 @@ export function TestRunLauncher(props: Props) {
             onChange={setV3Form}
           />
         ) : null}
+        {runType === "agent_runtime_parity_eval" ? (
+          <AgentRuntimeParityFields
+            copy={props.copy}
+            options={parityOptions}
+            form={parityForm}
+            onChange={setParityForm}
+          />
+        ) : null}
       </div>
       <div className="toolbar" style={{ marginTop: 10 }}>
         <button
           className="button"
-          onClick={() => void props.onCreateRun(buildTestRunPayload(runType, form, v3Form))}
+          onClick={() => void props.onCreateRun(buildTestRunPayload(runType, form, v3Form, parityForm))}
           disabled={disabled}
         >
           {props.busy ? props.copy.submitting : props.copy.createRun}

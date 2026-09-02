@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
 from ade_api.features.test_center.artifact_access import TestRunArtifactAccess
+from ade_api.features.test_center.agent_runtime_parity_evaluations import (
+    AgentRuntimeParityEvaluationReader,
+)
 from ade_api.features.test_center.chat_memory_evaluations import (
     ChatMemoryEvaluationReader,
 )
@@ -30,6 +34,9 @@ class TestRunOrchestrator:
         self._run_store = TestRunStore(resolved_state_root)
         self._artifact_access = TestRunArtifactAccess(self._run_store.state_root)
         self._chat_memory_evaluations = ChatMemoryEvaluationReader(
+            self._run_store.state_root
+        )
+        self._agent_runtime_parity_evaluations = AgentRuntimeParityEvaluationReader(
             self._run_store.state_root
         )
         self._process_executor = TestRunProcessExecutor(project_root, self._run_store)
@@ -75,6 +82,9 @@ class TestRunOrchestrator:
             output_dir=output_dir,
             options=options,
         )
+        environment = get_run_descriptor(run_type).build_environment(
+            options, os.environ
+        )
         run = self._run_store.create_run(
             run_id=run_id,
             run_type=run_type,
@@ -82,6 +92,7 @@ class TestRunOrchestrator:
             command=command,
             options=options,
         )
+        self._process_executor.set_environment(run_id, environment)
         self._process_executor.start(run_id)
         return self._public_record(run)
 
@@ -118,6 +129,21 @@ class TestRunOrchestrator:
             run,
             preferred_baseline=(run_id == preferred_run_id),
         )
+
+    def list_agent_runtime_parity_evaluations(self) -> list[dict[str, Any]]:
+        runs = [
+            run
+            for run in self._run_store.list_snapshots()
+            if run.get("run_type") == "agent_runtime_parity_eval"
+        ]
+        runs.sort(key=lambda run: str(run.get("created_at", "")), reverse=True)
+        return [self._agent_runtime_parity_evaluations.list_item(run) for run in runs]
+
+    def get_agent_runtime_parity_evaluation(self, run_id: str) -> dict[str, Any] | None:
+        run = self._run_store.get_snapshot(run_id)
+        if not run or run.get("run_type") != "agent_runtime_parity_eval":
+            return None
+        return self._agent_runtime_parity_evaluations.detail(run)
 
     def compare_chat_memory_evaluations(
         self, baseline_run_id: str, candidate_run_id: str

@@ -1,0 +1,18 @@
+# The parity workflow compares public product behavior only. Credentials are read
+# from AGENT_RUNTIME_PARITY_* environment variables or passed on the CLI.
+legacy_api_base_url = "http://127.0.0.1:8000"
+native_api_base_url = "http://127.0.0.1:8002"
+output_dir = "workflows/evals/agent_runtime_parity/outputs"
+fixture_path = "workflows/evals/chat_memory_eval/fixtures/recent_user_chat_turns.json"
+
+rounds = 3
+timeout_seconds = 180
+retry_count = 0
+
+prompt_key = "chat_v20260516"
+persona_key = "chat_linxiaotang"
+legacy_model = "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8"
+legacy_embedding = "letta/letta-free"
+native_conversation_model = "dgx_vllm::qwen3.6-35b-a3b-fp8"
+native_reviewer_model = "dgx_vllm::qwen3.6-35b-a3b-fp8"
+native_embedding_model = "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B"

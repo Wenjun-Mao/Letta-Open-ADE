@@ -10,7 +10,8 @@ title: ADE API（中文）
 
 - 本地开发默认地址：
   - ADE Web：`http://127.0.0.1:3000`
-  - ADE API：`http://127.0.0.1:8000`
+  - ADE API v2：`http://127.0.0.1:8000`
+  - ADE 原生 Agent Studio v3：`http://127.0.0.1:8002`
   - Model Router 与 Letta：Compose 网络内部服务，不暴露宿主机端口。
 - 浏览器请求通过 ADE 同源代理访问后端；直接 API 客户端使用 Reader、Operator
   或 Admin Bearer Key。
@@ -19,34 +20,45 @@ title: ADE API（中文）
 
 ## 文档覆盖范围
 
-- 面向智能体交互的运行时接口。
-- 面向提示词、模型、记忆块与工具变更的控制接口。
-- 两阶段安全删除生命周期（归档 -> 恢复 -> 清除）。
+- ADE 原生 Agent Studio 的 Definition、显式 Memory Subject、Conversation、
+  Turn、类型化 Memory、Summary、Run 与 Event 接口。
+- Agent Studio Conversation、Definition 与 Subject 的归档/恢复，以及仅限
+  Admin 的全新起点重置接口。
 - 面向检查与 Runner 的测试编排接口。
 - Comment Lab 与基于 Schema 的 Label Lab 无状态生成接口。
 - Prompt、Persona、Schema 与自定义 Tool 生命周期接口。
 
-## 智能体生命周期（安全删除）
+## Agent Studio 生命周期
 
-建议采用以下两阶段删除路径：
+Agent Studio 将可复用行为、用户记忆归属与会话历史明确分离。一个 Session
+会把一个不可变 Definition 版本绑定到一个 Memory Subject；归档 Conversation
+不会删除 Subject Memory 或 Definition。
 
-1. 归档智能体（软删除，默认列表隐藏）
-2. 如误操作可恢复
-3. 清除已归档智能体（硬删除）
+正常生命周期保持可恢复：
+
+1. 创建或复用不可变 Agent Definition。
+2. 创建或选择显式 Memory Subject。
+3. 创建、归档或恢复 Conversation Session。
+4. 独立于聊天检查类型化 Fact Revision 与来源消息证据。
 
 关键接口：
 
-- `POST /api/v2/agent-studio/agents/{agent_id}/archive`
-- `POST /api/v2/agent-studio/agents/{agent_id}/restore`
-- `DELETE /api/v2/agent-studio/agents/{agent_id}/purge`
-- `DELETE /api/v2/agent-studio/agents/{agent_id}`（清除已归档智能体的别名）
-- `GET /api/v2/agent-studio/agents?include_archived=true`
+- `GET|POST /api/v3/agent-studio/sessions`
+- `GET|DELETE /api/v3/agent-studio/sessions/{conversation_id}`
+- `POST /api/v3/agent-studio/sessions/{conversation_id}/restore`
+- `GET /api/v3/agent-studio/sessions/{conversation_id}/state`
+- `GET|POST /api/v3/agent-studio/definitions`
+- `GET|POST /api/v3/agent-studio/subjects`
+- `GET /api/v3/agent-studio/subjects/{subject_id}/memories`
+- `POST /api/v3/conversations/{conversation_id}/turns`
+- `GET /api/v3/runs/{run_id}/events`
 
 行为说明：
 
-- 默认情况下，`GET /api/v2/agent-studio/agents` 不返回已归档智能体。
-- 对已归档智能体进行运行时或控制类变更会返回 `409`，需先恢复。
-- 清除操作要求目标处于已归档状态，否则返回 `400`。
+- 默认列表不返回已归档资源；恢复前不能继续执行。
+- Turn 异步执行并提供规范化 Run Event，不暴露模型私有推理或原始 Provider Body。
+- 原生存储从全新状态开始，不提供 Letta 导入、双写、运行时切换或按请求回退。
+- 保留的 v2 Letta 接口仅作为 Phase 5 的发布级回滚通道；切换后不再是浏览器主契约。
 
 ## 错误返回格式
 
@@ -72,6 +84,7 @@ FastAPI 返回的错误 JSON 结构如下：
 - 请求流程：`docs/architecture/request-flows.md`
 - 上游参考资料：`docs/references.md`
 - OpenAPI 英文产物：`docs/openapi/ade-api-openapi.json`
+- 原生 OpenAPI 英文产物：`docs/openapi/ade-native-api-openapi.json`
 - OpenAPI 中文产物：`docs/openapi/ade-api-openapi-zh.json`
 - 前端静态 OpenAPI 英文产物：`apps/ade-web/public/openapi/ade-api-openapi.json`
 - 前端静态 OpenAPI 中文产物：`apps/ade-web/public/openapi/ade-api-openapi-zh.json`

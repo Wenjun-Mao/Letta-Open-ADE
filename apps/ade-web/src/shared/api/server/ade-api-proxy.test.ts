@@ -6,7 +6,6 @@ import {
   adeNativeApiBaseUrl,
   buildAdeApiHeaders,
   buildAdeApiUrl,
-  nativePreviewProxyEnabled,
 } from "./ade-api-proxy";
 
 describe("ADE API proxy URL", () => {
@@ -48,11 +47,5 @@ describe("ADE API proxy URL", () => {
     expect(headers.get("x-request-id")).toBe("request-123");
     expect(headers.get("last-event-id")).toBe("7");
     expect(headers.has("cookie")).toBe(false);
-  });
-
-  it("keeps the native proxy closed unless the server runtime gate is explicit", () => {
-    expect(nativePreviewProxyEnabled(undefined)).toBe(false);
-    expect(nativePreviewProxyEnabled("false")).toBe(false);
-    expect(nativePreviewProxyEnabled(" TRUE ")).toBe(true);
   });
 });

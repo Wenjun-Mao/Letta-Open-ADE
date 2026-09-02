@@ -6,24 +6,24 @@ The repository tree and each feature's README are the current source for local
 ownership and operational details.
 
 Letta Open ADE has one simple system story: **ADE Web** presents the product,
-**ADE API** owns product workflows, **Model Router** owns model access, and
-**Letta** provides the supported persistent Agent Studio runtime. An accepted,
-disabled-by-default native v3 preview uses an isolated API and separate worker to
-exercise ADE-owned persistence without changing that product path.
+**ADE API** owns the retained v2 product workflows, **ADE Native API** and its
+worker own Agent Studio, and **Model Router** owns model access. Letta and Redis
+remain temporarily for v2 capabilities during the cutover window; they are not
+Agent Studio's memory or execution authority.
 
 ```mermaid
 flowchart LR
     B[Browser] --> W[ADE Web\napps/ade-web\n:3000]
     W --> A[ADE API\nservices/ade-api\n:8000]
-    A --> L[Letta\npersistent agents]
+    W --> N[ADE Native API\nade-native-api\n:8002]
+    A --> L[Letta\nretained v2 capabilities]
     A --> R[Model Router\nprovider access]
     L --> R
     R --> P[Local and cloud\nmodel providers]
     A --> C[content/\nprompts, personas, schemas, tools]
-    L --> S[(PostgreSQL / Redis\nLetta state)]
-    W -. gated /api/v3 .-> N[ADE Native API\nade-native-api]
+    L --> S[(PostgreSQL / Redis\nlegacy state)]
     N --> D[(PostgreSQL\nADE v3 state)]
-    N -. accepted runs .-> V[ade-runtime-worker\noptional profile]
+    N -. accepted runs .-> V[ade-runtime-worker]
     V --> D
     V --> R
 ```
@@ -85,9 +85,8 @@ features/<feature>/
 ```
 
 The feature set is: `agent-studio`, `comment-lab`, `label-lab`, `prompt-center`,
-`schema-center`, `tool-center`, `test-center`, and `model-catalog`. The separately
-gated `native-runtime-preview` feature is an evaluation-backed pilot, not a mode of
-Agent Studio or part of the supported v2 product contract.
+`schema-center`, `tool-center`, `test-center`, and `model-catalog`. Agent Studio is
+the native v3 product surface; the former separate preview route has been removed.
 
 Feature code may depend on `platform/` contracts and `integrations/`; it must
 not import another feature's internal modules. If two features need to interact,
@@ -111,16 +110,17 @@ flowchart TD
 | ADE Web | Product interface | Host port `3000` | `ade-web`, `ADE_WEB_*` |
 | ADE API | Product workflows | Host port `8000` | `ade-api`, `ADE_API_*` |
 | Model Router | Provider access | Compose network only | `model-router`, `MODEL_ROUTER_*` |
-| Letta | Agent runtime | Compose network only | `letta`, `LETTA_*` |
-| Native runtime worker | Opt-in v3 run execution | Compose profile only | `ade-runtime-worker`, `ADE_API_AGENT_RUNTIME_V3_*` |
-| ADE Native API | Isolated v3 preview surface | Loopback `8002`, Compose profile only | `ade-native-api`, `ADE_NATIVE_API_*` |
+| Letta | Retained v2 capabilities | Compose network only | `letta`, `LETTA_*` |
+| Native runtime worker | Agent Studio run execution | Compose network only | `ade-runtime-worker`, `ADE_API_AGENT_RUNTIME_V3_*` |
+| ADE Native API | Agent Studio v3 API | Loopback `8002` and same-origin web proxy | `ade-native-api`, `ADE_NATIVE_API_*` |
 | PostgreSQL | Letta and separate ADE v3 databases | Compose network only | `postgres`, `LETTA_PG_*`, `ADE_PG_*` |
-| Redis | Current Letta runtime storage | Compose network only | `redis`, `LETTA_REDIS_*` |
+| Redis | Retained Letta runtime storage | Compose network only | `redis`, `LETTA_REDIS_*` |
 
 All browser calls use ADE Web's same-origin proxy. The proxy is the only web
-component that receives the server-side ADE API credential. ADE API talks to
-Letta and Model Router over the Compose network; browser code never sees those
-credentials or provider base URLs.
+component that receives the server-side ADE API credential. It routes `/api/v2`
+to `ade-api` and `/api/v3` only to `ade-native-api`; there is no runtime toggle or
+fallback. Backend services call Letta or Model Router only across the Compose
+network, so browser code never sees those credentials or provider base URLs.
 
 ## Content And Workflow Boundaries
 
@@ -151,14 +151,13 @@ ADE API version 2 is organized by the product capability a caller is using:
 /api/v2/health
 ```
 
-ADE API version 2 is the supported ADE product contract. Prompt, persona,
-schema, tool, and model-selection keys remain stable across this structure.
-Model Router retains its OpenAI-compatible `/v1` API.
+ADE API version 2 remains the supported contract for Comment Lab, Label Lab,
+Prompt Center, Schema Center, Tool Center, Test Center, Model Catalog, health, and
+the rollback-only legacy Agent Studio endpoints. Model Router retains its
+OpenAI-compatible `/v1` API.
 
-The opt-in native preview exposes a breaking `/api/v3` resource model for agent
-definitions, atomic preview sessions, memory subjects, conversations, turns,
-runs/events, and typed memories. Its separate ADE Web page and navigation remain
-build-gated until exact deployment promotion; it has no compatibility promise and
-is never an Agent Studio mode. See
-[ADR 0013](../adr/0013-narrow-native-runtime-product-pilot.md). Any future
-public-contract change requires an ADR and regenerated OpenAPI artifacts.
+Agent Studio uses the breaking `/api/v3` resource model for reusable definitions,
+memory subjects, atomic sessions, conversations, turns, runs/events, and typed
+memory lineage. The v3 proxy never falls back to v2. See
+[ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md). Any future public
+contract change requires an ADR and regenerated OpenAPI artifacts.

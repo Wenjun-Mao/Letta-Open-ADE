@@ -15,19 +15,23 @@ from ade_api.platform.settings import AdeApiSettings, get_settings
 
 from .contracts import (
     AcceptTurnRequest,
+    AgentStudioResetRequest,
     CreateAgentDefinitionRequest,
+    CreateAgentStudioSessionRequest,
     CreateConversationRequest,
     CreateMemorySubjectRequest,
-    CreatePreviewSessionRequest,
+    UpdateMemorySubjectRequest,
 )
+from .agent_studio_reset import AgentStudioResetService
+from .agent_studio_sessions import AgentStudioSessionService, AGENT_STUDIO_PURPOSE
 from .database_boundary import RuntimeDatabase
 from .definition_service import DefinitionService
 from .errors import RuntimeNotReady
 from .persistence.database import create_persistence_engine
-from .preview_session_service import PreviewSessionService
 from .resource_service import ResourceService
 from .router_transport import RouterTransport
 from .run_service import RunService
+from .release_policy import ensure_agent_studio_release_ready
 
 
 class AgentRuntimeV3Application:
@@ -50,10 +54,11 @@ class AgentRuntimeV3Application:
             router_transport=router_transport,
         )
         self.resources = ResourceService(self.database)
-        self.preview_sessions = PreviewSessionService(
+        self.agent_studio = AgentStudioSessionService(
             database=self.database,
             definitions=self.definitions,
         )
+        self.agent_studio_reset = AgentStudioResetService(self.database)
         self.runs = RunService(
             database=self.database,
             settings=settings,
@@ -71,10 +76,116 @@ class AgentRuntimeV3Application:
     async def get_agent_definition(self, definition_id: str) -> dict[str, Any]:
         return await self.definitions.get(definition_id)
 
-    async def create_preview_session(
-        self, request: CreatePreviewSessionRequest
+    async def get_agent_studio_options(self) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.options()
+
+    async def create_agent_studio_session(
+        self, request: CreateAgentStudioSessionRequest
     ) -> dict[str, Any]:
-        return await self.preview_sessions.create(request)
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.create(request)
+
+    async def get_agent_studio_session(self, conversation_id: str) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.get(conversation_id)
+
+    async def list_agent_studio_sessions(
+        self, *, include_archived: bool, limit: int, offset: int
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.list(
+            include_archived=include_archived, limit=limit, offset=offset
+        )
+
+    async def set_agent_studio_session_archived(
+        self, conversation_id: str, *, archived: bool
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.set_archived(conversation_id, archived=archived)
+
+    async def list_agent_studio_definitions(
+        self, *, include_archived: bool, limit: int, offset: int
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.list_definitions(
+            include_archived=include_archived, limit=limit, offset=offset
+        )
+
+    async def create_agent_studio_definition(
+        self, request: CreateAgentDefinitionRequest
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.create_definition(request)
+
+    async def set_agent_studio_definition_archived(
+        self, definition_id: str, *, archived: bool
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.set_definition_archived(
+            definition_id, archived=archived
+        )
+
+    async def list_agent_studio_subjects(
+        self, *, include_archived: bool, limit: int, offset: int
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.list_subjects(
+            include_archived=include_archived, limit=limit, offset=offset
+        )
+
+    async def create_agent_studio_subject(
+        self, request: CreateMemorySubjectRequest
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.create_subject(request)
+
+    async def update_agent_studio_subject(
+        self, subject_id: str, request: UpdateMemorySubjectRequest
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.update_subject(subject_id, request)
+
+    async def set_agent_studio_subject_archived(
+        self, subject_id: str, *, archived: bool
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.agent_studio.set_subject_archived(
+            subject_id, archived=archived
+        )
+
+    async def get_agent_studio_subject_memories(
+        self, subject_id: str
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.resources.get_subject_memories(
+            subject_id, required_purpose=AGENT_STUDIO_PURPOSE
+        )
+
+    async def get_agent_studio_conversation_state(
+        self,
+        conversation_id: str,
+        *,
+        message_limit: int,
+        before_sequence: int | None,
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.resources.get_conversation_state(
+            conversation_id,
+            required_purpose=AGENT_STUDIO_PURPOSE,
+            message_limit=message_limit,
+            before_sequence=before_sequence,
+        )
+
+    async def reset_agent_studio(
+        self, request: AgentStudioResetRequest
+    ) -> dict[str, Any]:
+        return await self.agent_studio_reset.reset(request)
+
+    def _ensure_agent_studio_release_ready(self) -> None:
+        ensure_agent_studio_release_ready(
+            self.definitions.settings.agent_runtime_v3_mode
+        )
 
     async def create_memory_subject(
         self, request: CreateMemorySubjectRequest
@@ -92,8 +203,18 @@ class AgentRuntimeV3Application:
     ) -> dict[str, Any]:
         return await self.resources.create_conversation(request)
 
-    async def get_conversation_state(self, conversation_id: str) -> dict[str, Any]:
-        return await self.resources.get_conversation_state(conversation_id)
+    async def get_conversation_state(
+        self,
+        conversation_id: str,
+        *,
+        message_limit: int = 200,
+        before_sequence: int | None = None,
+    ) -> dict[str, Any]:
+        return await self.resources.get_conversation_state(
+            conversation_id,
+            message_limit=message_limit,
+            before_sequence=before_sequence,
+        )
 
     async def accept_turn(
         self, conversation_id: str, request: AcceptTurnRequest
@@ -102,6 +223,18 @@ class AgentRuntimeV3Application:
 
     async def get_run(self, run_id: str) -> dict[str, Any]:
         return await self.runs.get_run(run_id)
+
+    async def list_runs(
+        self, conversation_id: str, *, limit: int, offset: int
+    ) -> dict[str, Any]:
+        return await self.runs.list_runs(conversation_id, limit=limit, offset=offset)
+
+    async def list_run_events(
+        self, run_id: str, *, limit: int, after_sequence: int
+    ) -> dict[str, Any]:
+        return await self.runs.list_events(
+            run_id, limit=limit, after_sequence=after_sequence
+        )
 
     async def cancel_run(self, run_id: str) -> dict[str, Any]:
         return await self.runs.cancel_run(run_id)

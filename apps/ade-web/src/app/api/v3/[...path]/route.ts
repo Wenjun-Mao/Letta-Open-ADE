@@ -6,7 +6,6 @@ import {
   adeNativeApiBaseUrl,
   buildAdeApiHeaders,
   buildAdeApiUrl,
-  nativePreviewProxyEnabled,
 } from "@/shared/api/server/ade-api-proxy";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +18,6 @@ function proxyError(status: number, detail: string): Response {
 }
 
 async function proxy(request: NextRequest, context: RouteContext): Promise<Response> {
-  if (!nativePreviewProxyEnabled()) {
-    return proxyError(404, "ADE native runtime preview is not enabled.");
-  }
-
   let target: URL;
   let authorization: string;
   try {

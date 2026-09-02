@@ -1,8 +1,9 @@
-# Agent Studio
+# Legacy Agent Studio V2
 
 ## Purpose
 
-Agent Studio creates and operates persistent Letta agents. It owns chat, runtime
+This retained Phase 5 rollback feature creates and operates persistent Letta agents.
+It owns chat, runtime
 overrides, memory and system updates, state inspection, archive lifecycle, and
 agent-tool attachment. Stateless generation belongs to Comment Lab and Label Lab.
 
@@ -14,6 +15,10 @@ agent-tool attachment. Stateless generation belongs to Comment Lab and Label Lab
    timeout and retry settings.
 4. State and memory changes are returned to the inspector; durable state remains in
    Letta and archive metadata in `data/runtime/agent-lifecycle/`.
+
+ADE Web no longer calls this feature after the native cutover. Do not add new product
+behavior here, bridge state to v3, or use it as a per-request fallback. Phase 6 removes
+it only after the rollback observation window closes.
 
 ## Key Files
 

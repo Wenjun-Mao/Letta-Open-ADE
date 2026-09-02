@@ -18,7 +18,8 @@ six ideas:
 1. `ade-web` is the browser product, not the business-logic owner.
 2. `ade-api` owns ADE workflows, feature contracts, and orchestration.
 3. `model-router` owns provider-facing model access and model intelligence.
-4. Letta owns supported Agent Studio execution; native v3 is an opt-in preview.
+4. Agent Studio uses the separately deployed ADE-native v3 API and worker; Letta v2
+   remains only as the Phase 5 release-level rollback lane.
 5. `content/` is reviewed product material; `workflows/` is executable operator work.
 6. A product feature has one home, including its UI, API, tests, and README.
 
@@ -34,15 +35,16 @@ six ideas:
 | 23-27 min | One feature's `README.md` | Its user value, endpoints, storage, integrations, and tests. |
 | 27-30 min | [Feature README Template](feature-readme-template.md) and [Glossary](glossary.md) | How to add work without recreating cross-cutting ambiguity. |
 
-For the opt-in Agent Studio runtime direction, read the
+For the Agent Studio runtime design and evidence-gated release contract, read the
 [replacement study](architecture/agent-runtime-replacement-study.md), then
 [ADR 0009](adr/0009-ade-owned-agent-runtime.md),
 [ADR 0010](adr/0010-production-path-runtime-qualification.md), and
 [ADR 0011](adr/0011-agent-runtime-operational-readiness.md), and
 [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md), then the
 [`agent_runtime_v3` guide](../services/ade-api/src/ade_api/features/agent_runtime_v3/README.md).
-The implementation decision is accepted, but current product behavior remains
-Letta-backed until a separate cutover is approved.
+The implementation and cutover design are accepted. Effective product activation is
+authorized only by the reviewed release ledger described in ADR 0016 and the
+[cutover runbook](operations/agent-studio-cutover.md).
 
 ## Find The Right Home
 

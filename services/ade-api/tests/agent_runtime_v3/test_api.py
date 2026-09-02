@@ -38,6 +38,60 @@ class _FakeService:
             "latest_heartbeat_at": NOW if self.health_ready else None,
         }
 
+    async def get_agent_studio_options(self):
+        return {
+            "runtime": "ade_native_v3",
+            "default_bundle_key": "ade_native_dgx_v1",
+            "bundles": [
+                {
+                    "key": "ade_native_dgx_v1",
+                    "name": "ADE Native DGX",
+                    "model_key": "dgx_vllm::qwen",
+                    "reviewer_model_key": "dgx_vllm::qwen",
+                    "embedding_model_key": "dgx_embedding::qwen",
+                    "prompt_key": "chat_v20260516",
+                    "persona_key": "chat_linxiaotang",
+                    "tool_names": ["search_memory"],
+                    "memory_policy_version": "typed-user-facts-v1",
+                    "qualification_state": "qualified",
+                    "deployments": [],
+                }
+            ],
+            "default_timeout_seconds": 180,
+            "default_retry_count": 0,
+            "max_retry_count": 5,
+        }
+
+    async def create_agent_studio_session(self, request):
+        assert request.idempotency_key == "studio-session-1"
+        return _agent_studio_session()
+
+    async def list_agent_studio_sessions(self, **kwargs):
+        assert kwargs == {"include_archived": False, "limit": 100, "offset": 0}
+        return {"total": 1, "items": [_agent_studio_session()]}
+
+    async def get_agent_studio_conversation_state(self, conversation_id, **kwargs):
+        assert conversation_id == "00000000-0000-0000-0000-000000000014"
+        assert kwargs == {"message_limit": 50, "before_sequence": None}
+        return {
+            **_agent_studio_session()["conversation"],
+            "messages": [],
+            "message_total": 0,
+            "messages_truncated": False,
+            "next_before_sequence": None,
+            "summary": None,
+        }
+
+    async def reset_agent_studio(self, request):
+        assert request.confirmation == "RESET ADE AGENT STUDIO"
+        return {
+            "receipt_id": "00000000-0000-0000-0000-000000000015",
+            "idempotent_replay": False,
+            "reset_generation": 2,
+            "deleted_counts": {"conversations": 1},
+            "reset_at": NOW,
+        }
+
     async def accept_turn(self, conversation_id, request):
         assert request.timeout_seconds == 180
         assert request.retry_count == 0
@@ -46,42 +100,6 @@ class _FakeService:
             "status": "pending",
             "events_url": "/api/v3/runs/00000000-0000-0000-0000-000000000004/events",
             "idempotent_replay": False,
-        }
-
-    async def create_preview_session(self, request):
-        assert request.idempotency_key == "preview-1"
-        assert request.subject_display_name == "Zhang Wei"
-        return {
-            "session_id": "00000000-0000-0000-0000-000000000001",
-            "idempotent_replay": False,
-            "agent_definition": {
-                "id": "00000000-0000-0000-0000-000000000002",
-                "definition_key": "preview_test",
-                "version": 1,
-                "name": "Native Runtime Preview",
-                "prompt_key": "chat_v20260516",
-                "prompt_sha256": "a" * 64,
-                "persona_key": "chat_linxiaotang",
-                "persona_sha256": "b" * 64,
-                "tool_names": ["search_memory"],
-                "memory_policy_version": "typed-user-facts-v1",
-                "qualification_state": "unqualified",
-                "deployments": [],
-                "created_at": NOW,
-            },
-            "memory_subject": {
-                "id": "00000000-0000-0000-0000-000000000003",
-                "external_key": "preview-session:test",
-                "display_name": "Zhang Wei",
-                "created_at": NOW,
-            },
-            "conversation": {
-                "id": "00000000-0000-0000-0000-000000000004",
-                "agent_definition_id": "00000000-0000-0000-0000-000000000002",
-                "memory_subject_id": "00000000-0000-0000-0000-000000000003",
-                "version": 1,
-                "created_at": NOW,
-            },
         }
 
     async def get_run(self, run_id):
@@ -95,6 +113,50 @@ class _FakeService:
             "retry_count": 0,
             "created_at": NOW,
         }
+
+
+def _agent_studio_session():
+    return {
+        "session_id": "00000000-0000-0000-0000-000000000014",
+        "idempotent_replay": False,
+        "agent_definition": {
+            "id": "00000000-0000-0000-0000-000000000012",
+            "agent_definition_id": "00000000-0000-0000-0000-000000000011",
+            "definition_key": "default_companion",
+            "version": 1,
+            "name": "Default companion",
+            "prompt_key": "chat_v20260516",
+            "prompt_sha256": "a" * 64,
+            "persona_key": "chat_linxiaotang",
+            "persona_sha256": "b" * 64,
+            "tool_names": ["search_memory"],
+            "memory_policy_version": "typed-user-facts-v1",
+            "qualification_state": "qualified",
+            "deployments": [],
+            "archived_at": None,
+            "created_at": NOW,
+        },
+        "memory_subject": {
+            "id": "00000000-0000-0000-0000-000000000013",
+            "external_key": "local-user",
+            "display_name": "Local user",
+            "version": 1,
+            "archived_at": None,
+            "created_at": NOW,
+            "updated_at": NOW,
+        },
+        "conversation": {
+            "id": "00000000-0000-0000-0000-000000000014",
+            "agent_definition_id": "00000000-0000-0000-0000-000000000012",
+            "memory_subject_id": "00000000-0000-0000-0000-000000000013",
+            "title": "First conversation",
+            "purpose": "agent_studio",
+            "version": 1,
+            "archived_at": None,
+            "created_at": NOW,
+        },
+        "latest_run": None,
+    }
 
 
 def _principal() -> AdePrincipal:
@@ -160,32 +222,6 @@ def test_router_catalog_transport_failure_returns_stable_not_ready_error() -> No
         "code": "model_router_unavailable",
         "message": "Model Router is not ready",
     }
-
-
-def test_preview_session_is_one_bounded_server_operation() -> None:
-    app.dependency_overrides[authenticate_ade_request] = _principal
-    app.dependency_overrides[get_agent_runtime_v3_service] = lambda: _FakeService()
-    try:
-        response = TestClient(app).post(
-            "/api/v3/preview-sessions",
-            json={
-                "idempotency_key": "preview-1",
-                "subject_display_name": "Zhang Wei",
-                "model_key": "dgx_vllm::qwen",
-                "reviewer_model_key": "dgx_vllm::qwen",
-                "embedding_model_key": "dgx_embedding::qwen",
-            },
-        )
-    finally:
-        app.dependency_overrides.clear()
-
-    assert response.status_code == 201
-    assert response.json()["idempotent_replay"] is False
-    assert response.json()["agent_definition"]["tool_names"] == ["search_memory"]
-    assert (
-        response.json()["conversation"]["memory_subject_id"]
-        == response.json()["memory_subject"]["id"]
-    )
 
 
 def test_turn_rejects_model_and_subject_overrides() -> None:
@@ -289,3 +325,66 @@ def test_worker_health_openapi_documents_typed_not_ready_response() -> None:
     assert response_schema == {
         "$ref": "#/components/schemas/RuntimeWorkerHealthResponse"
     }
+
+
+def test_agent_studio_api_exposes_qualified_options_and_persisted_sessions() -> None:
+    app.dependency_overrides[authenticate_ade_request] = _principal
+    app.dependency_overrides[get_agent_runtime_v3_service] = lambda: _FakeService()
+    try:
+        client = TestClient(app)
+        options = client.get("/api/v3/agent-studio/options")
+        created = client.post(
+            "/api/v3/agent-studio/sessions",
+            json={
+                "idempotency_key": "studio-session-1",
+                "title": "First conversation",
+                "agent_definition_id": "00000000-0000-0000-0000-000000000012",
+                "memory_subject_id": "00000000-0000-0000-0000-000000000013",
+            },
+        )
+        sessions = client.get("/api/v3/agent-studio/sessions")
+        state = client.get(
+            "/api/v3/agent-studio/sessions/"
+            "00000000-0000-0000-0000-000000000014/state?message_limit=50"
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert options.status_code == 200
+    assert options.json()["bundles"][0]["qualification_state"] == "qualified"
+    assert created.status_code == 201
+    assert created.json()["conversation"]["purpose"] == "agent_studio"
+    assert sessions.json()["total"] == 1
+    assert state.json()["message_total"] == 0
+
+
+def test_agent_studio_reset_requires_admin_and_returns_durable_receipt() -> None:
+    service = _FakeService()
+    app.dependency_overrides[get_agent_runtime_v3_service] = lambda: service
+    app.dependency_overrides[authenticate_ade_request] = lambda: AdePrincipal(
+        role=AdeRole.OPERATOR, key_name="operator-test"
+    )
+    try:
+        client = TestClient(app)
+        forbidden = client.post(
+            "/api/v3/agent-studio/reset",
+            json={
+                "idempotency_key": "reset-1",
+                "confirmation": "RESET ADE AGENT STUDIO",
+            },
+        )
+        app.dependency_overrides[authenticate_ade_request] = _principal
+        accepted = client.post(
+            "/api/v3/agent-studio/reset",
+            json={
+                "idempotency_key": "reset-1",
+                "confirmation": "RESET ADE AGENT STUDIO",
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert forbidden.status_code == 403
+    assert accepted.status_code == 200
+    assert accepted.json()["reset_generation"] == 2
+    assert accepted.json()["deleted_counts"] == {"conversations": 1}

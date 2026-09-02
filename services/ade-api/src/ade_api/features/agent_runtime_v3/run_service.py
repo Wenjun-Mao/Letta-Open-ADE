@@ -27,9 +27,11 @@ from .events import TERMINAL_RUN_STATUSES, append_run_event, event_response
 from .persistence.conversations import ConversationRepository
 from .persistence.definitions import DefinitionVersionRepository
 from .persistence.leases import ConversationLeaseRepository
+from .persistence.memory import MemoryRepository
 from .persistence.runs import RunRepository
 from .presenters import run_response, turn_accepted_response
 from .release_policy import (
+    ensure_agent_studio_release_ready,
     release_validation_kwargs,
 )
 from .router_transport import RouterTransport
@@ -57,6 +59,15 @@ class RunService:
                 runs = RunRepository(connection)
                 conversation = await conversations.get(conversation_id)
                 require_default_workspace(conversation)
+                if conversation.get("purpose") == "agent_studio":
+                    ensure_agent_studio_release_ready(
+                        self.settings.agent_runtime_v3_mode
+                    )
+                _reject_archived_conversation(conversation)
+                subject = await MemoryRepository(connection).get_subject(
+                    str(conversation["memory_subject_id"])
+                )
+                _reject_archived_subject(subject)
                 definition = await DefinitionVersionRepository(connection).get(
                     str(conversation["agent_definition_version_id"])
                 )
@@ -95,6 +106,11 @@ class RunService:
                 runs = RunRepository(connection)
                 conversation = await conversations.get_for_update(conversation_id)
                 require_default_workspace(conversation)
+                _reject_archived_conversation(conversation)
+                subject = await MemoryRepository(connection).lock_subject(
+                    str(conversation["memory_subject_id"])
+                )
+                _reject_archived_subject(subject)
                 definition = await DefinitionVersionRepository(connection).get(
                     str(conversation["agent_definition_version_id"])
                 )
@@ -178,6 +194,40 @@ class RunService:
                 row = await RunRepository(connection).get(run_id)
                 require_default_workspace(row)
         return run_response(row)
+
+    async def list_runs(
+        self, conversation_id: str, *, limit: int, offset: int
+    ) -> dict[str, Any]:
+        await self.database.ensure_ready()
+        async with self.database.translated_errors():
+            async with self.database.engine.connect() as connection:
+                conversation = await ConversationRepository(connection).get(
+                    conversation_id
+                )
+                require_default_workspace(conversation)
+                total, rows = await RunRepository(connection).list_for_conversation(
+                    conversation_id, limit=limit, offset=offset
+                )
+        return {"total": total, "items": [run_response(row) for row in rows]}
+
+    async def list_events(
+        self, run_id: str, *, limit: int, after_sequence: int
+    ) -> dict[str, Any]:
+        await self.database.ensure_ready()
+        async with self.database.translated_errors():
+            async with self.database.engine.connect() as connection:
+                repository = RunRepository(connection)
+                run = await repository.get(run_id)
+                require_default_workspace(run)
+                total, rows = await repository.list_event_page(
+                    run_id, limit=limit, after_sequence=after_sequence
+                )
+        return {
+            "total": total,
+            "items": [
+                event_response(row) for row in rows if row["visibility"] == "operator"
+            ],
+        }
 
     async def cancel_run(self, run_id: str) -> dict[str, Any]:
         await self.database.ensure_ready()
@@ -284,3 +334,16 @@ def _validate_idempotent_replay(
 
 def _sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _reject_archived_conversation(conversation: dict[str, Any]) -> None:
+    if conversation.get("archived_at") is not None:
+        raise RuntimeValidationError("archived conversations cannot accept new turns")
+
+
+def _reject_archived_subject(subject: dict[str, Any]) -> None:
+    require_default_workspace(subject)
+    if subject.get("archived_at") is not None:
+        raise RuntimeValidationError(
+            "conversations for archived memory subjects cannot accept new turns"
+        )

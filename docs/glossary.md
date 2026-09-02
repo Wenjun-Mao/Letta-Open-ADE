@@ -8,8 +8,9 @@
 | ADE Web | The Next.js browser application at `apps/ade-web`; the only user-facing web service. |
 | ADE API | The FastAPI product API at `services/ade-api`; it owns feature workflows and orchestration. |
 | Model Router | The OpenAI-compatible service at `services/model-router`; it owns provider access, model discovery, and profiles. |
-| Letta | The persistent runtime used by the supported Agent Studio v2 path. |
-| Native agent runtime v3 | The disabled-by-default ADE-owned API/worker preview accepted by ADR 0009; it is not the production Agent Studio path. |
+| Letta | The retained v2 runtime used only by Phase 5 product areas and the Agent Studio release-level rollback lane after native cutover. |
+| Memory subject | The explicit owner of ADE-native durable user facts; subjects can be shared deliberately across conversations but never selected by model arguments. |
+| Native agent runtime v3 | The ADE-owned Agent Studio API/worker runtime with PostgreSQL state, typed memory, curated tools, and evidence-gated release activation. |
 | Feature | A product capability with one owner, such as Agent Studio or Comment Lab. |
 | Platform | ADE API composition concerns: application setup, settings, auth, lifecycle, and dependency injection. It is not a feature. |
 | Integration | An adapter for an external protocol or service, such as Letta or Model Router. |
@@ -40,8 +41,8 @@
 
 | Term | Meaning |
 | --- | --- |
-| Agent Studio | The ADE feature for creating, chatting with, inspecting, and maintaining persistent Letta agents. |
-| Persistent state | Agent memory and related state retained by Letta across messages. |
+| Agent Studio | The ADE feature for operating reusable agent definitions, explicit memory subjects, persistent conversations, and inspectable native runs. |
+| Persistent state | Immutable conversation history plus versioned summaries and typed subject memory retained in ADE PostgreSQL. |
 | Agent definition | An immutable v3 prompt, persona, tools, and exact deployment snapshot reusable across memory subjects. |
 | Memory subject | The explicit v3 identity whose typed durable facts are isolated from other subjects and agents. |
 | Conversation | A v3 binding between one agent-definition version and one memory subject, with immutable messages. |

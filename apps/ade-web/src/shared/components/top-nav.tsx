@@ -24,7 +24,6 @@ const COPY = {
     promptCenter: "Prompt Center",
     toolCenter: "Tool Center",
     testCenter: "Test Center",
-    nativeRuntimePreview: "Native Runtime Preview",
     apiDocs: "API Docs",
   },
   zh: {
@@ -44,7 +43,6 @@ const COPY = {
     promptCenter: "提示词中心",
     toolCenter: "工具中心",
     testCenter: "测试中心",
-    nativeRuntimePreview: "原生运行时预览",
     apiDocs: "API 文档",
   },
 } as const;

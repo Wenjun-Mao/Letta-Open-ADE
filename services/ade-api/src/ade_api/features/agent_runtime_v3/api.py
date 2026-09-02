@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Awaitable
-from typing import TypeVar
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 
-from ade_api.platform.auth import require_operator
+from ade_api.platform.auth import require_admin, require_operator, require_reader
 from ade_api.platform.openapi_metadata import TAG_AGENT_RUNTIME_V3
 
 from .contracts import (
@@ -16,48 +15,30 @@ from .contracts import (
     CreateAgentDefinitionRequest,
     CreateConversationRequest,
     CreateMemorySubjectRequest,
-    CreatePreviewSessionRequest,
     ConversationResponse,
     ConversationStateResponse,
     MemorySubjectResponse,
-    PreviewSessionResponse,
+    RunEventListResponse,
+    RunListResponse,
     RunResponse,
     RuntimeWorkerHealthResponse,
     SubjectMemoriesResponse,
     TurnAcceptedResponse,
 )
+from .agent_studio_api import router as agent_studio_router
+from .api_boundary import call_runtime
 from .dependencies import (
     AgentRuntimeV3HealthServiceDependency,
     AgentRuntimeV3ServiceDependency,
 )
 from .errors import AgentRuntimeV3Error
-from .router_transport import RouterRequestError
 
 
 router = APIRouter(
     prefix="/api/v3",
-    dependencies=[Depends(require_operator)],
     tags=[TAG_AGENT_RUNTIME_V3],
 )
-T = TypeVar("T")
-
-
-async def _call(operation: Awaitable[T]) -> T:
-    try:
-        return await operation
-    except AgentRuntimeV3Error as exc:
-        raise HTTPException(
-            status_code=exc.status_code,
-            detail={"code": exc.code, "message": str(exc)},
-        ) from exc
-    except RouterRequestError as exc:
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "code": "model_router_unavailable",
-                "message": "Model Router is not ready",
-            },
-        ) from exc
+router.include_router(agent_studio_router)
 
 
 @router.get(
@@ -69,13 +50,14 @@ async def _call(operation: Awaitable[T]) -> T:
             "description": "Database or matching runtime worker is not ready",
         }
     },
+    dependencies=[Depends(require_reader)],
     summary="Check v3 worker process readiness",
 )
 async def get_worker_health(
     response: Response,
     service: AgentRuntimeV3HealthServiceDependency,
 ):
-    result = await _call(service.get_health())
+    result = await call_runtime(service.get_health())
     if not result["worker_ready"]:
         response.status_code = 503
     return result
@@ -85,110 +67,109 @@ async def get_worker_health(
     "/agent-definitions",
     response_model=AgentDefinitionResponse,
     status_code=201,
+    dependencies=[Depends(require_admin)],
     summary="Create an immutable v3 agent definition",
 )
 async def create_agent_definition(
     request: CreateAgentDefinitionRequest,
     service: AgentRuntimeV3ServiceDependency,
 ):
-    return await _call(service.create_agent_definition(request))
+    return await call_runtime(service.create_agent_definition(request))
 
 
 @router.get(
     "/agent-definitions/{definition_id}",
     response_model=AgentDefinitionResponse,
+    dependencies=[Depends(require_reader)],
     summary="Get a v3 agent definition",
 )
 async def get_agent_definition(
     definition_id: str,
     service: AgentRuntimeV3ServiceDependency,
 ):
-    return await _call(service.get_agent_definition(definition_id))
-
-
-@router.post(
-    "/preview-sessions",
-    response_model=PreviewSessionResponse,
-    status_code=201,
-    summary="Create an atomic native-runtime preview session",
-)
-async def create_preview_session(
-    request: CreatePreviewSessionRequest,
-    response: Response,
-    service: AgentRuntimeV3ServiceDependency,
-):
-    result = await _call(service.create_preview_session(request))
-    if bool(result.get("idempotent_replay")):
-        response.headers["Idempotent-Replay"] = "true"
-    return result
+    return await call_runtime(service.get_agent_definition(definition_id))
 
 
 @router.post(
     "/memory-subjects",
     response_model=MemorySubjectResponse,
     status_code=201,
+    dependencies=[Depends(require_admin)],
     summary="Create a v3 memory subject",
 )
 async def create_memory_subject(
     request: CreateMemorySubjectRequest,
     service: AgentRuntimeV3ServiceDependency,
 ):
-    return await _call(service.create_memory_subject(request))
+    return await call_runtime(service.create_memory_subject(request))
 
 
 @router.get(
     "/memory-subjects/{subject_id}",
     response_model=MemorySubjectResponse,
+    dependencies=[Depends(require_reader)],
     summary="Get a v3 memory subject",
 )
 async def get_memory_subject(
     subject_id: str,
     service: AgentRuntimeV3ServiceDependency,
 ):
-    return await _call(service.get_memory_subject(subject_id))
+    return await call_runtime(service.get_memory_subject(subject_id))
 
 
 @router.get(
     "/memory-subjects/{subject_id}/memories",
     response_model=SubjectMemoriesResponse,
+    dependencies=[Depends(require_reader)],
     summary="Inspect typed subject memories",
 )
 async def get_subject_memories(
     subject_id: str,
     service: AgentRuntimeV3ServiceDependency,
 ):
-    return await _call(service.get_subject_memories(subject_id))
+    return await call_runtime(service.get_subject_memories(subject_id))
 
 
 @router.post(
     "/conversations",
     response_model=ConversationResponse,
     status_code=201,
+    dependencies=[Depends(require_operator)],
     summary="Create a v3 conversation",
 )
 async def create_conversation(
     request: CreateConversationRequest,
     service: AgentRuntimeV3ServiceDependency,
 ):
-    return await _call(service.create_conversation(request))
+    return await call_runtime(service.create_conversation(request))
 
 
 @router.get(
     "/conversations/{conversation_id}/state",
     response_model=ConversationStateResponse,
+    dependencies=[Depends(require_reader)],
     summary="Get v3 conversation state",
 )
 async def get_conversation_state(
     conversation_id: str,
     service: AgentRuntimeV3ServiceDependency,
+    message_limit: Annotated[int, Query(ge=1, le=200)] = 200,
+    before_sequence: Annotated[int | None, Query(ge=1)] = None,
 ):
-    return await _call(service.get_conversation_state(conversation_id))
+    return await call_runtime(
+        service.get_conversation_state(
+            conversation_id,
+            message_limit=message_limit,
+            before_sequence=before_sequence,
+        )
+    )
 
 
 @router.post(
     "/conversations/{conversation_id}/turns",
     response_model=TurnAcceptedResponse,
     status_code=202,
+    dependencies=[Depends(require_operator)],
     summary="Accept an asynchronous v3 conversation turn",
 )
 async def accept_turn(
@@ -197,7 +178,7 @@ async def accept_turn(
     response: Response,
     service: AgentRuntimeV3ServiceDependency,
 ):
-    result = await _call(service.accept_turn(conversation_id, request))
+    result = await call_runtime(service.accept_turn(conversation_id, request))
     if bool(result.get("idempotent_replay")):
         response.headers["Idempotent-Replay"] = "true"
     return result
@@ -206,24 +187,61 @@ async def accept_turn(
 @router.get(
     "/runs/{run_id}",
     response_model=RunResponse,
+    dependencies=[Depends(require_reader)],
     summary="Get a v3 run",
 )
 async def get_run(run_id: str, service: AgentRuntimeV3ServiceDependency):
-    return await _call(service.get_run(run_id))
+    return await call_runtime(service.get_run(run_id))
+
+
+@router.get(
+    "/conversations/{conversation_id}/runs",
+    response_model=RunListResponse,
+    dependencies=[Depends(require_reader)],
+    summary="List v3 runs for one conversation",
+)
+async def list_runs(
+    conversation_id: str,
+    service: AgentRuntimeV3ServiceDependency,
+    limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+):
+    return await call_runtime(
+        service.list_runs(conversation_id, limit=limit, offset=offset)
+    )
 
 
 @router.post(
     "/runs/{run_id}/cancel",
     response_model=RunResponse,
+    dependencies=[Depends(require_operator)],
     summary="Cancel a v3 run",
 )
 async def cancel_run(run_id: str, service: AgentRuntimeV3ServiceDependency):
-    return await _call(service.cancel_run(run_id))
+    return await call_runtime(service.cancel_run(run_id))
+
+
+@router.get(
+    "/runs/{run_id}/event-log",
+    response_model=RunEventListResponse,
+    dependencies=[Depends(require_reader)],
+    summary="Read normalized v3 run events as JSON",
+)
+async def list_run_events(
+    run_id: str,
+    service: AgentRuntimeV3ServiceDependency,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+    after_sequence: Annotated[int, Query(ge=0)] = 0,
+):
+    return await call_runtime(
+        service.list_run_events(run_id, limit=limit, after_sequence=after_sequence)
+    )
 
 
 @router.get(
     "/runs/{run_id}/events",
     response_class=StreamingResponse,
+    dependencies=[Depends(require_reader)],
     summary="Stream normalized v3 run events",
 )
 async def stream_run_events(

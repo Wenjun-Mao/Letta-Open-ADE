@@ -18,10 +18,10 @@ from .errors import RuntimeValidationError
 from .persistence.definitions import DefinitionVersionRepository
 from .presenters import definition_response
 from .release_policy import (
-    PREVIEW_RELEASE_PERSONA_KEY,
-    PREVIEW_RELEASE_PROMPT_KEY,
-    PREVIEW_RELEASE_ROUTES,
-    PREVIEW_RELEASE_TOOL_NAMES,
+    AGENT_STUDIO_RELEASE_PERSONA_KEY,
+    AGENT_STUDIO_RELEASE_PROMPT_KEY,
+    AGENT_STUDIO_RELEASE_ROUTES,
+    AGENT_STUDIO_RELEASE_TOOL_NAMES,
     current_production_policy_hashes,
     source_tree_is_clean,
 )
@@ -45,14 +45,27 @@ class DefinitionService:
         self.prompt_registry = prompt_registry
         self.router_transport = router_transport
 
-    async def create(self, request: CreateAgentDefinitionRequest) -> dict[str, Any]:
+    async def create(
+        self,
+        request: CreateAgentDefinitionRequest,
+        *,
+        purpose: str = "development",
+        version_id: str | None = None,
+        root_id: str | None = None,
+    ) -> dict[str, Any]:
         prepared = await self.prepare(request)
         async with self.database.translated_errors():
             async with self.database.engine.begin() as connection:
                 await self.database.ensure_workspace(connection)
                 row = await DefinitionVersionRepository(connection).create_next(
                     DEFAULT_WORKSPACE_ID,
-                    {"id": str(uuid4()), **prepared},
+                    {
+                        "id": version_id or str(uuid4()),
+                        **({"agent_definition_id": root_id} if root_id else {}),
+                        **prepared,
+                    },
+                    purpose=purpose,
+                    expected_current_version=request.expected_current_version,
                 )
         return definition_response(row)
 
@@ -68,12 +81,12 @@ class DefinitionService:
                 "get_weather is available only in development and qualification runs"
             )
         if self.settings.agent_runtime_v3_mode == "release" and (
-            request.prompt_key != PREVIEW_RELEASE_PROMPT_KEY
-            or request.persona_key != PREVIEW_RELEASE_PERSONA_KEY
-            or tuple(request.tool_names) != PREVIEW_RELEASE_TOOL_NAMES
+            request.prompt_key != AGENT_STUDIO_RELEASE_PROMPT_KEY
+            or request.persona_key != AGENT_STUDIO_RELEASE_PERSONA_KEY
+            or tuple(request.tool_names) != AGENT_STUDIO_RELEASE_TOOL_NAMES
         ):
             raise RuntimeValidationError(
-                "Release preview definitions must use the exact qualified prompt, "
+                "Release Agent Studio definitions must use the exact qualified prompt, "
                 "persona, and tool contract"
             )
         prompt = self.prompt_registry.get_template(
@@ -141,9 +154,9 @@ class DefinitionService:
             "reviewer": normalize_route_alias(request.reviewer_model_key),
             "retriever": normalize_route_alias(request.embedding_model_key),
         }
-        if mode == "release" and requested_routes != PREVIEW_RELEASE_ROUTES:
+        if mode == "release" and requested_routes != AGENT_STUDIO_RELEASE_ROUTES:
             raise RuntimeValidationError(
-                "Release preview sessions must use the exact qualified deployment routes"
+                "Release Agent Studio sessions must use the exact qualified deployment routes"
             )
         release_checks = (
             {

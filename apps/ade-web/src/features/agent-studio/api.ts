@@ -1,7 +1,128 @@
 import { requestJson, type ApiRequestOptions } from "@/shared/api/client";
 
-import type { Scenario } from "@/features/model-catalog/api";
+import type {
+  AgentDefinition,
+  AgentStudioOptions,
+  AgentStudioSession,
+  ConversationState,
+  CreateDefinition,
+  CreateSession,
+  MemorySubject,
+  Run,
+  RunEvent,
+  SubjectMemories,
+} from "./types";
 
+type ListResponse<T> = { total: number; items: T[] };
+
+function listPath(path: string, includeArchived: boolean): string {
+  const query = new URLSearchParams({ limit: "200", offset: "0" });
+  if (includeArchived) query.set("include_archived", "true");
+  return `${path}?${query.toString()}`;
+}
+
+export function getAgentStudioOptions(): Promise<AgentStudioOptions> {
+  return requestJson("/api/v3/agent-studio/options");
+}
+
+export function listAgentStudioSessions(includeArchived = false): Promise<ListResponse<AgentStudioSession>> {
+  return requestJson(listPath("/api/v3/agent-studio/sessions", includeArchived));
+}
+
+export function getAgentStudioSession(conversationId: string): Promise<AgentStudioSession> {
+  return requestJson(`/api/v3/agent-studio/sessions/${encodeURIComponent(conversationId)}`);
+}
+
+export function createAgentStudioSession(payload: CreateSession): Promise<AgentStudioSession> {
+  return requestJson("/api/v3/agent-studio/sessions", { method: "POST", body: payload });
+}
+
+export function archiveAgentStudioSession(conversationId: string): Promise<AgentStudioSession> {
+  return requestJson(`/api/v3/agent-studio/sessions/${encodeURIComponent(conversationId)}`, { method: "DELETE" });
+}
+
+export function restoreAgentStudioSession(conversationId: string): Promise<AgentStudioSession> {
+  return requestJson(`/api/v3/agent-studio/sessions/${encodeURIComponent(conversationId)}/restore`, { method: "POST" });
+}
+
+export function getConversationState(conversationId: string, beforeSequence?: number): Promise<ConversationState> {
+  const query = new URLSearchParams({ message_limit: "120" });
+  if (beforeSequence) query.set("before_sequence", String(beforeSequence));
+  return requestJson(`/api/v3/agent-studio/sessions/${encodeURIComponent(conversationId)}/state?${query.toString()}`);
+}
+
+export function listAgentStudioDefinitions(includeArchived = false): Promise<ListResponse<AgentDefinition>> {
+  return requestJson(listPath("/api/v3/agent-studio/definitions", includeArchived));
+}
+
+export function createAgentStudioDefinition(payload: CreateDefinition): Promise<AgentDefinition> {
+  return requestJson("/api/v3/agent-studio/definitions", { method: "POST", body: payload });
+}
+
+export function archiveAgentStudioDefinition(rootId: string): Promise<AgentDefinition> {
+  return requestJson(`/api/v3/agent-studio/definitions/${encodeURIComponent(rootId)}`, { method: "DELETE" });
+}
+
+export function restoreAgentStudioDefinition(rootId: string): Promise<AgentDefinition> {
+  return requestJson(`/api/v3/agent-studio/definitions/${encodeURIComponent(rootId)}/restore`, { method: "POST" });
+}
+
+export function listAgentStudioSubjects(includeArchived = false): Promise<ListResponse<MemorySubject>> {
+  return requestJson(listPath("/api/v3/agent-studio/subjects", includeArchived));
+}
+
+export function createAgentStudioSubject(payload: { external_key: string; display_name: string }): Promise<MemorySubject> {
+  return requestJson("/api/v3/agent-studio/subjects", { method: "POST", body: payload });
+}
+
+export function updateAgentStudioSubject(
+  subjectId: string,
+  payload: { display_name: string; expected_version: number },
+): Promise<MemorySubject> {
+  return requestJson(`/api/v3/agent-studio/subjects/${encodeURIComponent(subjectId)}`, { method: "PATCH", body: payload });
+}
+
+export function archiveAgentStudioSubject(subjectId: string): Promise<MemorySubject> {
+  return requestJson(`/api/v3/agent-studio/subjects/${encodeURIComponent(subjectId)}`, { method: "DELETE" });
+}
+
+export function restoreAgentStudioSubject(subjectId: string): Promise<MemorySubject> {
+  return requestJson(`/api/v3/agent-studio/subjects/${encodeURIComponent(subjectId)}/restore`, { method: "POST" });
+}
+
+export function getSubjectMemories(subjectId: string): Promise<SubjectMemories> {
+  return requestJson(`/api/v3/agent-studio/subjects/${encodeURIComponent(subjectId)}/memories`);
+}
+
+export function acceptTurn(
+  conversationId: string,
+  payload: { content: string; idempotency_key: string; timeout_seconds: number; retry_count: number },
+): Promise<{ run_id: string; status: Run["status"]; events_url: string; idempotent_replay: boolean }> {
+  return requestJson(`/api/v3/conversations/${encodeURIComponent(conversationId)}/turns`, { method: "POST", body: payload });
+}
+
+export function getRun(runId: string): Promise<Run> {
+  return requestJson(`/api/v3/runs/${encodeURIComponent(runId)}`);
+}
+
+export function listConversationRuns(conversationId: string): Promise<ListResponse<Run>> {
+  return requestJson(`/api/v3/conversations/${encodeURIComponent(conversationId)}/runs`);
+}
+
+export function cancelRun(runId: string): Promise<Run> {
+  return requestJson(`/api/v3/runs/${encodeURIComponent(runId)}/cancel`, { method: "POST" });
+}
+
+export function getRunEventLog(runId: string): Promise<ListResponse<RunEvent>> {
+  return requestJson(`/api/v3/runs/${encodeURIComponent(runId)}/event-log`);
+}
+
+export function runEventsUrl(runId: string): string {
+  return `/api/v3/runs/${encodeURIComponent(runId)}/events`;
+}
+
+// Dashboard still consumes this small, read-only count adapter. It now counts
+// ADE-native definition roots instead of legacy Letta agents.
 export type AgentListItem = {
   id: string;
   name: string;
@@ -12,235 +133,26 @@ export type AgentListItem = {
   archived: boolean;
 };
 
-export type AgentLifecycleRecord = {
-  id: string;
-  name: string;
-  model: string;
-  archived: boolean;
-  archived_at?: string | null;
-  updated_at: string;
-};
-
-export type AgentDetails = {
-  id: string;
-  name: string;
-  agent_type?: string;
-  model: string;
-  embedding?: string | null;
-  created_at?: string;
-  last_updated_at?: string;
-  last_interaction_at?: string;
-  llm_config?: unknown;
-  embedding_config?: unknown;
-  tool_rules?: unknown;
-  context_window_limit?: number | null;
-  system: string;
-  tools: Record<string, string>;
-  memory: Record<string, string>;
-};
-
-export type PersistentState = {
-  source?: string;
-  agent?: {
-    id: string;
-    name: string;
-    agent_type: string;
-    model: string;
-    embedding?: string | null;
-    created_at?: string;
-    last_updated_at?: string;
-    context_window_limit?: number | null;
-    tool_rules?: string;
-  };
-  memory_blocks: Array<{
-    label: string;
-    value: string;
-    description: string;
-    limit: number | null;
-  }>;
-  tools?: Array<{
-    id: string;
-    name: string;
-    description: string;
-  }>;
-  conversation_history: {
-    total_persisted: number;
-    displayed: number;
-    limit?: number;
-    counts_by_type?: Record<string, number>;
-    items: Array<{
-      id: string;
-      created_at: string;
-      role: string;
-      message_type: string;
-      content: string;
-      name?: string | null;
-      tool_arguments?: string | null;
-    }>;
-  };
-};
-
-export type ChatStep = {
-  type: string;
-  content?: string;
-  name?: string;
-  status?: string;
-  arguments?: string;
-  tool_arguments?: string;
-  message_type?: string;
-};
-
-export type ChatResult = {
-  total_steps: number;
-  sequence: ChatStep[];
-  memory_diff: {
-    old: Record<string, string>;
-    new: Record<string, string>;
-  };
-};
-
-export type RuntimeTool = {
-  id: string;
-  name: string;
-  description: string;
-  tool_type: string;
-  source_type: string;
-  created_at: string;
-  last_updated_at: string;
-  tags: string[];
-  attached_to_agent?: boolean;
-  managed?: boolean;
-  read_only?: boolean;
-  archived?: boolean;
-  slug?: string | null;
-};
-
-export type ToolProbeResult = {
-  agent_id: string;
-  input: string;
-  expected_tool_name?: string | null;
-  expected_tool_matched?: boolean | null;
-  tool_call_count: number;
-  tool_return_count: number;
-  result: ChatResult;
-};
-
-export function listAgents(
-  limit = 200,
-  includeLastInteraction = false,
+export async function listAgents(
+  _limit = 200,
+  _includeLastInteraction = false,
   includeArchived = false,
   options?: ApiRequestOptions,
-) {
-  const params = new URLSearchParams({ limit: `${limit}` });
-  if (includeLastInteraction) params.set("include_last_interaction", "true");
-  if (includeArchived) params.set("include_archived", "true");
-  return requestJson<{ total: number; items: AgentListItem[] }>(`/api/v2/agent-studio/agents?${params.toString()}`, options);
-}
-
-export function createAgent(payload: {
-  scenario: Scenario;
-  name: string;
-  model: string;
-  prompt_key: string;
-  persona_key?: string;
-  embedding?: string | null;
-  temperature?: number;
-  top_p?: number;
-  top_k?: number;
-}) {
-  return requestJson<{
-    id: string;
-    name: string;
-    scenario: Scenario;
-    model: string;
-    embedding?: string | null;
-    prompt_key: string;
-    persona_key?: string;
-  }>("/api/v2/agent-studio/agents", { method: "POST", body: payload });
-}
-
-export function archiveAgent(agentId: string) {
-  return requestJson<AgentLifecycleRecord>(`/api/v2/agent-studio/agents/${agentId}/archive`, { method: "POST" });
-}
-
-export function restoreAgent(agentId: string) {
-  return requestJson<AgentLifecycleRecord>(`/api/v2/agent-studio/agents/${agentId}/restore`, { method: "POST" });
-}
-
-export function purgeAgent(agentId: string) {
-  return requestJson<{ ok: boolean; id: string; kind: string }>(`/api/v2/agent-studio/agents/${agentId}/purge`, { method: "DELETE" });
-}
-
-export function getAgentDetails(agentId: string, options?: ApiRequestOptions) {
-  return requestJson<AgentDetails>(`/api/v2/agent-studio/agents/${agentId}`, options);
-}
-
-export function getPersistentState(agentId: string, limit = 120, options?: ApiRequestOptions) {
-  return requestJson<PersistentState>(`/api/v2/agent-studio/agents/${agentId}/persistent-state?limit=${limit}`, options);
-}
-
-export function getRawPrompt(agentId: string, options?: ApiRequestOptions) {
-  return requestJson<{ messages: Array<{ role: string; content: string }> }>(`/api/v2/agent-studio/agents/${agentId}/raw-prompt`, options);
-}
-
-export function sendChat(
-  agentId: string,
-  message: string,
-  options?: { timeout_seconds?: number; retry_count?: number; signal?: AbortSignal },
-) {
-  return requestJson<ChatResult>(`/api/v2/agent-studio/agents/${agentId}/messages`, {
-    method: "POST",
-    signal: options?.signal,
-    body: { message, timeout_seconds: options?.timeout_seconds, retry_count: options?.retry_count },
-  });
-}
-
-export function updateSystemPrompt(agentId: string, system: string) {
-  return requestJson<{ system_after: string; system_before: string }>(`/api/v2/agent-studio/agents/${agentId}/system-prompt`, {
-    method: "PATCH",
-    body: { system },
-  });
-}
-
-export function updateAgentModel(agentId: string, model: string) {
-  return requestJson<{ model_after: string; model_before: string }>(`/api/v2/agent-studio/agents/${agentId}/model`, {
-    method: "PATCH",
-    body: { model },
-  });
-}
-
-export function updateCoreMemoryBlock(agentId: string, blockLabel: string, value: string) {
-  return requestJson<{ value_before: string; value_after: string }>(
-    `/api/v2/agent-studio/agents/${agentId}/memory/${blockLabel}`,
-    { method: "PATCH", body: { value } },
+): Promise<ListResponse<AgentListItem>> {
+  const response = await requestJson<ListResponse<AgentDefinition>>(
+    listPath("/api/v3/agent-studio/definitions", includeArchived),
+    options,
   );
-}
-
-export function listRuntimeTools(search = "", limit = 200, agentId = "", options?: ApiRequestOptions) {
-  const params = new URLSearchParams({ limit: `${limit}` });
-  if (search.trim()) params.set("search", search.trim());
-  if (agentId.trim()) params.set("agent_id", agentId.trim());
-  return requestJson<{ total: number; items: RuntimeTool[] }>(`/api/v2/tool-center/runtime-tools?${params.toString()}`, options);
-}
-
-export function testInvokeTool(payload: {
-  agent_id: string;
-  input: string;
-  expected_tool_name?: string;
-  override_model?: string;
-  override_system?: string;
-  timeout_seconds?: number;
-  retry_count?: number;
-  signal?: AbortSignal;
-}) {
-  const { signal, ...body } = payload;
-  return requestJson<ToolProbeResult>("/api/v2/tool-center/invocations", { method: "POST", body, signal });
-}
-
-export function attachTool(agentId: string, toolId: string) {
-  return requestJson(`/api/v2/agent-studio/agents/${agentId}/tools/${toolId}/attach`, { method: "PATCH" });
-}
-
-export function detachTool(agentId: string, toolId: string) {
-  return requestJson(`/api/v2/agent-studio/agents/${agentId}/tools/${toolId}/detach`, { method: "PATCH" });
+  return {
+    total: response.total,
+    items: response.items.map((definition) => ({
+      id: definition.agent_definition_id || definition.id,
+      name: definition.name,
+      model: definition.deployments.find((deployment) => deployment.role === "conversation")?.route_alias || "native",
+      created_at: definition.created_at,
+      last_updated_at: definition.created_at,
+      last_interaction_at: definition.created_at,
+      archived: Boolean(definition.archived_at),
+    })),
+  };
 }

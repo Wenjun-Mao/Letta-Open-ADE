@@ -1,10 +1,17 @@
-.PHONY: setup up down status logs test check openapi smoke eval-chat-memory eval-comment-persona eval-agent-runtime-v3 probe-models native-runtime-migrate native-runtime-up native-runtime-db-test native-runtime-lane-check native-runtime-policy-rebind native-runtime-preview-gate native-runtime-preview-up
+.PHONY: setup up down status logs test check openapi smoke eval-chat-memory eval-comment-persona eval-agent-runtime-v3 probe-models agent-studio-migrate agent-studio-up agent-studio-development-up agent-studio-db-test agent-studio-lane-check agent-studio-policy-rebind agent-studio-qualification agent-studio-promotion-apply agent-studio-conformance agent-studio-rollback-rehearsal agent-studio-cutover-review agent-studio-release-gate agent-studio-release-up
 
 SERVICE ?= ade-api
 SOURCE ?= ark
 ADE_SOURCE_REVISION ?= $(shell git rev-parse HEAD 2>/dev/null || echo unknown)
 ADE_SOURCE_DIRTY ?= $(shell test -z "$$(git status --porcelain 2>/dev/null)" && echo false || echo true)
 ADE_SOURCE_FINGERPRINT ?= $(shell python3 scripts/source_fingerprint.py 2>/dev/null || echo unknown)
+AGENT_STUDIO_EVIDENCE_DIR ?= tests/outputs/agent-studio-cutover
+AGENT_STUDIO_CONFORMANCE_RECEIPT ?= $(AGENT_STUDIO_EVIDENCE_DIR)/conformance.json
+AGENT_STUDIO_ROLLBACK_RECEIPT ?= $(AGENT_STUDIO_EVIDENCE_DIR)/rollback.json
+AGENT_STUDIO_QUALIFICATION_PROPOSAL ?=
+AGENT_STUDIO_PARITY_ROOT ?=
+AGENT_STUDIO_LEGACY_REVISION ?=
+AGENT_STUDIO_REVIEWER ?=
 export ADE_SOURCE_REVISION
 export ADE_SOURCE_DIRTY
 export ADE_SOURCE_FINGERPRINT
@@ -19,26 +26,48 @@ up:
 down:
 	docker compose down
 
-native-runtime-migrate:
-	docker compose --profile native-runtime run --rm --build ade-runtime-migrate
+agent-studio-migrate:
+	docker compose run --rm --build ade-runtime-migrate
 
-native-runtime-lane-check:
-	uv run python -m pytest tests/test_codebase_guardrails.py -q -k native_runtime_compose_lane
+agent-studio-lane-check:
+	uv run python -m pytest tests/test_codebase_guardrails.py -q -k agent_studio_compose_lane
 
-native-runtime-policy-rebind:
+agent-studio-policy-rebind:
 	uv run python scripts/rebind_agent_runtime_policy.py --apply
 
-native-runtime-preview-gate:
-	uv run python scripts/check_native_preview_gate.py
+agent-studio-qualification: eval-agent-runtime-v3
 
-native-runtime-up: native-runtime-lane-check native-runtime-migrate
-	ADE_API_AGENT_RUNTIME_V3_ENABLED=true ADE_API_AGENT_RUNTIME_V3_MODE=development docker compose --profile native-runtime up -d --build ade-native-api ade-runtime-worker
+agent-studio-promotion-apply:
+	@test -n "$(AGENT_STUDIO_QUALIFICATION_PROPOSAL)" || { echo "Set AGENT_STUDIO_QUALIFICATION_PROPOSAL" >&2; exit 2; }
+	uv run python -m workflows.evals.agent_runtime_v3_acceptance.promote --proposal "$(AGENT_STUDIO_QUALIFICATION_PROPOSAL)" --apply
 
-native-runtime-preview-up: native-runtime-lane-check native-runtime-preview-gate native-runtime-migrate
-	ADE_API_AGENT_RUNTIME_V3_ENABLED=true ADE_API_AGENT_RUNTIME_V3_MODE=release ADE_NATIVE_PREVIEW_ENABLED=true docker compose --profile native-runtime up -d --build ade-native-api ade-runtime-worker ade-web
+agent-studio-conformance:
+	uv run python scripts/record_agent_studio_conformance.py --output "$(AGENT_STUDIO_CONFORMANCE_RECEIPT)"
 
-native-runtime-db-test: native-runtime-migrate
-	docker compose --profile native-runtime run --rm --build --no-deps ade-runtime-db-test
+agent-studio-rollback-rehearsal:
+	@test -n "$(AGENT_STUDIO_LEGACY_REVISION)" || { echo "Set AGENT_STUDIO_LEGACY_REVISION" >&2; exit 2; }
+	uv run python scripts/rehearse_agent_studio_rollback.py --legacy-revision "$(AGENT_STUDIO_LEGACY_REVISION)" --output "$(AGENT_STUDIO_ROLLBACK_RECEIPT)"
+
+agent-studio-cutover-review:
+	@test -n "$(AGENT_STUDIO_QUALIFICATION_PROPOSAL)" || { echo "Set AGENT_STUDIO_QUALIFICATION_PROPOSAL" >&2; exit 2; }
+	@test -n "$(AGENT_STUDIO_PARITY_ROOT)" || { echo "Set AGENT_STUDIO_PARITY_ROOT" >&2; exit 2; }
+	@test -n "$(AGENT_STUDIO_REVIEWER)" || { echo "Set AGENT_STUDIO_REVIEWER" >&2; exit 2; }
+	uv run python scripts/review_agent_studio_cutover.py --qualification-proposal "$(AGENT_STUDIO_QUALIFICATION_PROPOSAL)" --parity-root "$(AGENT_STUDIO_PARITY_ROOT)" --conformance-receipt "$(AGENT_STUDIO_CONFORMANCE_RECEIPT)" --rollback-receipt "$(AGENT_STUDIO_ROLLBACK_RECEIPT)" --reviewer "$(AGENT_STUDIO_REVIEWER)" --apply
+
+agent-studio-release-gate:
+	uv run python scripts/check_agent_studio_release_gate.py
+
+agent-studio-up: agent-studio-lane-check
+	docker compose up -d --build
+
+agent-studio-development-up: agent-studio-lane-check
+	ADE_API_AGENT_RUNTIME_V3_MODE=development docker compose up -d --build
+
+agent-studio-release-up: agent-studio-lane-check agent-studio-release-gate
+	docker compose up -d --build
+
+agent-studio-db-test: agent-studio-migrate
+	docker compose --profile native-runtime-test run --rm --build --no-deps ade-runtime-db-test
 
 status:
 	docker compose ps
@@ -70,8 +99,8 @@ eval-chat-memory:
 eval-comment-persona:
 	docker compose exec ade-api python workflows/evals/comment_persona_eval/run.py --config workflows/evals/comment_persona_eval/config.toml
 
-eval-agent-runtime-v3: native-runtime-up
-	docker compose --profile native-runtime exec ade-native-api python workflows/evals/agent_runtime_v3_acceptance/run.py --config workflows/evals/agent_runtime_v3_acceptance/config.toml --rounds 3
+eval-agent-runtime-v3: agent-studio-development-up
+	docker compose exec ade-native-api python workflows/evals/agent_runtime_v3_acceptance/run.py --config workflows/evals/agent_runtime_v3_acceptance/config.toml --rounds 3
 
 probe-models:
 	docker compose exec model-router python workflows/evals/provider_model_probe/run.py --source-id $(SOURCE) --mode chat-probe --write

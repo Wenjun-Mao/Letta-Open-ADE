@@ -16,7 +16,12 @@ from .errors import (
     RuntimeNotFound,
     RuntimeNotReady,
 )
-from .persistence.base import IdempotencyConflictError, NotFoundError
+from .persistence.base import (
+    IdempotencyConflictError,
+    NotFoundError,
+    OptimisticLockError,
+    PersistenceError,
+)
 from .persistence.validation import validate_database_at_head
 from .persistence.workspaces import WorkspaceRepository
 
@@ -58,6 +63,10 @@ class RuntimeDatabase:
             raise RuntimeNotFound(str(exc)) from exc
         except IdempotencyConflictError as exc:
             raise IdempotencyConflict(str(exc)) from exc
+        except OptimisticLockError as exc:
+            raise RuntimeConflict(str(exc)) from exc
+        except PersistenceError as exc:
+            raise RuntimeConflict(str(exc)) from exc
         except IntegrityError as exc:
             raise RuntimeConflict("The requested v3 resource already exists") from exc
 

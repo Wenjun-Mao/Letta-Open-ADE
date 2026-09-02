@@ -7,7 +7,6 @@ export type NavigationItemKey =
   | "promptCenter"
   | "toolCenter"
   | "testCenter"
-  | "nativeRuntimePreview"
   | "apiDocs";
 
 export type NavigationGroupKey = "build" | "content" | "evaluate" | "operations";
@@ -24,7 +23,7 @@ type NavigationGroup = {
 
 export const HOME_NAVIGATION_ITEM: NavigationItem = { href: "/", key: "dashboard" };
 
-export function buildNavigationGroups(nativePreviewEnabled: boolean): readonly NavigationGroup[] {
+export function buildNavigationGroups(): readonly NavigationGroup[] {
   return [
   {
     key: "build",
@@ -48,19 +47,12 @@ export function buildNavigationGroups(nativePreviewEnabled: boolean): readonly N
   },
   {
     key: "operations",
-    items: [
-      ...(nativePreviewEnabled
-        ? [{ href: "/native-runtime-preview", key: "nativeRuntimePreview" } as const]
-        : []),
-      { href: "/api-docs", key: "apiDocs" },
-    ],
+    items: [{ href: "/api-docs", key: "apiDocs" }],
   },
   ];
 }
 
-export const NAVIGATION_GROUPS = buildNavigationGroups(
-  process.env.NEXT_PUBLIC_ADE_NATIVE_PREVIEW_ENABLED === "true",
-);
+export const NAVIGATION_GROUPS = buildNavigationGroups();
 
 export const ALL_NAVIGATION_ITEMS: readonly NavigationItem[] = [
   HOME_NAVIGATION_ITEM,

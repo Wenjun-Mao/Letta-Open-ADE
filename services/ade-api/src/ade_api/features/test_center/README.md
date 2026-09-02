@@ -37,6 +37,34 @@ Test Center rejects unknown or duplicate keys, emits the runner's repeated
 `--case-key` arguments in canonical order, and forces a one-round no-llama command.
 These focused runs are diagnostic-only and cannot be promotion eligible.
 
+## Agent Runtime Product Parity
+
+`agent_runtime_parity_eval` is the Milestone 4 product-comparison launcher. It
+compares the Letta v2 and ADE-native v3 public APIs under the same fixture,
+prompt, persona, paired DGX model selection, timeout, and zero-retry policy. It
+is intentionally separate from `agent_runtime_v3_acceptance`: qualification
+proves the native runtime's bounded contract, while parity measures the paired
+operator outcome.
+
+The launch form may select one to three rounds. Three rounds are evidence runs;
+one or two rounds are diagnostic evidence only. Test Center always passes
+`--retry-count 0` and rejects other values. It does not expose a mutable
+decision action because the current append-only decision ledger is specific to
+chat-memory candidate/baseline comparisons.
+
+The descriptor forces workflow output beneath the run-owned Test Center output
+directory and gives the evaluator an alphabetic `parity-<test-center-run-id>`
+scope for its generated resource cleanup. API keys, database URL, and Compose
+service URLs are injected only into the child process environment. They are not
+included in the command, `run.json`, logs, or parity artifact read model.
+
+`GET /api/v2/test-center/agent-runtime-parity-evaluations` lists product parity
+runs. `GET /api/v2/test-center/agent-runtime-parity-evaluations/{run_id}`
+returns evidence only after Test Center verifies the signed parity spec,
+provenance, normalized turns, comparison, and summary form one coherent
+content-addressed bundle. Incomplete or mismatched artifacts remain visible as
+not ready in the list and return a conflict on detail reads.
+
 ## Chat-memory evaluation reads
 
 `GET /api/v2/test-center/chat-memory-evaluations` lists persisted

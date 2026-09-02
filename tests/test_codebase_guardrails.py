@@ -726,6 +726,26 @@ def test_tracked_model_router_sources_do_not_embed_machine_specific_ip_addresses
     assert offenders == []
 
 
+def test_tracked_model_router_sources_are_resolvable_from_linux_containers() -> None:
+    sources = json.loads(
+        (PROJECT_ROOT / "config" / "model-router" / "sources.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    offenders = [
+        f"{source.get('id')}: {hostname}"
+        for source in sources
+        if (hostname := (urlparse(str(source.get("base_url", ""))).hostname or ""))
+        .casefold()
+        .endswith(".local")
+    ]
+
+    assert offenders == [], (
+        "Tracked provider hosts must resolve inside Linux containers; use a Compose "
+        f"network alias instead of mDNS: {offenders}"
+    )
+
+
 def test_docs_do_not_reference_removed_comment_eval_paths() -> None:
     forbidden = (
         "scripts/comment_persona_eval.py",
@@ -796,27 +816,25 @@ def test_ci_checks_formatting_without_rewriting_the_stable_base() -> None:
     )
 
 
-def test_native_runtime_migration_rebuilds_before_running_alembic() -> None:
+def test_agent_studio_migration_rebuilds_before_running_alembic() -> None:
     makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
-    migration_target = makefile.split("native-runtime-migrate:", 1)[1].split(
-        "\nnative-runtime-up:", 1
+    migration_target = makefile.split("agent-studio-migrate:", 1)[1].split(
+        "\nagent-studio-lane-check:", 1
     )[0]
 
-    assert (
-        "docker compose --profile native-runtime run --rm --build" in migration_target
-    )
+    assert "docker compose run --rm --build" in migration_target
     assert "ade-runtime-migrate" in migration_target
 
 
-def test_native_runtime_compose_lane_isolated_from_letta_and_redis() -> None:
+def test_agent_studio_compose_lane_is_default_and_isolated_from_letta_and_redis() -> (
+    None
+):
     result = subprocess.run(
         [
             "docker",
             "compose",
             "--env-file",
             ".env.example",
-            "--profile",
-            "native-runtime",
             "config",
             "--format",
             "json",
@@ -829,9 +847,20 @@ def test_native_runtime_compose_lane_isolated_from_letta_and_redis() -> None:
     assert result.returncode == 0, result.stderr
     services = json.loads(result.stdout)["services"]
 
+    assert {
+        "ade-runtime-migrate",
+        "ade-native-api",
+        "ade-runtime-worker",
+        "ade-web",
+    }.issubset(services)
+
     native_api = services["ade-native-api"]
     worker = services["ade-runtime-worker"]
-    assert native_api["profiles"] == ["native-runtime"]
+    migration = services["ade-runtime-migrate"]
+    web = services["ade-web"]
+    assert native_api.get("profiles") is None
+    assert worker.get("profiles") is None
+    assert migration.get("profiles") is None
     assert "env_file" not in native_api
     assert set(native_api["depends_on"]) == {
         "ade-runtime-migrate",
@@ -839,6 +868,8 @@ def test_native_runtime_compose_lane_isolated_from_letta_and_redis() -> None:
         "model-router",
     }
     assert native_api["build"]["args"] == worker["build"]["args"]
+    assert native_api["environment"]["ADE_API_AGENT_RUNTIME_V3_MODE"] == "release"
+    assert worker["environment"]["ADE_API_AGENT_RUNTIME_V3_MODE"] == "release"
     assert native_api["command"] == [
         "/opt/venv/bin/uvicorn",
         "ade_api.native_main:app",
@@ -882,38 +913,100 @@ def test_native_runtime_compose_lane_isolated_from_letta_and_redis() -> None:
         "postgres",
     }
     assert {"letta", "redis"}.isdisjoint(transitive_dependencies("ade-native-api"))
-    assert transitive_dependencies("ade-web") == set()
+    for service_name in ("ade-runtime-migrate", "ade-native-api", "ade-runtime-worker"):
+        dependencies = services[service_name].get("depends_on", {})
+        assert {"letta", "redis"}.isdisjoint(dependencies)
+        environment = services[service_name].get("environment", {})
+        assert not {
+            key
+            for key in environment
+            if "letta" in key.casefold() or "redis" in key.casefold()
+        }
 
-    preview_closure = {
-        "ade-native-api",
-        "ade-runtime-worker",
-        "ade-web",
-    }
-    for service_name in tuple(preview_closure):
-        preview_closure.update(transitive_dependencies(service_name))
-    assert {"letta", "redis", "ade-api"}.isdisjoint(preview_closure)
+    assert set(web["depends_on"]) == {"ade-api", "ade-native-api"}
+    assert web["depends_on"]["ade-api"]["condition"] == "service_healthy"
+    assert web["depends_on"]["ade-native-api"]["condition"] == "service_healthy"
 
     makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
-    native_up = makefile.split("native-runtime-up:", 1)[1].split(
-        "\nnative-runtime-db-test:", 1
+    supported_up = makefile.split("agent-studio-up:", 1)[1].split(
+        "\nagent-studio-development-up:", 1
     )[0]
     acceptance = makefile.split("eval-agent-runtime-v3:", 1)[1].split(
         "\nprobe-models:", 1
     )[0]
-    assert "ade-native-api ade-runtime-worker" in native_up
+    assert "docker compose up -d --build" in supported_up
+    assert "--profile" not in supported_up
+    assert (
+        "ADE_API_AGENT_RUNTIME_V3_MODE=development"
+        in makefile.split("agent-studio-development-up:", 1)[1].split(
+            "\nagent-studio-release-up:", 1
+        )[0]
+    )
     assert "exec ade-native-api python" in acceptance
+    assert "--profile" not in acceptance
+    assert "native-runtime-preview" not in makefile
+
+    profile_result = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "--env-file",
+            ".env.example",
+            "--profile",
+            "native-runtime-test",
+            "config",
+            "--format",
+            "json",
+        ],
+        cwd=PROJECT_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert profile_result.returncode == 0, profile_result.stderr
+    database_test = json.loads(profile_result.stdout)["services"]["ade-runtime-db-test"]
+    assert database_test["profiles"] == ["native-runtime-test"]
 
 
-def test_native_runtime_db_test_uses_the_locked_container_test_image() -> None:
+def test_native_v3_proxy_is_unconditional_and_has_no_preview_flags() -> None:
+    deployment_paths = (
+        "compose.yaml",
+        "Makefile",
+        ".env.example",
+        "apps/ade-web/Dockerfile",
+        "apps/ade-web/src/shared/api/server/ade-api-proxy.ts",
+        "apps/ade-web/src/app/api/v3/[...path]/route.ts",
+    )
+    removed_flags = (
+        "ADE_NATIVE_PREVIEW_ENABLED",
+        "NEXT_PUBLIC_ADE_NATIVE_PREVIEW_ENABLED",
+    )
+    for relative_path in deployment_paths:
+        source = (PROJECT_ROOT / relative_path).read_text(encoding="utf-8")
+        assert not any(flag in source for flag in removed_flags), relative_path
+
+    proxy = (
+        PROJECT_ROOT / "apps/ade-web/src/shared/api/server/ade-api-proxy.ts"
+    ).read_text(encoding="utf-8")
+    route = (PROJECT_ROOT / "apps/ade-web/src/app/api/v3/[...path]/route.ts").read_text(
+        encoding="utf-8"
+    )
+    assert "ADE_NATIVE_API_BASE_URL" in proxy
+    assert "adeNativeApiBaseUrl()" in route
+    assert "nativePreview" not in route
+    assert "return proxyError(404" not in route
+
+
+def test_agent_studio_db_test_uses_the_locked_container_test_image() -> None:
     makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
-    target = makefile.split("native-runtime-db-test:", 1)[1].split("\nstatus:", 1)[0]
+    target = makefile.split("agent-studio-db-test:", 1)[1].split("\nstatus:", 1)[0]
     compose = (PROJECT_ROOT / "compose.yaml").read_text(encoding="utf-8")
     dockerfile = (PROJECT_ROOT / "services/ade-api/Dockerfile").read_text(
         encoding="utf-8"
     )
 
     assert (
-        "docker compose --profile native-runtime run --rm --build --no-deps ade-runtime-db-test"
+        "docker compose --profile native-runtime-test run --rm --build --no-deps ade-runtime-db-test"
         in target
     )
     assert "uv pip install" not in target
@@ -969,3 +1062,12 @@ def test_ade_api_image_contains_runtime_qualification_policy_assets() -> None:
         "COPY scripts/source_fingerprint.py ./scripts/source_fingerprint.py"
         in dockerfile
     )
+    for script in (
+        "agent_studio_rollback_state.py",
+        "agent_studio_rollback_web.py",
+        "check_agent_studio_release_gate.py",
+        "record_agent_studio_conformance.py",
+        "rehearse_agent_studio_rollback.py",
+        "review_agent_studio_cutover.py",
+    ):
+        assert f"COPY scripts/{script} ./scripts/{script}" in dockerfile

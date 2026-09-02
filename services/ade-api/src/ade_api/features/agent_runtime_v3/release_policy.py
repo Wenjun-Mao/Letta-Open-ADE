@@ -7,15 +7,31 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Final
 
+from model_catalog_contracts.deployment_manifest import load_deployment_manifest
 
-PREVIEW_RELEASE_ROUTES: Final[dict[str, str]] = {
+from .errors import RuntimeNotReady
+from .release_evidence import (
+    AgentStudioReleaseEvidenceError,
+    file_sha256,
+    load_agent_studio_release_evidence,
+    validate_agent_studio_release_evidence,
+)
+
+
+AGENT_STUDIO_RELEASE_ROUTES: Final[dict[str, str]] = {
     "conversation": "dgx_vllm::qwen3.6-35b-a3b-fp8",
     "reviewer": "dgx_vllm::qwen3.6-35b-a3b-fp8",
     "retriever": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
 }
-PREVIEW_RELEASE_PROMPT_KEY: Final = "chat_v20260516"
-PREVIEW_RELEASE_PERSONA_KEY: Final = "chat_linxiaotang"
-PREVIEW_RELEASE_TOOL_NAMES: Final[tuple[str, ...]] = ("search_memory",)
+AGENT_STUDIO_RELEASE_PROMPT_KEY: Final = "chat_v20260516"
+AGENT_STUDIO_RELEASE_PERSONA_KEY: Final = "chat_linxiaotang"
+AGENT_STUDIO_RELEASE_TOOL_NAMES: Final[tuple[str, ...]] = ("search_memory",)
+AGENT_STUDIO_RELEASE_EVIDENCE_PATH: Final = Path(
+    "config/agent-studio/release-evidence.json"
+)
+AGENT_STUDIO_DEPLOYMENT_MANIFEST_PATH: Final = Path(
+    "config/model-router/deployment-manifest.json"
+)
 
 # These path-bound bundles are the executable behavior qualified by the
 # production-path matrix. Mutable qualification results are deliberately not inputs.
@@ -48,15 +64,25 @@ PRODUCTION_POLICY_INPUTS: Final[dict[str, tuple[str, ...]]] = {
         "packages/agent-runtime-eval-contracts/src/agent_runtime_eval_contracts/fixtures.py",
         "packages/agent-runtime-eval-contracts/src/agent_runtime_eval_contracts/observations.py",
         "packages/agent-runtime-eval-contracts/src/agent_runtime_eval_contracts/scoring.py",
-        "scripts/check_native_preview_gate.py",
+        "scripts/agent_studio_rollback_state.py",
+        "scripts/agent_studio_rollback_web.py",
+        "scripts/check_agent_studio_release_gate.py",
+        "scripts/record_agent_studio_conformance.py",
+        "scripts/rehearse_agent_studio_rollback.py",
+        "scripts/review_agent_studio_cutover.py",
         "scripts/source_fingerprint.py",
         "services/ade-api/Dockerfile",
         "services/ade-api/migrations/versions/20260829_0001_ade_native_runtime.py",
         "services/ade-api/migrations/versions/20260830_0002_ade_conversation_compaction.py",
         "services/ade-api/migrations/versions/20260830_0003_agent_runtime_worker_health.py",
         "services/ade-api/migrations/versions/20260830_0004_agent_runtime_source_fingerprint.py",
+        "services/ade-api/migrations/versions/20260902_0005_agent_studio_cutover.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/__init__.py",
+        "services/ade-api/src/ade_api/features/agent_runtime_v3/agent_studio_api.py",
+        "services/ade-api/src/ade_api/features/agent_runtime_v3/agent_studio_reset.py",
+        "services/ade-api/src/ade_api/features/agent_runtime_v3/agent_studio_sessions.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/api.py",
+        "services/ade-api/src/ade_api/features/agent_runtime_v3/api_boundary.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/application.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/bootstrap.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/compaction.py",
@@ -87,8 +113,8 @@ PRODUCTION_POLICY_INPUTS: Final[dict[str, tuple[str, ...]]] = {
         "services/ade-api/src/ade_api/features/agent_runtime_v3/persistence/workers.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/persistence/workspaces.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/presenters.py",
-        "services/ade-api/src/ade_api/features/agent_runtime_v3/preview_session_service.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/provider_tracing.py",
+        "services/ade-api/src/ade_api/features/agent_runtime_v3/release_evidence.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/release_policy.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/resource_service.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/retry.py",
@@ -104,10 +130,18 @@ PRODUCTION_POLICY_INPUTS: Final[dict[str, tuple[str, ...]]] = {
         "services/ade-api/src/ade_api/features/agent_runtime_v3/worker_events.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/worker_finalization.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/worker_health.py",
+        "services/ade-api/src/ade_api/features/test_center/agent_runtime_parity_evaluations.py",
         "services/ade-api/src/ade_api/native_main.py",
         "services/ade-api/src/ade_api/platform/auth.py",
         "services/ade-api/src/ade_api/platform/project_paths.py",
         "services/ade-api/src/ade_api/platform/settings.py",
+        "workflows/evals/agent_runtime_parity/artifacts.py",
+        "workflows/evals/agent_runtime_parity/clients.py",
+        "workflows/evals/agent_runtime_parity/config.py",
+        "workflows/evals/agent_runtime_parity/provenance.py",
+        "workflows/evals/agent_runtime_parity/scoring.py",
+        "workflows/evals/agent_runtime_parity/workflow.py",
+        "workflows/evals/agent_runtime_v3_acceptance/promotion_review.py",
     ),
     "retrieval": (
         "packages/agent-runtime-eval-contracts/src/agent_runtime_eval_contracts/data/semantic_retrieval_cases.json",
@@ -167,9 +201,32 @@ def release_validation_kwargs(mode: str) -> dict[str, Any]:
         return {}
     return {
         "expected_policy_hashes": current_production_policy_hashes(),
-        "expected_route_aliases": PREVIEW_RELEASE_ROUTES,
+        "expected_route_aliases": AGENT_STUDIO_RELEASE_ROUTES,
         "source_clean": source_tree_is_clean(),
     }
+
+
+def ensure_agent_studio_release_ready(mode: str) -> None:
+    """Fail closed until one reviewed evidence ledger authorizes product traffic."""
+
+    if mode != "release":
+        return
+    from ade_api.platform.project_paths import PROJECT_ROOT
+
+    manifest_path = PROJECT_ROOT / AGENT_STUDIO_DEPLOYMENT_MANIFEST_PATH
+    evidence_path = PROJECT_ROOT / AGENT_STUDIO_RELEASE_EVIDENCE_PATH
+    try:
+        validate_agent_studio_release_evidence(
+            load_agent_studio_release_evidence(evidence_path),
+            manifest=load_deployment_manifest(manifest_path, project_root=PROJECT_ROOT),
+            manifest_sha256=file_sha256(manifest_path),
+            policy_hashes=production_policy_hashes(PROJECT_ROOT),
+            release_routes=AGENT_STUDIO_RELEASE_ROUTES,
+        )
+    except (AgentStudioReleaseEvidenceError, OSError, ValueError) as exc:
+        raise RuntimeNotReady(
+            "Agent Studio release is waiting for reviewed cutover evidence"
+        ) from exc
 
 
 def _policy_bundle_hash(project_root: Path, relative_paths: tuple[str, ...]) -> str:

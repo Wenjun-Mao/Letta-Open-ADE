@@ -20,6 +20,7 @@ class TestRunRequest(BaseModel):
         "ade_mvp_smoke_e2e_check",
         "chat_memory_eval",
         "agent_runtime_v3_acceptance",
+        "agent_runtime_parity_eval",
     ]
     model: str | None = None
     prompt_key: str | None = None
@@ -36,6 +37,11 @@ class TestRunRequest(BaseModel):
     embedding_model_key: str | None = None
     include_llama_compatibility: bool | None = None
     case_keys: list[str] | None = Field(default=None, min_length=1)
+    legacy_model: str | None = None
+    legacy_embedding: str | None = None
+    native_conversation_model: str | None = None
+    native_reviewer_model: str | None = None
+    native_embedding_model: str | None = None
 
     @field_validator("case_keys")
     @classmethod
@@ -98,6 +104,105 @@ class TestRunArtifactReadResponse(BaseModel):
     content: str
     truncated: bool
     line_count: int
+
+
+class _AgentRuntimeParityResponseModel(BaseModel):
+    """Strict, secret-free product parity evidence returned by Test Center."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+
+class AgentRuntimeParityConfigResponse(_AgentRuntimeParityResponseModel):
+    prompt_key: str
+    persona_key: str
+    legacy_model: str
+    legacy_embedding: str
+    native_conversation_model: str
+    native_reviewer_model: str
+    native_embedding_model: str
+    rounds: int
+    timeout_seconds: float
+    retry_count: Literal[0]
+
+
+class AgentRuntimeParityArtifactDigestsResponse(_AgentRuntimeParityResponseModel):
+    parity_spec_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    provenance_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    normalized_turns_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    comparison_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    summary_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    evidence_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
+class AgentRuntimeParityRoundResponse(_AgentRuntimeParityResponseModel):
+    round: int
+    passed: bool
+    legacy_passed: bool
+    native_passed: bool
+    legacy_checks: dict[str, bool]
+    native_checks: dict[str, bool]
+
+
+class AgentRuntimeParityTurnResponse(_AgentRuntimeParityResponseModel):
+    engine: Literal["letta-v2", "ade-native-v3"]
+    round: int
+    turn_index: int
+    terminal_status: str
+    user_content: str
+    assistant_replies: list[str]
+    attempt_count: int | None = None
+    elapsed_seconds: float
+    tool_names: list[str]
+    event_types: list[str]
+    memory_changed: bool | None = None
+
+
+class AgentRuntimeParityCleanupResponse(_AgentRuntimeParityResponseModel):
+    completed: bool
+    legacy_completed: bool
+    native_completed: bool
+    legacy_creation_indeterminate: bool
+
+
+class AgentRuntimeParityProvenanceResponse(_AgentRuntimeParityResponseModel):
+    source_revision: str
+    source_dirty: bool
+    source_fingerprint: str
+    native_worker_ready: bool | None = None
+    native_worker_build_matches: bool | None = None
+    prompt_content_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    persona_content_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    fixture_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+
+
+class AgentRuntimeParityListItemResponse(_AgentRuntimeParityResponseModel):
+    run_id: str
+    run_status: str
+    created_at: str
+    finished_at: str
+    ready: bool
+    config: AgentRuntimeParityConfigResponse
+    passed: bool | None = None
+    inputs_comparable: bool | None = None
+    cleanup_complete: bool | None = None
+    rounds_requested: int | None = None
+    rounds_completed: int | None = None
+    rounds_passed: int | None = None
+    artifact_digests: AgentRuntimeParityArtifactDigestsResponse | None = None
+
+
+class AgentRuntimeParityListResponse(_AgentRuntimeParityResponseModel):
+    items: list[AgentRuntimeParityListItemResponse]
+
+
+class AgentRuntimeParityDetailResponse(AgentRuntimeParityListItemResponse):
+    checks: dict[str, bool]
+    comparability_checks: dict[str, bool]
+    cleanup: AgentRuntimeParityCleanupResponse
+    provenance: AgentRuntimeParityProvenanceResponse
+    rounds: list[AgentRuntimeParityRoundResponse]
+    turns: list[AgentRuntimeParityTurnResponse]
+    preflight_error: dict[str, str] | None = None
 
 
 class _ChatMemoryEvaluationResponseModel(BaseModel):

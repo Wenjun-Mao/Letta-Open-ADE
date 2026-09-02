@@ -41,6 +41,8 @@ services:
       - ./content/model-catalog:/app/content/model-catalog:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      # Use a Docker-resolvable alias; Linux containers do not reliably resolve mDNS.
+      - "dgx-spark:${DGX_SPARK_HOST:-100.64.35.71}"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS --max-time 5 --noproxy '*' http://127.0.0.1:8010/v1/health > /dev/null 2>&1"]
       interval: 10s
@@ -119,7 +121,6 @@ services:
         condition: service_healthy
 
   ade-runtime-migrate:
-    profiles: ["native-runtime"]
     build:
       context: .
       dockerfile: services/ade-api/Dockerfile
@@ -147,7 +148,9 @@ services:
         condition: service_healthy
 
   ade-runtime-db-test:
-    profiles: ["native-runtime"]
+    # The production lane migrates on every ordinary `docker compose up`.
+    # Keep database integration tests explicitly operator-invoked.
+    profiles: ["native-runtime-test"]
     build:
       context: .
       dockerfile: services/ade-api/Dockerfile
@@ -172,7 +175,6 @@ services:
         condition: service_completed_successfully
 
   ade-native-api:
-    profiles: ["native-runtime"]
     build:
       context: .
       dockerfile: services/ade-api/Dockerfile
@@ -189,7 +191,7 @@ services:
       - ADE_API_READER_KEY=${ADE_API_READER_KEY:-}
       - ADE_API_CORS_ORIGINS=${ADE_API_CORS_ORIGINS:-}
       - ADE_API_AGENT_RUNTIME_V3_ENABLED=true
-      - ADE_API_AGENT_RUNTIME_V3_MODE=${ADE_API_AGENT_RUNTIME_V3_MODE:-development}
+      - ADE_API_AGENT_RUNTIME_V3_MODE=${ADE_API_AGENT_RUNTIME_V3_MODE:-release}
       - ADE_API_DATABASE_URL=postgresql+psycopg://${ADE_PG_APP_USER:-ade_app}:${ADE_PG_APP_PASSWORD:?Set ADE_PG_APP_PASSWORD in .env}@postgres:5432/${ADE_PG_DB:-ade}
       - ADE_API_MODEL_ROUTER_BASE_URL=http://model-router:8010
       - ADE_API_MODEL_ROUTER_API_KEY_ENV=${ADE_API_MODEL_ROUTER_API_KEY_ENV:-MODEL_ROUTER_API_KEY}
@@ -219,7 +221,6 @@ services:
         condition: service_healthy
 
   ade-runtime-worker:
-    profiles: ["native-runtime"]
     build:
       context: .
       dockerfile: services/ade-api/Dockerfile
@@ -232,7 +233,7 @@ services:
     environment:
       - ADE_REPOSITORY_ROOT=/app
       - ADE_API_AGENT_RUNTIME_V3_ENABLED=true
-      - ADE_API_AGENT_RUNTIME_V3_MODE=${ADE_API_AGENT_RUNTIME_V3_MODE:-development}
+      - ADE_API_AGENT_RUNTIME_V3_MODE=${ADE_API_AGENT_RUNTIME_V3_MODE:-release}
       - ADE_API_DATABASE_URL=postgresql+psycopg://${ADE_PG_APP_USER:-ade_app}:${ADE_PG_APP_PASSWORD:?Set ADE_PG_APP_PASSWORD in .env}@postgres:5432/${ADE_PG_DB:-ade}
       - ADE_API_MODEL_ROUTER_BASE_URL=http://model-router:8010
       - MODEL_ROUTER_API_KEY=${MODEL_ROUTER_API_KEY:-local-router-dev-key}
@@ -256,13 +257,16 @@ services:
       args:
         NEXT_PUBLIC_ADE_WEB_VERSION: ${ADE_WEB_VERSION:-}
         NEXT_PUBLIC_ADE_WEB_BUILD: ${ADE_WEB_BUILD:-}
-        NEXT_PUBLIC_ADE_NATIVE_PREVIEW_ENABLED: ${ADE_NATIVE_PREVIEW_ENABLED:-false}
     restart: unless-stopped
     environment:
       - ADE_API_BASE_URL=http://ade-api:8000
       - ADE_NATIVE_API_BASE_URL=http://ade-native-api:8000
-      - ADE_NATIVE_PREVIEW_ENABLED=${ADE_NATIVE_PREVIEW_ENABLED:-false}
       - ADE_API_ADMIN_KEY=${ADE_API_ADMIN_KEY:?Set ADE_API_ADMIN_KEY in .env}
       - PORT=3000
     ports:
       - "${ADE_WEB_BIND_HOST:-127.0.0.1}:${ADE_WEB_PORT:-3000}:3000"
+    depends_on:
+      ade-api:
+        condition: service_healthy
+      ade-native-api:
+        condition: service_healthy

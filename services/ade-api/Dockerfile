@@ -20,7 +20,12 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /uvx /usr/local/bin/
 COPY pyproject.toml uv.lock ./
 COPY Makefile compose.yaml ./
-COPY scripts/check_native_preview_gate.py ./scripts/check_native_preview_gate.py
+COPY scripts/agent_studio_rollback_state.py ./scripts/agent_studio_rollback_state.py
+COPY scripts/agent_studio_rollback_web.py ./scripts/agent_studio_rollback_web.py
+COPY scripts/check_agent_studio_release_gate.py ./scripts/check_agent_studio_release_gate.py
+COPY scripts/record_agent_studio_conformance.py ./scripts/record_agent_studio_conformance.py
+COPY scripts/rehearse_agent_studio_rollback.py ./scripts/rehearse_agent_studio_rollback.py
+COPY scripts/review_agent_studio_cutover.py ./scripts/review_agent_studio_cutover.py
 COPY scripts/source_fingerprint.py ./scripts/source_fingerprint.py
 COPY services/ade-api ./services/ade-api
 COPY packages/agent-runtime-eval-contracts ./packages/agent-runtime-eval-contracts

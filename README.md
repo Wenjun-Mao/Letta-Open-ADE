@@ -86,23 +86,28 @@ make eval-comment-persona
 make probe-models SOURCE=ark
 ```
 
-The native runtime preview is a separate operator path:
+The ADE-native Agent Studio runtime is part of the supported default stack. The
+migration job, native API, and worker start with `make up`; the legacy v2 API,
+Letta, and Redis remain available for the product areas not yet migrated.
 
 ```text
-make native-runtime-migrate
-make native-runtime-db-test
-make native-runtime-lane-check
-make native-runtime-up
-make native-runtime-preview-gate  # revalidates reviewed promotion and policy identity
-make native-runtime-preview-up    # release-only; runs the gate first
+make agent-studio-migrate          # usually automatic with `make up`
+make agent-studio-db-test          # opt-in PostgreSQL integration suite
+make agent-studio-lane-check
+make agent-studio-development-up   # unqualified development runs
+make agent-studio-qualification    # canonical three-round release candidate run
+make agent-studio-conformance      # exact retry/cancel/idempotency contracts
+make agent-studio-release-gate     # revalidates promoted policy identity
+make agent-studio-release-up       # runs the gate, then starts the supported stack
 ```
 
-The development target creates/migrates the ADE-owned database and enables the
-native-only profile with unqualified runs marked as such. The release preview target
-first requires exact promoted conversation, reviewer, retriever, and current policy
-identities. Ordinary `make up` keeps v3 and its navigation disabled. See the
+The development target marks runs as unqualified. The release gate requires exact
+promoted conversation, reviewer, retriever, and current policy identities. See the
 [`agent_runtime_v3` guide](services/ade-api/src/ade_api/features/agent_runtime_v3/README.md)
-and [ADR 0013](docs/adr/0013-narrow-native-runtime-product-pilot.md) before using it.
+and [ADR 0016](docs/adr/0016-ade-native-agent-studio-cutover.md) for the cutover
+contract. Use the
+[cutover runbook](docs/operations/agent-studio-cutover.md) for the complete
+promotion, paired-evidence, rollback-rehearsal, and activation sequence.
 
 See [workflows/evals](workflows/evals/) for each evaluation's inputs, outputs,
 and interpretation. See [workflows/smoke](workflows/smoke/) for live API and

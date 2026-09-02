@@ -8,7 +8,7 @@ TAG_PROMPT_CENTER = "Prompt Center"
 TAG_SCHEMA_CENTER = "Schema Center"
 TAG_TOOL_CENTER = "Tool Center"
 TAG_TEST_CENTER = "Test Center"
-TAG_AGENT_RUNTIME_V3 = "Agent Runtime v3 Preview"
+TAG_AGENT_RUNTIME_V3 = "Agent Runtime v3"
 
 OPENAPI_TAGS = [
     {
@@ -42,9 +42,5 @@ OPENAPI_TAGS = [
     {
         "name": TAG_MODEL_CATALOG,
         "description": "Model capabilities, catalog diagnostics, and scenario runtime options.",
-    },
-    {
-        "name": TAG_AGENT_RUNTIME_V3,
-        "description": "Disabled-by-default ADE-owned agent runtime preview APIs.",
     },
 ]

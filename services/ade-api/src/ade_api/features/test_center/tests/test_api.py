@@ -24,6 +24,10 @@ def test_run_request_accepts_supported_run_types() -> None:
         TestRunRequest(run_type="agent_runtime_v3_acceptance").run_type
         == "agent_runtime_v3_acceptance"
     )
+    assert (
+        TestRunRequest(run_type="agent_runtime_parity_eval").run_type
+        == "agent_runtime_parity_eval"
+    )
 
     with pytest.raises(ValidationError):
         TestRunRequest(run_type="agent_bootstrap_check")
@@ -155,6 +159,34 @@ def test_agent_runtime_v3_diagnostic_case_keys_are_canonical_and_strict() -> Non
         )
 
 
+def test_agent_runtime_parity_request_accepts_only_product_comparison_fields() -> None:
+    request = TestRunRequest(
+        run_type="agent_runtime_parity_eval",
+        prompt_key="chat_v20260516",
+        persona_key="chat_linxiaotang",
+        legacy_model="openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
+        legacy_embedding="letta/letta-free",
+        native_conversation_model="dgx_vllm::qwen3.6-35b-a3b-fp8",
+        native_reviewer_model="dgx_vllm::qwen3.6-35b-a3b-fp8",
+        native_embedding_model="dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+        rounds=3,
+        timeout_seconds=180,
+        retry_count=0,
+    )
+
+    assert request.rounds == 3
+    assert request.retry_count == 0
+
+    with pytest.raises(ValidationError, match="paired turns must not be duplicated"):
+        TestRunRequest(run_type="agent_runtime_parity_eval", retry_count=1)
+
+    with pytest.raises(ValidationError, match="Unsupported fields"):
+        TestRunRequest(
+            run_type="agent_runtime_parity_eval",
+            include_llama_compatibility=True,
+        )
+
+
 def test_chat_memory_eval_create_passes_options(monkeypatch) -> None:
     captured: dict[str, object] = {}
 
@@ -209,6 +241,7 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
         "ade_mvp_smoke_e2e_check",
         "chat_memory_eval",
         "agent_runtime_v3_acceptance",
+        "agent_runtime_parity_eval",
     }
 
     orchestrator = TestRunOrchestrator(project_root=tmp_path)
@@ -315,6 +348,54 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
         "--rounds",
         "1",
         "--no-include-llama-compatibility",
+    ]
+
+    parity_output_dir = tmp_path / "3f525262-8dd1-4a75-91fd-a055ec4f5b9d"
+    parity_command = orchestrator._build_command(
+        run_type="agent_runtime_parity_eval",
+        output_dir=parity_output_dir,
+        options={
+            "prompt_key": "chat_v20260516",
+            "persona_key": "chat_linxiaotang",
+            "legacy_model": "openai-proxy/dgx_vllm::qwen",
+            "legacy_embedding": "letta/letta-free",
+            "native_conversation_model": "dgx_vllm::qwen",
+            "native_reviewer_model": "dgx_vllm::qwen",
+            "native_embedding_model": "dgx_embedding_sidecar::embedding",
+            "rounds": 3,
+            "timeout_seconds": 180,
+            "retry_count": 0,
+        },
+    )
+    assert parity_command == [
+        sys.executable,
+        "workflows/evals/agent_runtime_parity/run.py",
+        "--config",
+        "workflows/evals/agent_runtime_parity/config.toml",
+        "--output-dir",
+        str(parity_output_dir),
+        "--run-id",
+        "parity-3f525262-8dd1-4a75-91fd-a055ec4f5b9d",
+        "--prompt-key",
+        "chat_v20260516",
+        "--persona-key",
+        "chat_linxiaotang",
+        "--legacy-model",
+        "openai-proxy/dgx_vllm::qwen",
+        "--legacy-embedding",
+        "letta/letta-free",
+        "--native-conversation-model",
+        "dgx_vllm::qwen",
+        "--native-reviewer-model",
+        "dgx_vllm::qwen",
+        "--native-embedding-model",
+        "dgx_embedding_sidecar::embedding",
+        "--rounds",
+        "3",
+        "--timeout-seconds",
+        "180",
+        "--retry-count",
+        "0",
     ]
     with pytest.raises(
         ValueError, match="only accepted when run_type='chat_memory_eval'"

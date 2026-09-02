@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ALL_NAVIGATION_ITEMS, NAVIGATION_GROUPS, buildNavigationGroups } from "./navigation-items";
+import { ALL_NAVIGATION_ITEMS, NAVIGATION_GROUPS } from "./navigation-items";
 
 describe("ADE navigation information architecture", () => {
   it("groups every existing route into one conceptual workspace", () => {
@@ -29,11 +29,10 @@ describe("ADE navigation information architecture", () => {
     expect(evaluateGroup?.items).toEqual([{ href: "/test-center", key: "testCenter" }]);
   });
 
-  it("adds the native pilot to operations only when its build gate is enabled", () => {
-    const operations = buildNavigationGroups(true).find((group) => group.key === "operations");
+  it("keeps operations focused on API documentation after the native cutover", () => {
+    const operations = NAVIGATION_GROUPS.find((group) => group.key === "operations");
 
     expect(operations?.items).toEqual([
-      { href: "/native-runtime-preview", key: "nativeRuntimePreview" },
       { href: "/api-docs", key: "apiDocs" },
     ]);
   });

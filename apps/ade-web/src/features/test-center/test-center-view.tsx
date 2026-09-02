@@ -1,4 +1,6 @@
 import type {
+  AgentRuntimeParityDetail,
+  AgentRuntimeParityListItem,
   ChatMemoryEvaluationConfig,
   EvaluationComparison,
   EvaluationDecisionOutcome,
@@ -11,9 +13,11 @@ import type {
 import { ChatMemoryEvaluationView } from "./chat-memory-evaluation-view";
 import type { ChatMemoryEvaluationForm } from "./chat-memory-evaluation-helpers";
 import { RunArtifactViewer } from "./run-artifact-viewer";
+import { AgentRuntimeParityResultView } from "./agent-runtime-parity-result-view";
 import {
   BEHAVIOR_EVALUATION_RUN_TYPES,
   OPERATIONAL_RUN_TYPES,
+  PARITY_EVALUATION_RUN_TYPES,
   type TestCenterCopy,
 } from "./test-center-copy";
 import { TestRunLauncher } from "./test-run-launcher";
@@ -37,6 +41,10 @@ type Props = {
   selectedEvaluation: EvaluationDetail | null;
   evaluationBaselineRunId: string;
   evaluationComparison: EvaluationComparison | null;
+  parityEvaluationItems: AgentRuntimeParityListItem[];
+  selectedParityEvaluationId: string;
+  selectedParityEvaluationSummary: AgentRuntimeParityListItem | null;
+  selectedParityEvaluation: AgentRuntimeParityDetail | null;
   launcherPreset: ChatMemoryEvaluationForm | null;
   onCreateRun: (payload: CreateTestRunPayload) => Promise<void>;
   onRefreshRuns: () => Promise<void>;
@@ -54,11 +62,15 @@ type Props = {
   ) => void;
   onRefreshEvaluations: () => void;
   onRerunEvaluationSetup: (config: ChatMemoryEvaluationConfig) => void;
+  onSelectParityEvaluation: (runId: string) => void;
+  onRefreshParityEvaluation: () => void;
 };
 
 export function TestCenterView(props: Props) {
   const operationalRuns = props.runs.filter((run) => run.run_type !== "chat_memory_eval");
-  const hasSelectedOperationalRun = operationalRuns.some((run) => run.run_id === props.selectedRunId);
+  const nonParityOperationalRuns = operationalRuns.filter((run) => run.run_type !== "agent_runtime_parity_eval");
+  const hasSelectedParityRun = props.selectedParityEvaluationId === props.selectedRunId;
+  const hasSelectedOperationalRun = nonParityOperationalRuns.some((run) => run.run_id === props.selectedRunId);
   const selectedOperationalRunId = hasSelectedOperationalRun ? props.selectedRunId : "";
 
   return (
@@ -106,6 +118,43 @@ export function TestCenterView(props: Props) {
         />
       </section>
 
+      <section className="test-center-section" aria-labelledby="agent-runtime-parity-title">
+        <div className="test-center-section-heading">
+          <div className="kicker">{props.copy.parityKicker}</div>
+          <h2 id="agent-runtime-parity-title">{props.copy.parityTitle}</h2>
+          <p className="muted">{props.copy.parityIntro}</p>
+        </div>
+
+        <TestRunLauncher
+          copy={props.copy}
+          title={props.copy.parityLaunchTitle}
+          intro={props.copy.parityLaunchIntro}
+          availableRunTypes={PARITY_EVALUATION_RUN_TYPES}
+          initialRunType="agent_runtime_parity_eval"
+          busy={props.busy}
+          loading={props.loading}
+          preset={null}
+          onCreateRun={props.onCreateRun}
+          onRefreshRuns={props.onRefreshRuns}
+          onError={props.onLauncherError}
+        />
+
+        <AgentRuntimeParityResultView
+          copy={props.copy}
+          busy={props.busy}
+          items={props.parityEvaluationItems}
+          selectedId={props.selectedParityEvaluationId}
+          selectedSummary={props.selectedParityEvaluationSummary}
+          selected={props.selectedParityEvaluation}
+          artifacts={hasSelectedParityRun ? props.artifacts : []}
+          selectedArtifactId={hasSelectedParityRun ? props.selectedArtifactId : ""}
+          artifactContent={hasSelectedParityRun ? props.artifactContent : ""}
+          onSelect={props.onSelectParityEvaluation}
+          onRefresh={props.onRefreshParityEvaluation}
+          onReadArtifact={props.onReadArtifact}
+        />
+      </section>
+
       <details className="card test-center-operations">
         <summary><strong>{props.copy.operationsTitle}</strong></summary>
         <p className="muted test-center-operations-intro">{props.copy.operationsIntro}</p>
@@ -125,7 +174,7 @@ export function TestCenterView(props: Props) {
         <RunArtifactViewer
           copy={props.copy}
           busy={props.busy}
-          runs={operationalRuns}
+          runs={nonParityOperationalRuns}
           selectedRunId={selectedOperationalRunId}
           selectedRunSummary={hasSelectedOperationalRun ? props.selectedRunSummary : null}
           selectedRun={hasSelectedOperationalRun ? props.selectedRun : null}

@@ -119,39 +119,88 @@ class ScopedPostgresCleanup:
 def _scoped_statements(
     scope: CleanupScope,
 ) -> tuple[tuple[str, tuple[tuple[str, ...], ...]], ...]:
-    # Every statement begins from resources matched by both generated namespaces.
+    # Cleanup may only traverse exact generated resources in the default workspace.
+    # Product-owned Agent Studio resources are intentionally outside this boundary.
     target = """
-WITH target_conversations AS (
+WITH target_definitions AS (
+    SELECT definition.id
+    FROM ade.agent_definitions AS definition
+    JOIN ade.workspaces AS workspace ON workspace.id = definition.workspace_id
+    WHERE definition.definition_key = ANY(%s)
+      AND workspace.workspace_key = 'default'
+      AND definition.purpose IN ('development', 'evaluation')
+), target_definition_versions AS (
+    SELECT definition_version.id
+    FROM ade.agent_definition_versions AS definition_version
+    JOIN target_definitions AS definition
+      ON definition.id = definition_version.agent_definition_id
+    WHERE definition_version.definition_key = ANY(%s)
+      AND definition_version.purpose IN ('development', 'evaluation')
+), target_subjects AS (
+    SELECT subject.id
+    FROM ade.memory_subjects AS subject
+    JOIN ade.workspaces AS workspace ON workspace.id = subject.workspace_id
+    WHERE subject.external_key = ANY(%s)
+      AND workspace.workspace_key = 'default'
+      AND subject.purpose IN ('development', 'evaluation')
+), target_conversations AS (
     SELECT c.id
     FROM ade.conversations AS c
-    JOIN ade.agent_definition_versions AS d ON d.id = c.agent_definition_version_id
-    JOIN ade.memory_subjects AS s ON s.id = c.memory_subject_id
-    WHERE d.definition_key = ANY(%s)
-      AND s.external_key = ANY(%s)
-      AND c.workspace_id = (
-          SELECT id FROM ade.workspaces WHERE workspace_key = 'default'
-      )
+    WHERE c.agent_definition_version_id IN (SELECT id FROM target_definition_versions)
+      AND c.memory_subject_id IN (SELECT id FROM target_subjects)
+      AND c.purpose IN ('development', 'evaluation')
 ), target_runs AS (
     SELECT r.id FROM ade.runs AS r JOIN target_conversations AS c ON c.id = r.conversation_id
 )
 """.strip()
     target_facts = """
 WITH target_subjects AS (
-    SELECT id
-    FROM ade.memory_subjects
-    WHERE external_key = ANY(%s)
-      AND workspace_id = (
-          SELECT id FROM ade.workspaces WHERE workspace_key = 'default'
-      )
+    SELECT subject.id
+    FROM ade.memory_subjects AS subject
+    JOIN ade.workspaces AS workspace ON workspace.id = subject.workspace_id
+    WHERE subject.external_key = ANY(%s)
+      AND workspace.workspace_key = 'default'
+      AND subject.purpose IN ('development', 'evaluation')
 ), target_facts AS (
     SELECT id FROM ade.memory_facts WHERE subject_id IN (SELECT id FROM target_subjects)
 ), target_revisions AS (
     SELECT id FROM ade.memory_revisions WHERE fact_id IN (SELECT id FROM target_facts)
 )
 """.strip()
-    conversation_params = (scope.definition_keys, scope.subject_external_keys)
+    target_definitions = """
+WITH target_definitions AS (
+    SELECT definition.id
+    FROM ade.agent_definitions AS definition
+    JOIN ade.workspaces AS workspace ON workspace.id = definition.workspace_id
+    WHERE definition.definition_key = ANY(%s)
+      AND workspace.workspace_key = 'default'
+      AND definition.purpose IN ('development', 'evaluation')
+), target_definition_versions AS (
+    SELECT definition_version.id
+    FROM ade.agent_definition_versions AS definition_version
+    JOIN target_definitions AS definition
+      ON definition.id = definition_version.agent_definition_id
+    WHERE definition_version.definition_key = ANY(%s)
+      AND definition_version.purpose IN ('development', 'evaluation')
+)
+""".strip()
+    target_subjects = """
+WITH target_subjects AS (
+    SELECT subject.id
+    FROM ade.memory_subjects AS subject
+    JOIN ade.workspaces AS workspace ON workspace.id = subject.workspace_id
+    WHERE subject.external_key = ANY(%s)
+      AND workspace.workspace_key = 'default'
+      AND subject.purpose IN ('development', 'evaluation')
+)
+""".strip()
+    conversation_params = (
+        scope.definition_keys,
+        scope.definition_keys,
+        scope.subject_external_keys,
+    )
     fact_params = (scope.subject_external_keys,)
-    definition_params = (scope.definition_keys,)
+    definition_params = (scope.definition_keys, scope.definition_keys)
     subject_params = (scope.subject_external_keys,)
     statements: list[tuple[str, tuple[tuple[str, ...], ...]]] = []
     if scope.definition_keys and scope.subject_external_keys:
@@ -245,43 +294,55 @@ WITH target_subjects AS (
             )
         )
     if scope.definition_keys:
-        statements.append(
+        statements.extend(
             (
-                """
-DELETE FROM ade.agent_definition_versions
-WHERE definition_key = ANY(%s)
-  AND workspace_id = (
-      SELECT id FROM ade.workspaces WHERE workspace_key = 'default'
+                (
+                    target_definitions
+                    + """
+UPDATE ade.agent_definitions
+SET current_version_id = NULL
+WHERE id IN (SELECT id FROM target_definitions)
+  AND current_version_id IN (SELECT id FROM target_definition_versions)
+""",
+                    definition_params,
+                ),
+                (
+                    target_definitions
+                    + "\nDELETE FROM ade.agent_definition_versions WHERE id IN (SELECT id FROM target_definition_versions)",
+                    definition_params,
+                ),
+                (
+                    target_definitions
+                    + """
+DELETE FROM ade.agent_definitions AS definition
+WHERE definition.id IN (SELECT id FROM target_definitions)
+  AND definition.current_version_id IS NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM ade.agent_definition_versions AS version
+      WHERE version.agent_definition_id = definition.id
   )
-""".strip(),
-                definition_params,
-            ),
+""",
+                    definition_params,
+                ),
+            )
         )
     if scope.subject_external_keys:
         statements.extend(
             (
                 (
-                    """
+                    target_subjects
+                    + """
 DELETE FROM ade.memory_entities
 WHERE subject_id IN (
-    SELECT id
-    FROM ade.memory_subjects
-    WHERE external_key = ANY(%s)
-      AND workspace_id = (
-          SELECT id FROM ade.workspaces WHERE workspace_key = 'default'
-      )
+    SELECT id FROM target_subjects
 )
-""".strip(),
+""",
                     subject_params,
                 ),
                 (
-                    """
-DELETE FROM ade.memory_subjects
-WHERE external_key = ANY(%s)
-  AND workspace_id = (
-      SELECT id FROM ade.workspaces WHERE workspace_key = 'default'
-  )
-""".strip(),
+                    target_subjects
+                    + "\nDELETE FROM ade.memory_subjects WHERE id IN (SELECT id FROM target_subjects)",
                     subject_params,
                 ),
             )

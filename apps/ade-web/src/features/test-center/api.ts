@@ -4,7 +4,8 @@ export type TestRunType =
   | "ade_api_e2e_check"
   | "ade_mvp_smoke_e2e_check"
   | "chat_memory_eval"
-  | "agent_runtime_v3_acceptance";
+  | "agent_runtime_v3_acceptance"
+  | "agent_runtime_parity_eval";
 
 export type TestArtifact = {
   artifact_id: string;
@@ -203,6 +204,91 @@ export type EvaluationComparison = {
   metric_deltas: Record<string, number>;
 };
 
+export type AgentRuntimeParityConfig = {
+  prompt_key: string;
+  persona_key: string;
+  legacy_model: string;
+  legacy_embedding: string;
+  native_conversation_model: string;
+  native_reviewer_model: string;
+  native_embedding_model: string;
+  rounds: number;
+  timeout_seconds: number;
+  retry_count: 0;
+};
+
+export type AgentRuntimeParityArtifactDigests = {
+  parity_spec_sha256: string;
+  provenance_sha256: string;
+  normalized_turns_sha256: string;
+  comparison_sha256: string;
+  summary_sha256: string;
+  evidence_sha256: string;
+};
+
+export type AgentRuntimeParityListItem = {
+  run_id: string;
+  run_status: string;
+  created_at: string;
+  finished_at: string;
+  ready: boolean;
+  config: AgentRuntimeParityConfig;
+  passed: boolean | null;
+  inputs_comparable: boolean | null;
+  cleanup_complete: boolean | null;
+  rounds_requested: number | null;
+  rounds_completed: number | null;
+  rounds_passed: number | null;
+  artifact_digests: AgentRuntimeParityArtifactDigests | null;
+};
+
+export type AgentRuntimeParityRound = {
+  round: number;
+  passed: boolean;
+  legacy_passed: boolean;
+  native_passed: boolean;
+  legacy_checks: Record<string, boolean>;
+  native_checks: Record<string, boolean>;
+};
+
+export type AgentRuntimeParityTurn = {
+  engine: "letta-v2" | "ade-native-v3";
+  round: number;
+  turn_index: number;
+  terminal_status: string;
+  user_content: string;
+  assistant_replies: string[];
+  attempt_count: number | null;
+  elapsed_seconds: number;
+  tool_names: string[];
+  event_types: string[];
+  memory_changed: boolean | null;
+};
+
+export type AgentRuntimeParityDetail = AgentRuntimeParityListItem & {
+  checks: Record<string, boolean>;
+  comparability_checks: Record<string, boolean>;
+  cleanup: {
+    completed: boolean;
+    legacy_completed: boolean;
+    native_completed: boolean;
+    legacy_creation_indeterminate: boolean;
+  };
+  provenance: {
+    source_revision: string;
+    source_dirty: boolean;
+    source_fingerprint: string;
+    native_worker_ready?: boolean | null;
+    native_worker_build_matches?: boolean | null;
+    prompt_content_sha256?: string | null;
+    persona_content_sha256?: string | null;
+    fixture_sha256?: string | null;
+  };
+  rounds: AgentRuntimeParityRound[];
+  turns: AgentRuntimeParityTurn[];
+  preflight_error?: Record<string, string> | null;
+};
+
 export type CreateTestRunPayload = {
   run_type: TestRunType;
   model?: string;
@@ -220,6 +306,11 @@ export type CreateTestRunPayload = {
   embedding_model_key?: string;
   include_llama_compatibility?: boolean;
   case_keys?: string[];
+  legacy_model?: string;
+  legacy_embedding?: string;
+  native_conversation_model?: string;
+  native_reviewer_model?: string;
+  native_embedding_model?: string;
 };
 
 export function listTestRuns(options?: ApiRequestOptions) {
@@ -250,6 +341,20 @@ export function readRunArtifact(runId: string, artifactId: string, maxLines = 40
     truncated: boolean;
     line_count: number;
   }>(`/api/v2/test-center/runs/${runId}/artifacts/${artifactId}?max_lines=${maxLines}`, options);
+}
+
+export function listAgentRuntimeParityEvaluations(options?: ApiRequestOptions) {
+  return requestJson<{ items: AgentRuntimeParityListItem[] }>(
+    "/api/v2/test-center/agent-runtime-parity-evaluations",
+    options,
+  );
+}
+
+export function getAgentRuntimeParityEvaluation(runId: string, options?: ApiRequestOptions) {
+  return requestJson<AgentRuntimeParityDetail>(
+    `/api/v2/test-center/agent-runtime-parity-evaluations/${runId}`,
+    options,
+  );
 }
 
 export function listChatMemoryEvaluations(options?: ApiRequestOptions) {
