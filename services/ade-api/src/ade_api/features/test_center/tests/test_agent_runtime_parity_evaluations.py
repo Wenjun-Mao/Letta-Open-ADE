@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -76,7 +78,7 @@ def _create_completed_parity_run(
         {
             "schema_version": 1,
             "engine": engine,
-            "round": 1,
+            "round": round_index,
             "turn_index": 1,
             "user_content": "你好",
             "assistant_replies": ["你好呀"],
@@ -90,6 +92,7 @@ def _create_completed_parity_run(
             "run_events": [] if engine == "ade-native-v3" else None,
             "memory_outcome": {"changed": True},
         }
+        for round_index in range(1, 4)
         for engine in ("letta-v2", "ade-native-v3")
     ]
     turns_bytes = b"".join(
@@ -108,7 +111,11 @@ def _create_completed_parity_run(
         "schema_version": 1,
         "kind": "agent-runtime-parity-spec",
         "run_id": artifact_run_id,
-        "fixture": {"key": "recent_user_chat_turns", "sha256": fixture_sha256},
+        "fixture": {
+            "key": "recent_user_chat_turns",
+            "turns": ["你好"],
+            "sha256": fixture_sha256,
+        },
         "controls": {
             "rounds": 3,
             "timeout_seconds": 180.0,
@@ -148,9 +155,9 @@ def _create_completed_parity_run(
         "parity_spec_sha256": spec_sha256,
         "normalized_turns_sha256": turns_sha256,
         "source_identity": {
-            "revision": "abc123",
+            "revision": "a" * 40,
             "dirty": False,
-            "fingerprint": "source-fingerprint",
+            "fingerprint": "b" * 64,
         },
         "legacy": {
             "inputs": {
@@ -167,7 +174,7 @@ def _create_completed_parity_run(
     shared_checks = {
         "no_forbidden_disclosure": True,
         "expected_facts_captured": True,
-        "all_turns_terminal": True,
+        "all_turns_succeeded": True,
         "timeout_retry_controls_exact": True,
     }
     comparison = {
@@ -190,7 +197,19 @@ def _create_completed_parity_run(
         "preflight_error": None,
         "comparability": {
             "pass": True,
-            "checks": {"native_worker_build_matches_evaluator": True},
+            "checks": {
+                "parity_spec_hash_present": True,
+                "source_identity_complete": True,
+                "native_worker_build_matches_evaluator": True,
+                "legacy_inputs_available": True,
+                "fixture_hash_present": True,
+                "all_native_rounds_have_definitions": True,
+                "prompt_snapshots_match": True,
+                "persona_snapshots_match": True,
+                "conversation_models_match": True,
+                "reviewer_models_match": True,
+                "native_embedding_matches": True,
+            },
             "fixture_sha256": fixture_sha256,
         },
         "cleanup": cleanup,
@@ -199,7 +218,13 @@ def _create_completed_parity_run(
                 "round": index,
                 "pass": True,
                 "legacy_score": {"pass": True, "checks": shared_checks},
-                "native_score": {"pass": True, "checks": shared_checks},
+                "native_score": {
+                    "pass": True,
+                    "checks": {
+                        **shared_checks,
+                        "agent_studio_session_lifecycle": True,
+                    },
+                },
             }
             for index in range(1, 4)
         ],
@@ -235,6 +260,71 @@ def _create_completed_parity_run(
     return orchestrator, run_id, evidence_root
 
 
+def _read_unsigned_json(path: Path) -> dict[str, object]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+    payload.pop("artifact_sha256", None)
+    return payload
+
+
+def _rewrite_bundle(
+    evidence_root: Path,
+    mutate: Callable[
+        [
+            dict[str, object],
+            dict[str, object],
+            dict[str, object],
+            dict[str, object],
+            list[dict[str, Any]],
+        ],
+        None,
+    ],
+) -> None:
+    """Re-sign a test artifact bundle after a deliberate semantic mutation."""
+
+    spec = _read_unsigned_json(evidence_root / "parity-spec.json")
+    provenance = _read_unsigned_json(evidence_root / "provenance.json")
+    comparison = _read_unsigned_json(evidence_root / "comparison.json")
+    summary = _read_unsigned_json(evidence_root / "summary.json")
+    turns_path = evidence_root / "normalized-turns.jsonl"
+    turns = [
+        json.loads(line)
+        for line in turns_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    mutate(spec, provenance, comparison, summary, turns)
+
+    turns_bytes = b"".join(
+        (
+            json.dumps(turn, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            + "\n"
+        ).encode("utf-8")
+        for turn in turns
+    )
+    turns_path.write_bytes(turns_bytes)
+    turns_sha256 = hashlib.sha256(turns_bytes).hexdigest()
+    spec_sha256 = _write_signed_json(evidence_root / "parity-spec.json", spec)
+    provenance["parity_spec_sha256"] = spec_sha256
+    provenance["normalized_turns_sha256"] = turns_sha256
+    provenance_sha256 = _write_signed_json(
+        evidence_root / "provenance.json", provenance
+    )
+    comparison["artifact_inputs"] = {
+        "parity_spec_sha256": spec_sha256,
+        "provenance_sha256": provenance_sha256,
+        "normalized_turns_sha256": turns_sha256,
+    }
+    comparison_sha256 = _write_signed_json(
+        evidence_root / "comparison.json", comparison
+    )
+    summary["artifact_inputs"] = {
+        **comparison["artifact_inputs"],
+        "comparison_sha256": comparison_sha256,
+    }
+    _write_signed_json(evidence_root / "summary.json", summary)
+
+
 def test_parity_reader_projects_verified_paired_evidence(tmp_path: Path) -> None:
     orchestrator, run_id, _ = _create_completed_parity_run(tmp_path)
 
@@ -252,10 +342,84 @@ def test_parity_reader_projects_verified_paired_evidence(tmp_path: Path) -> None
     assert detail["config"]["retry_count"] == 0
     assert detail["provenance"]["native_worker_build_matches"] is True
     assert [item["passed"] for item in detail["rounds"]] == [True, True, True]
-    assert [item["engine"] for item in detail["turns"]] == [
-        "letta-v2",
-        "ade-native-v3",
-    ]
+    assert {(item["engine"], item["round"]) for item in detail["turns"]} == {
+        (engine, round_index)
+        for engine in ("letta-v2", "ade-native-v3")
+        for round_index in range(1, 4)
+    }
+
+
+def test_parity_reader_rejects_an_incomplete_canonical_check_set(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, _provenance, comparison, _summary, _turns) -> None:
+        comparison["checks"].pop("all_paired_rounds_pass")
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match="check set"):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
+def test_parity_reader_rejects_partial_rounds_after_successful_preflight(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, _provenance, comparison, summary, _turns) -> None:
+        comparison["checks"]["all_paired_rounds_pass"] = False
+        comparison["pass"] = False
+        comparison["rounds"] = comparison["rounds"][:2]
+        summary["pass"] = False
+        summary["rounds_completed"] = 2
+        summary["rounds_passed"] = 2
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match="exactly"):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
+def test_parity_reader_rejects_missing_required_engine_evidence(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, _provenance, _comparison, _summary, turns) -> None:
+        turns[:] = [
+            turn
+            for turn in turns
+            if not (turn["engine"] == "ade-native-v3" and turn["round"] == 2)
+        ]
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match="engine"):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (("revision", "not-a-git-revision"), ("fingerprint", "not-a-fingerprint")),
+)
+def test_parity_reader_rejects_invalid_source_identity(
+    tmp_path: Path, field: str, value: str
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, provenance, _comparison, _summary, _turns) -> None:
+        provenance["source_identity"][field] = value
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match="source identity"):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
 
 
 def test_parity_reader_fails_closed_on_tampered_artifact(tmp_path: Path) -> None:

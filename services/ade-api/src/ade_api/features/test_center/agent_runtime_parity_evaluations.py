@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
@@ -49,6 +50,43 @@ class _ParityArtifacts:
 
 class AgentRuntimeParityEvaluationReader:
     """Project signed paired-product artifacts into stable Test Center evidence."""
+
+    _COMPARISON_CHECKS = frozenset(
+        {
+            "preflight_completed",
+            "inputs_comparable",
+            "all_paired_rounds_pass",
+            "cleanup_complete",
+            "zero_retry_policy",
+        }
+    )
+    _COMPARABILITY_CHECKS = frozenset(
+        {
+            "parity_spec_hash_present",
+            "source_identity_complete",
+            "native_worker_build_matches_evaluator",
+            "legacy_inputs_available",
+            "fixture_hash_present",
+            "all_native_rounds_have_definitions",
+            "prompt_snapshots_match",
+            "persona_snapshots_match",
+            "conversation_models_match",
+            "reviewer_models_match",
+            "native_embedding_matches",
+        }
+    )
+    _LEGACY_SCORE_CHECKS = frozenset(
+        {
+            "no_forbidden_disclosure",
+            "expected_facts_captured",
+            "all_turns_succeeded",
+            "timeout_retry_controls_exact",
+        }
+    )
+    _NATIVE_SCORE_CHECKS = _LEGACY_SCORE_CHECKS | {"agent_studio_session_lifecycle"}
+    _REQUIRED_ENGINES = frozenset({"letta-v2", "ade-native-v3"})
+    _GIT_REVISION_PATTERN = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
+    _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
     _ARTIFACT_NAMES = {
         "parity_spec": "parity-spec.json",
@@ -148,6 +186,7 @@ class AgentRuntimeParityEvaluationReader:
             spec_sha256=spec_sha256,
             provenance=provenance,
             provenance_sha256=provenance_sha256,
+            normalized_turns=normalized_turns,
             normalized_turns_sha256=normalized_turns_sha256,
             comparison=comparison,
             comparison_sha256=comparison_sha256,
@@ -234,6 +273,7 @@ class AgentRuntimeParityEvaluationReader:
         spec_sha256: str,
         provenance: Mapping[str, Any],
         provenance_sha256: str,
+        normalized_turns: list[Mapping[str, Any]],
         normalized_turns_sha256: str,
         comparison: Mapping[str, Any],
         comparison_sha256: str,
@@ -261,6 +301,7 @@ class AgentRuntimeParityEvaluationReader:
             raise AgentRuntimeParityArtifactUnavailable(
                 "Agent-runtime parity provenance does not match normalized turns"
             )
+        self._validate_source_identity(provenance)
         comparison_inputs = self._mapping(comparison, "artifact_inputs")
         summary_inputs = self._mapping(summary, "artifact_inputs")
         expected_comparison_inputs = {
@@ -285,7 +326,12 @@ class AgentRuntimeParityEvaluationReader:
             raise AgentRuntimeParityArtifactUnavailable(
                 "Agent-runtime parity summary does not match its evidence artifacts"
             )
-        checks = self._boolean_mapping(comparison, "checks")
+        checks = self._canonical_boolean_mapping(
+            comparison,
+            "checks",
+            self._COMPARISON_CHECKS,
+            "comparison",
+        )
         if comparison.get("pass") is not all(checks.values()):
             raise AgentRuntimeParityArtifactUnavailable(
                 "Agent-runtime parity comparison pass state does not match checks"
@@ -302,37 +348,34 @@ class AgentRuntimeParityEvaluationReader:
             raise AgentRuntimeParityArtifactUnavailable(
                 "Agent-runtime parity summary signals do not match comparison evidence"
             )
+        comparability = self._mapping(comparison, "comparability")
+        if checks["preflight_completed"]:
+            self._canonical_boolean_mapping(
+                comparability,
+                "checks",
+                self._COMPARABILITY_CHECKS,
+                "comparability",
+            )
         rounds = self._list(comparison, "rounds")
         expected_rounds = self._integer(self._mapping(spec, "controls"), "rounds")
-        if len(rounds) > expected_rounds:
+        if expected_rounds < 1:
             raise AgentRuntimeParityArtifactUnavailable(
-                "Agent-runtime parity comparison contains more than the requested rounds"
+                "Agent-runtime parity requested round count is invalid"
             )
         passed_rounds = sum(
             1
             for round_ in rounds
             if isinstance(round_, Mapping) and round_.get("pass") is True
         )
-        for round_ in rounds:
-            if not isinstance(round_, Mapping):
-                raise AgentRuntimeParityArtifactUnavailable(
-                    "Agent-runtime parity comparison round is invalid"
-                )
-            legacy_score = self._mapping(round_, "legacy_score")
-            native_score = self._mapping(round_, "native_score")
-            if round_.get("pass") is not (
-                self._boolean(legacy_score, "pass")
-                and self._boolean(native_score, "pass")
-            ):
-                raise AgentRuntimeParityArtifactUnavailable(
-                    "Agent-runtime parity paired round does not match engine outcomes"
-                )
-        paired_rounds_pass = checks.get("all_paired_rounds_pass")
-        if paired_rounds_pass is True and (
-            len(rounds) != expected_rounds or passed_rounds != expected_rounds
-        ):
-            raise AgentRuntimeParityArtifactUnavailable(
-                "Agent-runtime parity passing comparison is missing a paired round"
+        self._validate_rounds(
+            rounds,
+            expected_rounds=expected_rounds,
+            require_exact_coverage=checks["preflight_completed"],
+        )
+        if comparison.get("pass") is True:
+            self._validate_successful_turn_engines(
+                normalized_turns,
+                expected_rounds=expected_rounds,
             )
         if (
             self._integer(summary, "rounds_completed") != len(rounds)
@@ -341,6 +384,106 @@ class AgentRuntimeParityEvaluationReader:
         ):
             raise AgentRuntimeParityArtifactUnavailable(
                 "Agent-runtime parity summary round counts do not match comparison evidence"
+            )
+
+    def _validate_source_identity(self, provenance: Mapping[str, Any]) -> None:
+        try:
+            source = self._mapping(provenance, "source_identity")
+            revision = self._string(source, "revision")
+            fingerprint = self._string(source, "fingerprint")
+            self._boolean(source, "dirty")
+        except ValueError as exc:
+            raise AgentRuntimeParityArtifactUnavailable(
+                "Agent-runtime parity provenance source identity is invalid"
+            ) from exc
+        if not self._GIT_REVISION_PATTERN.fullmatch(
+            revision
+        ) or not self._SHA256_PATTERN.fullmatch(fingerprint):
+            raise AgentRuntimeParityArtifactUnavailable(
+                "Agent-runtime parity provenance source identity is invalid"
+            )
+
+    def _validate_rounds(
+        self,
+        rounds: list[Any],
+        *,
+        expected_rounds: int,
+        require_exact_coverage: bool,
+    ) -> None:
+        round_numbers: list[int] = []
+        for round_ in rounds:
+            if not isinstance(round_, Mapping):
+                raise AgentRuntimeParityArtifactUnavailable(
+                    "Agent-runtime parity comparison round is invalid"
+                )
+            try:
+                round_number = self._integer(round_, "round")
+                legacy_score = self._mapping(round_, "legacy_score")
+                native_score = self._mapping(round_, "native_score")
+                legacy_checks = self._canonical_boolean_mapping(
+                    legacy_score,
+                    "checks",
+                    self._LEGACY_SCORE_CHECKS,
+                    "legacy round score",
+                )
+                native_checks = self._canonical_boolean_mapping(
+                    native_score,
+                    "checks",
+                    self._NATIVE_SCORE_CHECKS,
+                    "native round score",
+                )
+                legacy_passed = self._boolean(legacy_score, "pass")
+                native_passed = self._boolean(native_score, "pass")
+                paired_passed = self._boolean(round_, "pass")
+            except ValueError as exc:
+                raise AgentRuntimeParityArtifactUnavailable(
+                    "Agent-runtime parity comparison round is invalid"
+                ) from exc
+            if legacy_passed is not all(
+                legacy_checks.values()
+            ) or native_passed is not all(native_checks.values()):
+                raise AgentRuntimeParityArtifactUnavailable(
+                    "Agent-runtime parity round pass state does not match engine checks"
+                )
+            if paired_passed is not (legacy_passed and native_passed):
+                raise AgentRuntimeParityArtifactUnavailable(
+                    "Agent-runtime parity paired round does not match engine outcomes"
+                )
+            round_numbers.append(round_number)
+        if require_exact_coverage and set(round_numbers) != set(
+            range(1, expected_rounds + 1)
+        ):
+            raise AgentRuntimeParityArtifactUnavailable(
+                "Agent-runtime parity comparison must contain exactly the requested distinct rounds"
+            )
+        if len(round_numbers) != len(set(round_numbers)):
+            raise AgentRuntimeParityArtifactUnavailable(
+                "Agent-runtime parity comparison rounds are duplicated"
+            )
+
+    def _validate_successful_turn_engines(
+        self,
+        turns: list[Mapping[str, Any]],
+        *,
+        expected_rounds: int,
+    ) -> None:
+        try:
+            engine_rounds = {
+                (self._string(turn, "engine"), self._integer(turn, "round"))
+                for turn in turns
+            }
+        except ValueError as exc:
+            raise AgentRuntimeParityArtifactUnavailable(
+                "Agent-runtime parity normalized turns are invalid"
+            ) from exc
+        expected = {
+            (engine, round_number)
+            for engine in self._REQUIRED_ENGINES
+            for round_number in range(1, expected_rounds + 1)
+        }
+        if engine_rounds != expected:
+            raise AgentRuntimeParityArtifactUnavailable(
+                "Agent-runtime parity normalized turns are missing a required engine or round"
             )
 
     def _artifact_root(self, run: RunRecord, artifact_run_id: str) -> Path:
@@ -493,6 +636,26 @@ class AgentRuntimeParityEvaluationReader:
         if not mapping or any(type(value) is not bool for value in mapping.values()):
             raise ValueError(f"{key} must be a non-empty boolean mapping")
         return {str(name): bool(value) for name, value in mapping.items()}
+
+    @classmethod
+    def _canonical_boolean_mapping(
+        cls,
+        payload: Mapping[str, Any],
+        key: str,
+        expected_names: frozenset[str],
+        artifact_section: str,
+    ) -> dict[str, bool]:
+        try:
+            mapping = cls._boolean_mapping(payload, key)
+        except ValueError as exc:
+            raise AgentRuntimeParityArtifactUnavailable(
+                f"Agent-runtime parity {artifact_section} check set is invalid"
+            ) from exc
+        if set(mapping) != expected_names:
+            raise AgentRuntimeParityArtifactUnavailable(
+                f"Agent-runtime parity {artifact_section} check set is incomplete or unexpected"
+            )
+        return mapping
 
     def _cleanup_response(
         self, cleanup: Mapping[str, Any]
