@@ -241,9 +241,7 @@ def test_long_history_score_accepts_a_natural_many_turns_confirmation() -> None:
 
 def test_long_history_score_accepts_a_natural_round_count_confirmation() -> None:
     case = select_cases(load_cases(study_cases_path()), ("long_history_compaction",))[0]
-    assistant_text = (
-        "咱们这都聊了多少个历史问题啦？连我都快分不清现在到底算第几轮了。"
-    )
+    assistant_text = "咱们这都聊了多少个历史问题啦？连我都快分不清现在到底算第几轮了。"
 
     score = score_case(
         case=case,
