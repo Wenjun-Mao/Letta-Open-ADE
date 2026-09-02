@@ -26,6 +26,7 @@ from workflows.evals.agent_runtime_v3_acceptance.policy import production_policy
 from workflows.evals.agent_runtime_v3_acceptance.promotion_review import (
     GitState,
     PromotionReviewError,
+    _validate_and_rescore_case,
     _validate_raw_events,
     _validate_worker_preflight,
     review_promotion,
@@ -315,6 +316,31 @@ def test_raw_tool_and_summary_evidence_must_match_normalized_contracts() -> None
             conversation_fingerprint="f" * 64,
             index=1,
         )
+
+
+def test_promotion_review_preserves_auxiliary_run_tool_evidence() -> None:
+    case = next(
+        case
+        for case in load_cases(study_cases_path())
+        if case.key == "old_memory_deep_search"
+    )
+    payload, _raw_events = _passing_case_evidence(case, 1, "f" * 64)
+    setup_run_id = "run-1-old-memory-setup"
+    payload["setup_run_ids"].append(setup_run_id)
+    payload["tools"].insert(
+        0,
+        {
+            "run_id": setup_run_id,
+            "name": "search_memory",
+            "succeeded": True,
+            "payload": {},
+        },
+    )
+
+    run_ids, tools_by_run = _validate_and_rescore_case(payload, case, 1)
+
+    assert setup_run_id in run_ids
+    assert tools_by_run[setup_run_id] == [("search_memory", True)]
 
 
 def _evidence(

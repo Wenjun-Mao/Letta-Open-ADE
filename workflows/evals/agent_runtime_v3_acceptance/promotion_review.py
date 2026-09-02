@@ -503,6 +503,9 @@ def _validate_and_rescore_case(
         setup_run_ids
     ):
         raise PromotionReviewError(f"{case.key} setup run ids are duplicated")
+    scoreable_run_ids = set(run_ids)
+    setup_run_id_set = set(setup_run_ids)
+    known_run_ids = scoreable_run_ids | setup_run_id_set
     expected_tool_records = [
         {"run_id": run_id, "name": name, "succeeded": succeeded}
         for run_id, tools in normalized_tools_by_run.items()
@@ -516,14 +519,31 @@ def _validate_and_rescore_case(
         }
         for item in _mapping_list(payload.get("tools"), f"{case.key} recorded tools")
     ]
+    unknown_tool_run_ids = {
+        record["run_id"]
+        for record in actual_tool_records
+        if record["run_id"] not in known_run_ids
+    }
+    if unknown_tool_run_ids:
+        raise PromotionReviewError(
+            f"{case.key} recorded tool references an unknown run"
+        )
     _require_equal(
-        actual_tool_records,
+        [
+            record
+            for record in actual_tool_records
+            if record["run_id"] in scoreable_run_ids
+        ],
         expected_tool_records,
         f"{case.key} normalized tool records",
     )
     run_ids.update(setup_run_ids)
     for run_id in setup_run_ids:
-        normalized_tools_by_run[run_id] = []
+        normalized_tools_by_run[run_id] = [
+            (record["name"], record["succeeded"])
+            for record in actual_tool_records
+            if record["run_id"] == run_id
+        ]
     return run_ids, normalized_tools_by_run
 
 
