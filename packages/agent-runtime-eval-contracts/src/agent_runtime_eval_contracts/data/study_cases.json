@@ -144,15 +144,15 @@
           "count": 40,
           "user_template": "历史问题 {index}：请记住这是一次普通对话。",
           "assistant_template": "历史回答 {index}：已收到。",
-          "summary": "用户进行了多轮普通历史对话；没有产生新的持久事实。",
+          "summary": "用户进行了40轮普通历史对话；没有产生新的持久事实。",
           "summary_through_sequence": 70
         }
       ],
       "turns": [
-        {"conversation_key": "primary", "user": "请简短确认我们之前聊过很多轮。"}
+        {"conversation_key": "primary", "user": "请简短告诉我：我们之前一共聊了多少轮普通历史对话？"}
       ],
       "assistant_assertions": [
-        {"conversation_key": "primary", "contains_any": ["很多", "多轮", "聊过", "这么多", "這麼多", "聊了多少", "第几轮"]}
+        {"conversation_key": "primary", "contains_any": ["40", "四十"]}
       ]
     },
     {

@@ -24,7 +24,7 @@
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
         "prompt_policy_sha256": "3b8c4258d16f64c74176b04dc48776efe3dc19566e88960fc3fbbf6e4d92317d",
         "tool_policy_sha256": "7ed531203c24b05a6741d2ca050bcf7cd199a3121ed15b6b2f3119b105f33289",
-        "schema_policy_sha256": "9f387003bec59877df393b8054302c81bb7b1e923929b635909a8160567ef202",
+        "schema_policy_sha256": "25d451b816e93e52f9e4b32dce48e654f473ab451ae6809fc488696341f3ec20",
         "retrieval_policy_sha256": "99a2bc57779efe14767bde80f8432da6f1d414dbf45c41696ca45b9d6333ed51",
         "sampling_settings": {
           "temperature": 1.0,
@@ -49,7 +49,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "f01f5b9ccbd8f1d9139388d703267e793cfe3b9a5fa8d3cedd1e8964b2f40846",
+        "fingerprint_sha256": "6dd8a917dbc874589dd3f9c1f8ef142dddbcaa6370c31f9910216b87136c36be",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [
@@ -91,7 +91,7 @@
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
         "prompt_policy_sha256": "3b8c4258d16f64c74176b04dc48776efe3dc19566e88960fc3fbbf6e4d92317d",
         "tool_policy_sha256": "7ed531203c24b05a6741d2ca050bcf7cd199a3121ed15b6b2f3119b105f33289",
-        "schema_policy_sha256": "9f387003bec59877df393b8054302c81bb7b1e923929b635909a8160567ef202",
+        "schema_policy_sha256": "25d451b816e93e52f9e4b32dce48e654f473ab451ae6809fc488696341f3ec20",
         "retrieval_policy_sha256": "99a2bc57779efe14767bde80f8432da6f1d414dbf45c41696ca45b9d6333ed51",
         "sampling_settings": {
           "dimensions": 1024,
@@ -109,7 +109,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "ca18acee6cfc6e099ce682101a8924b9838a891ba17b3deff32fc9a18a9fe6c1",
+        "fingerprint_sha256": "2fea9c04f5116abfbd397bf29423481b5cb16afcec23ba2e1d0a7223e29cbdb0",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [
@@ -144,7 +144,7 @@
         "runtime_image_digest": null,
         "prompt_policy_sha256": "3b8c4258d16f64c74176b04dc48776efe3dc19566e88960fc3fbbf6e4d92317d",
         "tool_policy_sha256": "7ed531203c24b05a6741d2ca050bcf7cd199a3121ed15b6b2f3119b105f33289",
-        "schema_policy_sha256": "9f387003bec59877df393b8054302c81bb7b1e923929b635909a8160567ef202",
+        "schema_policy_sha256": "25d451b816e93e52f9e4b32dce48e654f473ab451ae6809fc488696341f3ec20",
         "retrieval_policy_sha256": "99a2bc57779efe14767bde80f8432da6f1d414dbf45c41696ca45b9d6333ed51",
         "sampling_settings": {
           "thinking_enabled": false,
@@ -168,7 +168,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "cca399375189eba30a5d771897e413dd551587ebbf8c9282ccd8b1d800dbddea",
+        "fingerprint_sha256": "d7f81d9b60fd1c802735bc86176c4f37543c26284e9512db0d8fa960247d407d",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [

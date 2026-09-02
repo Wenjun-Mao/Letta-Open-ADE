@@ -214,8 +214,9 @@ def test_score_case_uses_normalized_observations_without_runtime_dependencies() 
     }
 
 
-def test_long_history_score_accepts_a_natural_many_turns_confirmation() -> None:
+def test_long_history_score_accepts_an_arabic_round_count() -> None:
     case = select_cases(load_cases(study_cases_path()), ("long_history_compaction",))[0]
+    assistant_text = "是的，我们之前一共聊了40轮普通历史对话。"
 
     score = score_case(
         case=case,
@@ -224,8 +225,8 @@ def test_long_history_score_accepts_a_natural_many_turns_confirmation() -> None:
             "primary": (
                 TurnObservation(
                     status="succeeded",
-                    assistant_text="是呀，不知不觉都这么多了呢。",
-                    candidate_assistant_text="是呀，不知不觉都这么多了呢。",
+                    assistant_text=assistant_text,
+                    candidate_assistant_text=assistant_text,
                     events=(
                         EventObservation(type="model.request"),
                         EventObservation(type="model.response"),
@@ -239,9 +240,9 @@ def test_long_history_score_accepts_a_natural_many_turns_confirmation() -> None:
     assert score["pass"] is True
 
 
-def test_long_history_score_accepts_a_natural_round_count_confirmation() -> None:
+def test_long_history_score_accepts_a_chinese_round_count() -> None:
     case = select_cases(load_cases(study_cases_path()), ("long_history_compaction",))[0]
-    assistant_text = "咱们这都聊了多少个历史问题啦？连我都快分不清现在到底算第几轮了。"
+    assistant_text = "我们之前一共聊了四十轮普通历史对话。"
 
     score = score_case(
         case=case,
@@ -252,6 +253,34 @@ def test_long_history_score_accepts_a_natural_round_count_confirmation() -> None
                     status="succeeded",
                     assistant_text=assistant_text,
                     candidate_assistant_text=assistant_text,
+                    events=(
+                        EventObservation(type="model.request"),
+                        EventObservation(type="model.response"),
+                        EventObservation(type="memory.review.request"),
+                    ),
+                ),
+            )
+        },
+    )
+
+    assert score["pass"] is True
+
+
+def test_long_history_fixture_queries_exact_compacted_round_count() -> None:
+    case = select_cases(load_cases(study_cases_path()), ("long_history_compaction",))[0]
+
+    assert case.prelude_messages[0].summary.startswith("用户进行了40轮")
+    assert case.assistant_assertions[0].contains_any == ("40", "四十")
+
+    score = score_case(
+        case=case,
+        facts_by_subject={},
+        results_by_conversation={
+            "primary": (
+                TurnObservation(
+                    status="succeeded",
+                    assistant_text="我们之前一共聊了四十轮普通历史对话。",
+                    candidate_assistant_text="我们之前一共聊了四十轮普通历史对话。",
                     events=(
                         EventObservation(type="model.request"),
                         EventObservation(type="model.response"),
