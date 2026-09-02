@@ -10,6 +10,9 @@ from urllib.parse import urlsplit
 import httpx
 
 
+_TERMINAL_RUN_EVENT_TYPES = frozenset({"run.completed", "run.failed", "run.cancelled"})
+
+
 class RuntimeClientError(RuntimeError):
     pass
 
@@ -197,6 +200,8 @@ class RuntimeV3Client:
             async with asyncio.timeout(timeout_seconds):
                 async for event in self.stream_events(events_url):
                     events.append(event)
+                    if event.event_type in _TERMINAL_RUN_EVENT_TYPES:
+                        break
         except TimeoutError as exc:
             raise RunTimeout(
                 f"run {run_id} did not finish before the client deadline"

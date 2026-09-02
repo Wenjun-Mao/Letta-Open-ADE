@@ -280,6 +280,42 @@ def test_terminal_wait_times_out_when_sse_never_finishes() -> None:
     asyncio.run(scenario())
 
 
+def test_terminal_wait_stops_when_terminal_event_arrives() -> None:
+    stream_continued_after_terminal = False
+
+    async def remains_open(_url: str):
+        nonlocal stream_continued_after_terminal
+        yield SseEvent(None, "run.started", {})
+        yield SseEvent(None, "run.completed", {})
+        stream_continued_after_terminal = True
+        await asyncio.sleep(60)
+
+    async def scenario() -> None:
+        client = RuntimeV3Client("https://ade.test", "key")
+        client.stream_events = remains_open  # type: ignore[method-assign]
+
+        async def get_run(_run_id: str) -> dict[str, object]:
+            return {"id": "run-1", "status": "succeeded"}
+
+        client.get_run = get_run  # type: ignore[method-assign]
+        try:
+            run, events = await client.await_terminal(
+                {"run_id": "run-1", "events_url": "/api/v3/runs/run-1/events"},
+                timeout_seconds=0.1,
+            )
+        finally:
+            await client.aclose()
+
+        assert run["status"] == "succeeded"
+        assert [event.event_type for event in events] == [
+            "run.started",
+            "run.completed",
+        ]
+
+    asyncio.run(scenario())
+    assert stream_continued_after_terminal is False
+
+
 def test_owned_client_disables_implicit_sse_read_timeout() -> None:
     async def scenario() -> None:
         client = RuntimeV3Client("https://ade.test", "key")
