@@ -95,9 +95,9 @@ def validate_agent_studio_release_evidence(
         raise AgentStudioReleaseEvidenceError(
             "Agent Studio cutover evidence digest does not match its content"
         )
-    if material.get("schema_version") != 1:
+    if material.get("schema_version") != 2:
         raise AgentStudioReleaseEvidenceError(
-            "Agent Studio cutover evidence schema_version must be 1"
+            "Agent Studio cutover evidence schema_version must be 2"
         )
     if material.get("kind") != "ade-agent-studio-cutover-evidence":
         raise AgentStudioReleaseEvidenceError(
@@ -177,11 +177,32 @@ def validate_agent_studio_release_evidence(
             raise AgentStudioReleaseEvidenceError(
                 f"Agent Studio paired parity requires {field}=true"
             )
-    for field in ("rounds_requested", "rounds_completed", "rounds_passed"):
-        if parity.get(field) != 3:
-            raise AgentStudioReleaseEvidenceError(
-                "Agent Studio paired parity requires exactly three clean rounds"
-            )
+    rounds_requested = _required_round_count(parity, "rounds_requested")
+    rounds_completed = _required_round_count(parity, "rounds_completed")
+    rounds_passed = _required_round_count(parity, "rounds_passed")
+    if rounds_requested != 3 or rounds_completed != 3:
+        raise AgentStudioReleaseEvidenceError(
+            "Agent Studio paired parity requires exactly three completed rounds"
+        )
+    native_rounds_passed = _required_round_count(parity, "native_rounds_passed")
+    legacy_rounds_passed = _required_round_count(parity, "legacy_rounds_passed")
+    if native_rounds_passed != 3:
+        raise AgentStudioReleaseEvidenceError(
+            "Agent Studio paired parity requires native_rounds_passed=3"
+        )
+    if legacy_rounds_passed > native_rounds_passed:
+        raise AgentStudioReleaseEvidenceError(
+            "Agent Studio paired parity legacy_rounds_passed cannot exceed "
+            "native_rounds_passed"
+        )
+    if rounds_passed != native_rounds_passed:
+        raise AgentStudioReleaseEvidenceError(
+            "Agent Studio paired parity rounds_passed must equal native_rounds_passed"
+        )
+    if parity.get("native_not_worse_than_legacy") is not True:
+        raise AgentStudioReleaseEvidenceError(
+            "Agent Studio paired parity requires native_not_worse_than_legacy=true"
+        )
     if parity.get("native_product_api") != "/api/v3/agent-studio/sessions":
         raise AgentStudioReleaseEvidenceError(
             "Agent Studio parity did not exercise the released session API"
@@ -328,6 +349,15 @@ def _required_text(payload: Mapping[str, Any], field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise AgentStudioReleaseEvidenceError(f"{field} must be a non-empty string")
     return value.strip()
+
+
+def _required_round_count(payload: Mapping[str, Any], field: str) -> int:
+    value = payload.get(field)
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 3:
+        raise AgentStudioReleaseEvidenceError(
+            f"Agent Studio paired parity {field} must be an integer from 0 to 3"
+        )
+    return value
 
 
 def _required_digest(value: object, label: str) -> str:

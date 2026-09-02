@@ -61,7 +61,9 @@ def _write_receipt(
     _write_json(path, {**material, digest_field: canonical_sha256(material)})
 
 
-def _parity_artifacts() -> tuple[dict[str, object], dict[str, object]]:
+def _parity_artifacts(
+    *, legacy_rounds_passed: int = 3, native_rounds_passed: int = 3
+) -> tuple[dict[str, object], dict[str, object]]:
     digests = {
         "parity_spec_sha256": "1" * 64,
         "provenance_sha256": "2" * 64,
@@ -77,7 +79,10 @@ def _parity_artifacts() -> tuple[dict[str, object], dict[str, object]]:
         "cleanup_complete": True,
         "rounds_requested": 3,
         "rounds_completed": 3,
-        "rounds_passed": 3,
+        "rounds_passed": native_rounds_passed,
+        "native_rounds_passed": native_rounds_passed,
+        "legacy_rounds_passed": legacy_rounds_passed,
+        "native_not_worse_than_legacy": True,
         "artifact_digests": digests,
         "provenance": {
             "source_revision": "a" * 40,
@@ -86,9 +91,10 @@ def _parity_artifacts() -> tuple[dict[str, object], dict[str, object]]:
         },
     }
     spec = {
+        "schema_version": 2,
         "shared_product_contract": {
             "native_product_api": "/api/v3/agent-studio/sessions"
-        }
+        },
     }
     return detail, spec
 
@@ -100,7 +106,9 @@ def _inputs(tmp_path: Path) -> dict[str, Path]:
         proposal_path,
         {
             "run_id": "qualification-run",
-            "source_revision": "d" * 40,
+            "source_revision": "a" * 40,
+            "source_dirty": False,
+            "source_fingerprint": "b" * 64,
             "proposal_sha256": "e" * 64,
             "round_artifact_sha256s": ["7" * 64, "8" * 64, "9" * 64],
         },
@@ -153,6 +161,9 @@ def test_cutover_review_composes_one_content_addressed_release_ledger(
     )
 
     assert payload["decision"] == "approved"
+    assert payload["schema_version"] == 2
+    assert payload["paired_parity"]["native_rounds_passed"] == 3
+    assert payload["paired_parity"]["legacy_rounds_passed"] == 3
     assert payload["conformance"] == {
         "passed": True,
         "receipt_sha256": payload["capability_evidence"]["cancellation"][
@@ -167,6 +178,110 @@ def test_cutover_review_composes_one_content_addressed_release_ledger(
     assert payload["evidence_sha256"] == canonical_sha256(
         {key: value for key, value in payload.items() if key != "evidence_sha256"}
     )
+
+
+def test_cutover_review_records_a_failing_legacy_baseline_without_vetoing_native(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cutover_review, "review_promotion", lambda **_kwargs: None)
+    monkeypatch.setattr(
+        cutover_review,
+        "_read_parity",
+        lambda _root: _parity_artifacts(legacy_rounds_passed=0),
+    )
+
+    payload = cutover_review.review_cutover(
+        **_inputs(tmp_path),
+        reviewer="release-reviewer",
+    )
+
+    assert payload["paired_parity"]["native_rounds_passed"] == 3
+    assert payload["paired_parity"]["legacy_rounds_passed"] == 0
+    assert payload["paired_parity"]["native_not_worse_than_legacy"] is True
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("source_revision", "d" * 40),
+        ("source_dirty", True),
+        ("source_fingerprint", "c" * 64),
+    ),
+)
+def test_cutover_review_rejects_qualification_from_a_different_source(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    field: str,
+    value: object,
+) -> None:
+    monkeypatch.setattr(cutover_review, "review_promotion", lambda **_kwargs: None)
+    monkeypatch.setattr(
+        cutover_review, "_read_parity", lambda _root: _parity_artifacts()
+    )
+    inputs = _inputs(tmp_path)
+    proposal_path = inputs["qualification_proposal_path"]
+    proposal = json.loads(proposal_path.read_text(encoding="utf-8"))
+    proposal[field] = value
+    _write_json(proposal_path, proposal)
+
+    with pytest.raises(
+        cutover_review.CutoverReviewError,
+        match="qualification used a different source build",
+    ):
+        cutover_review.review_cutover(
+            **inputs,
+            reviewer="release-reviewer",
+        )
+
+
+def test_cutover_review_rejects_historical_schema_v1_parity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(cutover_review, "review_promotion", lambda **_kwargs: None)
+    detail, spec = _parity_artifacts()
+    spec["schema_version"] = 1
+    monkeypatch.setattr(cutover_review, "_read_parity", lambda _root: (detail, spec))
+
+    with pytest.raises(
+        cutover_review.CutoverReviewError,
+        match="evidence must use schema_version 2",
+    ):
+        cutover_review.review_cutover(
+            **_inputs(tmp_path),
+            reviewer="release-reviewer",
+        )
+
+
+@pytest.mark.parametrize(
+    ("parity_fields", "message"),
+    [
+        ({"native_rounds_passed": 2}, "paired Agent Studio parity is incomplete"),
+        ({"rounds_requested": 3.0}, "rounds_requested must be an integer"),
+        ({"legacy_rounds_passed": True}, "legacy_rounds_passed must be an integer"),
+        (
+            {"native_not_worse_than_legacy": False},
+            "paired Agent Studio parity is incomplete",
+        ),
+    ],
+)
+def test_cutover_review_fails_closed_on_native_candidate_contract(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    parity_fields: dict[str, object],
+    message: str,
+) -> None:
+    monkeypatch.setattr(cutover_review, "review_promotion", lambda **_kwargs: None)
+    detail, spec = _parity_artifacts()
+    detail.update(parity_fields)
+    if "native_rounds_passed" in parity_fields:
+        detail["rounds_passed"] = parity_fields["native_rounds_passed"]
+    monkeypatch.setattr(cutover_review, "_read_parity", lambda _root: (detail, spec))
+
+    with pytest.raises(cutover_review.CutoverReviewError, match=message):
+        cutover_review.review_cutover(
+            **_inputs(tmp_path),
+            reviewer="release-reviewer",
+        )
 
 
 def test_cutover_review_rejects_receipts_from_a_different_source(

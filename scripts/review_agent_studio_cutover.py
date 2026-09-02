@@ -56,6 +56,11 @@ def review_cutover(
 ) -> dict[str, Any]:
     proposal = _load_json(qualification_proposal_path, "qualification proposal")
     source_revision = _required_text(proposal, "source_revision")
+    qualification_source = {
+        "source_revision": source_revision,
+        "source_dirty": proposal.get("source_dirty"),
+        "source_fingerprint": _required_text(proposal, "source_fingerprint"),
+    }
     review_promotion(
         proposal_path=qualification_proposal_path,
         manifest_path=manifest_path,
@@ -75,13 +80,24 @@ def review_cutover(
         raise CutoverReviewError("llama-server compatibility did not pass")
 
     parity_detail, parity_spec = _read_parity(parity_root)
+    if parity_spec.get("schema_version") != 2:
+        raise CutoverReviewError(
+            "paired Agent Studio evidence must use schema_version 2"
+        )
+    rounds_requested = _required_round_count(parity_detail, "rounds_requested")
+    rounds_completed = _required_round_count(parity_detail, "rounds_completed")
+    rounds_passed = _required_round_count(parity_detail, "rounds_passed")
+    native_rounds_passed = _required_round_count(parity_detail, "native_rounds_passed")
+    legacy_rounds_passed = _required_round_count(parity_detail, "legacy_rounds_passed")
     if not (
         parity_detail.get("passed") is True
         and parity_detail.get("inputs_comparable") is True
         and parity_detail.get("cleanup_complete") is True
-        and parity_detail.get("rounds_requested") == 3
-        and parity_detail.get("rounds_completed") == 3
-        and parity_detail.get("rounds_passed") == 3
+        and rounds_requested == 3
+        and rounds_completed == 3
+        and rounds_passed == native_rounds_passed
+        and native_rounds_passed == 3
+        and parity_detail.get("native_not_worse_than_legacy") is True
     ):
         raise CutoverReviewError("paired Agent Studio parity is incomplete")
     product_api = _mapping(
@@ -103,6 +119,7 @@ def review_cutover(
     parity_source = _mapping(
         parity_detail.get("provenance"), "parity source provenance"
     )
+    _require_same_source(parity_source, qualification_source, "qualification")
     _require_same_source(parity_source, conformance, "conformance")
     _require_same_source(parity_source, rollback, "rollback rehearsal")
     if conformance.get("passed") is not True or conformance.get("test_paths") != list(
@@ -135,7 +152,7 @@ def review_cutover(
     parity_evidence_digest = _required_text(parity_digests, "evidence_sha256")
     conformance_digest = _required_text(conformance, "artifact_sha256")
     payload: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "ade-agent-studio-cutover-evidence",
         "decision": "approved",
         "reviewed_by": reviewer.strip(),
@@ -168,7 +185,13 @@ def review_cutover(
             "cleanup_complete": True,
             "rounds_requested": 3,
             "rounds_completed": 3,
-            "rounds_passed": 3,
+            # Retain rounds_passed as the candidate alias in the signed ledger.
+            "rounds_passed": native_rounds_passed,
+            "native_rounds_passed": native_rounds_passed,
+            "legacy_rounds_passed": legacy_rounds_passed,
+            "native_not_worse_than_legacy": parity_detail[
+                "native_not_worse_than_legacy"
+            ],
             "native_product_api": product_api,
             "artifact_digests": dict(parity_digests),
         },
@@ -342,6 +365,13 @@ def _required_text(payload: Mapping[str, Any], field: str) -> str:
     return value.strip()
 
 
+def _required_round_count(payload: Mapping[str, Any], field: str) -> int:
+    value = payload.get(field)
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= 3:
+        raise CutoverReviewError(f"{field} must be an integer from 0 to 3")
+    return value
+
+
 def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(f"{path.suffix}.tmp")
@@ -355,7 +385,7 @@ def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Review qualification, paired product parity, deterministic conformance, "
+            "Review qualification, paired baseline evidence, deterministic conformance, "
             "and rollback evidence into the single Agent Studio activation ledger."
         )
     )

@@ -25,9 +25,10 @@ the native v3 cutover gate remains incomplete.
 The native runtime remains deliberately separate while the cutover gate is pending.
 It neither imports Letta agents nor dual-writes state.
 [ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md) authorizes implementation
-of a fresh-start cutover contract, but does not claim that live parity evidence has
-passed. Effective cutover needs current qualification and three clean Test
-Center-owned paired DGX rounds. Until then, current Agent Studio, `/api/v2`, and
+of a fresh-start cutover contract, but does not claim that candidate-qualification
+evidence has passed. Effective cutover needs current qualification and three clean
+Test Center-owned schema-v2 paired DGX rounds in which native passes and does not
+trail the observed Letta baseline. Until then, current Agent Studio, `/api/v2`, and
 Letta remain the supported product path.
 
 ```mermaid
@@ -66,7 +67,7 @@ they support confidence in the loop but do not measure product behavior.
 | Horizon | Outcome | Decision gate |
 | --- | --- | --- |
 | Delivered | Evaluation is the primary product journey, with deterministic evidence, verified content-addressed inputs, readable comparisons, and explicit keep/promote/reject decisions. | Product-quality evaluation remains distinct from stack health, diagnostics, and runtime qualification. |
-| Now | Complete Phase 4 paired v2/v3 product-outcome evidence and Phase 5 cutover implementation. | Current qualification plus three clean Test Center-owned paired DGX rounds are reviewed. Qualification alone is insufficient. |
+| Now | Complete Phase 4 v2/v3 paired-baseline candidate evidence and Phase 5 cutover implementation. | Current qualification plus three clean Test Center-owned schema-v2 DGX rounds with native `3/3` and non-regression are reviewed. Qualification alone is insufficient. |
 | Next | Activate the fresh-start v3 Agent Studio only after the Phase 4 gate. | The exact qualified DGX bundle is the only initial product bundle; reset and release-level rollback contracts are ready and verified. |
 | Later | Remove legacy runtime dependencies in Phase 6. | No product traffic or deployment dependency remains on Letta, Redis, v2 Agent Studio endpoints, or retained legacy evidence. |
 
@@ -78,8 +79,9 @@ they support confidence in the loop but do not measure product behavior.
   structure.
 - [Codebase Map](../codebase-map.md) to locate the owner of a change.
 - [ADR 0009](../adr/0009-ade-owned-agent-runtime.md),
-  [ADR 0010](../adr/0010-production-path-runtime-qualification.md), and
-  [ADR 0011](../adr/0011-agent-runtime-operational-readiness.md), and
-  [ADR 0013](../adr/0013-narrow-native-runtime-product-pilot.md), and
-  [ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md) before
+  [ADR 0010](../adr/0010-production-path-runtime-qualification.md),
+  [ADR 0011](../adr/0011-agent-runtime-operational-readiness.md),
+  [ADR 0013](../adr/0013-narrow-native-runtime-product-pilot.md),
+  [ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md), and
+  [ADR 0017](../adr/0017-incumbent-baseline-does-not-veto-native-cutover.md) before
   changing or describing the native runtime.

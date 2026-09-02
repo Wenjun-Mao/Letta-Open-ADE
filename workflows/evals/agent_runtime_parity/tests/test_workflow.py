@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 from pathlib import Path
 from typing import Any
 
@@ -19,13 +20,21 @@ from workflows.evals.agent_runtime_parity.workflow import _build_comparison, run
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
 
-def _round() -> dict[str, Any]:
-    score = {"checks": {"timeout_retry_controls_exact": True}}
+def _round(*, legacy_passed: bool = True, native_passed: bool = True) -> dict[str, Any]:
+    legacy_score = {
+        "pass": legacy_passed,
+        "checks": {"timeout_retry_controls_exact": True},
+    }
+    native_score = {
+        "pass": native_passed,
+        "checks": {"timeout_retry_controls_exact": True},
+    }
     return {
         "round": 1,
-        "pass": True,
-        "legacy": {"score": score},
-        "native": {"score": score},
+        "pass": native_passed,
+        "native_not_worse_than_legacy": native_passed or not legacy_passed,
+        "legacy": {"score": legacy_score},
+        "native": {"score": native_score},
     }
 
 
@@ -60,6 +69,57 @@ def test_comparison_passes_only_with_complete_pairing_and_cleanup() -> None:
     )
 
     assert comparison["pass"] is True
+
+
+def test_comparison_treats_a_failing_legacy_runtime_as_an_observed_baseline() -> None:
+    comparison = _build_comparison(
+        run_id="parity-test-run",
+        parity_spec_sha256="a" * 64,
+        provenance_sha256="b" * 64,
+        normalized_turns_sha256="c" * 64,
+        preflight_error=None,
+        comparability={"pass": True},
+        expected_rounds=3,
+        rounds=[
+            _round(legacy_passed=False),
+            _round(legacy_passed=False),
+            _round(legacy_passed=False),
+        ],
+        cleanup={"completed": True},
+    )
+
+    assert comparison["pass"] is True
+    assert comparison["checks"]["all_native_rounds_pass"] is True
+    assert comparison["checks"]["native_not_worse_than_legacy"] is True
+    assert comparison["baseline"] == {
+        "engine": "letta-v2",
+        "role": "observed_incumbent",
+        "rounds_passed": 0,
+        "rounds_completed": 3,
+    }
+    assert comparison["candidate"]["rounds_passed"] == 3
+
+
+def test_comparison_rejects_a_native_regression_against_the_legacy_baseline() -> None:
+    comparison = _build_comparison(
+        run_id="parity-test-run",
+        parity_spec_sha256="a" * 64,
+        provenance_sha256="b" * 64,
+        normalized_turns_sha256="c" * 64,
+        preflight_error=None,
+        comparability={"pass": True},
+        expected_rounds=3,
+        rounds=[
+            _round(native_passed=False),
+            _round(),
+            _round(),
+        ],
+        cleanup={"completed": True},
+    )
+
+    assert comparison["pass"] is False
+    assert comparison["checks"]["all_native_rounds_pass"] is False
+    assert comparison["checks"]["native_not_worse_than_legacy"] is False
 
 
 def test_workflow_writes_a_passing_three_round_bundle_without_live_calls(
@@ -105,7 +165,11 @@ def test_workflow_writes_a_passing_three_round_bundle_without_live_calls(
     summary = asyncio.run(run_parity(config, run_id="parity-fake-e2e"))
 
     assert summary["pass"] is True
+    assert summary["schema_version"] == 2
     assert summary["rounds_passed"] == 3
+    assert summary["native_rounds_passed"] == 3
+    assert summary["legacy_rounds_passed"] == 3
+    assert summary["native_not_worse_than_legacy"] is True
     assert cleanup_calls[0]["native_definition_keys"] == (
         "parity-fake-e2e-r01-definition",
         "parity-fake-e2e-r02-definition",
@@ -113,6 +177,12 @@ def test_workflow_writes_a_passing_three_round_bundle_without_live_calls(
     )
     for name in ("parity_spec", "provenance", "comparison", "summary"):
         assert verify_json_artifact(Path(summary["artifact_paths"][name]))
+    comparison = json.loads(
+        Path(summary["artifact_paths"]["comparison"]).read_text(encoding="utf-8")
+    )
+    assert comparison["schema_version"] == 2
+    assert comparison["baseline"]["role"] == "observed_incumbent"
+    assert comparison["candidate"]["role"] == "cutover_candidate"
     assert Path(summary["artifact_paths"]["normalized_turns"]).is_file()
 
 

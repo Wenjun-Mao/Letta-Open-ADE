@@ -233,11 +233,18 @@ export type AgentRuntimeParityListItem = {
   finished_at: string;
   ready: boolean;
   config: AgentRuntimeParityConfig;
+  evidence_schema_version: number | null;
   passed: boolean | null;
   inputs_comparable: boolean | null;
   cleanup_complete: boolean | null;
   rounds_requested: number | null;
   rounds_completed: number | null;
+  /** Candidate pass count; rounds_passed is retained for older receipts. */
+  native_rounds_passed: number | null;
+  /** Observed Letta baseline pass count. */
+  legacy_rounds_passed: number | null;
+  /** The native candidate did not trail the observed baseline in any round. */
+  native_not_worse_than_legacy: boolean | null;
   rounds_passed: number | null;
   artifact_digests: AgentRuntimeParityArtifactDigests | null;
 };
@@ -247,6 +254,7 @@ export type AgentRuntimeParityRound = {
   passed: boolean;
   legacy_passed: boolean;
   native_passed: boolean;
+  native_not_worse_than_legacy: boolean;
   legacy_checks: Record<string, boolean>;
   native_checks: Record<string, boolean>;
 };

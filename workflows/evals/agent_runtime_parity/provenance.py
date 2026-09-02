@@ -55,7 +55,7 @@ def build_parity_spec(
     *, config: ParityConfig, fixture: ConversationFixture, run_id: str
 ) -> dict[str, Any]:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "agent-runtime-parity-spec",
         "run_id": run_id,
         "shared_product_contract": {
@@ -70,6 +70,11 @@ def build_parity_spec(
             "internal_memory_representation": "not compared",
             "assistant_prose": "not compared",
             "advisory_llm_judge": "out_of_scope",
+            "decision_policy": {
+                "candidate": "ADE-native v3 must pass every requested round",
+                "baseline": "Letta v2 is an observed incumbent, not a veto",
+                "non_regression": "ADE-native v3 may not trail Letta v2 in any paired round",
+            },
         },
         "fixture": fixture_payload(fixture),
         "controls": {
@@ -281,7 +286,7 @@ def build_provenance(
     cleanup: dict[str, Any],
 ) -> dict[str, Any]:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "agent-runtime-parity-provenance",
         "run_id": run_id,
         "parity_spec_sha256": parity_spec_sha256,

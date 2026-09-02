@@ -329,6 +329,17 @@
             "title": "创建时间",
             "type": "string"
           },
+          "evidence_schema_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "证据 Schema 版本"
+          },
           "finished_at": {
             "title": "结束时间",
             "type": "string"
@@ -343,6 +354,39 @@
               }
             ],
             "title": "输入可比"
+          },
+          "legacy_rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "旧运行时通过轮数"
+          },
+          "native_not_worse_than_legacy": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时不落后于旧运行时"
+          },
+          "native_rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时通过轮数"
           },
           "passed": {
             "anyOf": [
@@ -480,6 +524,17 @@
             "title": "创建时间",
             "type": "string"
           },
+          "evidence_schema_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "证据 Schema 版本"
+          },
           "finished_at": {
             "title": "结束时间",
             "type": "string"
@@ -494,6 +549,39 @@
               }
             ],
             "title": "输入可比"
+          },
+          "legacy_rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "旧运行时通过轮数"
+          },
+          "native_not_worse_than_legacy": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时不落后于旧运行时"
+          },
+          "native_rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时通过轮数"
           },
           "passed": {
             "anyOf": [
@@ -683,6 +771,10 @@
             "title": "原生运行时检查",
             "type": "object"
           },
+          "native_not_worse_than_legacy": {
+            "title": "原生运行时不落后于旧运行时",
+            "type": "boolean"
+          },
           "native_passed": {
             "title": "原生运行时 通过",
             "type": "boolean"
@@ -701,6 +793,7 @@
           "passed",
           "legacy_passed",
           "native_passed",
+          "native_not_worse_than_legacy",
           "legacy_checks",
           "native_checks"
         ],
@@ -8899,7 +8992,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "列出成对智能体运行时产品对等性评估",
+        "summary": "列出智能体运行时配对基线对比",
         "tags": [
           "测试中心"
         ]
@@ -8946,7 +9039,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "获取成对智能体运行时产品对等性证据",
+        "summary": "获取智能体运行时配对基线证据",
         "tags": [
           "测试中心"
         ]

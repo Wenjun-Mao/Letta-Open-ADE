@@ -107,7 +107,7 @@ class TestRunArtifactReadResponse(BaseModel):
 
 
 class _AgentRuntimeParityResponseModel(BaseModel):
-    """Strict, secret-free product parity evidence returned by Test Center."""
+    """Strict, secret-free paired baseline evidence returned by Test Center."""
 
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -139,6 +139,7 @@ class AgentRuntimeParityRoundResponse(_AgentRuntimeParityResponseModel):
     passed: bool
     legacy_passed: bool
     native_passed: bool
+    native_not_worse_than_legacy: bool
     legacy_checks: dict[str, bool]
     native_checks: dict[str, bool]
 
@@ -182,12 +183,16 @@ class AgentRuntimeParityListItemResponse(_AgentRuntimeParityResponseModel):
     finished_at: str
     ready: bool
     config: AgentRuntimeParityConfigResponse
+    evidence_schema_version: int | None = None
     passed: bool | None = None
     inputs_comparable: bool | None = None
     cleanup_complete: bool | None = None
     rounds_requested: int | None = None
     rounds_completed: int | None = None
     rounds_passed: int | None = None
+    native_rounds_passed: int | None = None
+    legacy_rounds_passed: int | None = None
+    native_not_worse_than_legacy: bool | None = None
     artifact_digests: AgentRuntimeParityArtifactDigestsResponse | None = None
 
 

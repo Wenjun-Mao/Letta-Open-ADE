@@ -78,7 +78,7 @@ def _release_evidence(manifest, policies):
             "fingerprint_sha256": deployment.fingerprint.sha256,
         }
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "ade-agent-studio-cutover-evidence",
         "decision": "approved",
         "reviewed_by": "test",
@@ -110,6 +110,9 @@ def _release_evidence(manifest, policies):
             "rounds_requested": 3,
             "rounds_completed": 3,
             "rounds_passed": 3,
+            "native_rounds_passed": 3,
+            "legacy_rounds_passed": 0,
+            "native_not_worse_than_legacy": True,
             "native_product_api": "/api/v3/agent-studio/sessions",
             "artifact_digests": {
                 "parity_spec_sha256": "5" * 64,
@@ -169,7 +172,9 @@ def _release_evidence(manifest, policies):
     return payload
 
 
-def test_agent_studio_release_gate_requires_all_exact_promoted_roles() -> None:
+def test_agent_studio_release_gate_accepts_a_qualified_native_candidate_with_a_failing_legacy_baseline() -> (
+    None
+):
     manifest, policies = _qualified_manifest(PROJECT_ROOT)
 
     validate_agent_studio_release_gate(

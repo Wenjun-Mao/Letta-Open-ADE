@@ -73,7 +73,7 @@ def _payload(manifest, policies):
             "fingerprint_sha256": deployment.fingerprint.sha256,
         }
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "ade-agent-studio-cutover-evidence",
         "decision": "approved",
         "reviewed_by": "release-reviewer",
@@ -105,6 +105,9 @@ def _payload(manifest, policies):
             "rounds_requested": 3,
             "rounds_completed": 3,
             "rounds_passed": 3,
+            "native_rounds_passed": 3,
+            "legacy_rounds_passed": 0,
+            "native_not_worse_than_legacy": True,
             "native_product_api": "/api/v3/agent-studio/sessions",
             "artifact_digests": {
                 "parity_spec_sha256": "5" * 64,
@@ -176,18 +179,46 @@ def _validate(payload, manifest, policies):
 
 def test_release_evidence_binds_every_cutover_gate() -> None:
     manifest, policies = _qualified_manifest()
-    evidence = _validate(_payload(manifest, policies), manifest, policies)
+    payload = _payload(manifest, policies)
+    evidence = _validate(payload, manifest, policies)
 
     assert evidence.qualification_run_id == "qualification-1"
     assert evidence.parity_run_id == "parity-1"
+    assert payload["paired_parity"]["legacy_rounds_passed"] == 0
 
 
 @pytest.mark.parametrize(
     ("mutate", "message"),
     [
         (
+            lambda payload: payload["paired_parity"].update(native_rounds_passed=2),
+            "native_rounds_passed=3",
+        ),
+        (
             lambda payload: payload["paired_parity"].update(rounds_passed=2),
-            "three clean rounds",
+            "rounds_passed must equal native_rounds_passed",
+        ),
+        (
+            lambda payload: payload["paired_parity"].update(rounds_completed=3.0),
+            "rounds_completed must be an integer from 0 to 3",
+        ),
+        (
+            lambda payload: payload["paired_parity"].update(legacy_rounds_passed=4),
+            "legacy_rounds_passed must be an integer from 0 to 3",
+        ),
+        (
+            lambda payload: payload["paired_parity"].update(legacy_rounds_passed=True),
+            "legacy_rounds_passed must be an integer from 0 to 3",
+        ),
+        (
+            lambda payload: payload["paired_parity"].update(
+                native_not_worse_than_legacy=False
+            ),
+            "native_not_worse_than_legacy=true",
+        ),
+        (
+            lambda payload: payload.update(schema_version=1),
+            "schema_version must be 2",
         ),
         (
             lambda payload: payload["qualification"]["llama_compatibility"].update(

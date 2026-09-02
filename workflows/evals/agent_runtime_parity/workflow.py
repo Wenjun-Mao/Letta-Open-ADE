@@ -107,11 +107,18 @@ async def run_parity(
                     definition_key=native_definition_keys[round_index - 1],
                     subject_key=native_subject_keys[round_index - 1],
                 )
+                legacy_passed = bool(legacy_result["score"]["pass"])
+                native_passed = bool(native_result["score"]["pass"])
                 round_results.append(
                     {
                         "round": round_index,
-                        "pass": bool(legacy_result["score"]["pass"])
-                        and bool(native_result["score"]["pass"]),
+                        # Letta is an observed incumbent, not a normative veto. The
+                        # cutover candidate must independently pass and must never
+                        # trail a passing baseline round.
+                        "pass": native_passed,
+                        "native_not_worse_than_legacy": (
+                            native_passed or not legacy_passed
+                        ),
                         "legacy": legacy_result,
                         "native": native_result,
                         "native_definition": native_result.get("definition"),
@@ -574,13 +581,24 @@ def _build_comparison(
     rounds: list[dict[str, Any]],
     cleanup: dict[str, Any],
 ) -> dict[str, Any]:
-    paired_rounds_pass = len(rounds) == expected_rounds and all(
-        item["pass"] for item in rounds
+    complete_rounds = len(rounds) == expected_rounds
+    all_native_rounds_pass = complete_rounds and all(
+        bool(item["native"]["score"]["pass"]) for item in rounds
+    )
+    native_not_worse_than_legacy = complete_rounds and all(
+        bool(item["native_not_worse_than_legacy"]) for item in rounds
+    )
+    legacy_rounds_passed = sum(
+        1 for item in rounds if bool(item["legacy"]["score"]["pass"])
+    )
+    native_rounds_passed = sum(
+        1 for item in rounds if bool(item["native"]["score"]["pass"])
     )
     checks = {
         "preflight_completed": preflight_error is None,
         "inputs_comparable": bool(comparability["pass"]),
-        "all_paired_rounds_pass": paired_rounds_pass,
+        "all_native_rounds_pass": all_native_rounds_pass,
+        "native_not_worse_than_legacy": native_not_worse_than_legacy,
         "cleanup_complete": bool(cleanup["completed"]),
         "zero_retry_policy": all(
             item["legacy"]["score"]["checks"]["timeout_retry_controls_exact"]
@@ -589,7 +607,7 @@ def _build_comparison(
         ),
     }
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "agent-runtime-parity-comparison",
         "run_id": run_id,
         "pass": all(checks.values()),
@@ -602,10 +620,23 @@ def _build_comparison(
         "preflight_error": preflight_error,
         "comparability": comparability,
         "cleanup": cleanup,
+        "baseline": {
+            "engine": "letta-v2",
+            "role": "observed_incumbent",
+            "rounds_passed": legacy_rounds_passed,
+            "rounds_completed": len(rounds),
+        },
+        "candidate": {
+            "engine": "ade-native-v3",
+            "role": "cutover_candidate",
+            "rounds_passed": native_rounds_passed,
+            "rounds_completed": len(rounds),
+        },
         "rounds": [
             {
                 "round": item["round"],
                 "pass": item["pass"],
+                "native_not_worse_than_legacy": item["native_not_worse_than_legacy"],
                 "legacy_score": item["legacy"]["score"],
                 "native_score": item["native"]["score"],
             }
@@ -633,14 +664,27 @@ def _build_summary(
     cleanup: dict[str, Any],
     passed: bool,
 ) -> dict[str, Any]:
+    complete_rounds = len(rounds) == config.rounds
+    legacy_rounds_passed = sum(
+        1 for item in rounds if bool(item["legacy"]["score"]["pass"])
+    )
+    native_rounds_passed = sum(
+        1 for item in rounds if bool(item["native"]["score"]["pass"])
+    )
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "kind": "agent-runtime-parity-summary",
         "run_id": run_id,
         "pass": passed,
         "rounds_requested": config.rounds,
         "rounds_completed": len(rounds),
-        "rounds_passed": sum(1 for item in rounds if item["pass"]),
+        # Retained for API compatibility; schema v2 defines this as candidate
+        # rounds. Explicit per-engine counts remove the old ambiguity.
+        "rounds_passed": native_rounds_passed,
+        "native_rounds_passed": native_rounds_passed,
+        "legacy_rounds_passed": legacy_rounds_passed,
+        "native_not_worse_than_legacy": complete_rounds
+        and all(bool(item["native_not_worse_than_legacy"]) for item in rounds),
         "fixture": {"key": fixture.key, "sha256": fixture.sha256},
         "controls": {
             "timeout_seconds": config.timeout_seconds,

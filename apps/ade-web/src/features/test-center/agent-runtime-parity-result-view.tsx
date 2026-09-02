@@ -32,8 +32,17 @@ function resultLabel(value: boolean | null, passed: string, failed: string, pend
 }
 
 export function parityRoundProgress(result: AgentRuntimeParityListItem): string {
+  return runtimeRoundProgress(result.native_rounds_passed ?? result.rounds_passed, result);
+}
+
+export function legacyBaselineRoundProgress(result: AgentRuntimeParityListItem): string {
+  return runtimeRoundProgress(result.legacy_rounds_passed, result);
+}
+
+function runtimeRoundProgress(passed: number | null, result: AgentRuntimeParityListItem): string {
   if (result.rounds_requested === null) return "-";
-  return `${result.rounds_passed ?? 0}/${result.rounds_completed ?? 0}/${result.rounds_requested}`;
+  if (passed === null) return "-";
+  return `${passed}/${result.rounds_completed ?? 0}/${result.rounds_requested}`;
 }
 
 function ArtifactButton({
@@ -58,25 +67,42 @@ function ArtifactButton({
 }
 
 function EvidenceOverview({ result, copy }: { result: AgentRuntimeParityListItem; copy: TestCenterCopy }) {
+  const historical = result.evidence_schema_version === 1;
   return (
     <div className="card-grid" style={{ marginTop: 12 }}>
       <div className="card" style={{ padding: 12, boxShadow: "none" }}>
-        <div className="muted" style={{ fontSize: 12 }}>{copy.paritySummary}</div>
+        <div className="muted" style={{ fontSize: 12 }}>
+          {historical ? copy.parityHistoricalSummary : copy.paritySummary}
+        </div>
         <strong style={{ color: result.passed === false ? "#b91c1c" : result.passed === true ? "#166534" : undefined }}>
-          {resultLabel(result.passed, copy.parityPassed, copy.parityFailed, copy.pending)}
+          {resultLabel(
+            result.passed,
+            historical ? copy.parityHistoricalPassed : copy.parityPassed,
+            historical ? copy.parityHistoricalFailed : copy.parityFailed,
+            copy.pending,
+          )}
         </strong>
+        {historical ? <p className="muted" style={{ marginBottom: 0 }}>{copy.parityHistoricalNotice}</p> : null}
         <p className="muted" style={{ marginBottom: 0 }}>{result.run_id}</p>
       </div>
       <div className="card" style={{ padding: 12, boxShadow: "none" }}>
-        <div className="muted" style={{ fontSize: 12 }}>{copy.parityRoundsCompleted}</div>
+        <div className="muted" style={{ fontSize: 12 }}>{copy.parityNativeCandidateProgress}</div>
         <strong>{parityRoundProgress(result)}</strong>
-        <p className="muted" style={{ marginBottom: 0 }}>{copy.parityControlsFixed}</p>
+        <p className="muted" style={{ marginBottom: 0 }}>{copy.parityRoundsCompleted}</p>
+      </div>
+      <div className="card" style={{ padding: 12, boxShadow: "none" }}>
+        <div className="muted" style={{ fontSize: 12 }}>{copy.parityLegacyBaselineProgress}</div>
+        <strong>{legacyBaselineRoundProgress(result)}</strong>
+        <p className="muted" style={{ marginBottom: 0 }}>{copy.parityBaselineObserved}</p>
       </div>
       <div className="card" style={{ padding: 12, boxShadow: "none" }}>
         <div className="muted" style={{ fontSize: 12 }}>{copy.parityControlEvidence}</div>
         <strong>{resultLabel(result.inputs_comparable, copy.parityComparable, copy.parityNotComparable, copy.pending)}</strong>
         <br />
         <strong>{resultLabel(result.cleanup_complete, copy.parityCleanupComplete, copy.parityCleanupIncomplete, copy.pending)}</strong>
+        <br />
+        <strong>{resultLabel(result.native_not_worse_than_legacy, copy.parityNonRegressionPassed, copy.parityNonRegressionFailed, copy.pending)}</strong>
+        <p className="muted" style={{ marginBottom: 0 }}>{copy.parityControlsFixed}</p>
       </div>
     </div>
   );
@@ -88,11 +114,16 @@ function VerifiedEvidence({ detail, copy }: { detail: AgentRuntimeParityDetail; 
     <>
       <div style={{ marginTop: 16 }}>
         <h4>{copy.parityRoundResults}</h4>
-        <div className="toolbar" style={{ gap: 8 }}>
+        <div className="card-grid" style={{ gap: 8 }}>
           {detail.rounds.map((round) => (
-            <span key={round.round} className="muted">
-              {copy.round} {round.round}: {resultLabel(round.passed, copy.passed, copy.failed, copy.pending)}
-            </span>
+            <div className="card" key={round.round} style={{ padding: 12, boxShadow: "none" }}>
+              <strong>{copy.round} {round.round}</strong>
+              <div className="muted" style={{ display: "grid", gap: 4, marginTop: 8 }}>
+                <span>{copy.parityNativeCandidate}: <strong>{resultLabel(round.native_passed, copy.passed, copy.failed, copy.pending)}</strong></span>
+                <span>{copy.parityLegacyBaseline}: <strong>{resultLabel(round.legacy_passed, copy.passed, copy.failed, copy.pending)}</strong></span>
+                <span>{copy.parityNonRegression}: <strong>{resultLabel(round.native_not_worse_than_legacy, copy.parityNonRegressionPassed, copy.parityNonRegressionFailed, copy.pending)}</strong></span>
+              </div>
+            </div>
           ))}
         </div>
       </div>

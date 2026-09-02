@@ -329,6 +329,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "evidence_schema_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Schema Version"
+          },
           "finished_at": {
             "title": "Finished At",
             "type": "string"
@@ -343,6 +354,39 @@
               }
             ],
             "title": "Inputs Comparable"
+          },
+          "legacy_rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Rounds Passed"
+          },
+          "native_not_worse_than_legacy": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Not Worse Than Legacy"
+          },
+          "native_rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Rounds Passed"
           },
           "passed": {
             "anyOf": [
@@ -480,6 +524,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "evidence_schema_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Schema Version"
+          },
           "finished_at": {
             "title": "Finished At",
             "type": "string"
@@ -494,6 +549,39 @@
               }
             ],
             "title": "Inputs Comparable"
+          },
+          "legacy_rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legacy Rounds Passed"
+          },
+          "native_not_worse_than_legacy": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Not Worse Than Legacy"
+          },
+          "native_rounds_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Rounds Passed"
           },
           "passed": {
             "anyOf": [
@@ -683,6 +771,10 @@
             "title": "Native Checks",
             "type": "object"
           },
+          "native_not_worse_than_legacy": {
+            "title": "Native Not Worse Than Legacy",
+            "type": "boolean"
+          },
           "native_passed": {
             "title": "Native Passed",
             "type": "boolean"
@@ -701,6 +793,7 @@
           "passed",
           "legacy_passed",
           "native_passed",
+          "native_not_worse_than_legacy",
           "legacy_checks",
           "native_checks"
         ],
@@ -8899,7 +8992,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "List paired Agent Runtime product parity evaluations",
+        "summary": "List Agent Runtime paired baseline comparisons",
         "tags": [
           "Test Center"
         ]
@@ -8946,7 +9039,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Get paired Agent Runtime product parity evidence",
+        "summary": "Get Agent Runtime paired baseline evidence",
         "tags": [
           "Test Center"
         ]

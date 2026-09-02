@@ -37,14 +37,15 @@ Test Center rejects unknown or duplicate keys, emits the runner's repeated
 `--case-key` arguments in canonical order, and forces a one-round no-llama command.
 These focused runs are diagnostic-only and cannot be promotion eligible.
 
-## Agent Runtime Product Parity
+## Agent Runtime Paired Baseline Comparison
 
-`agent_runtime_parity_eval` is the Milestone 4 product-comparison launcher. It
-compares the Letta v2 and ADE-native v3 public APIs under the same fixture,
-prompt, persona, paired DGX model selection, timeout, and zero-retry policy. It
-is intentionally separate from `agent_runtime_v3_acceptance`: qualification
-proves the native runtime's bounded contract, while parity measures the paired
-operator outcome.
+`agent_runtime_parity_eval` is the Milestone 4 paired-baseline launcher. It compares
+the ADE-native-v3 cutover candidate with the observed Letta-v2 incumbent under the
+same fixture, prompt, persona, paired DGX model selection, timeout, and zero-retry
+policy. It is intentionally separate from `agent_runtime_v3_acceptance`:
+qualification proves the native runtime's bounded contract, while this workflow
+tests the shared operator outcome. Schema-v2 evidence requires native to pass every
+round and not trail Letta; an incumbent failure remains visible but is not a veto.
 
 The launch form may select one to three rounds. Three rounds are evidence runs;
 one or two rounds are diagnostic evidence only. Test Center always passes
@@ -58,7 +59,7 @@ scope for its generated resource cleanup. API keys, database URL, and Compose
 service URLs are injected only into the child process environment. They are not
 included in the command, `run.json`, logs, or parity artifact read model.
 
-`GET /api/v2/test-center/agent-runtime-parity-evaluations` lists product parity
+`GET /api/v2/test-center/agent-runtime-parity-evaluations` lists paired baseline
 runs. `GET /api/v2/test-center/agent-runtime-parity-evaluations/{run_id}`
 returns evidence only after Test Center verifies the signed parity spec,
 provenance, normalized turns, comparison, and summary form one coherent

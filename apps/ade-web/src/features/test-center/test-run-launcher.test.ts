@@ -106,7 +106,9 @@ describe("Test Center run launcher", () => {
 
     expect(getTestRunTypeLabel(copy, "chat_memory_eval")).toBe("Chat-memory behavior evaluation");
     expect(getTestRunTypeLabel(copy, "agent_runtime_v3_acceptance")).toBe("Native runtime qualification");
-    expect(getTestRunTypeLabel(copy, "agent_runtime_parity_eval")).toBe("Letta v2 ↔ ADE-native v3 product parity");
+    expect(getTestRunTypeLabel(copy, "agent_runtime_parity_eval")).toBe(
+      "ADE-native v3 candidate vs Letta v2 baseline",
+    );
   });
 
   it("does not leak chat-memory fields into standard run payloads", () => {

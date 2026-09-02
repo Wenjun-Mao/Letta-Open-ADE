@@ -105,9 +105,10 @@ The development target marks runs as unqualified. The release gate requires exac
 promoted conversation, reviewer, retriever, and current policy identities. See the
 [`agent_runtime_v3` guide](services/ade-api/src/ade_api/features/agent_runtime_v3/README.md)
 and [ADR 0016](docs/adr/0016-ade-native-agent-studio-cutover.md) for the cutover
-contract. Use the
+contract and [ADR 0017](docs/adr/0017-incumbent-baseline-does-not-veto-native-cutover.md)
+for paired-baseline candidate qualification. Use the
 [cutover runbook](docs/operations/agent-studio-cutover.md) for the complete
-promotion, paired-evidence, rollback-rehearsal, and activation sequence.
+promotion, paired-baseline-evidence, rollback-rehearsal, and activation sequence.
 
 See [workflows/evals](workflows/evals/) for each evaluation's inputs, outputs,
 and interpretation. See [workflows/smoke](workflows/smoke/) for live API and

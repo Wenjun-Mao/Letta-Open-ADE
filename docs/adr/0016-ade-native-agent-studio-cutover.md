@@ -5,16 +5,18 @@
 - Related: [ADR 0009](0009-ade-owned-agent-runtime.md),
   [ADR 0010](0010-production-path-runtime-qualification.md),
   [ADR 0013](0013-narrow-native-runtime-product-pilot.md), and
-  [ADR 0014](0014-curated-tool-invocation-and-external-source-authority.md)
+  [ADR 0014](0014-curated-tool-invocation-and-external-source-authority.md), with
+  paired-baseline gate semantics in [ADR 0017](0017-incumbent-baseline-does-not-veto-native-cutover.md)
 
 ## Context
 
 ADE has accepted an ADE-owned runtime design and implemented a separately gated v3
 candidate. Runtime qualification establishes that an exact deployment can satisfy
-technical contracts; it does not establish that the native and Letta-backed products
-produce equivalent operator outcomes. A product cutover also needs an unambiguous
-state boundary and recovery plan. Keeping a permanent toggle, request fallback, or
-dual-write path would preserve two conflicting authorities for memory and history.
+technical contracts; it does not establish that the native candidate is ready for the
+observable product outcomes shared with the Letta-backed incumbent. A product cutover
+also needs an unambiguous state boundary and recovery plan. Keeping a permanent
+toggle, request fallback, or dual-write path would preserve two conflicting
+authorities for memory and history.
 
 ## Decision
 
@@ -42,19 +44,23 @@ dual-write path would preserve two conflicting authorities for memory and histor
   present. The native API remains live for diagnosis when the worker is unavailable,
   but Compose and product admission use authenticated worker readiness rather than
   the liveness endpoint.
-- Phase 4 compares product outcomes rather than internal memory representations.
-  Test Center owns content-addressed paired native-v3 and Letta-v2 artifacts,
-  normalized turn evidence, and comparison results.
+- Phase 4 is a paired baseline comparison of product outcomes rather than internal
+  memory representations. Test Center owns content-addressed native-v3 candidate and
+  Letta-v2 observed-incumbent artifacts, normalized turn evidence, and comparison
+  results.
 - Paired evidence covers only behavior both products expose comparably. Native-only
   subject, correction, compaction, tool, and trace guarantees come from the full
   canonical qualification matrix; exact retry, cancellation, and idempotency
   guarantees come from deterministic conformance tests. The release ledger requires
   all three evidence classes and does not relabel native-only checks as paired.
-- Effective cutover requires current qualification or requalification plus three
-  clean paired DGX rounds, deterministic conformance, and a successful release-level
-  rollback rehearsal. Until those artifacts are reviewed into the content-addressed
-  cutover ledger, implementation may proceed but no document, UI, or deployment may
-  claim that the cutover is complete.
+- Effective cutover requires current qualification or requalification; three clean
+  schema-v2 paired DGX rounds in which native passes every round and is not worse
+  than the observed incumbent; deterministic conformance; and a successful
+  release-level rollback rehearsal. A failing incumbent remains visible evidence but
+  does not veto a passing, non-regressive candidate under ADR 0017. Until those
+  artifacts are reviewed into the content-addressed cutover ledger, implementation
+  may proceed but no document, UI, or deployment may claim that the cutover is
+  complete.
 - The initial product tool scope is subject-bound `search_memory` only. Additional
   curated tools need their own contract, evaluation, and qualification decision.
 - Letta, Redis, v2 Agent Studio endpoints, and old evidence stay available during
@@ -76,8 +82,11 @@ not a migration failure.
 
 ## Guardrails
 
-- Never claim product parity from unit tests, a single live run, or runtime
-  qualification alone.
+- Never claim candidate qualification, product parity, or equivalence from unit
+  tests, a single live run, or runtime qualification alone.
+- Never let an incumbent failure satisfy or veto the candidate gate. Require the
+  schema-v2 native pass count and per-round non-regression evidence described in
+  ADR 0017.
 - Never satisfy a capability with an arbitrary evidence digest; each ledger row must
   point to the required qualification, parity, or conformance receipt.
 - Never expose an unqualified model route through Agent Studio configuration.

@@ -159,5 +159,6 @@ OpenAI-compatible `/v1` API.
 Agent Studio uses the breaking `/api/v3` resource model for reusable definitions,
 memory subjects, atomic sessions, conversations, turns, runs/events, and typed
 memory lineage. The v3 proxy never falls back to v2. See
-[ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md). Any future public
-contract change requires an ADR and regenerated OpenAPI artifacts.
+[ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md) and
+[ADR 0017](../adr/0017-incumbent-baseline-does-not-veto-native-cutover.md). Any
+future public contract change requires an ADR and regenerated OpenAPI artifacts.

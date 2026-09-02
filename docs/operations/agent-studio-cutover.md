@@ -3,7 +3,7 @@
 This runbook closes Milestones 4 and 5 under
 [ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md). It activates one
 fresh-start ADE-native Agent Studio authority only after qualification, paired
-product evidence, deterministic conformance, and rollback rehearsal all bind to
+baseline evidence, deterministic conformance, and rollback rehearsal all bind to
 the expected clean source and deployment identities.
 
 ## Evidence Model
@@ -13,10 +13,13 @@ The release ledger composes three deliberately different kinds of evidence:
 - Three canonical native qualification rounds prove native-only guarantees such
   as subject isolation, correction and forgetting, deep retrieval, compaction,
   false-memory prevention, tool behavior, and normalized trace preservation.
-- Three Test Center paired rounds compare the common Letta-v2 and native-v3
-  product outcome: the same seven-turn fixture, prompt, persona, DGX model,
-  timeout, zero-retry policy, replies, durable user facts, and cleanup. The native
-  side creates, archives, and restores through `/api/v3/agent-studio/sessions`.
+- Three Test Center paired rounds evaluate the ADE-native-v3 cutover candidate
+  against the Letta-v2 observed incumbent using the same seven-turn fixture, prompt,
+  persona, DGX model, timeout, zero-retry policy, replies, durable user facts, and
+  cleanup. Native must pass every round and must not fail a round that Letta passes.
+  Letta's result remains visible but does not veto a passing, non-regressive native
+  candidate. The native side creates, archives, and restores through
+  `/api/v3/agent-studio/sessions`.
 - The deterministic conformance receipt proves exact retry ownership,
   cancellation, idempotency, and event contracts that cannot be inferred from a
   successful conversational sample.
@@ -42,6 +45,8 @@ only when every capability points to its required signed artifact.
 - Require `/api/v3/worker-health` to report a fresh worker with the same source
   revision, fingerprint, and runtime mode as the native API before collecting turns.
 - Use `rounds=3`, `timeout_seconds=180`, and `retry_count=0` exactly.
+- Accept only a schema-v2 paired-baseline bundle for this gate. Schema-v1 bundles
+  remain historical diagnostics and cannot approve cutover.
 - Do not edit a policy-bound file after qualification. Restart from policy
   rebinding if code, prompt, persona, tool, schema, retrieval, workflow, or gate
   behavior changes.
@@ -84,7 +89,7 @@ that clean promotion commit before collecting product evidence:
 make agent-studio-development-up
 ```
 
-## 3. Collect Paired Product Evidence
+## 3. Collect Paired Baseline Evidence
 
 In ADE Test Center, launch `Agent Runtime Parity` with the defaults shown below:
 
@@ -94,8 +99,16 @@ In ADE Test Center, launch `Agent Runtime Parity` with the defaults shown below:
 - DGX Qwen embedding route
 - three rounds, 180 seconds, zero retries
 
-Require `passed`, `inputs_comparable`, and `cleanup_complete` to all be true.
-Inspect all three round summaries and normalized turn evidence in Test Center.
+Require all of the following to be true: `passed`, `inputs_comparable`,
+`cleanup_complete`, `all_native_rounds_pass`, and
+`native_not_worse_than_legacy`. Confirm that `native_rounds_passed` is `3` and that
+the run used exactly three rounds, 180 seconds, and zero retries. Inspect all three
+round summaries and normalized turn evidence in Test Center.
+
+Record `legacy_rounds_passed` beside the candidate result. A Letta baseline failure
+is a visible diagnosis, not a veto; do not describe a native `3/3` and Letta `0/3`
+result as parity or equivalence. A native failure in any round, particularly one that
+Letta passes, blocks cutover.
 Record the artifact root, normally:
 
 ```text
@@ -105,7 +118,7 @@ data/runtime/test-runs/<test-center-run-id>/parity-<test-center-run-id>
 ## 4. Record Conformance And Rehearse Rollback
 
 Both commands require the same clean promotion commit that produced the paired
-artifacts. Receipts are written under ignored `tests/outputs/` state.
+baseline artifacts. Receipts are written under ignored `tests/outputs/` state.
 
 ```text
 make agent-studio-conformance
@@ -147,7 +160,8 @@ make status
 Verify Agent Studio through ADE Web: create or reuse a definition and subject,
 start a conversation, send turns, inspect memory revisions and evidence, inspect
 run events, reload the page, and archive/restore the conversation. Verify Test
-Center still opens the paired summary and normalized turns. The removed
+Center still opens the separate candidate and observed-baseline summary, including
+per-round non-regression and normalized turns. The removed
 `/native-runtime-preview` route must return 404.
 
 ## Release-Level Rollback

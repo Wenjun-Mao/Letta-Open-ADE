@@ -22,7 +22,7 @@ from workflows.evals.agent_runtime_parity.workflow import run_parity  # noqa: E4
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run the Letta-v2 versus ADE-native-v3 product parity evaluation."
+        description="Run the Letta-v2 versus ADE-native-v3 paired baseline comparison."
     )
     parser.add_argument("--config", default=str(WORKFLOW_ROOT / "config.toml"))
     parser.add_argument("--output-dir", default="")

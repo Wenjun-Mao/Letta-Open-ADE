@@ -56,7 +56,7 @@ relevant turn and memory evidence, compare a candidate with a baseline, and
 state a keep, promote, or reject decision without reconstructing raw artifacts.
 Operations and qualification views remain separate from product-quality decisions.
 
-## Now: Complete Native Runtime Product Parity
+## Now: Complete Native Runtime Candidate Qualification
 
 The ADE-native runtime is an accepted implementation candidate, not the current
 product runtime. It has a separate PostgreSQL model, worker, typed-memory contracts,
@@ -64,24 +64,28 @@ and a breaking `/api/v3` API. Current Agent Studio, `/api/v2`, and Letta `0.16.8
 remain the product authority until the evidence-gated cutover in
 [ADR 0016](adr/0016-ade-native-agent-studio-cutover.md) takes effect.
 
-Phase 4 is a product-outcome comparison, not an attempt to reproduce Letta's internal
-blocks or compaction format. Test Center must own content-addressed paired artifacts
-for native v3 and Letta v2 using the same fixture, controls, and scoring policy.
+Phase 4 is a paired baseline comparison, not an attempt to reproduce Letta's internal
+blocks or compaction format. Test Center must own content-addressed artifacts for the
+native-v3 candidate and Letta-v2 observed incumbent using the same fixture, controls,
+and scoring policy.
 
 - Run three clean paired DGX rounds after every relevant qualification change.
-- Pair the common chat and memory outcome against Letta. Prove native-only isolation,
-  retrieval, compaction, false-memory prevention, tool behavior, and trace guarantees
-  through the canonical native matrix, and prove retry/cancellation/idempotency
-  semantics through deterministic conformance tests.
+- Qualify native against the observed Letta baseline: native must pass all three
+  rounds and not trail Letta in any round. A failing Letta baseline remains visible
+  diagnosis rather than a veto. Prove native-only isolation, retrieval, compaction,
+  false-memory prevention, tool behavior, and trace guarantees through the canonical
+  native matrix, and prove retry/cancellation/idempotency semantics through
+  deterministic conformance tests.
 - Keep llama-server as compatibility evidence, not an initial selectable product
   bundle, until it independently qualifies.
 - Retain the initial native tool scope: subject-bound `search_memory` only.
 
 ### Now Decision Gate
 
-Phase 4 closes only when current qualification, three clean paired DGX rounds, and
-deterministic conformance provide one reviewed, content-addressed capability ledger.
-Runtime qualification alone does not prove product parity.
+Phase 4 closes only when current qualification, three clean schema-v2 paired DGX
+rounds with native `3/3` and per-round non-regression, and deterministic conformance
+provide one reviewed, content-addressed capability ledger. Runtime qualification
+alone does not prove candidate readiness for the shared product outcome.
 
 ## Next: Fresh-Start Agent Studio Cutover
 
@@ -131,4 +135,6 @@ remains, with the removal backed by a separate operational completion check.
 - [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md): separate pilot,
   atomic session, curated-tool, and exposure-gate contract.
 - [ADR 0016](adr/0016-ade-native-agent-studio-cutover.md): fresh-start cutover,
-  paired-evidence, reset, rollback, and legacy-removal contract.
+  reset, rollback, and legacy-removal contract.
+- [ADR 0017](adr/0017-incumbent-baseline-does-not-veto-native-cutover.md): paired
+  baseline, candidate-qualification, and non-regression gate semantics.

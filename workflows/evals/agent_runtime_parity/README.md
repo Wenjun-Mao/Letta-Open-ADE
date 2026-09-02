@@ -1,9 +1,9 @@
-# Agent Runtime Product Parity
+# Agent Runtime Paired Baseline Comparison
 
 This self-contained workflow compares the Letta-backed Agent Studio public API
 (``/api/v2``) with the ADE-native Agent Studio session API
-(``/api/v3/agent-studio/sessions``). It is
-Milestone 4 evidence, not a runtime qualification run and not a cutover switch.
+(``/api/v3/agent-studio/sessions``). It is Milestone 4 candidate-qualification
+evidence, not a runtime qualification run and not a cutover switch.
 It imports neither Letta nor internal ADE runtime services.
 
 Each run executes three paired DGX rounds against the same seven user turns from
@@ -22,6 +22,21 @@ It also does not pretend that Letta exposes native subjects, revisions, or event
 semantics: those native-only capabilities are proven by qualification and
 deterministic conformance, then composed with this paired result by the cutover
 ledger.
+
+## Candidate Gate
+
+Schema-v2 artifacts treat Letta v2 as the observed incumbent baseline and native v3
+as the cutover candidate. The comparison qualifies the candidate only when all three
+native rounds pass, the inputs are comparable, exact zero-retry controls are
+observed, cleanup completes, and native is not worse than Letta in any round. If
+Letta passes a round, native must pass it too. If Letta fails a round and native
+passes, the incumbent failure remains visible but does not veto the candidate.
+
+The summary and every round report separate native and Letta outcomes plus the
+non-regression result. This is a paired baseline comparison, not a statement that
+the products are equivalent. Schema-v1 bundles are readable history but cannot meet
+this cutover gate because they do not encode these separate outcomes.
+
 The checked-in configuration uses the required three-round evidence run;
 ``--rounds 1`` or ``--rounds 2`` is allowed for diagnostics but cannot by itself
 meet Milestone 4's three-round evidence requirement.
@@ -37,7 +52,7 @@ For a container run, invoke the workflow in ``ade-native-api`` with the v2 and
 v3 Compose service URLs. That service already carries the build-bound
 ``ADE_SOURCE_REVISION``, ``ADE_SOURCE_DIRTY``, and ``ADE_SOURCE_FINGERPRINT``
 values used to prove that the evaluator and native worker are the same build.
-For a host run, the workflow derives the equivalent identity from the local Git
+For a host run, the workflow derives the corresponding identity from the local Git
 worktree. Either identity must exactly match ``/api/v3/worker-health`` or the
 comparison fails closed.
 
@@ -65,8 +80,8 @@ bundle below ``outputs/<run-id>/``:
   receipts;
 - ``normalized-turns.jsonl``: user-visible replies, terminal states, tool
   observations, memory outcomes, and control evidence only;
-- ``comparison.json``: fail-closed input comparability and deterministic paired
-  results; and
+- ``comparison.json``: fail-closed input comparability, separate observed-incumbent
+  and candidate results, and deterministic per-round non-regression; and
 - ``summary.json``: a compact pass/fail receipt bound to the other artifacts.
 
 JSON artifacts embed a SHA-256 of their canonical content. The JSONL artifact is

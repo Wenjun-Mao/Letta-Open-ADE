@@ -43,8 +43,10 @@ For the Agent Studio runtime design and evidence-gated release contract, read th
 [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md), then the
 [`agent_runtime_v3` guide](../services/ade-api/src/ade_api/features/agent_runtime_v3/README.md).
 The implementation and cutover design are accepted. Effective product activation is
-authorized only by the reviewed release ledger described in ADR 0016 and the
-[cutover runbook](operations/agent-studio-cutover.md).
+authorized only by the reviewed release ledger described in
+[ADR 0016](adr/0016-ade-native-agent-studio-cutover.md), the paired-baseline
+candidate gate in [ADR 0017](adr/0017-incumbent-baseline-does-not-veto-native-cutover.md),
+and the [cutover runbook](operations/agent-studio-cutover.md).
 
 ## Find The Right Home
 

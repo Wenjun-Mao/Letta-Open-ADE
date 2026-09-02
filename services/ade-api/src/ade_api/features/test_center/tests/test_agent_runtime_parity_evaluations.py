@@ -51,6 +51,9 @@ def _run_id() -> str:
 
 def _create_completed_parity_run(
     tmp_path: Path,
+    *,
+    schema_version: int = 2,
+    legacy_passed: bool = True,
 ) -> tuple[RunOrchestrator, str, Path]:
     state_root = tmp_path / "runtime" / "test-runs"
     orchestrator = RunOrchestrator(project_root=tmp_path, state_root=state_root)
@@ -108,7 +111,7 @@ def _create_completed_parity_run(
     content_sha256 = hashlib.sha256(b"chat prompt").hexdigest()
     persona_sha256 = hashlib.sha256(b"chat persona").hexdigest()
     spec = {
-        "schema_version": 1,
+        "schema_version": schema_version,
         "kind": "agent-runtime-parity-spec",
         "run_id": artifact_run_id,
         "fixture": {
@@ -149,7 +152,7 @@ def _create_completed_parity_run(
         "completed": True,
     }
     provenance = {
-        "schema_version": 1,
+        "schema_version": schema_version,
         "kind": "agent-runtime-parity-provenance",
         "run_id": artifact_run_id,
         "parity_spec_sha256": spec_sha256,
@@ -177,18 +180,34 @@ def _create_completed_parity_run(
         "all_turns_succeeded": True,
         "timeout_retry_controls_exact": True,
     }
-    comparison = {
-        "schema_version": 1,
-        "kind": "agent-runtime-parity-comparison",
-        "run_id": artifact_run_id,
-        "pass": True,
-        "checks": {
+    legacy_checks = {
+        **shared_checks,
+        "expected_facts_captured": legacy_passed,
+    }
+    comparison_checks = (
+        {
             "preflight_completed": True,
             "inputs_comparable": True,
-            "all_paired_rounds_pass": True,
+            "all_paired_rounds_pass": legacy_passed,
             "cleanup_complete": True,
             "zero_retry_policy": True,
-        },
+        }
+        if schema_version == 1
+        else {
+            "preflight_completed": True,
+            "inputs_comparable": True,
+            "all_native_rounds_pass": True,
+            "native_not_worse_than_legacy": True,
+            "cleanup_complete": True,
+            "zero_retry_policy": True,
+        }
+    )
+    comparison = {
+        "schema_version": schema_version,
+        "kind": "agent-runtime-parity-comparison",
+        "run_id": artifact_run_id,
+        "pass": True if schema_version == 2 else legacy_passed,
+        "checks": comparison_checks,
         "artifact_inputs": {
             "parity_spec_sha256": spec_sha256,
             "provenance_sha256": provenance_sha256,
@@ -213,11 +232,37 @@ def _create_completed_parity_run(
             "fixture_sha256": fixture_sha256,
         },
         "cleanup": cleanup,
+        **(
+            {
+                "baseline": {
+                    "engine": "letta-v2",
+                    "role": "observed_incumbent",
+                    "rounds_passed": 3 if legacy_passed else 0,
+                    "rounds_completed": 3,
+                },
+                "candidate": {
+                    "engine": "ade-native-v3",
+                    "role": "cutover_candidate",
+                    "rounds_passed": 3,
+                    "rounds_completed": 3,
+                },
+            }
+            if schema_version == 2
+            else {}
+        ),
         "rounds": [
             {
                 "round": index,
-                "pass": True,
-                "legacy_score": {"pass": True, "checks": shared_checks},
+                "pass": True if schema_version == 2 else legacy_passed,
+                **(
+                    {"native_not_worse_than_legacy": True}
+                    if schema_version == 2
+                    else {}
+                ),
+                "legacy_score": {
+                    "pass": legacy_passed,
+                    "checks": legacy_checks,
+                },
                 "native_score": {
                     "pass": True,
                     "checks": {
@@ -233,13 +278,22 @@ def _create_completed_parity_run(
         evidence_root / "comparison.json", comparison
     )
     summary = {
-        "schema_version": 1,
+        "schema_version": schema_version,
         "kind": "agent-runtime-parity-summary",
         "run_id": artifact_run_id,
-        "pass": True,
+        "pass": True if schema_version == 2 else legacy_passed,
         "rounds_requested": 3,
         "rounds_completed": 3,
-        "rounds_passed": 3,
+        "rounds_passed": 3 if schema_version == 2 else (3 if legacy_passed else 0),
+        **(
+            {
+                "native_rounds_passed": 3,
+                "legacy_rounds_passed": 3 if legacy_passed else 0,
+                "native_not_worse_than_legacy": True,
+            }
+            if schema_version == 2
+            else {}
+        ),
         "fixture": {"key": "recent_user_chat_turns", "sha256": fixture_sha256},
         "controls": {
             "timeout_seconds": 180.0,
@@ -331,6 +385,7 @@ def test_parity_reader_projects_verified_paired_evidence(tmp_path: Path) -> None
     items = orchestrator.list_agent_runtime_parity_evaluations()
     assert len(items) == 1
     assert items[0]["ready"] is True
+    assert items[0]["evidence_schema_version"] == 2
     assert items[0]["passed"] is True
     assert items[0]["inputs_comparable"] is True
     assert items[0]["cleanup_complete"] is True
@@ -349,13 +404,177 @@ def test_parity_reader_projects_verified_paired_evidence(tmp_path: Path) -> None
     }
 
 
+def test_parity_reader_keeps_a_failing_legacy_baseline_visible_without_veto(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, _ = _create_completed_parity_run(
+        tmp_path,
+        legacy_passed=False,
+    )
+
+    detail = orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+    assert detail["passed"] is True
+    assert detail["native_rounds_passed"] == 3
+    assert detail["legacy_rounds_passed"] == 0
+    assert detail["native_not_worse_than_legacy"] is True
+    assert [item["native_passed"] for item in detail["rounds"]] == [True] * 3
+    assert [item["legacy_passed"] for item in detail["rounds"]] == [False] * 3
+
+
+def test_parity_reader_keeps_schema_v1_history_readable(tmp_path: Path) -> None:
+    orchestrator, run_id, _ = _create_completed_parity_run(
+        tmp_path,
+        schema_version=1,
+    )
+
+    detail = orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+    assert detail["passed"] is True
+    assert detail["evidence_schema_version"] == 1
+    assert detail["native_rounds_passed"] == 3
+    assert detail["legacy_rounds_passed"] == 3
+
+
+def test_parity_reader_preserves_a_divergent_schema_v1_gate_as_history(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, _ = _create_completed_parity_run(
+        tmp_path,
+        schema_version=1,
+        legacy_passed=False,
+    )
+
+    detail = orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+    assert detail["passed"] is False
+    assert detail["evidence_schema_version"] == 1
+    assert detail["native_rounds_passed"] == 3
+    assert detail["legacy_rounds_passed"] == 0
+    assert detail["native_not_worse_than_legacy"] is True
+
+
+def test_parity_reader_rejects_a_tampered_non_regression_result(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, _provenance, comparison, _summary, _turns) -> None:
+        comparison["rounds"][0]["native_not_worse_than_legacy"] = False
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match="non-regression"):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
+def test_parity_reader_rejects_gate_checks_that_contradict_round_evidence(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, _provenance, comparison, summary, _turns) -> None:
+        comparison["checks"]["all_native_rounds_pass"] = False
+        comparison["pass"] = False
+        summary["pass"] = False
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match="engine evidence"):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
+@pytest.mark.parametrize("section", ("baseline", "candidate"))
+def test_parity_reader_rejects_engine_summaries_that_contradict_round_evidence(
+    tmp_path: Path,
+    section: str,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, _provenance, comparison, _summary, _turns) -> None:
+        comparison[section]["rounds_passed"] = 2
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match=section):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
+def test_parity_reader_rejects_summary_engine_counts_that_contradict_rounds(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, _provenance, _comparison, summary, _turns) -> None:
+        summary["legacy_rounds_passed"] = 2
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match="engine counts"):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
+def test_parity_reader_rejects_comparability_that_contradicts_its_checks(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, _provenance, comparison, _summary, _turns) -> None:
+        comparison["comparability"]["checks"]["prompt_snapshots_match"] = False
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match="comparability"):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
+def test_parity_reader_rejects_cleanup_that_contradicts_runtime_outcomes(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, provenance, comparison, _summary, _turns) -> None:
+        comparison["cleanup"]["native"]["completed"] = False
+        provenance["cleanup"]["native"]["completed"] = False
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match="cleanup state"):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
+def test_parity_reader_projects_malformed_signed_shapes_as_unavailable(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, _provenance, comparison, summary, _turns) -> None:
+        comparison["preflight_error"] = []
+        summary["preflight_error"] = []
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(
+        AgentRuntimeParityArtifactUnavailable,
+        match="invalid evidence shape",
+    ):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
 def test_parity_reader_rejects_an_incomplete_canonical_check_set(
     tmp_path: Path,
 ) -> None:
     orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
 
     def mutate(_spec, _provenance, comparison, _summary, _turns) -> None:
-        comparison["checks"].pop("all_paired_rounds_pass")
+        comparison["checks"].pop("all_native_rounds_pass")
 
     _rewrite_bundle(evidence_root, mutate)
 
@@ -370,12 +589,16 @@ def test_parity_reader_rejects_partial_rounds_after_successful_preflight(
     orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
 
     def mutate(_spec, _provenance, comparison, summary, _turns) -> None:
-        comparison["checks"]["all_paired_rounds_pass"] = False
+        comparison["checks"]["all_native_rounds_pass"] = False
+        comparison["checks"]["native_not_worse_than_legacy"] = False
         comparison["pass"] = False
         comparison["rounds"] = comparison["rounds"][:2]
         summary["pass"] = False
         summary["rounds_completed"] = 2
         summary["rounds_passed"] = 2
+        summary["native_rounds_passed"] = 2
+        summary["legacy_rounds_passed"] = 2
+        summary["native_not_worse_than_legacy"] = False
 
     _rewrite_bundle(evidence_root, mutate)
 
@@ -447,7 +670,8 @@ def test_parity_reader_keeps_a_completed_preflight_failure_inspectable(
                 "checks": {
                     "preflight_completed": False,
                     "inputs_comparable": False,
-                    "all_paired_rounds_pass": False,
+                    "all_native_rounds_pass": False,
+                    "native_not_worse_than_legacy": False,
                     "cleanup_complete": True,
                     "zero_retry_policy": True,
                 },
@@ -473,6 +697,18 @@ def test_parity_reader_keeps_a_completed_preflight_failure_inspectable(
                     "code": "offline",
                 },
                 "rounds": [],
+                "baseline": {
+                    "engine": "letta-v2",
+                    "role": "observed_incumbent",
+                    "rounds_passed": 0,
+                    "rounds_completed": 0,
+                },
+                "candidate": {
+                    "engine": "ade-native-v3",
+                    "role": "cutover_candidate",
+                    "rounds_passed": 0,
+                    "rounds_completed": 0,
+                },
             }
         )
         summary.update(
@@ -480,6 +716,9 @@ def test_parity_reader_keeps_a_completed_preflight_failure_inspectable(
                 "pass": False,
                 "rounds_completed": 0,
                 "rounds_passed": 0,
+                "native_rounds_passed": 0,
+                "legacy_rounds_passed": 0,
+                "native_not_worse_than_legacy": False,
                 "preflight_error": {
                     "kind": "public_api_error",
                     "code": "offline",

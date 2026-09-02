@@ -38,7 +38,7 @@ router = APIRouter(dependencies=[Depends(require_admin)])
     "/api/v2/test-center/agent-runtime-parity-evaluations",
     response_model=AgentRuntimeParityListResponse,
     tags=[TAG_TEST_CENTER],
-    summary="List paired Agent Runtime product parity evaluations",
+    summary="List Agent Runtime paired baseline comparisons",
 )
 async def list_agent_runtime_parity_evaluations(
     test_orchestrator: TestOrchestratorDependency,
@@ -52,7 +52,7 @@ async def list_agent_runtime_parity_evaluations(
     response_model=AgentRuntimeParityDetailResponse,
     response_model_exclude_none=True,
     tags=[TAG_TEST_CENTER],
-    summary="Get paired Agent Runtime product parity evidence",
+    summary="Get Agent Runtime paired baseline evidence",
 )
 async def get_agent_runtime_parity_evaluation(
     run_id: str,
@@ -66,7 +66,7 @@ async def get_agent_runtime_parity_evaluation(
     if evaluation is None:
         raise HTTPException(
             status_code=404,
-            detail="agent-runtime parity evaluation run_id not found",
+            detail="agent-runtime paired baseline run_id not found",
         )
     return evaluation
 

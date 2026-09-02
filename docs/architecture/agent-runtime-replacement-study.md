@@ -2,11 +2,12 @@
 
 - Study date: 2026-08-29
 - Production impact: none
-- Decision state: implementation accepted; Phase 4 paired parity and Phase 5
-  effective cutover evidence remain pending
+- Decision state: implementation accepted; Phase 4 paired-baseline candidate
+  qualification and Phase 5 effective cutover evidence remain pending
 - Reproducible workflow: [`workflows/evals/agent_runtime_study/`](../../workflows/evals/agent_runtime_study/README.md)
 - Accepted implementation decision: [ADR 0009](../adr/0009-ade-owned-agent-runtime.md)
 - Cutover contract: [ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md)
+- Baseline gate semantics: [ADR 0017](../adr/0017-incumbent-baseline-does-not-veto-native-cutover.md)
 
 ## Executive Conclusion
 
@@ -39,10 +40,12 @@ making it production-ready.
 
 The study establishes a candidate architecture, not effective product cutover
 evidence. Qualification and compatibility artifacts are necessary technical inputs,
-but they do not prove native and Letta-backed Agent Studio produce equivalent operator
-outcomes. Under [ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md), three
-clean content-addressed paired DGX rounds, current requalification, and reviewed Test
-Center comparison artifacts are still required before any cutover claim.
+but they do not prove that the native candidate satisfies the shared product outcome.
+Under [ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md) and
+[ADR 0017](../adr/0017-incumbent-baseline-does-not-veto-native-cutover.md), three
+clean content-addressed schema-v2 paired DGX rounds with native `3/3` and
+non-regression, current requalification, and reviewed Test Center comparison
+artifacts are still required before any cutover claim.
 
 The follow-up implementation lives under
 `services/ade-api/src/ade_api/features/agent_runtime_v3/`. It adds an opt-in
@@ -740,9 +743,10 @@ models into one score. Test Center owns content-addressed paired v2/v3 artifacts
 the common conversational and durable-user-fact outcome. The canonical native matrix
 proves v3-only subject isolation, retrieval, compaction, false-memory prevention,
 tools, and trace semantics. Deterministic conformance proves retry, cancellation, and
-idempotency contracts. Three clean paired DGX rounds, three native qualification
-rounds, conformance, and a rollback rehearsal are all required before a release claim;
-llama-server remains compatibility evidence until independently qualified.
+idempotency contracts. Three clean schema-v2 paired DGX candidate rounds with native
+`3/3` and non-regression, three native qualification rounds, conformance, and a
+rollback rehearsal are all required before a release claim; llama-server remains
+compatibility evidence until independently qualified.
 
 ### Phase 5: Fresh-Start Cutover
 
@@ -784,8 +788,10 @@ Replacement work may not cut over until all are true:
   disclosure.
 - llama-server passes the defined compatibility protocol and memory gate.
 - Full Python tests, Ruff, `make check`, and live artifacts pass.
-- ADR 0016's evidence gate is satisfied with current requalification and three clean
-  paired DGX Test Center rounds; implementation authorization is not evidence.
+- ADR 0016 and ADR 0017's evidence gate is satisfied with current requalification
+  and three clean schema-v2 paired DGX Test Center rounds where native passes every
+  round and does not trail the observed incumbent; implementation authorization is
+  not evidence.
 
 ## Open Questions
 
