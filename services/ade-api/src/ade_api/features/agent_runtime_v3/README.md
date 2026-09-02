@@ -25,11 +25,20 @@ dual-write behavior.
   schema creation path. `metadata.py` intentionally keeps the reviewed relational
   graph together while repositories remain split by domain.
 - `executor.py`, `reviewer.py`, and `fact_registry.py` contain the model/tool loop,
-  dedicated review protocol, and allowed durable-fact vocabulary.
+  dedicated review protocol, and allowed durable-fact vocabulary. `tool_policy.py`
+  resolves versioned explicit external-action requirements independently of model
+  inference and evaluation expectations.
 
 The conversation model may call only its definition-selected curated tools:
 subject-bound `search_memory` and the deterministic preview `get_weather` fixture.
-It cannot write memory or select a subject. A separate reviewer proposes closed
+Available tools remain discretionary unless the current request unambiguously
+matches the versioned explicit-action policy. A required action uses exact named
+function selection and fails closed without a hidden repair if the model returns
+final text, another tool, or malformed arguments. Tool results, including typed
+failures, are authoritative and requirement events contain no user text. Evaluation
+availability and expected observations are separate fields. See
+[ADR 0014](../../../../../../docs/adr/0014-curated-tool-invocation-and-external-source-authority.md).
+The model cannot write memory or select a subject. A separate reviewer proposes closed
 typed operations bound to user-authored evidence. ADE generates a contiguous-prefix
 summary before context assembly when more than 64 messages are unsummarized or
 their estimated size exceeds the recent-history budget. It retains up to the newest

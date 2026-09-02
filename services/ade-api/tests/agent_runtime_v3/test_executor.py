@@ -10,6 +10,10 @@ from ade_api.features.agent_runtime_v3.executor import (
     ConversationExecutor,
     curated_tools,
 )
+from ade_api.features.agent_runtime_v3.tool_policy import (
+    TOOL_USE_POLICY,
+    ToolRequirement,
+)
 
 
 class _Transport:
@@ -181,6 +185,186 @@ def test_executor_dispatches_the_enabled_curated_weather_tool() -> None:
             "error_type": None,
         }
     ]
+
+
+def test_enabled_tools_add_an_evidence_bound_usage_policy() -> None:
+    transport = _Transport(
+        [
+            {
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {"role": "assistant", "content": "Hello."},
+                    }
+                ]
+            }
+        ]
+    )
+
+    asyncio.run(
+        ConversationExecutor(transport).execute(
+            model_key="source::model",
+            messages=[
+                {"role": "system", "content": "persona"},
+                {"role": "user", "content": "ordinary dialogue"},
+            ],
+            tools=curated_tools(("get_weather",)),
+            timeout_seconds=30,
+            max_output_tokens=100,
+        )
+    )
+
+    payload = transport.calls[0][0]
+    assert payload["tool_choice"] == "auto"
+    assert payload["messages"] == [
+        {"role": "system", "content": f"persona\n\n{TOOL_USE_POLICY}"},
+        {"role": "user", "content": "ordinary dialogue"},
+    ]
+
+
+def test_required_tool_is_forced_once_and_a_failed_result_can_be_explained() -> None:
+    transport = _Transport(
+        [
+            {
+                "choices": [
+                    {
+                        "finish_reason": "tool_calls",
+                        "message": {
+                            "role": "assistant",
+                            "tool_calls": [
+                                {
+                                    "id": "weather-required",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "get_weather",
+                                        "arguments": '{"city":"FAIL_CITY"}',
+                                    },
+                                }
+                            ],
+                        },
+                    }
+                ]
+            },
+            {
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {
+                            "role": "assistant",
+                            "content": "The weather provider is unavailable.",
+                        },
+                    }
+                ]
+            },
+        ]
+    )
+    requirement = ToolRequirement(
+        tool_name="get_weather", capability="weather.current_lookup"
+    )
+
+    result = asyncio.run(
+        ConversationExecutor(transport).execute(
+            model_key="source::model",
+            messages=[{"role": "user", "content": "Check FAIL_CITY weather."}],
+            tools=curated_tools(("get_weather",)),
+            tool_requirement=requirement,
+            timeout_seconds=30,
+            max_output_tokens=100,
+        )
+    )
+
+    assert transport.calls[0][0]["tool_choice"] == {
+        "type": "function",
+        "function": {"name": "get_weather"},
+    }
+    assert transport.calls[1][0]["tool_choice"] == "auto"
+    assert result.tool_requirement == requirement
+    assert result.tool_requirement_satisfied is True
+    assert result.tool_events[0]["succeeded"] is False
+
+
+def test_required_tool_cannot_be_replaced_by_plausible_final_text() -> None:
+    transport = _Transport(
+        [
+            {
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {
+                            "role": "assistant",
+                            "content": "The weather tool failed.",
+                        },
+                    }
+                ]
+            }
+        ]
+    )
+
+    with pytest.raises(RuntimeValidationError) as exc_info:
+        asyncio.run(
+            ConversationExecutor(transport).execute(
+                model_key="source::model",
+                messages=[{"role": "user", "content": "Check the weather."}],
+                tools=curated_tools(("get_weather",)),
+                tool_requirement=ToolRequirement(
+                    tool_name="get_weather", capability="weather.current_lookup"
+                ),
+                timeout_seconds=30,
+                max_output_tokens=100,
+            )
+        )
+
+    assert exc_info.value.detail_code == "conversation_required_tool_missing"
+    assert len(transport.calls) == 1
+
+
+def test_required_tool_rejects_a_different_model_selected_tool() -> None:
+    transport = _Transport(
+        [
+            {
+                "choices": [
+                    {
+                        "finish_reason": "tool_calls",
+                        "message": {
+                            "role": "assistant",
+                            "tool_calls": [
+                                {
+                                    "id": "wrong-tool",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "search_memory",
+                                        "arguments": '{"query":"weather"}',
+                                    },
+                                }
+                            ],
+                        },
+                    }
+                ]
+            }
+        ]
+    )
+
+    async def search(_query: str, _limit: int):
+        return []
+
+    with pytest.raises(RuntimeValidationError) as exc_info:
+        asyncio.run(
+            ConversationExecutor(transport).execute(
+                model_key="source::model",
+                messages=[{"role": "user", "content": "Check the weather."}],
+                tools=curated_tools(
+                    ("get_weather", "search_memory"), search_memory=search
+                ),
+                tool_requirement=ToolRequirement(
+                    tool_name="get_weather", capability="weather.current_lookup"
+                ),
+                timeout_seconds=30,
+                max_output_tokens=100,
+            )
+        )
+
+    assert exc_info.value.detail_code == "conversation_required_tool_mismatch"
+    assert len(transport.calls) == 1
 
 
 def test_weather_provider_failure_is_visible_and_conversation_continues() -> None:

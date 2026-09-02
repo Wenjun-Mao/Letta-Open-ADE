@@ -556,7 +556,7 @@ def _passing_case_evidence(case, round_index: int, conversation_fingerprint: str
                     name=name,
                     succeeded=not case.require_failed_tool_result,
                 )
-                for name in case.required_tools
+                for name in case.expected_tool_observations
             )
         event_observations = (
             EventObservation(type="model.request"),

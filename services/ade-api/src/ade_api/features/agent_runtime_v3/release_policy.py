@@ -29,6 +29,7 @@ PRODUCTION_POLICY_INPUTS: Final[dict[str, tuple[str, ...]]] = {
         "services/ade-api/src/ade_api/features/agent_runtime_v3/definition_service.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/executor.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/reviewer.py",
+        "services/ade-api/src/ade_api/features/agent_runtime_v3/tool_policy.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/turn_execution.py",
     ),
     "tool": (
@@ -36,6 +37,7 @@ PRODUCTION_POLICY_INPUTS: Final[dict[str, tuple[str, ...]]] = {
         "services/ade-api/src/ade_api/features/agent_runtime_v3/definition_service.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/deployments.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/executor.py",
+        "services/ade-api/src/ade_api/features/agent_runtime_v3/tool_policy.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/turn_execution.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/worker_events.py",
     ),
@@ -94,6 +96,7 @@ PRODUCTION_POLICY_INPUTS: Final[dict[str, tuple[str, ...]]] = {
         "services/ade-api/src/ade_api/features/agent_runtime_v3/router_transport.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/run_service.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/service_protocol.py",
+        "services/ade-api/src/ade_api/features/agent_runtime_v3/tool_policy.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/turn_execution.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/worker.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/worker_claims.py",

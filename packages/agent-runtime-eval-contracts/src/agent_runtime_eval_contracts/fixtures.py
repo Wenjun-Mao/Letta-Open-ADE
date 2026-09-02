@@ -63,7 +63,8 @@ class StudyCase:
     turns: tuple[FixtureTurn, ...]
     fact_assertions: tuple[FactAssertion, ...]
     assistant_assertions: tuple[AssistantAssertion, ...]
-    required_tools: tuple[str, ...]
+    enabled_tools: tuple[str, ...]
+    expected_tool_observations: tuple[str, ...]
     require_failed_tool_result: bool
     profile_token_override: int | None
 
@@ -140,6 +141,20 @@ def _case(value: object) -> StudyCase:
         if turn.conversation_key not in conversations:
             raise FixtureError(f"{key} turn references {turn.conversation_key}")
 
+    enabled_tools = _strings(item.get("enabled_tools"))
+    expected_tool_observations = _strings(item.get("expected_tool_observations"))
+    if len(enabled_tools) != len(set(enabled_tools)):
+        raise FixtureError(f"{key}.enabled_tools must be unique")
+    if len(expected_tool_observations) != len(set(expected_tool_observations)):
+        raise FixtureError(f"{key}.expected_tool_observations must be unique")
+    unavailable_expectations = sorted(
+        set(expected_tool_observations) - set(enabled_tools)
+    )
+    if unavailable_expectations:
+        raise FixtureError(
+            f"{key} expects observations for disabled tools: {unavailable_expectations}"
+        )
+
     return StudyCase(
         key=key,
         description=str(item.get("description") or "").strip(),
@@ -177,7 +192,8 @@ def _case(value: object) -> StudyCase:
             _assistant_assertion(_object(assertion, "assistant_assertion"))
             for assertion in _list(item.get("assistant_assertions"))
         ),
-        required_tools=_strings(item.get("required_tools")),
+        enabled_tools=enabled_tools,
+        expected_tool_observations=expected_tool_observations,
         require_failed_tool_result=bool(item.get("require_failed_tool_result", False)),
         profile_token_override=(
             int(item["profile_token_override"])

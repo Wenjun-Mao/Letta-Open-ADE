@@ -5,6 +5,7 @@ from typing import Any
 from .events import append_run_event
 from .persistence.runs import RunRepository
 from .provider_tracing import AttemptTrace
+from .tool_policy import ToolRequirement
 from .turn_execution import AttemptResult
 
 
@@ -73,6 +74,8 @@ async def append_success_events(
         request_count=result.executor.model_request_count,
         provider_request_ids=result.executor.provider_request_ids,
         tool_events=result.executor.tool_events,
+        tool_requirement=result.executor.tool_requirement,
+        tool_requirement_satisfied=result.executor.tool_requirement_satisfied,
         causation_id=str(context_event["id"]),
     )
     reviewer_event_id = await _append_model_rounds(
@@ -238,9 +241,22 @@ async def _append_conversation_trace(
     request_count: int,
     provider_request_ids: list[str | None],
     tool_events: list[dict[str, Any]],
+    tool_requirement: ToolRequirement | None,
+    tool_requirement_satisfied: bool,
     causation_id: str | None,
 ) -> str | None:
     last_event_id = causation_id
+    requirement_event_written = False
+    if tool_requirement is not None:
+        resolved = await append_run_event(
+            runs,
+            run_id=run_id,
+            event_type="tool.requirement.resolved",
+            payload=tool_requirement.safe_payload(),
+            attempt=attempt,
+            causation_id=last_event_id,
+        )
+        last_event_id = str(resolved["id"])
     for request_number in range(1, request_count + 1):
         requested = await append_run_event(
             runs,
@@ -280,6 +296,27 @@ async def _append_conversation_trace(
                 tool=tool,
                 causation_id=str(response["id"]),
             )
+            if (
+                tool_requirement is not None
+                and not requirement_event_written
+                and str(tool["name"]) == tool_requirement.tool_name
+            ):
+                satisfied = await append_run_event(
+                    runs,
+                    run_id=run_id,
+                    event_type="tool.requirement.satisfied",
+                    payload=tool_requirement.safe_payload(),
+                    attempt=attempt,
+                    causation_id=last_event_id,
+                )
+                last_event_id = str(satisfied["id"])
+                requirement_event_written = True
+    if tool_requirement is not None and (
+        not tool_requirement_satisfied or not requirement_event_written
+    ):
+        raise ValueError(
+            "successful executor result did not satisfy its tool requirement"
+        )
     return last_event_id
 
 

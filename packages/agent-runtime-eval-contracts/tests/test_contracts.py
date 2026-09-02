@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from agent_runtime_eval_contracts import (
     DeploymentRole,
     EventObservation,
     FactObservation,
+    FixtureError,
     QualificationRound,
     ReleaseTarget,
     ToolObservation,
@@ -99,6 +101,36 @@ def test_package_data_exposes_the_canonical_fixture_suites() -> None:
     assert select_cases(cases, ("correction_chain",))[0].key == "correction_chain"
 
 
+def test_fixture_cannot_expect_an_observation_from_a_disabled_tool(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "cases.json"
+    path.write_text(
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "key": "invalid-tool-contract",
+                        "conversations": {
+                            "primary": {
+                                "agent_key": "primary",
+                                "subject_key": "primary",
+                            }
+                        },
+                        "turns": [{"conversation_key": "primary", "user": "hello"}],
+                        "enabled_tools": [],
+                        "expected_tool_observations": ["get_weather"],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(FixtureError, match="disabled tools"):
+        load_cases(path)
+
+
 def test_score_case_uses_normalized_observations_without_runtime_dependencies() -> None:
     case = select_cases(load_cases(study_cases_path()), ("weather_tool_failure",))[0]
 
@@ -135,7 +167,11 @@ def test_score_case_uses_normalized_observations_without_runtime_dependencies() 
                 "visible_markers": [],
                 "pass": True,
             },
-            {"kind": "required_tool", "tool_name": "get_weather", "pass": True},
+            {
+                "kind": "expected_tool_observation",
+                "tool_name": "get_weather",
+                "pass": True,
+            },
             {"kind": "failed_tool_was_observed", "pass": True},
             {"kind": "all_runs_succeeded", "pass": True},
             {"kind": "normalized_trace_preserved", "pass": True},
@@ -157,7 +193,7 @@ def test_score_case_uses_normalized_observations_without_runtime_dependencies() 
                         "pass": True,
                     },
                     {
-                        "kind": "required_tool",
+                        "kind": "expected_tool_observation",
                         "tool_name": "get_weather",
                         "pass": True,
                     },

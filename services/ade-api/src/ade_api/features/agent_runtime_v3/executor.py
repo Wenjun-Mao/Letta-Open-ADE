@@ -20,13 +20,17 @@ from .compaction import (
 from .errors import RuntimeValidationError
 from .provider_tracing import safe_provider_request_id
 from .router_transport import RouterTransport
+from .tool_policy import TOOL_USE_POLICY, ToolRequirement
 
 
 SEARCH_MEMORY_TOOL = {
     "type": "function",
     "function": {
         "name": "search_memory",
-        "description": "Search older committed facts for the current memory subject.",
+        "description": (
+            "Search older committed facts for the current memory subject. Call this "
+            "for every explicit deep-memory search request; do not invent results."
+        ),
         "parameters": {
             "type": "object",
             "additionalProperties": False,
@@ -43,7 +47,11 @@ WEATHER_TOOL = {
     "type": "function",
     "function": {
         "name": "get_weather",
-        "description": "Return deterministic preview weather for a named city.",
+        "description": (
+            "Return deterministic preview weather for a named city. Call this for "
+            "every explicit weather lookup, including unfamiliar cities or requests "
+            "expected to fail; do not invent a result."
+        ),
         "parameters": {
             "type": "object",
             "additionalProperties": False,
@@ -97,6 +105,8 @@ class ExecutorResult:
     tool_events: list[dict[str, Any]]
     finish_reason: str
     provider_request_ids: list[str | None]
+    tool_requirement: ToolRequirement | None = None
+    tool_requirement_satisfied: bool = False
 
 
 def curated_tools(
@@ -136,6 +146,7 @@ class ConversationExecutor:
         timeout_seconds: float,
         max_output_tokens: int,
         tools: Mapping[str, CuratedTool] | None = None,
+        tool_requirement: ToolRequirement | None = None,
         max_model_requests: int = 6,
         # Kept only for callers of the original preview API. Runtime execution
         # supplies ``tools`` and therefore never selects behavior by a boolean.
@@ -151,10 +162,16 @@ class ConversationExecutor:
             )
         )
         _validate_registry(enabled_tools)
-        working_messages = [dict(message) for message in messages]
+        _validate_tool_requirement(tool_requirement, enabled_tools)
+        working_messages = (
+            _with_tool_policy(messages)
+            if enabled_tools
+            else [dict(message) for message in messages]
+        )
         total_usage: dict[str, int] = {}
         tool_events: list[dict[str, Any]] = []
         request_ids: list[str | None] = []
+        requirement_satisfied = False
         for request_number in range(1, max_model_requests + 1):
             payload: dict[str, Any] = {
                 "model": model_key,
@@ -166,7 +183,12 @@ class ConversationExecutor:
                 payload.update(
                     {
                         "tools": [tool.definition for tool in enabled_tools.values()],
-                        "tool_choice": "auto",
+                        "tool_choice": (
+                            tool_requirement.tool_choice()
+                            if tool_requirement is not None
+                            and not requirement_satisfied
+                            else "auto"
+                        ),
                     }
                 )
             response = await self.transport.chat_completion(
@@ -183,9 +205,20 @@ class ConversationExecutor:
                         "Conversation model called a tool that is not enabled",
                         detail_code="conversation_tool_unexpected",
                     )
+                parsed_calls = [
+                    _parse_tool_call(raw_call, enabled_tools) for raw_call in tool_calls
+                ]
+                if tool_requirement is not None and not requirement_satisfied:
+                    if (
+                        len(parsed_calls) != 1
+                        or parsed_calls[0][1] != tool_requirement.tool_name
+                    ):
+                        raise RuntimeValidationError(
+                            "Conversation model did not call the required curated tool",
+                            detail_code="conversation_required_tool_mismatch",
+                        )
                 working_messages.append(message)
-                for raw_call in tool_calls:
-                    call_id, name, arguments = _parse_tool_call(raw_call, enabled_tools)
+                for call_id, name, arguments in parsed_calls:
                     result = await _execute_tool(enabled_tools[name], arguments)
                     tool_events.append(
                         {
@@ -198,6 +231,11 @@ class ConversationExecutor:
                             "error_type": result.error_type,
                         }
                     )
+                    if (
+                        tool_requirement is not None
+                        and name == tool_requirement.tool_name
+                    ):
+                        requirement_satisfied = True
                     working_messages.append(
                         {
                             "role": "tool",
@@ -209,6 +247,11 @@ class ConversationExecutor:
                         }
                     )
                 continue
+            if tool_requirement is not None and not requirement_satisfied:
+                raise RuntimeValidationError(
+                    "Conversation model returned final text before the required tool call",
+                    detail_code="conversation_required_tool_missing",
+                )
             content = str(message.get("content", "") or "").strip()
             if not content:
                 raise RuntimeValidationError(
@@ -222,6 +265,8 @@ class ConversationExecutor:
                 tool_events=tool_events,
                 finish_reason=finish_reason,
                 provider_request_ids=request_ids,
+                tool_requirement=tool_requirement,
+                tool_requirement_satisfied=requirement_satisfied,
             )
         raise RuntimeValidationError(
             "Conversation model exceeded its tool-step budget",
@@ -377,6 +422,33 @@ def _validate_registry(tools: Mapping[str, CuratedTool]) -> None:
                 "Curated tool registry key does not match tool schema",
                 detail_code="curated_tool_registry_invalid",
             )
+
+
+def _validate_tool_requirement(
+    requirement: ToolRequirement | None, tools: Mapping[str, CuratedTool]
+) -> None:
+    if requirement is not None and requirement.tool_name not in tools:
+        raise RuntimeValidationError(
+            "Required curated tool is not enabled for this conversation",
+            detail_code="curated_tool_requirement_invalid",
+        )
+
+
+def _with_tool_policy(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    working = [dict(message) for message in messages]
+    if any(
+        message.get("role") == "system"
+        and TOOL_USE_POLICY in str(message.get("content") or "")
+        for message in working
+    ):
+        return working
+    if working and working[0].get("role") == "system":
+        working[0]["content"] = (
+            f"{str(working[0].get('content') or '').rstrip()}\n\n{TOOL_USE_POLICY}"
+        )
+    else:
+        working.insert(0, {"role": "system", "content": TOOL_USE_POLICY})
+    return working
 
 
 def _first_choice(response: dict[str, Any]) -> tuple[dict[str, Any], str]:

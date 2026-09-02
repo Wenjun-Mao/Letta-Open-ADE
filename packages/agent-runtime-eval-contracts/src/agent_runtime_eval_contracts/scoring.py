@@ -117,9 +117,9 @@ def score_case(
     used_tools = {
         execution.name for result in all_results for execution in result.tools
     }
-    for tool_name in case.required_tools:
+    for tool_name in case.expected_tool_observations:
         check = {
-            "kind": "required_tool",
+            "kind": "expected_tool_observation",
             "tool_name": tool_name,
             "pass": tool_name in used_tools,
         }

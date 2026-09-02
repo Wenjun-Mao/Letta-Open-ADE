@@ -56,7 +56,8 @@ class _Case:
     prelude_messages: tuple[object, ...] = ()
     fact_assertions: tuple[object, ...] = ()
     assistant_assertions: tuple[object, ...] = ()
-    required_tools: tuple[str, ...] = ()
+    enabled_tools: tuple[str, ...] = ()
+    expected_tool_observations: tuple[str, ...] = ()
     require_failed_tool_result: bool = False
 
 
@@ -209,14 +210,14 @@ def test_normal_turn_and_retry_are_normalized_against_shared_contracts() -> None
     asyncio.run(scenario())
 
 
-def test_case_definitions_enable_search_and_only_required_curated_tools() -> None:
+def test_case_definitions_enable_search_and_only_declared_curated_tools() -> None:
     async def scenario() -> None:
         client = _FakeClient()
         case = _Case(
             key="weather",
             conversations={"primary": ("primary", "primary")},
             turns=(_Turn("primary", "Weather in Toronto?"),),
-            required_tools=("get_weather",),
+            enabled_tools=("get_weather",),
         )
 
         await execute_case(

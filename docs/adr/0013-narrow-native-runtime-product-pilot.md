@@ -4,7 +4,9 @@
 - Date: 2026-08-30
 - Related: [ADR 0009](0009-ade-owned-agent-runtime.md),
   [ADR 0010](0010-production-path-runtime-qualification.md), and
-  [ADR 0011](0011-agent-runtime-operational-readiness.md)
+  [ADR 0011](0011-agent-runtime-operational-readiness.md), with curated invocation
+  semantics defined by
+  [ADR 0014](0014-curated-tool-invocation-and-external-source-authority.md)
 
 ## Context
 

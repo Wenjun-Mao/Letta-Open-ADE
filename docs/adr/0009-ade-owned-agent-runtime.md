@@ -194,6 +194,8 @@ cutover is approved.
   not qualify the `/api/v3` implementation.
 - Apply the worker-readiness and safe provider-failure evidence rules in
   [ADR 0011](0011-agent-runtime-operational-readiness.md).
+- Apply the availability, explicit-action, external-result, and no-hidden-repair
+  rules in [ADR 0014](0014-curated-tool-invocation-and-external-source-authority.md).
 
 ## Implementation Status
 

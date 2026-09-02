@@ -220,6 +220,72 @@ def test_router_rewrites_model_and_preserves_payload(monkeypatch) -> None:
     assert captured["payload"]["reasoning"] == {"effort": "low"}
 
 
+@pytest.mark.parametrize(
+    ("source_id", "adapter"),
+    [
+        ("dgx_vllm", "vllm_openai"),
+        ("local_llama_server", "llama_cpp_server"),
+    ],
+)
+def test_router_preserves_exact_named_tool_selection(
+    monkeypatch: pytest.MonkeyPatch, source_id: str, adapter: str
+) -> None:
+    captured: dict[str, Any] = {}
+    source = RouterSourceConfig(
+        id=source_id,
+        label="Local model",
+        base_url="http://provider.invalid/v1",
+        adapter=adapter,
+        enabled_for=["agent_studio"],
+    )
+    model = RoutedModel(
+        router_model_id=f"{source_id}::model",
+        source_id=source_id,
+        source_label=source.label,
+        source_kind="openai-compatible",
+        source_adapter=adapter,
+        source_base_url=source.base_url,
+        module_visibility=("agent_studio",),
+        provider_model_id="model",
+        model_type="llm",
+        letta_handle=f"openai-proxy/{source_id}::model",
+        agent_studio_available=True,
+        comment_lab_available=False,
+        label_lab_available=False,
+        structured_output_mode="json_schema",
+    )
+
+    async def fake_forward(
+        _application, _source: RouterSourceConfig, payload: dict[str, Any]
+    ):
+        captured["payload"] = payload
+        return JSONResponse({"ok": True})
+
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(
+        router_app, "catalog_service", _FakeCatalog(source=source, model=model)
+    )
+    monkeypatch.setattr(router_app, "forward_chat_completion", fake_forward)
+    selection = {
+        "type": "function",
+        "function": {"name": "get_weather"},
+    }
+
+    response = TestClient(router_app.app).post(
+        "/v1/chat/completions",
+        json={
+            "model": f"{source_id}::model",
+            "messages": [{"role": "user", "content": "weather"}],
+            "tools": [{"type": "function", "function": {"name": "get_weather"}}],
+            "tool_choice": selection,
+        },
+        headers={"Authorization": "Bearer router-token"},
+    )
+
+    assert response.status_code == 200
+    assert captured["payload"]["tool_choice"] == selection
+
+
 def test_router_injects_profile_sampling_defaults_for_vllm_when_omitted(
     monkeypatch,
 ) -> None:

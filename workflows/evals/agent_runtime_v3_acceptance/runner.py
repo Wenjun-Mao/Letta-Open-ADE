@@ -307,7 +307,7 @@ def _normalize_case(
 
 
 def _case_tool_names(case: object) -> tuple[str, ...]:
-    requested = ("search_memory", *tuple(getattr(case, "required_tools", ())))
+    requested = ("search_memory", *tuple(getattr(case, "enabled_tools", ())))
     return tuple(dict.fromkeys(str(name) for name in requested))
 
 

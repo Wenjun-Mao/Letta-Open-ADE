@@ -9,6 +9,7 @@ from typing import Any
 from uuid import uuid4
 
 from .router_transport import RouterRequestError
+from .tool_policy import ToolRequirement
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,37 @@ class AttemptTrace:
 
     def normalized_events(self) -> tuple[NormalizedTraceEvent, ...]:
         return tuple(self._events)
+
+    def record_tool_requirement_resolved(self, requirement: ToolRequirement) -> None:
+        self._events.append(
+            NormalizedTraceEvent(
+                event_type="tool.requirement.resolved",
+                payload=requirement.safe_payload(),
+            )
+        )
+
+    def record_tool_requirement_satisfied(self, requirement: ToolRequirement) -> None:
+        self._events.append(
+            NormalizedTraceEvent(
+                event_type="tool.requirement.satisfied",
+                payload=requirement.safe_payload(),
+            )
+        )
+
+    def record_tool_requirement_unmet(
+        self, requirement: ToolRequirement, *, detail_code: str
+    ) -> None:
+        if not re.fullmatch(r"[a-z][a-z0-9_]{0,127}", detail_code):
+            raise ValueError("detail_code must be a bounded snake-case identifier")
+        self._events.append(
+            NormalizedTraceEvent(
+                event_type="tool.requirement.unmet",
+                payload={
+                    **requirement.safe_payload(),
+                    "error_detail_code": detail_code,
+                },
+            )
+        )
 
     def _start(
         self,

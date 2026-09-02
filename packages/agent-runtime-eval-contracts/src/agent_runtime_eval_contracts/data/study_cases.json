@@ -129,7 +129,8 @@
       "assistant_assertions": [
         {"conversation_key": "primary", "contains_any": ["Royal Ontario Museum", "皇家安大略博物馆"]}
       ],
-      "required_tools": ["search_memory"]
+      "enabled_tools": ["search_memory"],
+      "expected_tool_observations": ["search_memory"]
     },
     {
       "key": "long_history_compaction",
@@ -179,7 +180,8 @@
       "assistant_assertions": [
         {"conversation_key": "primary", "contains_any": ["21", "clear", "晴"]}
       ],
-      "required_tools": ["get_weather"]
+      "enabled_tools": ["get_weather"],
+      "expected_tool_observations": ["get_weather"]
     },
     {
       "key": "weather_tool_failure",
@@ -190,7 +192,8 @@
       "turns": [
         {"conversation_key": "primary", "user": "请查询FAIL_CITY的天气；如果工具失败就直接说明。"}
       ],
-      "required_tools": ["get_weather"],
+      "enabled_tools": ["get_weather"],
+      "expected_tool_observations": ["get_weather"],
       "require_failed_tool_result": true
     }
   ]

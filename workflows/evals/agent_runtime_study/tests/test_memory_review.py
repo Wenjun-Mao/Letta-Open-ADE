@@ -506,7 +506,8 @@ def test_reviewer_failure_commits_neither_assistant_nor_memory() -> None:
                     contains_any=("Hi Alice",),
                 ),
             ),
-            required_tools=(),
+            enabled_tools=(),
+            expected_tool_observations=(),
             require_failed_tool_result=False,
             profile_token_override=None,
         )

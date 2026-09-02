@@ -42,7 +42,7 @@ provider-facing boundary for normal discovery and generation.
 | Evals and provider probes | `workflows/evals/` | workflow-local `README.md` and `run.py` |
 | Native agent-runtime preview | `services/ade-api/src/ade_api/features/agent_runtime_v3/` | feature README, thin application/worker coordinators, and owning service modules |
 | Native agent-runtime research evidence | `workflows/evals/agent_runtime_study/` | workflow README, [study report](architecture/agent-runtime-replacement-study.md), and accepted [ADR 0009](adr/0009-ade-owned-agent-runtime.md) |
-| Native agent-runtime production qualification | `workflows/evals/agent_runtime_v3_acceptance/` | workflow README, worker-health preflight, case-filtered diagnostic CLI, policy registry, reviewed promotion command, [ADR 0010](adr/0010-production-path-runtime-qualification.md), and [ADR 0011](adr/0011-agent-runtime-operational-readiness.md) |
+| Native agent-runtime production qualification | `workflows/evals/agent_runtime_v3_acceptance/` | workflow README, worker-health preflight, case-filtered diagnostic CLI, policy registry, reviewed promotion command, [ADR 0010](adr/0010-production-path-runtime-qualification.md), [ADR 0011](adr/0011-agent-runtime-operational-readiness.md), and curated invocation [ADR 0014](adr/0014-curated-tool-invocation-and-external-source-authority.md) |
 | Live smoke coverage | `workflows/smoke/` | named smoke script or `make smoke` |
 | Compose support files | `infra/` | `compose.yaml` and the relevant `infra/` asset |
 
@@ -102,6 +102,7 @@ for the persona projection contract.
 | Diagnose v3 worker/provider readiness | authenticated `/api/v3/worker-health`, run events, and [ADR 0011](adr/0011-agent-runtime-operational-readiness.md) |
 | Qualify the production v3 path | `workflows/evals/agent_runtime_v3_acceptance/` through Test Center or its CLI |
 | Change the separate v3 product pilot | web `native-runtime-preview/`, API `preview_session_service.py`, and [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md) |
+| Change curated tool availability or required invocation | `features/agent_runtime_v3/tool_policy.py`, eval availability/observation contracts, and [ADR 0014](adr/0014-curated-tool-invocation-and-external-source-authority.md) |
 | Regenerate API artifacts | `uv run python scripts/export_openapi.py` |
 | Diagnose the Compose stack | `scripts/collect_diagnostics.sh .env` |
 

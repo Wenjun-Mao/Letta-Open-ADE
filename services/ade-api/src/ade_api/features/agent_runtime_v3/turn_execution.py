@@ -34,6 +34,7 @@ from .release_policy import (
 )
 from .reviewer import MemoryReviewer, ReviewerResult
 from .router_transport import RouterTransport
+from .tool_policy import resolve_tool_requirement
 
 
 @dataclass(frozen=True)
@@ -231,17 +232,47 @@ class TurnExecution:
             )
             return [_tool_fact(item) for item in rows]
 
-        executor_result = await conversation_executor.execute(
-            model_key=str(conversation_deployment["route_alias"]),
-            messages=built_context.messages,
-            timeout_seconds=_remaining(deadline),
-            max_output_tokens=budget.max_output_tokens,
-            max_model_requests=_max_model_requests(conversation_deployment),
-            tools=curated_tools(
-                tuple(str(name) for name in definition["tool_names"]),
-                search_memory=search_memory,
-            ),
+        enabled_tool_names = tuple(str(name) for name in definition["tool_names"])
+        tool_requirement = resolve_tool_requirement(
+            str(current_user["content"]), enabled_tool_names
         )
+        if tool_requirement is not None:
+            trace.record_tool_requirement_resolved(tool_requirement)
+        try:
+            executor_result = await conversation_executor.execute(
+                model_key=str(conversation_deployment["route_alias"]),
+                messages=built_context.messages,
+                timeout_seconds=_remaining(deadline),
+                max_output_tokens=budget.max_output_tokens,
+                max_model_requests=_max_model_requests(conversation_deployment),
+                tools=curated_tools(
+                    enabled_tool_names,
+                    search_memory=search_memory,
+                ),
+                tool_requirement=tool_requirement,
+            )
+        except RuntimeValidationError as exc:
+            if tool_requirement is not None and exc.detail_code in {
+                "conversation_required_tool_missing",
+                "conversation_required_tool_mismatch",
+                "conversation_tool_call_malformed",
+                "conversation_tool_not_enabled",
+                "conversation_tool_arguments_invalid_json",
+                "conversation_tool_arguments_not_object",
+                "curated_tool_arguments_invalid",
+                "curated_tool_requirement_invalid",
+            }:
+                trace.record_tool_requirement_unmet(
+                    tool_requirement, detail_code=exc.detail_code
+                )
+            raise
+        if tool_requirement is not None:
+            if not executor_result.tool_requirement_satisfied:
+                raise RuntimeValidationError(
+                    "Conversation executor lost its required tool outcome",
+                    detail_code="conversation_required_tool_missing",
+                )
+            trace.record_tool_requirement_satisfied(tool_requirement)
         recent_users = [
             message
             for message in state["messages"]
