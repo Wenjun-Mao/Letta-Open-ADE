@@ -151,7 +151,7 @@
         {"conversation_key": "primary", "user": "请简短确认我们之前聊过很多轮。"}
       ],
       "assistant_assertions": [
-        {"conversation_key": "primary", "contains_any": ["很多", "多轮", "聊过"]}
+        {"conversation_key": "primary", "contains_any": ["很多", "多轮", "聊过", "这么多", "這麼多"]}
       ]
     },
     {

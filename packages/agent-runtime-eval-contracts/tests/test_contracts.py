@@ -178,6 +178,31 @@ def test_score_case_uses_normalized_observations_without_runtime_dependencies() 
     }
 
 
+def test_long_history_score_accepts_a_natural_many_turns_confirmation() -> None:
+    case = select_cases(load_cases(study_cases_path()), ("long_history_compaction",))[0]
+
+    score = score_case(
+        case=case,
+        facts_by_subject={},
+        results_by_conversation={
+            "primary": (
+                TurnObservation(
+                    status="succeeded",
+                    assistant_text="是呀，不知不觉都这么多了呢。",
+                    candidate_assistant_text="是呀，不知不觉都这么多了呢。",
+                    events=(
+                        EventObservation(type="model.request"),
+                        EventObservation(type="model.response"),
+                        EventObservation(type="memory.review.request"),
+                    ),
+                ),
+            )
+        },
+    )
+
+    assert score["pass"] is True
+
+
 def test_fingerprint_and_qualification_sequence_are_deterministic() -> None:
     deployment = _deployment(DeploymentRole.CONVERSATION, DeploymentRole.REVIEWER)
     renamed = replace(
