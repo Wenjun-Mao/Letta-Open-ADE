@@ -52,6 +52,9 @@ def rehearse_rollback(
     legacy_health_passed = False
     legacy_web_image_built = False
     legacy_web_smoke_passed = False
+    legacy_web_api_read_passed = False
+    legacy_web_api_write_passed = False
+    legacy_web_api_cleanup_passed = False
     native_state_preserved = False
     legacy_source_verified = False
     error_code: str | None = None
@@ -66,7 +69,7 @@ def rehearse_rollback(
         legacy_source_verified = "/api/v2/agent-studio/" in legacy_source
         if not legacy_source_verified:
             raise RuntimeError("legacy_source_unavailable")
-        legacy_web_image_built, legacy_web_smoke_passed = _verify_legacy_web(
+        legacy_web = _verify_legacy_web(
             project_root=project_root,
             legacy_revision=legacy_revision,
             compose_network=compose_network,
@@ -75,6 +78,11 @@ def rehearse_rollback(
             client=http,
             sleep=sleep,
         )
+        legacy_web_image_built = legacy_web.image_built
+        legacy_web_smoke_passed = legacy_web.smoke_passed
+        legacy_web_api_read_passed = legacy_web.api_read_passed
+        legacy_web_api_write_passed = legacy_web.api_write_passed
+        legacy_web_api_cleanup_passed = legacy_web.api_cleanup_passed
         if not legacy_web_image_built or not legacy_web_smoke_passed:
             raise RuntimeError("legacy_web_unavailable")
         steps.append({"step": "verify_prior_v2_web_release", "passed": True})
@@ -163,6 +171,9 @@ def rehearse_rollback(
         "legacy_source_verified": legacy_source_verified,
         "legacy_web_image_built": legacy_web_image_built,
         "legacy_web_smoke_passed": legacy_web_smoke_passed,
+        "legacy_web_api_read_passed": legacy_web_api_read_passed,
+        "legacy_web_api_write_passed": legacy_web_api_write_passed,
+        "legacy_web_api_cleanup_passed": legacy_web_api_cleanup_passed,
         "legacy_health_passed": legacy_health_passed,
         "native_state_preserved": native_state_preserved,
         "native_state_before_sha256": state_before_sha256,

@@ -47,8 +47,9 @@ The Agent Studio release utilities are intentionally separate and fail closed:
 
 - `check_agent_studio_release_gate.py` validates the final content-addressed ledger.
 - `record_agent_studio_conformance.py` records exact deterministic runtime contracts.
-- `rehearse_agent_studio_rollback.py` proves the prior v2 web/API artifact and native
-  state preservation.
+- `rehearse_agent_studio_rollback.py` proves the prior v2 web/API artifact by creating,
+  reading, updating, re-reading, and purging a disposable Agent Studio agent through
+  the legacy web proxy, then verifies native state preservation.
 - `review_agent_studio_cutover.py` composes reviewed qualification, parity,
   conformance, and rollback evidence.
 

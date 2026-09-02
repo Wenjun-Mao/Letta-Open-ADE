@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 from datetime import UTC, datetime
 
@@ -7,7 +8,12 @@ import httpx
 import pytest
 
 from scripts.agent_studio_rollback_state import snapshot_native_state
-from scripts.agent_studio_rollback_web import _published_port
+from scripts.agent_studio_rollback_web import (
+    LegacyWebApiVerification,
+    LegacyWebVerification,
+    _published_port,
+    exercise_legacy_agent_studio_proxy,
+)
 from scripts.rehearse_agent_studio_rollback import rehearse_rollback
 
 
@@ -28,7 +34,13 @@ def test_rollback_rehearsal_proves_v2_health_and_preserves_v3_state(
     )
     monkeypatch.setattr(
         "scripts.rehearse_agent_studio_rollback._verify_legacy_web",
-        lambda **_kwargs: (True, True),
+        lambda **_kwargs: LegacyWebVerification(
+            image_built=True,
+            page_loaded=True,
+            api_read_passed=True,
+            api_write_passed=True,
+            api_cleanup_passed=True,
+        ),
     )
     calls: list[str] = []
 
@@ -83,10 +95,14 @@ def test_rollback_rehearsal_proves_v2_health_and_preserves_v3_state(
         now=lambda: datetime(2026, 9, 3, tzinfo=UTC),
     )
 
+    assert receipt["error_code"] is None, receipt
     assert receipt["rehearsed"] is True
     assert receipt["legacy_health_passed"] is True
     assert receipt["legacy_web_image_built"] is True
     assert receipt["legacy_web_smoke_passed"] is True
+    assert receipt["legacy_web_api_read_passed"] is True
+    assert receipt["legacy_web_api_write_passed"] is True
+    assert receipt["legacy_web_api_cleanup_passed"] is True
     assert receipt["native_state_preserved"] is True
     assert calls.count("/api/v3/agent-studio/sessions") == 2
     assert calls.count("/api/v3/agent-studio/sessions/c1/state") == 2
@@ -110,7 +126,13 @@ def test_rollback_rehearsal_fails_closed_when_v3_state_changes(
     )
     monkeypatch.setattr(
         "scripts.rehearse_agent_studio_rollback._verify_legacy_web",
-        lambda **_kwargs: (True, True),
+        lambda **_kwargs: LegacyWebVerification(
+            image_built=True,
+            page_loaded=True,
+            api_read_passed=True,
+            api_write_passed=True,
+            api_cleanup_passed=True,
+        ),
     )
     session_snapshots = iter(
         (
@@ -208,3 +230,162 @@ def test_legacy_web_port_parser_rejects_unusable_output() -> None:
     assert _published_port("127.0.0.1:49152\n") == 49152
     with pytest.raises(RuntimeError, match="legacy_web_port_invalid"):
         _published_port("")
+
+
+def test_legacy_web_proxy_exercises_disposable_v2_agent_read_write_and_purge() -> None:
+    calls: list[tuple[str, str, str]] = []
+    agent_id = "legacy-agent-1"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append((request.method, request.url.host, request.url.path))
+        assert request.url.host == "legacy-web.test"
+        if (
+            request.method == "GET"
+            and request.url.path == "/api/v2/model-catalog/options"
+        ):
+            return httpx.Response(
+                200,
+                json={
+                    "models": [{"key": "openai-proxy/test-model"}],
+                    "embeddings": [{"key": "letta/test-embedding"}],
+                    "prompts": [{"key": "chat_prompt"}],
+                    "personas": [{"key": "chat_persona"}],
+                    "defaults": {
+                        "prompt_key": "chat_prompt",
+                        "persona_key": "chat_persona",
+                        "embedding": "letta/test-embedding",
+                    },
+                },
+            )
+        if (
+            request.method == "POST"
+            and request.url.path == "/api/v2/agent-studio/agents"
+        ):
+            payload = json.loads(request.content)
+            assert payload["scenario"] == "chat"
+            assert payload["model"] == "openai-proxy/test-model"
+            assert payload["prompt_key"] == "chat_prompt"
+            assert payload["persona_key"] == "chat_persona"
+            assert payload["embedding"] == "letta/test-embedding"
+            return httpx.Response(200, json={"id": agent_id})
+        if (
+            request.method == "GET"
+            and request.url.path
+            == f"/api/v2/agent-studio/agents/{agent_id}/persistent-state"
+        ):
+            memory_value = (
+                "before"
+                if len([call for call in calls if call[0] == "PATCH"]) == 0
+                else "rollback marker"
+            )
+            return httpx.Response(
+                200,
+                json={"memory_blocks": [{"label": "human", "value": memory_value}]},
+            )
+        if (
+            request.method == "PATCH"
+            and request.url.path
+            == f"/api/v2/agent-studio/agents/{agent_id}/memory/human"
+        ):
+            assert json.loads(request.content) == {"value": "rollback marker"}
+            return httpx.Response(
+                200,
+                json={"value_before": "before", "value_after": "rollback marker"},
+            )
+        if (
+            request.method == "DELETE"
+            and request.url.path == f"/api/v2/agent-studio/agents/{agent_id}/purge"
+        ):
+            return httpx.Response(
+                200, json={"ok": True, "id": agent_id, "kind": "agent"}
+            )
+        raise AssertionError(f"Unexpected request: {request.method} {request.url}")
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        result = exercise_legacy_agent_studio_proxy(
+            client=client,
+            legacy_web_base_url="http://legacy-web.test",
+            agent_name="ade-rollback-agent",
+            memory_marker="rollback marker",
+        )
+
+    assert result == LegacyWebApiVerification(
+        api_read_passed=True,
+        api_write_passed=True,
+        api_cleanup_passed=True,
+    )
+    assert calls == [
+        ("GET", "legacy-web.test", "/api/v2/model-catalog/options"),
+        ("POST", "legacy-web.test", "/api/v2/agent-studio/agents"),
+        (
+            "GET",
+            "legacy-web.test",
+            f"/api/v2/agent-studio/agents/{agent_id}/persistent-state",
+        ),
+        (
+            "PATCH",
+            "legacy-web.test",
+            f"/api/v2/agent-studio/agents/{agent_id}/memory/human",
+        ),
+        (
+            "GET",
+            "legacy-web.test",
+            f"/api/v2/agent-studio/agents/{agent_id}/persistent-state",
+        ),
+        ("DELETE", "legacy-web.test", f"/api/v2/agent-studio/agents/{agent_id}/purge"),
+    ]
+
+
+def test_legacy_web_smoke_fails_when_proxy_cleanup_fails() -> None:
+    agent_id = "legacy-agent-1"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/api/v2/model-catalog/options":
+            return httpx.Response(
+                200,
+                json={
+                    "models": [{"key": "openai-proxy/test-model"}],
+                    "prompts": [{"key": "chat_prompt"}],
+                    "personas": [{"key": "chat_persona"}],
+                    "defaults": {
+                        "prompt_key": "chat_prompt",
+                        "persona_key": "chat_persona",
+                    },
+                },
+            )
+        if request.method == "POST":
+            return httpx.Response(200, json={"id": agent_id})
+        if request.method == "GET":
+            return httpx.Response(
+                200,
+                json={
+                    "memory_blocks": [{"label": "human", "value": "rollback marker"}]
+                },
+            )
+        if request.method == "PATCH":
+            return httpx.Response(200, json={"value_after": "rollback marker"})
+        if request.method == "DELETE":
+            return httpx.Response(500, json={"detail": "ignored"})
+        raise AssertionError(request.url.path)
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        result = exercise_legacy_agent_studio_proxy(
+            client=client,
+            legacy_web_base_url="http://legacy-web.test",
+            agent_name="ade-rollback-agent",
+            memory_marker="rollback marker",
+        )
+
+    assert result.api_read_passed is True
+    assert result.api_write_passed is True
+    assert result.api_cleanup_passed is False
+    assert (
+        LegacyWebVerification(
+            image_built=True,
+            page_loaded=True,
+            api_read_passed=result.api_read_passed,
+            api_write_passed=result.api_write_passed,
+            api_cleanup_passed=result.api_cleanup_passed,
+        ).smoke_passed
+        is False
+    )
