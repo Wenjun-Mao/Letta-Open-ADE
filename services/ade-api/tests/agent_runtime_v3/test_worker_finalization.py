@@ -5,6 +5,7 @@ import asyncio
 import pytest
 
 from ade_api.features.agent_runtime_v3 import worker_control, worker_finalization
+from ade_api.features.agent_runtime_v3.errors import RuntimeValidationError
 from ade_api.features.agent_runtime_v3.worker_claims import ClaimedRun
 from ade_api.features.agent_runtime_v3.provider_tracing import AttemptTrace
 from ade_api.features.agent_runtime_v3.worker_control import (
@@ -267,3 +268,46 @@ def test_terminal_fallback_persists_trace_and_redacts_exception_text(
     )
     assert "secret" not in str(runs.finished_run)
     assert leases.released is True
+
+
+def test_terminal_failure_persists_safe_validation_detail_code(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runs = _TerminalRuns()
+    leases = _OwnedLeases()
+    monkeypatch.setattr(worker_finalization, "RunRepository", lambda _connection: runs)
+    monkeypatch.setattr(
+        worker_finalization,
+        "ConversationLeaseRepository",
+        lambda _connection: leases,
+    )
+    finalizer = RunFinalizer(_Engine())  # type: ignore[arg-type]
+    claim = ClaimedRun(
+        run={"id": "run-1"},
+        lease_token="owned-token",
+        recovered=False,
+    )
+
+    asyncio.run(
+        finalizer.commit_failure(
+            claim,
+            "attempt-1",
+            RuntimeValidationError(
+                "private provider-derived detail",
+                detail_code="conversation_output_empty",
+            ),
+        )
+    )
+
+    expected_error = {
+        "error_code": "runtime_validation_error",
+        "error_detail_code": "conversation_output_empty",
+    }
+    assert runs.finished_attempts[0]["provider_outcome"] == expected_error
+    assert runs.events[-1]["payload"] == {"attempt_count": 1, **expected_error}
+    assert runs.finished_run is not None
+    assert runs.finished_run["error_message"] == (
+        "Agent Runtime v3 run failed (runtime_validation_error)"
+    )
+    assert "private provider-derived detail" not in repr(runs.finished_attempts)
+    assert "private provider-derived detail" not in repr(runs.events)

@@ -122,7 +122,15 @@ class _FakeClient:
         terminal_type = (
             "run.completed" if self.status == "succeeded" else f"run.{self.status}"
         )
-        events.append((terminal_type, {"usage": {"total_tokens": 12}}))
+        terminal_payload = {"usage": {"total_tokens": 12}}
+        if self.status == "failed":
+            terminal_payload.update(
+                {
+                    "error_code": "runtime_validation_error",
+                    "error_detail_code": "conversation_output_empty",
+                }
+            )
+        events.append((terminal_type, terminal_payload))
         prior_event_id = None
         request_ids: dict[tuple[str, int], str] = {}
         for sequence, (event_type, payload) in enumerate(events, start=1):
@@ -724,5 +732,13 @@ def test_failed_setup_run_preserves_terminal_evidence_before_cleanup() -> None:
         assert "run.failed" in {event.event_type for event in failed_case.events}
         assert failed_case.infrastructure["terminal_statuses"] == ["failed"]
         assert failed_case.infrastructure["all_terminal"] is True
+        assert {
+            "kind": "run_failure",
+            "pass": False,
+            "run_id": failed_case.setup_run_ids[0],
+            "stage": "unknown",
+            "error_code": "runtime_validation_error",
+            "error_detail_code": "conversation_output_empty",
+        } in failed_case.infrastructure["failures"]
 
     asyncio.run(scenario())

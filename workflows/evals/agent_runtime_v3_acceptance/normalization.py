@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import re
 from typing import Any
 
 from .client import SseEvent
@@ -198,6 +199,7 @@ def _normalize_run_events(
     last_sequence = 0
     seen_event_ids: set[str] = set()
     prior_events: dict[str, tuple[str, dict[str, Any]]] = {}
+    last_provider_stage = "unknown"
     for event in events:
         payload = dict(event.data.get("payload") or {})
         actual_run_id = str(event.data.get("run_id") or "")
@@ -245,6 +247,24 @@ def _normalize_run_events(
                     "error_code": str(payload.get("error_code") or "unknown"),
                 }
             )
+        if event_type in {
+            "model.request.started",
+            "model.response.completed",
+            *PROVIDER_TERMINAL_EVENT_TYPES,
+        }:
+            last_provider_stage = _safe_code(payload.get("stage"), default="unknown")
+        if event_type == "run.failed":
+            terminal_failure = {
+                "kind": "run_failure",
+                "pass": False,
+                "run_id": run_id,
+                "stage": last_provider_stage,
+                "error_code": _safe_code(payload.get("error_code"), default="unknown"),
+            }
+            detail_code = _safe_code(payload.get("error_detail_code"), default="")
+            if detail_code:
+                terminal_failure["error_detail_code"] = detail_code
+            failures.append(terminal_failure)
         if event_id:
             seen_event_ids.add(event_id)
             prior_events[event_id] = (event_type, payload)
@@ -350,6 +370,11 @@ def _usage(value: object) -> dict[str, int]:
         for key, item in value.items()
         if isinstance(item, int) and not isinstance(item, bool)
     }
+
+
+def _safe_code(value: object, *, default: str) -> str:
+    candidate = str(value or "")
+    return candidate if re.fullmatch(r"[a-z][a-z0-9_]{0,127}", candidate) else default
 
 
 def _assistant_content(state: dict[str, Any]) -> str:

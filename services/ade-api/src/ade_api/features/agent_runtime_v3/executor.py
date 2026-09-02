@@ -109,14 +109,18 @@ def curated_tools(
     requested = tuple(str(name) for name in names)
     if len(requested) != len(set(requested)):
         raise RuntimeValidationError(
-            "Conversation tool names must not contain duplicates"
+            "Conversation tool names must not contain duplicates",
+            detail_code="curated_tool_registry_invalid",
         )
     available: dict[str, CuratedTool] = {"get_weather": _weather_tool()}
     if search_memory is not None:
         available["search_memory"] = _search_memory_tool(search_memory)
     unknown = sorted(set(requested) - set(available))
     if unknown:
-        raise RuntimeValidationError(f"Unknown or unavailable curated tools: {unknown}")
+        raise RuntimeValidationError(
+            f"Unknown or unavailable curated tools: {unknown}",
+            detail_code="curated_tool_registry_invalid",
+        )
     return {name: available[name] for name in requested}
 
 
@@ -176,7 +180,8 @@ class ConversationExecutor:
             if isinstance(tool_calls, list) and tool_calls:
                 if not enabled_tools:
                     raise RuntimeValidationError(
-                        "Conversation model called a tool that is not enabled"
+                        "Conversation model called a tool that is not enabled",
+                        detail_code="conversation_tool_unexpected",
                     )
                 working_messages.append(message)
                 for raw_call in tool_calls:
@@ -207,7 +212,8 @@ class ConversationExecutor:
             content = str(message.get("content", "") or "").strip()
             if not content:
                 raise RuntimeValidationError(
-                    "Conversation model returned neither dialogue nor a tool call"
+                    "Conversation model returned neither dialogue nor a tool call",
+                    detail_code="conversation_output_empty",
                 )
             return ExecutorResult(
                 assistant_text=content,
@@ -217,7 +223,10 @@ class ConversationExecutor:
                 finish_reason=finish_reason,
                 provider_request_ids=request_ids,
             )
-        raise RuntimeValidationError("Conversation model exceeded its tool-step budget")
+        raise RuntimeValidationError(
+            "Conversation model exceeded its tool-step budget",
+            detail_code="conversation_tool_step_budget_exceeded",
+        )
 
     async def compact(
         self,
@@ -318,7 +327,8 @@ async def _execute_tool(tool: CuratedTool, arguments: dict[str, Any]) -> ToolRes
         validated = tool.validate_arguments(arguments)
     except (TypeError, ValueError) as exc:
         raise RuntimeValidationError(
-            f"{tool.name} arguments failed closed validation: {exc}"
+            f"{tool.name} arguments failed closed validation: {exc}",
+            detail_code="curated_tool_arguments_invalid",
         ) from exc
     try:
         return await tool.handler(validated)
@@ -364,18 +374,25 @@ def _validate_registry(tools: Mapping[str, CuratedTool]) -> None:
     for name, tool in tools.items():
         if name != tool.name:
             raise RuntimeValidationError(
-                "Curated tool registry key does not match tool schema"
+                "Curated tool registry key does not match tool schema",
+                detail_code="curated_tool_registry_invalid",
             )
 
 
 def _first_choice(response: dict[str, Any]) -> tuple[dict[str, Any], str]:
     choices = response.get("choices")
     if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-        raise RuntimeValidationError("Model response did not contain a choice")
+        raise RuntimeValidationError(
+            "Model response did not contain a choice",
+            detail_code="model_response_choice_missing",
+        )
     choice = choices[0]
     message = choice.get("message")
     if not isinstance(message, dict):
-        raise RuntimeValidationError("Model response choice did not contain a message")
+        raise RuntimeValidationError(
+            "Model response choice did not contain a message",
+            detail_code="model_response_message_missing",
+        )
     return dict(message), str(choice.get("finish_reason", "") or "")
 
 
@@ -383,15 +400,22 @@ def _parse_tool_call(
     raw_call: object, enabled_tools: Mapping[str, CuratedTool]
 ) -> tuple[str, str, dict[str, Any]]:
     if not isinstance(raw_call, dict):
-        raise RuntimeValidationError("Tool call must be an object")
+        raise RuntimeValidationError(
+            "Tool call must be an object",
+            detail_code="conversation_tool_call_malformed",
+        )
     call_id = str(raw_call.get("id", "") or "").strip()
     function = raw_call.get("function")
     if not call_id or not isinstance(function, dict):
-        raise RuntimeValidationError("Tool call requires id and function")
+        raise RuntimeValidationError(
+            "Tool call requires id and function",
+            detail_code="conversation_tool_call_malformed",
+        )
     name = str(function.get("name", "") or "").strip()
     if name not in enabled_tools:
         raise RuntimeValidationError(
-            f"Tool '{name}' is not enabled for this conversation"
+            f"Tool '{name}' is not enabled for this conversation",
+            detail_code="conversation_tool_not_enabled",
         )
     raw_arguments = function.get("arguments", "{}")
     try:
@@ -401,9 +425,15 @@ def _parse_tool_call(
             else raw_arguments
         )
     except json.JSONDecodeError as exc:
-        raise RuntimeValidationError(f"{name} arguments are invalid JSON") from exc
+        raise RuntimeValidationError(
+            f"{name} arguments are invalid JSON",
+            detail_code="conversation_tool_arguments_invalid_json",
+        ) from exc
     if not isinstance(arguments, dict):
-        raise RuntimeValidationError(f"{name} arguments must be an object")
+        raise RuntimeValidationError(
+            f"{name} arguments must be an object",
+            detail_code="conversation_tool_arguments_not_object",
+        )
     return call_id, name, arguments
 
 

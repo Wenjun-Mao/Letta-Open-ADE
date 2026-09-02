@@ -81,18 +81,20 @@ class AttemptTrace:
         response: dict[str, Any],
         started_at: float,
     ) -> None:
+        payload = {
+            "request_id": request_id,
+            "provider": "model_router",
+            "operation": operation,
+            "stage": stage,
+            "request_number": request_number,
+            "provider_request_id": _provider_request_id(response),
+            "latency_ms": _elapsed_ms(started_at),
+        }
+        payload.update(_safe_response_shape(operation, response))
         self._events.append(
             NormalizedTraceEvent(
                 event_type="model.response.completed",
-                payload={
-                    "request_id": request_id,
-                    "provider": "model_router",
-                    "operation": operation,
-                    "stage": stage,
-                    "request_number": request_number,
-                    "provider_request_id": _provider_request_id(response),
-                    "latency_ms": _elapsed_ms(started_at),
-                },
+                payload=payload,
             )
         )
 
@@ -263,6 +265,90 @@ def _model_key(payload: dict[str, Any]) -> str | None:
 
 def _provider_request_id(response: dict[str, Any]) -> str | None:
     return safe_provider_request_id(response.get("id"))
+
+
+def _safe_response_shape(operation: str, response: dict[str, Any]) -> dict[str, Any]:
+    if operation != "chat_completion":
+        return {}
+    choices = response.get("choices")
+    choices_state = _choices_state(response, choices)
+    raw_choice_count = len(choices) if isinstance(choices, list) else 0
+    choice = choices[0] if raw_choice_count and isinstance(choices[0], dict) else None
+    message = choice.get("message") if isinstance(choice, dict) else None
+    content = message.get("content") if isinstance(message, dict) else None
+    reasoning = message.get("reasoning_content") if isinstance(message, dict) else None
+    tool_calls = message.get("tool_calls") if isinstance(message, dict) else None
+    raw_tool_call_count = len(tool_calls) if isinstance(tool_calls, list) else 0
+    finish_reason = choice.get("finish_reason") if isinstance(choice, dict) else None
+    return {
+        "response_shape_version": 1,
+        "choices_state": choices_state,
+        "choice_count": min(raw_choice_count, 32),
+        "choice_count_overflow": raw_choice_count > 32,
+        "message_state": _object_state(choice, "message", message),
+        "content_state": _text_state(message, "content", content),
+        "reasoning_content_state": _text_state(message, "reasoning_content", reasoning),
+        "tool_calls_state": _list_state(message, "tool_calls", tool_calls),
+        "tool_call_count": min(raw_tool_call_count, 32),
+        "tool_call_count_overflow": raw_tool_call_count > 32,
+        "finish_reason": _safe_finish_reason(finish_reason),
+        "usage": _safe_usage(response.get("usage")),
+    }
+
+
+def _choices_state(response: dict[str, Any], value: object) -> str:
+    if "choices" not in response or value is None:
+        return "missing_or_null"
+    if not isinstance(value, list):
+        return "non_list"
+    if not value:
+        return "empty"
+    return "present" if isinstance(value[0], dict) else "first_not_object"
+
+
+def _object_state(container: object, key: str, value: object) -> str:
+    if not isinstance(container, dict) or key not in container or value is None:
+        return "missing_or_null"
+    return "present" if isinstance(value, dict) else "non_object"
+
+
+def _text_state(container: object, key: str, value: object) -> str:
+    if not isinstance(container, dict) or key not in container or value is None:
+        return "missing_or_null"
+    if not isinstance(value, str):
+        return "non_string"
+    return "present" if value.strip() else "empty"
+
+
+def _list_state(container: object, key: str, value: object) -> str:
+    if not isinstance(container, dict) or key not in container or value is None:
+        return "missing_or_null"
+    if not isinstance(value, list):
+        return "non_list"
+    return "present" if value else "empty"
+
+
+def _safe_finish_reason(value: object) -> str:
+    if value is None:
+        return "missing"
+    if not isinstance(value, str):
+        return "other"
+    candidate = value.strip().casefold()
+    allowed = {"stop", "length", "tool_calls", "content_filter", "function_call"}
+    return candidate if candidate in allowed else "other"
+
+
+def _safe_usage(value: object) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    allowed = {"prompt_tokens", "completion_tokens", "total_tokens"}
+    return {
+        key: min(item, 1_000_000_000)
+        for key in allowed
+        if isinstance((item := value.get(key)), int)
+        and not isinstance(item, bool)
+        and item >= 0
+    }
 
 
 def safe_provider_request_id(value: object) -> str | None:

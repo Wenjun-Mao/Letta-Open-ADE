@@ -131,6 +131,107 @@ def test_provider_success_records_provider_request_identity_and_stage_counter() 
     assert events[3].payload["provider_request_id"] == "provider-2"
 
 
+def test_provider_success_records_only_bounded_chat_response_shape() -> None:
+    async def succeed() -> dict[str, Any]:
+        return {
+            "id": "provider-safe",
+            "choices": [
+                {
+                    "finish_reason": "tool_calls",
+                    "message": {
+                        "content": "private assistant output",
+                        "reasoning_content": "private chain of thought",
+                        "tool_calls": [
+                            {
+                                "id": "private-call-id",
+                                "function": {
+                                    "name": "private_tool_name",
+                                    "arguments": '{"secret":"private"}',
+                                },
+                            }
+                        ],
+                    },
+                }
+            ],
+        }
+
+    trace, transport = _traced_transport(_StubTransport(succeed))
+    asyncio.run(
+        transport.chat_completion(
+            {"model": "source::model", "messages": []}, timeout_seconds=2
+        )
+    )
+
+    completed = trace.normalized_events()[-1]
+    assert completed.payload == {
+        "request_id": completed.payload["request_id"],
+        "provider": "model_router",
+        "operation": "chat_completion",
+        "stage": "conversation",
+        "request_number": 1,
+        "provider_request_id": "provider-safe",
+        "latency_ms": completed.payload["latency_ms"],
+        "response_shape_version": 1,
+        "choices_state": "present",
+        "choice_count": 1,
+        "choice_count_overflow": False,
+        "message_state": "present",
+        "content_state": "present",
+        "reasoning_content_state": "present",
+        "tool_calls_state": "present",
+        "tool_call_count": 1,
+        "tool_call_count_overflow": False,
+        "finish_reason": "tool_calls",
+        "usage": {},
+    }
+    rendered = repr(completed)
+    assert "private assistant output" not in rendered
+    assert "private chain of thought" not in rendered
+    assert "private_tool_name" not in rendered
+    assert "private-call-id" not in rendered
+
+
+@pytest.mark.parametrize(
+    ("response", "expected"),
+    [
+        ({}, ("missing_or_null", "missing_or_null", "missing_or_null")),
+        ({"choices": "private"}, ("non_list", "missing_or_null", "missing_or_null")),
+        ({"choices": []}, ("empty", "missing_or_null", "missing_or_null")),
+        (
+            {"choices": ["private"]},
+            ("first_not_object", "missing_or_null", "missing_or_null"),
+        ),
+        (
+            {"choices": [{"message": "private"}]},
+            ("present", "non_object", "missing_or_null"),
+        ),
+        (
+            {"choices": [{"message": {"content": "", "tool_calls": []}}]},
+            ("present", "present", "empty"),
+        ),
+    ],
+)
+def test_chat_response_shape_distinguishes_safe_structural_states(
+    response: dict[str, Any], expected: tuple[str, str, str]
+) -> None:
+    async def succeed() -> dict[str, Any]:
+        return response
+
+    trace, transport = _traced_transport(_StubTransport(succeed))
+    asyncio.run(
+        transport.chat_completion(
+            {"model": "source::model", "messages": []}, timeout_seconds=2
+        )
+    )
+
+    payload = trace.normalized_events()[-1].payload
+    assert (
+        payload["choices_state"],
+        payload["message_state"],
+        payload["tool_calls_state"],
+    ) == expected
+
+
 def test_cancelled_provider_request_gets_a_terminal_trace() -> None:
     async def cancel() -> dict[str, Any]:
         raise asyncio.CancelledError

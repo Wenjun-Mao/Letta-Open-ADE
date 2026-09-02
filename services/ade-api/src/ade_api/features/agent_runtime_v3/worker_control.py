@@ -145,7 +145,7 @@ class AttemptController:
             await runs.finish_attempt(
                 attempt_id,
                 status="cancelled" if isinstance(exc, RunCancelled) else "failed",
-                provider_outcome={"error_code": worker_error_code(exc)},
+                provider_outcome=worker_error_payload(exc),
                 finished_at=utc_now(),
             )
             trace_event_id = await append_attempt_trace(
@@ -163,7 +163,7 @@ class AttemptController:
                     if isinstance(exc, RunCancelled)
                     else "attempt.failed"
                 ),
-                payload={"error_code": worker_error_code(exc)},
+                payload=worker_error_payload(exc),
                 attempt=attempt,
                 causation_id=trace_event_id or started_event_id,
             )
@@ -197,7 +197,7 @@ class AttemptController:
                     "completed_attempt": completed_attempt,
                     "next_attempt": next_attempt,
                     "delay_seconds": round(delay, 6),
-                    "error_code": worker_error_code(exc),
+                    **worker_error_payload(exc),
                 },
                 attempt=completed_attempt,
                 causation_id=causation_id,
@@ -273,6 +273,14 @@ def worker_error_code(exc: Exception) -> str:
         return explicit
     name = type(exc).__name__
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()[:128]
+
+
+def worker_error_payload(exc: Exception) -> dict[str, str]:
+    payload = {"error_code": worker_error_code(exc)}
+    detail_code = str(getattr(exc, "detail_code", "") or "")
+    if re.fullmatch(r"[a-z][a-z0-9_]{0,127}", detail_code):
+        payload["error_detail_code"] = detail_code
+    return payload
 
 
 def utc_now() -> datetime:

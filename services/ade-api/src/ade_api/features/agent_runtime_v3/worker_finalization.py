@@ -18,7 +18,12 @@ from .persistence.runs import RunRepository
 from .provider_tracing import AttemptTrace
 from .turn_execution import AttemptResult
 from .worker_claims import ClaimedRun
-from .worker_control import LeaseLost, RunCancelled, utc_now, worker_error_code
+from .worker_control import (
+    LeaseLost,
+    RunCancelled,
+    utc_now,
+    worker_error_payload,
+)
 from .worker_events import append_attempt_trace, append_success_events
 
 
@@ -168,7 +173,7 @@ class RunFinalizer:
                         run=run,
                         attempt_id=attempt_id,
                         status="cancelled",
-                        error_code="run_cancelled",
+                        error_payload={"error_code": "run_cancelled"},
                         trace=trace,
                         trace_causation_id=trace_causation_id or causation_id,
                     )
@@ -211,7 +216,7 @@ class RunFinalizer:
                         run=run,
                         attempt_id=attempt_id,
                         status="cancelled",
-                        error_code="run_cancelled",
+                        error_payload={"error_code": "run_cancelled"},
                         trace=trace,
                         trace_causation_id=trace_causation_id or causation_id,
                     )
@@ -228,14 +233,15 @@ class RunFinalizer:
                     causation_id=causation_id,
                 )
             elif run["status"] in {"pending", "running"}:
-                error_code = worker_error_code(exc)
+                error_payload = worker_error_payload(exc)
+                error_code = error_payload["error_code"]
                 if attempt_id:
                     causation_id = await _finish_open_attempt(
                         runs,
                         run=run,
                         attempt_id=attempt_id,
                         status="failed",
-                        error_code=error_code,
+                        error_payload=error_payload,
                         trace=trace,
                         trace_causation_id=trace_causation_id or causation_id,
                     )
@@ -252,7 +258,7 @@ class RunFinalizer:
                     event_type="run.failed",
                     payload={
                         "attempt_count": int(run["attempt_count"]),
-                        "error_code": error_code,
+                        **error_payload,
                     },
                     attempt=int(run["attempt_count"]) or None,
                     causation_id=causation_id,
@@ -266,14 +272,14 @@ async def _finish_open_attempt(
     run: dict[str, Any],
     attempt_id: str,
     status: str,
-    error_code: str,
+    error_payload: dict[str, str],
     trace: AttemptTrace | None,
     trace_causation_id: str | None,
 ) -> str | None:
     await runs.finish_attempt(
         attempt_id,
         status=status,
-        provider_outcome={"error_code": error_code},
+        provider_outcome=dict(error_payload),
         finished_at=utc_now(),
     )
     if trace is None:

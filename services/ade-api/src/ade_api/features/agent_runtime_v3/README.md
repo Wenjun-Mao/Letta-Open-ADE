@@ -94,7 +94,12 @@ fingerprint is visible; otherwise it returns the same typed body with `503`. Unk
 source identity fails closed. A draining worker finishes at most one active attempt
 within Compose's 650-second grace period and never starts another retry. Provider
 failures persist only bounded stage/status/retry metadata,
-never prompts, inputs, response bodies, headers, or exception text. See
+never prompts, inputs, response bodies, headers, or exception text. Completed chat
+requests in a failed attempt additionally retain only allowlisted envelope states,
+capped choice/tool counts, bounded token usage, and a normalized finish reason.
+Local validation failures add a stable detail code, and acceptance normalization
+preserves that code with the run ID and last provider stage so cleanup does not erase
+the causal category. See
 [ADR 0011](../../../../../../docs/adr/0011-agent-runtime-operational-readiness.md).
 Disposable live checks must purge the definitions, subjects, conversations, runs,
 messages, and memories they create.

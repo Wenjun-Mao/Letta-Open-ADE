@@ -30,6 +30,12 @@ content or upstream implementation details.
   `model.request.failed`, and `model.request.cancelled` records with generated request
   IDs, stage, operation, request number, safe model identity, status/retry metadata,
   and latency.
+- A completed chat request may additionally retain an allowlisted structural view:
+  response-shape version, enum-valued choice/message/content/reasoning/tool-call
+  states, capped counts, normalized finish reason, and bounded standard token-usage
+  counters. Local validation failures use a stable detail code. Acceptance evidence
+  carries that code with the run ID and last provider stage so a cleanup-safe failure
+  remains diagnosable without retaining model content.
 - If an attempt fails or is cancelled, its partial trace is flushed inside the same
   lease-fenced transaction that finalizes the attempt. The attempt terminal event,
   retry event, and run terminal event continue that causal chain.

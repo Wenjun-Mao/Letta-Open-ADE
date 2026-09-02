@@ -274,7 +274,9 @@ def test_malformed_curated_tool_arguments_fail_the_attempt() -> None:
     async def search(query: str, limit: int):
         return []
 
-    with pytest.raises(RuntimeValidationError, match="failed closed validation"):
+    with pytest.raises(
+        RuntimeValidationError, match="failed closed validation"
+    ) as exc_info:
         asyncio.run(
             ConversationExecutor(transport).execute(
                 model_key="source::model",
@@ -284,4 +286,37 @@ def test_malformed_curated_tool_arguments_fail_the_attempt() -> None:
                 max_output_tokens=100,
             )
         )
+    assert exc_info.value.detail_code == "curated_tool_arguments_invalid"
     assert len(transport.calls) == 1
+
+
+def test_empty_conversation_output_has_a_stable_safe_detail_code() -> None:
+    transport = _Transport(
+        [
+            {
+                "choices": [
+                    {
+                        "finish_reason": "length",
+                        "message": {
+                            "role": "assistant",
+                            "content": "",
+                            "reasoning_content": "private reasoning must not escape",
+                        },
+                    }
+                ]
+            }
+        ]
+    )
+
+    with pytest.raises(RuntimeValidationError, match="neither dialogue") as exc_info:
+        asyncio.run(
+            ConversationExecutor(transport).execute(
+                model_key="source::model",
+                messages=[{"role": "user", "content": "hello"}],
+                tools={},
+                timeout_seconds=30,
+                max_output_tokens=100,
+            )
+        )
+
+    assert exc_info.value.detail_code == "conversation_output_empty"
