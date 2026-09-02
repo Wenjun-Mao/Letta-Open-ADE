@@ -186,6 +186,16 @@ async def chat_completions(
     upstream_payload = dict(payload)
     upstream_payload["model"] = routed_model.provider_model_id
     upstream_payload = _normalize_openai_payload(upstream_payload)
+    try:
+        upstream_payload = _normalize_adapter_payload(source, upstream_payload)
+    except ValueError as exc:
+        return router_error(
+            400,
+            "invalid_tool_choice",
+            str(exc),
+            model=routed_model.router_model_id,
+            source_id=source.id,
+        )
     upstream_payload = _apply_sampling_defaults(routed_model, source, upstream_payload)
     return await forward_chat_completion(request.app, source, upstream_payload)
 
@@ -248,6 +258,50 @@ def _normalize_openai_payload(payload: dict[str, Any]) -> dict[str, Any]:
         and max_tokens <= 0
     ):
         next_payload.pop("max_tokens", None)
+    return next_payload
+
+
+def _normalize_adapter_payload(
+    source: RouterSourceConfig, payload: dict[str, Any]
+) -> dict[str, Any]:
+    """Preserve tool-choice meaning across provider wire-protocol variants."""
+
+    next_payload = dict(payload)
+    if source.adapter != "llama_cpp_server":
+        return next_payload
+
+    tool_choice = next_payload.get("tool_choice")
+    if not isinstance(tool_choice, dict):
+        return next_payload
+    function = tool_choice.get("function")
+    selected_name = (
+        str(function.get("name") or "").strip()
+        if tool_choice.get("type") == "function" and isinstance(function, dict)
+        else ""
+    )
+    if not selected_name:
+        raise ValueError("llama.cpp named tool choice requires one function name")
+
+    tools = next_payload.get("tools")
+    if not isinstance(tools, list):
+        raise ValueError("llama.cpp named tool choice requires a tools list")
+    selected_tools = [
+        tool
+        for tool in tools
+        if isinstance(tool, dict)
+        and tool.get("type") == "function"
+        and isinstance(tool.get("function"), dict)
+        and str(tool["function"].get("name") or "").strip() == selected_name
+    ]
+    if len(selected_tools) != 1:
+        raise ValueError(
+            "llama.cpp named tool choice must match exactly one declared function"
+        )
+
+    # llama.cpp's OpenAI route supports `required`, but not OpenAI's named object.
+    # Reducing the list preserves the exact ADE-selected function semantics.
+    next_payload["tools"] = selected_tools
+    next_payload["tool_choice"] = "required"
     return next_payload
 
 

@@ -11,6 +11,7 @@ from ade_api.features.agent_runtime_v3.errors import (
     RuntimeValidationError,
 )
 from ade_api.features.agent_runtime_v3.executor import (
+    WEATHER_TOOL,
     ConversationExecutor,
     curated_tools,
 )
@@ -191,6 +192,21 @@ def test_executor_dispatches_the_enabled_curated_weather_tool() -> None:
             "error_type": None,
         }
     ]
+
+
+def test_weather_tool_schema_declares_its_finite_fixture_domain() -> None:
+    city_schema = WEATHER_TOOL["function"]["parameters"]["properties"]["city"]
+
+    assert set(city_schema["enum"]) == {
+        "Toronto",
+        "toronto",
+        "Beijing",
+        "beijing",
+        "北京",
+        "多伦多",
+        "FAIL_CITY",
+        "fail_city",
+    }
 
 
 def test_enabled_tools_add_an_evidence_bound_usage_policy() -> None:
@@ -476,6 +492,49 @@ def test_malformed_curated_tool_arguments_fail_the_attempt() -> None:
                 max_output_tokens=100,
             )
         )
+    assert exc_info.value.detail_code == "curated_tool_arguments_invalid"
+    assert len(transport.calls) == 1
+
+
+def test_unsupported_weather_fixture_argument_fails_the_attempt() -> None:
+    transport = _Transport(
+        [
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "tool_calls": [
+                                {
+                                    "id": "weather-unsupported",
+                                    "function": {
+                                        "name": "get_weather",
+                                        "arguments": '{"city":"多伦"}',
+                                    },
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    )
+
+    with pytest.raises(
+        RuntimeValidationError, match="supported deterministic weather fixture"
+    ) as exc_info:
+        asyncio.run(
+            ConversationExecutor(transport).execute(
+                model_key="source::model",
+                messages=[{"role": "user", "content": "请查一下多伦多的天气。"}],
+                tools=curated_tools(("get_weather",)),
+                tool_requirement=ToolRequirement(
+                    tool_name="get_weather", capability="weather.current_lookup"
+                ),
+                timeout_seconds=30,
+                max_output_tokens=100,
+            )
+        )
+
     assert exc_info.value.detail_code == "curated_tool_arguments_invalid"
     assert len(transport.calls) == 1
 

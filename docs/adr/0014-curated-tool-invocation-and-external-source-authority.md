@@ -34,8 +34,11 @@ would violate the meaning of an ADE attempt when `retry_count=0`.
   deep-memory search and current-weather lookup. Benign mentions remain
   discretionary. If multiple capabilities match, ADE does not guess an order and
   leaves the turn discretionary until a later multi-action contract exists.
-- For `explicit_action_required`, the first provider request uses the exact
-  OpenAI-compatible named-function form. A final response, a different tool, or
+- For `explicit_action_required`, ADE sends a provider-neutral named-function
+  requirement to Model Router. Adapters preserve the named OpenAI form when the
+  upstream supports it. The llama.cpp adapter reduces the request to that one
+  selected schema and sends `tool_choice="required"`, because llama.cpp's OpenAI
+  route does not support the named object. A final response, a different tool, or
   malformed arguments before the required call fails the current attempt closed.
   ADE does not issue a repair request. `retry_count` remains the only owner of an
   additional complete attempt.
@@ -43,6 +46,10 @@ would violate the meaning of an ADE attempt when `retry_count=0`.
   handler returns a typed failure. The returned result is authoritative evidence;
   the following model step may explain success or failure and resumes discretionary
   `tool_choice="auto"` behavior.
+- Qualification-only fixture tools publish their complete finite input domain in the
+  tool schema and validate it again before dispatch. An unsupported value is a
+  malformed call that fails the attempt; it is never converted into a successful
+  synthetic `unknown` result.
 - The assistant must never claim that a tool ran or succeeded without a corresponding
   result. Requirement resolution, satisfaction, and failure use correlated events
   containing only mode, curated tool name, capability, source, policy version, and a
@@ -89,7 +96,10 @@ tool-policy fingerprint and requires deterministic tests, security review, and f
 qualification.
 
 - Never treat assistant prose as evidence of a tool call.
+- Never translate a named requirement into bare `required` without first reducing
+  the provider-visible tool list to exactly the selected schema.
 - Never inspect fault-fixture arguments or evaluation case identity in policy code.
 - Never let the model select a memory subject through tool arguments.
 - Never broaden multilingual matching without benign-mention and ambiguity tests.
 - Never enable an additional product tool merely because it exists in qualification.
+- Never advertise a wider fixture input domain than its deterministic handler owns.

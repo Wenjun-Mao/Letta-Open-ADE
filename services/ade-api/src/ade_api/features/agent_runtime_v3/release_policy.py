@@ -49,6 +49,8 @@ PRODUCTION_POLICY_INPUTS: Final[dict[str, tuple[str, ...]]] = {
         "services/ade-api/src/ade_api/features/agent_runtime_v3/turn_execution.py",
     ),
     "tool": (
+        "config/model-router/model-profiles.json",
+        "config/model-router/sources.json",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/contracts.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/definition_service.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/deployments.py",
@@ -56,6 +58,8 @@ PRODUCTION_POLICY_INPUTS: Final[dict[str, tuple[str, ...]]] = {
         "services/ade-api/src/ade_api/features/agent_runtime_v3/tool_policy.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/turn_execution.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/worker_events.py",
+        "services/model-router/src/model_router/app.py",
+        "services/model-router/src/model_router/settings.py",
     ),
     "schema": (
         "Makefile",

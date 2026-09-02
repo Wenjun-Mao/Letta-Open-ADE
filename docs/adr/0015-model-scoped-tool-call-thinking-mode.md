@@ -30,8 +30,10 @@ also treats thinking mode and tool parsing as explicit serving concerns.
 - For a vLLM request with a non-empty `tools` list, Model Router uses this value when
   `chat_template_kwargs.enable_thinking` is omitted. Requests without tools continue
   to use `thinking_default_enabled`.
-- An explicit caller value always wins. The router never overwrites explicit
-  thinking mode, sampling, tools, or named tool choice.
+- An explicit caller value always wins for thinking and sampling. The router
+  preserves named tool choice unless a provider adapter must encode the same
+  selection differently under ADR 0014; that translation may reduce the visible
+  tool list but must not broaden or change the selected function.
 - The DGX Qwen profile keeps ordinary thinking enabled and defaults tool-bearing
   requests to non-thinking mode.
 - The tool-call mode is part of the deployment fingerprint. Changing it invalidates

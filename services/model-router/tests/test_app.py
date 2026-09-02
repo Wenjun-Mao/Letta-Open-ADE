@@ -226,35 +226,28 @@ def test_router_rewrites_model_and_preserves_payload(monkeypatch) -> None:
     assert captured["payload"]["reasoning"] == {"effort": "low"}
 
 
-@pytest.mark.parametrize(
-    ("source_id", "adapter"),
-    [
-        ("dgx_vllm", "vllm_openai"),
-        ("local_llama_server", "llama_cpp_server"),
-    ],
-)
-def test_router_preserves_exact_named_tool_selection(
-    monkeypatch: pytest.MonkeyPatch, source_id: str, adapter: str
+def test_router_preserves_exact_named_tool_selection_for_vllm(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     captured: dict[str, Any] = {}
     source = RouterSourceConfig(
-        id=source_id,
+        id="dgx_vllm",
         label="Local model",
         base_url="http://provider.invalid/v1",
-        adapter=adapter,
+        adapter="vllm_openai",
         enabled_for=["agent_studio"],
     )
     model = RoutedModel(
-        router_model_id=f"{source_id}::model",
-        source_id=source_id,
+        router_model_id="dgx_vllm::model",
+        source_id="dgx_vllm",
         source_label=source.label,
         source_kind="openai-compatible",
-        source_adapter=adapter,
+        source_adapter="vllm_openai",
         source_base_url=source.base_url,
         module_visibility=("agent_studio",),
         provider_model_id="model",
         model_type="llm",
-        letta_handle=f"openai-proxy/{source_id}::model",
+        letta_handle="openai-proxy/dgx_vllm::model",
         agent_studio_available=True,
         comment_lab_available=False,
         label_lab_available=False,
@@ -280,7 +273,7 @@ def test_router_preserves_exact_named_tool_selection(
     response = TestClient(router_app.app).post(
         "/v1/chat/completions",
         json={
-            "model": f"{source_id}::model",
+            "model": "dgx_vllm::model",
             "messages": [{"role": "user", "content": "weather"}],
             "tools": [{"type": "function", "function": {"name": "get_weather"}}],
             "tool_choice": selection,
@@ -290,6 +283,102 @@ def test_router_preserves_exact_named_tool_selection(
 
     assert response.status_code == 200
     assert captured["payload"]["tool_choice"] == selection
+
+
+def test_router_adapts_named_tool_selection_for_llama_cpp(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, Any] = {}
+    source = RouterSourceConfig(
+        id="local_llama_server",
+        label="Local llama-server",
+        base_url="http://provider.invalid/v1",
+        adapter="llama_cpp_server",
+        enabled_for=["agent_studio"],
+    )
+    model = RoutedModel(
+        router_model_id="local_llama_server::model",
+        source_id=source.id,
+        source_label=source.label,
+        source_kind="openai-compatible",
+        source_adapter=source.adapter,
+        source_base_url=source.base_url,
+        module_visibility=("agent_studio",),
+        provider_model_id="model",
+        model_type="llm",
+        letta_handle="openai-proxy/local_llama_server::model",
+        agent_studio_available=True,
+        comment_lab_available=False,
+        label_lab_available=False,
+        structured_output_mode="json_schema",
+    )
+
+    async def fake_forward(
+        _application, _source: RouterSourceConfig, payload: dict[str, Any]
+    ):
+        captured["payload"] = payload
+        return JSONResponse({"ok": True})
+
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(
+        router_app, "catalog_service", _FakeCatalog(source=source, model=model)
+    )
+    monkeypatch.setattr(router_app, "forward_chat_completion", fake_forward)
+    tools = [
+        {"type": "function", "function": {"name": "search_memory"}},
+        {"type": "function", "function": {"name": "get_weather"}},
+    ]
+
+    response = TestClient(router_app.app).post(
+        "/v1/chat/completions",
+        json={
+            "model": model.router_model_id,
+            "messages": [{"role": "user", "content": "weather"}],
+            "tools": tools,
+            "tool_choice": {
+                "type": "function",
+                "function": {"name": "get_weather"},
+            },
+        },
+        headers={"Authorization": "Bearer router-token"},
+    )
+
+    assert response.status_code == 200
+    assert captured["payload"]["tool_choice"] == "required"
+    assert captured["payload"]["tools"] == [tools[1]]
+
+
+def test_router_rejects_unbound_llama_cpp_named_tool_choice(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    forwarded = False
+
+    async def fake_forward(*_args, **_kwargs):
+        nonlocal forwarded
+        forwarded = True
+        return JSONResponse({"ok": True})
+
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
+    monkeypatch.setattr(router_app, "forward_chat_completion", fake_forward)
+
+    response = TestClient(router_app.app).post(
+        "/v1/chat/completions",
+        json={
+            "model": "local_llama_server::gemma4",
+            "messages": [{"role": "user", "content": "weather"}],
+            "tools": [{"type": "function", "function": {"name": "search_memory"}}],
+            "tool_choice": {
+                "type": "function",
+                "function": {"name": "get_weather"},
+            },
+        },
+        headers={"Authorization": "Bearer router-token"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_tool_choice"
+    assert forwarded is False
 
 
 def test_router_injects_profile_sampling_defaults_for_vllm_when_omitted(

@@ -43,29 +43,48 @@ SEARCH_MEMORY_TOOL = {
     },
 }
 
-WEATHER_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "get_weather",
-        "description": (
-            "Return deterministic fixture weather for a named city. Call this for "
-            "every explicit weather lookup, including unfamiliar cities or requests "
-            "expected to fail; do not invent a result."
-        ),
-        "parameters": {
-            "type": "object",
-            "additionalProperties": False,
-            "properties": {"city": {"type": "string", "minLength": 1}},
-            "required": ["city"],
-        },
-    },
-}
 
 _WEATHER_FIXTURES = {
     "toronto": {"condition": "clear", "temperature_c": 21},
     "beijing": {"condition": "partly cloudy", "temperature_c": 26},
     "北京": {"condition": "partly cloudy", "temperature_c": 26},
     "多伦多": {"condition": "clear", "temperature_c": 21},
+}
+_WEATHER_FAILURE_FIXTURES = frozenset({"fail_city"})
+_WEATHER_CITY_ENUM = (
+    "Toronto",
+    "toronto",
+    "Beijing",
+    "beijing",
+    "北京",
+    "多伦多",
+    "FAIL_CITY",
+    "fail_city",
+)
+
+
+WEATHER_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": (
+            "Return deterministic fixture weather for one supported city identifier. "
+            "Call this for every explicit weather lookup and copy one exact identifier "
+            "from the schema; do not abbreviate a city or invent a result."
+        ),
+        "parameters": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "city": {
+                    "type": "string",
+                    "enum": list(_WEATHER_CITY_ENUM),
+                    "description": "Exact supported fixture city identifier.",
+                }
+            },
+            "required": ["city"],
+        },
+    },
 }
 
 
@@ -349,12 +368,10 @@ def _search_memory_tool(search_memory: SearchMemoryHandler) -> CuratedTool:
 def _weather_tool() -> CuratedTool:
     async def handler(arguments: dict[str, Any]) -> ToolResult:
         city = arguments["city"]
-        if city.casefold() in {"fail_city", "failure", "故障城市"}:
+        normalized_city = city.casefold()
+        if normalized_city in _WEATHER_FAILURE_FIXTURES:
             raise RuntimeError("deterministic weather provider failure")
-        weather = _WEATHER_FIXTURES.get(city.casefold()) or {
-            "condition": "unknown",
-            "temperature_c": None,
-        }
+        weather = _WEATHER_FIXTURES[normalized_city]
         return ToolResult(
             arguments={"city": city},
             content={"ok": True, "city": city, **weather},
@@ -412,7 +429,13 @@ def _validate_weather_arguments(arguments: dict[str, Any]) -> dict[str, Any]:
     city = arguments.get("city")
     if not isinstance(city, str) or not city.strip():
         raise ValueError("city must be a non-empty string")
-    return {"city": city.strip()}
+    city = city.strip()
+    if (
+        city.casefold() not in _WEATHER_FIXTURES
+        and city.casefold() not in _WEATHER_FAILURE_FIXTURES
+    ):
+        raise ValueError("city must be a supported deterministic weather fixture")
+    return {"city": city}
 
 
 def _validate_registry(tools: Mapping[str, CuratedTool]) -> None:
