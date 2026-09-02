@@ -8,6 +8,10 @@ MEMORY_CONTROL_INSTRUCTIONS = """Memory rules:
 - A separate ADE reviewer evaluates durable facts after your response. Never claim
   that you stored, corrected, or forgot memory.
 - Use only committed facts shown in context. Never select or invent a subject ID.
+- Facts in the bound memory-subject profile and search results describe the current
+  user or account, never the assistant persona. Preserve I/you attribution exactly.
+- When a committed fact answers the user's question, state its concrete value
+  directly instead of merely saying that you remember it.
 - Use search_memory only when older relevant details are absent from the profile.
 - Return user-visible dialogue only; never expose private reasoning.
 """
@@ -162,7 +166,8 @@ def build_context(
         for fact in active_facts
     ]
     profile = truncate_to_tokens(
-        "Active subject facts:\n" + ("\n".join(profile_lines) or "- None"),
+        "Active facts about the current user (bound memory subject):\n"
+        + ("\n".join(profile_lines) or "- None"),
         budget.profile_tokens,
     )
     metadata = history_metadata or ConversationHistoryMetadata(
@@ -190,7 +195,7 @@ def build_context(
     active_ids = {str(fact["id"]) for fact in active_facts}
     retrieved = [fact for fact in retrieved_facts if str(fact["id"]) not in active_ids]
     retrieval = truncate_to_tokens(
-        "Retrieved memory:\n"
+        "Retrieved older facts about the current user (bound memory subject):\n"
         + (
             "\n".join(
                 f"- [{fact['id']} v{fact['version']}] {fact['key']}: {fact['value']}"

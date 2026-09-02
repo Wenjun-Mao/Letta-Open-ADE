@@ -28,8 +28,10 @@ SEARCH_MEMORY_TOOL = {
     "function": {
         "name": "search_memory",
         "description": (
-            "Search older committed facts for the current memory subject. Call this "
-            "for every explicit deep-memory search request; do not invent results."
+            "Search older committed facts about the current user or account bound "
+            "to this conversation. Returned facts never describe the assistant "
+            "persona. Call this for every explicit deep-memory search request; do "
+            "not invent results."
         ),
         "parameters": {
             "type": "object",
@@ -354,7 +356,11 @@ def _search_memory_tool(search_memory: SearchMemoryHandler) -> CuratedTool:
         facts = await search_memory(arguments["query"], arguments["limit"])
         return ToolResult(
             arguments=arguments,
-            content={"ok": True, "facts": facts},
+            content={
+                "ok": True,
+                "memory_subject_role": "current_user",
+                "facts": facts,
+            },
             result_count=len(facts),
         )
 

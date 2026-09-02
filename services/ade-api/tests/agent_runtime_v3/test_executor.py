@@ -89,6 +89,12 @@ def test_executor_runs_only_subject_bound_memory_search() -> None:
     assert result.model_request_count == 2
     assert searches == [("Rocky", 3)]
     assert result.usage == {"prompt_tokens": 10, "completion_tokens": 5}
+    tool_payload = json.loads(transport.calls[1][0]["messages"][-1]["content"])
+    assert tool_payload == {
+        "ok": True,
+        "memory_subject_role": "current_user",
+        "facts": [{"id": "fact-1", "value": "Rocky"}],
+    }
 
 
 def test_executor_rejects_arbitrary_tool_names() -> None:

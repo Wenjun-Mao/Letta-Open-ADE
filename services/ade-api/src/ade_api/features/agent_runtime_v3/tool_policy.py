@@ -13,6 +13,8 @@ TOOL_USE_POLICY: Final = """Tool rules:
 - When an explicit external action is required, call the selected tool before giving
   a final answer, even when an argument is unfamiliar or the tool may fail.
 - Treat the returned tool result as evidence. Explain a failed result honestly.
+- Subject-bound memory results describe the current user or account, not the
+  assistant persona. Attribute them correctly and state relevant values directly.
 - Never claim that a tool was called or succeeded without a corresponding tool result.
 """
 

@@ -105,3 +105,43 @@ def test_context_marks_exact_history_metadata_as_authoritative() -> None:
     )
     assert "Summary covers messages through sequence: 48" in system_message
     assert "metadata above overrides the narrative summary" in system_message
+
+
+def test_context_labels_bound_memory_as_current_user_facts() -> None:
+    context = build_context(
+        system_prompt="system",
+        persona="My name is Lin Xiaotang.",
+        active_facts=[
+            {
+                "id": "fact-name",
+                "version": 1,
+                "key": "person.name|subject-1",
+                "value": "Alice",
+            }
+        ],
+        retrieved_facts=[
+            {
+                "id": "fact-city",
+                "version": 1,
+                "key": "person.location|subject-1",
+                "value": "Toronto",
+            }
+        ],
+        recent_messages=[],
+        current_user_content="你还记得我的名字吗？",
+        budget=ContextBudget(
+            context_window=2_000,
+            max_output_tokens=200,
+            tool_schema_tokens=100,
+        ),
+    )
+
+    system_message = context.messages[0]["content"]
+    assert "bound memory-subject profile and search results" in system_message
+    assert "never the assistant persona" in system_message
+    assert "state its concrete value" in system_message
+    assert "Active facts about the current user (bound memory subject)" in system_message
+    assert (
+        "Retrieved older facts about the current user (bound memory subject)"
+        in system_message
+    )
