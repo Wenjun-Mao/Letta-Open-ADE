@@ -10,7 +10,7 @@
         "conversation",
         "reviewer"
       ],
-      "lifecycle": "candidate",
+      "lifecycle": "qualified",
       "fingerprint": {
         "provider": "dgx_vllm",
         "endpoint_role": "openai-compatible-chat",
@@ -50,20 +50,20 @@
       },
       "qualification": {
         "fingerprint_sha256": "39d9c929b3d745926225ff0abe0e6ed11ae721947f9c4300a66523bf9cc810b9",
-        "qualified": false,
+        "qualified": true,
         "stale_round_count": 0,
         "role_results": [
           {
             "role": "conversation",
-            "observed_rounds": 0,
-            "consecutive_passing_rounds": 0,
-            "qualified": false
+            "observed_rounds": 3,
+            "consecutive_passing_rounds": 3,
+            "qualified": true
           },
           {
             "role": "reviewer",
-            "observed_rounds": 0,
-            "consecutive_passing_rounds": 0,
-            "qualified": false
+            "observed_rounds": 3,
+            "consecutive_passing_rounds": 3,
+            "qualified": true
           }
         ]
       }
@@ -77,7 +77,7 @@
       "roles": [
         "retriever"
       ],
-      "lifecycle": "candidate",
+      "lifecycle": "qualified",
       "fingerprint": {
         "provider": "dgx_embedding_sidecar",
         "endpoint_role": "openai-compatible-embeddings",
@@ -110,14 +110,14 @@
       },
       "qualification": {
         "fingerprint_sha256": "1850ea153ac500f33a9924769a6b0d2dcf376a0f69cd0951514313a3df8c25a2",
-        "qualified": false,
+        "qualified": true,
         "stale_round_count": 0,
         "role_results": [
           {
             "role": "retriever",
-            "observed_rounds": 0,
-            "consecutive_passing_rounds": 0,
-            "qualified": false
+            "observed_rounds": 3,
+            "consecutive_passing_rounds": 3,
+            "qualified": true
           }
         ]
       }
