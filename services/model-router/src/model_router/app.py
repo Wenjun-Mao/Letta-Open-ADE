@@ -279,7 +279,9 @@ def _apply_sampling_defaults(
         ):
             next_payload["chat_template_kwargs"] = {
                 **_existing_chat_template_kwargs(next_payload),
-                "enable_thinking": routed_model.thinking_default_enabled,
+                "enable_thinking": _thinking_default_for_payload(
+                    routed_model, next_payload
+                ),
             }
     return next_payload
 
@@ -298,6 +300,19 @@ def _chat_template_kwargs_missing(payload: dict[str, Any], field: str) -> bool:
     if not isinstance(value, dict):
         return True
     return field not in value or value.get(field) is None
+
+
+def _thinking_default_for_payload(
+    routed_model: RoutedModel, payload: dict[str, Any]
+) -> bool:
+    tools = payload.get("tools")
+    if (
+        isinstance(tools, list)
+        and bool(tools)
+        and routed_model.tool_call_thinking_default_enabled is not None
+    ):
+        return routed_model.tool_call_thinking_default_enabled
+    return routed_model.thinking_default_enabled
 
 
 def _supports_top_k(routed_model: RoutedModel, source: RouterSourceConfig) -> bool:

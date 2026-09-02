@@ -34,7 +34,7 @@ provider-facing boundary for normal discovery and generation.
 | Product HTTP API and feature orchestration | `services/ade-api/` | `src/ade_api/features/<feature>/` |
 | API setup, settings, auth, dependency wiring | `services/ade-api/` | `src/ade_api/platform/` |
 | Letta and Model Router protocol adapters | `services/ade-api/` | `src/ade_api/integrations/` |
-| Provider discovery, profiles, and forwarding | `services/model-router/` | `src/model_router/` and `config/model-router/` |
+| Provider discovery, profiles, and forwarding | `services/model-router/` | `src/model_router/`, `config/model-router/`, and tool-protocol [ADR 0015](adr/0015-model-scoped-tool-call-thinking-mode.md) |
 | Typed catalog/probe exchange formats | `packages/model-catalog-contracts/` | `src/model_catalog_contracts/` |
 | Shared agent-runtime eval contracts | `packages/agent-runtime-eval-contracts/` | package README and `src/agent_runtime_eval_contracts/` |
 | Prompts, personas, schemas, tools, reports | `content/` | owning center's adapter and its matching content subdirectory |
@@ -103,6 +103,7 @@ for the persona projection contract.
 | Qualify the production v3 path | `workflows/evals/agent_runtime_v3_acceptance/` through Test Center or its CLI |
 | Change the separate v3 product pilot | web `native-runtime-preview/`, API `preview_session_service.py`, and [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md) |
 | Change curated tool availability or required invocation | `features/agent_runtime_v3/tool_policy.py`, eval availability/observation contracts, and [ADR 0014](adr/0014-curated-tool-invocation-and-external-source-authority.md) |
+| Change a model's tool-call thinking mode | `config/model-router/model-profiles.json`, deployment fingerprint sampling settings, and [ADR 0015](adr/0015-model-scoped-tool-call-thinking-mode.md) |
 | Regenerate API artifacts | `uv run python scripts/export_openapi.py` |
 | Diagnose the Compose stack | `scripts/collect_diagnostics.sh .env` |
 

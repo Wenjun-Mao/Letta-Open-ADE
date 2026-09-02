@@ -87,6 +87,7 @@ class RoutedModel:
     supports_top_k: bool = False
     supports_thinking: bool = False
     thinking_default_enabled: bool = False
+    tool_call_thinking_default_enabled: bool | None = None
     profile_applied: bool = False
     profile_source: str = ""
     agent_studio_candidate: bool = False
@@ -118,6 +119,9 @@ class RoutedModel:
             "supports_top_k": self.supports_top_k,
             "supports_thinking": self.supports_thinking,
             "thinking_default_enabled": self.thinking_default_enabled,
+            "tool_call_thinking_default_enabled": (
+                self.tool_call_thinking_default_enabled
+            ),
             "profile_applied": self.profile_applied,
             "profile_source": self.profile_source,
             "agent_studio_candidate": self.agent_studio_candidate,
@@ -260,6 +264,11 @@ class RouterCatalogService:
                         supports_thinking=bool(profile and profile.supports_thinking),
                         thinking_default_enabled=bool(
                             profile and profile.thinking_default_enabled
+                        ),
+                        tool_call_thinking_default_enabled=(
+                            profile.tool_call_thinking_default_enabled
+                            if profile
+                            else None
                         ),
                         profile_applied=profile is not None,
                         profile_source=profile.profile_source if profile else "",

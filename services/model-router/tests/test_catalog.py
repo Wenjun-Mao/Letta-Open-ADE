@@ -418,10 +418,13 @@ def test_router_catalog_exposes_qwen_vllm_profile_to_all_modules(
             {
                 "dgx_vllm::qwen3.6-35b-a3b-fp8": {
                     "base_model": "Qwen/Qwen3.6-35B-A3B-FP8",
-                    "profile_source": "temps/new_LLM/llm/settings.py",
+                    "profile_source": (
+                        "docs/adr/0015-model-scoped-tool-call-thinking-mode.md"
+                    ),
                     "supports_top_k": True,
                     "supports_thinking": True,
                     "thinking_default_enabled": True,
+                    "tool_call_thinking_default_enabled": False,
                     "agent_studio_candidate": True,
                     "agent_studio_compatible": True,
                     "sampling_defaults": {
@@ -496,6 +499,8 @@ def test_router_catalog_exposes_qwen_vllm_profile_to_all_modules(
     assert model.comment_lab_available is True
     assert model.label_lab_available is True
     assert model.thinking_default_enabled is True
+    assert model.tool_call_thinking_default_enabled is False
+    assert model.as_dict()["tool_call_thinking_default_enabled"] is False
     assert model.sampling_defaults == {
         "temperature": 1.0,
         "top_p": 0.95,

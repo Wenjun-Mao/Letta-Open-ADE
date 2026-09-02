@@ -359,6 +359,102 @@ def test_router_injects_profile_sampling_defaults_for_vllm_when_omitted(
     assert captured["payload"]["chat_template_kwargs"] == {"enable_thinking": True}
 
 
+def test_router_uses_model_tool_call_thinking_default_without_overriding_caller(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: list[dict[str, Any]] = []
+    source = RouterSourceConfig(
+        id="dgx_vllm",
+        label="DGX Spark vLLM",
+        base_url="http://100.64.35.71:8000/v1",
+        adapter="vllm_openai",
+        enabled_for=["agent_studio"],
+    )
+    model = RoutedModel(
+        router_model_id="dgx_vllm::qwen3.6-35b-a3b-fp8",
+        source_id="dgx_vllm",
+        source_label=source.label,
+        source_kind="openai-compatible",
+        source_adapter=source.adapter,
+        source_base_url=source.base_url,
+        module_visibility=("agent_studio",),
+        provider_model_id="qwen3.6-35b-a3b-fp8",
+        model_type="llm",
+        letta_handle="openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
+        agent_studio_available=True,
+        comment_lab_available=False,
+        label_lab_available=False,
+        structured_output_mode="json_schema",
+        supports_thinking=True,
+        thinking_default_enabled=True,
+        tool_call_thinking_default_enabled=False,
+        profile_applied=True,
+    )
+
+    async def fake_forward(
+        _application, _source: RouterSourceConfig, payload: dict[str, Any]
+    ):
+        captured.append(payload)
+        return JSONResponse({"ok": True})
+
+    monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
+    monkeypatch.setattr(
+        router_app, "catalog_service", _FakeCatalog(source=source, model=model)
+    )
+    monkeypatch.setattr(router_app, "forward_chat_completion", fake_forward)
+    client = TestClient(router_app.app)
+    tool_payload = {
+        "model": model.router_model_id,
+        "messages": [{"role": "user", "content": "check the weather"}],
+        "tools": [{"type": "function", "function": {"name": "get_weather"}}],
+        "tool_choice": {
+            "type": "function",
+            "function": {"name": "get_weather"},
+        },
+    }
+
+    assert (
+        client.post(
+            "/v1/chat/completions",
+            json=tool_payload,
+            headers={"Authorization": "Bearer router-token"},
+        ).status_code
+        == 200
+    )
+    assert captured[-1]["chat_template_kwargs"] == {"enable_thinking": False}
+
+    explicit = {
+        **tool_payload,
+        "chat_template_kwargs": {"enable_thinking": True, "tokenize": False},
+    }
+    assert (
+        client.post(
+            "/v1/chat/completions",
+            json=explicit,
+            headers={"Authorization": "Bearer router-token"},
+        ).status_code
+        == 200
+    )
+    assert captured[-1]["chat_template_kwargs"] == {
+        "enable_thinking": True,
+        "tokenize": False,
+    }
+
+    no_tools = {
+        "model": model.router_model_id,
+        "messages": [{"role": "user", "content": "hello"}],
+    }
+    assert (
+        client.post(
+            "/v1/chat/completions",
+            json=no_tools,
+            headers={"Authorization": "Bearer router-token"},
+        ).status_code
+        == 200
+    )
+    assert captured[-1]["chat_template_kwargs"] == {"enable_thinking": True}
+
+
 def test_router_preserves_explicit_sampling_values(monkeypatch) -> None:
     captured: dict[str, Any] = {}
     source = RouterSourceConfig(

@@ -220,7 +220,9 @@ class _FakeRouterClient:
                     "supports_thinking": True,
                     "thinking_default_enabled": True,
                     "profile_applied": True,
-                    "profile_source": "temps/new_LLM/llm/settings.py",
+                    "profile_source": (
+                        "docs/adr/0015-model-scoped-tool-call-thinking-mode.md"
+                    ),
                     "agent_studio_candidate": True,
                     "agent_studio_compatible": True,
                 },

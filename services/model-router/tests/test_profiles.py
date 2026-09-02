@@ -77,10 +77,13 @@ def test_load_model_profiles_accepts_qwen_vllm_sampling_defaults(tmp_path) -> No
             {
                 "dgx_vllm::qwen3.6-35b-a3b-fp8": {
                     "base_model": "Qwen/Qwen3.6-35B-A3B-FP8",
-                    "profile_source": "temps/new_LLM/llm/settings.py",
+                    "profile_source": (
+                        "docs/adr/0015-model-scoped-tool-call-thinking-mode.md"
+                    ),
                     "supports_top_k": True,
                     "supports_thinking": True,
                     "thinking_default_enabled": True,
+                    "tool_call_thinking_default_enabled": False,
                     "agent_studio_candidate": True,
                     "agent_studio_compatible": True,
                     "sampling_defaults": {
@@ -123,6 +126,7 @@ def test_load_model_profiles_accepts_qwen_vllm_sampling_defaults(tmp_path) -> No
         == 1.0
     )
     assert profile.thinking_default_enabled is True
+    assert profile.tool_call_thinking_default_enabled is False
     assert profile.agent_studio_compatible is True
 
 

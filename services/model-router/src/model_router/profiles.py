@@ -119,6 +119,7 @@ class ModelProfile(BaseModel):
     supports_top_k: bool = False
     supports_thinking: bool = False
     thinking_default_enabled: bool = False
+    tool_call_thinking_default_enabled: bool | None = None
     agent_studio_candidate: bool = False
     agent_studio_compatible: bool = True
     sampling_defaults: SamplingDefaults = Field(default_factory=SamplingDefaults)

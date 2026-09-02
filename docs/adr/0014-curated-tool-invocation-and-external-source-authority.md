@@ -4,7 +4,8 @@
 - Date: 2026-09-02
 - Related: [ADR 0009](0009-ade-owned-agent-runtime.md),
   [ADR 0010](0010-production-path-runtime-qualification.md), and
-  [ADR 0013](0013-narrow-native-runtime-product-pilot.md)
+  [ADR 0013](0013-narrow-native-runtime-product-pilot.md), with provider protocol
+  defaults in [ADR 0015](0015-model-scoped-tool-call-thinking-mode.md)
 
 ## Context
 

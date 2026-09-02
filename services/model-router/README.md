@@ -17,10 +17,15 @@ as `dgx_vllm::qwen3.6-35b-a3b-fp8`; they do not select provider URLs directly.
 4. `/v1/chat/completions` resolves the source, applies missing defaults, and
    `forwarding.py` sends the request upstream.
 
+Thinking defaults may be model- and protocol-specific. A profile can keep normal
+dialogue thinking enabled while setting `tool_call_thinking_default_enabled=false`
+for tool-bearing vLLM requests. Explicit caller values are always preserved. See
+[ADR 0015](../../docs/adr/0015-model-scoped-tool-call-thinking-mode.md).
+
 ## Boundaries
 
 - Owns provider discovery, provider authentication, model IDs, capability profiles,
-  sampling defaults, and upstream forwarding.
+  sampling and tool-protocol defaults, and upstream forwarding.
 - Uses `model-catalog-contracts` only for stable allowlist report contracts.
 - Must not contain ADE feature policy, prompt content, personas, schemas, or Letta
   agent lifecycle behavior.

@@ -33,7 +33,8 @@
           "min_p": 0.0,
           "presence_penalty": 1.5,
           "repetition_penalty": 1.0,
-          "thinking_enabled": true
+          "thinking_enabled": true,
+          "tool_call_thinking_enabled": false
         },
         "context_settings": {
           "total_tokens": 16384,
@@ -48,7 +49,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "fef0930cd9c2d3b78aa2793bd4fef20a00b9b2a9e26ef62466c46942252988ac",
+        "fingerprint_sha256": "d0352e7e3424dd91e9879aa7280709f63fc1e52a73de71e74780128d987b5eda",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [

@@ -1,10 +1,11 @@
 {
   "dgx_vllm::qwen3.6-35b-a3b-fp8": {
     "base_model": "Qwen/Qwen3.6-35B-A3B-FP8",
-    "profile_source": "temps/new_LLM/llm/settings.py",
+    "profile_source": "docs/adr/0015-model-scoped-tool-call-thinking-mode.md",
     "supports_top_k": true,
     "supports_thinking": true,
     "thinking_default_enabled": true,
+    "tool_call_thinking_default_enabled": false,
     "agent_studio_candidate": true,
     "agent_studio_compatible": true,
     "sampling_defaults": {
