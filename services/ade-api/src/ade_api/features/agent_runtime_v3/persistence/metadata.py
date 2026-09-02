@@ -291,6 +291,12 @@ runs = Table(
     Column("request_hash", String(64), nullable=False),
     Column("status", String(32), nullable=False),
     Column("qualification_state", String(32), nullable=False),
+    Column(
+        "accepted_runtime_mode",
+        String(32),
+        nullable=False,
+        server_default=text("'development'"),
+    ),
     Column("timeout_seconds", Numeric(8, 3), nullable=False),
     Column("retry_count", Integer, nullable=False),
     Column("accepted_conversation_version", Integer, nullable=False),
@@ -316,6 +322,10 @@ runs = Table(
     CheckConstraint("attempt_count >= 0", name="ck_runs_nonnegative_attempt_count"),
     CheckConstraint("retry_count BETWEEN 0 AND 5", name="ck_runs_retry_count"),
     CheckConstraint("timeout_seconds > 0", name="ck_runs_positive_timeout"),
+    CheckConstraint(
+        "accepted_runtime_mode IN ('development', 'release')",
+        name="ck_runs_accepted_runtime_mode",
+    ),
     CheckConstraint(
         "accepted_conversation_version > 0",
         name="ck_runs_positive_conversation_version",

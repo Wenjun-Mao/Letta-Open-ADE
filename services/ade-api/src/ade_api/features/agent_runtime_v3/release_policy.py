@@ -77,6 +77,7 @@ PRODUCTION_POLICY_INPUTS: Final[dict[str, tuple[str, ...]]] = {
         "services/ade-api/migrations/versions/20260830_0003_agent_runtime_worker_health.py",
         "services/ade-api/migrations/versions/20260830_0004_agent_runtime_source_fingerprint.py",
         "services/ade-api/migrations/versions/20260902_0005_agent_studio_cutover.py",
+        "services/ade-api/migrations/versions/20260902_0006_run_runtime_mode.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/__init__.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/agent_studio_api.py",
         "services/ade-api/src/ade_api/features/agent_runtime_v3/agent_studio_reset.py",

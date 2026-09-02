@@ -95,6 +95,10 @@ def test_alembic_upgrade_creates_named_ade_pgvector_schema() -> None:
             assert "uq_runs_active_conversation" in {
                 index["name"] for index in inspector.get_indexes("runs", schema="ade")
             }
+            run_columns = {
+                column["name"] for column in inspector.get_columns("runs", schema="ade")
+            }
+            assert "accepted_runtime_mode" in run_columns
             assert connection.scalar(
                 text(
                     "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'vector')"

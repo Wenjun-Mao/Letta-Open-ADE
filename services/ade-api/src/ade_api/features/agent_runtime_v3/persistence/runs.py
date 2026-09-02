@@ -117,12 +117,17 @@ class RunRepository:
         )
         return total, [dict(row) for row in result.mappings().all()]
 
-    async def claim_pending(self) -> dict[str, Any] | None:
+    async def claim_pending(self, *, runtime_mode: str) -> dict[str, Any] | None:
         """Claim one pending run without holding the transaction during model I/O."""
 
         candidate = (
             select(runs.c.id)
-            .where(runs.c.status == "pending")
+            .where(
+                and_(
+                    runs.c.status == "pending",
+                    runs.c.accepted_runtime_mode == runtime_mode,
+                )
+            )
             .order_by(runs.c.created_at, runs.c.id)
             .with_for_update(skip_locked=True)
             .limit(1)
@@ -137,7 +142,7 @@ class RunRepository:
         row = result.mappings().one_or_none()
         return dict(row) if row is not None else None
 
-    async def claim_abandoned(self) -> dict[str, Any] | None:
+    async def claim_abandoned(self, *, runtime_mode: str) -> dict[str, Any] | None:
         result = await self._connection.execute(
             select(runs)
             .join(
@@ -147,6 +152,7 @@ class RunRepository:
             .where(
                 and_(
                     runs.c.status == "running",
+                    runs.c.accepted_runtime_mode == runtime_mode,
                     conversation_leases.c.released_at.is_(None),
                     conversation_leases.c.expires_at <= func.now(),
                 )

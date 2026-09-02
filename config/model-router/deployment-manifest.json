@@ -22,10 +22,10 @@
         "runtime_implementation": "vLLM",
         "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
-        "prompt_policy_sha256": "c17c4ac29d1284d55b4fe4e32a43e1431b2ebf8433c54b4267790c41bce917d2",
-        "tool_policy_sha256": "734ff1e49afd0c5ea2f10193d5bc4ad2939dcb9002b0bd1dd5156657cd6cd2c7",
-        "schema_policy_sha256": "b224d76d29dc6f52b1a1133d15b7c0c47d0f01674df567725da845c031576d9e",
-        "retrieval_policy_sha256": "d65da5509c1e0490e4a0380f9451a5e938073987e43dc56bc81fb6b13901c675",
+        "prompt_policy_sha256": "b60943835fdc9aa4f00e210420358488151feec3691d546d7f9b6460455a3892",
+        "tool_policy_sha256": "97b2ab19db83f4fadbc4cb8c7f6298a25d12400604273a6fd989c1de7172d1f6",
+        "schema_policy_sha256": "d67e99621d8946c080a78aae624081c217adf5a52f9c154d737ceb7b375d7c88",
+        "retrieval_policy_sha256": "3b23caded276bda2eee6aa4a81fef719e0830bc04edb3082edb05c34c3980faf",
         "sampling_settings": {
           "temperature": 1.0,
           "top_p": 0.95,
@@ -49,7 +49,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "9392600791ca2ea3ce72b319db42db8b304a9b873e4da465dc268c8444e0ac4e",
+        "fingerprint_sha256": "bd91601e7c653092a64daa3e04c43fe7f65a8af1a26ba1ef1162c052dc80ab98",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [
@@ -89,10 +89,10 @@
         "runtime_implementation": "vLLM",
         "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
-        "prompt_policy_sha256": "c17c4ac29d1284d55b4fe4e32a43e1431b2ebf8433c54b4267790c41bce917d2",
-        "tool_policy_sha256": "734ff1e49afd0c5ea2f10193d5bc4ad2939dcb9002b0bd1dd5156657cd6cd2c7",
-        "schema_policy_sha256": "b224d76d29dc6f52b1a1133d15b7c0c47d0f01674df567725da845c031576d9e",
-        "retrieval_policy_sha256": "d65da5509c1e0490e4a0380f9451a5e938073987e43dc56bc81fb6b13901c675",
+        "prompt_policy_sha256": "b60943835fdc9aa4f00e210420358488151feec3691d546d7f9b6460455a3892",
+        "tool_policy_sha256": "97b2ab19db83f4fadbc4cb8c7f6298a25d12400604273a6fd989c1de7172d1f6",
+        "schema_policy_sha256": "d67e99621d8946c080a78aae624081c217adf5a52f9c154d737ceb7b375d7c88",
+        "retrieval_policy_sha256": "3b23caded276bda2eee6aa4a81fef719e0830bc04edb3082edb05c34c3980faf",
         "sampling_settings": {
           "dimensions": 1024,
           "query_instruction_enabled": true,
@@ -109,7 +109,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "f4714bc4e77421c0cd0baed0ead701a2b3fd4448e7dc416cf4ca827377bb6d80",
+        "fingerprint_sha256": "3bf04a2f96735f6d2bef84dcdf25ac7a6a1fa2b49eec0199ae2221b7282cb680",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [
@@ -142,10 +142,10 @@
         "runtime_implementation": "llama-server",
         "runtime_version": "b1-225088e",
         "runtime_image_digest": null,
-        "prompt_policy_sha256": "c17c4ac29d1284d55b4fe4e32a43e1431b2ebf8433c54b4267790c41bce917d2",
-        "tool_policy_sha256": "734ff1e49afd0c5ea2f10193d5bc4ad2939dcb9002b0bd1dd5156657cd6cd2c7",
-        "schema_policy_sha256": "b224d76d29dc6f52b1a1133d15b7c0c47d0f01674df567725da845c031576d9e",
-        "retrieval_policy_sha256": "d65da5509c1e0490e4a0380f9451a5e938073987e43dc56bc81fb6b13901c675",
+        "prompt_policy_sha256": "b60943835fdc9aa4f00e210420358488151feec3691d546d7f9b6460455a3892",
+        "tool_policy_sha256": "97b2ab19db83f4fadbc4cb8c7f6298a25d12400604273a6fd989c1de7172d1f6",
+        "schema_policy_sha256": "d67e99621d8946c080a78aae624081c217adf5a52f9c154d737ceb7b375d7c88",
+        "retrieval_policy_sha256": "3b23caded276bda2eee6aa4a81fef719e0830bc04edb3082edb05c34c3980faf",
         "sampling_settings": {
           "thinking_enabled": false,
           "temperature": 0.6,
@@ -168,7 +168,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "67faad25c8242331c2f2fbfe4b36c10ab1d65dbbf297cc7f927105805ab09867",
+        "fingerprint_sha256": "5f709b199789d5f9e2d0866898d79b6828d53e437b45de4c840cf6f22062b934",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [

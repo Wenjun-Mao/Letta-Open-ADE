@@ -15,6 +15,7 @@ from ade_api.features.agent_runtime_v3.errors import (
 from ade_api.features.agent_runtime_v3.run_service import RunService
 import ade_api.features.agent_runtime_v3.run_service as run_service_module
 from ade_api.features.agent_runtime_v3.run_service import (
+    _ensure_worker_ready,
     _turn_request_hash,
     _validate_idempotent_replay,
 )
@@ -79,6 +80,39 @@ def test_idempotent_replay_rejects_a_changed_request_after_completion() -> None:
         )
 
 
+def test_idempotent_replay_rejects_a_runtime_mode_change() -> None:
+    request = AcceptTurnRequest(content="Remember Rocky", idempotency_key="turn-1")
+    definition = _definition()
+    prior = {
+        "accepted_conversation_version": 3,
+        "accepted_runtime_mode": "development",
+        "request_hash": _turn_request_hash(
+            request, _conversation(version=3), definition
+        ),
+    }
+
+    with pytest.raises(IdempotencyConflict, match="runtime mode"):
+        _validate_idempotent_replay(
+            prior,
+            request=request,
+            conversation=_conversation(version=3),
+            definition=definition,
+            runtime_mode="release",
+        )
+
+
+def test_turn_admission_rejects_an_unavailable_matching_worker() -> None:
+    class _WorkerHealth:
+        async def get_health(self) -> dict[str, object]:
+            return {
+                "worker_ready": False,
+                "failure_code": "compatible_worker_unavailable",
+            }
+
+    with pytest.raises(RuntimeNotReady, match="compatible_worker_unavailable"):
+        asyncio.run(_ensure_worker_ready(_WorkerHealth()))
+
+
 def test_agent_studio_turn_fails_at_release_gate_before_execution(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -128,6 +162,7 @@ def test_agent_studio_turn_fails_at_release_gate_before_execution(
         database=_Database(),
         settings=SimpleNamespace(agent_runtime_v3_mode="release"),
         router_transport=object(),
+        worker_health=object(),
     )
 
     with pytest.raises(RuntimeNotReady, match="cutover evidence missing"):

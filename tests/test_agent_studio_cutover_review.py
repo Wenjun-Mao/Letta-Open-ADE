@@ -51,6 +51,9 @@ def _write_receipt(
                 "legacy_source_verified": True,
                 "legacy_web_image_built": True,
                 "legacy_web_smoke_passed": True,
+                "legacy_web_api_read_passed": True,
+                "legacy_web_api_write_passed": True,
+                "legacy_web_api_cleanup_passed": True,
                 "legacy_health_passed": True,
                 "native_state_preserved": True,
             }
@@ -159,6 +162,7 @@ def test_cutover_review_composes_one_content_addressed_release_ledger(
     }
     assert payload["rollback_rehearsal"]["legacy_source_verified"] is True
     assert payload["rollback_rehearsal"]["legacy_web_smoke_passed"] is True
+    assert payload["rollback_rehearsal"]["legacy_web_api_write_passed"] is True
     assert set(payload["capability_evidence"]) == set(REQUIRED_CAPABILITY_EVIDENCE)
     assert payload["evidence_sha256"] == canonical_sha256(
         {key: value for key, value in payload.items() if key != "evidence_sha256"}

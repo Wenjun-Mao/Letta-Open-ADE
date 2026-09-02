@@ -32,6 +32,7 @@ from .resource_service import ResourceService
 from .router_transport import RouterTransport
 from .run_service import RunService
 from .release_policy import ensure_agent_studio_release_ready
+from .worker_health import RuntimeWorkerHealthService
 
 
 class AgentRuntimeV3Application:
@@ -63,6 +64,10 @@ class AgentRuntimeV3Application:
             database=self.database,
             settings=settings,
             router_transport=router_transport,
+            worker_health=RuntimeWorkerHealthService(
+                engine=engine,
+                settings=settings,
+            ),
         )
 
     async def aclose(self) -> None:

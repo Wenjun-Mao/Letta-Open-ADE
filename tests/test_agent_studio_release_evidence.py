@@ -150,6 +150,9 @@ def _payload(manifest, policies):
             "legacy_source_verified": True,
             "legacy_web_image_built": True,
             "legacy_web_smoke_passed": True,
+            "legacy_web_api_read_passed": True,
+            "legacy_web_api_write_passed": True,
+            "legacy_web_api_cleanup_passed": True,
             "legacy_health_passed": True,
             "native_state_preserved": True,
             "legacy_revision": "0" * 40,
@@ -211,6 +214,12 @@ def test_release_evidence_binds_every_cutover_gate() -> None:
                 native_state_preserved=False
             ),
             "native_state_preserved=true",
+        ),
+        (
+            lambda payload: payload["rollback_rehearsal"].update(
+                legacy_web_api_write_passed=False
+            ),
+            "legacy_web_api_write_passed=true",
         ),
     ],
 )

@@ -33,10 +33,11 @@ class RunClaimer:
         async with self.engine.begin() as connection:
             runs = RunRepository(connection)
             leases = ConversationLeaseRepository(connection)
-            run = await runs.claim_pending()
+            runtime_mode = self.settings.agent_runtime_v3_mode
+            run = await runs.claim_pending(runtime_mode=runtime_mode)
             recovered = False
             if run is None:
-                run = await runs.claim_abandoned()
+                run = await runs.claim_abandoned(runtime_mode=runtime_mode)
                 recovered = run is not None
             if run is None:
                 return None, False

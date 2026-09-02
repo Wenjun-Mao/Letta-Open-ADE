@@ -878,6 +878,10 @@ def test_agent_studio_compose_lane_is_default_and_isolated_from_letta_and_redis(
         "--port",
         "8000",
     ]
+    native_healthcheck = native_api["healthcheck"]["test"]
+    assert "/api/v3/worker-health" in native_healthcheck[-1]
+    assert "ADE_API_ADMIN_KEY" in native_healthcheck[-1]
+    assert "/health" not in native_healthcheck[-1]
     assert not {
         key
         for key in native_api["environment"]

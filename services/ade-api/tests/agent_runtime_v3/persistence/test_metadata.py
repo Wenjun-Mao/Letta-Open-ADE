@@ -8,6 +8,7 @@ from ade_api.features.agent_runtime_v3.persistence.metadata import (
     conversation_summaries,
     memory_embeddings,
     run_attempts,
+    runs,
     worker_instances,
 )
 from ade_api.features.agent_runtime_v3.persistence.validation import (
@@ -46,6 +47,7 @@ def test_metadata_has_the_complete_ade_runtime_table_set() -> None:
     assert isinstance(memory_embeddings.c.embedding.type, Vector)
     assert run_attempts.c.timeout_seconds.type.precision == 8
     assert run_attempts.c.timeout_seconds.type.scale == 3
+    assert runs.c.accepted_runtime_mode.server_default is not None
 
 
 def test_metadata_uses_named_constraints_and_indexes() -> None:

@@ -34,6 +34,14 @@ dual-write path would preserve two conflicting authorities for memory and histor
 - Rollback is a deliberate release-level deployment rollback to the prior v2 UI/API.
   It is never automatic or request-scoped, and it leaves isolated v3 state intact for
   diagnosis and a later explicit reset decision.
+- Every accepted run records its runtime mode immutably. Workers claim only pending
+  or abandoned runs accepted in their own mode, and Agent Studio release evidence is
+  revalidated immediately before provider work. A development run therefore cannot
+  cross a deployment transition and execute under release authority.
+- New turns are accepted only while a fresh, source-matched worker heartbeat is
+  present. The native API remains live for diagnosis when the worker is unavailable,
+  but Compose and product admission use authenticated worker readiness rather than
+  the liveness endpoint.
 - Phase 4 compares product outcomes rather than internal memory representations.
   Test Center owns content-addressed paired native-v3 and Letta-v2 artifacts,
   normalized turn evidence, and comparison results.
@@ -74,6 +82,8 @@ not a migration failure.
   point to the required qualification, parity, or conformance receipt.
 - Never expose an unqualified model route through Agent Studio configuration.
 - Never route one native request to Letta after a provider, tool, or runtime failure.
+- Never claim or recover a run under a different runtime mode than accepted it.
+- Never persist a new turn when no fresh, source-matched worker is ready.
 - Never delete or mutate Letta history as part of the native reset operation.
 - Never remove Letta, Redis, v2 endpoints, or historical artifacts during Phase 5.
 - Record any deployment, policy, prompt, tool, schema, or retrieval identity change as

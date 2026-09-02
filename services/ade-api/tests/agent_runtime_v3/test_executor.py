@@ -5,11 +5,17 @@ import json
 
 import pytest
 
-from ade_api.features.agent_runtime_v3.errors import RuntimeValidationError
+import ade_api.features.agent_runtime_v3.turn_execution as turn_execution_module
+from ade_api.features.agent_runtime_v3.errors import (
+    RuntimeNotReady,
+    RuntimeValidationError,
+)
 from ade_api.features.agent_runtime_v3.executor import (
     ConversationExecutor,
     curated_tools,
 )
+from ade_api.features.agent_runtime_v3.provider_tracing import AttemptTrace
+from ade_api.features.agent_runtime_v3.turn_execution import TurnExecution
 from ade_api.features.agent_runtime_v3.tool_policy import (
     TOOL_USE_POLICY,
     ToolRequirement,
@@ -504,3 +510,48 @@ def test_empty_conversation_output_has_a_stable_safe_detail_code() -> None:
         )
 
     assert exc_info.value.detail_code == "conversation_output_empty"
+
+
+def test_agent_studio_execution_rechecks_release_evidence_before_provider_work(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _NoProviderTransport:
+        async def catalog(self, **_kwargs):
+            raise AssertionError("provider work must not begin before the release gate")
+
+    class _Settings:
+        agent_runtime_v3_mode = "release"
+        model_discovery_timeout_seconds = 5.0
+
+    execution = TurnExecution(
+        engine=object(),  # type: ignore[arg-type]
+        transport=_NoProviderTransport(),  # type: ignore[arg-type]
+        settings=_Settings(),  # type: ignore[arg-type]
+    )
+
+    async def _load_state(_run):
+        return {
+            "conversation": {"purpose": "agent_studio"},
+            "definition": {},
+        }
+
+    monkeypatch.setattr(execution, "_load_state", _load_state)
+
+    def _reject_release(_mode: str) -> None:
+        raise RuntimeNotReady("cutover evidence was withdrawn")
+
+    monkeypatch.setattr(
+        turn_execution_module,
+        "ensure_agent_studio_release_ready",
+        _reject_release,
+        raising=False,
+    )
+
+    with pytest.raises(RuntimeNotReady, match="withdrawn"):
+        asyncio.run(
+            execution.execute(
+                {"id": "run-1"},
+                deadline=10_000_000.0,
+                trace=AttemptTrace(attempt=1),
+            )
+        )

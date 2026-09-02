@@ -267,6 +267,9 @@ def validate_agent_studio_release_evidence(
         "legacy_source_verified",
         "legacy_web_image_built",
         "legacy_web_smoke_passed",
+        "legacy_web_api_read_passed",
+        "legacy_web_api_write_passed",
+        "legacy_web_api_cleanup_passed",
         "legacy_health_passed",
         "native_state_preserved",
     ):

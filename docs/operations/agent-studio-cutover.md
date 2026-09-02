@@ -39,6 +39,8 @@ only when every capability points to its required signed artifact.
 - Keep DGX chat and embedding routes reachable from `model-router` and keep the
   llama-server compatibility route reachable.
 - Keep Letta, Redis, the v2 ADE API, PostgreSQL, and the native lane running.
+- Require `/api/v3/worker-health` to report a fresh worker with the same source
+  revision, fingerprint, and runtime mode as the native API before collecting turns.
 - Use `rounds=3`, `timeout_seconds=180`, and `retry_count=0` exactly.
 - Do not edit a policy-bound file after qualification. Restart from policy
   rebinding if code, prompt, persona, tool, schema, retrieval, workflow, or gate

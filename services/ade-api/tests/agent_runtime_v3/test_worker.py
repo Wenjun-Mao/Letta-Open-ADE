@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
+import pytest
+
 from ade_api.features.agent_runtime_v3.worker import AgentRuntimeV3Worker
+import ade_api.features.agent_runtime_v3.worker_claims as worker_claims_module
 from ade_api.features.agent_runtime_v3.worker_claims import ClaimedRun
+from ade_api.features.agent_runtime_v3.worker_claims import RunClaimer
 from ade_api.features.agent_runtime_v3.worker_control import (
     StartedAttempt,
     WorkerDraining,
@@ -100,3 +105,40 @@ def test_drain_before_attempt_fails_claim_without_starting_provider_work() -> No
 
     assert attempts.start_count == 0
     assert isinstance(finalizer.failure, WorkerDraining)
+
+
+def test_run_claimer_only_claims_work_accepted_in_its_runtime_mode(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: list[tuple[str, str]] = []
+
+    class _Engine:
+        @asynccontextmanager
+        async def begin(self):
+            yield object()
+
+    class _Runs:
+        def __init__(self, _connection) -> None:
+            pass
+
+        async def claim_pending(self, *, runtime_mode: str):
+            seen.append(("pending", runtime_mode))
+            return None
+
+        async def claim_abandoned(self, *, runtime_mode: str):
+            seen.append(("abandoned", runtime_mode))
+            return None
+
+    monkeypatch.setattr(worker_claims_module, "RunRepository", _Runs)
+    monkeypatch.setattr(
+        worker_claims_module,
+        "ConversationLeaseRepository",
+        lambda _connection: object(),
+    )
+    claimer = RunClaimer(
+        engine=_Engine(),
+        settings=SimpleNamespace(agent_runtime_v3_mode="release"),
+    )
+
+    assert asyncio.run(claimer.claim()) == (None, False)
+    assert seen == [("pending", "release"), ("abandoned", "release")]

@@ -31,6 +31,7 @@ from .persistence.definitions import DefinitionVersionRepository
 from .persistence.memory import MemoryRepository
 from .provider_tracing import AttemptTrace
 from .release_policy import (
+    ensure_agent_studio_release_ready,
     release_validation_kwargs,
 )
 from .reviewer import MemoryReviewer, ReviewerResult
@@ -73,6 +74,9 @@ class TurnExecution:
     ) -> AttemptResult:
         state = await self._load_state(run)
         definition = state["definition"]
+        conversation = state["conversation"]
+        if conversation.get("purpose") == "agent_studio":
+            ensure_agent_studio_release_ready(self.settings.agent_runtime_v3_mode)
         catalog = await trace.transport(self.transport, stage="catalog").catalog(
             timeout_seconds=min(
                 _remaining(deadline),
@@ -85,7 +89,6 @@ class TurnExecution:
             mode=self.settings.agent_runtime_v3_mode,
             **release_validation_kwargs(self.settings.agent_runtime_v3_mode),
         )
-        conversation = state["conversation"]
         subject_id = str(conversation["memory_subject_id"])
         deployments = {
             str(item["role"]): item for item in definition["deployment_snapshot"]

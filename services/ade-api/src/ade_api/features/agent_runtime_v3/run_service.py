@@ -21,6 +21,7 @@ from .deployments import definition_deployment, validate_definition_execution
 from .errors import (
     ConversationBusy,
     IdempotencyConflict,
+    RuntimeNotReady,
     RuntimeValidationError,
 )
 from .events import TERMINAL_RUN_STATUSES, append_run_event, event_response
@@ -35,6 +36,7 @@ from .release_policy import (
     release_validation_kwargs,
 )
 from .router_transport import RouterTransport
+from .worker_health import RuntimeWorkerHealthServiceProtocol
 
 
 class RunService:
@@ -44,10 +46,12 @@ class RunService:
         database: RuntimeDatabase,
         settings: AdeApiSettings,
         router_transport: RouterTransport,
+        worker_health: RuntimeWorkerHealthServiceProtocol,
     ) -> None:
         self.database = database
         self.settings = settings
         self.router_transport = router_transport
+        self.worker_health = worker_health
 
     async def accept_turn(
         self, conversation_id: str, request: AcceptTurnRequest
@@ -80,6 +84,7 @@ class RunService:
                         request=request,
                         conversation=conversation,
                         definition=definition,
+                        runtime_mode=self.settings.agent_runtime_v3_mode,
                     )
                     return turn_accepted_response(prior, replayed=True)
             catalog = await self.router_transport.catalog(
@@ -101,6 +106,7 @@ class RunService:
                 )
             except ValueError as exc:
                 raise RuntimeValidationError(str(exc)) from exc
+            await _ensure_worker_ready(self.worker_health)
             async with self.database.engine.begin() as connection:
                 conversations = ConversationRepository(connection)
                 runs = RunRepository(connection)
@@ -124,6 +130,7 @@ class RunService:
                         request=request,
                         conversation=conversation,
                         definition=definition,
+                        runtime_mode=self.settings.agent_runtime_v3_mode,
                     )
                     return turn_accepted_response(prior, replayed=True)
                 if await runs.active_for_conversation(conversation_id) is not None:
@@ -140,6 +147,7 @@ class RunService:
                         "request_hash": request_hash,
                         "status": "pending",
                         "qualification_state": definition["qualification_state"],
+                        "accepted_runtime_mode": self.settings.agent_runtime_v3_mode,
                         "timeout_seconds": request.timeout_seconds,
                         "retry_count": request.retry_count,
                         "accepted_conversation_version": conversation["version"],
@@ -176,6 +184,7 @@ class RunService:
                         "timeout_seconds": request.timeout_seconds,
                         "retry_count": request.retry_count,
                         "qualification_state": definition["qualification_state"],
+                        "accepted_runtime_mode": self.settings.agent_runtime_v3_mode,
                     },
                 )
                 await append_run_event(
@@ -321,7 +330,12 @@ def _validate_idempotent_replay(
     request: AcceptTurnRequest,
     conversation: dict[str, Any],
     definition: dict[str, Any],
+    runtime_mode: str | None = None,
 ) -> None:
+    if runtime_mode is not None and prior.get("accepted_runtime_mode") != runtime_mode:
+        raise IdempotencyConflict(
+            "idempotency key is bound to a turn accepted in another runtime mode"
+        )
     request_hash = _turn_request_hash(
         request,
         conversation,
@@ -330,6 +344,16 @@ def _validate_idempotent_replay(
     )
     if prior["request_hash"] != request_hash:
         raise IdempotencyConflict("idempotency key is already bound to another turn")
+
+
+async def _ensure_worker_ready(
+    worker_health: RuntimeWorkerHealthServiceProtocol,
+) -> None:
+    health = await worker_health.get_health()
+    if bool(health.get("worker_ready")):
+        return
+    failure_code = str(health.get("failure_code") or "worker_unavailable")
+    raise RuntimeNotReady(f"A matching ADE-native worker is not ready ({failure_code})")
 
 
 def _sha256(value: str) -> str:
