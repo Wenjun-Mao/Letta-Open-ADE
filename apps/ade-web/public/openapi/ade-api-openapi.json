@@ -1432,6 +1432,17 @@
             ],
             "title": "Thinking Default Enabled"
           },
+          "tool_call_thinking_default_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Call Thinking Default Enabled"
+          },
           "upstream_provider_model_id": {
             "anyOf": [
               {
@@ -3436,6 +3447,17 @@
             ],
             "title": "Thinking Default Enabled"
           },
+          "tool_call_thinking_default_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Call Thinking Default Enabled"
+          },
           "upstream_provider_model_id": {
             "anyOf": [
               {
@@ -3530,7 +3552,8 @@
           "schema_version": {
             "enum": [
               1,
-              2
+              2,
+              3
             ],
             "title": "Schema Version",
             "type": "integer"

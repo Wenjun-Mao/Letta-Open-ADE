@@ -432,6 +432,7 @@ TITLE_TOKEN_TRANSLATIONS = {
     "e2e": "E2E",
     "embedding": "向量模型",
     "enable": "启用",
+    "enabled": "已启用",
     "end": "结束",
     "entries": "条目",
     "entry": "条目",

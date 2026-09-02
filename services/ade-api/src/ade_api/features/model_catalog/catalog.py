@@ -84,6 +84,13 @@ def enriched_catalog_items(
                 "thinking_default_enabled": bool(
                     raw_item.get("thinking_default_enabled", False)
                 ),
+                "tool_call_thinking_default_enabled": (
+                    raw_item.get("tool_call_thinking_default_enabled")
+                    if isinstance(
+                        raw_item.get("tool_call_thinking_default_enabled"), bool
+                    )
+                    else None
+                ),
                 "profile_applied": bool(raw_item.get("profile_applied", False)),
                 "profile_source": str(raw_item.get("profile_source", "") or ""),
                 "agent_studio_candidate": bool(

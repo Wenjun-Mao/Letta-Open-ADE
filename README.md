@@ -93,7 +93,7 @@ make native-runtime-migrate
 make native-runtime-db-test
 make native-runtime-lane-check
 make native-runtime-up
-make native-runtime-preview-gate  # expected to fail until reviewed promotion
+make native-runtime-preview-gate  # revalidates reviewed promotion and policy identity
 make native-runtime-preview-up    # release-only; runs the gate first
 ```
 

@@ -98,6 +98,8 @@ for the implemented guarantee.
   for comparison and decisions.
 - Changing any execution-relevant catalog option changes its identity even when its
   display label or route alias does not.
+- Provenance schema v3 includes the model profile's tool-call thinking default;
+  readers retain the original identity field set when verifying v1/v2 artifacts.
 - Do not add a transport retry around non-idempotent evaluation calls without first
   adding and testing a server-owned idempotency contract.
 - Do not lower Test Center's authority while it returns full prompt or persona text.

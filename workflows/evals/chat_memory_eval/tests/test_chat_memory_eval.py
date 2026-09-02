@@ -250,6 +250,7 @@ def _catalog_option(key: str, *, revision: str) -> dict[str, object]:
         "supports_top_k": True,
         "supports_thinking": False,
         "thinking_default_enabled": False,
+        "tool_call_thinking_default_enabled": False,
         "profile_applied": True,
         "profile_source": "test",
         "agent_studio_candidate": True,
@@ -300,6 +301,7 @@ def test_evaluation_provenance_records_effective_controls_and_source_identity(
 
     assert first["configuration_sha256"] == second["configuration_sha256"]
     assert first["provenance_sha256"] != second["provenance_sha256"]
+    assert first["schema_version"] == 3
     assert first["controls"] == {
         "rounds": config.rounds,
         "timeout_seconds": config.timeout_seconds,
@@ -320,6 +322,7 @@ def test_evaluation_provenance_records_effective_controls_and_source_identity(
     assert first["model"]["deployment"]["fingerprint"]["artifact_revision"] == (
         "model-r1"
     )
+    assert first["model"]["tool_call_thinking_default_enabled"] is False
 
 
 def test_evaluation_configuration_identity_changes_with_content_model_or_source(

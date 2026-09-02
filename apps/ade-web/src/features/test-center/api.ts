@@ -92,6 +92,7 @@ export type EvaluationOptionSnapshot = {
   supports_top_k: boolean | null;
   supports_thinking: boolean | null;
   thinking_default_enabled: boolean | null;
+  tool_call_thinking_default_enabled: boolean | null;
   profile_applied: boolean | null;
   profile_source: string;
   agent_studio_candidate: boolean | null;
@@ -101,7 +102,7 @@ export type EvaluationOptionSnapshot = {
 };
 
 export type EvaluationProvenance = {
-  schema_version: 1 | 2;
+  schema_version: 1 | 2 | 3;
   run_id: string | null;
   captured_at: string;
   configuration_sha256: string;

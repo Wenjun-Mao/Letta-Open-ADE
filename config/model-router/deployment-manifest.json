@@ -10,7 +10,7 @@
         "conversation",
         "reviewer"
       ],
-      "lifecycle": "qualified",
+      "lifecycle": "candidate",
       "fingerprint": {
         "provider": "dgx_vllm",
         "endpoint_role": "openai-compatible-chat",
@@ -24,7 +24,7 @@
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
         "prompt_policy_sha256": "cadb12b27a59a72f68425fc0787f695c259925060247905bcfe474e6b685a848",
         "tool_policy_sha256": "2120edcc35fc168b550d309b474001e0071ecaaba5723f9dc8e721fce317c4f4",
-        "schema_policy_sha256": "483d0362274234e7de3eafb1a31764787592b03140d2b2dd0f61a374c5a1e6e0",
+        "schema_policy_sha256": "6674c4c63170a1fdac1d0c22533c761f86d3f7df0a30e893eb07d7f59c4511ac",
         "retrieval_policy_sha256": "d293a05d2a2b5035216a284428479a52aabe313f9062bf324a1960275b691580",
         "sampling_settings": {
           "temperature": 1.0,
@@ -49,21 +49,21 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "8892ffe150cdb2afff5adc5f4f4982a273b4f8aa5eb2d14f9a85b2323bc94718",
-        "qualified": true,
+        "fingerprint_sha256": "a96047ff47bdfaf672204c578c30b48043bcf146bfaf0cad336b76ad897ce6e9",
+        "qualified": false,
         "stale_round_count": 0,
         "role_results": [
           {
             "role": "conversation",
-            "observed_rounds": 3,
-            "consecutive_passing_rounds": 3,
-            "qualified": true
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
           },
           {
             "role": "reviewer",
-            "observed_rounds": 3,
-            "consecutive_passing_rounds": 3,
-            "qualified": true
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
           }
         ]
       }
@@ -77,7 +77,7 @@
       "roles": [
         "retriever"
       ],
-      "lifecycle": "qualified",
+      "lifecycle": "candidate",
       "fingerprint": {
         "provider": "dgx_embedding_sidecar",
         "endpoint_role": "openai-compatible-embeddings",
@@ -91,7 +91,7 @@
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
         "prompt_policy_sha256": "cadb12b27a59a72f68425fc0787f695c259925060247905bcfe474e6b685a848",
         "tool_policy_sha256": "2120edcc35fc168b550d309b474001e0071ecaaba5723f9dc8e721fce317c4f4",
-        "schema_policy_sha256": "483d0362274234e7de3eafb1a31764787592b03140d2b2dd0f61a374c5a1e6e0",
+        "schema_policy_sha256": "6674c4c63170a1fdac1d0c22533c761f86d3f7df0a30e893eb07d7f59c4511ac",
         "retrieval_policy_sha256": "d293a05d2a2b5035216a284428479a52aabe313f9062bf324a1960275b691580",
         "sampling_settings": {
           "dimensions": 1024,
@@ -109,15 +109,15 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "7a94803b33bf6e93b08c00a6b0b779f2217b432b9fc851f6077942f7ea6cf3c3",
-        "qualified": true,
+        "fingerprint_sha256": "636d77b7f2acd00220a6bd224a6518fdfc9c03b94347a53b600706a970e67823",
+        "qualified": false,
         "stale_round_count": 0,
         "role_results": [
           {
             "role": "retriever",
-            "observed_rounds": 3,
-            "consecutive_passing_rounds": 3,
-            "qualified": true
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
           }
         ]
       }
@@ -144,7 +144,7 @@
         "runtime_image_digest": null,
         "prompt_policy_sha256": "cadb12b27a59a72f68425fc0787f695c259925060247905bcfe474e6b685a848",
         "tool_policy_sha256": "2120edcc35fc168b550d309b474001e0071ecaaba5723f9dc8e721fce317c4f4",
-        "schema_policy_sha256": "483d0362274234e7de3eafb1a31764787592b03140d2b2dd0f61a374c5a1e6e0",
+        "schema_policy_sha256": "6674c4c63170a1fdac1d0c22533c761f86d3f7df0a30e893eb07d7f59c4511ac",
         "retrieval_policy_sha256": "d293a05d2a2b5035216a284428479a52aabe313f9062bf324a1960275b691580",
         "sampling_settings": {
           "thinking_enabled": false,
@@ -168,7 +168,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "cfa68fdd616e7f9f3b31b2ce4d09242750ff6e445008df4f9498953b3427a3cd",
+        "fingerprint_sha256": "cc4737629d7f9b6bdf824c73c5e3314505b452a324bff8ae19991a1a58d74dae",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [

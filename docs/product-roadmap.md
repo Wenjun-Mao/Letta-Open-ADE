@@ -30,9 +30,9 @@ live baseline is recorded in the
 Deterministic checks own the official pass/fail outcome. Optional LLM judging is
 diagnostic only and must not make a result non-deterministic.
 
-## Now: Make Evaluation The Product Spine
+## Delivered: Evaluation Is The Product Spine
 
-Turn the delivered loop into ADE's primary operator journey rather than one
+The delivered loop is now ADE's primary operator journey rather than one
 technical surface among peers.
 
 - Make the behavior-improvement path clear from the dashboard and navigation:
@@ -49,44 +49,45 @@ technical surface among peers.
 - Extend the same outcome-oriented evaluation approach to Comment Lab and Label
   Lab only when each has a concrete, task-specific success contract.
 
-### Now Decision Gate
+### Delivered Decision Gate
 
-This milestone is ready to close when an operator can make a trustworthy
-behavior decision from ADE: the run records the exact evaluated inputs, shows
-the relevant turn and memory evidence, compares a candidate with a baseline,
-and states the resulting keep, promote, or reject decision. Operations and
-qualification views must not be confused with that product-quality decision.
+This milestone closed when ADE could record exact evaluated inputs, show the
+relevant turn and memory evidence, compare a candidate with a baseline, and
+state a keep, promote, or reject decision without reconstructing raw artifacts.
+Operations and qualification views remain separate from product-quality decisions.
 
-## Next: Qualify The ADE-Native Runtime And Prove A Narrow Product Pilot
+## Now: Operate The Qualified ADE-Native Runtime Pilot
 
 The ADE-native runtime is an accepted implementation candidate, not the current
 product runtime. It has a separate PostgreSQL model, worker, typed-memory
-contracts, a breaking `/api/v3` API, and an implemented separate preview route,
-but it remains disabled by default and unqualified. Current Agent Studio,
-`/api/v2`, and Letta `0.16.8` remain the product authority.
+contracts, a breaking `/api/v3` API, and a separate preview route. Its checked-in
+conversation, reviewer, and retriever deployments passed three consecutive complete
+zero-retry rounds and independent reviewed promotion on 2026-09-02. The ordinary
+stack still disables the preview by default; current Agent Studio, `/api/v2`, and
+Letta `0.16.8` remain the product authority.
 
-Next runtime work is evidence and product-contract work, not another broad
-rewrite:
+The next runtime work is pilot evidence and product-contract learning, not another
+broad rewrite:
 
-- Complete the production-path qualification required by
-  [ADR 0010](adr/0010-production-path-runtime-qualification.md), retaining
-  reviewed evidence for the exact deployment fingerprints.
+- Exercise the separate preview with representative conversations and operators,
+  preserving evidence about memory correctness, usability, latency, cancellation,
+  and recovery.
+- Compare the pilot with the supported Agent Studio path on the same product
+  outcomes; do not mistake runtime qualification for user-value evidence.
 - Retain the accepted first-pilot tool scope from
   [ADR 0013](adr/0013-narrow-native-runtime-product-pilot.md): subject-bound
   `search_memory` only, with no arbitrary Tool Center execution.
-- Demonstrate a native-only operational path, including worker readiness,
-  recovery, cancellation, and the absence of a Letta or Redis dependency for
-  that path.
-- Qualify and then expose the implemented, deliberately separate v3 pilot around
-  agent definitions, memory subjects, conversations, typed memory, and run events.
+- Requalify before exposure whenever any bound deployment, prompt, tool, schema,
+  retrieval policy, or runtime identity changes.
+- Use the evidence to decide whether to iterate, reject the candidate, or propose
+  a fresh-start cutover ADR.
 
-### Next Decision Gate
+### Now Decision Gate
 
-The runtime can enter a product pilot only after the required role deployments
-have passed three consecutive complete, zero-retry qualification rounds and
-reviewed promotion; the first tool contract is approved; and a native-only
-operational path has been demonstrated. Passing unit tests, study fixtures, or
-focused diagnostics do not satisfy this gate.
+This milestone closes only when representative pilot evidence supports an explicit
+iterate, reject, or cutover-proposal decision. A cutover proposal must explain the
+product benefit, operational boundary, reset/rollback plan, and removal sequence;
+the completed qualification gate alone does not authorize cutover.
 
 ## Later: Fresh-Start Cutover And Simplification
 

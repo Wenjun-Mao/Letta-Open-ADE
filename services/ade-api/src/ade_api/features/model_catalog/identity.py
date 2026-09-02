@@ -15,6 +15,7 @@ _IDENTITY_FIELDS = (
     "supports_top_k",
     "supports_thinking",
     "thinking_default_enabled",
+    "tool_call_thinking_default_enabled",
     "profile_applied",
     "profile_source",
     "agent_studio_candidate",

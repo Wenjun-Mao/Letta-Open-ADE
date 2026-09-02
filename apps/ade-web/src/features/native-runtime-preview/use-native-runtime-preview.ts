@@ -94,12 +94,13 @@ export function useNativeRuntimePreview(enabled: boolean) {
       return;
     }
     terminalRunRef.current = runId;
-    stopMonitoring();
     try {
       setRun(await getNativeRun(runId));
       await refreshSessionState();
+      stopMonitoring();
       setStreamWarning("");
     } catch (exc) {
+      terminalRunRef.current = "";
       setError(exc instanceof Error ? exc.message : String(exc));
     }
   }

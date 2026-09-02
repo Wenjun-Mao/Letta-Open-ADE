@@ -141,6 +141,7 @@ class ChatMemoryEvaluationOptionSnapshotResponse(_ChatMemoryEvaluationResponseMo
     supports_top_k: bool | None
     supports_thinking: bool | None
     thinking_default_enabled: bool | None
+    tool_call_thinking_default_enabled: bool | None = None
     profile_applied: bool | None
     profile_source: str
     agent_studio_candidate: bool | None
@@ -150,7 +151,7 @@ class ChatMemoryEvaluationOptionSnapshotResponse(_ChatMemoryEvaluationResponseMo
 
 
 class ChatMemoryEvaluationProvenanceResponse(_ChatMemoryEvaluationResponseModel):
-    schema_version: Literal[1, 2]
+    schema_version: Literal[1, 2, 3]
     run_id: str | None = None
     captured_at: str
     configuration_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -166,8 +167,8 @@ class ChatMemoryEvaluationProvenanceResponse(_ChatMemoryEvaluationResponseModel)
     def _require_run_binding_in_schema_v2(
         self,
     ) -> ChatMemoryEvaluationProvenanceResponse:
-        if self.schema_version == 2 and not str(self.run_id or "").strip():
-            raise ValueError("schema v2 evaluation provenance requires run_id")
+        if self.schema_version in {2, 3} and not str(self.run_id or "").strip():
+            raise ValueError("schema v2+ evaluation provenance requires run_id")
         if self.schema_version == 1 and self.run_id is not None:
             raise ValueError("schema v1 evaluation provenance cannot include run_id")
         return self

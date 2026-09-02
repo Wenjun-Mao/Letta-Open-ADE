@@ -1432,6 +1432,17 @@
             ],
             "title": "Thinking 默认启用"
           },
+          "tool_call_thinking_default_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "工具 调用 Thinking 默认 已启用"
+          },
           "upstream_provider_model_id": {
             "anyOf": [
               {
@@ -3436,6 +3447,17 @@
             ],
             "title": "Thinking 默认启用"
           },
+          "tool_call_thinking_default_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "工具 调用 Thinking 默认 已启用"
+          },
           "upstream_provider_model_id": {
             "anyOf": [
               {
@@ -3530,7 +3552,8 @@
           "schema_version": {
             "enum": [
               1,
-              2
+              2,
+              3
             ],
             "title": "Schema 版本",
             "type": "integer"

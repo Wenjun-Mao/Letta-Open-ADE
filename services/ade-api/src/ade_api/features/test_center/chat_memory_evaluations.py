@@ -447,24 +447,30 @@ class ChatMemoryEvaluationReader:
         for option in (provenance.model, provenance.embedding):
             if option is None:
                 continue
-            option_payload = {
-                field: getattr(option, field)
-                for field in (
-                    "key",
-                    "source_id",
-                    "provider_model_id",
-                    "upstream_provider_model_id",
-                    "sampling_defaults",
-                    "scenario_sampling_defaults",
-                    "supports_top_k",
-                    "supports_thinking",
-                    "thinking_default_enabled",
-                    "profile_applied",
-                    "profile_source",
-                    "agent_studio_candidate",
-                    "agent_studio_compatible",
-                    "deployment",
+            identity_fields = (
+                "key",
+                "source_id",
+                "provider_model_id",
+                "upstream_provider_model_id",
+                "sampling_defaults",
+                "scenario_sampling_defaults",
+                "supports_top_k",
+                "supports_thinking",
+                "thinking_default_enabled",
+                "profile_applied",
+                "profile_source",
+                "agent_studio_candidate",
+                "agent_studio_compatible",
+                "deployment",
+            )
+            if provenance.schema_version >= 3:
+                identity_fields = (
+                    *identity_fields[:9],
+                    "tool_call_thinking_default_enabled",
+                    *identity_fields[9:],
                 )
+            option_payload = {
+                field: getattr(option, field) for field in identity_fields
             }
             if _canonical_sha256(option_payload) != option.identity_sha256:
                 raise ChatMemoryEvaluationArtifactUnavailable(
@@ -486,6 +492,11 @@ class ChatMemoryEvaluationReader:
             "controls": provenance.controls,
         }
         provenance_payload = provenance.model_dump(exclude={"provenance_sha256"})
+        if provenance.schema_version < 3:
+            for option_name in ("model", "embedding"):
+                option_payload = provenance_payload.get(option_name)
+                if isinstance(option_payload, dict):
+                    option_payload.pop("tool_call_thinking_default_enabled", None)
         if (
             fixture_hash != provenance.fixture_sha256
             or _canonical_sha256(configuration_payload)

@@ -60,15 +60,16 @@ class RunService:
                 definition = await DefinitionVersionRepository(connection).get(
                     str(conversation["agent_definition_version_id"])
                 )
-                request_hash = _turn_request_hash(request, conversation, definition)
                 prior = await runs.get_by_idempotency(
                     conversation_id, request.idempotency_key
                 )
                 if prior is not None:
-                    if prior["request_hash"] != request_hash:
-                        raise IdempotencyConflict(
-                            "idempotency key is already bound to another turn"
-                        )
+                    _validate_idempotent_replay(
+                        prior,
+                        request=request,
+                        conversation=conversation,
+                        definition=definition,
+                    )
                     return turn_accepted_response(prior, replayed=True)
             catalog = await self.router_transport.catalog(
                 timeout_seconds=self.settings.model_discovery_timeout_seconds
@@ -102,10 +103,12 @@ class RunService:
                     conversation_id, request.idempotency_key
                 )
                 if prior is not None:
-                    if prior["request_hash"] != request_hash:
-                        raise IdempotencyConflict(
-                            "idempotency key is already bound to another turn"
-                        )
+                    _validate_idempotent_replay(
+                        prior,
+                        request=request,
+                        conversation=conversation,
+                        definition=definition,
+                    )
                     return turn_accepted_response(prior, replayed=True)
                 if await runs.active_for_conversation(conversation_id) is not None:
                     raise ConversationBusy(
@@ -237,10 +240,16 @@ def _turn_request_hash(
     request: AcceptTurnRequest,
     conversation: dict[str, Any],
     definition: dict[str, Any],
+    *,
+    conversation_version: int | None = None,
 ) -> str:
     payload = {
         "conversation_id": str(conversation["id"]),
-        "conversation_version": conversation["version"],
+        "conversation_version": (
+            conversation["version"]
+            if conversation_version is None
+            else conversation_version
+        ),
         "content": request.content,
         "definition_id": str(definition["id"]),
         "definition_version": definition["version"],
@@ -254,6 +263,23 @@ def _turn_request_hash(
         payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
     ).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _validate_idempotent_replay(
+    prior: dict[str, Any],
+    *,
+    request: AcceptTurnRequest,
+    conversation: dict[str, Any],
+    definition: dict[str, Any],
+) -> None:
+    request_hash = _turn_request_hash(
+        request,
+        conversation,
+        definition,
+        conversation_version=int(prior["accepted_conversation_version"]),
+    )
+    if prior["request_hash"] != request_hash:
+        raise IdempotencyConflict("idempotency key is already bound to another turn")
 
 
 def _sha256(value: str) -> str:

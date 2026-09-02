@@ -219,6 +219,7 @@ class _FakeRouterClient:
                     "supports_top_k": True,
                     "supports_thinking": True,
                     "thinking_default_enabled": True,
+                    "tool_call_thinking_default_enabled": False,
                     "profile_applied": True,
                     "profile_source": (
                         "docs/adr/0015-model-scoped-tool-call-thinking-mode.md"
@@ -322,6 +323,7 @@ def test_options_api_uses_router_catalog_for_all_scenarios(monkeypatch) -> None:
     }
     assert qwen_chat["supports_thinking"] is True
     assert qwen_chat["thinking_default_enabled"] is True
+    assert qwen_chat["tool_call_thinking_default_enabled"] is False
     assert qwen_chat["agent_studio_compatible"] is True
     assert label_payload["defaults"]["schema_key"] == "label_entity_groups_v1"
     assert chat_payload["agent_studio"] == {

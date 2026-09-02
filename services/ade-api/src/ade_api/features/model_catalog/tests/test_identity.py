@@ -41,3 +41,6 @@ def test_model_option_identity_changes_with_execution_inputs() -> None:
     assert model_option_identity_sha256(
         {**option, "deployment": {"fingerprint": {"artifact_revision": "rev-2"}}}
     ) != model_option_identity_sha256(option)
+    assert model_option_identity_sha256(
+        {**option, "tool_call_thinking_default_enabled": False}
+    ) != model_option_identity_sha256(option)

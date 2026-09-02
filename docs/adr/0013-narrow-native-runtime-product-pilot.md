@@ -1,6 +1,6 @@
 # ADR 0013: The First Native Runtime Product Pilot Is Separate And Memory-Focused
 
-- Status: Accepted for implementation; exposure pending ADR 0010 qualification
+- Status: Accepted; first exposure gate satisfied on 2026-09-02
 - Date: 2026-08-30
 - Related: [ADR 0009](0009-ade-owned-agent-runtime.md),
   [ADR 0010](0010-production-path-runtime-qualification.md), and
@@ -37,11 +37,11 @@ contract than Letta Tool Center parity.
   fingerprints, prompt/persona content hashes, immutable messages, versioned summary
   provenance, typed memory revision lineage and source quotes, explicit timeout/retry
   ownership, cancellation, and normalized SSE events.
-- `NEXT_PUBLIC_ADE_NATIVE_PREVIEW_ENABLED` is built as false by default. The checked-
-  in and local `.env` control remains false until promotion. Navigation is conditional;
-  the direct route renders a truthful gated explanation while disabled, and the
-  server-side `/api/v3` proxy independently returns `404` unless
-  `ADE_NATIVE_PREVIEW_ENABLED=true` at runtime.
+- `NEXT_PUBLIC_ADE_NATIVE_PREVIEW_ENABLED` is built as false by default. The ordinary
+  stack keeps the checked-in control false; the release-preview target enables it only
+  after the promotion gate passes. Navigation is conditional; the direct route renders
+  a truthful gated explanation while disabled, and the server-side `/api/v3` proxy
+  independently returns `404` unless `ADE_NATIVE_PREVIEW_ENABLED=true` at runtime.
 - `make native-runtime-preview-up` must first run a fail-closed gate. It enables the
   route only when the exact conversation, reviewer, and retriever aliases have each
   been promoted for three complete rounds, have no stale rounds, and still match the

@@ -29,6 +29,7 @@ class ApiOptionEntryResponse(BaseModel):
     supports_top_k: bool | None = None
     supports_thinking: bool | None = None
     thinking_default_enabled: bool | None = None
+    tool_call_thinking_default_enabled: bool | None = None
     profile_applied: bool | None = None
     profile_source: str | None = None
     agent_studio_candidate: bool | None = None

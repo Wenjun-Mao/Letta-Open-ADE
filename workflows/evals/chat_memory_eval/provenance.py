@@ -32,6 +32,7 @@ _OPTION_IDENTITY_FIELDS = (
     "supports_top_k",
     "supports_thinking",
     "thinking_default_enabled",
+    "tool_call_thinking_default_enabled",
     "profile_applied",
     "profile_source",
     "agent_studio_candidate",
@@ -88,7 +89,7 @@ def capture_evaluation_provenance(
         "controls": controls,
     }
     payload = {
-        "schema_version": 2,
+        "schema_version": 3,
         "run_id": run_id,
         "captured_at": (captured_at or datetime.now(timezone.utc)).isoformat(),
         "configuration_sha256": _sha256(configuration_payload),
@@ -178,6 +179,9 @@ def _option_snapshot(option: dict[str, Any]) -> dict[str, Any]:
         "supports_top_k": option.get("supports_top_k"),
         "supports_thinking": option.get("supports_thinking"),
         "thinking_default_enabled": option.get("thinking_default_enabled"),
+        "tool_call_thinking_default_enabled": option.get(
+            "tool_call_thinking_default_enabled"
+        ),
         "profile_applied": option.get("profile_applied"),
         "profile_source": str(option.get("profile_source", "")),
         "agent_studio_candidate": option.get("agent_studio_candidate"),

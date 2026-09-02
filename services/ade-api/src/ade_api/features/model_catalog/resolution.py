@@ -142,6 +142,9 @@ def runtime_options(
                     "thinking_default_enabled": item.get(
                         "thinking_default_enabled", False
                     ),
+                    "tool_call_thinking_default_enabled": item.get(
+                        "tool_call_thinking_default_enabled"
+                    ),
                     "profile_applied": item.get("profile_applied", False),
                     "profile_source": item.get("profile_source", ""),
                     "agent_studio_candidate": item.get("agent_studio_candidate", False),
