@@ -336,6 +336,10 @@ def test_router_resolves_stable_alias_through_the_discovered_deployment(
     assert model.provider_model_id == "Qwen/Qwen3-Embedding-0.6B"
     assert model.deployment is not None
     assert model.deployment.deployment_id == "embedding-deployment"
+    assert model.as_dict()["route_aliases"] == [
+        "embedding-source::stable",
+        "embedding-source::Qwen/Qwen3-Embedding-0.6B",
+    ]
 
 
 def test_router_catalog_enriches_models_from_profiles_and_gates_agent_studio(

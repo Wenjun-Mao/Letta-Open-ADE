@@ -50,9 +50,7 @@ def resolve_deployment(
         (
             item
             for item in items
-            if isinstance(item, dict)
-            and str(item.get("model_key") or item.get("router_model_id") or "")
-            == route_alias
+            if isinstance(item, dict) and _item_selects_route(item, route_alias)
         ),
         None,
     )
@@ -107,6 +105,13 @@ def resolve_deployment(
         ),
         fingerprint_payload=dict(fingerprint),
     )
+
+
+def _item_selects_route(item: Mapping[str, Any], route_alias: str) -> bool:
+    if str(item.get("model_key") or item.get("router_model_id") or "") == route_alias:
+        return True
+    aliases = item.get("route_aliases")
+    return isinstance(aliases, list) and route_alias in aliases
 
 
 def validate_definition_execution(

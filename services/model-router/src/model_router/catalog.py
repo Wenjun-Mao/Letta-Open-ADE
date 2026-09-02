@@ -126,6 +126,11 @@ class RoutedModel:
             "profile_source": self.profile_source,
             "agent_studio_candidate": self.agent_studio_candidate,
             "agent_studio_compatible": self.agent_studio_compatible,
+            "route_aliases": (
+                list(self.deployment.route_aliases)
+                if self.deployment is not None
+                else [self.router_model_id]
+            ),
             "deployment": self.deployment.as_catalog_dict()
             if self.deployment is not None
             else None,

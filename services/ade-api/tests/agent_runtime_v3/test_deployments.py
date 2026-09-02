@@ -76,6 +76,31 @@ def test_development_mode_records_unqualified_deployment() -> None:
     assert result.fingerprint == "a" * 64
 
 
+def test_development_mode_resolves_stable_alias_from_discovered_route() -> None:
+    catalog = {
+        "items": [
+            {
+                **CATALOG["items"][0],
+                "model_key": "source::provider-advertised-name",
+                "route_aliases": [
+                    "source::stable",
+                    "source::provider-advertised-name",
+                ],
+            }
+        ]
+    }
+
+    result = resolve_deployment(
+        catalog,
+        route_alias="source::stable",
+        role="conversation",
+        mode="development",
+    )
+
+    assert result.route_alias == "source::stable"
+    assert result.deployment_id == "deployment-1"
+
+
 def test_release_mode_blocks_unqualified_deployment() -> None:
     with pytest.raises(UnqualifiedDeployment):
         resolve_deployment(

@@ -687,6 +687,10 @@ exact deployment identities:
 
 - Product roles are `conversation`, `reviewer`, and `retriever`.
 - A route alias selects a candidate but carries no qualification by itself.
+- A deployment may publish stable selection aliases alongside the provider's current
+  advertised route. At least one declared alias must match the live catalog so the
+  router can attach the immutable deployment record; native definitions may then
+  bind a stable alias without inheriting qualification from the alias text.
 - A deployment fingerprint includes artifact revision/digest, served model, runtime
   implementation/version/image digest, endpoint role, hardware, context and sampling
   settings, plus prompt/tool/schema/retrieval policy hashes.

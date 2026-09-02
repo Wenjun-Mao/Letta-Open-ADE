@@ -140,7 +140,9 @@ def test_context_labels_bound_memory_as_current_user_facts() -> None:
     assert "bound memory-subject profile and search results" in system_message
     assert "never the assistant persona" in system_message
     assert "state its concrete value" in system_message
-    assert "Active facts about the current user (bound memory subject)" in system_message
+    assert (
+        "Active facts about the current user (bound memory subject)" in system_message
+    )
     assert (
         "Retrieved older facts about the current user (bound memory subject)"
         in system_message
