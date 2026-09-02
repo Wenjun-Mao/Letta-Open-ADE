@@ -131,58 +131,52 @@ async def execute_case(
     # history or allowing an empty setup conversation to loop on retrieval tools.
     auxiliary_turns: list[dict[str, Any]] = []
     initial_facts = tuple(getattr(case, "initial_facts", ()))
-    setup_definitions: dict[str, str] = {}
-    setup_conversations: dict[str, str] = {}
+    initial_facts_by_subject: dict[str, list[object]] = {}
     for fact in initial_facts:
         subject_key = str(getattr(fact, "subject_key", "primary"))
-        setup_conversation_id = setup_conversations.get(subject_key)
-        if setup_conversation_id is None:
-            agent_key = _first_agent_for_subject(case, subject_key)
-            setup_definition_id = setup_definitions.get(agent_key)
-            if setup_definition_id is None:
-                setup_definition_key = _resource_key(
-                    namespace,
-                    str(getattr(case, "key")),
-                    f"setup-agent-{agent_key}",
-                )
-                definition_keys.append(setup_definition_key)
-                if resource_scope_sink is not None:
-                    resource_scope_sink.append(
-                        ResourceScope((setup_definition_key,), (), {}, ())
-                    )
-                setup_definition = await _run_stage(
-                    "initial_fact_definition_setup",
-                    client.create_definition(
-                        definition_key=setup_definition_key,
-                        name=f"v3 acceptance {getattr(case, 'key')} setup {agent_key}",
-                        model_key=conversation_model_key,
-                        reviewer_model_key=reviewer_model_key,
-                        embedding_model_key=embedding_model_key,
-                        tool_names=(),
-                    ),
-                )
-                setup_fingerprints = _deployment_fingerprints(setup_definition)
-                setup_snapshots = _deployment_snapshots(setup_definition)
-                fingerprints.update(setup_fingerprints)
-                deployment_snapshots.extend(setup_snapshots)
-                if resource_scope_sink is not None:
-                    resource_scope_sink.append(
-                        ResourceScope(
-                            (),
-                            (),
-                            setup_fingerprints,
-                            setup_snapshots,
-                        )
-                    )
-                setup_definition_id = _id(setup_definition, "definition")
-                setup_definitions[agent_key] = setup_definition_id
-            created = await _run_stage(
-                "initial_fact_conversation_setup",
-                client.create_conversation(setup_definition_id, subjects[subject_key]),
+        initial_facts_by_subject.setdefault(subject_key, []).append(fact)
+    setup_definitions: dict[str, str] = {}
+    for subject_key, subject_facts in initial_facts_by_subject.items():
+        agent_key = _first_agent_for_subject(case, subject_key)
+        setup_definition_id = setup_definitions.get(agent_key)
+        if setup_definition_id is None:
+            setup_definition_key = _resource_key(
+                namespace,
+                str(getattr(case, "key")),
+                f"setup-agent-{agent_key}",
             )
-            setup_conversation_id = _id(created, "conversation")
-            setup_conversations[subject_key] = setup_conversation_id
-        content = _natural_fact_setup_message(fact)
+            definition_keys.append(setup_definition_key)
+            if resource_scope_sink is not None:
+                resource_scope_sink.append(
+                    ResourceScope((setup_definition_key,), (), {}, ())
+                )
+            setup_definition = await _run_stage(
+                "initial_fact_definition_setup",
+                client.create_definition(
+                    definition_key=setup_definition_key,
+                    name=f"v3 acceptance {getattr(case, 'key')} setup {agent_key}",
+                    model_key=conversation_model_key,
+                    reviewer_model_key=reviewer_model_key,
+                    embedding_model_key=embedding_model_key,
+                    tool_names=(),
+                ),
+            )
+            setup_fingerprints = _deployment_fingerprints(setup_definition)
+            setup_snapshots = _deployment_snapshots(setup_definition)
+            fingerprints.update(setup_fingerprints)
+            deployment_snapshots.extend(setup_snapshots)
+            if resource_scope_sink is not None:
+                resource_scope_sink.append(
+                    ResourceScope((), (), setup_fingerprints, setup_snapshots)
+                )
+            setup_definition_id = _id(setup_definition, "definition")
+            setup_definitions[agent_key] = setup_definition_id
+        created = await _run_stage(
+            "initial_fact_conversation_setup",
+            client.create_conversation(setup_definition_id, subjects[subject_key]),
+        )
+        setup_conversation_id = _id(created, "conversation")
+        content = _natural_fact_setup_batch(subject_facts)
         setup_run, setup_events = await _complete_setup_turn(
             client,
             setup_conversation_id,
@@ -204,11 +198,12 @@ async def execute_case(
             "initial_fact_memory_verification",
             client.get_subject_memories(subjects[subject_key]),
         )
-        _verify_public_initial_fact(
-            response=response,
-            subject_id=subjects[subject_key],
-            fact=fact,
-        )
+        for fact in subject_facts:
+            _verify_public_initial_fact(
+                response=response,
+                subject_id=subjects[subject_key],
+                fact=fact,
+            )
     for prelude in tuple(getattr(case, "prelude_messages", ())):
         conversation_key = str(getattr(prelude, "conversation_key"))
         for number in range(1, int(getattr(prelude, "count", 0)) + 1):
@@ -367,6 +362,15 @@ def _natural_fact_setup_message(fact: object) -> str:
     if fact_type == "relationship.person" and qualifier:
         return f"My {qualifier} is {value}. Please remember it."
     return f"Please remember this detail: {value}."
+
+
+def _natural_fact_setup_batch(facts: list[object]) -> str:
+    messages = [_natural_fact_setup_message(fact) for fact in facts]
+    if len(messages) == 1:
+        return messages[0]
+    return "Please remember each of these durable details:\n" + "\n".join(
+        f"- {message}" for message in messages
+    )
 
 
 def _verify_public_initial_fact(

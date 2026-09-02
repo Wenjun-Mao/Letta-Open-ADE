@@ -647,7 +647,15 @@ def test_initial_facts_use_natural_language_and_verify_public_typed_memory() -> 
                         "qualifier": "place",
                         "value": "Royal Ontario Museum",
                         "status": "active",
-                    }
+                    },
+                    {
+                        "id": "fact-2",
+                        "fact_type": "person.current_location",
+                        "entity_id": subject_id,
+                        "qualifier": None,
+                        "value": "Toronto",
+                        "status": "active",
+                    },
                 ],
             }
 
@@ -665,6 +673,11 @@ def test_initial_facts_use_natural_language_and_verify_public_typed_memory() -> 
                     qualifier="place",
                     value="Royal Ontario Museum",
                 ),
+                _InitialFact(
+                    subject_key="primary",
+                    fact_type="person.current_location",
+                    value="Toronto",
+                ),
             ),
         )
 
@@ -681,8 +694,11 @@ def test_initial_facts_use_natural_language_and_verify_public_typed_memory() -> 
 
         assert result.score["pass"] is True
         assert client.setup_content[0] == (
-            "My favorite place is Royal Ontario Museum. Please remember it."
+            "Please remember each of these durable details:\n"
+            "- My favorite place is Royal Ontario Museum. Please remember it.\n"
+            "- I currently live in Toronto. Please remember it."
         )
+        assert len(client.setup_content) == 2
         assert (
             client.accepted_conversation_ids[0] != client.accepted_conversation_ids[1]
         )
