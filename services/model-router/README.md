@@ -17,6 +17,11 @@ as `dgx_vllm::qwen3.6-35b-a3b-fp8`; they do not select provider URLs directly.
 4. `/v1/chat/completions` resolves the source, applies missing defaults, and
    `forwarding.py` sends the request upstream.
 
+Forwarding uses one lifespan-managed HTTP client and exactly one upstream request.
+Idle pooled connections expire before the local servers' observed five-second
+closure boundary; connection renewal never retries a provider request. See
+[ADR 0002](../../docs/adr/0002-router-transparent-retry-policy.md).
+
 Thinking defaults may be model- and protocol-specific. A profile can keep normal
 dialogue thinking enabled while setting `tool_call_thinking_default_enabled=false`
 for tool-bearing vLLM requests. Explicit caller values are always preserved. See
@@ -29,6 +34,8 @@ for tool-bearing vLLM requests. Explicit caller values are always preserved. See
 - Uses `model-catalog-contracts` only for stable allowlist report contracts.
 - Must not contain ADE feature policy, prompt content, personas, schemas, or Letta
   agent lifecycle behavior.
+- Must not add transport retries; connection-pool freshness and request-attempt
+  ownership are separate contracts.
 - Secrets belong in `.env` or Docker secrets; tracked source configuration must not
   contain machine-specific credentials.
 

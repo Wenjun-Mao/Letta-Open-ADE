@@ -34,7 +34,7 @@ provider-facing boundary for normal discovery and generation.
 | Product HTTP API and feature orchestration | `services/ade-api/` | `src/ade_api/features/<feature>/` |
 | API setup, settings, auth, dependency wiring | `services/ade-api/` | `src/ade_api/platform/` |
 | Letta and Model Router protocol adapters | `services/ade-api/` | `src/ade_api/integrations/` |
-| Provider discovery, profiles, and forwarding | `services/model-router/` | `src/model_router/`, `config/model-router/`, and tool-protocol [ADR 0015](adr/0015-model-scoped-tool-call-thinking-mode.md) |
+| Provider discovery, profiles, and forwarding | `services/model-router/` | `src/model_router/`, `config/model-router/`, transparent transport [ADR 0002](adr/0002-router-transparent-retry-policy.md), and tool-protocol [ADR 0015](adr/0015-model-scoped-tool-call-thinking-mode.md) |
 | Typed catalog/probe exchange formats | `packages/model-catalog-contracts/` | `src/model_catalog_contracts/` |
 | Shared agent-runtime eval contracts | `packages/agent-runtime-eval-contracts/` | package README and `src/agent_runtime_eval_contracts/` |
 | Prompts, personas, schemas, tools, reports | `content/` | owning center's adapter and its matching content subdirectory |

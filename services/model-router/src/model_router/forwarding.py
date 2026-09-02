@@ -12,9 +12,20 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from model_router.settings import RouterSourceConfig, get_settings
 
 
+_UPSTREAM_KEEPALIVE_EXPIRY_SECONDS = 2.0
+
+
+def upstream_http_limits() -> httpx.Limits:
+    """Retire pooled connections before common five-second server timeouts."""
+    return httpx.Limits(keepalive_expiry=_UPSTREAM_KEEPALIVE_EXPIRY_SECONDS)
+
+
 def create_upstream_client() -> httpx.AsyncClient:
     """Create the single upstream transport owned for the app lifespan."""
-    return httpx.AsyncClient(timeout=get_settings().request_timeout_seconds)
+    return httpx.AsyncClient(
+        timeout=get_settings().request_timeout_seconds,
+        limits=upstream_http_limits(),
+    )
 
 
 @asynccontextmanager

@@ -129,6 +129,12 @@ def test_router_warms_catalog_before_lifespan_reports_ready(monkeypatch) -> None
         assert catalog.snapshot_calls == 1
 
 
+def test_upstream_connections_expire_before_common_server_timeout() -> None:
+    limits = router_forwarding.upstream_http_limits()
+
+    assert limits.keepalive_expiry == 2.0
+
+
 def test_router_lists_agent_studio_models(monkeypatch) -> None:
     monkeypatch.setattr(router_app, "get_settings", lambda: _FakeSettings())
     monkeypatch.setattr(router_app, "catalog_service", _FakeCatalog())
