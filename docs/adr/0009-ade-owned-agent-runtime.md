@@ -111,6 +111,11 @@ passing complete rounds. Focused diagnostics never count as qualification rounds
   newest ten raw messages that fit the recent-history budget, binds every older
   message to a contiguous summary boundary, and fails before conversation generation
   if either the compaction request or the remaining raw suffix cannot fit.
+- Exact history counts and summary boundaries are derived from immutable messages and
+  injected as authoritative context metadata. A completed user turn requires a
+  same-run committed assistant reply, so failed or cancelled attempts do not inflate
+  the count. Model-generated summaries remain lossy narrative derivatives and cannot
+  override those exact values.
 - The model cannot supply a subject ID or cross a server-bound subject boundary.
 
 ## Preview Operational Readiness

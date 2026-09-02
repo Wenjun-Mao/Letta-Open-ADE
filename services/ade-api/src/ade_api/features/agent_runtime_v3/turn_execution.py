@@ -12,6 +12,7 @@ from .compaction import ModelCompaction, plan_compaction
 from .context import (
     BuiltContext,
     build_context,
+    conversation_history_metadata,
     context_budget_from_deployment,
     validate_current_user_message,
 )
@@ -203,6 +204,11 @@ class TurnExecution:
                 persona=str(definition["persona_content"]),
                 active_facts=[_context_fact(item) for item in active_facts[:12]],
                 conversation_summary=summary_content,
+                history_metadata=conversation_history_metadata(
+                    messages=state["messages"],
+                    current_sequence=current_sequence,
+                    summary_through_sequence=summary_boundary,
+                ),
                 retrieved_facts=[_context_fact(item) for item in retrieved],
                 recent_messages=recent_messages,
                 current_user_content=str(current_user["content"]),

@@ -395,10 +395,11 @@ The context order is fixed:
 
 1. Agent system prompt and persona snapshot.
 2. Compact active profile for the bound subject.
-3. Latest valid conversation summary.
-4. Automatically retrieved relevant facts and accepted episodes.
-5. Recent raw turns after the summary boundary.
-6. Current user message.
+3. Authoritative history metadata derived from immutable messages.
+4. Latest valid conversation summary as a lossy narrative derivative.
+5. Automatically retrieved relevant facts and accepted episodes.
+6. Recent raw turns after the summary boundary.
+7. Current user message.
 
 The model profile supplies its real context window and tokenizer. For each run:
 
@@ -421,7 +422,10 @@ sub-operation of that same turn. It summarizes only complete prior turns through
 validated sequence and never deletes source messages. Its versioned summary and
 provenance commit atomically with the assistant message, reviewer changes, terminal
 run state, events, and outbox records; a failure commits none of those turn results
-and produces an explicit context error.
+and produces an explicit context error. Exact counts and sequence boundaries are
+computed from the immutable log and supplied separately; only a user message with a
+same-run committed assistant reply counts as a completed turn. Generated summary
+prose cannot override those values.
 
 ## Memory Review And Write Contract
 

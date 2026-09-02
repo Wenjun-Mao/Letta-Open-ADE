@@ -107,6 +107,38 @@ class BuiltContext:
     estimated_input_tokens: int
 
 
+@dataclass(frozen=True)
+class ConversationHistoryMetadata:
+    completed_user_turns: int
+    summary_through_sequence: int
+
+
+def conversation_history_metadata(
+    *,
+    messages: list[dict[str, Any]],
+    current_sequence: int,
+    summary_through_sequence: int,
+) -> ConversationHistoryMetadata:
+    completed_run_ids = {
+        str(message["run_id"])
+        for message in messages
+        if str(message.get("role")) == "assistant"
+        and message.get("run_id") is not None
+        and int(message["sequence"]) < current_sequence
+    }
+    return ConversationHistoryMetadata(
+        completed_user_turns=sum(
+            1
+            for message in messages
+            if str(message.get("role")) == "user"
+            and int(message["sequence"]) < current_sequence
+            and message.get("run_id") is not None
+            and str(message["run_id"]) in completed_run_ids
+        ),
+        summary_through_sequence=max(0, int(summary_through_sequence)),
+    )
+
+
 def build_context(
     *,
     system_prompt: str,
@@ -117,6 +149,7 @@ def build_context(
     current_user_content: str,
     budget: ContextBudget,
     conversation_summary: str = "",
+    history_metadata: ConversationHistoryMetadata | None = None,
 ) -> BuiltContext:
     if budget.input_limit <= 0:
         raise ValueError("Context budget leaves no model input capacity")
@@ -132,8 +165,20 @@ def build_context(
         "Active subject facts:\n" + ("\n".join(profile_lines) or "- None"),
         budget.profile_tokens,
     )
+    metadata = history_metadata or ConversationHistoryMetadata(
+        completed_user_turns=0,
+        summary_through_sequence=0,
+    )
+    history = (
+        "Conversation history metadata (authoritative):\n"
+        f"- Completed user turns before current: {metadata.completed_user_turns}\n"
+        "- Summary covers messages through sequence: "
+        f"{metadata.summary_through_sequence}\n"
+        "- For exact counts or boundaries, the metadata above overrides the "
+        "narrative summary."
+    )
     summary = truncate_to_tokens(
-        "Conversation summary:\n"
+        "Conversation summary (lossy narrative derivative):\n"
         + (conversation_summary.strip() or "No summary has been committed."),
         budget.summary_tokens,
     )
@@ -166,7 +211,9 @@ def build_context(
     messages = [
         {
             "role": "system",
-            "content": f"{prompt}\n\n{profile}\n\n{summary}\n\n{retrieval}",
+            "content": (
+                f"{prompt}\n\n{profile}\n\n{history}\n\n{summary}\n\n{retrieval}"
+            ),
         },
         *[
             {"role": str(message["role"]), "content": str(message["content"])}
@@ -186,6 +233,7 @@ def build_context(
         section_tokens={
             "prompt_persona": estimate_tokens(prompt),
             "active_profile": estimate_tokens(profile),
+            "conversation_history_metadata": estimate_tokens(history),
             "conversation_summary": estimate_tokens(summary),
             "retrieved_memory": estimate_tokens(retrieval),
             "recent_messages": sum(

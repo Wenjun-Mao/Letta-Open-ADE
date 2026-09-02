@@ -43,9 +43,12 @@ typed operations bound to user-authored evidence. ADE generates a contiguous-pre
 summary before context assembly when more than 64 messages are unsummarized or
 their estimated size exceeds the recent-history budget. It retains up to the newest
 10 raw messages only when they fit; every older unsummarized message must be covered
-by the new summary, and an over-budget compaction fails closed. ADE atomically commits the summary's source
-links, model/request identity, policy/content/input hashes, assistant response, and
-memory revisions together.
+by the new summary, and an over-budget compaction fails closed. The narrative summary
+is a lossy derivative: exact completed-turn counts are derived from user messages
+whose run has a committed assistant reply, while summary boundaries come directly
+from immutable history. ADE injects both as authoritative history metadata.
+ADE atomically commits the summary's source links, model/request identity,
+policy/content/input hashes, assistant response, and memory revisions together.
 
 ## Local Preview
 
