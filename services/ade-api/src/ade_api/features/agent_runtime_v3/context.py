@@ -171,7 +171,12 @@ def build_context(
     )
     history = (
         "Conversation history metadata (authoritative):\n"
-        f"- Completed user turns before current: {metadata.completed_user_turns}\n"
+        "- Exact completed conversation rounds before current: "
+        f"{metadata.completed_user_turns}\n"
+        "- This excludes the current request and any run without a committed "
+        "assistant reply.\n"
+        "- Use this exact integer for count questions; do not estimate or include "
+        "the current request.\n"
         "- Summary covers messages through sequence: "
         f"{metadata.summary_through_sequence}\n"
         "- For exact counts or boundaries, the metadata above overrides the "

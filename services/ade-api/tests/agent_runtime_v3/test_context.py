@@ -99,6 +99,9 @@ def test_context_marks_exact_history_metadata_as_authoritative() -> None:
 
     system_message = context.messages[0]["content"]
     assert "Conversation history metadata (authoritative)" in system_message
-    assert "Completed user turns before current: 40" in system_message
+    assert "Exact completed conversation rounds before current: 40" in system_message
+    assert (
+        "Use this exact integer for count questions; do not estimate" in system_message
+    )
     assert "Summary covers messages through sequence: 48" in system_message
     assert "metadata above overrides the narrative summary" in system_message

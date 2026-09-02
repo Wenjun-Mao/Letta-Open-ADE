@@ -22,10 +22,10 @@
         "runtime_implementation": "vLLM",
         "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
-        "prompt_policy_sha256": "db51ced8cf434eced15309822dcaf231b33f382598d320725c98e4d01fd71dc9",
+        "prompt_policy_sha256": "cadb12b27a59a72f68425fc0787f695c259925060247905bcfe474e6b685a848",
         "tool_policy_sha256": "2120edcc35fc168b550d309b474001e0071ecaaba5723f9dc8e721fce317c4f4",
-        "schema_policy_sha256": "1834d7b1f4514c990bd1a645ce9ea8f8dc1dd00789b9be29e6357df636458c2a",
-        "retrieval_policy_sha256": "85683063e469ced6e43d8c3c898dcc2cef444856ab389b0a3d122d4811254142",
+        "schema_policy_sha256": "483d0362274234e7de3eafb1a31764787592b03140d2b2dd0f61a374c5a1e6e0",
+        "retrieval_policy_sha256": "d293a05d2a2b5035216a284428479a52aabe313f9062bf324a1960275b691580",
         "sampling_settings": {
           "temperature": 1.0,
           "top_p": 0.95,
@@ -49,7 +49,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "3a1531dba7e2d828541d80dc3dd9d42390ede602762de75ab17c56aa2f29e83e",
+        "fingerprint_sha256": "8892ffe150cdb2afff5adc5f4f4982a273b4f8aa5eb2d14f9a85b2323bc94718",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [
@@ -89,10 +89,10 @@
         "runtime_implementation": "vLLM",
         "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
-        "prompt_policy_sha256": "db51ced8cf434eced15309822dcaf231b33f382598d320725c98e4d01fd71dc9",
+        "prompt_policy_sha256": "cadb12b27a59a72f68425fc0787f695c259925060247905bcfe474e6b685a848",
         "tool_policy_sha256": "2120edcc35fc168b550d309b474001e0071ecaaba5723f9dc8e721fce317c4f4",
-        "schema_policy_sha256": "1834d7b1f4514c990bd1a645ce9ea8f8dc1dd00789b9be29e6357df636458c2a",
-        "retrieval_policy_sha256": "85683063e469ced6e43d8c3c898dcc2cef444856ab389b0a3d122d4811254142",
+        "schema_policy_sha256": "483d0362274234e7de3eafb1a31764787592b03140d2b2dd0f61a374c5a1e6e0",
+        "retrieval_policy_sha256": "d293a05d2a2b5035216a284428479a52aabe313f9062bf324a1960275b691580",
         "sampling_settings": {
           "dimensions": 1024,
           "query_instruction_enabled": true,
@@ -109,7 +109,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "fa78e9674cc91ebe33229242ffcf5501358e93327d89f9b80199955dce083732",
+        "fingerprint_sha256": "7a94803b33bf6e93b08c00a6b0b779f2217b432b9fc851f6077942f7ea6cf3c3",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [
@@ -142,10 +142,10 @@
         "runtime_implementation": "llama-server",
         "runtime_version": "b1-225088e",
         "runtime_image_digest": null,
-        "prompt_policy_sha256": "db51ced8cf434eced15309822dcaf231b33f382598d320725c98e4d01fd71dc9",
+        "prompt_policy_sha256": "cadb12b27a59a72f68425fc0787f695c259925060247905bcfe474e6b685a848",
         "tool_policy_sha256": "2120edcc35fc168b550d309b474001e0071ecaaba5723f9dc8e721fce317c4f4",
-        "schema_policy_sha256": "1834d7b1f4514c990bd1a645ce9ea8f8dc1dd00789b9be29e6357df636458c2a",
-        "retrieval_policy_sha256": "85683063e469ced6e43d8c3c898dcc2cef444856ab389b0a3d122d4811254142",
+        "schema_policy_sha256": "483d0362274234e7de3eafb1a31764787592b03140d2b2dd0f61a374c5a1e6e0",
+        "retrieval_policy_sha256": "d293a05d2a2b5035216a284428479a52aabe313f9062bf324a1960275b691580",
         "sampling_settings": {
           "thinking_enabled": false,
           "temperature": 0.6,
@@ -168,7 +168,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "a201c6726a70ec00d40459f62a78c268a8fce909a009dc0cf39a40e5ea5f535f",
+        "fingerprint_sha256": "cfa68fdd616e7f9f3b31b2ce4d09242750ff6e445008df4f9498953b3427a3cd",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [

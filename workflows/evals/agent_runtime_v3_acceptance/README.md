@@ -85,7 +85,9 @@ behavioral score credit.
 Canonical cases that declare a conversation summary cannot pass on dialogue
 alone: the production path must emit `summary.committed` within the same accepted
 turn as the assistant result, and the conversation state must still expose the
-expected immutable raw-message count.
+expected immutable raw-message count. The long-history count check also rejects
+approximate answers such as “more than forty”; containing the expected numeral alone
+is insufficient.
 
 A failed primary round is completed and written in full, then later primary
 rounds are skipped because three consecutive passes are no longer possible in

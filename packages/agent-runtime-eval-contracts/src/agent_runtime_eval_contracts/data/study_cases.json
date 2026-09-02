@@ -149,10 +149,37 @@
         }
       ],
       "turns": [
-        {"conversation_key": "primary", "user": "请简短告诉我：我们之前一共聊了多少轮普通历史对话？"}
+        {"conversation_key": "primary", "user": "请只根据系统提供的精确历史元数据，简短告诉我：在当前这条消息之前，我们完成了多少轮普通历史对话？不要估算，也不要把当前这条算进去。"}
       ],
       "assistant_assertions": [
-        {"conversation_key": "primary", "contains_any": ["40", "四十"]}
+        {
+          "conversation_key": "primary",
+          "contains_any": ["40", "四十"],
+          "forbidden": [
+            "40多",
+            "四十多",
+            "40余",
+            "四十余",
+            "四十几",
+            "40+",
+            "大概",
+            "大约",
+            "约40",
+            "约四十",
+            "至少40",
+            "至少四十",
+            "超过40",
+            "超过四十",
+            "不止40",
+            "不止四十",
+            "about 40",
+            "around 40",
+            "approximately 40",
+            "more than 40",
+            "over 40",
+            "forty-plus"
+          ]
+        }
       ]
     },
     {
