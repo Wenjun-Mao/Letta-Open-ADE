@@ -50,3 +50,19 @@ def test_policy_scripts_are_available_inside_the_ade_api_image() -> None:
     for relative_path in PRODUCTION_POLICY_INPUTS["schema"]:
         if relative_path.startswith("scripts/"):
             assert f"COPY {relative_path} ./{relative_path}" in dockerfile
+
+
+def test_cross_service_policy_inputs_are_available_inside_the_ade_api_image() -> None:
+    dockerfile = (PROJECT_ROOT / "services/ade-api/Dockerfile").read_text(
+        encoding="utf-8"
+    )
+
+    cross_service_inputs = {
+        relative_path
+        for paths in PRODUCTION_POLICY_INPUTS.values()
+        for relative_path in paths
+        if relative_path.startswith("services/model-router/")
+    }
+    assert cross_service_inputs
+    for relative_path in cross_service_inputs:
+        assert f"COPY {relative_path} ./{relative_path}" in dockerfile

@@ -34,6 +34,10 @@ COPY workflows/pyproject.toml ./workflows/pyproject.toml
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --package ade-api --package ade-workflows --frozen --no-dev
 
+# Policy-only copies come after uv sync so they do not create a partial workspace member.
+COPY services/model-router/src/model_router/app.py ./services/model-router/src/model_router/app.py
+COPY services/model-router/src/model_router/settings.py ./services/model-router/src/model_router/settings.py
+
 # Copy runtime assets required by ADE API and Test Center workflows.
 COPY config ./config
 COPY content ./content
