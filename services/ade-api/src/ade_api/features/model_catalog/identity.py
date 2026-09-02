@@ -23,11 +23,22 @@ _IDENTITY_FIELDS = (
     "deployment",
 )
 
+_IDENTITY_MAPPING_FIELDS = (
+    "sampling_defaults",
+    "scenario_sampling_defaults",
+)
+
 
 def model_option_identity_payload(option: dict[str, Any]) -> dict[str, Any]:
     """Keep only execution-relevant catalog fields in a canonical identity."""
 
-    return {field: option.get(field) for field in _IDENTITY_FIELDS}
+    payload = {field: option.get(field) for field in _IDENTITY_FIELDS}
+    # The public response contract serializes omitted sampling maps as empty maps.
+    # Hash the same representation clients receive so the digest is verifiable.
+    for field in _IDENTITY_MAPPING_FIELDS:
+        if not isinstance(payload[field], dict):
+            payload[field] = {}
+    return payload
 
 
 def model_option_identity_sha256(option: dict[str, Any]) -> str:

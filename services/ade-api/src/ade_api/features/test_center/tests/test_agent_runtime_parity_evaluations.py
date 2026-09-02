@@ -438,43 +438,57 @@ def test_parity_reader_keeps_a_completed_preflight_failure_inspectable(
     tmp_path: Path,
 ) -> None:
     orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
-    comparison_path = evidence_root / "comparison.json"
-    summary_path = evidence_root / "summary.json"
-    comparison = json.loads(comparison_path.read_text(encoding="utf-8"))
-    comparison.update(
-        {
-            "pass": False,
-            "checks": {
-                "preflight_completed": False,
-                "inputs_comparable": False,
-                "all_paired_rounds_pass": False,
-                "cleanup_complete": True,
-                "zero_retry_policy": False,
-            },
-            "comparability": {
+
+    def mutate(_spec, _provenance, comparison, summary, turns) -> None:
+        turns.clear()
+        comparison.update(
+            {
                 "pass": False,
-                "checks": {"legacy_inputs_available": False},
-                "fixture_sha256": comparison["comparability"]["fixture_sha256"],
-            },
-            "preflight_error": {"kind": "public_api_error", "code": "offline"},
-            "rounds": [],
-        }
-    )
-    comparison.pop("artifact_sha256", None)
-    comparison_sha256 = _write_signed_json(comparison_path, comparison)
-    summary = json.loads(summary_path.read_text(encoding="utf-8"))
-    summary.update(
-        {
-            "pass": False,
-            "rounds_completed": 0,
-            "rounds_passed": 0,
-            "preflight_error": {"kind": "public_api_error", "code": "offline"},
-            "inputs_comparable": False,
-        }
-    )
-    summary["artifact_inputs"]["comparison_sha256"] = comparison_sha256
-    summary.pop("artifact_sha256", None)
-    _write_signed_json(summary_path, summary)
+                "checks": {
+                    "preflight_completed": False,
+                    "inputs_comparable": False,
+                    "all_paired_rounds_pass": False,
+                    "cleanup_complete": True,
+                    "zero_retry_policy": True,
+                },
+                "comparability": {
+                    "pass": False,
+                    "checks": {
+                        "parity_spec_hash_present": True,
+                        "source_identity_complete": True,
+                        "native_worker_build_matches_evaluator": False,
+                        "legacy_inputs_available": False,
+                        "fixture_hash_present": True,
+                        "all_native_rounds_have_definitions": False,
+                        "prompt_snapshots_match": False,
+                        "persona_snapshots_match": False,
+                        "conversation_models_match": False,
+                        "reviewer_models_match": False,
+                        "native_embedding_matches": False,
+                    },
+                    "fixture_sha256": comparison["comparability"]["fixture_sha256"],
+                },
+                "preflight_error": {
+                    "kind": "public_api_error",
+                    "code": "offline",
+                },
+                "rounds": [],
+            }
+        )
+        summary.update(
+            {
+                "pass": False,
+                "rounds_completed": 0,
+                "rounds_passed": 0,
+                "preflight_error": {
+                    "kind": "public_api_error",
+                    "code": "offline",
+                },
+                "inputs_comparable": False,
+            }
+        )
+
+    _rewrite_bundle(evidence_root, mutate)
 
     item = orchestrator.list_agent_runtime_parity_evaluations()[0]
     assert item["ready"] is True
@@ -482,10 +496,114 @@ def test_parity_reader_keeps_a_completed_preflight_failure_inspectable(
     detail = orchestrator.get_agent_runtime_parity_evaluation(run_id)
     assert detail is not None
     assert detail["rounds"] == []
+    assert detail["turns"] == []
+    assert (
+        detail["artifact_digests"]["normalized_turns_sha256"]
+        == hashlib.sha256(b"").hexdigest()
+    )
     assert detail["preflight_error"] == {
         "kind": "public_api_error",
         "code": "offline",
     }
+
+
+@pytest.mark.parametrize(
+    ("mutate", "message"),
+    (
+        (
+            lambda comparison, turns: comparison.update(
+                {"checks": {**comparison["checks"], "preflight_completed": False}}
+            ),
+            "preflight failure must not contain rounds",
+        ),
+        (
+            lambda comparison, turns: (
+                comparison.update(
+                    {"checks": {**comparison["checks"], "preflight_completed": False}}
+                ),
+                turns.clear(),
+                comparison.update({"rounds": []}),
+            ),
+            "preflight failure must include a public error",
+        ),
+    ),
+)
+def test_parity_reader_rejects_invalid_preflight_failure_evidence(
+    tmp_path: Path,
+    mutate: Callable[[dict[str, Any], list[dict[str, Any]]], object],
+    message: str,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def rewrite(_spec, _provenance, comparison, summary, turns) -> None:
+        mutate(comparison, turns)
+        comparison["pass"] = False
+        summary.update(
+            {
+                "pass": False,
+                "rounds_completed": len(comparison["rounds"]),
+                "rounds_passed": 0,
+                "preflight_error": comparison["preflight_error"],
+            }
+        )
+
+    _rewrite_bundle(evidence_root, rewrite)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match=message):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
+def test_parity_reader_rejects_turns_on_preflight_failure(tmp_path: Path) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, _provenance, comparison, summary, _turns) -> None:
+        comparison.update(
+            {
+                "pass": False,
+                "checks": {
+                    **comparison["checks"],
+                    "preflight_completed": False,
+                },
+                "rounds": [],
+                "preflight_error": {
+                    "kind": "public_api_error",
+                    "code": "offline",
+                },
+            }
+        )
+        summary.update(
+            {
+                "pass": False,
+                "rounds_completed": 0,
+                "rounds_passed": 0,
+                "preflight_error": comparison["preflight_error"],
+            }
+        )
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(
+        AgentRuntimeParityArtifactUnavailable,
+        match="preflight failure must not contain normalized turns",
+    ):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
+
+
+def test_parity_reader_rejects_empty_turns_after_completed_preflight(
+    tmp_path: Path,
+) -> None:
+    orchestrator, run_id, evidence_root = _create_completed_parity_run(tmp_path)
+
+    def mutate(_spec, _provenance, _comparison, _summary, turns) -> None:
+        turns.clear()
+
+    _rewrite_bundle(evidence_root, mutate)
+
+    assert orchestrator.list_agent_runtime_parity_evaluations()[0]["ready"] is False
+    with pytest.raises(AgentRuntimeParityArtifactUnavailable, match="engine or round"):
+        orchestrator.get_agent_runtime_parity_evaluation(run_id)
 
 
 def test_parity_descriptor_uses_ephemeral_service_credentials(monkeypatch) -> None:

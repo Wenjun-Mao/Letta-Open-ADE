@@ -96,6 +96,8 @@ def test_comparability_fails_closed_when_native_persona_differs() -> None:
 def test_catalog_snapshot_verifies_the_public_catalog_hash_format() -> None:
     option = {field: None for field in OPTION_IDENTITY_FIELDS}
     option["key"] = "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8"
+    option["sampling_defaults"] = {}
+    option["scenario_sampling_defaults"] = {}
     option["identity_sha256"] = _catalog_identity_sha256(
         {field: option.get(field) for field in OPTION_IDENTITY_FIELDS}
     )

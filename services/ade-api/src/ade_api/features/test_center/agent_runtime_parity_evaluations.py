@@ -87,6 +87,7 @@ class AgentRuntimeParityEvaluationReader:
     _REQUIRED_ENGINES = frozenset({"letta-v2", "ade-native-v3"})
     _GIT_REVISION_PATTERN = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
     _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+    _EMPTY_FILE_SHA256 = hashlib.sha256(b"").hexdigest()
 
     _ARTIFACT_NAMES = {
         "parity_spec": "parity-spec.json",
@@ -349,7 +350,8 @@ class AgentRuntimeParityEvaluationReader:
                 "Agent-runtime parity summary signals do not match comparison evidence"
             )
         comparability = self._mapping(comparison, "comparability")
-        if checks["preflight_completed"]:
+        preflight_completed = checks["preflight_completed"]
+        if preflight_completed:
             self._canonical_boolean_mapping(
                 comparability,
                 "checks",
@@ -367,15 +369,22 @@ class AgentRuntimeParityEvaluationReader:
             for round_ in rounds
             if isinstance(round_, Mapping) and round_.get("pass") is True
         )
-        self._validate_rounds(
-            rounds,
-            expected_rounds=expected_rounds,
-            require_exact_coverage=checks["preflight_completed"],
-        )
-        if comparison.get("pass") is True:
-            self._validate_successful_turn_engines(
+        if preflight_completed:
+            self._validate_rounds(
+                rounds,
+                expected_rounds=expected_rounds,
+                require_exact_coverage=True,
+            )
+            self._validate_completed_preflight_turn_engines(
                 normalized_turns,
                 expected_rounds=expected_rounds,
+            )
+        else:
+            self._validate_preflight_failure(
+                rounds=rounds,
+                normalized_turns=normalized_turns,
+                normalized_turns_sha256=normalized_turns_sha256,
+                preflight_error=comparison.get("preflight_error"),
             )
         if (
             self._integer(summary, "rounds_completed") != len(rounds)
@@ -461,7 +470,38 @@ class AgentRuntimeParityEvaluationReader:
                 "Agent-runtime parity comparison rounds are duplicated"
             )
 
-    def _validate_successful_turn_engines(
+    def _validate_preflight_failure(
+        self,
+        *,
+        rounds: list[Any],
+        normalized_turns: list[Mapping[str, Any]],
+        normalized_turns_sha256: str,
+        preflight_error: object,
+    ) -> None:
+        if rounds:
+            raise AgentRuntimeParityArtifactUnavailable(
+                "Agent-runtime parity preflight failure must not contain rounds"
+            )
+        if normalized_turns:
+            raise AgentRuntimeParityArtifactUnavailable(
+                "Agent-runtime parity preflight failure must not contain normalized turns"
+            )
+        if normalized_turns_sha256 != self._EMPTY_FILE_SHA256:
+            raise AgentRuntimeParityArtifactUnavailable(
+                "Agent-runtime parity preflight failure normalized-turns artifact must be empty"
+            )
+        try:
+            safe_error = self._safe_error(preflight_error)
+        except ValueError as exc:
+            raise AgentRuntimeParityArtifactUnavailable(
+                "Agent-runtime parity preflight failure error is invalid"
+            ) from exc
+        if not safe_error:
+            raise AgentRuntimeParityArtifactUnavailable(
+                "Agent-runtime parity preflight failure must include a public error"
+            )
+
+    def _validate_completed_preflight_turn_engines(
         self,
         turns: list[Mapping[str, Any]],
         *,
@@ -542,7 +582,7 @@ class AgentRuntimeParityEvaluationReader:
             raise AgentRuntimeParityArtifactUnavailable(
                 "Agent-runtime parity normalized-turns artifact is unreadable"
             ) from exc
-        if not rows or any(not isinstance(row, Mapping) for row in rows):
+        if any(not isinstance(row, Mapping) for row in rows):
             raise AgentRuntimeParityArtifactUnavailable(
                 "Agent-runtime parity normalized-turns rows are invalid"
             )

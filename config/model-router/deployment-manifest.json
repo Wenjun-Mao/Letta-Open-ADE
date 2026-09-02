@@ -10,7 +10,7 @@
         "conversation",
         "reviewer"
       ],
-      "lifecycle": "qualified",
+      "lifecycle": "candidate",
       "fingerprint": {
         "provider": "dgx_vllm",
         "endpoint_role": "openai-compatible-chat",
@@ -24,7 +24,7 @@
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
         "prompt_policy_sha256": "b60943835fdc9aa4f00e210420358488151feec3691d546d7f9b6460455a3892",
         "tool_policy_sha256": "97b2ab19db83f4fadbc4cb8c7f6298a25d12400604273a6fd989c1de7172d1f6",
-        "schema_policy_sha256": "d67e99621d8946c080a78aae624081c217adf5a52f9c154d737ceb7b375d7c88",
+        "schema_policy_sha256": "a1e1c116b1222a640582e493e037fcb5e697461a22b153faf41e416c6e720b5a",
         "retrieval_policy_sha256": "3b23caded276bda2eee6aa4a81fef719e0830bc04edb3082edb05c34c3980faf",
         "sampling_settings": {
           "temperature": 1.0,
@@ -49,21 +49,21 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "bd91601e7c653092a64daa3e04c43fe7f65a8af1a26ba1ef1162c052dc80ab98",
-        "qualified": true,
+        "fingerprint_sha256": "297e27b83e4e1c861b45b804b381e238dafa7eaed342a12130d561e4e502c319",
+        "qualified": false,
         "stale_round_count": 0,
         "role_results": [
           {
             "role": "conversation",
-            "observed_rounds": 3,
-            "consecutive_passing_rounds": 3,
-            "qualified": true
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
           },
           {
             "role": "reviewer",
-            "observed_rounds": 3,
-            "consecutive_passing_rounds": 3,
-            "qualified": true
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
           }
         ]
       }
@@ -77,7 +77,7 @@
       "roles": [
         "retriever"
       ],
-      "lifecycle": "qualified",
+      "lifecycle": "candidate",
       "fingerprint": {
         "provider": "dgx_embedding_sidecar",
         "endpoint_role": "openai-compatible-embeddings",
@@ -91,7 +91,7 @@
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
         "prompt_policy_sha256": "b60943835fdc9aa4f00e210420358488151feec3691d546d7f9b6460455a3892",
         "tool_policy_sha256": "97b2ab19db83f4fadbc4cb8c7f6298a25d12400604273a6fd989c1de7172d1f6",
-        "schema_policy_sha256": "d67e99621d8946c080a78aae624081c217adf5a52f9c154d737ceb7b375d7c88",
+        "schema_policy_sha256": "a1e1c116b1222a640582e493e037fcb5e697461a22b153faf41e416c6e720b5a",
         "retrieval_policy_sha256": "3b23caded276bda2eee6aa4a81fef719e0830bc04edb3082edb05c34c3980faf",
         "sampling_settings": {
           "dimensions": 1024,
@@ -109,15 +109,15 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "3bf04a2f96735f6d2bef84dcdf25ac7a6a1fa2b49eec0199ae2221b7282cb680",
-        "qualified": true,
+        "fingerprint_sha256": "6a3b94509c3dd5ebfb48c4e86d500ba40036d6cb6a3c6623672cebcdd3db8941",
+        "qualified": false,
         "stale_round_count": 0,
         "role_results": [
           {
             "role": "retriever",
-            "observed_rounds": 3,
-            "consecutive_passing_rounds": 3,
-            "qualified": true
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
           }
         ]
       }
@@ -144,7 +144,7 @@
         "runtime_image_digest": null,
         "prompt_policy_sha256": "b60943835fdc9aa4f00e210420358488151feec3691d546d7f9b6460455a3892",
         "tool_policy_sha256": "97b2ab19db83f4fadbc4cb8c7f6298a25d12400604273a6fd989c1de7172d1f6",
-        "schema_policy_sha256": "d67e99621d8946c080a78aae624081c217adf5a52f9c154d737ceb7b375d7c88",
+        "schema_policy_sha256": "a1e1c116b1222a640582e493e037fcb5e697461a22b153faf41e416c6e720b5a",
         "retrieval_policy_sha256": "3b23caded276bda2eee6aa4a81fef719e0830bc04edb3082edb05c34c3980faf",
         "sampling_settings": {
           "thinking_enabled": false,
@@ -168,7 +168,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "5f709b199789d5f9e2d0866898d79b6828d53e437b45de4c840cf6f22062b934",
+        "fingerprint_sha256": "e0599f1af95cda2c3ea70c02ac1c0272cdacffdeac37d22c1387f046108d7878",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [
