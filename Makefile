@@ -12,6 +12,7 @@ AGENT_STUDIO_QUALIFICATION_PROPOSAL ?=
 AGENT_STUDIO_PARITY_ROOT ?=
 AGENT_STUDIO_LEGACY_REVISION ?=
 AGENT_STUDIO_REVIEWER ?=
+ADE_LOCAL_ENV_FILE ?= .env
 export ADE_SOURCE_REVISION
 export ADE_SOURCE_DIRTY
 export ADE_SOURCE_FINGERPRINT
@@ -46,7 +47,7 @@ agent-studio-conformance:
 
 agent-studio-rollback-rehearsal:
 	@test -n "$(AGENT_STUDIO_LEGACY_REVISION)" || { echo "Set AGENT_STUDIO_LEGACY_REVISION" >&2; exit 2; }
-	uv run python scripts/rehearse_agent_studio_rollback.py --legacy-revision "$(AGENT_STUDIO_LEGACY_REVISION)" --output "$(AGENT_STUDIO_ROLLBACK_RECEIPT)"
+	uv run --env-file "$(ADE_LOCAL_ENV_FILE)" python scripts/rehearse_agent_studio_rollback.py --legacy-revision "$(AGENT_STUDIO_LEGACY_REVISION)" --output "$(AGENT_STUDIO_ROLLBACK_RECEIPT)"
 
 agent-studio-cutover-review:
 	@test -n "$(AGENT_STUDIO_QUALIFICATION_PROPOSAL)" || { echo "Set AGENT_STUDIO_QUALIFICATION_PROPOSAL" >&2; exit 2; }

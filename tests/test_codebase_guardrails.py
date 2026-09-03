@@ -826,6 +826,17 @@ def test_agent_studio_migration_rebuilds_before_running_alembic() -> None:
     assert "ade-runtime-migrate" in migration_target
 
 
+def test_agent_studio_rollback_rehearsal_loads_local_credentials() -> None:
+    makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+    target = makefile.split("agent-studio-rollback-rehearsal:", 1)[1].split(
+        "\nagent-studio-cutover-review:", 1
+    )[0]
+
+    assert "ADE_LOCAL_ENV_FILE ?= .env" in makefile
+    assert 'uv run --env-file "$(ADE_LOCAL_ENV_FILE)" python' in target
+    assert "scripts/rehearse_agent_studio_rollback.py" in target
+
+
 def test_agent_studio_compose_lane_is_default_and_isolated_from_letta_and_redis() -> (
     None
 ):
