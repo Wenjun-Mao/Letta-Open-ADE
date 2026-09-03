@@ -10,7 +10,7 @@ from typing import Any
 WORKFLOW_ROOT = Path(__file__).resolve().parent
 DEFAULT_DGX_CHAT_MODEL = "dgx_vllm::qwen3.6-35b-a3b-fp8"
 DEFAULT_DGX_EMBEDDING_MODEL = "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B"
-DEFAULT_LLAMA_COMPATIBILITY_MODEL = "local_llama_server::gemma4"
+DEFAULT_LLAMA_COMPATIBILITY_MODEL = "local_llama_server::qwen3527b"
 
 
 class ConfigError(ValueError):

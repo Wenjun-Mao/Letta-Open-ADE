@@ -125,8 +125,8 @@
     {
       "id": "llama-server-qwen3_5-27b",
       "route_aliases": [
-        "local_llama_server::gemma4",
-        "local_llama_server::qwen3527b"
+        "local_llama_server::qwen3527b",
+        "local_llama_server::gemma4"
       ],
       "roles": [
         "conversation"
