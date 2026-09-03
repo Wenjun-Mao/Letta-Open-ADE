@@ -3,11 +3,11 @@
   "kind": "ade-agent-studio-cutover-evidence",
   "decision": "approved",
   "reviewed_by": "Codex",
-  "reviewed_at": "2026-09-03T04:03:51.224274+00:00",
+  "reviewed_at": "2026-09-03T05:01:05.165286+00:00",
   "evaluated_source": {
-    "revision": "82a48f098c4e2921d75daf6486bad815d1f03cdd",
+    "revision": "7a81df449b1dad5f7d712d0640657ca903af06d2",
     "dirty": false,
-    "fingerprint": "4515e9fd47a71e900a0d673840dc61d83b4f59debd9454637023020851dbbfcc"
+    "fingerprint": "ecb3fd55390d1f8376f159ea08cd8b4795d2282ca94cee073d9732228a953453"
   },
   "manifest_sha256": "1602bc08eb1b3894f8a23a0be5754e0e50cc3256778b3a6fb674129962add37f",
   "policy_hashes": {
@@ -34,22 +34,22 @@
     }
   },
   "qualification": {
-    "run_id": "agent-runtime-v3-20260903t032035z-934114f7",
+    "run_id": "agent-runtime-v3-20260903t041603z-0af0bf33",
     "passed": true,
-    "proposal_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+    "proposal_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
     "canonical_case_keys_sha256": "65a8fed44be5a590c12709f6c2fa0576f1976b4a582fe9968989b85d498d244e",
     "round_artifact_sha256s": [
-      "8ace903d957c97e50e30a6bb946fb8177ed1afedf71bb07ec5c1e99a378840c7",
-      "16c3fc3fe04167424d26ed532e8a42ddb2dfc4efe16b8556e2f335922fab055c",
-      "798c197a2fd4a249251aed0589f93325e6ae1eb004153f5bbb3b3d714288e3f0"
+      "e53efe3183c7d61bbccb7ee746a10bb72f6026574dc3bfd188c15338a6cc3267",
+      "993cb4f1af9a2a704cfe2123724c9833759b8543e0050521f55046f9efe91f7d",
+      "8f01c07ac06e2eb799ace80b1da46a7e994ecc51e23d7c562453272dd5a7069a"
     ],
     "llama_compatibility": {
       "passed": true,
-      "artifact_sha256": "59a1aaa1e6ba294e2a943d2a176aa09b7ca4d4e6ad534614320623639fe25617"
+      "artifact_sha256": "41ee20caa22e6aea2160adc41370bbf71e50a2a957c5a1f48170c3c1ddbe2fd1"
     }
   },
   "paired_parity": {
-    "run_id": "23738f73-2894-4a25-856e-a0f9e779cd87",
+    "run_id": "1b4e5b91-5540-4bd1-b346-988f899b1e46",
     "passed": true,
     "inputs_comparable": true,
     "cleanup_complete": true,
@@ -61,17 +61,17 @@
     "native_not_worse_than_legacy": true,
     "native_product_api": "/api/v3/agent-studio/sessions",
     "artifact_digests": {
-      "parity_spec_sha256": "f0dd6dd7208497f031f7efc350137e110f6d58fed373bfe5686830a85022fe46",
-      "provenance_sha256": "9879f5fd70133f9c0d794f67063c8dc157951d2859a57a43b44c42382bae3c9a",
-      "normalized_turns_sha256": "78a1fcdf3a9418aa87110cf5a30f8e5b1a3b55e90d93fabbe0cc70f15dc0454d",
-      "comparison_sha256": "e0ed8cfeb8f6d304ec0b2a8c2676ce5896432d5c0765d6cb255ebd41644e5253",
-      "summary_sha256": "c05ea5c87147561174b337f4eb3a5a76cec38ebdec46c6c6cd64afa8ba83cd77",
-      "evidence_sha256": "b44eef7a0e873e395df97832aec28be6db56162853ab65c6a57b749957f81085"
+      "parity_spec_sha256": "e70a7ec3c83a6f47aa92f9cf45742c823cd98757e8f5793ceb3e18fff1897490",
+      "provenance_sha256": "9df924aed037cafd78fa64027b2f4d2886e9c76ded78be1869c071abdd18383c",
+      "normalized_turns_sha256": "0ccba03ccf8f7fd318a57462c97dca2d0b5e9205e1a056ab2b6f3529bbb16d2e",
+      "comparison_sha256": "ebbdb9f3ef87a7c0745a34c8129b27174a06ed7c8a68e87a305ae441400343a9",
+      "summary_sha256": "d476348593542e1f50867d702a6ab39919b39ff3b9b603951dfd3e836fb4074f",
+      "evidence_sha256": "e86c7010ab8240c01bd031ec3da53f91ced0845d335e9a6bd232d622d5c7696f"
     }
   },
   "conformance": {
     "passed": true,
-    "receipt_sha256": "7517e423e6ff39415b66ec6e144d1ef722d0ed313e0adc827c511d527c36dbff",
+    "receipt_sha256": "84795fd9f6398b48199e76e3a51ecaaf5076816a4e0f70b07d745746b956c640",
     "test_paths": [
       "services/ade-api/tests/agent_runtime_v3/test_retry.py",
       "services/ade-api/tests/agent_runtime_v3/test_provider_tracing.py",
@@ -86,7 +86,7 @@
     "cancellation": {
       "status": "passed",
       "evidence_kind": "deterministic-contract",
-      "artifact_sha256": "7517e423e6ff39415b66ec6e144d1ef722d0ed313e0adc827c511d527c36dbff",
+      "artifact_sha256": "84795fd9f6398b48199e76e3a51ecaaf5076816a4e0f70b07d745746b956c640",
       "references": [
         "test_client.py",
         "test_rounds.py"
@@ -95,7 +95,7 @@
     "false_memory_prevention": {
       "status": "passed",
       "evidence_kind": "native-qualification",
-      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
       "references": [
         "false_memory_prevention"
       ]
@@ -103,7 +103,7 @@
     "long_history_compaction": {
       "status": "passed",
       "evidence_kind": "native-qualification",
-      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
       "references": [
         "long_history_compaction"
       ]
@@ -111,7 +111,7 @@
     "memory_correctness": {
       "status": "passed",
       "evidence_kind": "paired-parity",
-      "artifact_sha256": "b44eef7a0e873e395df97832aec28be6db56162853ab65c6a57b749957f81085",
+      "artifact_sha256": "e86c7010ab8240c01bd031ec3da53f91ced0845d335e9a6bd232d622d5c7696f",
       "references": [
         "chat_memory_baseline"
       ]
@@ -119,7 +119,7 @@
     "old_memory_retrieval": {
       "status": "passed",
       "evidence_kind": "native-qualification",
-      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
       "references": [
         "old_memory_deep_search"
       ]
@@ -127,7 +127,7 @@
     "subject_isolation": {
       "status": "passed",
       "evidence_kind": "native-qualification",
-      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
       "references": [
         "cross_agent_subject_sharing",
         "cross_subject_isolation"
@@ -136,7 +136,7 @@
     "timeout_retry_ownership": {
       "status": "passed",
       "evidence_kind": "deterministic-contract",
-      "artifact_sha256": "7517e423e6ff39415b66ec6e144d1ef722d0ed313e0adc827c511d527c36dbff",
+      "artifact_sha256": "84795fd9f6398b48199e76e3a51ecaaf5076816a4e0f70b07d745746b956c640",
       "references": [
         "test_retry.py",
         "test_provider_tracing.py"
@@ -145,7 +145,7 @@
     "tool_failure": {
       "status": "passed",
       "evidence_kind": "native-qualification",
-      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
       "references": [
         "weather_tool_failure"
       ]
@@ -153,7 +153,7 @@
     "tool_selection": {
       "status": "passed",
       "evidence_kind": "native-qualification",
-      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
       "references": [
         "weather_tool_selection"
       ]
@@ -161,7 +161,7 @@
     "trace_preservation": {
       "status": "passed",
       "evidence_kind": "native-qualification",
-      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
       "references": [
         "all canonical qualification cases"
       ]
@@ -178,8 +178,8 @@
     "legacy_health_passed": true,
     "native_state_preserved": true,
     "legacy_revision": "53703ea6660c869e3eb10aeaefc9bab1aab8b57b",
-    "rehearsed_at": "2026-09-03T03:20:06.408178+00:00",
-    "receipt_sha256": "15b9f411e86c47780523b9444793aab0497e8ed117526092cd5fda44dfba2ace"
+    "rehearsed_at": "2026-09-03T05:00:49.780409+00:00",
+    "receipt_sha256": "7e36ea8bff4f8c6b0952d668791bde24ac0eda060241d907ad81e326b6a6e774"
   },
-  "evidence_sha256": "744901b56f944022a23522dfb4e25c0aa919d0821eb3bf1793523e42e2de14a7"
+  "evidence_sha256": "505c25068a8565e6486b6678d78970c2b747b3f2ac3b296383a75f6c588fb9fe"
 }
