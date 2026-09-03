@@ -311,8 +311,8 @@ def test_canonical_manifest_tracks_actual_identity_separately_from_aliases() -> 
     llama = deployments[2]
     retriever = deployments[1]
     assert llama.route_aliases == (
-        "local_llama_server::gemma4",
         "local_llama_server::qwen3527b",
+        "local_llama_server::gemma4",
     )
     assert llama.fingerprint.served_model == "Qwen3.5-27B-UD-Q4_K_XL.gguf"
     assert retriever.roles == (DeploymentRole.RETRIEVER,)

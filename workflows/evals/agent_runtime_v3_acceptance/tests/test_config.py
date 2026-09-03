@@ -30,9 +30,7 @@ def test_defaults_match_production_qualification_contract(
     assert config.conversation_model_key == DEFAULT_DGX_CHAT_MODEL
     assert config.reviewer_model_key == DEFAULT_DGX_CHAT_MODEL
     assert config.embedding_model_key == DEFAULT_DGX_EMBEDDING_MODEL
-    assert config.llama_compatibility_model_key == (
-        DEFAULT_LLAMA_COMPATIBILITY_MODEL
-    )
+    assert config.llama_compatibility_model_key == DEFAULT_LLAMA_COMPATIBILITY_MODEL
     assert config.llama_compatibility_model_key == "local_llama_server::qwen3527b"
     assert config.rounds == 3
     assert config.timeout_seconds == 180
