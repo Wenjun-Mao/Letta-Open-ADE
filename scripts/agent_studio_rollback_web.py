@@ -232,6 +232,17 @@ def exercise_legacy_agent_studio_proxy(
     finally:
         if agent_id:
             try:
+                archived = _proxy_json(
+                    client,
+                    legacy_web_base_url,
+                    "POST",
+                    f"/api/v2/agent-studio/agents/{agent_id}/archive",
+                )
+                if (
+                    archived.get("id") != agent_id
+                    or archived.get("archived") is not True
+                ):
+                    raise RuntimeError("legacy_web_proxy_archive_invalid")
                 purged = _proxy_json(
                     client,
                     legacy_web_base_url,

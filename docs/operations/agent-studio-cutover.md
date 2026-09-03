@@ -27,7 +27,8 @@ The release ledger composes three deliberately different kinds of evidence:
 The rollback receipt separately proves that the prior v2 web revision still
 builds and serves Agent Studio against the retained v2 API. It must select live
 v2 options, create a disposable agent through the legacy web proxy, read and
-persist a `human` memory update, and purge that agent through the same proxy.
+persist a `human` memory update, then archive and purge that agent through the
+same proxy.
 It also proves that withdrawing then restoring the native lane leaves
 definitions, subjects, conversations, messages, summaries, and typed memory
 lineage unchanged.
@@ -128,9 +129,9 @@ make agent-studio-rollback-rehearsal \
 The legacy revision must contain the v2 Agent Studio client. The rehearsal builds
 that exact web source in an ephemeral image, loads `/agent-studio`, then exercises
 the legacy web proxy with a disposable v2 agent lifecycle: read model options,
-create, read persistent state, update and re-read `human` memory, and purge. It
-removes the image, stops the native API and worker, verifies v2 health, restores
-the native lane, and compares complete native state snapshots.
+create, read persistent state, update and re-read `human` memory, archive, and
+purge. It removes the image, stops the native API and worker, verifies v2 health,
+restores the native lane, and compares complete native state snapshots.
 
 ## 5. Promote And Approve The Single Release Ledger
 

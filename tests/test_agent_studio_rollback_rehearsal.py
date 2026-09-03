@@ -232,7 +232,7 @@ def test_legacy_web_port_parser_rejects_unusable_output() -> None:
         _published_port("")
 
 
-def test_legacy_web_proxy_exercises_disposable_v2_agent_read_write_and_purge() -> None:
+def test_legacy_web_proxy_exercises_disposable_v2_agent_lifecycle() -> None:
     calls: list[tuple[str, str, str]] = []
     agent_id = "legacy-agent-1"
 
@@ -293,6 +293,11 @@ def test_legacy_web_proxy_exercises_disposable_v2_agent_read_write_and_purge() -
                 json={"value_before": "before", "value_after": "rollback marker"},
             )
         if (
+            request.method == "POST"
+            and request.url.path == f"/api/v2/agent-studio/agents/{agent_id}/archive"
+        ):
+            return httpx.Response(200, json={"id": agent_id, "archived": True})
+        if (
             request.method == "DELETE"
             and request.url.path == f"/api/v2/agent-studio/agents/{agent_id}/purge"
         ):
@@ -332,6 +337,11 @@ def test_legacy_web_proxy_exercises_disposable_v2_agent_read_write_and_purge() -
             "legacy-web.test",
             f"/api/v2/agent-studio/agents/{agent_id}/persistent-state",
         ),
+        (
+            "POST",
+            "legacy-web.test",
+            f"/api/v2/agent-studio/agents/{agent_id}/archive",
+        ),
         ("DELETE", "legacy-web.test", f"/api/v2/agent-studio/agents/{agent_id}/purge"),
     ]
 
@@ -353,6 +363,8 @@ def test_legacy_web_smoke_fails_when_proxy_cleanup_fails() -> None:
                     },
                 },
             )
+        if request.method == "POST" and request.url.path.endswith("/archive"):
+            return httpx.Response(200, json={"id": agent_id, "archived": True})
         if request.method == "POST":
             return httpx.Response(200, json={"id": agent_id})
         if request.method == "GET":
