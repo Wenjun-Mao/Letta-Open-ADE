@@ -22,8 +22,18 @@ pytestmark = pytest.mark.skipif(
 )
 
 
+@pytest.mark.parametrize(
+    ("target_purpose", "cleanup_purposes"),
+    [
+        ("development", ("development", "evaluation")),
+        ("agent_studio", ("agent_studio",)),
+    ],
+)
 def test_scoped_cleanup_honors_the_complete_provenance_fk_graph(
     tmp_path: Path,
+    request: pytest.FixtureRequest,
+    target_purpose: str,
+    cleanup_purposes: tuple[str, ...],
 ) -> None:
     assert DATABASE_URL is not None
     run_id = f"agent-runtime-v3-cleanup-{uuid4().hex[:8]}"
@@ -44,7 +54,23 @@ def test_scoped_cleanup_honors_the_complete_provenance_fk_graph(
                 subject_external_key=subject_external_key,
                 unrelated_definition_key=unrelated_definition_key,
                 ids=ids,
+                target_purpose=target_purpose,
             )
+
+    def cleanup_fixture() -> None:
+        ScopedPostgresCleanup(
+            database_url=DATABASE_URL,
+            output_dir=tmp_path,
+        ).cleanup(
+            CleanupScope(
+                run_id=run_id,
+                definition_keys=(definition_key, unrelated_definition_key),
+                subject_external_keys=(subject_external_key,),
+                resource_purposes=("development", "evaluation", "agent_studio"),
+            )
+        )
+
+    request.addfinalizer(cleanup_fixture)
 
     manifest = ScopedPostgresCleanup(
         database_url=DATABASE_URL,
@@ -54,10 +80,12 @@ def test_scoped_cleanup_honors_the_complete_provenance_fk_graph(
             run_id=run_id,
             definition_keys=(definition_key,),
             subject_external_keys=(subject_external_key,),
+            resource_purposes=cleanup_purposes,
         )
     )
 
     assert manifest.payload["status"] == "completed"
+    assert manifest.payload["verification"] == {"remaining_resources": 0}
     with psycopg.connect(_psycopg_url(DATABASE_URL)) as connection:
         with connection.cursor() as cursor:
             assert (
@@ -121,6 +149,7 @@ def _insert_cleanup_graph(
     subject_external_key: str,
     unrelated_definition_key: str,
     ids: dict[str, object],
+    target_purpose: str,
 ) -> None:
     _insert_definition(
         cursor,
@@ -128,7 +157,7 @@ def _insert_cleanup_graph(
         definition_id=ids["definition_root"],
         version_id=ids["definition_version"],
         definition_key=definition_key,
-        purpose="development",
+        purpose=target_purpose,
     )
     _insert_definition(
         cursor,
@@ -142,9 +171,9 @@ def _insert_cleanup_graph(
         """
         INSERT INTO ade.memory_subjects (
             id, workspace_id, external_key, display_name, purpose
-        ) VALUES (%s, %s, %s, 'cleanup test', 'development')
+        ) VALUES (%s, %s, %s, 'cleanup test', %s)
         """,
-        (ids["subject"], workspace_id, subject_external_key),
+        (ids["subject"], workspace_id, subject_external_key, target_purpose),
     )
     cursor.execute(
         "INSERT INTO ade.memory_entities (id, workspace_id, subject_id, kind, label) VALUES (%s, %s, %s, 'person', 'user')",
@@ -155,13 +184,14 @@ def _insert_cleanup_graph(
         INSERT INTO ade.conversations (
             id, workspace_id, agent_definition_version_id, memory_subject_id, title,
             purpose
-        ) VALUES (%s, %s, %s, %s, 'cleanup test', 'development')
+        ) VALUES (%s, %s, %s, %s, 'cleanup test', %s)
         """,
         (
             ids["conversation"],
             workspace_id,
             ids["definition_version"],
             ids["subject"],
+            target_purpose,
         ),
     )
     cursor.execute(

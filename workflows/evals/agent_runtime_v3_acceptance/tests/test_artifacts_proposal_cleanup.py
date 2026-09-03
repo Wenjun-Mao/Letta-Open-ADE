@@ -169,6 +169,8 @@ def test_cleanup_refuses_unsupported_database_or_unscoped_queries(
 
     def execute(sql: str, params: tuple[tuple[str, ...], ...]) -> dict[str, int]:
         executed.append((sql, params))
+        if "AS remaining_resources" in sql:
+            return {"remaining_resources": 0}
         return {"deleted": 1}
 
     cleaner = ScopedPostgresCleanup(
@@ -179,12 +181,19 @@ def test_cleanup_refuses_unsupported_database_or_unscoped_queries(
 
     manifest = cleaner.cleanup(scope)
     assert manifest.path.is_file()
+    assert manifest.payload["schema_version"] == 2
     assert manifest.payload["scope"]["run_id"] == scope.run_id
+    assert manifest.payload["scope"]["resource_purposes"] == [
+        "development",
+        "evaluation",
+    ]
+    assert manifest.payload["verification"] == {"remaining_resources": 0}
     assert executed
     assert all("WHERE" in sql for sql, _params in executed)
     assert all(params for _sql, params in executed)
     assert all("workspace.workspace_key = 'default'" in sql for sql, _ in executed)
-    assert all("purpose IN ('development', 'evaluation')" in sql for sql, _ in executed)
+    assert all("purpose = ANY(%s)" in sql for sql, _ in executed[:-1])
+    assert "AS remaining_resources" in executed[-1][0]
     sql_order = [sql.rsplit("\n", maxsplit=1)[-1] for sql, _params in executed]
     assert next(
         index for index, sql in enumerate(sql_order) if "UPDATE ade.memory_facts" in sql
@@ -222,6 +231,28 @@ def test_cleanup_refuses_unsupported_database_or_unscoped_queries(
     )
     assert _psycopg_params((("a", "b"), ("c",))) == (["a", "b"], ["c"])
 
+    def incomplete_execute(
+        sql: str, _params: tuple[tuple[str, ...], ...]
+    ) -> dict[str, int]:
+        if "AS remaining_resources" in sql:
+            return {"remaining_resources": 3}
+        return {"deleted": 0}
+
+    incomplete = ScopedPostgresCleanup(
+        database_url="postgresql://example",
+        output_dir=tmp_path / "incomplete",
+        execute=incomplete_execute,
+    )
+    with pytest.raises(CleanupError, match="scoped cleanup failed"):
+        incomplete.cleanup(scope)
+    failed_manifest = json.loads(
+        (
+            tmp_path / "incomplete" / scope.run_id / "cleanup-recovery-manifest.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert failed_manifest["status"] == "failed"
+    assert failed_manifest["verification"] == {"remaining_resources": 3}
+
     with pytest.raises(CleanupError, match="PostgreSQL"):
         ScopedPostgresCleanup(
             database_url="sqlite:///unsafe.db",
@@ -232,4 +263,14 @@ def test_cleanup_refuses_unsupported_database_or_unscoped_queries(
     with pytest.raises(CleanupError, match="scope"):
         cleaner.cleanup(
             CleanupScope(run_id="", definition_keys=(), subject_external_keys=())
+        )
+
+    with pytest.raises(CleanupError, match="unsupported cleanup resource purpose"):
+        cleaner.cleanup(
+            CleanupScope(
+                run_id="acceptance-20260829",
+                definition_keys=("acceptance-20260829-agent",),
+                subject_external_keys=(),
+                resource_purposes=("production",),
+            )
         )

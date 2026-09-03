@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -14,7 +15,11 @@ from workflows.evals.agent_runtime_parity.provenance import (
     OPTION_IDENTITY_FIELDS,
     _catalog_identity_sha256,
 )
-from workflows.evals.agent_runtime_parity.workflow import _build_comparison, run_parity
+from workflows.evals.agent_runtime_parity.workflow import (
+    _build_comparison,
+    _cleanup_all,
+    run_parity,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
@@ -201,6 +206,42 @@ def test_direct_workflow_call_rejects_retries_before_live_resources(
 
     with pytest.raises(ConfigError, match="retry_count must be 0"):
         asyncio.run(run_parity(config, run_id="parity-retry-rejected"))
+
+
+def test_parity_cleanup_explicitly_targets_agent_studio_resources(
+    monkeypatch, tmp_path: Path
+) -> None:
+    captured_scopes: list[Any] = []
+
+    class CapturingCleanup:
+        def __init__(self, **_kwargs: Any) -> None:
+            pass
+
+        def cleanup(self, scope: Any) -> Any:
+            captured_scopes.append(scope)
+            path = tmp_path / "cleanup-recovery-manifest.json"
+            path.write_text("{}", encoding="utf-8")
+            return SimpleNamespace(payload={"status": "completed"}, path=path)
+
+    monkeypatch.setattr(
+        "workflows.evals.agent_runtime_parity.workflow.ScopedPostgresCleanup",
+        CapturingCleanup,
+    )
+    cleanup = asyncio.run(
+        _cleanup_all(
+            legacy=object(),
+            legacy_targets=[],
+            legacy_creation_indeterminate=False,
+            database_url="postgresql://example/ade",
+            output_dir=tmp_path,
+            run_id="parity-purpose-test",
+            native_definition_keys=("parity-purpose-test-r01-definition",),
+            native_subject_keys=("parity-purpose-test-r01-subject",),
+        )
+    )
+
+    assert cleanup["completed"] is True
+    assert captured_scopes[0].resource_purposes == ("agent_studio",)
 
 
 class _FakeLegacy:

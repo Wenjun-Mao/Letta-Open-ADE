@@ -92,9 +92,12 @@ raw SSE payload bodies.
 Legacy agents are archived and purged through ``/api/v2``. Native sessions are
 created atomically, archived, and restored through the Agent Studio session API.
 Their definition and subject keys begin with the exact parity run ID before any
-request is issued, so scoped PostgreSQL cleanup can delete only generated v3 resources. An
-ambiguous legacy creation or either incomplete cleanup path makes the comparison
-fail even when behavior otherwise passes.
+request is issued. The native public API owns those resources as `agent_studio`,
+so parity cleanup explicitly authorizes that one purpose for exact run-bound keys.
+The cleanup transaction then verifies that no exact definition, definition version,
+or subject remains under any purpose. An ambiguous legacy creation, a purpose
+mismatch, or either incomplete cleanup path makes the comparison fail even when
+behavior otherwise passes.
 
 The workflow intentionally reuses the repository's shared
 ``ScopedPostgresCleanup`` contract. Run it only after that cleaner has been kept

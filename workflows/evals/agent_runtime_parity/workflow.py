@@ -452,6 +452,7 @@ async def _cleanup_all(
                 run_id=run_id,
                 definition_keys=native_definition_keys,
                 subject_external_keys=native_subject_keys,
+                resource_purposes=("agent_studio",),
             )
         )
         native_cleanup = {

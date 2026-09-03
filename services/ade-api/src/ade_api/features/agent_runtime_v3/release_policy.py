@@ -146,6 +146,7 @@ PRODUCTION_POLICY_INPUTS: Final[dict[str, tuple[str, ...]]] = {
         "workflows/evals/agent_runtime_parity/provenance.py",
         "workflows/evals/agent_runtime_parity/scoring.py",
         "workflows/evals/agent_runtime_parity/workflow.py",
+        "workflows/evals/agent_runtime_v3_acceptance/cleanup.py",
         "workflows/evals/agent_runtime_v3_acceptance/promotion_review.py",
     ),
     "retrieval": (

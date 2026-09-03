@@ -33,6 +33,13 @@ def test_checked_in_manifest_is_bound_to_current_production_policy() -> None:
     )
 
 
+def test_cleanup_contract_is_part_of_release_policy() -> None:
+    assert (
+        "workflows/evals/agent_runtime_v3_acceptance/cleanup.py"
+        in PRODUCTION_POLICY_INPUTS["schema"]
+    )
+
+
 def test_policy_hash_snapshot_cannot_mutate_the_cached_policy() -> None:
     first = production_policy_hashes()
     expected_prompt = first["prompt"]
