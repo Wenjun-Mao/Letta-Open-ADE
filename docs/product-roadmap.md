@@ -56,58 +56,64 @@ relevant turn and memory evidence, compare a candidate with a baseline, and
 state a keep, promote, or reject decision without reconstructing raw artifacts.
 Operations and qualification views remain separate from product-quality decisions.
 
-## Now: Complete Native Runtime Candidate Qualification
+## Delivered: Native Runtime Qualification And Fresh-Start Cutover
 
-The ADE-native runtime is an accepted implementation candidate, not the current
-product runtime. It has a separate PostgreSQL model, worker, typed-memory contracts,
-and a breaking `/api/v3` API. Current Agent Studio, `/api/v2`, and Letta `0.16.8`
-remain the product authority until the evidence-gated cutover in
-[ADR 0016](adr/0016-ade-native-agent-studio-cutover.md) takes effect.
+Milestones 4 and 5 are complete. Agent Studio now uses the ADE-native `/api/v3`
+runtime, its worker, typed memory contracts, and ADE PostgreSQL as its sole product
+authority. Letta `0.16.8` is not an Agent Studio request fallback or state authority.
+It remains available only through the deliberate release-level rollback lane and for
+other retained v2 capabilities until Phase 6.
 
-Phase 4 is a paired baseline comparison, not an attempt to reproduce Letta's internal
-blocks or compaction format. Test Center must own content-addressed artifacts for the
-native-v3 candidate and Letta-v2 observed incumbent using the same fixture, controls,
-and scoring policy.
+Phase 4 closed with one reviewed, content-addressed
+[release ledger](../config/agent-studio/release-evidence.json) that binds:
 
-- Run three clean paired DGX rounds after every relevant qualification change.
-- Qualify native against the observed Letta baseline: native must pass all three
-  rounds and not trail Letta in any round. A failing Letta baseline remains visible
-  diagnosis rather than a veto. Prove native-only isolation, retrieval, compaction,
-  false-memory prevention, tool behavior, and trace guarantees through the canonical
-  native matrix, and prove retry/cancellation/idempotency semantics through
-  deterministic conformance tests.
-- Keep llama-server as compatibility evidence, not an initial selectable product
-  bundle, until it independently qualifies.
-- Retain the initial native tool scope: subject-bound `search_memory` only.
+- three complete native qualification rounds over the canonical capability matrix;
+- three clean schema-v2 paired DGX rounds with native `3/3`, comparable inputs,
+  exact zero-retry controls, completed cleanup, and per-round non-regression against
+  the observed Letta baseline;
+- deterministic retry, timeout, cancellation, idempotency, and event conformance;
+- a passing llama-server compatibility round; and
+- a successful release-level rollback rehearsal that preserves native state.
+
+Phase 5 activated the exact qualified DGX conversation, reviewer, and retriever
+bundle through the evidence gate. The cutover used a fresh, scoped reset and has no
+Letta importer, UI/runtime toggle, compatibility authority, per-request fallback, or
+dual write. The admin-only reset boundary is idempotent, transactional, limited to
+`purpose=agent_studio`, and auditable.
+
+### Delivered Decision Gate
+
+The gate is executable through `make agent-studio-release-gate`; release startup
+runs it before bringing up the product lane. Any policy, prompt, tool, schema,
+retrieval, deployment-identity, or implementation change outside the explicitly
+allowed release-record files invalidates the evidence and requires requalification.
+
+## Now: Stabilize The Native Product Path
+
+Operate the native Agent Studio as the supported product path and learn from normal
+use before removing the fallback deployment asset. Keep runtime health, run events,
+memory lineage, Test Center evidence, reset receipts, and release-level rollback
+observable. Fix defects at their owning contract and requalify changes that affect
+the released behavior or evidence boundary.
 
 ### Now Decision Gate
 
-Phase 4 closes only when current qualification, three clean schema-v2 paired DGX
-rounds with native `3/3` and per-round non-regression, and deterministic conformance
-provide one reviewed, content-addressed capability ledger. Runtime qualification
-alone does not prove candidate readiness for the shared product outcome.
+Every Agent Studio release must pass the reviewed evidence gate and report a fresh,
+source-matched worker. No incident response may silently route a request to Letta,
+merge v2 and v3 state, or weaken cleanup and provenance guarantees. Rollback remains
+an explicit whole-release operation.
 
-## Next: Fresh-Start Agent Studio Cutover
+## Next: Remove Legacy Runtime Dependencies
 
-Phase 5 implements the cutover contract in
-[ADR 0016](adr/0016-ade-native-agent-studio-cutover.md), but activation remains
-evidence-gated. When the Phase 4 gate passes, new Agent Studio usage moves exclusively
-to the qualified native DGX bundle and a fresh ADE PostgreSQL store. There is no Letta
-importer, UI/runtime toggle, compatibility authority, per-request fallback, or dual
-write. The admin-only reset boundary is idempotent, transactional, scoped to
-`purpose=agent_studio`, and auditable.
+Phase 6 may remove Letta, Redis, rollback-only v2 Agent Studio endpoints, and legacy
+evidence only after an explicit traffic and dependency audit proves that no product
+capability or required recovery path still depends on them. The removal needs its own
+decision, operational checks, and updated recovery plan.
 
-### Next Decision Gate
+## Later: Rename The Project
 
-Effective cutover requires the Phase 4 evidence gate, the exact qualified DGX bundle,
-release readiness, and a rehearsed prior-v2 web/API rollback that preserves native
-state. Rollback never falls back per request and does not merge or delete v3 state.
-
-## Later: Remove Legacy Runtime Dependencies
-
-Letta, Redis, v2 Agent Studio endpoints, and legacy evidence remain throughout Phase
-5. Phase 6 removes them only after no product traffic or deployment dependency
-remains, with the removal backed by a separate operational completion check.
+After Phase 6 removes Letta from code, runtime, documentation, and operator
+vocabulary, decide and execute the project rename as a separate coordinated change.
 
 ## Explicit Non-Goals
 
@@ -115,8 +121,8 @@ remains, with the removal backed by a separate operational completion check.
 - Do not add a generic evaluation framework before a concrete product workflow
   needs it.
 - Do not mix behavioral quality decisions with infrastructure diagnostics.
-- Do not preserve duplicate runtime authority, legacy import, or compatibility
-  aliases for a future v3 cutover.
+- Do not reintroduce duplicate Agent Studio runtime authority, legacy import,
+  per-request fallback, dual write, or compatibility aliases.
 - Do not start another repository-wide restructuring before an outcome or
   authority boundary requires it.
 
@@ -138,3 +144,7 @@ remains, with the removal backed by a separate operational completion check.
   reset, rollback, and legacy-removal contract.
 - [ADR 0017](adr/0017-incumbent-baseline-does-not-veto-native-cutover.md): paired
   baseline, candidate-qualification, and non-regression gate semantics.
+- [ADR 0018](adr/0018-evaluation-cleanup-must-prove-absence.md): exact-scope cleanup
+  and resource-absence proof required by release evidence.
+- [Agent Studio release ledger](../config/agent-studio/release-evidence.json): the
+  reviewed, executable record that activated the native product path.

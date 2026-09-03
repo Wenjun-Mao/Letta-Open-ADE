@@ -7,43 +7,45 @@ runtime decisions.
 ## One-Sentence Model
 
 ADE is a local-first operator workspace for improving agent behavior with evidence:
-ADE Web presents the workflow, ADE API owns product orchestration, Model Router owns
-provider access, and Letta currently owns the supported Agent Studio runtime while
-the native v3 cutover gate remains incomplete.
+ADE Web presents the workflow, ADE API owns product orchestration, ADE Native API and
+its worker own Agent Studio, and Model Router owns provider access. Letta remains only
+for retained v2 capabilities and the release-level Agent Studio rollback lane.
 
 ## Current Authority
 
 | Concern | Current authority | Status |
 | --- | --- | --- |
-| Product UI and browser contract | ADE Web and `/api/v2` | Supported product path |
-| Persistent Agent Studio execution and current agent state | Letta `0.16.8` | Supported product path |
+| Product UI and browser contracts | ADE Web, `/api/v3` for Agent Studio, and `/api/v2` for retained features | Supported product paths |
+| Persistent Agent Studio execution and current agent state | `ade-native-api`, ADE PostgreSQL, and `ade-runtime-worker` | Supported Agent Studio authority |
 | Provider discovery, capability policy, and generation routing | Model Router | Supported shared boundary |
 | Prompts, personas, schemas, and custom-tool content | `content/` through its owning center | Reviewed product material |
 | Product behavior evidence | Test Center and feature-owned evaluation workflows | Delivered evaluation-loop baseline |
-| ADE-native agent runtime | isolated `ade-native-api`, ADE PostgreSQL, and `ade-runtime-worker` | Phase 4/5 implementation in progress; not yet the supported Agent Studio authority |
+| Letta `0.16.8` and Redis | Retained v2 ADE API capabilities | Not Agent Studio authority; retained for release-level rollback until Phase 6 |
 
-The native runtime remains deliberately separate while the cutover gate is pending.
-It neither imports Letta agents nor dual-writes state.
-[ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md) authorizes implementation
-of a fresh-start cutover contract, but does not claim that candidate-qualification
-evidence has passed. Effective cutover needs current qualification and three clean
-Test Center-owned schema-v2 paired DGX rounds in which native passes and does not
-trail the observed Letta baseline. Until then, current Agent Studio, `/api/v2`, and
-Letta remain the supported product path.
+Milestone 4 qualification and Milestone 5 fresh-start cutover are complete. The
+reviewed [release ledger](../../config/agent-studio/release-evidence.json) records
+three passing native qualification rounds, three clean Test Center-owned schema-v2
+paired DGX rounds with native `3/3` and per-round non-regression, deterministic
+conformance, llama-server compatibility, completed cleanup, and a successful
+release-level rollback rehearsal. Agent Studio now uses `/api/v3` exclusively; it
+does not import Letta agents, dual-write state, expose a runtime toggle, or fall back
+to Letta per request. Phase 5 retains the prior v2 lane only for deliberate release
+rollback while Phase 6 remains a separate decision.
 
 ```mermaid
 flowchart LR
     O[Operator] --> W[ADE Web]
-    W --> A[ADE API /api/v2]
-    A --> L[Letta\ncurrent Agent Studio authority]
+    W --> A[ADE API /api/v2\nretained product features]
+    W --> NAPI[ADE Native API /api/v3\nAgent Studio authority]
+    A --> L[Letta\nretained v2 + rollback]
     A --> R[Model Router\nprovider boundary]
     L --> R
-    A --> C[Content centers\nprompts, personas, schemas, tools]
-    T[Test Center] --> A
-    T --> E[Behavior evidence\nand workflow artifacts]
-    W -. gated /api/v3 preview .-> NAPI[ade-native-api\nnative surface only]
     NAPI --> N[ADE-native runtime\nPostgreSQL + worker]
     N --> R
+    A --> C[Content centers\nprompts, personas, schemas, tools]
+    T[Test Center] --> A
+    T --> NAPI
+    T --> E[Behavior evidence\nand workflow artifacts]
 ```
 
 ## Product Spine
@@ -66,10 +68,10 @@ they support confidence in the loop but do not measure product behavior.
 
 | Horizon | Outcome | Decision gate |
 | --- | --- | --- |
-| Delivered | Evaluation is the primary product journey, with deterministic evidence, verified content-addressed inputs, readable comparisons, and explicit keep/promote/reject decisions. | Product-quality evaluation remains distinct from stack health, diagnostics, and runtime qualification. |
-| Now | Complete Phase 4 v2/v3 paired-baseline candidate evidence and Phase 5 cutover implementation. | Current qualification plus three clean Test Center-owned schema-v2 DGX rounds with native `3/3` and non-regression are reviewed. Qualification alone is insufficient. |
-| Next | Activate the fresh-start v3 Agent Studio only after the Phase 4 gate. | The exact qualified DGX bundle is the only initial product bundle; reset and release-level rollback contracts are ready and verified. |
-| Later | Remove legacy runtime dependencies in Phase 6. | No product traffic or deployment dependency remains on Letta, Redis, v2 Agent Studio endpoints, or retained legacy evidence. |
+| Delivered | Evaluation is the primary product journey, and Milestones 4 and 5 qualified and activated the fresh-start native Agent Studio. | The reviewed release ledger binds qualification, paired evidence, deterministic conformance, cleanup, and rollback rehearsal to the approved deployment. |
+| Now | Operate and stabilize the native Agent Studio product path while preserving the explicit v2 rollback boundary. | Every release passes the evidence gate; policy or deployment identity changes trigger requalification; production behavior remains observable and recoverable. |
+| Next | Decide whether Phase 6 can remove Letta, Redis, and the rollback-only v2 Agent Studio path. | No product traffic or required deployment capability depends on the legacy runtime, and an explicit removal decision replaces the rollback plan. |
+| Later | Rename the project after Letta is absent from code, runtime, documentation, and operator vocabulary. | The rename is coordinated separately and does not hide unfinished dependency removal. |
 
 ## Read Next
 

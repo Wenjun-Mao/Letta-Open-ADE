@@ -1,6 +1,6 @@
 # ADR 0016: ADE-Native Agent Studio Uses A Fresh-Start, Evidence-Gated Cutover
 
-- Status: Accepted for implementation; effective cutover remains evidence-gated
+- Status: Accepted; effective cutover activated on 2026-09-03
 - Date: 2026-09-02
 - Related: [ADR 0009](0009-ade-owned-agent-runtime.md),
   [ADR 0010](0010-production-path-runtime-qualification.md),
@@ -99,3 +99,18 @@ not a migration failure.
   a requalification event before a release claim.
 - Follow the executable sequence in the
   [Agent Studio cutover runbook](../operations/agent-studio-cutover.md).
+
+## Activation Record
+
+The reviewed [Agent Studio release ledger](../../config/agent-studio/release-evidence.json)
+records an approved decision after all Phase 4 and Phase 5 gates passed. It binds the
+qualified deployment identities to three passing native qualification rounds, three
+clean schema-v2 paired DGX rounds with native `3/3` and non-regression, deterministic
+conformance, completed cleanup, llama-server compatibility, and a successful
+release-level rollback rehearsal.
+
+As of 2026-09-03, Agent Studio uses the ADE-native `/api/v3` API, ADE PostgreSQL, and
+the source-matched runtime worker as its sole product authority. The prior Letta v2
+web/API path remains only as a deliberate whole-release rollback lane. Phase 6 will
+decide its removal separately after dependency and operational observation gates
+pass.
