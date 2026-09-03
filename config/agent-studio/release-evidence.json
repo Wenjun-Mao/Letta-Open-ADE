@@ -1,0 +1,185 @@
+{
+  "schema_version": 2,
+  "kind": "ade-agent-studio-cutover-evidence",
+  "decision": "approved",
+  "reviewed_by": "Codex",
+  "reviewed_at": "2026-09-03T04:03:51.224274+00:00",
+  "evaluated_source": {
+    "revision": "82a48f098c4e2921d75daf6486bad815d1f03cdd",
+    "dirty": false,
+    "fingerprint": "4515e9fd47a71e900a0d673840dc61d83b4f59debd9454637023020851dbbfcc"
+  },
+  "manifest_sha256": "1602bc08eb1b3894f8a23a0be5754e0e50cc3256778b3a6fb674129962add37f",
+  "policy_hashes": {
+    "prompt": "f0a29a8a91c808561037a777eab5570433e259d021cfb95ba9b100ab441a916d",
+    "tool": "a1b623b138ecfcd223a46dda96be8cb3eb432ba0b64fb04d07c0de43c785d247",
+    "schema": "96b0ffd04ee52a9bb7dd9dbbc86f486e40dff0392e41dbb19a2df47101e5f8ed",
+    "retrieval": "9655faf4ffc59f3a5ae80d2fd92675fd84837e047306e4cc852e2a7188e52800"
+  },
+  "qualified_routes": {
+    "conversation": {
+      "route_alias": "dgx_vllm::qwen3.6-35b-a3b-fp8",
+      "deployment_id": "dgx-qwen3_6-chat",
+      "fingerprint_sha256": "10b158a36fe7a97d7a57d76d9215c4dfcbdbe906769765bc7f6f976d3bc622ca"
+    },
+    "reviewer": {
+      "route_alias": "dgx_vllm::qwen3.6-35b-a3b-fp8",
+      "deployment_id": "dgx-qwen3_6-chat",
+      "fingerprint_sha256": "10b158a36fe7a97d7a57d76d9215c4dfcbdbe906769765bc7f6f976d3bc622ca"
+    },
+    "retriever": {
+      "route_alias": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+      "deployment_id": "dgx-qwen3-embedding-0_6b",
+      "fingerprint_sha256": "30407a994e5c548122879a34e8af36ade7cafb16174217436580b262e8349fa7"
+    }
+  },
+  "qualification": {
+    "run_id": "agent-runtime-v3-20260903t032035z-934114f7",
+    "passed": true,
+    "proposal_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+    "canonical_case_keys_sha256": "65a8fed44be5a590c12709f6c2fa0576f1976b4a582fe9968989b85d498d244e",
+    "round_artifact_sha256s": [
+      "8ace903d957c97e50e30a6bb946fb8177ed1afedf71bb07ec5c1e99a378840c7",
+      "16c3fc3fe04167424d26ed532e8a42ddb2dfc4efe16b8556e2f335922fab055c",
+      "798c197a2fd4a249251aed0589f93325e6ae1eb004153f5bbb3b3d714288e3f0"
+    ],
+    "llama_compatibility": {
+      "passed": true,
+      "artifact_sha256": "59a1aaa1e6ba294e2a943d2a176aa09b7ca4d4e6ad534614320623639fe25617"
+    }
+  },
+  "paired_parity": {
+    "run_id": "23738f73-2894-4a25-856e-a0f9e779cd87",
+    "passed": true,
+    "inputs_comparable": true,
+    "cleanup_complete": true,
+    "rounds_requested": 3,
+    "rounds_completed": 3,
+    "rounds_passed": 3,
+    "native_rounds_passed": 3,
+    "legacy_rounds_passed": 0,
+    "native_not_worse_than_legacy": true,
+    "native_product_api": "/api/v3/agent-studio/sessions",
+    "artifact_digests": {
+      "parity_spec_sha256": "f0dd6dd7208497f031f7efc350137e110f6d58fed373bfe5686830a85022fe46",
+      "provenance_sha256": "9879f5fd70133f9c0d794f67063c8dc157951d2859a57a43b44c42382bae3c9a",
+      "normalized_turns_sha256": "78a1fcdf3a9418aa87110cf5a30f8e5b1a3b55e90d93fabbe0cc70f15dc0454d",
+      "comparison_sha256": "e0ed8cfeb8f6d304ec0b2a8c2676ce5896432d5c0765d6cb255ebd41644e5253",
+      "summary_sha256": "c05ea5c87147561174b337f4eb3a5a76cec38ebdec46c6c6cd64afa8ba83cd77",
+      "evidence_sha256": "b44eef7a0e873e395df97832aec28be6db56162853ab65c6a57b749957f81085"
+    }
+  },
+  "conformance": {
+    "passed": true,
+    "receipt_sha256": "7517e423e6ff39415b66ec6e144d1ef722d0ed313e0adc827c511d527c36dbff",
+    "test_paths": [
+      "services/ade-api/tests/agent_runtime_v3/test_retry.py",
+      "services/ade-api/tests/agent_runtime_v3/test_provider_tracing.py",
+      "services/ade-api/tests/agent_runtime_v3/test_run_service.py",
+      "services/ade-api/tests/agent_runtime_v3/test_worker_events.py",
+      "services/ade-api/tests/agent_runtime_v3/persistence/test_repository_contracts.py",
+      "workflows/evals/agent_runtime_v3_acceptance/tests/test_client.py",
+      "workflows/evals/agent_runtime_v3_acceptance/tests/test_rounds.py"
+    ]
+  },
+  "capability_evidence": {
+    "cancellation": {
+      "status": "passed",
+      "evidence_kind": "deterministic-contract",
+      "artifact_sha256": "7517e423e6ff39415b66ec6e144d1ef722d0ed313e0adc827c511d527c36dbff",
+      "references": [
+        "test_client.py",
+        "test_rounds.py"
+      ]
+    },
+    "false_memory_prevention": {
+      "status": "passed",
+      "evidence_kind": "native-qualification",
+      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "references": [
+        "false_memory_prevention"
+      ]
+    },
+    "long_history_compaction": {
+      "status": "passed",
+      "evidence_kind": "native-qualification",
+      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "references": [
+        "long_history_compaction"
+      ]
+    },
+    "memory_correctness": {
+      "status": "passed",
+      "evidence_kind": "paired-parity",
+      "artifact_sha256": "b44eef7a0e873e395df97832aec28be6db56162853ab65c6a57b749957f81085",
+      "references": [
+        "chat_memory_baseline"
+      ]
+    },
+    "old_memory_retrieval": {
+      "status": "passed",
+      "evidence_kind": "native-qualification",
+      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "references": [
+        "old_memory_deep_search"
+      ]
+    },
+    "subject_isolation": {
+      "status": "passed",
+      "evidence_kind": "native-qualification",
+      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "references": [
+        "cross_agent_subject_sharing",
+        "cross_subject_isolation"
+      ]
+    },
+    "timeout_retry_ownership": {
+      "status": "passed",
+      "evidence_kind": "deterministic-contract",
+      "artifact_sha256": "7517e423e6ff39415b66ec6e144d1ef722d0ed313e0adc827c511d527c36dbff",
+      "references": [
+        "test_retry.py",
+        "test_provider_tracing.py"
+      ]
+    },
+    "tool_failure": {
+      "status": "passed",
+      "evidence_kind": "native-qualification",
+      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "references": [
+        "weather_tool_failure"
+      ]
+    },
+    "tool_selection": {
+      "status": "passed",
+      "evidence_kind": "native-qualification",
+      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "references": [
+        "weather_tool_selection"
+      ]
+    },
+    "trace_preservation": {
+      "status": "passed",
+      "evidence_kind": "native-qualification",
+      "artifact_sha256": "65d1786bd91a2c99939fc2a3c86371b5deb77ea289cd8f84e4efd05822786a9f",
+      "references": [
+        "all canonical qualification cases"
+      ]
+    }
+  },
+  "rollback_rehearsal": {
+    "rehearsed": true,
+    "legacy_source_verified": true,
+    "legacy_web_image_built": true,
+    "legacy_web_smoke_passed": true,
+    "legacy_web_api_read_passed": true,
+    "legacy_web_api_write_passed": true,
+    "legacy_web_api_cleanup_passed": true,
+    "legacy_health_passed": true,
+    "native_state_preserved": true,
+    "legacy_revision": "53703ea6660c869e3eb10aeaefc9bab1aab8b57b",
+    "rehearsed_at": "2026-09-03T03:20:06.408178+00:00",
+    "receipt_sha256": "15b9f411e86c47780523b9444793aab0497e8ed117526092cd5fda44dfba2ace"
+  },
+  "evidence_sha256": "744901b56f944022a23522dfb4e25c0aa919d0821eb3bf1793523e42e2de14a7"
+}
