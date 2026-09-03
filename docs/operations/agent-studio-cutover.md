@@ -131,7 +131,8 @@ that exact web source in an ephemeral image, loads `/agent-studio`, then exercis
 the legacy web proxy with a disposable v2 agent lifecycle: read model options,
 create, read persistent state, update and re-read `human` memory, archive, and
 purge. It removes the image, stops the native API and worker, verifies v2 health,
-restores the native lane, and compares complete native state snapshots.
+restarts those exact native containers without recomputing their Compose
+environment, and compares complete native state snapshots.
 
 ## 5. Promote And Approve The Single Release Ledger
 

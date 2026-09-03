@@ -43,6 +43,15 @@ def test_rollback_rehearsal_proves_v2_health_and_preserves_v3_state(
         ),
     )
     calls: list[str] = []
+    commands: list[list[str]] = []
+
+    def command_runner(
+        command: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        commands.append(command)
+        return subprocess.CompletedProcess(
+            args=command, returncode=0, stdout="", stderr=""
+        )
 
     def handler(request: httpx.Request) -> httpx.Response:
         calls.append(request.url.path)
@@ -87,9 +96,7 @@ def test_rollback_rehearsal_proves_v2_health_and_preserves_v3_state(
         native_api_key="native",
         compose_network="test_default",
         output_path=tmp_path / "rollback.json",
-        command_runner=lambda *_args, **_kwargs: subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="", stderr=""
-        ),
+        command_runner=command_runner,
         client=httpx.Client(transport=httpx.MockTransport(handler)),
         sleep=lambda _seconds: None,
         now=lambda: datetime(2026, 9, 3, tzinfo=UTC),
@@ -107,6 +114,21 @@ def test_rollback_rehearsal_proves_v2_health_and_preserves_v3_state(
     assert calls.count("/api/v3/agent-studio/sessions") == 2
     assert calls.count("/api/v3/agent-studio/sessions/c1/state") == 2
     assert calls.count("/api/v3/agent-studio/subjects/s1/memories") == 2
+    assert [
+        "docker",
+        "compose",
+        "start",
+        "ade-runtime-worker",
+        "ade-native-api",
+    ] in commands
+    assert [
+        "docker",
+        "compose",
+        "up",
+        "-d",
+        "ade-runtime-worker",
+        "ade-native-api",
+    ] not in commands
 
 
 def test_rollback_rehearsal_fails_closed_when_v3_state_changes(

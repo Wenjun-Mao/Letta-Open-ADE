@@ -123,8 +123,7 @@ def rehearse_rollback(
                 _compose(
                     command_runner,
                     project_root,
-                    "up",
-                    "-d",
+                    "start",
                     "ade-runtime-worker",
                     "ade-native-api",
                 )
