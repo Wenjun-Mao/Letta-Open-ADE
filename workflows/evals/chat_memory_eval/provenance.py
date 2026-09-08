@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
+from ade_api.features.model_catalog.identity import model_option_identity_sha256
+
 from .config import (
     ADE_API_TRANSPORT_RETRIES,
     JUDGE_TRANSPORT_RETRIES,
@@ -20,25 +22,6 @@ from .scoring import DEFAULT_FORBIDDEN_REPLY_SUBSTRINGS
 
 class TemplateClient(Protocol):
     def template(self, kind: str, key: str) -> dict[str, Any]: ...
-
-
-_OPTION_IDENTITY_FIELDS = (
-    "key",
-    "source_id",
-    "provider_model_id",
-    "upstream_provider_model_id",
-    "sampling_defaults",
-    "scenario_sampling_defaults",
-    "supports_top_k",
-    "supports_thinking",
-    "thinking_default_enabled",
-    "tool_call_thinking_default_enabled",
-    "profile_applied",
-    "profile_source",
-    "agent_studio_candidate",
-    "agent_studio_compatible",
-    "deployment",
-)
 
 
 def capture_evaluation_provenance(
@@ -184,8 +167,9 @@ def _selected_option(items: object, key: str) -> dict[str, Any]:
 
 
 def _option_snapshot(option: dict[str, Any]) -> dict[str, Any]:
-    identity_payload = {field: option.get(field) for field in _OPTION_IDENTITY_FIELDS}
-    identity_sha256 = _sha256(identity_payload)
+    # The API owns the public catalog identity contract. Reuse it here so an
+    # evaluator cannot drift when catalog metadata gains display-only fields.
+    identity_sha256 = model_option_identity_sha256(option)
     if option.get("identity_sha256") != identity_sha256:
         raise ValueError(
             f"Catalog option '{option.get('key', '')}' identity is inconsistent"

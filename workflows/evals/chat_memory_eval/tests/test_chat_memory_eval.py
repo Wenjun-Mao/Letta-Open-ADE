@@ -10,6 +10,7 @@ from pathlib import Path
 import httpx
 import pytest
 
+from ade_api.features.model_catalog.identity import model_option_identity_sha256
 from workflows.evals.chat_memory_eval.artifacts import ArtifactWriter, build_summary
 from workflows.evals.chat_memory_eval.client import AdeApiClient, ApiRequestError
 from workflows.evals.chat_memory_eval.config import (
@@ -26,8 +27,6 @@ from workflows.evals.chat_memory_eval.config import (
 from workflows.evals.chat_memory_eval.fixtures import ExpectedFact, load_fixture
 from workflows.evals.chat_memory_eval.judge import _parse_json_object
 from workflows.evals.chat_memory_eval.provenance import (
-    _OPTION_IDENTITY_FIELDS,
-    _sha256,
     assert_created_session_identity,
     capture_evaluation_provenance,
 )
@@ -257,10 +256,26 @@ def _catalog_option(key: str, *, revision: str) -> dict[str, object]:
         "agent_studio_compatible": True,
         "deployment": {"fingerprint": {"artifact_revision": revision}},
     }
-    option["identity_sha256"] = _sha256(
-        {field: option.get(field) for field in _OPTION_IDENTITY_FIELDS}
-    )
+    option["identity_sha256"] = model_option_identity_sha256(option)
     return option
+
+
+def test_provenance_uses_the_public_catalog_identity_contract() -> None:
+    config, options, fixture = _provenance_inputs()
+    option = options["models"][0]
+    option["upstream_provider_model_id"] = "provider-specific-id"
+    option["identity_sha256"] = model_option_identity_sha256(option)
+
+    assert (
+        capture_evaluation_provenance(
+            run_id="identity-contract",
+            api=_TemplateClient(),
+            options={"models": [option], "embeddings": []},
+            config=replace(config, embedding=""),
+            fixture=fixture,
+        )["model"]["identity_sha256"]
+        == option["identity_sha256"]
+    )
 
 
 def _provenance_inputs() -> tuple[object, dict[str, object], object]:
