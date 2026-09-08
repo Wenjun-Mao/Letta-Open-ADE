@@ -319,7 +319,6 @@ def main() -> None:
                         "model_key": label_model_key,
                         "max_tokens": 128,
                         "timeout_seconds": SMOKE_TURN_TIMEOUT_SECONDS,
-                        "repair_retry_count": 0,
                     },
                 ),
                 step="Label Lab generation",
