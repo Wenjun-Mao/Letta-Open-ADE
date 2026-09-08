@@ -1,185 +1,80 @@
 {
-  "schema_version": 2,
-  "kind": "ade-agent-studio-cutover-evidence",
+  "schema_version": 3,
+  "kind": "ade-agent-studio-release-evidence",
   "decision": "approved",
-  "reviewed_by": "Codex",
-  "reviewed_at": "2026-09-03T05:01:05.165286+00:00",
+  "reviewed_by": "codex-release-review",
+  "reviewed_at": "2026-09-08T19:44:48.225294+00:00",
   "evaluated_source": {
-    "revision": "7a81df449b1dad5f7d712d0640657ca903af06d2",
+    "revision": "4da0ac23bf258fac45e268e75dc74ffc10eb307b",
     "dirty": false,
-    "fingerprint": "ecb3fd55390d1f8376f159ea08cd8b4795d2282ca94cee073d9732228a953453"
+    "fingerprint": "da92104e82f2a643b723724527631a4537878183974f6af99d9ac39fc8ab6da5"
   },
-  "manifest_sha256": "1602bc08eb1b3894f8a23a0be5754e0e50cc3256778b3a6fb674129962add37f",
+  "build_identity": {
+    "api": {
+      "revision": "4da0ac23bf258fac45e268e75dc74ffc10eb307b",
+      "fingerprint": "da92104e82f2a643b723724527631a4537878183974f6af99d9ac39fc8ab6da5"
+    },
+    "worker": {
+      "revision": "4da0ac23bf258fac45e268e75dc74ffc10eb307b",
+      "fingerprint": "da92104e82f2a643b723724527631a4537878183974f6af99d9ac39fc8ab6da5"
+    }
+  },
+  "manifest_sha256": "e63f34d87d5118c3c4374f46eb8e086c2daf882b7f8881cce12ebb84bc8da1e4",
   "policy_hashes": {
-    "prompt": "f0a29a8a91c808561037a777eab5570433e259d021cfb95ba9b100ab441a916d",
-    "tool": "a1b623b138ecfcd223a46dda96be8cb3eb432ba0b64fb04d07c0de43c785d247",
-    "schema": "96b0ffd04ee52a9bb7dd9dbbc86f486e40dff0392e41dbb19a2df47101e5f8ed",
-    "retrieval": "9655faf4ffc59f3a5ae80d2fd92675fd84837e047306e4cc852e2a7188e52800"
+    "prompt": "a7c25c67fa41bfda5fdab5102192c9b1261310fb55e0fbb98c38b97ffafd422d",
+    "tool": "2b30616cdc949a59db4d9258dc6592b434efd7fd450cfc7d0caeea77f1d78840",
+    "schema": "094c22c790aae6b332e974e9091d63e5aa3e0ef00b5faa887c51eb3563c9464a",
+    "retrieval": "a3944d7124416ad36cb2785eb92755f64703f932e9ed01a14330ad68863518f9"
   },
   "qualified_routes": {
     "conversation": {
       "route_alias": "dgx_vllm::qwen3.6-35b-a3b-fp8",
       "deployment_id": "dgx-qwen3_6-chat",
-      "fingerprint_sha256": "10b158a36fe7a97d7a57d76d9215c4dfcbdbe906769765bc7f6f976d3bc622ca"
+      "fingerprint_sha256": "c909663970c69333dc5dd04adc141a53b30c7e127075c2a10ab937e1c3431983"
     },
     "reviewer": {
       "route_alias": "dgx_vllm::qwen3.6-35b-a3b-fp8",
       "deployment_id": "dgx-qwen3_6-chat",
-      "fingerprint_sha256": "10b158a36fe7a97d7a57d76d9215c4dfcbdbe906769765bc7f6f976d3bc622ca"
+      "fingerprint_sha256": "c909663970c69333dc5dd04adc141a53b30c7e127075c2a10ab937e1c3431983"
     },
     "retriever": {
       "route_alias": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
       "deployment_id": "dgx-qwen3-embedding-0_6b",
-      "fingerprint_sha256": "30407a994e5c548122879a34e8af36ade7cafb16174217436580b262e8349fa7"
+      "fingerprint_sha256": "c549d7dc288d2112f10e8b1032b502eda74557d093bc1390fe0fc4f44de63086"
     }
   },
+  "agent_bundle": {
+    "persona_key": "chat_linxiaotang",
+    "prompt_key": "chat_v20260516",
+    "tool_names": [
+      "search_memory"
+    ]
+  },
   "qualification": {
-    "run_id": "agent-runtime-v3-20260903t041603z-0af0bf33",
+    "run_id": "agent-runtime-20260908t192652z-bfe14f89",
     "passed": true,
-    "proposal_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
+    "proposal_sha256": "76b519b23e20ae70905273c1ae970cd63b27a7c1b40d6a18fea8302068c0104a",
     "canonical_case_keys_sha256": "65a8fed44be5a590c12709f6c2fa0576f1976b4a582fe9968989b85d498d244e",
     "round_artifact_sha256s": [
-      "e53efe3183c7d61bbccb7ee746a10bb72f6026574dc3bfd188c15338a6cc3267",
-      "993cb4f1af9a2a704cfe2123724c9833759b8543e0050521f55046f9efe91f7d",
-      "8f01c07ac06e2eb799ace80b1da46a7e994ecc51e23d7c562453272dd5a7069a"
+      "ae7d27ed6cf4e42d63452e270452d815b8c4e582d2a14f4ec50f518b6d8ce800",
+      "0cf76b6dfa0a92dee016ce47820d95d304a089ecbc69cc77846356583b810cd4",
+      "23abdcd5a8ae000b5ec475ef34aa3cbeabbff0ec887dc22b6954e97a9dc37236"
     ],
     "llama_compatibility": {
       "passed": true,
-      "artifact_sha256": "41ee20caa22e6aea2160adc41370bbf71e50a2a957c5a1f48170c3c1ddbe2fd1"
-    }
-  },
-  "paired_parity": {
-    "run_id": "1b4e5b91-5540-4bd1-b346-988f899b1e46",
-    "passed": true,
-    "inputs_comparable": true,
-    "cleanup_complete": true,
-    "rounds_requested": 3,
-    "rounds_completed": 3,
-    "rounds_passed": 3,
-    "native_rounds_passed": 3,
-    "legacy_rounds_passed": 0,
-    "native_not_worse_than_legacy": true,
-    "native_product_api": "/api/v3/agent-studio/sessions",
-    "artifact_digests": {
-      "parity_spec_sha256": "e70a7ec3c83a6f47aa92f9cf45742c823cd98757e8f5793ceb3e18fff1897490",
-      "provenance_sha256": "9df924aed037cafd78fa64027b2f4d2886e9c76ded78be1869c071abdd18383c",
-      "normalized_turns_sha256": "0ccba03ccf8f7fd318a57462c97dca2d0b5e9205e1a056ab2b6f3529bbb16d2e",
-      "comparison_sha256": "ebbdb9f3ef87a7c0745a34c8129b27174a06ed7c8a68e87a305ae441400343a9",
-      "summary_sha256": "d476348593542e1f50867d702a6ab39919b39ff3b9b603951dfd3e836fb4074f",
-      "evidence_sha256": "e86c7010ab8240c01bd031ec3da53f91ced0845d335e9a6bd232d622d5c7696f"
+      "artifact_sha256": "dcdf20c906171990693350b34058870e7611761ed871e2b47f4707681748adc4"
     }
   },
   "conformance": {
     "passed": true,
-    "receipt_sha256": "84795fd9f6398b48199e76e3a51ecaaf5076816a4e0f70b07d745746b956c640",
+    "receipt_sha256": "ba8417dd2c74424ca9c62797ad33c776bc2cf8b30c2e8f84c492886b6144f233",
     "test_paths": [
-      "services/ade-api/tests/agent_runtime_v3/test_retry.py",
-      "services/ade-api/tests/agent_runtime_v3/test_provider_tracing.py",
-      "services/ade-api/tests/agent_runtime_v3/test_run_service.py",
-      "services/ade-api/tests/agent_runtime_v3/test_worker_events.py",
-      "services/ade-api/tests/agent_runtime_v3/persistence/test_repository_contracts.py",
-      "workflows/evals/agent_runtime_v3_acceptance/tests/test_client.py",
-      "workflows/evals/agent_runtime_v3_acceptance/tests/test_rounds.py"
+      "services/ade-api/tests/agent_runtime/test_retry.py",
+      "services/ade-api/tests/agent_runtime/test_provider_tracing.py",
+      "services/ade-api/tests/agent_runtime/test_run_service.py",
+      "services/ade-api/tests/agent_runtime/test_worker_events.py",
+      "services/ade-api/tests/agent_runtime/persistence/test_repository_contracts.py"
     ]
   },
-  "capability_evidence": {
-    "cancellation": {
-      "status": "passed",
-      "evidence_kind": "deterministic-contract",
-      "artifact_sha256": "84795fd9f6398b48199e76e3a51ecaaf5076816a4e0f70b07d745746b956c640",
-      "references": [
-        "test_client.py",
-        "test_rounds.py"
-      ]
-    },
-    "false_memory_prevention": {
-      "status": "passed",
-      "evidence_kind": "native-qualification",
-      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
-      "references": [
-        "false_memory_prevention"
-      ]
-    },
-    "long_history_compaction": {
-      "status": "passed",
-      "evidence_kind": "native-qualification",
-      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
-      "references": [
-        "long_history_compaction"
-      ]
-    },
-    "memory_correctness": {
-      "status": "passed",
-      "evidence_kind": "paired-parity",
-      "artifact_sha256": "e86c7010ab8240c01bd031ec3da53f91ced0845d335e9a6bd232d622d5c7696f",
-      "references": [
-        "chat_memory_baseline"
-      ]
-    },
-    "old_memory_retrieval": {
-      "status": "passed",
-      "evidence_kind": "native-qualification",
-      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
-      "references": [
-        "old_memory_deep_search"
-      ]
-    },
-    "subject_isolation": {
-      "status": "passed",
-      "evidence_kind": "native-qualification",
-      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
-      "references": [
-        "cross_agent_subject_sharing",
-        "cross_subject_isolation"
-      ]
-    },
-    "timeout_retry_ownership": {
-      "status": "passed",
-      "evidence_kind": "deterministic-contract",
-      "artifact_sha256": "84795fd9f6398b48199e76e3a51ecaaf5076816a4e0f70b07d745746b956c640",
-      "references": [
-        "test_retry.py",
-        "test_provider_tracing.py"
-      ]
-    },
-    "tool_failure": {
-      "status": "passed",
-      "evidence_kind": "native-qualification",
-      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
-      "references": [
-        "weather_tool_failure"
-      ]
-    },
-    "tool_selection": {
-      "status": "passed",
-      "evidence_kind": "native-qualification",
-      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
-      "references": [
-        "weather_tool_selection"
-      ]
-    },
-    "trace_preservation": {
-      "status": "passed",
-      "evidence_kind": "native-qualification",
-      "artifact_sha256": "d8abf2288b06a74fe4b4859a189186f2fd8b16ee1ce600b6a0e2fbea5efc9e52",
-      "references": [
-        "all canonical qualification cases"
-      ]
-    }
-  },
-  "rollback_rehearsal": {
-    "rehearsed": true,
-    "legacy_source_verified": true,
-    "legacy_web_image_built": true,
-    "legacy_web_smoke_passed": true,
-    "legacy_web_api_read_passed": true,
-    "legacy_web_api_write_passed": true,
-    "legacy_web_api_cleanup_passed": true,
-    "legacy_health_passed": true,
-    "native_state_preserved": true,
-    "legacy_revision": "53703ea6660c869e3eb10aeaefc9bab1aab8b57b",
-    "rehearsed_at": "2026-09-03T05:00:49.780409+00:00",
-    "receipt_sha256": "7e36ea8bff4f8c6b0952d668791bde24ac0eda060241d907ad81e326b6a6e774"
-  },
-  "evidence_sha256": "505c25068a8565e6486b6678d78970c2b747b3f2ac3b296383a75f6c588fb9fe"
+  "evidence_sha256": "f16a302773c0ee66e815f614c37042ab8ec4fa49fb7b786ad578553f7a1c42b4"
 }
