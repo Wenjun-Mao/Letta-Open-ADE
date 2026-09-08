@@ -29,10 +29,10 @@ setup:
 	npm ci --prefix apps/ade-web
 
 up:
-	ADE_API_AGENT_RUNTIME_MODE=development docker compose up -d --build
+	ADE_API_AGENT_RUNTIME_MODE=development docker compose up -d --build --remove-orphans
 
 down:
-	docker compose down
+	docker compose down --remove-orphans
 
 status:
 	docker compose ps
@@ -92,4 +92,4 @@ runtime-release-gate:
 	uv run python scripts/check_agent_studio_release_gate.py
 
 runtime-release-up: runtime-release-gate
-	ADE_API_AGENT_RUNTIME_MODE=release docker compose up -d --build
+	ADE_API_AGENT_RUNTIME_MODE=release docker compose up -d --build --remove-orphans
