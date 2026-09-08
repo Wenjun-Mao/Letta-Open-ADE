@@ -94,6 +94,46 @@ class DefinitionService:
             tool_names=tool_names,
         )
 
+    def configured_agent_studio_bundle(self) -> dict[str, Any]:
+        """Describe the configured bundle without requiring a live provider."""
+
+        request = self.default_agent_studio_request()
+        manifest = load_deployment_manifest(
+            PROJECT_ROOT / AGENT_STUDIO_DEPLOYMENT_MANIFEST_PATH,
+            project_root=PROJECT_ROOT,
+        )
+        catalog = {
+            "items": [
+                {
+                    "route_aliases": list(deployment.route_aliases),
+                    "deployment": deployment.as_catalog_dict(),
+                }
+                for deployment in manifest.deployments
+            ]
+        }
+        deployments = self._resolve_deployments(request, catalog, release=None)
+        qualification = (
+            QualificationState.QUALIFIED
+            if all(
+                deployment.qualification_state is QualificationState.QUALIFIED
+                for deployment in deployments
+            )
+            else QualificationState.UNQUALIFIED
+        )
+        return {
+            "key": "ade_native_default",
+            "name": "ADE Native Default",
+            "model_key": deployments[0].route_alias,
+            "reviewer_model_key": deployments[1].route_alias,
+            "embedding_model_key": deployments[2].route_alias,
+            "prompt_key": request.prompt_key,
+            "persona_key": request.persona_key,
+            "tool_names": list(request.tool_names),
+            "memory_policy_version": MEMORY_POLICY_VERSION,
+            "qualification_state": qualification.value,
+            "deployments": [deployment.as_snapshot() for deployment in deployments],
+        }
+
     async def create(
         self,
         request: CreateAgentDefinitionRequest,

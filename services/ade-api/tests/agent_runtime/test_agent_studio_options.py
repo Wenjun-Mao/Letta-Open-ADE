@@ -81,16 +81,27 @@ def test_release_default_bundle_uses_validated_release_evidence(monkeypatch) -> 
     assert request.persona_key == "persona_release"
 
 
+def test_development_configured_bundle_comes_from_manifest_without_provider_io() -> (
+    None
+):
+    bundle = _definition_service(mode="development").configured_agent_studio_bundle()
+
+    assert bundle["key"] == "ade_native_default"
+    assert {deployment["role"] for deployment in bundle["deployments"]} == {
+        "conversation",
+        "reviewer",
+        "retriever",
+    }
+
+
 class _PreparedDefinitions:
     def __init__(self, mode: str) -> None:
         self.settings = SimpleNamespace(agent_runtime_mode=mode)
 
-    def default_agent_studio_request(self):
-        return SimpleNamespace()
-
-    async def prepare(self, _request, *, purpose: str):
-        assert purpose == "agent_studio"
+    def configured_agent_studio_bundle(self):
         return {
+            "key": "ade_native_default",
+            "name": "ADE Native Default",
             "model_key": "local::chat",
             "reviewer_model_key": "local::chat",
             "embedding_model_key": "local::embedding",
@@ -99,7 +110,7 @@ class _PreparedDefinitions:
             "tool_names": ["search_memory"],
             "memory_policy_version": "typed-user-facts-v1",
             "qualification_state": "unqualified",
-            "deployment_snapshot": [],
+            "deployments": [],
         }
 
 

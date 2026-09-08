@@ -68,27 +68,13 @@ class PurposeSessionService:
         self.allowed_tool_names = allowed_tool_names
 
     async def options(self) -> dict[str, Any]:
-        request = self.definitions.default_agent_studio_request()
-        prepared = await self.definitions.prepare(request, purpose=AGENT_STUDIO_PURPOSE)
-        bundle = {
-            "key": "ade_native_default",
-            "name": "ADE Native Default",
-            "model_key": prepared["model_key"],
-            "reviewer_model_key": prepared["reviewer_model_key"],
-            "embedding_model_key": prepared["embedding_model_key"],
-            "prompt_key": prepared["prompt_key"],
-            "persona_key": prepared["persona_key"],
-            "tool_names": prepared["tool_names"],
-            "memory_policy_version": prepared["memory_policy_version"],
-            "qualification_state": prepared["qualification_state"],
-            "deployments": prepared["deployment_snapshot"],
-        }
+        bundle = self.definitions.configured_agent_studio_bundle()
         return {
             "runtime": "ade_native",
             "default_bundle_key": bundle["key"],
             "bundles": [bundle]
             if self.definitions.settings.agent_runtime_mode == "development"
-            or prepared["qualification_state"] == "qualified"
+            or bundle["qualification_state"] == "qualified"
             else [],
             "default_timeout_seconds": 180.0,
             "default_retry_count": 0,
