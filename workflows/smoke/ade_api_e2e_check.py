@@ -74,7 +74,7 @@ def _option_key(
         str(item.get("key", "") or "").strip()
         for item in items
         if isinstance(item, dict)
-        and bool(item.get("available", True))
+        and item.get("available") is not False
         and str(item.get("key", "") or "").strip()
     ]
     key = default_key if default_key in available else ""

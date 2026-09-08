@@ -88,7 +88,7 @@ def _catalog_options(items: list[dict]) -> list[dict[str, object]]:
         {
             "key": str(item.get("key") or ""),
             "label": str(item.get("label") or item.get("key") or ""),
-            "available": bool(item.get("available", True)),
+            "available": item.get("available") is not False,
         }
         for item in items
         if str(item.get("key") or "").strip()
