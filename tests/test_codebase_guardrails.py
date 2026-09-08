@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import ast
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -75,6 +76,7 @@ def _compose_config() -> dict[str, object]:
             "json",
         ],
         cwd=PROJECT_ROOT,
+        env={**os.environ, "ADE_ENV_FILE": ".env.example"},
         check=False,
         capture_output=True,
         text=True,
