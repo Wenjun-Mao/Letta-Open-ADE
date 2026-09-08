@@ -184,7 +184,13 @@ async def _delete_conversation_graph(
     conversation_ids = select(conversations.c.id).where(
         conversations.c.id == conversation_id
     )
+    message_ids = select(messages.c.id).where(
+        messages.c.conversation_id.in_(conversation_ids)
+    )
     run_ids = select(runs.c.id).where(runs.c.conversation_id.in_(conversation_ids))
+    run_revision_ids = select(memory_revisions.c.id).where(
+        memory_revisions.c.run_id.in_(run_ids)
+    )
     summary_ids = select(conversation_summaries.c.id).where(
         conversation_summaries.c.conversation_id.in_(conversation_ids)
     )
@@ -210,6 +216,44 @@ async def _delete_conversation_graph(
         delete(conversation_leases).where(
             conversation_leases.c.conversation_id.in_(conversation_ids)
         ),
+    )
+    # A session can retain memory provenance for messages and runs that are
+    # about to be removed. Delete this run-owned chain first; the subject itself
+    # may still be shared by another evaluation fixture.
+    await remove(
+        "memory_revision_sources",
+        delete(memory_revision_sources).where(
+            or_(
+                memory_revision_sources.c.revision_id.in_(run_revision_ids),
+                memory_revision_sources.c.message_id.in_(message_ids),
+            )
+        ),
+    )
+    await remove(
+        "memory_revision_predecessors",
+        delete(memory_revision_predecessors).where(
+            or_(
+                memory_revision_predecessors.c.revision_id.in_(run_revision_ids),
+                memory_revision_predecessors.c.predecessor_revision_id.in_(
+                    run_revision_ids
+                ),
+            )
+        ),
+    )
+    await remove(
+        "memory_embeddings",
+        delete(memory_embeddings).where(
+            memory_embeddings.c.revision_id.in_(run_revision_ids)
+        ),
+    )
+    await connection.execute(
+        update(memory_facts)
+        .where(memory_facts.c.current_revision_id.in_(run_revision_ids))
+        .values(current_revision_id=None)
+    )
+    await remove(
+        "memory_revisions",
+        delete(memory_revisions).where(memory_revisions.c.id.in_(run_revision_ids)),
     )
     await remove(
         "messages",

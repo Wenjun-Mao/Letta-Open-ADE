@@ -206,3 +206,60 @@ def test_evaluation_purge_rejects_an_active_run(
 
     with pytest.raises(RuntimeConflict, match="active run"):
         asyncio.run(service.purge("evaluation-conversation-1"))
+
+
+def test_evaluation_purge_removes_run_owned_provenance_before_its_parents() -> None:
+    class _Result:
+        rowcount = 0
+
+    class _Connection:
+        def __init__(self) -> None:
+            self.statements = []
+
+        async def execute(self, statement):
+            self.statements.append(statement)
+            return _Result()
+
+    connection = _Connection()
+
+    asyncio.run(
+        evaluation_sessions._delete_conversation_graph(
+            connection, "evaluation-conversation-1"
+        )
+    )
+
+    deleted_tables = [
+        statement.table.name
+        for statement in connection.statements
+        if getattr(statement, "is_delete", False)
+    ]
+    assert deleted_tables.index("memory_revision_sources") < deleted_tables.index(
+        "messages"
+    )
+    assert deleted_tables.index("memory_revision_predecessors") < deleted_tables.index(
+        "memory_revisions"
+    )
+    assert deleted_tables.index("memory_embeddings") < deleted_tables.index(
+        "memory_revisions"
+    )
+    assert deleted_tables.index("memory_revisions") < deleted_tables.index("runs")
+    provenance_delete = next(
+        statement
+        for statement in connection.statements
+        if getattr(statement, "is_delete", False)
+        and statement.table.name == "memory_revision_sources"
+    )
+    assert "memory_revision_sources.message_id" in str(provenance_delete)
+    assert "memory_revision_sources.revision_id" in str(provenance_delete)
+    fact_pointer_update = next(
+        statement
+        for statement in connection.statements
+        if getattr(statement, "is_update", False)
+        and statement.table.name == "memory_facts"
+    )
+    assert connection.statements.index(fact_pointer_update) < next(
+        index
+        for index, statement in enumerate(connection.statements)
+        if getattr(statement, "is_delete", False)
+        and statement.table.name == "memory_revisions"
+    )
