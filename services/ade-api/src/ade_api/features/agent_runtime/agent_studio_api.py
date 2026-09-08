@@ -38,7 +38,7 @@ PageOffset = Annotated[int, Query(ge=0)]
     "/options",
     response_model=AgentStudioOptionsResponse,
     dependencies=[Depends(require_reader)],
-    summary="List qualified native Agent Studio bundles",
+    summary="List configured native Agent Studio bundles",
 )
 async def get_options(service: AgentRuntimeServiceDependency):
     return await call_runtime(service.get_agent_studio_options())

@@ -51,7 +51,7 @@ SUMMARY_TRANSLATIONS = {
     "List Agent Studio memory subjects": "列出 Agent Studio 记忆主体",
     "List current Agent Studio definition versions": "列出当前 Agent Studio 定义版本",
     "List persisted Agent Studio conversations": "列出持久化 Agent Studio 会话",
-    "List qualified native Agent Studio bundles": "列出已资格认定的原生 Agent Studio 套件",
+    "List configured native Agent Studio bundles": "列出已配置的原生 Agent Studio 套件",
     "List agent runtime runs for one conversation": "列出单个会话的智能体运行",
     "List Label Lab JSON schemas": "列出 Label Lab JSON Schema",
     "List orchestrated test runs": "列出编排测试运行",

@@ -6,7 +6,9 @@ from typing import Any
 from uuid import uuid4
 
 from ade_api.features.prompt_center import PromptTemplateReader
+from ade_api.platform.project_paths import PROJECT_ROOT
 from ade_api.platform.settings import AdeApiSettings
+from model_catalog_contracts.deployment_manifest import load_deployment_manifest
 
 from .contracts import CreateAgentDefinitionRequest, QualificationState
 from .database_boundary import (
@@ -19,6 +21,7 @@ from .errors import RuntimeValidationError
 from .persistence.definitions import DefinitionVersionRepository
 from .presenters import definition_response
 from .release_policy import (
+    AGENT_STUDIO_DEPLOYMENT_MANIFEST_PATH,
     current_production_policy_hashes,
     load_validated_agent_studio_release,
     source_tree_is_clean,
@@ -43,6 +46,53 @@ class DefinitionService:
         self.settings = settings
         self.prompt_registry = prompt_registry
         self.router_transport = router_transport
+
+    def default_agent_studio_request(self) -> CreateAgentDefinitionRequest:
+        """Build the configured Agent Studio definition for the active mode."""
+
+        if self.settings.agent_runtime_mode == "release":
+            release = load_validated_agent_studio_release()
+            route_aliases = release.route_aliases
+            prompt_key = release.agent_bundle.prompt_key
+            persona_key = release.agent_bundle.persona_key
+            tool_names = list(release.agent_bundle.tool_names)
+        else:
+            manifest = load_deployment_manifest(
+                PROJECT_ROOT / AGENT_STUDIO_DEPLOYMENT_MANIFEST_PATH,
+                project_root=PROJECT_ROOT,
+            )
+            route_aliases = {
+                role: next(
+                    (
+                        deployment.route_aliases[0]
+                        for deployment in manifest.deployments
+                        if role in deployment.roles
+                        and deployment.lifecycle != "deprecated"
+                    ),
+                    "",
+                )
+                for role in ("conversation", "reviewer", "retriever")
+            }
+            missing_roles = [role for role, alias in route_aliases.items() if not alias]
+            if missing_roles:
+                raise RuntimeValidationError(
+                    "Deployment manifest has no active Agent Studio route for: "
+                    + ", ".join(missing_roles)
+                )
+            prompt_key = "chat_v20260516"
+            persona_key = "chat_linxiaotang"
+            tool_names = ["search_memory"]
+
+        return CreateAgentDefinitionRequest(
+            definition_key="ade_native_default",
+            name="ADE Native Companion",
+            model_key=route_aliases["conversation"],
+            reviewer_model_key=route_aliases["reviewer"],
+            embedding_model_key=route_aliases["retriever"],
+            prompt_key=prompt_key,
+            persona_key=persona_key,
+            tool_names=tool_names,
+        )
 
     async def create(
         self,

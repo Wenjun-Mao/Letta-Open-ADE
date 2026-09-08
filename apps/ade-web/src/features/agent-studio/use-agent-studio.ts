@@ -215,7 +215,7 @@ export function useAgentStudio() {
   async function createSession() {
     const bundle = defaultBundle(options);
     if (!bundle) {
-      setError("No qualified Agent Studio bundle is available.");
+      setError("No configured Agent Studio bundle is available.");
       return;
     }
     if (!title.trim()) {

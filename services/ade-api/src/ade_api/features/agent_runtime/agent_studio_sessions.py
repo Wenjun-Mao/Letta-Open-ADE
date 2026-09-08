@@ -35,8 +35,6 @@ from .presenters import (
     run_response,
     subject_response,
 )
-from .release_policy import load_validated_agent_studio_release
-
 
 AGENT_STUDIO_PURPOSE = RuntimeResourcePurpose.AGENT_STUDIO.value
 EVALUATION_PURPOSE = RuntimeResourcePurpose.EVALUATION.value
@@ -70,21 +68,11 @@ class PurposeSessionService:
         self.allowed_tool_names = allowed_tool_names
 
     async def options(self) -> dict[str, Any]:
-        release = load_validated_agent_studio_release()
-        request = CreateAgentDefinitionRequest(
-            definition_key="ade_native_default",
-            name="ADE Native Companion",
-            model_key=release.route_aliases["conversation"],
-            reviewer_model_key=release.route_aliases["reviewer"],
-            embedding_model_key=release.route_aliases["retriever"],
-            prompt_key=release.agent_bundle.prompt_key,
-            persona_key=release.agent_bundle.persona_key,
-            tool_names=list(release.agent_bundle.tool_names),
-        )
+        request = self.definitions.default_agent_studio_request()
         prepared = await self.definitions.prepare(request, purpose=AGENT_STUDIO_PURPOSE)
         bundle = {
-            "key": "ade_native_dgx_v1",
-            "name": "ADE Native DGX",
+            "key": "ade_native_default",
+            "name": "ADE Native Default",
             "model_key": prepared["model_key"],
             "reviewer_model_key": prepared["reviewer_model_key"],
             "embedding_model_key": prepared["embedding_model_key"],
@@ -99,7 +87,8 @@ class PurposeSessionService:
             "runtime": "ade_native",
             "default_bundle_key": bundle["key"],
             "bundles": [bundle]
-            if prepared["qualification_state"] == "qualified"
+            if self.definitions.settings.agent_runtime_mode == "development"
+            or prepared["qualification_state"] == "qualified"
             else [],
             "default_timeout_seconds": 180.0,
             "default_retry_count": 0,

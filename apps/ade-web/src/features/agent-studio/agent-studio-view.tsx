@@ -39,7 +39,7 @@ function Library({ controller, t }: { controller: Controller; t: Translate }) {
           <label className="field"><span>{t("Conversation title", "对话标题")}</span><input className="input" value={controller.title} onChange={(event) => controller.setTitle(event.target.value)} disabled={controller.busy} /></label>
           <label className="field"><span>{t("Definition version", "定义版本")}</span>
             <select className="input" value={controller.definitionChoice} onChange={(event) => controller.setDefinitionChoice(event.target.value)} disabled={controller.busy}>
-              <option value={NEW_RESOURCE_VALUE}>{t("Create from qualified bundle", "从已认证套件创建")}</option>
+              <option value={NEW_RESOURCE_VALUE}>{t("Create from configured bundle", "从已配置套件创建")}</option>
               {controller.definitions.map((definition) => <option key={definition.id} value={definition.id} disabled={isArchived(definition)}>{identity(definition)}{isArchived(definition) ? ` (${t("archived", "已归档")})` : ""}</option>)}
             </select>
           </label>
@@ -79,7 +79,7 @@ function DefinitionDraft({ controller, t }: { controller: Controller; t: Transla
   return <div className="studio-draft">
     <label className="field"><span>{t("Definition name", "定义名称")}</span><input className="input" value={controller.definitionName} onChange={(event) => controller.setDefinitionName(event.target.value)} /></label>
     <label className="field"><span>{t("Definition key", "定义键")}</span><input className="input" value={controller.definitionKey} onChange={(event) => controller.setDefinitionKey(event.target.value)} /></label>
-    {bundle ? <div className="studio-bundle-note"><strong>{t("Qualified bundle", "已认证套件")}</strong><span>{bundle.name}</span><code>{bundle.model_key}</code><small>{bundle.prompt_key} · {bundle.persona_key} · {bundle.tool_names.join(", ")}</small></div> : null}
+    {bundle ? <div className="studio-bundle-note"><strong>{t("Configured bundle", "已配置套件")}</strong><span>{bundle.name}</span><code>{bundle.model_key}</code><small>{bundle.prompt_key} · {bundle.persona_key} · {bundle.tool_names.join(", ")}</small></div> : null}
   </div>;
 }
 

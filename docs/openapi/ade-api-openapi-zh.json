@@ -6942,7 +6942,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "列出已资格认定的原生 Agent Studio 套件",
+        "summary": "列出已配置的原生 Agent Studio 套件",
         "tags": [
           "智能体运行时"
         ]
