@@ -8,6 +8,11 @@ from ade_api.platform.dependencies import build_application_services
 from ade_api.platform.settings import AdeApiSettings
 
 
+def test_label_lab_default_leaves_provider_token_budget_unset() -> None:
+    """Allow schema-constrained Qwen responses to finish after hidden reasoning."""
+    assert AdeApiSettings(_env_file=None).label_lab_max_tokens == 0
+
+
 def test_importing_app_does_not_create_runtime_state(tmp_path) -> None:
     runtime_dir = tmp_path / "runtime"
     persona_db = runtime_dir / "personas" / "personas.sqlite3"

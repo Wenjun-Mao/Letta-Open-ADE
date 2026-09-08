@@ -32,7 +32,10 @@ class AdeApiSettings(BaseSettings):
     comment_lab_top_p: float = 1.0
     comment_lab_top_k: int | None = None
     label_lab_timeout_seconds: float = 60.0
-    label_lab_max_tokens: int = 1024
+    # Qwen-family providers may spend a substantial part of a bounded response
+    # on hidden reasoning before emitting the schema-constrained answer.  Leave
+    # the provider cap unset by default; callers can still request a cap.
+    label_lab_max_tokens: int = 0
     label_lab_repair_retry_count: int = 1
     label_lab_temperature: float = 0.0
     label_lab_top_p: float = 1.0
