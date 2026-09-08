@@ -26,7 +26,7 @@ It does not run models or create agents.
   `PromptTemplateReader` contract and `build_prompt_template_reader()` factory.
 - Owns template validation, prompt file lifecycle, persona SQLite persistence, and
   prompt/persona revision helpers.
-- Must not call Letta or model providers directly.
+- Must not call model providers directly.
 
 ## Data And Content
 

@@ -21,7 +21,6 @@ class ApiOptionEntryResponse(BaseModel):
     source_id: str | None = None
     source_label: str | None = None
     provider_model_id: str | None = None
-    upstream_provider_model_id: str | None = None
     label_lab_available: bool | None = None
     structured_output_mode: LabelingOutputMode | None = None
     sampling_defaults: dict[str, Any] = Field(default_factory=dict)
@@ -85,36 +84,6 @@ class ApiOptionsResponse(BaseModel):
     labeling: ApiLabelingRuntimeDefaultsResponse | None = None
 
 
-class RuntimeCapabilitiesResponse(BaseModel):
-    per_request_model_override: bool
-    per_request_model_override_via_extra_body: bool
-    per_request_system_override: bool
-    per_request_system_override_via_extra_body: bool
-
-
-class ControlCapabilitiesResponse(BaseModel):
-    update_system_prompt: bool
-    update_agent_model: bool
-    update_core_memory_block: bool
-    attach_tool: bool
-    detach_tool: bool
-
-
-class SdkCapabilitiesResponse(BaseModel):
-    messages_create_params: list[str]
-    agents_update_params: list[str]
-    blocks_update_params: list[str]
-
-
-class CapabilitiesResponse(BaseModel):
-    enabled: bool
-    strict_mode: bool
-    missing_required: list[str]
-    runtime: RuntimeCapabilitiesResponse
-    control: ControlCapabilitiesResponse
-    sdk: SdkCapabilitiesResponse
-
-
 class ModelCatalogSourceModelResponse(BaseModel):
     provider_model_id: str
     model_type: str
@@ -127,7 +96,6 @@ class ModelCatalogSourceResponse(BaseModel):
     adapter: str = "generic_openai"
     base_url: str
     enabled_for: list[str]
-    letta_handle_prefix: str
     status: str
     detail: str
     allowlist_applied: bool | None = None
@@ -145,8 +113,6 @@ class ModelCatalogEntryResponse(BaseModel):
     source_adapter: str = "generic_openai"
     provider_model_id: str
     model_type: str
-    letta_handle: str | None = None
-    letta_catalog_visible: bool = False
     agent_studio_available: bool
     comment_lab_available: bool
     label_lab_available: bool

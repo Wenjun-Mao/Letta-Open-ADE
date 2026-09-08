@@ -2,32 +2,30 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from ade_api.features.model_catalog import runtime_options
+from ade_api.features.prompt_center import persona_option_entries, prompt_option_entries
 from ade_api.platform.auth import require_admin
-from ade_api.platform.dependencies import TestOrchestratorDependency
+from ade_api.platform.dependencies import (
+    ModelRouterClientDependency,
+    PromptPersonaRegistryDependency,
+    TestOrchestratorDependency,
+)
 from ade_api.platform.feature_flags import ensure_ade_api_enabled
 from ade_api.platform.openapi_metadata import TAG_TEST_CENTER
 
-from .chat_memory_evaluations import ChatMemoryEvaluationArtifactUnavailable
-from .agent_runtime_parity_evaluations import AgentRuntimeParityArtifactUnavailable
-from .chat_memory_evaluation_comparisons import (
-    ChatMemoryEvaluationComparisonUnavailable,
-)
-from .chat_memory_evaluation_decisions import (
-    ChatMemoryEvaluationDecisionConflict,
-)
 from .contracts import (
-    ChatMemoryEvaluationComparisonResponse,
-    ChatMemoryEvaluationDecisionRequest,
-    ChatMemoryEvaluationDecisionResponse,
-    ChatMemoryEvaluationDetailResponse,
-    ChatMemoryEvaluationListResponse,
-    AgentRuntimeParityDetailResponse,
-    AgentRuntimeParityListResponse,
+    TestCenterOptionsResponse,
     TestRunArtifactListResponse,
     TestRunArtifactReadResponse,
     TestRunListResponse,
     TestRunRecordResponse,
     TestRunRequest,
+)
+from .run_descriptors import (
+    AGENT_RUNTIME_DIAGNOSTIC_CASE_KEYS,
+    CHAT_MEMORY_EVALUATION_FIXTURES,
+    DEFAULT_AGENT_RUNTIME_ACCEPTANCE_CONFIG,
+    DEFAULT_CHAT_MEMORY_EVALUATION_CONFIG,
 )
 
 
@@ -35,132 +33,66 @@ router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 @router.get(
-    "/api/v2/test-center/agent-runtime-parity-evaluations",
-    response_model=AgentRuntimeParityListResponse,
+    "/api/v2/test-center/options",
+    response_model=TestCenterOptionsResponse,
     tags=[TAG_TEST_CENTER],
-    summary="List Agent Runtime paired baseline comparisons",
+    summary="Get canonical Test Center launch options",
 )
-async def list_agent_runtime_parity_evaluations(
-    test_orchestrator: TestOrchestratorDependency,
+async def get_test_center_options(
+    model_router_client: ModelRouterClientDependency,
+    prompt_registry: PromptPersonaRegistryDependency,
 ):
     ensure_ade_api_enabled()
-    return {"items": test_orchestrator.list_agent_runtime_parity_evaluations()}
+    models, embeddings = runtime_options(
+        "chat",
+        model_router_client=model_router_client,
+        force_refresh=False,
+    )
+    return {
+        "run_types": [
+            {"key": "chat_memory_eval", "label": "Behavior evaluation"},
+            {
+                "key": "agent_runtime_acceptance",
+                "label": "Native runtime qualification",
+            },
+            {"key": "ade_api_e2e_check", "label": "Current-stack smoke"},
+        ],
+        "catalog": {
+            "models": _catalog_options(models),
+            "embeddings": _catalog_options(embeddings),
+            "prompts": _catalog_options(prompt_option_entries(prompt_registry, "chat")),
+            "personas": _catalog_options(
+                persona_option_entries(prompt_registry, "chat")
+            ),
+        },
+        "chat_memory_eval": {
+            "defaults": DEFAULT_CHAT_MEMORY_EVALUATION_CONFIG,
+            "fixtures": [
+                {"key": key, "label": label}
+                for key, label in CHAT_MEMORY_EVALUATION_FIXTURES
+            ],
+        },
+        "agent_runtime_acceptance": {
+            "defaults": DEFAULT_AGENT_RUNTIME_ACCEPTANCE_CONFIG,
+            "cases": [
+                {"key": key, "label": key.replace("_", " ").title()}
+                for key in AGENT_RUNTIME_DIAGNOSTIC_CASE_KEYS
+            ],
+        },
+        "current_stack_smoke": {"run_type": "ade_api_e2e_check"},
+    }
 
 
-@router.get(
-    "/api/v2/test-center/agent-runtime-parity-evaluations/{run_id}",
-    response_model=AgentRuntimeParityDetailResponse,
-    response_model_exclude_none=True,
-    tags=[TAG_TEST_CENTER],
-    summary="Get Agent Runtime paired baseline evidence",
-)
-async def get_agent_runtime_parity_evaluation(
-    run_id: str,
-    test_orchestrator: TestOrchestratorDependency,
-):
-    ensure_ade_api_enabled()
-    try:
-        evaluation = test_orchestrator.get_agent_runtime_parity_evaluation(run_id)
-    except AgentRuntimeParityArtifactUnavailable as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    if evaluation is None:
-        raise HTTPException(
-            status_code=404,
-            detail="agent-runtime paired baseline run_id not found",
-        )
-    return evaluation
-
-
-@router.get(
-    "/api/v2/test-center/chat-memory-evaluations",
-    response_model=ChatMemoryEvaluationListResponse,
-    tags=[TAG_TEST_CENTER],
-    summary="List chat-memory evaluations",
-)
-async def list_chat_memory_evaluations(
-    test_orchestrator: TestOrchestratorDependency,
-):
-    ensure_ade_api_enabled()
-    return {"items": test_orchestrator.list_chat_memory_evaluations()}
-
-
-@router.get(
-    "/api/v2/test-center/chat-memory-evaluations/comparison",
-    response_model=ChatMemoryEvaluationComparisonResponse,
-    tags=[TAG_TEST_CENTER],
-    summary="Compare two chat-memory evaluations",
-)
-async def compare_chat_memory_evaluations(
-    baseline_run_id: str,
-    candidate_run_id: str,
-    test_orchestrator: TestOrchestratorDependency,
-):
-    ensure_ade_api_enabled()
-    if baseline_run_id == candidate_run_id:
-        raise HTTPException(
-            status_code=400, detail="Baseline and candidate must be different runs"
-        )
-    try:
-        comparison = test_orchestrator.compare_chat_memory_evaluations(
-            baseline_run_id, candidate_run_id
-        )
-    except (
-        ChatMemoryEvaluationArtifactUnavailable,
-        ChatMemoryEvaluationComparisonUnavailable,
-    ) as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    if comparison is None:
-        raise HTTPException(status_code=404, detail="Evaluation run_id not found")
-    return comparison
-
-
-@router.post(
-    "/api/v2/test-center/chat-memory-evaluations/{run_id}/decisions",
-    response_model=ChatMemoryEvaluationDecisionResponse,
-    tags=[TAG_TEST_CENTER],
-    summary="Record a chat-memory evaluation decision",
-)
-async def record_chat_memory_evaluation_decision(
-    run_id: str,
-    request: ChatMemoryEvaluationDecisionRequest,
-    test_orchestrator: TestOrchestratorDependency,
-):
-    ensure_ade_api_enabled()
-    try:
-        decision = test_orchestrator.record_chat_memory_evaluation_decision(
-            run_id, **request.model_dump()
-        )
-    except (
-        ChatMemoryEvaluationArtifactUnavailable,
-        ChatMemoryEvaluationDecisionConflict,
-    ) as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    if decision is None:
-        raise HTTPException(status_code=404, detail="Evaluation run_id not found")
-    return decision
-
-
-@router.get(
-    "/api/v2/test-center/chat-memory-evaluations/{run_id}",
-    response_model=ChatMemoryEvaluationDetailResponse,
-    response_model_exclude_none=True,
-    tags=[TAG_TEST_CENTER],
-    summary="Get chat-memory evaluation detail",
-)
-async def get_chat_memory_evaluation(
-    run_id: str,
-    test_orchestrator: TestOrchestratorDependency,
-):
-    ensure_ade_api_enabled()
-    try:
-        evaluation = test_orchestrator.get_chat_memory_evaluation(run_id)
-    except ChatMemoryEvaluationArtifactUnavailable as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    if evaluation is None:
-        raise HTTPException(
-            status_code=404, detail="chat-memory evaluation run_id not found"
-        )
-    return evaluation
+def _catalog_options(items: list[dict]) -> list[dict[str, object]]:
+    return [
+        {
+            "key": str(item.get("key") or ""),
+            "label": str(item.get("label") or item.get("key") or ""),
+            "available": bool(item.get("available", True)),
+        }
+        for item in items
+        if str(item.get("key") or "").strip()
+    ]
 
 
 @router.get(

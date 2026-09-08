@@ -17,7 +17,6 @@ describe("ADE navigation information architecture", () => {
       "/label-lab",
       "/schema-center",
       "/prompt-center",
-      "/tool-center",
       "/test-center",
       "/api-docs",
     ]);

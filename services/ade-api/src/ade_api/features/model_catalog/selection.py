@@ -2,26 +2,21 @@ from __future__ import annotations
 
 from typing import Any
 
-from letta_client import Letta
-
 from ade_api.integrations.model_router.client import ModelRouterClient
 
-from .catalog import enriched_catalog_items
+from .catalog import router_catalog_items
 
 
 def resolve_comment_model_selection(
     *,
     model_key: str | None = None,
-    model_selector: str | None = None,
     model_router_client: ModelRouterClient,
-    letta_client: Letta,
     force_refresh: bool = False,
 ) -> dict[str, Any]:
     items = [
         item
-        for item in enriched_catalog_items(
+        for item in router_catalog_items(
             model_router_client=model_router_client,
-            letta_client=letta_client,
             force_refresh=force_refresh,
         )
         if item["comment_lab_available"]
@@ -36,41 +31,19 @@ def resolve_comment_model_selection(
             return {**matched, "api_key": router_api_key}
         raise ValueError(f"Invalid model_key: {requested_key}")
 
-    requested_model = str(model_selector or "").strip()
-    if not requested_model:
-        raise ValueError("model_key is required")
-
-    matches = [
-        item
-        for item in items
-        if requested_model
-        in {
-            str(item["model_key"]),
-            str(item["provider_model_id"]),
-            str(item.get("letta_handle", "") or ""),
-        }
-    ]
-    if len(matches) == 1:
-        return {**matches[0], "api_key": router_api_key}
-    if len(matches) > 1:
-        raise ValueError(
-            f"Ambiguous model selector '{requested_model}'. Use model_key instead."
-        )
-    raise ValueError(f"Invalid model: {requested_model}")
+    raise ValueError("model_key is required")
 
 
 def resolve_label_model_selection(
     *,
     model_key: str,
     model_router_client: ModelRouterClient,
-    letta_client: Letta,
     force_refresh: bool = False,
 ) -> dict[str, Any]:
     items = [
         item
-        for item in enriched_catalog_items(
+        for item in router_catalog_items(
             model_router_client=model_router_client,
-            letta_client=letta_client,
             force_refresh=force_refresh,
         )
         if item["label_lab_available"]

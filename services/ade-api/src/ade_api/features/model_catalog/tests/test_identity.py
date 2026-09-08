@@ -9,12 +9,12 @@ from ade_api.features.model_catalog.identity import (
 
 def test_model_option_identity_ignores_display_and_availability_fields() -> None:
     option = {
-        "key": "openai-proxy/dgx::qwen",
+        "key": "dgx::qwen",
         "label": "Qwen",
         "description": "Local model",
         "available": True,
         "source_id": "dgx",
-        "provider_model_id": "dgx::qwen",
+        "provider_model_id": "qwen",
         "sampling_defaults": {"temperature": 1.0},
         "deployment": {"fingerprint": {"artifact_revision": "rev-1"}},
     }
@@ -32,9 +32,9 @@ def test_model_option_identity_ignores_display_and_availability_fields() -> None
 
 def test_model_option_identity_changes_with_execution_inputs() -> None:
     option = {
-        "key": "openai-proxy/dgx::qwen",
+        "key": "dgx::qwen",
         "source_id": "dgx",
-        "provider_model_id": "dgx::qwen",
+        "provider_model_id": "qwen",
         "sampling_defaults": {"temperature": 1.0},
         "deployment": {"fingerprint": {"artifact_revision": "rev-1"}},
     }
@@ -52,11 +52,11 @@ def test_model_option_identity_changes_with_execution_inputs() -> None:
 
 def test_attached_identity_survives_public_embedding_option_serialization() -> None:
     sparse_embedding_option = {
-        "key": "letta/letta-free",
-        "label": "Letta Free",
-        "description": "Shared embedding model",
-        "source_id": "letta",
-        "provider_model_id": "letta-free",
+        "key": "local_embeddings::qwen3-embedding",
+        "label": "Qwen Embedding",
+        "description": "Router-discovered embedding model",
+        "source_id": "local_embeddings",
+        "provider_model_id": "qwen3-embedding",
     }
 
     attached_option = attach_model_option_identity(sparse_embedding_option)

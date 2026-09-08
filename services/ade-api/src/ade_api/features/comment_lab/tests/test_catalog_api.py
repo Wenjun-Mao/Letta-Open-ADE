@@ -19,7 +19,7 @@ def test_commenting_generate_uses_model_key_and_selected_source_connection(
     monkeypatch.setattr(
         comment_lab,
         "resolve_comment_model_selection",
-        lambda model_key=None, model_selector=None, **_kwargs: {
+        lambda model_key=None, *, model_router_client: {
             "model_key": "local_unsloth::qwen3.5-27b",
             "source_id": "local_unsloth",
             "source_label": "Local Unsloth",
@@ -99,12 +99,11 @@ def test_commenting_generate_uses_model_key_and_selected_source_connection(
         commenting_service,
         object(),
         object(),
-        object(),
     )
 
     assert captured["base_url"] == "http://127.0.0.1:2234/v1"
     assert captured["api_key"] == "local-token"
-    assert captured["model"] == "qwen3.5-27b"
+    assert captured["model"] == "local_unsloth::qwen3.5-27b"
     assert captured["source_adapter"] == "llama_cpp_server"
     assert captured["cache_prompt"] is False
     assert captured["enable_thinking"] is True
@@ -115,7 +114,7 @@ def test_commenting_generate_uses_model_key_and_selected_source_connection(
     assert payload["source_label"] == "Local Unsloth"
     assert payload["provider_model_id"] == "qwen3.5-27b"
     assert payload["enable_thinking"] is True
-    assert payload["raw_request"] == {"model": "qwen3.5-27b"}
+    assert payload["raw_request"] == {"model": "local_unsloth::qwen3.5-27b"}
     assert payload["raw_reply"] == {"choices": []}
 
 
@@ -127,6 +126,16 @@ def test_commenting_generate_request_rejects_removed_compact_task_shape() -> Non
             persona_key="comment_linxiaotang",
             model_key="local_unsloth::qwen3.5-27b",
             task_shape="compact",
+        )
+
+
+def test_commenting_generate_request_rejects_legacy_model_selector() -> None:
+    with pytest.raises(ValidationError, match="model"):
+        CommentingGenerateRequest(
+            input="Need one comment",
+            prompt_key="comment_v20260418",
+            persona_key="comment_linxiaotang",
+            model="qwen3527b",
         )
 
 

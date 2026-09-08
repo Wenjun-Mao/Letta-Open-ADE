@@ -61,9 +61,9 @@ def test_reader_operator_and_admin_roles_are_ordered(monkeypatch) -> None:
         headers=_headers("reader-test-key"),
     )
     reader_chat = client.post(
-        "/api/v2/agent-studio/agents/agent-test/messages",
+        "/api/v3/conversations/conversation-test/turns",
         headers=_headers("reader-test-key"),
-        json={"message": "hello"},
+        json={"content": "hello", "idempotency_key": "auth-test"},
     )
     operator_admin_route = client.get(
         "/api/v2/prompt-center/prompts?scenario=chat",

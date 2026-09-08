@@ -1,20 +1,13 @@
 # Model Catalog
 
-Owns ADE's interpretation of model-router source and profile metadata. It resolves
-the scenario-specific model and embedding options, validates Comment Lab and Label
-Lab selections, exposes `/api/v2/model-catalog/*`, and checks Letta capabilities at
-startup.
+Model Catalog turns Model Router's canonical catalog into feature-ready options.
+It exposes `/api/v2/model-catalog/*`, validates feature selections, and supplies
+scenario defaults to Agent Studio, Comment Lab, Label Lab, and Test Center.
 
-Other features import its public selection and options functions rather than reading
-model-router configuration or internal Model Catalog modules directly. Agent Studio,
-Comment Lab, and Label Lab all receive model decisions through this interface.
+Model Router is the source of truth for model keys, capability profiles, and
+availability. This feature does not read provider configuration directly, create
+provider clients, or maintain a second model identity.
 
-The model router is authoritative for router-backed Agent Studio availability. ADE
-passes an explicit router `llm_config` when it creates an agent, so a stale Letta
-catalog list does not hide a healthy compatible model. Catalog diagnostics retain
-`letta_catalog_visible` to expose synchronization lag without turning it into a false
-availability gate. Letta remains authoritative for embedding handles.
-
-`scenario=label` also includes Label Schema Center metadata because the stable options
-response includes it. The dependency is read-only and uses Schema Center's public
-registry contract.
+`scenario=label` includes active schema metadata through Schema Center's narrow
+read contract. All other cross-feature access should use this package's public
+selection/options functions rather than internal modules.

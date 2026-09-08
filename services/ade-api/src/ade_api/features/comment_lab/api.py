@@ -7,7 +7,6 @@ from fastapi import APIRouter, Depends, HTTPException
 from ade_api.platform.auth import AdePrincipal, AdeRole, require_operator
 from ade_api.platform.dependencies import (
     CommentingServiceDependency,
-    LettaClientDependency,
     ModelRouterClientDependency,
     PromptPersonaRegistryDependency,
 )
@@ -48,7 +47,7 @@ router = APIRouter()
                                 "input": "Summarize the reader reaction and write one concise editor-style reply.",
                                 "prompt_key": "comment_v20260418",
                                 "persona_key": "comment_linxiaotang",
-                                "model_key": "local_llama_server::gemma4",
+                                "model_key": "local_llama_server::qwen3527b",
                                 "max_tokens": 512,
                                 "timeout_seconds": 120,
                                 "retry_count": 1,
@@ -71,7 +70,6 @@ def api_commenting_generate(
     principal: Annotated[AdePrincipal, Depends(require_operator)],
     commenting_service: CommentingServiceDependency,
     model_router_client: ModelRouterClientDependency,
-    letta_client: LettaClientDependency,
     prompt_registry: PromptPersonaRegistryDependency,
 ):
     ensure_ade_api_enabled()
@@ -113,12 +111,9 @@ def api_commenting_generate(
         )
 
     try:
-        legacy_model_selector = str(request.__dict__.get("model") or "").strip()
         model_selection = resolve_comment_model_selection(
             model_key=(request.model_key or "").strip() or None,
-            model_selector=legacy_model_selector or None,
             model_router_client=model_router_client,
-            letta_client=letta_client,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -127,7 +122,7 @@ def api_commenting_generate(
     try:
         generation_result = commenting_service.generate_comment(
             base_url=str(model_selection.get("base_url", "") or ""),
-            model=str(model_selection.get("provider_model_id", "") or ""),
+            model=str(model_selection.get("model_key", "") or ""),
             system_prompt=prompt_map[request.prompt_key],
             persona_prompt=persona_text,
             news_input=text,

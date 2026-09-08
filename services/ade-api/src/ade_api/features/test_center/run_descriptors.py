@@ -89,11 +89,13 @@ CHAT_MEMORY_EVAL_FIELDS: Final[frozenset[str]] = frozenset(
     }
 )
 
-AGENT_RUNTIME_V3_ACCEPTANCE_FIELDS: Final[frozenset[str]] = frozenset(
+AGENT_RUNTIME_ACCEPTANCE_FIELDS: Final[frozenset[str]] = frozenset(
     {
         "conversation_model_key",
         "reviewer_model_key",
         "embedding_model_key",
+        "prompt_key",
+        "persona_key",
         "rounds",
         "timeout_seconds",
         "retry_count",
@@ -102,22 +104,7 @@ AGENT_RUNTIME_V3_ACCEPTANCE_FIELDS: Final[frozenset[str]] = frozenset(
     }
 )
 
-AGENT_RUNTIME_PARITY_FIELDS: Final[frozenset[str]] = frozenset(
-    {
-        "prompt_key",
-        "persona_key",
-        "legacy_model",
-        "legacy_embedding",
-        "native_conversation_model",
-        "native_reviewer_model",
-        "native_embedding_model",
-        "rounds",
-        "timeout_seconds",
-        "retry_count",
-    }
-)
-
-AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS: Final[tuple[str, ...]] = (
+AGENT_RUNTIME_DIAGNOSTIC_CASE_KEYS: Final[tuple[str, ...]] = (
     "chat_memory_baseline",
     "correction_chain",
     "explicit_forgetting",
@@ -131,38 +118,36 @@ AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS: Final[tuple[str, ...]] = (
 )
 
 
-def canonicalize_agent_runtime_v3_case_keys(
+def canonicalize_agent_runtime_case_keys(
     case_keys: object,
 ) -> tuple[str, ...]:
     """Validate diagnostic cases and preserve the runner's canonical ordering."""
 
     if not isinstance(case_keys, (list, tuple)):
         raise ValueError(
-            "agent runtime v3 case_keys must be a list of canonical case keys"
+            "agent runtime case_keys must be a list of canonical case keys"
         )
     if not case_keys:
-        raise ValueError("agent runtime v3 case_keys must not be empty")
+        raise ValueError("agent runtime case_keys must not be empty")
     if not all(isinstance(case_key, str) for case_key in case_keys):
-        raise ValueError(
-            "agent runtime v3 case_keys must contain canonical string values"
-        )
+        raise ValueError("agent runtime case_keys must contain canonical string values")
 
     selected_keys = tuple(case_keys)
     if len(selected_keys) != len(set(selected_keys)):
-        raise ValueError("agent runtime v3 case_keys must not contain duplicates")
+        raise ValueError("agent runtime case_keys must not contain duplicates")
 
     unknown_keys = sorted(
-        set(selected_keys).difference(AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS)
+        set(selected_keys).difference(AGENT_RUNTIME_DIAGNOSTIC_CASE_KEYS)
     )
     if unknown_keys:
         raise ValueError(
-            "agent runtime v3 case_keys must be canonical: " + ", ".join(unknown_keys)
+            "agent runtime case_keys must be canonical: " + ", ".join(unknown_keys)
         )
 
     selected = set(selected_keys)
     return tuple(
         case_key
-        for case_key in AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS
+        for case_key in AGENT_RUNTIME_DIAGNOSTIC_CASE_KEYS
         if case_key in selected
     )
 
@@ -170,10 +155,10 @@ def canonicalize_agent_runtime_v3_case_keys(
 # These mirror the runner TOML so Test Center can render an active run before
 # the runner has written its effective config into the summary artifact.
 DEFAULT_CHAT_MEMORY_EVALUATION_CONFIG: Final[dict[str, Any]] = {
-    "model": "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
+    "model": "dgx_vllm::qwen3.6-35b-a3b-fp8",
     "prompt_key": "chat_v20260516",
     "persona_key": "chat_linxiaotang",
-    "embedding": "letta/letta-free",
+    "embedding": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
     "fixture_key": "recent_user_chat_turns",
     "rounds": 3,
     "timeout_seconds": 180.0,
@@ -181,28 +166,21 @@ DEFAULT_CHAT_MEMORY_EVALUATION_CONFIG: Final[dict[str, Any]] = {
     "judge_enabled": True,
 }
 
-DEFAULT_AGENT_RUNTIME_V3_ACCEPTANCE_CONFIG: Final[dict[str, Any]] = {
+DEFAULT_AGENT_RUNTIME_ACCEPTANCE_CONFIG: Final[dict[str, Any]] = {
     "conversation_model_key": "dgx_vllm::qwen3.6-35b-a3b-fp8",
     "reviewer_model_key": "dgx_vllm::qwen3.6-35b-a3b-fp8",
     "embedding_model_key": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+    "prompt_key": "chat_v20260516",
+    "persona_key": "chat_linxiaotang",
     "rounds": 3,
     "timeout_seconds": 180.0,
     "retry_count": 0,
     "include_llama_compatibility": True,
 }
 
-DEFAULT_AGENT_RUNTIME_PARITY_CONFIG: Final[dict[str, Any]] = {
-    "prompt_key": "chat_v20260516",
-    "persona_key": "chat_linxiaotang",
-    "legacy_model": "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
-    "legacy_embedding": "letta/letta-free",
-    "native_conversation_model": "dgx_vllm::qwen3.6-35b-a3b-fp8",
-    "native_reviewer_model": "dgx_vllm::qwen3.6-35b-a3b-fp8",
-    "native_embedding_model": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
-    "rounds": 3,
-    "timeout_seconds": 180.0,
-    "retry_count": 0,
-}
+CHAT_MEMORY_EVALUATION_FIXTURES: Final[tuple[tuple[str, str], ...]] = (
+    ("recent_user_chat_turns", "Recent user chat turns"),
+)
 
 
 def _append_option(command: list[str], flag: str, value: Any) -> None:
@@ -215,10 +193,6 @@ def _append_option(command: list[str], flag: str, value: Any) -> None:
 
 def _build_api_e2e_check(_: Path, __: RunOptions) -> list[str]:
     return [sys.executable, "workflows/smoke/ade_api_e2e_check.py"]
-
-
-def _build_ade_mvp_smoke_e2e_check(_: Path, __: RunOptions) -> list[str]:
-    return [sys.executable, "workflows/smoke/ade_mvp_smoke_e2e_check.py"]
 
 
 def _build_chat_memory_eval(output_dir: Path, options: RunOptions) -> list[str]:
@@ -249,41 +223,40 @@ def _build_chat_memory_eval(output_dir: Path, options: RunOptions) -> list[str]:
 
 
 def _validate_chat_memory_eval(options: RunOptions) -> None:
-    retry_count = options.get("retry_count")
-    if retry_count not in {None, 0}:
+    fixture_key = options.get("fixture_key")
+    valid_fixture_keys = {key for key, _ in CHAT_MEMORY_EVALUATION_FIXTURES}
+    if fixture_key is not None and fixture_key not in valid_fixture_keys:
         raise ValueError(
-            "chat memory evaluation retry_count must be 0 because message requests "
-            "do not have a server-owned idempotency contract"
+            "chat memory evaluation fixture_key must be one of: "
+            + ", ".join(sorted(valid_fixture_keys))
         )
 
 
-def _validate_agent_runtime_v3_acceptance(options: RunOptions) -> None:
+def _validate_agent_runtime_acceptance(options: RunOptions) -> None:
     rounds = options.get("rounds")
     if rounds is not None and (not isinstance(rounds, int) or not 1 <= rounds <= 3):
-        raise ValueError("agent runtime v3 acceptance rounds must be between 1 and 3")
+        raise ValueError("agent runtime acceptance rounds must be between 1 and 3")
     timeout_seconds = options.get("timeout_seconds")
     if timeout_seconds is not None and float(timeout_seconds) < 5:
         raise ValueError(
-            "agent runtime v3 acceptance timeout_seconds must be between 5 and 600"
+            "agent runtime acceptance timeout_seconds must be between 5 and 600"
         )
     case_keys = options.get("case_keys")
     if case_keys is not None:
-        canonicalize_agent_runtime_v3_case_keys(case_keys)
+        canonicalize_agent_runtime_case_keys(case_keys)
 
 
-def _build_agent_runtime_v3_acceptance(
-    output_dir: Path, options: RunOptions
-) -> list[str]:
+def _build_agent_runtime_acceptance(output_dir: Path, options: RunOptions) -> list[str]:
     case_keys = (
-        canonicalize_agent_runtime_v3_case_keys(options["case_keys"])
+        canonicalize_agent_runtime_case_keys(options["case_keys"])
         if options.get("case_keys") is not None
         else ()
     )
     command = [
         sys.executable,
-        "workflows/evals/agent_runtime_v3_acceptance/run.py",
+        "workflows/evals/agent_runtime_acceptance/run.py",
         "--config",
-        "workflows/evals/agent_runtime_v3_acceptance/config.toml",
+        "workflows/evals/agent_runtime_acceptance/config.toml",
         "--output-dir",
         str(output_dir),
     ]
@@ -292,6 +265,8 @@ def _build_agent_runtime_v3_acceptance(
     )
     _append_option(command, "--reviewer-model-key", options.get("reviewer_model_key"))
     _append_option(command, "--embedding-model-key", options.get("embedding_model_key"))
+    _append_option(command, "--prompt-key", options.get("prompt_key"))
+    _append_option(command, "--persona-key", options.get("persona_key"))
     if case_keys:
         for case_key in case_keys:
             command.extend(["--case-key", case_key])
@@ -310,112 +285,6 @@ def _build_agent_runtime_v3_acceptance(
     if compatibility is False:
         command.append("--no-include-llama-compatibility")
     return command
-
-
-def _validate_agent_runtime_parity(options: RunOptions) -> None:
-    rounds = options.get("rounds")
-    if rounds is not None and (not isinstance(rounds, int) or not 1 <= rounds <= 3):
-        raise ValueError("agent runtime parity rounds must be between 1 and 3")
-    timeout_seconds = options.get("timeout_seconds")
-    if timeout_seconds is not None and not 5 <= float(timeout_seconds) <= 600:
-        raise ValueError(
-            "agent runtime parity timeout_seconds must be between 5 and 600"
-        )
-    if options.get("retry_count", 0) != 0:
-        raise ValueError(
-            "agent runtime parity retry_count must be 0 because paired turns "
-            "must not be duplicated"
-        )
-    for field, prefix in (("prompt_key", "chat_"), ("persona_key", "chat_")):
-        value = options.get(field)
-        if value is not None and not str(value).startswith(prefix):
-            raise ValueError(f"agent runtime parity {field} must start with {prefix}")
-
-
-def _build_agent_runtime_parity(output_dir: Path, options: RunOptions) -> list[str]:
-    command = [
-        sys.executable,
-        "workflows/evals/agent_runtime_parity/run.py",
-        "--config",
-        "workflows/evals/agent_runtime_parity/config.toml",
-        "--output-dir",
-        str(output_dir),
-        "--run-id",
-        # The workflow's scoped resource keys require a leading letter; Test
-        # Center UUID directory names may begin with a digit.
-        f"parity-{output_dir.name}",
-    ]
-    option_flags = (
-        ("prompt_key", "--prompt-key"),
-        ("persona_key", "--persona-key"),
-        ("legacy_model", "--legacy-model"),
-        ("legacy_embedding", "--legacy-embedding"),
-        ("native_conversation_model", "--native-conversation-model"),
-        ("native_reviewer_model", "--native-reviewer-model"),
-        ("native_embedding_model", "--native-embedding-model"),
-        ("rounds", "--rounds"),
-        ("timeout_seconds", "--timeout-seconds"),
-    )
-    for option, flag in option_flags:
-        _append_option(command, flag, options.get(option))
-    # This explicitly binds the evaluator to the no-retry product contract even
-    # when the launch form uses all defaults.
-    command.extend(["--retry-count", "0"])
-    return command
-
-
-def _parity_environment_value(
-    environment: Mapping[str, str],
-    *,
-    parity_key: str,
-    fallback_keys: tuple[str, ...],
-    default: str = "",
-) -> str:
-    for key in (parity_key, *fallback_keys):
-        value = str(environment.get(key) or "").strip()
-        if value:
-            return value
-    return default
-
-
-def _build_agent_runtime_parity_environment(
-    _: RunOptions, parent_environment: Mapping[str, str]
-) -> dict[str, str]:
-    """Supply service-local credentials without adding them to a run manifest."""
-
-    environment = dict(parent_environment)
-    environment.update(
-        {
-            "AGENT_RUNTIME_PARITY_LEGACY_API_BASE_URL": _parity_environment_value(
-                parent_environment,
-                parity_key="AGENT_RUNTIME_PARITY_LEGACY_API_BASE_URL",
-                fallback_keys=(),
-                default="http://127.0.0.1:8000",
-            ),
-            "AGENT_RUNTIME_PARITY_NATIVE_API_BASE_URL": _parity_environment_value(
-                parent_environment,
-                parity_key="AGENT_RUNTIME_PARITY_NATIVE_API_BASE_URL",
-                fallback_keys=(),
-                default="http://ade-native-api:8000",
-            ),
-            "AGENT_RUNTIME_PARITY_LEGACY_API_KEY": _parity_environment_value(
-                parent_environment,
-                parity_key="AGENT_RUNTIME_PARITY_LEGACY_API_KEY",
-                fallback_keys=("ADE_API_ADMIN_KEY",),
-            ),
-            "AGENT_RUNTIME_PARITY_NATIVE_API_KEY": _parity_environment_value(
-                parent_environment,
-                parity_key="AGENT_RUNTIME_PARITY_NATIVE_API_KEY",
-                fallback_keys=("ADE_API_OPERATOR_KEY", "ADE_API_ADMIN_KEY"),
-            ),
-            "AGENT_RUNTIME_PARITY_DATABASE_URL": _parity_environment_value(
-                parent_environment,
-                parity_key="AGENT_RUNTIME_PARITY_DATABASE_URL",
-                fallback_keys=("ADE_API_DATABASE_URL",),
-            ),
-        }
-    )
-    return environment
 
 
 def discover_run_directory_artifacts(
@@ -485,13 +354,6 @@ RUN_DESCRIPTORS: Final[dict[str, TestRunDescriptor]] = {
         command_builder=_build_api_e2e_check,
         artifact_discoverer=discover_run_directory_artifacts,
     ),
-    "ade_mvp_smoke_e2e_check": TestRunDescriptor(
-        run_type="ade_mvp_smoke_e2e_check",
-        accepted_fields=frozenset(),
-        unexpected_field_message="Chat memory eval fields are only accepted when run_type='chat_memory_eval'",
-        command_builder=_build_ade_mvp_smoke_e2e_check,
-        artifact_discoverer=discover_run_directory_artifacts,
-    ),
     "chat_memory_eval": TestRunDescriptor(
         run_type="chat_memory_eval",
         accepted_fields=CHAT_MEMORY_EVAL_FIELDS,
@@ -500,36 +362,17 @@ RUN_DESCRIPTORS: Final[dict[str, TestRunDescriptor]] = {
         artifact_discoverer=discover_run_directory_artifacts,
         option_validator=_validate_chat_memory_eval,
     ),
-    "agent_runtime_v3_acceptance": TestRunDescriptor(
-        run_type="agent_runtime_v3_acceptance",
-        accepted_fields=AGENT_RUNTIME_V3_ACCEPTANCE_FIELDS,
+    "agent_runtime_acceptance": TestRunDescriptor(
+        run_type="agent_runtime_acceptance",
+        accepted_fields=AGENT_RUNTIME_ACCEPTANCE_FIELDS,
         unexpected_field_message=(
-            "Unsupported fields for run_type='agent_runtime_v3_acceptance'"
+            "Unsupported fields for run_type='agent_runtime_acceptance'"
         ),
-        command_builder=_build_agent_runtime_v3_acceptance,
+        command_builder=_build_agent_runtime_acceptance,
         artifact_discoverer=discover_run_directory_artifacts,
-        option_validator=_validate_agent_runtime_v3_acceptance,
-    ),
-    "agent_runtime_parity_eval": TestRunDescriptor(
-        run_type="agent_runtime_parity_eval",
-        accepted_fields=AGENT_RUNTIME_PARITY_FIELDS,
-        unexpected_field_message=(
-            "Unsupported fields for run_type='agent_runtime_parity_eval'"
-        ),
-        command_builder=_build_agent_runtime_parity,
-        artifact_discoverer=discover_run_directory_artifacts,
-        option_validator=_validate_agent_runtime_parity,
-        environment_builder=_build_agent_runtime_parity_environment,
+        option_validator=_validate_agent_runtime_acceptance,
     ),
 }
-
-_LEGACY_ARTIFACT_DESCRIPTOR: Final[TestRunDescriptor] = TestRunDescriptor(
-    run_type="legacy_persisted_run",
-    accepted_fields=frozenset(),
-    unexpected_field_message="Unsupported fields for run_type='legacy_persisted_run'",
-    command_builder=lambda _output_dir, _options: [],
-    artifact_discoverer=discover_run_directory_artifacts,
-)
 
 
 def get_run_descriptor(run_type: str) -> TestRunDescriptor:
@@ -537,12 +380,6 @@ def get_run_descriptor(run_type: str) -> TestRunDescriptor:
         return RUN_DESCRIPTORS[run_type]
     except KeyError as exc:
         raise ValueError(f"Unsupported run_type: {run_type}") from exc
-
-
-def get_persisted_run_descriptor(run_type: str) -> TestRunDescriptor:
-    """Keep historical manifests readable if a later release retires a run type."""
-
-    return RUN_DESCRIPTORS.get(run_type, _LEGACY_ARTIFACT_DESCRIPTOR)
 
 
 def validate_test_run_options(run_type: str, options: RunOptions) -> None:

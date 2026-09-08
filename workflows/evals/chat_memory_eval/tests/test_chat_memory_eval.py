@@ -20,7 +20,6 @@ from workflows.evals.chat_memory_eval.config import (
     apply_cli_overrides,
     effective_judge_model_key,
     load_config,
-    router_model_key_from_agent_handle,
     router_v1_base_url,
     validate_config,
 )
@@ -29,7 +28,7 @@ from workflows.evals.chat_memory_eval.judge import _parse_json_object
 from workflows.evals.chat_memory_eval.provenance import (
     _OPTION_IDENTITY_FIELDS,
     _sha256,
-    assert_created_agent_identities,
+    assert_created_session_identity,
     capture_evaluation_provenance,
 )
 from workflows.evals.chat_memory_eval.scoring import (
@@ -49,7 +48,7 @@ def test_chat_memory_config_loads_defaults_and_cli_overrides(tmp_path) -> None:
     args = argparse.Namespace(
         api_base_url="",
         output_dir=str(tmp_path),
-        model="openai-proxy/test::model",
+        model="test::model",
         prompt_key="",
         persona_key="",
         embedding="",
@@ -66,19 +65,20 @@ def test_chat_memory_config_loads_defaults_and_cli_overrides(tmp_path) -> None:
 
     assert config.prompt_key == "chat_v20260516"
     assert updated.output_dir == tmp_path
-    assert updated.model == "openai-proxy/test::model"
+    assert updated.model == "test::model"
     assert updated.rounds == 1
     assert updated.judge_enabled is False
     assert not hasattr(updated, "api_retry_count")
 
 
-def test_chat_memory_config_rejects_non_idempotent_message_retries() -> None:
+def test_chat_memory_config_accepts_explicit_retries_and_caps_them() -> None:
     config = load_config(
         PROJECT_ROOT / "workflows" / "evals" / "chat_memory_eval" / "config.toml"
     )
 
-    with pytest.raises(ConfigError, match="server-owned idempotency"):
-        validate_config(replace(config, retry_count=1))
+    validate_config(replace(config, retry_count=1))
+    with pytest.raises(ConfigError, match="between 0 and 5"):
+        validate_config(replace(config, retry_count=6))
 
 
 def test_chat_memory_fixture_loads_restored_conversation() -> None:
@@ -128,11 +128,11 @@ def test_deterministic_round_score_requires_memory_facts_and_no_forbidden_hits()
     assert score["missing_expected_facts"] == ["breed"]
 
 
-def test_router_model_key_derives_from_agent_studio_handle() -> None:
-    assert (
-        router_model_key_from_agent_handle("openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8")
-        == "dgx_vllm::qwen3.6-35b-a3b-fp8"
+def test_judge_defaults_to_the_selected_canonical_model() -> None:
+    config = load_config(
+        PROJECT_ROOT / "workflows" / "evals" / "chat_memory_eval" / "config.toml"
     )
+    assert effective_judge_model_key(config) == config.model
 
 
 def test_eval_inherits_ade_api_router_location(monkeypatch) -> None:
@@ -206,7 +206,7 @@ def test_ade_api_client_never_retries_a_failed_post() -> None:
             base_url="http://ade.test", transport=httpx.MockTransport(handler)
         )
         with pytest.raises(ApiRequestError, match="503"):
-            api.create_agent({"scenario": "chat"})
+            api.create_evaluation_session({"idempotency_key": "session-1"})
 
     assert attempts == 1
 
@@ -376,29 +376,48 @@ def test_evaluation_configuration_identity_changes_with_content_model_or_source(
     assert baseline["configuration_sha256"] != changed_evaluator["configuration_sha256"]
 
 
-def test_created_agent_must_confirm_captured_provenance() -> None:
-    config, options, fixture = _provenance_inputs()
-    provenance = capture_evaluation_provenance(
-        run_id="run-1",
-        api=_TemplateClient(),
-        options=options,
-        config=config,
-        fixture=fixture,
-    )
-    created = {
-        "model_identity_sha256": provenance["model"]["identity_sha256"],
-        "embedding_identity_sha256": provenance["embedding"]["identity_sha256"],
-        "prompt_content_sha256": provenance["prompt"]["content_sha256"],
-        "persona_content_sha256": provenance["persona"]["content_sha256"],
+def _created_session(provenance: dict[str, object]) -> dict[str, object]:
+    model = provenance["model"]
+    embedding = provenance["embedding"]
+    prompt = provenance["prompt"]
+    persona = provenance["persona"]
+    assert isinstance(model, dict)
+    assert isinstance(embedding, dict)
+    assert isinstance(prompt, dict)
+    assert isinstance(persona, dict)
+    return {
+        "session_id": "session-1",
+        "conversation": {"id": "session-1"},
+        "agent_definition": {
+            "prompt_sha256": prompt["content_sha256"],
+            "persona_sha256": persona["content_sha256"],
+            "deployments": [
+                {"role": "conversation", "route_alias": model["key"]},
+                {"role": "reviewer", "route_alias": model["key"]},
+                {"role": "retriever", "route_alias": embedding["key"]},
+            ],
+        },
     }
 
-    assert_created_agent_identities(created, provenance)
-    created["prompt_content_sha256"] = "0" * 64
-    with pytest.raises(RuntimeError, match="prompt_content_sha256"):
-        assert_created_agent_identities(created, provenance)
+
+def test_created_session_must_confirm_captured_provenance() -> None:
+    config, options, fixture = _provenance_inputs()
+    provenance = capture_evaluation_provenance(
+        run_id="run-1",
+        api=_TemplateClient(),
+        options=options,
+        config=config,
+        fixture=fixture,
+    )
+    created = _created_session(provenance)
+
+    assert_created_session_identity(created, provenance)
+    created["agent_definition"]["prompt_sha256"] = "0" * 64  # type: ignore[index]
+    with pytest.raises(RuntimeError, match="prompt_sha256"):
+        assert_created_session_identity(created, provenance)
 
 
-def test_identity_mismatched_created_agent_is_still_archived_and_purged() -> None:
+def test_identity_mismatched_session_is_still_purged() -> None:
     config, options, fixture = _provenance_inputs()
     provenance = capture_evaluation_provenance(
         run_id="run-1",
@@ -408,29 +427,24 @@ def test_identity_mismatched_created_agent_is_still_archived_and_purged() -> Non
         fixture=fixture,
     )
 
-    class _MismatchedAgentApi:
+    class _MismatchedSessionApi:
         def __init__(self) -> None:
-            self.archived: list[str] = []
             self.purged: list[str] = []
 
-        def create_agent(self, _payload: dict[str, object]) -> dict[str, object]:
-            return {
-                "id": "agent-mismatch",
-                "model_identity_sha256": "0" * 64,
-                "embedding_identity_sha256": "0" * 64,
-                "prompt_content_sha256": "0" * 64,
-                "persona_content_sha256": "0" * 64,
-            }
+        def create_evaluation_session(
+            self, _payload: dict[str, object]
+        ) -> dict[str, object]:
+            created = _created_session(provenance)
+            created["session_id"] = "session-mismatch"
+            created["conversation"] = {"id": "session-mismatch"}
+            created["agent_definition"]["prompt_sha256"] = "0" * 64  # type: ignore[index]
+            return created
 
-        def archive_agent(self, agent_id: str) -> dict[str, object]:
-            self.archived.append(agent_id)
+        def purge_evaluation_session(self, session_id: str) -> dict[str, object]:
+            self.purged.append(session_id)
             return {}
 
-        def purge_agent(self, agent_id: str) -> dict[str, object]:
-            self.purged.append(agent_id)
-            return {}
-
-    api = _MismatchedAgentApi()
+    api = _MismatchedSessionApi()
 
     row, raw = run_round(
         api=api,  # type: ignore[arg-type]
@@ -442,9 +456,7 @@ def test_identity_mismatched_created_agent_is_still_archived_and_purged() -> Non
     )
 
     assert row["status"] == "error"
-    assert row["agent_id"] == "agent-mismatch"
-    assert row["archived"] is True
+    assert row["session_id"] == "session-mismatch"
     assert row["purged"] is True
     assert raw["deterministic_score"]["pass"] is False
-    assert api.archived == ["agent-mismatch"]
-    assert api.purged == ["agent-mismatch"]
+    assert api.purged == ["session-mismatch"]

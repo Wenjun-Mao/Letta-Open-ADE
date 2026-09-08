@@ -24,7 +24,6 @@ from model_catalog_contracts.deployment_manifest import (
 from model_catalog_contracts.model_allowlist import load_configured_source_allowlist
 
 
-_KNOWN_HANDLE_PREFIXES = ("lmstudio_openai/", "openai-proxy/", "openai/", "anthropic/")
 _WINDOWS_PATH_RE = re.compile(r"^[A-Za-z]:[\\/]")
 
 
@@ -75,7 +74,6 @@ class RoutedModel:
     module_visibility: tuple[str, ...]
     provider_model_id: str
     model_type: RouterModelType
-    letta_handle: str | None
     agent_studio_available: bool
     comment_lab_available: bool
     label_lab_available: bool
@@ -106,7 +104,6 @@ class RoutedModel:
             "module_visibility": list(self.module_visibility),
             "provider_model_id": self.provider_model_id,
             "model_type": self.model_type,
-            "letta_handle": self.letta_handle,
             "agent_studio_available": self.agent_studio_available,
             "comment_lab_available": self.comment_lab_available,
             "label_lab_available": self.label_lab_available,
@@ -142,12 +139,7 @@ def build_router_model_id(source_id: str, provider_model_id: str) -> str:
 
 
 def normalize_router_model_id(value: str) -> str:
-    resolved = str(value or "").strip()
-    lowered = resolved.lower()
-    for prefix in _KNOWN_HANDLE_PREFIXES:
-        if lowered.startswith(prefix):
-            return resolved[len(prefix) :].strip()
-    return resolved
+    return str(value or "").strip()
 
 
 def parse_router_model_id(value: str) -> tuple[str, str]:
@@ -159,6 +151,8 @@ def parse_router_model_id(value: str) -> tuple[str, str]:
     provider_model_id = provider_model_id.strip()
     if not source_id or not provider_model_id:
         raise ValueError("Router model id must include source id and provider model id")
+    if re.fullmatch(r"[a-z0-9][a-z0-9_-]*", source_id) is None:
+        raise ValueError("Router source id must be canonical")
     return source_id, provider_model_id
 
 
@@ -249,11 +243,6 @@ class RouterCatalogService:
                         module_visibility=source.module_visibility,
                         provider_model_id=model.provider_model_id,
                         model_type=model.model_type,
-                        letta_handle=(
-                            f"openai-proxy/{router_model_id}"
-                            if agent_studio_available
-                            else None
-                        ),
                         agent_studio_available=agent_studio_available,
                         comment_lab_available=is_llm
                         and "comment_lab" in source.module_visibility,

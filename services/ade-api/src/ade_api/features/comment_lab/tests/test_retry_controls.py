@@ -78,7 +78,7 @@ def test_retry_count_zero_makes_single_provider_attempt(monkeypatch) -> None:
 
     with pytest.raises(httpx.TimeoutException):
         service._post_chat_completions(
-            {"model": "lmstudio_openai/qwen3.5-27b"},
+            {"model": "local_llama_server::qwen3527b"},
             base_url="http://127.0.0.1:1234/v1",
             api_key="test-key",
             timeout_seconds=30,
@@ -120,7 +120,7 @@ def test_retry_count_controls_total_attempts(
     )
 
     payload = service._post_chat_completions(
-        {"model": "lmstudio_openai/qwen3.5-27b"},
+        {"model": "local_llama_server::qwen3527b"},
         base_url="http://127.0.0.1:1234/v1",
         api_key="test-key",
         timeout_seconds=30,
@@ -153,7 +153,7 @@ def test_non_transient_provider_errors_do_not_retry(monkeypatch) -> None:
 
     with pytest.raises(ValueError):
         service._post_chat_completions(
-            {"model": "lmstudio_openai/qwen3.5-27b"},
+            {"model": "local_llama_server::qwen3527b"},
             base_url="http://127.0.0.1:1234/v1",
             api_key="test-key",
             timeout_seconds=30,
@@ -198,7 +198,7 @@ def test_structured_output_fallback_stays_separate_from_retry_policy(
     result = service.generate_comment(
         base_url="http://127.0.0.1:1234/v1",
         api_key="test-key",
-        model="lmstudio_openai/qwen3.5-27b",
+        model="local_llama_server::qwen3527b",
         system_prompt="System",
         persona_prompt="Persona",
         news_input="News input",
@@ -238,7 +238,7 @@ def test_generate_comment_strips_think_tags_from_assistant_content(monkeypatch) 
     result = service.generate_comment(
         base_url="http://127.0.0.1:1234/v1",
         api_key="test-key",
-        model="lmstudio_openai/gemma-4-31b-it",
+        model="local_llama_server::qwen3527b",
         system_prompt="System",
         persona_prompt="Persona",
         news_input="News input",
@@ -429,7 +429,7 @@ def test_generate_comment_rejects_removed_compact_task_shape(monkeypatch) -> Non
         service.generate_comment(
             base_url="http://127.0.0.1:1234/v1",
             api_key="test-key",
-            model="lmstudio_openai/gemma-4-31b-it",
+            model="local_llama_server::qwen3527b",
             system_prompt="System",
             persona_prompt="Persona",
             news_input="News input",

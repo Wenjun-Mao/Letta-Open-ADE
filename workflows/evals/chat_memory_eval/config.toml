@@ -11,10 +11,10 @@ rounds = 3
 stop_on_error = false
 keep_agents = false
 
-model = "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8"
+model = "dgx_vllm::qwen3.6-35b-a3b-fp8"
 prompt_key = "chat_v20260516"
 persona_key = "chat_linxiaotang"
-embedding = "letta/letta-free"
+embedding = "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B"
 timeout_seconds = 180
 retry_count = 0
 

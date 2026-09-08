@@ -16,7 +16,7 @@ from model_catalog_contracts.deployment_manifest import (
     DeploymentManifest,
 )
 
-from workflows.evals.agent_runtime_v3_acceptance.policy import (
+from ade_api.features.agent_runtime.release_policy import (
     production_policy_hashes,
 )
 

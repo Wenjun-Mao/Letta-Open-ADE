@@ -12,8 +12,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("native v3 route proxy", () => {
-  it("always forwards to the dedicated native service and exposes SSE chunks without buffering", async () => {
+describe("v3 route proxy", () => {
+  it("forwards to ADE API and exposes SSE chunks without buffering", async () => {
     const encoder = new TextEncoder();
     let streamController: ReadableStreamDefaultController<Uint8Array> | undefined;
     const upstreamBody = new ReadableStream<Uint8Array>({
@@ -28,7 +28,7 @@ describe("native v3 route proxy", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubEnv("ADE_NATIVE_API_BASE_URL", "http://ade-native-api:8000");
+    vi.stubEnv("ADE_API_BASE_URL", "http://ade-api:8000");
     vi.stubEnv("ADE_API_ADMIN_KEY", "server-secret");
 
     const response = await GET(
@@ -43,7 +43,7 @@ describe("native v3 route proxy", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
     const [target, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
     expect(target.toString()).toBe(
-      "http://ade-native-api:8000/api/v3/runs/run-1/events",
+      "http://ade-api:8000/api/v3/runs/run-1/events",
     );
     const forwardedHeaders = init.headers as Headers;
     expect(forwardedHeaders.get("authorization")).toBe("Bearer server-secret");

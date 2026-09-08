@@ -20,13 +20,6 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /uvx /usr/local/bin/
 COPY pyproject.toml uv.lock ./
 COPY Makefile compose.yaml ./
-COPY scripts/agent_studio_rollback_state.py ./scripts/agent_studio_rollback_state.py
-COPY scripts/agent_studio_rollback_web.py ./scripts/agent_studio_rollback_web.py
-COPY scripts/check_agent_studio_release_gate.py ./scripts/check_agent_studio_release_gate.py
-COPY scripts/record_agent_studio_conformance.py ./scripts/record_agent_studio_conformance.py
-COPY scripts/rehearse_agent_studio_rollback.py ./scripts/rehearse_agent_studio_rollback.py
-COPY scripts/review_agent_studio_cutover.py ./scripts/review_agent_studio_cutover.py
-COPY scripts/source_fingerprint.py ./scripts/source_fingerprint.py
 COPY services/ade-api ./services/ade-api
 COPY packages/agent-runtime-eval-contracts ./packages/agent-runtime-eval-contracts
 COPY packages/model-catalog-contracts ./packages/model-catalog-contracts
@@ -34,11 +27,12 @@ COPY workflows/pyproject.toml ./workflows/pyproject.toml
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --package ade-api --package ade-workflows --frozen --no-dev
 
-# Policy-only copies come after uv sync so they do not create a partial workspace member.
-COPY services/model-router/src/model_router/app.py ./services/model-router/src/model_router/app.py
-COPY services/model-router/src/model_router/settings.py ./services/model-router/src/model_router/settings.py
+# Policy-only router source comes after uv sync so it does not create a partial
+# workspace member during dependency installation.
+COPY services/model-router/src/model_router ./services/model-router/src/model_router
 
 # Copy runtime assets required by ADE API and Test Center workflows.
+COPY scripts ./scripts
 COPY config ./config
 COPY content ./content
 COPY workflows ./workflows

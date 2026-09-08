@@ -7,7 +7,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool, text
 
-from ade_api.features.agent_runtime_v3.persistence.metadata import METADATA
+from ade_api.features.agent_runtime.persistence.metadata import METADATA
 
 
 config = context.config

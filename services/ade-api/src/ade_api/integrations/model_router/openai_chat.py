@@ -19,12 +19,6 @@ class RetryableOpenAIChatError(RuntimeError):
 
 
 _VERSION_PATH_RE = re.compile(r"/v\d+(?:\.\d+)?$", re.IGNORECASE)
-_MODEL_HANDLE_PREFIXES = (
-    "lmstudio_openai/",
-    "openai-proxy/",
-    "openai/",
-    "anthropic/",
-)
 RETRYABLE_OPENAI_CHAT_EXCEPTIONS = (
     RetryableOpenAIChatError,
     httpx.TimeoutException,
@@ -42,15 +36,6 @@ def chat_completions_url(base_url: str) -> str:
     if _VERSION_PATH_RE.search(base):
         return f"{base}/chat/completions"
     return f"{base}/v1/chat/completions"
-
-
-def resolve_provider_model(model: str) -> str:
-    resolved_model = str(model or "").strip()
-    lowered_model = resolved_model.lower()
-    for prefix in _MODEL_HANDLE_PREFIXES:
-        if lowered_model.startswith(prefix):
-            return resolved_model[len(prefix) :].strip()
-    return resolved_model
 
 
 def parse_sse_chat_completion_response(raw_text: str) -> dict[str, Any] | None:

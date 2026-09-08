@@ -48,7 +48,7 @@ def test_commenting_generate_example_documents_model_key_not_legacy_model() -> N
 
     assert values
     assert all(
-        value.get("model_key") == "local_llama_server::gemma4" for value in values
+        value.get("model_key") == "local_llama_server::qwen3527b" for value in values
     )
     assert all("model" not in value for value in values)
     assert all(value.get("timeout_seconds", 0) >= 30 for value in values)
@@ -62,23 +62,21 @@ def test_labeling_generate_example_documents_model_key_and_schema_key() -> None:
 
     assert values
     assert all(
-        value.get("model_key") == "local_llama_server::gemma4" for value in values
+        value.get("model_key") == "local_llama_server::qwen3527b" for value in values
     )
     assert all(value.get("schema_key") for value in values)
     assert all(value.get("timeout_seconds", 0) >= 30 for value in values)
 
 
-def test_legacy_api_openapi_does_not_claim_native_v3_routes() -> None:
+def test_unified_api_openapi_includes_native_agent_studio_routes() -> None:
     paths = _openapi()["paths"]
-    assert not any(path.startswith("/api/v3") for path in paths)
+    assert any(path.startswith("/api/v3/agent-studio") for path in paths)
 
 
-def test_commenting_generate_schema_marks_legacy_model_deprecated() -> None:
+def test_commenting_generate_schema_requires_canonical_model_key() -> None:
     schema = _openapi()
     request_schema = schema["components"]["schemas"]["CommentingGenerateRequest"]
-    model_property = request_schema["properties"]["model"]
 
-    assert model_property["deprecated"] is True
     assert "model_key" in request_schema["properties"]
-    assert request_schema["examples"][0]["model_key"] == "local_llama_server::gemma4"
-    assert "model" not in request_schema["examples"][0]
+    assert "model" not in request_schema["properties"]
+    assert request_schema["examples"][0]["model_key"] == "local_llama_server::qwen3527b"

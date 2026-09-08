@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW_ROOT = Path(__file__).resolve().parent
 DEFAULT_ROUTER_MODEL_KEY = "dgx_vllm::qwen3.6-35b-a3b-fp8"
-DEFAULT_AGENT_MODEL_HANDLE = f"openai-proxy/{DEFAULT_ROUTER_MODEL_KEY}"
+DEFAULT_EMBEDDING_MODEL_KEY = "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B"
 ADE_API_TRANSPORT_RETRIES = 0
 JUDGE_TRANSPORT_RETRIES = 0
 
@@ -32,10 +32,10 @@ class ChatMemoryEvalConfig:
     rounds: int = 3
     stop_on_error: bool = False
     keep_agents: bool = False
-    model: str = DEFAULT_AGENT_MODEL_HANDLE
+    model: str = DEFAULT_ROUTER_MODEL_KEY
     prompt_key: str = "chat_v20260516"
     persona_key: str = "chat_linxiaotang"
-    embedding: str = "letta/letta-free"
+    embedding: str = DEFAULT_EMBEDDING_MODEL_KEY
     timeout_seconds: float = 180.0
     retry_count: int = 0
     judge_enabled: bool = True
@@ -133,11 +133,8 @@ def validate_config(config: ChatMemoryEvalConfig) -> None:
         raise ConfigError("persona_key must start with chat_")
     if config.timeout_seconds <= 0 or config.timeout_seconds > 600:
         raise ConfigError("timeout_seconds must be > 0 and <= 600")
-    if config.retry_count != 0:
-        raise ConfigError(
-            "retry_count must be 0 because Agent Studio message requests do not have "
-            "a server-owned idempotency contract"
-        )
+    if config.retry_count < 0 or config.retry_count > 5:
+        raise ConfigError("retry_count must be between 0 and 5")
     if config.judge_timeout_seconds <= 0 or config.judge_timeout_seconds > 600:
         raise ConfigError("judge_timeout_seconds must be > 0 and <= 600")
 
@@ -183,17 +180,8 @@ def router_v1_base_url(config: ChatMemoryEvalConfig) -> str:
     return f"{base}/v1"
 
 
-def router_model_key_from_agent_handle(model: str) -> str:
-    handle = _strip(model)
-    if handle.startswith("openai-proxy/"):
-        handle = handle.split("/", 1)[1]
-    if "::" in handle:
-        return handle
-    return DEFAULT_ROUTER_MODEL_KEY
-
-
 def effective_judge_model_key(config: ChatMemoryEvalConfig) -> str:
-    return config.judge_model_key or router_model_key_from_agent_handle(config.model)
+    return config.judge_model_key or config.model
 
 
 def ade_api_timeout_seconds(config: ChatMemoryEvalConfig) -> float:

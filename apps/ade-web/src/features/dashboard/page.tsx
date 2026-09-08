@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { listAgents } from "@/features/agent-studio/api";
-import { fetchCapabilities } from "@/features/model-catalog/api";
 import { listTestRuns } from "@/features/test-center/api";
+import { requestJson } from "@/shared/api/client";
 import { useI18n } from "@/shared/i18n";
 
 const DOCS_HREF = "/api-docs";
@@ -39,11 +39,9 @@ const COPY = {
     checking: "Checking...",
     statusPrefix: "Status",
     adeApiEnabled: "ADE API enabled",
-    strictMode: "Strict capabilities mode",
     operationalSnapshot: "Operational Snapshot",
     knownAgents: "Known agents",
     observedRuns: "Observed test runs",
-    missingRequired: "Missing required capabilities",
     qualityGate: "Quality Gate",
     qualityGateSummary: "Backend E2E green plus ADE smoke suite green.",
     qualityGateHint: "Use this signal as the release-readiness baseline.",
@@ -59,7 +57,7 @@ const COPY = {
     modules: {
       agentStudioTitle: "Agent Studio",
       agentStudioDescription:
-        "Runtime chat, prompt and persona editing, tool management, execution trace, and persistent state inspection.",
+        "Runtime chat, prompt and persona configuration, curated tools, execution traces, and persistent memory inspection.",
       commentLabTitle: "Comment Lab",
       commentLabDescription:
         "Stateless comment generation workspace with independent model, prompt, and persona controls.",
@@ -70,8 +68,6 @@ const COPY = {
       schemaCenterDescription: "Manage Label Lab JSON schemas as workspace files with CRUD and archive/restore.",
       promptCenterTitle: "Prompt Center",
       promptCenterDescription: "Manage system prompts and persona templates with workspace-persisted CRUD and archive/restore.",
-      toolCenterTitle: "Tool Center",
-      toolCenterDescription: "Create and maintain managed custom tools, then attach them in Agent Studio without restart.",
       testCenterTitle: "Test Center",
       testCenterDescription: "Evaluate agent behavior with evidence, or open a separate operations area for health checks and qualification.",
       apiDocsTitle: "API Docs",
@@ -106,11 +102,9 @@ const COPY = {
     checking: "检查中...",
     statusPrefix: "状态",
     adeApiEnabled: "ADE API 开关",
-    strictMode: "严格能力模式",
     operationalSnapshot: "运行快照",
     knownAgents: "已知智能体数量",
     observedRuns: "已观察测试运行数",
-    missingRequired: "缺失必需能力数",
     qualityGate: "质量门禁",
     qualityGateSummary: "后端 E2E 与 ADE 烟雾测试均已通过。",
     qualityGateHint: "该信号可作为发布就绪基线。",
@@ -125,7 +119,7 @@ const COPY = {
     ready: "ready",
     modules: {
       agentStudioTitle: "智能体工作台",
-      agentStudioDescription: "支持运行时对话、提示词和 Persona 编辑、工具管理、执行轨迹及持久化状态查看。",
+      agentStudioDescription: "支持运行时对话、提示词和 Persona 配置、精选工具、执行轨迹及持久化记忆查看。",
       commentLabTitle: "评论实验室",
       commentLabDescription: "独立的无状态评论生成空间，可分别控制模型、Prompt 与 Persona。",
       labelLabTitle: "标注实验室",
@@ -134,8 +128,6 @@ const COPY = {
       schemaCenterDescription: "以工作区文件方式管理 Label Lab JSON Schema，支持 CRUD 与归档恢复。",
       promptCenterTitle: "提示词中心",
       promptCenterDescription: "管理 System Prompt 与 Persona 模板，支持工作区持久化 CRUD 与归档恢复。",
-      toolCenterTitle: "工具中心",
-      toolCenterDescription: "创建并维护受管自定义工具，无需重启即可在智能体工作台挂载使用。",
       testCenterTitle: "测试中心",
       testCenterDescription: "用证据评估智能体行为，或进入独立的运维区域执行健康检查与运行时资格验证。",
       apiDocsTitle: "API 文档",
@@ -157,8 +149,6 @@ export default function DashboardPage() {
   const [agentCount, setAgentCount] = useState(0);
   const [runCount, setRunCount] = useState(0);
   const [adeApiEnabled, setPlatformEnabled] = useState(false);
-  const [strictMode, setStrictMode] = useState(false);
-  const [missingCapabilities, setMissingCapabilities] = useState<string[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,8 +156,8 @@ export default function DashboardPage() {
       setLoading(true);
       setError("");
       try {
-        const [capabilities, agents, runs] = await Promise.all([
-          fetchCapabilities(),
+        const [health, agents, runs] = await Promise.all([
+          requestJson<{ status: string }>("/api/v2/health"),
           listAgents(200),
           listTestRuns(),
         ]);
@@ -176,9 +166,7 @@ export default function DashboardPage() {
           return;
         }
 
-        setPlatformEnabled(Boolean(capabilities.enabled));
-        setStrictMode(Boolean(capabilities.strict_mode));
-        setMissingCapabilities(Array.isArray(capabilities.missing_required) ? capabilities.missing_required : []);
+        setPlatformEnabled(health.status === "ok");
         setAgentCount(Number(agents.total || 0));
         setRunCount(Array.isArray(runs.items) ? runs.items.length : 0);
       } catch (exc) {
@@ -202,11 +190,8 @@ export default function DashboardPage() {
     if (!adeApiEnabled) {
       return copy.platformDisabled;
     }
-    if (missingCapabilities.length > 0) {
-      return copy.degraded;
-    }
     return copy.ready;
-  }, [copy.degraded, copy.platformDisabled, copy.ready, missingCapabilities.length, adeApiEnabled]);
+  }, [copy.platformDisabled, copy.ready, adeApiEnabled]);
 
   const modules = useMemo(
     () => [
@@ -236,11 +221,6 @@ export default function DashboardPage() {
         href: "/prompt-center",
       },
       {
-        title: copy.modules.toolCenterTitle,
-        description: copy.modules.toolCenterDescription,
-        href: "/tool-center",
-      },
-      {
         title: copy.modules.testCenterTitle,
         description: copy.modules.testCenterDescription,
         href: "/test-center",
@@ -262,11 +242,11 @@ export default function DashboardPage() {
       },
       {
         title: copy.workspaceGroups.content,
-        hrefs: ["/schema-center", "/prompt-center", "/tool-center"],
+        hrefs: ["/schema-center", "/prompt-center"],
       },
       {
         title: copy.workspaceGroups.operations,
-        hrefs: [DOCS_HREF],
+        hrefs: ["/test-center", DOCS_HREF],
       },
     ],
     [copy.workspaceGroups],
@@ -354,7 +334,6 @@ export default function DashboardPage() {
           <p className="muted">{loading ? copy.checking : `${copy.statusPrefix}: ${healthLabel}`}</p>
           <ul className="list">
             <li>{copy.adeApiEnabled}: {adeApiEnabled ? copy.yes : copy.no}</li>
-            <li>{copy.strictMode}: {strictMode ? copy.on : copy.off}</li>
           </ul>
         </div>
 
@@ -363,7 +342,6 @@ export default function DashboardPage() {
           <ul className="list">
             <li>{copy.knownAgents}: {agentCount}</li>
             <li>{copy.observedRuns}: {runCount}</li>
-            <li>{copy.missingRequired}: {missingCapabilities.length}</li>
           </ul>
         </div>
 

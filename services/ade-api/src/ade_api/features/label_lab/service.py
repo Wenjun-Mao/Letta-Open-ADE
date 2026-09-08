@@ -5,7 +5,6 @@ from typing import Any
 
 from ade_api.integrations.model_router.openai_chat import (
     OpenAIChatClient,
-    resolve_provider_model,
 )
 from ade_api.platform.settings import get_settings
 from ade_api.features.label_lab.helpers import (
@@ -164,7 +163,7 @@ class LabelingService:
         if not resolved_base_url:
             raise ValueError("base_url is required")
 
-        resolved_model = resolve_provider_model(str(model or ""))
+        resolved_model = str(model or "").strip()
         if not resolved_model:
             raise ValueError("model is required")
 

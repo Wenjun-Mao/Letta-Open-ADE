@@ -58,7 +58,7 @@ class EvalConfig:
     persona_keys: tuple[str, ...] = ()
     persona_search: str = ""
     limit: int = 0
-    model_key: str = "local_llama_server::gemma4"
+    model_key: str = "local_llama_server::qwen3527b"
     prompt_key: str = "comment_v20260418"
     max_tokens: int = 0
     timeout_seconds: float = 180.0

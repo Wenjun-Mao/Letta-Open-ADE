@@ -25,7 +25,7 @@ class LabelingGenerateRequest(BaseModel):
                     "input": "Messi scored for Inter Miami against Orlando City.",
                     "prompt_key": "label_football_entities_v1",
                     "schema_key": "label_football_entity_groups_v1",
-                    "model_key": "local_llama_server::gemma4",
+                    "model_key": "local_llama_server::qwen3527b",
                     "max_tokens": 1024,
                     "timeout_seconds": 120,
                     "repair_retry_count": 1,
@@ -53,8 +53,8 @@ class LabelingGenerateRequest(BaseModel):
     )
     model_key: str = Field(
         ...,
-        description="Router-scoped model key from `/api/v2/model-catalog/options?scenario=label`, for example `local_llama_server::gemma4`.",
-        examples=["local_llama_server::gemma4"],
+        description="Router-scoped model key from `/api/v2/model-catalog/options?scenario=label`, for example `local_llama_server::qwen3527b`.",
+        examples=["local_llama_server::qwen3527b"],
     )
     max_tokens: int | None = Field(
         default=None,

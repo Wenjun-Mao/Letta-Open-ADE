@@ -39,7 +39,6 @@ class RouterSourceConfig(BaseModel):
     enabled: bool = True
     enabled_for: list[str] = Field(default_factory=list)
     module_visibility: list[str] = Field(default_factory=list)
-    letta_handle_prefix: str = "openai-proxy"
     api_key_env: str = ""
     api_key_secret: str = ""
 
@@ -48,7 +47,6 @@ class RouterSourceConfig(BaseModel):
         "label",
         "base_url",
         "adapter",
-        "letta_handle_prefix",
         "api_key_env",
         "api_key_secret",
     )

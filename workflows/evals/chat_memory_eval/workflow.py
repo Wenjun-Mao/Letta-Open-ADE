@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import time
 from dataclasses import asdict
@@ -19,7 +20,7 @@ from .config import (
 from .fixtures import ConversationFixture, load_fixture
 from .judge import judge_round
 from .provenance import (
-    assert_created_agent_identities,
+    assert_created_session_identity,
     capture_evaluation_provenance,
     expected_agent_identities,
     write_provenance,
@@ -66,14 +67,14 @@ def run_evaluation(
             fixture=fixture,
         )
         write_provenance(provenance_path, provenance)
-        total = config.rounds
         print(
-            f"[INFO] Running {total} chat-memory rounds with {len(fixture.turns)} turns each."
+            f"[INFO] Running {config.rounds} chat-memory rounds with "
+            f"{len(fixture.turns)} turns each."
         )
         print(f"[INFO] Streaming CSV to {csv_path}")
         with ArtifactWriter(csv_path=csv_path, jsonl_path=jsonl_path) as writer:
-            for round_index in range(1, total + 1):
-                print(f"[{round_index}/{total}] starting")
+            for round_index in range(1, config.rounds + 1):
+                print(f"[{round_index}/{config.rounds}] starting")
                 row, raw = run_round(
                     api=api,
                     config=config,
@@ -85,8 +86,8 @@ def run_evaluation(
                 rows.append(row)
                 writer.write_round(row, raw)
                 print(
-                    f"[{round_index}/{total}] status={row['status']} pass={row['pass']} "
-                    f"elapsed={row['elapsed_seconds']}s"
+                    f"[{round_index}/{config.rounds}] status={row['status']} "
+                    f"pass={row['pass']} elapsed={row['elapsed_seconds']}s"
                 )
                 if config.stop_on_error and row["status"] == "error":
                     break
@@ -110,26 +111,17 @@ def run_evaluation(
 def validate_chat_options(
     payload: dict[str, Any], config: ChatMemoryEvalConfig
 ) -> None:
-    models = _option_keys(payload.get("models", []))
-    prompts = _option_keys(payload.get("prompts", []))
-    personas = _option_keys(payload.get("personas", []))
-    embeddings = _option_keys(payload.get("embeddings", []))
-    if config.model not in models:
-        raise ValueError(
-            f"model '{config.model}' is not available from /api/v2/model-catalog/options?scenario=chat"
-        )
-    if config.prompt_key not in prompts:
-        raise ValueError(
-            f"prompt_key '{config.prompt_key}' is not available from /api/v2/model-catalog/options?scenario=chat"
-        )
-    if config.persona_key not in personas:
-        raise ValueError(
-            f"persona_key '{config.persona_key}' is not available from /api/v2/model-catalog/options?scenario=chat"
-        )
-    if config.embedding and config.embedding not in embeddings:
-        raise ValueError(
-            f"embedding '{config.embedding}' is not available from /api/v2/model-catalog/options?scenario=chat"
-        )
+    selections = (
+        ("model", config.model, _option_keys(payload.get("models"))),
+        ("prompt_key", config.prompt_key, _option_keys(payload.get("prompts"))),
+        ("persona_key", config.persona_key, _option_keys(payload.get("personas"))),
+        ("embedding", config.embedding, _option_keys(payload.get("embeddings"))),
+    )
+    for label, selected, available in selections:
+        if selected and selected not in available:
+            raise ValueError(
+                f"{label} '{selected}' is unavailable from the chat options endpoint"
+            )
 
 
 def run_round(
@@ -142,34 +134,38 @@ def run_round(
     provenance: dict[str, Any],
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     started = time.time()
-    agent_id = ""
-    archived = False
+    session_id = ""
     purged = False
     row: dict[str, Any]
     raw: dict[str, Any]
     try:
-        created = api.create_agent(
-            _create_agent_payload(config, round_index, provenance)
+        created = api.create_evaluation_session(
+            _create_session_payload(config, run_id, round_index)
         )
-        agent_id = str(created.get("id", "") or "")
-        if not agent_id:
-            raise RuntimeError("Agent creation did not return id")
-        assert_created_agent_identities(created, provenance)
+        conversation = created.get("conversation")
+        if not isinstance(conversation, dict):
+            raise RuntimeError("Evaluation session did not return a conversation")
+        session_id = str(created.get("session_id") or conversation.get("id") or "")
+        if not session_id:
+            raise RuntimeError("Evaluation session did not return a session id")
+        assert_created_session_identity(created, provenance)
 
-        turn_records, assistant_texts, initial_human_memory = _run_turns(
+        initial_state = api.evaluation_state(session_id)
+        initial_memory = _memory_text_from_state(initial_state)
+        turn_records, assistant_texts, final_state = _run_turns(
             api=api,
-            agent_id=agent_id,
+            session_id=session_id,
             config=config,
             fixture=fixture,
+            run_id=run_id,
+            round_index=round_index,
+            initial_memory=initial_memory,
         )
-        state = api.persistent_state(agent_id)
-        final_human_memory = _human_memory_from_state(state) or _last_human_memory(
-            turn_records
-        )
+        final_memory = _memory_text_from_state(final_state)
         score = deterministic_round_score(
             assistant_texts=assistant_texts,
-            initial_human_memory=initial_human_memory,
-            final_human_memory=final_human_memory,
+            initial_human_memory=initial_memory,
+            final_human_memory=final_memory,
             expected_facts=fixture.expected_facts,
             forbidden_reply_substrings=_forbidden_substrings(fixture),
         )
@@ -177,9 +173,8 @@ def run_round(
             config=config,
             fixture=fixture,
             turn_records=turn_records,
-            final_human_memory=final_human_memory,
+            final_human_memory=final_memory,
         )
-
         row = _round_row(
             run_id=run_id,
             round_index=round_index,
@@ -188,9 +183,7 @@ def run_round(
             status="ok",
             passed=bool(score["pass"]),
             elapsed_seconds=time.time() - started,
-            agent_id=agent_id,
-            archived=False,
-            purged=False,
+            session_id=session_id,
             score=score,
             judge_payload=judge_payload,
             turn_records=turn_records,
@@ -199,14 +192,12 @@ def run_round(
         )
         raw = {
             **row,
-            "configuration_sha256": provenance["configuration_sha256"],
-            "provenance_sha256": provenance["provenance_sha256"],
             "turns": turn_records,
-            "initial_human_memory": initial_human_memory,
-            "final_human_memory": final_human_memory,
+            "initial_human_memory": initial_memory,
+            "final_human_memory": final_memory,
             "deterministic_score": score,
             "judge": judge_payload,
-            "persistent_state": state,
+            "evaluation_state": final_state,
         }
     except Exception as exc:
         score = deterministic_round_score(
@@ -217,38 +208,33 @@ def run_round(
             forbidden_reply_substrings=_forbidden_substrings(fixture),
         )
         row = _error_row(
-            run_id,
-            round_index,
-            config,
-            fixture,
-            time.time() - started,
-            agent_id,
-            str(exc),
-            provenance,
-            score,
+            run_id=run_id,
+            round_index=round_index,
+            config=config,
+            fixture=fixture,
+            elapsed_seconds=time.time() - started,
+            session_id=session_id,
+            error=str(exc),
+            provenance=provenance,
+            score=score,
         )
         raw = {
             **row,
-            "error": str(exc),
             "turns": [],
             "initial_human_memory": "",
             "final_human_memory": "",
             "deterministic_score": score,
             "judge": {"ok": False, "skipped": True},
-            "persistent_state": {},
+            "evaluation_state": {},
         }
     finally:
-        if agent_id and not config.keep_agents:
+        if session_id and not config.keep_agents:
             try:
-                api.archive_agent(agent_id)
-                archived = True
-                api.purge_agent(agent_id)
+                api.purge_evaluation_session(session_id)
                 purged = True
             except Exception as exc:
-                print(f"[WARN] Failed to archive/purge eval agent {agent_id}: {exc}")
-            row["archived"] = archived
+                print(f"[WARN] Failed to purge evaluation session {session_id}: {exc}")
             row["purged"] = purged
-            raw["archived"] = archived
             raw["purged"] = purged
     return row, raw
 
@@ -256,55 +242,110 @@ def run_round(
 def _run_turns(
     *,
     api: AdeApiClient,
-    agent_id: str,
+    session_id: str,
     config: ChatMemoryEvalConfig,
     fixture: ConversationFixture,
-) -> tuple[list[dict[str, Any]], list[str], str]:
-    turn_records: list[dict[str, Any]] = []
-    all_assistant_texts: list[str] = []
-    initial_human_memory = ""
+    run_id: str,
+    round_index: int,
+    initial_memory: str,
+) -> tuple[list[dict[str, Any]], list[str], dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    replies: list[str] = []
+    before_memory = initial_memory
+    final_state: dict[str, Any] = {}
     for turn_index, user_input in enumerate(fixture.turns, 1):
-        turn_started = time.time()
-        result = api.chat(
-            agent_id=agent_id,
+        started = time.time()
+        result = api.run_turn(
+            conversation_id=session_id,
             message=user_input,
+            idempotency_key=f"{run_id}-round-{round_index}-turn-{turn_index}",
             timeout_seconds=config.timeout_seconds,
             retry_count=config.retry_count,
         )
-        sequence = result.get("sequence", [])
-        if not isinstance(sequence, list):
-            sequence = []
-        memory_diff = result.get("memory_diff", {})
-        if not isinstance(memory_diff, dict):
-            memory_diff = {}
-        old_human = str(
-            (memory_diff.get("old") or {}).get("human", "")
-            if isinstance(memory_diff.get("old"), dict)
-            else ""
+        final_state = result["state"]
+        run = result["run"]
+        events = result["events"]
+        sequence = _sequence_from_result(final_state, events, str(run.get("id") or ""))
+        turn_replies = assistant_replies(sequence)
+        replies.extend(turn_replies)
+        after_memory = _memory_text_from_state(final_state)
+        records.append(
+            {
+                "turn_index": turn_index,
+                "user_input": user_input,
+                "assistant_replies": turn_replies,
+                "elapsed_seconds": round(time.time() - started, 3),
+                "memory_changed_this_turn": before_memory != after_memory,
+                "human_memory_before_turn": before_memory,
+                "human_memory_after_turn": after_memory,
+                "tool_calls": tool_calls(sequence),
+                "memory_tool_calls": memory_tool_calls(sequence),
+                "sequence": sequence,
+                "run": run,
+                "events": events,
+            }
         )
-        new_human = str(
-            (memory_diff.get("new") or {}).get("human", "")
-            if isinstance(memory_diff.get("new"), dict)
-            else ""
+        before_memory = after_memory
+    return records, replies, final_state
+
+
+def _sequence_from_result(
+    state: dict[str, Any], events: object, run_id: str
+) -> list[dict[str, Any]]:
+    sequence: list[dict[str, Any]] = []
+    messages = (state.get("conversation") or {}).get("messages", [])
+    for message in reversed(messages if isinstance(messages, list) else []):
+        if (
+            isinstance(message, dict)
+            and message.get("role") == "assistant"
+            and str(message.get("run_id") or "") == run_id
+        ):
+            sequence.append(
+                {"type": "assistant", "content": message.get("content", "")}
+            )
+            break
+    for event in events if isinstance(events, list) else []:
+        if not isinstance(event, dict):
+            continue
+        event_type = str(event.get("type") or "")
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+        if event_type == "tool.call.requested":
+            sequence.append(
+                {
+                    "type": "tool_call",
+                    "name": str(payload.get("name") or ""),
+                    "arguments": json.dumps(
+                        payload.get("arguments") or {}, ensure_ascii=False
+                    ),
+                }
+            )
+        elif event_type == "memory.committed":
+            sequence.append(
+                {
+                    "type": "tool_call",
+                    "name": "memory.commit",
+                    "arguments": json.dumps(payload, ensure_ascii=False),
+                }
+            )
+    return sequence
+
+
+def _memory_text_from_state(state: dict[str, Any]) -> str:
+    facts = (state.get("memories") or {}).get("facts", [])
+    if not isinstance(facts, list):
+        return ""
+    rows = []
+    for fact in facts:
+        if not isinstance(fact, dict) or fact.get("status") != "active":
+            continue
+        value = str(fact.get("value") or "").strip()
+        if not value:
+            continue
+        label = str(
+            fact.get("qualifier") or fact.get("fact_type") or fact.get("key") or ""
         )
-        if turn_index == 1:
-            initial_human_memory = old_human
-        replies = assistant_replies(sequence)
-        all_assistant_texts.extend(replies)
-        record = {
-            "turn_index": turn_index,
-            "user_input": user_input,
-            "assistant_replies": replies,
-            "elapsed_seconds": round(time.time() - turn_started, 3),
-            "memory_changed_this_turn": old_human.strip() != new_human.strip(),
-            "human_memory_before_turn": old_human,
-            "human_memory_after_turn": new_human,
-            "tool_calls": tool_calls(sequence),
-            "memory_tool_calls": memory_tool_calls(sequence),
-            "sequence": sequence,
-        }
-        turn_records.append(record)
-    return turn_records, all_assistant_texts, initial_human_memory
+        rows.append(f"{label}: {value}" if label else value)
+    return "\n".join(rows)
 
 
 def _run_judge_if_enabled(
@@ -316,11 +357,10 @@ def _run_judge_if_enabled(
 ) -> dict[str, Any]:
     if not config.judge_enabled:
         return {"ok": False, "skipped": True}
-    model_key = effective_judge_model_key(config)
     return judge_round(
         router_v1_base_url=router_v1_base_url(config),
         router_api_key=config.model_router_api_key,
-        model_key=model_key,
+        model_key=effective_judge_model_key(config),
         fixture=_fixture_payload(fixture),
         turn_records=turn_records,
         final_human_memory=final_human_memory,
@@ -328,151 +368,83 @@ def _run_judge_if_enabled(
     )
 
 
-def _create_agent_payload(
-    config: ChatMemoryEvalConfig,
-    round_index: int,
-    provenance: dict[str, Any],
+def _create_session_payload(
+    config: ChatMemoryEvalConfig, run_id: str, round_index: int
 ) -> dict[str, Any]:
-    payload: dict[str, Any] = {
-        "scenario": "chat",
-        "name": f"chat-memory-eval-r{round_index}-{int(time.time())}",
-        "model": config.model,
+    return {
+        "idempotency_key": f"{run_id}-round-{round_index}-session",
+        "title": f"Chat memory evaluation round {round_index}",
+        "model_key": config.model,
+        "reviewer_model_key": config.model,
+        "embedding_model_key": config.embedding,
         "prompt_key": config.prompt_key,
         "persona_key": config.persona_key,
-        **expected_agent_identities(provenance),
+        "tool_names": ["search_memory"],
+        "subject_external_key": f"evaluation:{run_id}:round:{round_index}",
+        "subject_display_name": f"Evaluation subject {round_index}",
     }
-    if config.embedding:
-        payload["embedding"] = config.embedding
-    return payload
 
 
-def _round_row(**kwargs: Any) -> dict[str, Any]:
-    score = kwargs["score"]
-    judge_payload = kwargs["judge_payload"]
-    turn_records = kwargs["turn_records"]
-    memory_tool_count = sum(
-        len(item.get("memory_tool_calls", [])) for item in turn_records
-    )
-    tool_count = sum(len(item.get("tool_calls", [])) for item in turn_records)
-    identities = expected_agent_identities(kwargs["provenance"])
+def _round_row(**values: Any) -> dict[str, Any]:
+    score = values["score"]
+    judge = values["judge_payload"]
+    turns = values["turn_records"]
+    identities = expected_agent_identities(values["provenance"])
     return {
-        "run_id": kwargs["run_id"],
-        "round": kwargs["round_index"],
-        "status": kwargs["status"],
-        "pass": kwargs["passed"],
-        "elapsed_seconds": round(float(kwargs["elapsed_seconds"]), 3),
-        "model": kwargs["config"].model,
-        "prompt_key": kwargs["config"].prompt_key,
-        "persona_key": kwargs["config"].persona_key,
-        "embedding": kwargs["config"].embedding,
-        "fixture_key": kwargs["fixture"].key,
-        "configuration_sha256": kwargs["provenance"]["configuration_sha256"],
-        "provenance_sha256": kwargs["provenance"]["provenance_sha256"],
+        "run_id": values["run_id"],
+        "round": values["round_index"],
+        "status": values["status"],
+        "pass": values["passed"],
+        "elapsed_seconds": round(float(values["elapsed_seconds"]), 3),
+        "model": values["config"].model,
+        "prompt_key": values["config"].prompt_key,
+        "persona_key": values["config"].persona_key,
+        "embedding": values["config"].embedding,
+        "fixture_key": values["fixture"].key,
+        "configuration_sha256": values["provenance"]["configuration_sha256"],
+        "provenance_sha256": values["provenance"]["provenance_sha256"],
         "model_identity_sha256": identities["model_identity_sha256"],
         "embedding_identity_sha256": identities["embedding_identity_sha256"],
         "prompt_content_sha256": identities["prompt_content_sha256"],
         "persona_content_sha256": identities["persona_content_sha256"],
-        "turn_count": len(turn_records),
-        "assistant_reply_count": sum(
-            len(item.get("assistant_replies", [])) for item in turn_records
-        ),
-        "forbidden_hit_count": int(score.get("forbidden_hit_count", 0)),
-        "human_memory_changed": bool(score.get("human_memory_changed", False)),
-        "expected_facts_passed": bool(score.get("expected_facts_passed", False)),
-        "missing_expected_facts": ",".join(score.get("missing_expected_facts", [])),
-        "memory_tool_call_count": memory_tool_count,
-        "total_tool_call_count": tool_count,
-        "judge_enabled": kwargs["config"].judge_enabled,
-        "judge_ok": bool(judge_payload.get("ok", False)),
-        "judge_pass": judge_payload.get("pass", ""),
-        "judge_score": judge_payload.get("score", ""),
-        "agent_id": kwargs["agent_id"],
-        "archived": kwargs["archived"],
-        "purged": kwargs["purged"],
-        "error": kwargs["error"],
-    }
-
-
-def _error_row(
-    run_id: str,
-    round_index: int,
-    config: ChatMemoryEvalConfig,
-    fixture: ConversationFixture,
-    elapsed_seconds: float,
-    agent_id: str,
-    error: str,
-    provenance: dict[str, Any],
-    score: dict[str, Any],
-) -> dict[str, Any]:
-    identities = expected_agent_identities(provenance)
-    return {
-        "run_id": run_id,
-        "round": round_index,
-        "status": "error",
-        "pass": False,
-        "elapsed_seconds": round(elapsed_seconds, 3),
-        "model": config.model,
-        "prompt_key": config.prompt_key,
-        "persona_key": config.persona_key,
-        "embedding": config.embedding,
-        "fixture_key": fixture.key,
-        "configuration_sha256": provenance["configuration_sha256"],
-        "provenance_sha256": provenance["provenance_sha256"],
-        "model_identity_sha256": identities["model_identity_sha256"],
-        "embedding_identity_sha256": identities["embedding_identity_sha256"],
-        "prompt_content_sha256": identities["prompt_content_sha256"],
-        "persona_content_sha256": identities["persona_content_sha256"],
-        "turn_count": len(fixture.turns),
-        "assistant_reply_count": 0,
+        "turn_count": len(turns),
+        "assistant_reply_count": sum(len(item["assistant_replies"]) for item in turns),
         "forbidden_hit_count": int(score["forbidden_hit_count"]),
         "human_memory_changed": bool(score["human_memory_changed"]),
         "expected_facts_passed": bool(score["expected_facts_passed"]),
         "missing_expected_facts": ",".join(score["missing_expected_facts"]),
-        "memory_tool_call_count": 0,
-        "total_tool_call_count": 0,
-        "judge_enabled": config.judge_enabled,
-        "judge_ok": False,
-        "judge_pass": "",
-        "judge_score": "",
-        "agent_id": agent_id,
-        "archived": False,
+        "memory_tool_call_count": sum(len(item["memory_tool_calls"]) for item in turns),
+        "total_tool_call_count": sum(len(item["tool_calls"]) for item in turns),
+        "judge_enabled": values["config"].judge_enabled,
+        "judge_ok": bool(judge.get("ok", False)),
+        "judge_pass": judge.get("pass", ""),
+        "judge_score": judge.get("score", ""),
+        "session_id": values["session_id"],
         "purged": False,
-        "error": error,
+        "error": values["error"],
     }
+
+
+def _error_row(**values: Any) -> dict[str, Any]:
+    return _round_row(
+        **values,
+        status="error",
+        passed=False,
+        judge_payload={"ok": False},
+        turn_records=[],
+    )
 
 
 def _option_keys(items: object) -> set[str]:
     if not isinstance(items, list):
         return set()
     return {
-        str(item.get("key", "") or "").strip()
-        for item in items
-        if isinstance(item, dict)
+        str(item.get("key") or "").strip() for item in items if isinstance(item, dict)
     }
 
 
-def _human_memory_from_state(state: dict[str, Any]) -> str:
-    blocks = state.get("memory_blocks", [])
-    if not isinstance(blocks, list):
-        return ""
-    for block in blocks:
-        if isinstance(block, dict) and str(block.get("label", "") or "") == "human":
-            return str(block.get("value", "") or "")
-    return ""
-
-
-def _last_human_memory(turn_records: list[dict[str, Any]]) -> str:
-    for item in reversed(turn_records):
-        value = str(item.get("human_memory_after_turn", "") or "")
-        if value:
-            return value
-    return ""
-
-
 def _forbidden_substrings(fixture: ConversationFixture) -> tuple[str, ...]:
-    if fixture.forbidden_reply_substrings:
-        return fixture.forbidden_reply_substrings
-    return DEFAULT_FORBIDDEN_REPLY_SUBSTRINGS
+    return fixture.forbidden_reply_substrings or DEFAULT_FORBIDDEN_REPLY_SUBSTRINGS
 
 
 def _fixture_payload(fixture: ConversationFixture) -> dict[str, Any]:
@@ -497,6 +469,4 @@ def _config_payload(config: ChatMemoryEvalConfig) -> dict[str, Any]:
 
 def _resolve_run_id(run_id: str | None, run_timestamp: str) -> str:
     provided = str(run_id or "").strip()
-    if provided:
-        return provided
-    return f"chat-memory-eval-{run_timestamp}-{uuid4().hex[:8]}"
+    return provided or f"chat-memory-eval-{run_timestamp}-{uuid4().hex[:8]}"

@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import {
   HOP_BY_HOP_RESPONSE_HEADERS,
   adeApiAuthorization,
-  adeNativeApiBaseUrl,
+  adeApiBaseUrl,
   buildAdeApiHeaders,
   buildAdeApiUrl,
 } from "@/shared/api/server/ade-api-proxy";
@@ -22,10 +22,10 @@ async function proxy(request: NextRequest, context: RouteContext): Promise<Respo
   let authorization: string;
   try {
     const { path } = await context.params;
-    target = buildAdeApiUrl(path, request.nextUrl.search, adeNativeApiBaseUrl(), "v3");
+    target = buildAdeApiUrl(path, request.nextUrl.search, adeApiBaseUrl(), "v3");
     authorization = adeApiAuthorization();
   } catch (error) {
-    return proxyError(500, error instanceof Error ? error.message : "ADE native API proxy is not configured.");
+    return proxyError(500, error instanceof Error ? error.message : "ADE API proxy is not configured.");
   }
 
   let upstream: Response;
@@ -38,8 +38,8 @@ async function proxy(request: NextRequest, context: RouteContext): Promise<Respo
       redirect: "manual",
     });
   } catch (error) {
-    const detail = error instanceof Error ? error.message : "Unable to reach ADE native API.";
-    return proxyError(502, `ADE native API proxy request failed: ${detail}`);
+    const detail = error instanceof Error ? error.message : "Unable to reach ADE API.";
+    return proxyError(502, `ADE API proxy request failed: ${detail}`);
   }
 
   const responseHeaders = new Headers();

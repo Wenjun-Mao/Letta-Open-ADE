@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import os
-
 from fastapi import APIRouter, Depends
 
 from ade_api.platform.auth import require_reader
@@ -9,16 +7,10 @@ from ade_api.platform.dependencies import (
     CommentingServiceDependency,
     LabelingServiceDependency,
     LabelSchemaRegistryDependency,
-    LettaClientDependency,
-    LettaAgentServiceDependency,
     ModelRouterClientDependency,
     PromptPersonaRegistryDependency,
 )
-from ade_api.platform.feature_flags import (
-    ensure_ade_api_enabled,
-    is_truthy,
-    ade_api_enabled,
-)
+from ade_api.platform.feature_flags import ensure_ade_api_enabled
 from ade_api.features.prompt_center import (
     normalize_scenario,
     persona_option_entries,
@@ -32,14 +24,8 @@ from ade_api.features.schema_center import (
 )
 from ade_api.platform.openapi_metadata import TAG_MODEL_CATALOG
 
-from .capabilities import missing_required_capabilities
 from .catalog import model_catalog
-from .contracts import (
-    ApiOptionsResponse,
-    CapabilitiesResponse,
-    ModelCatalogResponse,
-)
-from .defaults import DEFAULT_EMBEDDING
+from .contracts import ApiOptionsResponse, ModelCatalogResponse
 from .resolution import runtime_options
 from .runtime_defaults import (
     agent_studio_runtime_defaults,
@@ -58,7 +44,6 @@ router = APIRouter(dependencies=[Depends(require_reader)])
 )
 async def api_get_options(
     model_router_client: ModelRouterClientDependency,
-    letta_client: LettaClientDependency,
     prompt_registry: PromptPersonaRegistryDependency,
     schema_registry: LabelSchemaRegistryDependency,
     commenting_service: CommentingServiceDependency,
@@ -73,7 +58,6 @@ async def api_get_options(
     model_options, embedding_options = runtime_options(
         resolved_scenario,
         model_router_client=model_router_client,
-        letta_client=letta_client,
         force_refresh=refresh,
     )
     prompt_options = prompt_option_entries(prompt_registry, resolved_scenario)
@@ -83,20 +67,8 @@ async def api_get_options(
         if resolved_scenario == "label"
         else []
     )
-    default_embedding = (
-        os.getenv("LETTA_DEFAULT_EMBEDDING_HANDLE")
-        or os.getenv("LETTA_EMBEDDING_HANDLE")
-        or DEFAULT_EMBEDDING
-    )
-    if default_embedding and not any(
-        option["key"] == default_embedding for option in embedding_options
-    ):
-        default_embedding = ""
-
     for option in embedding_options:
-        option["is_default"] = bool(
-            default_embedding and option["key"] == default_embedding
-        )
+        option["is_default"] = False
 
     return {
         "scenario": resolved_scenario,
@@ -116,7 +88,7 @@ async def api_get_options(
                 persona_options,
                 resolved_scenario,
             ),
-            "embedding": default_embedding,
+            "embedding": "",
             "schema_key": (
                 resolve_default_label_schema_key(schema_options)
                 if resolved_scenario == "label"
@@ -142,22 +114,6 @@ async def api_get_options(
 
 
 @router.get(
-    "/api/v2/model-catalog/capabilities",
-    response_model=CapabilitiesResponse,
-    tags=[TAG_MODEL_CATALOG],
-    summary="Get platform capability matrix",
-)
-async def get_capabilities(agent_service: LettaAgentServiceDependency):
-    capabilities = agent_service.capabilities()
-    return {
-        "enabled": ade_api_enabled(),
-        "strict_mode": is_truthy(os.getenv("ADE_API_STRICT_CAPABILITIES")),
-        "missing_required": missing_required_capabilities(capabilities),
-        **capabilities,
-    }
-
-
-@router.get(
     "/api/v2/model-catalog/models",
     response_model=ModelCatalogResponse,
     tags=[TAG_MODEL_CATALOG],
@@ -165,12 +121,10 @@ async def get_capabilities(agent_service: LettaAgentServiceDependency):
 )
 async def get_model_catalog(
     model_router_client: ModelRouterClientDependency,
-    letta_client: LettaClientDependency,
     refresh: bool = False,
 ):
     ensure_ade_api_enabled()
     return model_catalog(
         model_router_client=model_router_client,
-        letta_client=letta_client,
         force_refresh=refresh,
     )

@@ -10,7 +10,7 @@
         "conversation",
         "reviewer"
       ],
-      "lifecycle": "qualified",
+      "lifecycle": "candidate",
       "fingerprint": {
         "provider": "dgx_vllm",
         "endpoint_role": "openai-compatible-chat",
@@ -22,10 +22,10 @@
         "runtime_implementation": "vLLM",
         "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
-        "prompt_policy_sha256": "f0a29a8a91c808561037a777eab5570433e259d021cfb95ba9b100ab441a916d",
-        "tool_policy_sha256": "a1b623b138ecfcd223a46dda96be8cb3eb432ba0b64fb04d07c0de43c785d247",
-        "schema_policy_sha256": "96b0ffd04ee52a9bb7dd9dbbc86f486e40dff0392e41dbb19a2df47101e5f8ed",
-        "retrieval_policy_sha256": "9655faf4ffc59f3a5ae80d2fd92675fd84837e047306e4cc852e2a7188e52800",
+        "prompt_policy_sha256": "40a9ff2cc96bde550e3a41e7ea51ea923c1cafceea22deced03a5abe81284605",
+        "tool_policy_sha256": "91cbdf538dd3be496a340d8b9651ca1442cdd01c50859dd74d709164c66c4e3c",
+        "schema_policy_sha256": "280a9e33e88bc7756cce1e0fab5ca685f8ba63a5ca679639dc5cba7bcc094c7c",
+        "retrieval_policy_sha256": "d31e2ee3c06d78d4f52200d872bc1cbf2757d321a868daf1a1743823a6b34186",
         "sampling_settings": {
           "temperature": 1.0,
           "top_p": 0.95,
@@ -49,21 +49,21 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "10b158a36fe7a97d7a57d76d9215c4dfcbdbe906769765bc7f6f976d3bc622ca",
-        "qualified": true,
+        "fingerprint_sha256": "61c2300e7367c645919393e4d3c0c8f69cbfba8db780ad16b532cc3bcd796cbb",
+        "qualified": false,
         "stale_round_count": 0,
         "role_results": [
           {
             "role": "conversation",
-            "observed_rounds": 3,
-            "consecutive_passing_rounds": 3,
-            "qualified": true
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
           },
           {
             "role": "reviewer",
-            "observed_rounds": 3,
-            "consecutive_passing_rounds": 3,
-            "qualified": true
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
           }
         ]
       }
@@ -77,7 +77,7 @@
       "roles": [
         "retriever"
       ],
-      "lifecycle": "qualified",
+      "lifecycle": "candidate",
       "fingerprint": {
         "provider": "dgx_embedding_sidecar",
         "endpoint_role": "openai-compatible-embeddings",
@@ -89,10 +89,10 @@
         "runtime_implementation": "vLLM",
         "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
-        "prompt_policy_sha256": "f0a29a8a91c808561037a777eab5570433e259d021cfb95ba9b100ab441a916d",
-        "tool_policy_sha256": "a1b623b138ecfcd223a46dda96be8cb3eb432ba0b64fb04d07c0de43c785d247",
-        "schema_policy_sha256": "96b0ffd04ee52a9bb7dd9dbbc86f486e40dff0392e41dbb19a2df47101e5f8ed",
-        "retrieval_policy_sha256": "9655faf4ffc59f3a5ae80d2fd92675fd84837e047306e4cc852e2a7188e52800",
+        "prompt_policy_sha256": "40a9ff2cc96bde550e3a41e7ea51ea923c1cafceea22deced03a5abe81284605",
+        "tool_policy_sha256": "91cbdf538dd3be496a340d8b9651ca1442cdd01c50859dd74d709164c66c4e3c",
+        "schema_policy_sha256": "280a9e33e88bc7756cce1e0fab5ca685f8ba63a5ca679639dc5cba7bcc094c7c",
+        "retrieval_policy_sha256": "d31e2ee3c06d78d4f52200d872bc1cbf2757d321a868daf1a1743823a6b34186",
         "sampling_settings": {
           "dimensions": 1024,
           "query_instruction_enabled": true,
@@ -109,15 +109,15 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "30407a994e5c548122879a34e8af36ade7cafb16174217436580b262e8349fa7",
-        "qualified": true,
+        "fingerprint_sha256": "4443200f5e717eb3b2bcd2a845440531635cae9785fdb59141b3e61625474d22",
+        "qualified": false,
         "stale_round_count": 0,
         "role_results": [
           {
             "role": "retriever",
-            "observed_rounds": 3,
-            "consecutive_passing_rounds": 3,
-            "qualified": true
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
           }
         ]
       }
@@ -125,8 +125,7 @@
     {
       "id": "llama-server-qwen3_5-27b",
       "route_aliases": [
-        "local_llama_server::qwen3527b",
-        "local_llama_server::gemma4"
+        "local_llama_server::qwen3527b"
       ],
       "roles": [
         "conversation"
@@ -143,10 +142,10 @@
         "runtime_implementation": "llama-server",
         "runtime_version": "b1-225088e",
         "runtime_image_digest": null,
-        "prompt_policy_sha256": "f0a29a8a91c808561037a777eab5570433e259d021cfb95ba9b100ab441a916d",
-        "tool_policy_sha256": "a1b623b138ecfcd223a46dda96be8cb3eb432ba0b64fb04d07c0de43c785d247",
-        "schema_policy_sha256": "96b0ffd04ee52a9bb7dd9dbbc86f486e40dff0392e41dbb19a2df47101e5f8ed",
-        "retrieval_policy_sha256": "9655faf4ffc59f3a5ae80d2fd92675fd84837e047306e4cc852e2a7188e52800",
+        "prompt_policy_sha256": "40a9ff2cc96bde550e3a41e7ea51ea923c1cafceea22deced03a5abe81284605",
+        "tool_policy_sha256": "91cbdf538dd3be496a340d8b9651ca1442cdd01c50859dd74d709164c66c4e3c",
+        "schema_policy_sha256": "280a9e33e88bc7756cce1e0fab5ca685f8ba63a5ca679639dc5cba7bcc094c7c",
+        "retrieval_policy_sha256": "d31e2ee3c06d78d4f52200d872bc1cbf2757d321a868daf1a1743823a6b34186",
         "sampling_settings": {
           "thinking_enabled": false,
           "temperature": 0.6,
@@ -171,7 +170,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "d13d8b610708cb70b233aa6fc8a0a994d8bce8c94040cc80a3ed5b4e18f59fcb",
+        "fingerprint_sha256": "561cdf9eb59f207c4938cd99daf9e67c973e5af7a3b4621737bc25d491c6b533",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [

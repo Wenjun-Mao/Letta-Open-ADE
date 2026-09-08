@@ -1,12 +1,10 @@
 # Repository Utilities
 
-Run these repository-wide utilities from the repository root. Use
-`workflows/evals/` for evaluators and provider probes, and `workflows/smoke/`
-for live product checks; each workflow owns its own configuration and artifacts.
+Run repository-wide utilities from the repository root. Self-contained evals,
+qualification, probes, and smoke checks belong in `workflows/`; scripts are for
+small cross-repository maintenance tasks.
 
 ## Stack Lifecycle
-
-The root Make targets are the usual entrypoints:
 
 ```text
 make up
@@ -15,10 +13,9 @@ make logs SERVICE=ade-api
 make down
 ```
 
-The Compose service names include `ade-web`, `ade-api`, `ade-native-api`,
-`ade-runtime-worker`, `model-router`, `letta`, `postgres`, and `redis`. Model
-Router, Letta, and the worker are internal services; inspect them through
-`docker compose logs` or `docker compose exec`, not stale host ports.
+The ordinary Compose services are `postgres`, `model-router`,
+`ade-runtime-migrate`, `ade-runtime-worker`, `ade-api`, and `ade-web`. Inspect
+internal services through `docker compose logs` or `docker compose exec`.
 
 ## OpenAPI Artifacts
 
@@ -28,64 +25,29 @@ uv run python scripts/export_openapi.py --check
 uv run python scripts/generate_openapi_zh_manual.py
 ```
 
-The command exports both the retained v2 API and the ADE-native Agent Studio v3
-API, with copies under `apps/ade-web/public/openapi/`. The Chinese
-generator updates its matching web copy and missing-term report.
+The export writes the single ADE API specification and its ADE Web copy. The
+Chinese generator updates the matching web artifact and missing-term report.
 
-## Content Utilities
+## Release Evidence
 
-Synchronize reviewed personas with the local runtime projection or export a
-persona library:
+- `check_agent_studio_release_gate.py` validates the promoted native runtime ledger.
+- `record_agent_studio_conformance.py` records deterministic runtime contracts.
+- The release-promotion utility validates proposal, conformance, reviewer
+  approval, manifest update, and ledger promotion as one operation.
 
-```text
-uv run python scripts/persona_library.py --help
-```
+Use the Make targets and the [release evidence guide](../docs/operations/agent-studio-release.md)
+for the current sequence. A release failure requires new qualification and
+promotion evidence.
 
 ## Diagnostics And Recovery
 
-The Agent Studio release utilities are intentionally separate and fail closed:
-
-- `check_agent_studio_release_gate.py` validates the final content-addressed ledger.
-- `record_agent_studio_conformance.py` records exact deterministic runtime contracts.
-- `rehearse_agent_studio_rollback.py` proves the prior v2 web/API artifact by creating,
-  reading, updating, re-reading, and purging a disposable Agent Studio agent through
-  the legacy web proxy, then verifies native state preservation.
-- `review_agent_studio_cutover.py` composes reviewed qualification, parity,
-  conformance, and rollback evidence.
-
-Run them through the Make targets and sequence documented in the
-[Agent Studio cutover runbook](../docs/operations/agent-studio-cutover.md).
-
-Create a redacted diagnostics bundle:
-
 ```text
 scripts/collect_diagnostics.sh .env
+scripts/reset_database.sh
+./scripts/reset_database.ps1
 ```
 
-The collector reads the current Compose service names, probes ADE Web and ADE
-API on their host ports, and probes Model Router from inside `ade-api`. Review
-the bundle before sharing it.
-
-Reset only local Letta/Postgres data when a clean environment is intended:
-
-```text
-scripts/reset_database.sh       # POSIX shell
-./scripts/reset_database.ps1    # Windows PowerShell
-```
-
-Both reset scripts accept an optional environment-file path. They delete
-`data/pgdata` and restart Compose; they do not delete reviewed `content/` or
-`config/` assets.
-
-Migrate runtime files from a checkout predating `data/runtime/`:
-
-```text
-uv run python scripts/migrate_runtime_data.py --dry-run
-uv run python scripts/migrate_runtime_data.py --remove-source
-```
-
-Pre-seed NLTK data when Letta needs it:
-
-```text
-scripts/seed_nltk_data.sh
-```
+The diagnostics collector creates a redacted bundle. The reset scripts delete
+the local `data/pgdata` volume and restart Compose; they do not delete reviewed
+`content/` or `config/` assets. Use reset only for an intentionally clean local
+environment.

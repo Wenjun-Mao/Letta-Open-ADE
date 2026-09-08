@@ -121,8 +121,8 @@ export function runEventsUrl(runId: string): string {
   return `/api/v3/runs/${encodeURIComponent(runId)}/events`;
 }
 
-// Dashboard still consumes this small, read-only count adapter. It now counts
-// ADE-native definition roots instead of legacy Letta agents.
+// Dashboard still consumes this small, read-only count adapter. It counts
+// Agent Studio definition records without a second agent backend.
 export type AgentListItem = {
   id: string;
   name: string;

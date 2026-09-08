@@ -2,17 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from letta_client import Letta
-
 from ade_api.integrations.model_router.client import ModelRouterClient
 from ade_api.platform.contracts import ScenarioType
 
-from . import letta_catalog
-from .catalog import enriched_catalog_items
+from .catalog import router_catalog_items
 from .defaults import (
-    MODEL_OPTION_OVERRIDES,
-    MODEL_OPTION_PRIORITY,
-    PREFERRED_EMBEDDING_OPTIONS,
     PROVIDER_MODEL_OPTION_OVERRIDES,
     PROVIDER_MODEL_OPTION_PRIORITY,
 )
@@ -20,66 +14,45 @@ from .identity import attach_model_option_identity
 from .utils import dedupe_options
 
 
-def model_option_metadata(
-    item: dict[str, Any], *, chat_key: str | None = None
-) -> tuple[str, str]:
-    resolved_key = str(chat_key or item.get("letta_handle", "") or "").strip()
+def model_option_metadata(item: dict[str, Any]) -> tuple[str, str]:
     provider_model_id = str(item.get("provider_model_id", "") or "").strip()
-    upstream_provider_model_id = str(
-        item.get("upstream_provider_model_id", "") or ""
-    ).strip()
-    override = (
-        MODEL_OPTION_OVERRIDES.get(resolved_key)
-        or PROVIDER_MODEL_OPTION_OVERRIDES.get(provider_model_id)
-        or PROVIDER_MODEL_OPTION_OVERRIDES.get(upstream_provider_model_id)
-    )
+    override = PROVIDER_MODEL_OPTION_OVERRIDES.get(provider_model_id)
     if override:
         return override["label"], override["description"]
     source_label = str(item.get("source_label", "") or "").strip()
-    display_model_id = upstream_provider_model_id or provider_model_id or resolved_key
+    display_model_id = provider_model_id or str(item.get("model_key", "") or "").strip()
     return display_model_id, f"Discovered from {source_label}."
 
 
-def embedding_options(letta_client: Letta) -> list[dict[str, Any]]:
-    _, discovered_embedding_handles = letta_catalog.resolve_letta_catalog_handles(
-        letta_client
-    )
-    options = [dict(option) for option in PREFERRED_EMBEDDING_OPTIONS]
-    known_embedding_keys = {option["key"] for option in options}
-
-    for handle in sorted(discovered_embedding_handles):
-        if handle in known_embedding_keys:
+def embedding_options(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    options: list[dict[str, Any]] = []
+    for item in items:
+        if item.get("model_type") != "embedding":
             continue
-        known_embedding_keys.add(handle)
+        key = str(item.get("model_key", "") or "").strip()
+        if not key:
+            continue
+        label, description = model_option_metadata(item)
         options.append(
-            {
-                "key": handle,
-                "label": handle.split("/", 1)[-1],
-                "description": "Discovered embedding handle from Letta model catalog.",
-            }
+            attach_model_option_identity(
+                {
+                    "key": key,
+                    "label": label,
+                    "description": description,
+                    "available": True,
+                    "source_id": item["source_id"],
+                    "source_label": item["source_label"],
+                    "provider_model_id": item["provider_model_id"],
+                }
+            )
         )
-
-    options = dedupe_options(options)
-    embedding_catalog_known = bool(discovered_embedding_handles)
-    for option in options:
-        option["available"] = (not embedding_catalog_known) or option[
-            "key"
-        ] in discovered_embedding_handles
-        attach_model_option_identity(option)
-    return options
+    return dedupe_options(options)
 
 
 def model_option_sort_key(option: dict[str, Any]) -> tuple[int, int, str, str]:
     key = str(option.get("key", "") or "").strip()
     provider_model_id = str(option.get("provider_model_id", "") or "").strip()
-    upstream_provider_model_id = str(
-        option.get("upstream_provider_model_id", "") or ""
-    ).strip()
-    preferred_rank = MODEL_OPTION_PRIORITY.get(key)
-    if preferred_rank is None:
-        preferred_rank = PROVIDER_MODEL_OPTION_PRIORITY.get(provider_model_id)
-    if preferred_rank is None:
-        preferred_rank = PROVIDER_MODEL_OPTION_PRIORITY.get(upstream_provider_model_id)
+    preferred_rank = PROVIDER_MODEL_OPTION_PRIORITY.get(provider_model_id)
     if preferred_rank is not None:
         return (0, int(preferred_rank), key.lower(), provider_model_id.lower())
     return (1, 0, key.lower(), provider_model_id.lower())
@@ -89,12 +62,10 @@ def runtime_options(
     scenario: ScenarioType = "chat",
     *,
     model_router_client: ModelRouterClient,
-    letta_client: Letta,
     force_refresh: bool = False,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    items = enriched_catalog_items(
+    items = router_catalog_items(
         model_router_client=model_router_client,
-        letta_client=letta_client,
         force_refresh=force_refresh,
     )
     model_options: list[dict[str, Any]] = []
@@ -109,15 +80,11 @@ def runtime_options(
     for item in items:
         if not item[availability_key]:
             continue
-        key = str(
-            item.get("letta_handle" if scenario == "chat" else "model_key", "") or ""
-        ).strip()
+        key = str(item.get("model_key", "") or "").strip()
         if not key or key in seen_model_keys:
             continue
         seen_model_keys.add(key)
-        label, description = model_option_metadata(
-            item, chat_key=key if scenario == "chat" else None
-        )
+        label, description = model_option_metadata(item)
         model_options.append(
             attach_model_option_identity(
                 {
@@ -128,9 +95,6 @@ def runtime_options(
                     "source_id": item["source_id"],
                     "source_label": item["source_label"],
                     "provider_model_id": item["provider_model_id"],
-                    "upstream_provider_model_id": item.get(
-                        "upstream_provider_model_id"
-                    ),
                     "label_lab_available": item["label_lab_available"],
                     "structured_output_mode": item["structured_output_mode"],
                     "sampling_defaults": item.get("sampling_defaults", {}),
@@ -158,4 +122,4 @@ def runtime_options(
 
     if scenario == "chat":
         model_options.sort(key=model_option_sort_key)
-    return model_options, embedding_options(letta_client)
+    return model_options, embedding_options(items)

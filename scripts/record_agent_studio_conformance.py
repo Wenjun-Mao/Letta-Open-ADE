@@ -12,7 +12,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from ade_api.features.agent_runtime_v3.release_evidence import (
+from ade_api.features.agent_runtime.release_evidence import (
     REQUIRED_CONFORMANCE_TESTS as CONFORMANCE_TESTS,
     canonical_sha256,
 )

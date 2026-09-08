@@ -3,7 +3,14 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from scripts.source_fingerprint import source_fingerprint
+from scripts.source_fingerprint import is_governed_source_path, source_fingerprint
+
+
+def test_governed_source_boundary_excludes_mutable_release_manifest() -> None:
+    assert is_governed_source_path("config/model-router/model-profiles.json")
+    assert is_governed_source_path("config/model-router/sources.json")
+    assert not is_governed_source_path("config/model-router/deployment-manifest.json")
+    assert not is_governed_source_path("docs/architecture/overview.md")
 
 
 def test_source_fingerprint_is_order_independent_and_content_addressed(

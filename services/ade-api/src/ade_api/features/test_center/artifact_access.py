@@ -5,7 +5,7 @@ from typing import Any, Mapping
 
 from ade_api.features.test_center.run_descriptors import (
     ArtifactDiscoveryContext,
-    get_persisted_run_descriptor,
+    get_run_descriptor,
 )
 
 
@@ -29,7 +29,7 @@ class TestRunArtifactAccess:
             state_root=self._state_root,
         )
         run_type = str(run.get("run_type", "") or "")
-        return get_persisted_run_descriptor(run_type).discover_artifacts(context)
+        return get_run_descriptor(run_type).discover_artifacts(context)
 
     def read_artifact(
         self,

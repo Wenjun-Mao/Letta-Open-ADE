@@ -1,5 +1,4 @@
 const API_BASE_URL_ENV = "ADE_API_BASE_URL";
-const NATIVE_API_BASE_URL_ENV = "ADE_NATIVE_API_BASE_URL";
 const API_KEY_ENV = "ADE_API_ADMIN_KEY";
 
 export function adeApiBaseUrl(value = process.env[API_BASE_URL_ENV]): URL {
@@ -11,18 +10,6 @@ export function adeApiBaseUrl(value = process.env[API_BASE_URL_ENV]): URL {
     return new URL(value);
   } catch {
     throw new Error(`${API_BASE_URL_ENV} must be a valid absolute URL.`);
-  }
-}
-
-export function adeNativeApiBaseUrl(value = process.env[NATIVE_API_BASE_URL_ENV]): URL {
-  if (!value?.trim()) {
-    throw new Error(`${NATIVE_API_BASE_URL_ENV} must be configured for the ADE native API proxy.`);
-  }
-
-  try {
-    return new URL(value);
-  } catch {
-    throw new Error(`${NATIVE_API_BASE_URL_ENV} must be a valid absolute URL.`);
   }
 }
 

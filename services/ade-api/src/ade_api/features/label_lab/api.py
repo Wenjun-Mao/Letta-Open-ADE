@@ -8,7 +8,6 @@ from ade_api.platform.auth import AdePrincipal, AdeRole, require_operator
 from ade_api.platform.dependencies import (
     LabelingServiceDependency,
     LabelSchemaRegistryDependency,
-    LettaClientDependency,
     ModelRouterClientDependency,
     PromptPersonaRegistryDependency,
 )
@@ -44,7 +43,7 @@ router = APIRouter()
                                 "input": "Messi scored for Inter Miami against Orlando City.",
                                 "prompt_key": "label_football_entities_v1",
                                 "schema_key": "label_football_entity_groups_v1",
-                                "model_key": "local_llama_server::gemma4",
+                                "model_key": "local_llama_server::qwen3527b",
                                 "max_tokens": 1024,
                                 "timeout_seconds": 120,
                                 "repair_retry_count": 1,
@@ -64,7 +63,6 @@ def api_labeling_generate(
     principal: Annotated[AdePrincipal, Depends(require_operator)],
     labeling_service: LabelingServiceDependency,
     model_router_client: ModelRouterClientDependency,
-    letta_client: LettaClientDependency,
     prompt_registry: PromptPersonaRegistryDependency,
     schema_registry: LabelSchemaRegistryDependency,
 ):
@@ -106,7 +104,6 @@ def api_labeling_generate(
         model_selection = resolve_label_model_selection(
             model_key=request.model_key,
             model_router_client=model_router_client,
-            letta_client=letta_client,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -115,7 +112,7 @@ def api_labeling_generate(
     try:
         generation_result = labeling_service.generate_labels(
             base_url=str(model_selection.get("base_url", "") or ""),
-            model=str(model_selection.get("provider_model_id", "") or ""),
+            model=str(model_selection.get("model_key", "") or ""),
             api_key=str(model_selection.get("api_key", "") or ""),
             system_prompt=str(prompt_record.get("content", "") or ""),
             article_input=text,

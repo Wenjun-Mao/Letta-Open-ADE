@@ -12,8 +12,8 @@ load_dotenv(PROJECT_ROOT / ".env", override=False)
 DEFAULT_ADE_API_BASE_URL = os.getenv("ADE_API_BASE_URL", "http://127.0.0.1:8000")
 DEFAULT_ADE_API_ADMIN_KEY = os.getenv("ADE_API_ADMIN_KEY", "").strip()
 DEFAULT_PROMPT_KEY = "chat_v20260516"
-DEFAULT_TEST_MODEL_HANDLE = "openai-proxy/local_llama_server::gemma4"
-DEFAULT_EMBEDDING_HANDLE = "letta/letta-free"
+DEFAULT_TEST_MODEL_KEY = "dgx_vllm::qwen3.6-35b-a3b-fp8"
+DEFAULT_EMBEDDING_MODEL_KEY = "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B"
 
 
 def ade_api_headers() -> dict[str, str]:

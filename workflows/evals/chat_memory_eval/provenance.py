@@ -123,14 +123,37 @@ def expected_agent_identities(provenance: dict[str, Any]) -> dict[str, str | Non
     }
 
 
-def assert_created_agent_identities(
+def assert_created_session_identity(
     created: dict[str, Any], provenance: dict[str, Any]
 ) -> None:
-    for field, expected in expected_agent_identities(provenance).items():
-        if created.get(field) != expected:
+    definition = created.get("agent_definition")
+    if not isinstance(definition, dict):
+        raise RuntimeError("Evaluation session did not return an agent definition")
+    expected_fields = {
+        "prompt_sha256": provenance["prompt"]["content_sha256"],
+        "persona_sha256": provenance["persona"]["content_sha256"],
+    }
+    for field, expected in expected_fields.items():
+        if definition.get(field) != expected:
             raise RuntimeError(
-                f"Agent creation returned a different {field} than the captured evaluation provenance"
+                f"Evaluation session returned a different {field} than captured provenance"
             )
+
+    expected_routes = {
+        "conversation": provenance["model"]["key"],
+        "reviewer": provenance["model"]["key"],
+        "retriever": provenance["embedding"]["key"],
+    }
+    deployments = definition.get("deployments")
+    actual_routes = {
+        str(item.get("role") or ""): str(item.get("route_alias") or "")
+        for item in deployments or []
+        if isinstance(item, dict)
+    }
+    if actual_routes != expected_routes:
+        raise RuntimeError(
+            "Evaluation session deployment routes differ from captured provenance"
+        )
 
 
 def _template_snapshot(record: dict[str, Any], expected_kind: str) -> dict[str, Any]:

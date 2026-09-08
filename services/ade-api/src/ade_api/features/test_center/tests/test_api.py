@@ -4,57 +4,217 @@ import asyncio
 import json
 import sys
 from io import StringIO
-from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
-from ade_api.features.test_center.contracts import TestRunRequest
 from ade_api.features.test_center import api
+from ade_api.features.test_center.contracts import (
+    AgentRuntimeAcceptanceRunRequest,
+    ChatMemoryEvaluationRunRequest,
+    CurrentStackSmokeRunRequest,
+    TestRunRequest,
+)
 
 
-def test_run_request_accepts_supported_run_types() -> None:
-    assert TestRunRequest(run_type="ade_api_e2e_check").run_type == "ade_api_e2e_check"
-    assert (
-        TestRunRequest(run_type="ade_mvp_smoke_e2e_check").run_type
-        == "ade_mvp_smoke_e2e_check"
+RUN_REQUEST_ADAPTER = TypeAdapter(TestRunRequest)
+
+
+def _parse_request(payload: dict[str, object]):
+    return RUN_REQUEST_ADAPTER.validate_python(payload)
+
+
+def test_run_request_discriminator_accepts_only_the_three_workflows() -> None:
+    assert isinstance(
+        _parse_request({"run_type": "ade_api_e2e_check"}),
+        CurrentStackSmokeRunRequest,
     )
-    assert TestRunRequest(run_type="chat_memory_eval").run_type == "chat_memory_eval"
-    assert (
-        TestRunRequest(run_type="agent_runtime_v3_acceptance").run_type
-        == "agent_runtime_v3_acceptance"
+    assert isinstance(
+        _parse_request({"run_type": "chat_memory_eval"}),
+        ChatMemoryEvaluationRunRequest,
     )
-    assert (
-        TestRunRequest(run_type="agent_runtime_parity_eval").run_type
-        == "agent_runtime_parity_eval"
+    assert isinstance(
+        _parse_request({"run_type": "agent_runtime_acceptance"}),
+        AgentRuntimeAcceptanceRunRequest,
     )
 
     with pytest.raises(ValidationError):
-        TestRunRequest(run_type="agent_bootstrap_check")
+        _parse_request({"run_type": "ade_mvp_smoke_e2e_check"})
+    with pytest.raises(ValidationError):
+        _parse_request({"run_type": "agent_runtime_parity_eval"})
 
 
-def test_run_request_rejects_unsupported_fields() -> None:
+def test_run_request_models_forbid_fields_owned_by_another_workflow() -> None:
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
-        TestRunRequest(
-            run_type="ade_api_e2e_check",
-            model="lmstudio_openai/gemma-4-31b-it",
-            embedding="letta/letta-free",
-            rounds=5,
-            config_path="legacy-config.json",
+        _parse_request(
+            {
+                "run_type": "ade_api_e2e_check",
+                "model": "test::model",
+            }
+        )
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        _parse_request(
+            {
+                "run_type": "agent_runtime_acceptance",
+                "fixture_key": "recent_user_chat_turns",
+            }
+        )
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        _parse_request(
+            {
+                "run_type": "chat_memory_eval",
+                "case_keys": ["chat_memory_baseline"],
+            }
         )
 
 
-def test_create_test_run_passes_only_run_type(monkeypatch) -> None:
+def test_chat_memory_request_keeps_its_retry_contract() -> None:
+    request = _parse_request(
+        {
+            "run_type": "chat_memory_eval",
+            "model": "test::model",
+            "fixture_key": "recent_user_chat_turns",
+            "rounds": 2,
+            "retry_count": 1,
+            "judge_enabled": False,
+        }
+    )
+
+    assert request.model == "test::model"
+    assert request.rounds == 2
+    assert request.retry_count == 1
+    assert request.judge_enabled is False
+
+    with pytest.raises(ValidationError, match="fixture_key must be one of"):
+        _parse_request(
+            {
+                "run_type": "chat_memory_eval",
+                "fixture_key": "unknown_fixture",
+            }
+        )
+
+
+def test_native_runtime_request_canonicalizes_case_keys_and_enforces_bounds() -> None:
+    request = _parse_request(
+        {
+            "run_type": "agent_runtime_acceptance",
+            "case_keys": ["weather_tool_failure", "chat_memory_baseline"],
+            "rounds": 3,
+            "timeout_seconds": 180,
+        }
+    )
+
+    assert request.case_keys == ["chat_memory_baseline", "weather_tool_failure"]
+
+    with pytest.raises(ValidationError, match="must be canonical"):
+        _parse_request(
+            {
+                "run_type": "agent_runtime_acceptance",
+                "case_keys": ["unknown_case"],
+            }
+        )
+    with pytest.raises(ValidationError):
+        _parse_request({"run_type": "agent_runtime_acceptance", "rounds": 4})
+    with pytest.raises(ValidationError):
+        _parse_request({"run_type": "agent_runtime_acceptance", "timeout_seconds": 4.9})
+
+
+def test_options_endpoint_returns_the_canonical_defaults_and_choices(
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(api, "ensure_ade_api_enabled", lambda: None)
+    monkeypatch.setattr(
+        api,
+        "runtime_options",
+        lambda *_args, **_kwargs: (
+            [
+                {
+                    "key": "dgx_vllm::chat-model",
+                    "label": "DGX chat model",
+                    "available": True,
+                }
+            ],
+            [
+                {
+                    "key": "dgx_embedding_sidecar::embedding-model",
+                    "label": "DGX embedding model",
+                    "available": True,
+                }
+            ],
+        ),
+    )
+    monkeypatch.setattr(
+        api,
+        "prompt_option_entries",
+        lambda *_args: [{"key": "chat_prompt", "label": "Chat prompt"}],
+    )
+    monkeypatch.setattr(
+        api,
+        "persona_option_entries",
+        lambda *_args: [{"key": "chat_persona", "label": "Chat persona"}],
+    )
+
+    payload = asyncio.run(api.get_test_center_options(object(), object()))
+
+    assert [item["key"] for item in payload["run_types"]] == [
+        "chat_memory_eval",
+        "agent_runtime_acceptance",
+        "ade_api_e2e_check",
+    ]
+    assert payload["chat_memory_eval"]["defaults"]["fixture_key"] == (
+        "recent_user_chat_turns"
+    )
+    assert payload["chat_memory_eval"]["fixtures"] == [
+        {"key": "recent_user_chat_turns", "label": "Recent user chat turns"}
+    ]
+    assert payload["catalog"] == {
+        "models": [
+            {
+                "key": "dgx_vllm::chat-model",
+                "label": "DGX chat model",
+                "available": True,
+            }
+        ],
+        "embeddings": [
+            {
+                "key": "dgx_embedding_sidecar::embedding-model",
+                "label": "DGX embedding model",
+                "available": True,
+            }
+        ],
+        "prompts": [{"key": "chat_prompt", "label": "Chat prompt", "available": True}],
+        "personas": [
+            {"key": "chat_persona", "label": "Chat persona", "available": True}
+        ],
+    }
+    assert payload["agent_runtime_acceptance"]["defaults"]["rounds"] == 3
+    assert {item["key"] for item in payload["agent_runtime_acceptance"]["cases"]} == {
+        "chat_memory_baseline",
+        "weather_tool_failure",
+        "correction_chain",
+        "explicit_forgetting",
+        "cross_agent_subject_sharing",
+        "cross_subject_isolation",
+        "old_memory_deep_search",
+        "long_history_compaction",
+        "false_memory_prevention",
+        "weather_tool_selection",
+    }
+
+
+def test_create_test_run_passes_only_the_discriminated_request_fields(
+    monkeypatch,
+) -> None:
     captured: dict[str, object] = {}
 
     class _FakeOrchestrator:
-        def create_run(self, *, run_type: str):
-            captured["run_type"] = run_type
+        def create_run(self, **kwargs):
+            captured.update(kwargs)
             return {
                 "run_id": "run-1",
-                "run_type": run_type,
+                "run_type": kwargs["run_type"],
                 "status": "queued",
-                "command": ["python", "workflows/smoke/ade_api_e2e_check.py"],
+                "command": ["python", "workflow.py"],
                 "created_at": "2026-04-22T00:00:00+00:00",
                 "started_at": "",
                 "finished_at": "",
@@ -67,170 +227,25 @@ def test_create_test_run_passes_only_run_type(monkeypatch) -> None:
             }
 
     monkeypatch.setattr(api, "ensure_ade_api_enabled", lambda: None)
-
-    payload = asyncio.run(
-        api.create_test_run(
-            TestRunRequest(run_type="ade_api_e2e_check"),
-            _FakeOrchestrator(),
-        )
+    request = _parse_request(
+        {
+            "run_type": "chat_memory_eval",
+            "model": "test::model",
+            "judge_enabled": False,
+        }
     )
 
-    assert captured["run_type"] == "ade_api_e2e_check"
-    assert payload["run_type"] == "ade_api_e2e_check"
+    payload = asyncio.run(api.create_test_run(request, _FakeOrchestrator()))
+
+    assert captured == {
+        "run_type": "chat_memory_eval",
+        "model": "test::model",
+        "judge_enabled": False,
+    }
+    assert payload["run_id"] == "run-1"
 
 
-def test_chat_memory_eval_request_accepts_focused_fields() -> None:
-    request = TestRunRequest(
-        run_type="chat_memory_eval",
-        model="openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
-        prompt_key="chat_v20260516",
-        persona_key="chat_linxiaotang",
-        embedding="letta/letta-free",
-        rounds=1,
-        fixture_key="recent_user_chat_turns",
-        timeout_seconds=180,
-        retry_count=0,
-        judge_enabled=False,
-    )
-
-    assert request.rounds == 1
-    assert request.judge_enabled is False
-
-
-def test_chat_memory_eval_request_rejects_non_idempotent_retries() -> None:
-    with pytest.raises(ValidationError, match="server-owned idempotency"):
-        TestRunRequest(run_type="chat_memory_eval", retry_count=1)
-
-
-def test_agent_runtime_v3_acceptance_request_accepts_only_focused_fields() -> None:
-    request = TestRunRequest(
-        run_type="agent_runtime_v3_acceptance",
-        conversation_model_key="dgx_vllm::qwen3.6-35b-a3b-fp8",
-        reviewer_model_key="dgx_vllm::qwen3.6-35b-a3b-fp8",
-        embedding_model_key="dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
-        rounds=3,
-        timeout_seconds=180,
-        retry_count=0,
-        include_llama_compatibility=True,
-    )
-
-    assert request.rounds == 3
-    assert request.include_llama_compatibility is True
-
-    with pytest.raises(ValidationError, match="Unsupported fields"):
-        TestRunRequest(
-            run_type="agent_runtime_v3_acceptance",
-            prompt_key="chat_v20260516",
-        )
-
-    with pytest.raises(ValidationError, match="rounds must be between 1 and 3"):
-        TestRunRequest(run_type="agent_runtime_v3_acceptance", rounds=4)
-
-    with pytest.raises(ValidationError, match="timeout_seconds must be between 5"):
-        TestRunRequest(run_type="agent_runtime_v3_acceptance", timeout_seconds=4.9)
-
-
-def test_agent_runtime_v3_diagnostic_case_keys_are_canonical_and_strict() -> None:
-    from agent_runtime_eval_contracts import load_cases, study_cases_path
-    from ade_api.features.test_center.run_descriptors import (
-        AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS,
-    )
-
-    assert AGENT_RUNTIME_V3_DIAGNOSTIC_CASE_KEYS == tuple(
-        case.key for case in load_cases(study_cases_path())
-    )
-    request = TestRunRequest(
-        run_type="agent_runtime_v3_acceptance",
-        case_keys=["weather_tool_failure", "chat_memory_baseline"],
-    )
-
-    assert request.case_keys == ["chat_memory_baseline", "weather_tool_failure"]
-
-    with pytest.raises(ValidationError, match="must be canonical"):
-        TestRunRequest(
-            run_type="agent_runtime_v3_acceptance",
-            case_keys=["unknown_case"],
-        )
-
-    with pytest.raises(ValidationError, match="must not contain duplicates"):
-        TestRunRequest(
-            run_type="agent_runtime_v3_acceptance",
-            case_keys=["chat_memory_baseline", "chat_memory_baseline"],
-        )
-
-
-def test_agent_runtime_parity_request_accepts_only_product_comparison_fields() -> None:
-    request = TestRunRequest(
-        run_type="agent_runtime_parity_eval",
-        prompt_key="chat_v20260516",
-        persona_key="chat_linxiaotang",
-        legacy_model="openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
-        legacy_embedding="letta/letta-free",
-        native_conversation_model="dgx_vllm::qwen3.6-35b-a3b-fp8",
-        native_reviewer_model="dgx_vllm::qwen3.6-35b-a3b-fp8",
-        native_embedding_model="dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
-        rounds=3,
-        timeout_seconds=180,
-        retry_count=0,
-    )
-
-    assert request.rounds == 3
-    assert request.retry_count == 0
-
-    with pytest.raises(ValidationError, match="paired turns must not be duplicated"):
-        TestRunRequest(run_type="agent_runtime_parity_eval", retry_count=1)
-
-    with pytest.raises(ValidationError, match="Unsupported fields"):
-        TestRunRequest(
-            run_type="agent_runtime_parity_eval",
-            include_llama_compatibility=True,
-        )
-
-
-def test_chat_memory_eval_create_passes_options(monkeypatch) -> None:
-    captured: dict[str, object] = {}
-
-    class _FakeOrchestrator:
-        def create_run(self, **kwargs):
-            captured.update(kwargs)
-            return {
-                "run_id": "run-2",
-                "run_type": kwargs["run_type"],
-                "status": "queued",
-                "command": ["python", "workflows/evals/chat_memory_eval/run.py"],
-                "created_at": "2026-04-22T00:00:00+00:00",
-                "started_at": "",
-                "finished_at": "",
-                "exit_code": None,
-                "log_file": "data/runtime/test-runs/run-2/orchestrator.log",
-                "cancel_requested": False,
-                "output_tail": [],
-                "error": "",
-                "artifacts": [],
-            }
-
-    monkeypatch.setattr(api, "ensure_ade_api_enabled", lambda: None)
-
-    payload = asyncio.run(
-        api.create_test_run(
-            TestRunRequest(
-                run_type="chat_memory_eval",
-                model="openai-proxy/test::model",
-                rounds=1,
-                judge_enabled=False,
-            ),
-            _FakeOrchestrator(),
-        )
-    )
-
-    assert captured["run_type"] == "chat_memory_eval"
-    assert captured["model"] == "openai-proxy/test::model"
-    assert captured["rounds"] == 1
-    assert captured["judge_enabled"] is False
-    assert payload["run_type"] == "chat_memory_eval"
-
-
-def test_test_run_descriptors_own_option_validation_and_command_construction(
+def test_descriptors_own_the_three_commands_and_reject_unowned_options(
     tmp_path,
 ) -> None:
     from ade_api.features.test_center.orchestrator import TestRunOrchestrator
@@ -238,276 +253,108 @@ def test_test_run_descriptors_own_option_validation_and_command_construction(
 
     assert set(RUN_DESCRIPTORS) == {
         "ade_api_e2e_check",
-        "ade_mvp_smoke_e2e_check",
         "chat_memory_eval",
-        "agent_runtime_v3_acceptance",
-        "agent_runtime_parity_eval",
+        "agent_runtime_acceptance",
     }
 
     orchestrator = TestRunOrchestrator(project_root=tmp_path)
     assert orchestrator._build_command(
         run_type="ade_api_e2e_check",
-        output_dir=tmp_path / "run-output",
+        output_dir=tmp_path / "smoke-output",
         options={},
     ) == [sys.executable, "workflows/smoke/ade_api_e2e_check.py"]
+
+    output_dir = tmp_path / "00000000-0000-0000-0000-000000000001"
     assert orchestrator._build_command(
-        run_type="ade_mvp_smoke_e2e_check",
-        output_dir=tmp_path / "run-output",
-        options={},
-    ) == [sys.executable, "workflows/smoke/ade_mvp_smoke_e2e_check.py"]
-
-    chat_memory_run_id = "00000000-0000-0000-0000-000000000001"
-    chat_memory_output_dir = tmp_path / chat_memory_run_id
-    command = orchestrator._build_command(
         run_type="chat_memory_eval",
-        output_dir=chat_memory_output_dir,
-        options={
-            "model": "openai-proxy/test::model",
-            "rounds": 2,
-            "judge_enabled": False,
-        },
-    )
-
-    assert command == [
+        output_dir=output_dir,
+        options={"model": "test::model", "judge_enabled": False},
+    ) == [
         sys.executable,
         "workflows/evals/chat_memory_eval/run.py",
         "--config",
         "workflows/evals/chat_memory_eval/config.toml",
         "--output-dir",
-        str(chat_memory_output_dir),
+        str(output_dir),
         "--run-id",
-        chat_memory_run_id,
+        output_dir.name,
         "--model",
-        "openai-proxy/test::model",
-        "--rounds",
-        "2",
+        "test::model",
         "--no-judge-enabled",
     ]
 
-    v3_command = orchestrator._build_command(
-        run_type="agent_runtime_v3_acceptance",
-        output_dir=tmp_path / "v3-output",
-        options={
-            "conversation_model_key": "dgx_vllm::chat",
-            "reviewer_model_key": "dgx_vllm::reviewer",
-            "embedding_model_key": "dgx_embedding_sidecar::embedding",
-            "rounds": 3,
-            "timeout_seconds": 180,
-            "retry_count": 0,
-            "include_llama_compatibility": False,
-        },
-    )
-    assert v3_command == [
+    assert orchestrator._build_command(
+        run_type="agent_runtime_acceptance",
+        output_dir=tmp_path / "qualification-output",
+        options={"case_keys": ["weather_tool_failure", "chat_memory_baseline"]},
+    ) == [
         sys.executable,
-        "workflows/evals/agent_runtime_v3_acceptance/run.py",
+        "workflows/evals/agent_runtime_acceptance/run.py",
         "--config",
-        "workflows/evals/agent_runtime_v3_acceptance/config.toml",
+        "workflows/evals/agent_runtime_acceptance/config.toml",
         "--output-dir",
-        str(tmp_path / "v3-output"),
-        "--conversation-model-key",
-        "dgx_vllm::chat",
-        "--reviewer-model-key",
-        "dgx_vllm::reviewer",
-        "--embedding-model-key",
-        "dgx_embedding_sidecar::embedding",
-        "--rounds",
-        "3",
-        "--timeout-seconds",
-        "180",
-        "--retry-count",
-        "0",
-        "--no-include-llama-compatibility",
-    ]
-
-    diagnostic_command = orchestrator._build_command(
-        run_type="agent_runtime_v3_acceptance",
-        output_dir=tmp_path / "diagnostic-output",
-        options={
-            "case_keys": ["weather_tool_failure", "chat_memory_baseline"],
-            "rounds": 3,
-            "timeout_seconds": 75,
-            "retry_count": 2,
-            "include_llama_compatibility": True,
-        },
-    )
-    assert diagnostic_command == [
-        sys.executable,
-        "workflows/evals/agent_runtime_v3_acceptance/run.py",
-        "--config",
-        "workflows/evals/agent_runtime_v3_acceptance/config.toml",
-        "--output-dir",
-        str(tmp_path / "diagnostic-output"),
+        str(tmp_path / "qualification-output"),
         "--case-key",
         "chat_memory_baseline",
         "--case-key",
         "weather_tool_failure",
-        "--timeout-seconds",
-        "75",
-        "--retry-count",
-        "2",
         "--rounds",
         "1",
         "--no-include-llama-compatibility",
     ]
 
-    parity_output_dir = tmp_path / "3f525262-8dd1-4a75-91fd-a055ec4f5b9d"
-    parity_command = orchestrator._build_command(
-        run_type="agent_runtime_parity_eval",
-        output_dir=parity_output_dir,
-        options={
-            "prompt_key": "chat_v20260516",
-            "persona_key": "chat_linxiaotang",
-            "legacy_model": "openai-proxy/dgx_vllm::qwen",
-            "legacy_embedding": "letta/letta-free",
-            "native_conversation_model": "dgx_vllm::qwen",
-            "native_reviewer_model": "dgx_vllm::qwen",
-            "native_embedding_model": "dgx_embedding_sidecar::embedding",
-            "rounds": 3,
-            "timeout_seconds": 180,
-            "retry_count": 0,
-        },
-    )
-    assert parity_command == [
-        sys.executable,
-        "workflows/evals/agent_runtime_parity/run.py",
-        "--config",
-        "workflows/evals/agent_runtime_parity/config.toml",
-        "--output-dir",
-        str(parity_output_dir),
-        "--run-id",
-        "parity-3f525262-8dd1-4a75-91fd-a055ec4f5b9d",
-        "--prompt-key",
-        "chat_v20260516",
-        "--persona-key",
-        "chat_linxiaotang",
-        "--legacy-model",
-        "openai-proxy/dgx_vllm::qwen",
-        "--legacy-embedding",
-        "letta/letta-free",
-        "--native-conversation-model",
-        "dgx_vllm::qwen",
-        "--native-reviewer-model",
-        "dgx_vllm::qwen",
-        "--native-embedding-model",
-        "dgx_embedding_sidecar::embedding",
-        "--rounds",
-        "3",
-        "--timeout-seconds",
-        "180",
-        "--retry-count",
-        "0",
-    ]
     with pytest.raises(
         ValueError, match="only accepted when run_type='chat_memory_eval'"
     ):
         orchestrator._build_command(
             run_type="ade_api_e2e_check",
-            output_dir=tmp_path / "run-output",
-            options={"model": "openai-proxy/test::model"},
+            output_dir=tmp_path / "smoke-output",
+            options={"model": "test::model"},
         )
 
 
-def test_test_run_orchestrator_discovers_run_output_artifacts(tmp_path) -> None:
-    from ade_api.features.test_center.orchestrator import TestRunOrchestrator
-
-    orchestrator = TestRunOrchestrator(project_root=tmp_path)
-    output_dir = tmp_path / "data" / "runtime" / "test-runs" / "run-3"
-    output_dir.mkdir(parents=True)
-    log_file = output_dir / "orchestrator.log"
-    csv_file = output_dir / "chat_memory_eval_20260516.csv"
-    log_file.write_text("log", encoding="utf-8")
-    csv_file.write_text("csv", encoding="utf-8")
-
-    artifacts = orchestrator._resolve_artifacts(
-        {
-            "run_type": "chat_memory_eval",
-            "log_file": str(log_file),
-            "output_dir": str(output_dir),
-        }
-    )
-
-    assert [item["artifact_id"] for item in artifacts] == [
-        "orchestrator_log",
-        "chat_memory_eval_20260516.csv",
-    ]
-
-
-def test_artifact_discovery_ignores_internal_and_transient_files(
-    tmp_path, monkeypatch
-) -> None:
+def test_artifact_discovery_stays_rooted_and_ignores_internal_files(tmp_path) -> None:
     from ade_api.features.test_center.run_descriptors import (
         ArtifactDiscoveryContext,
         discover_run_directory_artifacts,
     )
 
     state_root = tmp_path / "runtime" / "test-runs"
-    output_dir = state_root / "run-racing"
+    output_dir = state_root / "run-1"
     output_dir.mkdir(parents=True)
-    internal_temp = output_dir / ".run.json.tmp"
-    transient = output_dir / "transient.json"
-    internal_temp.write_text("temporary", encoding="utf-8")
-    transient.write_text("temporary", encoding="utf-8")
+    (output_dir / ".run.json.tmp").write_text("temporary", encoding="utf-8")
+    (output_dir / "run.json").write_text("manifest", encoding="utf-8")
+    (output_dir / "result.json").write_text("{}", encoding="utf-8")
 
-    original_stat = Path.stat
-    transient_stat_calls = 0
-
-    def stat_with_disappearing_artifact(path: Path, *args, **kwargs):
-        nonlocal transient_stat_calls
-        if path == transient:
-            transient_stat_calls += 1
-            if transient_stat_calls > 1:
-                raise FileNotFoundError(transient)
-        return original_stat(path, *args, **kwargs)
-
-    monkeypatch.setattr(Path, "stat", stat_with_disappearing_artifact)
-
-    artifacts = discover_run_directory_artifacts(
+    assert discover_run_directory_artifacts(
         ArtifactDiscoveryContext(
             output_dir=output_dir,
             log_file=None,
             state_root=state_root,
         )
+    ) == [
+        {
+            "artifact_id": "result.json",
+            "type": "json",
+            "path": str((output_dir / "result.json").resolve()),
+            "exists": True,
+            "size_bytes": 2,
+        }
+    ]
+
+    assert (
+        discover_run_directory_artifacts(
+            ArtifactDiscoveryContext(
+                output_dir=tmp_path / "outside",
+                log_file=None,
+                state_root=state_root,
+            )
+        )
+        == []
     )
 
-    assert artifacts == []
 
-
-def test_test_run_orchestrator_recovers_completed_runs_from_manifests(tmp_path) -> None:
-    from ade_api.features.test_center.orchestrator import TestRunOrchestrator
-
-    state_root = tmp_path / "runtime" / "test-runs"
-    output_dir = state_root / "run-complete"
-    output_dir.mkdir(parents=True)
-    (output_dir / "orchestrator.log").write_text("complete\n", encoding="utf-8")
-    (output_dir / "run.json").write_text(
-        json.dumps(
-            {
-                "run_id": "run-complete",
-                "run_type": "ade_api_e2e_check",
-                "status": "passed",
-                "command": ["python", "workflows/smoke/ade_api_e2e_check.py"],
-                "created_at": "2026-05-16T16:00:00+00:00",
-                "started_at": "2026-05-16T16:00:01+00:00",
-                "finished_at": "2026-05-16T16:00:02+00:00",
-                "exit_code": 0,
-                "cancel_requested": False,
-                "output_tail": ["complete"],
-                "error": "",
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    orchestrator = TestRunOrchestrator(project_root=tmp_path, state_root=state_root)
-
-    recovered = orchestrator.get_run("run-complete")
-    assert recovered is not None
-    assert recovered["status"] == "passed"
-    assert recovered["output_tail"] == ["complete"]
-    assert recovered["artifacts"][0]["artifact_id"] == "orchestrator_log"
-
-
-def test_test_run_orchestrator_keeps_retired_persisted_run_artifacts_readable(
+def test_retired_persisted_runs_are_not_part_of_the_current_product_surface(
     tmp_path,
 ) -> None:
     from ade_api.features.test_center.orchestrator import TestRunOrchestrator
@@ -521,7 +368,7 @@ def test_test_run_orchestrator_keeps_retired_persisted_run_artifacts_readable(
         json.dumps(
             {
                 "run_id": "retired-run",
-                "run_type": "retired_check",
+                "run_type": "agent_runtime_parity_eval",
                 "status": "passed",
                 "command": ["python", "retired_check.py"],
                 "created_at": "2026-05-16T16:00:00+00:00",
@@ -538,81 +385,11 @@ def test_test_run_orchestrator_keeps_retired_persisted_run_artifacts_readable(
 
     orchestrator = TestRunOrchestrator(project_root=tmp_path, state_root=state_root)
 
-    recovered = orchestrator.get_run("retired-run")
-    assert recovered is not None
-    assert recovered["run_type"] == "retired_check"
-    assert [item["artifact_id"] for item in recovered["artifacts"]] == [
-        "orchestrator_log",
-        "legacy-result.txt",
-    ]
+    assert orchestrator.get_run("retired-run") is None
+    assert orchestrator.list_runs() == []
 
 
-def test_test_run_orchestrator_marks_inflight_runs_interrupted_after_restart(
-    tmp_path,
-) -> None:
-    from ade_api.features.test_center.orchestrator import TestRunOrchestrator
-
-    state_root = tmp_path / "runtime" / "test-runs"
-    output_dir = state_root / "run-running"
-    output_dir.mkdir(parents=True)
-    manifest_path = output_dir / "run.json"
-    manifest_path.write_text(
-        json.dumps(
-            {
-                "run_id": "run-running",
-                "run_type": "chat_memory_eval",
-                "status": "running",
-                "command": ["python", "workflows/evals/chat_memory_eval/run.py"],
-                "created_at": "2026-05-16T16:00:00+00:00",
-                "started_at": "2026-05-16T16:00:01+00:00",
-                "finished_at": "",
-                "exit_code": None,
-                "cancel_requested": False,
-                "output_tail": [],
-                "error": "",
-            }
-        ),
-        encoding="utf-8",
-    )
-
-    orchestrator = TestRunOrchestrator(project_root=tmp_path, state_root=state_root)
-
-    recovered = orchestrator.get_run("run-running")
-    assert recovered is not None
-    assert recovered["status"] == "interrupted"
-    assert "restarted" in recovered["error"]
-    assert (
-        json.loads(manifest_path.read_text(encoding="utf-8"))["status"] == "interrupted"
-    )
-
-
-def test_process_executor_cancels_queued_runs_without_starting_a_subprocess(
-    tmp_path,
-) -> None:
-    from ade_api.features.test_center.process_executor import TestRunProcessExecutor
-    from ade_api.features.test_center.run_store import TestRunStore
-
-    state_root = tmp_path / "runtime" / "test-runs"
-    run_store = TestRunStore(state_root)
-    run_id, output_dir = run_store.allocate_output_directory()
-    run_store.create_run(
-        run_id=run_id,
-        run_type="ade_api_e2e_check",
-        output_dir=output_dir,
-        command=[sys.executable, "workflows/smoke/ade_api_e2e_check.py"],
-    )
-    executor = TestRunProcessExecutor(tmp_path, run_store)
-
-    assert executor.cancel(run_id) is True
-    executor._run_worker(run_id)
-
-    recovered = run_store.get_snapshot(run_id)
-    assert recovered is not None
-    assert recovered["status"] == "cancelled"
-    assert recovered["cancel_requested"] is True
-
-
-def test_process_executor_streams_output_and_persists_completion(
+def test_process_executor_streams_output_without_persisting_process_handles(
     tmp_path, monkeypatch
 ) -> None:
     from ade_api.features.test_center import process_executor
@@ -644,29 +421,9 @@ def test_process_executor_streams_output_and_persists_completion(
     TestRunProcessExecutor(tmp_path, run_store)._run_worker(run_id)
 
     completed = run_store.get_snapshot(run_id)
+    manifest = json.loads((output_dir / "run.json").read_text(encoding="utf-8"))
     assert completed is not None
     assert completed["status"] == "passed"
-    assert completed["exit_code"] == 0
     assert completed["output_tail"] == ["first output", "second output"]
-    assert "second output" in (output_dir / "orchestrator.log").read_text(
-        encoding="utf-8"
-    )
-    manifest = json.loads((output_dir / "run.json").read_text(encoding="utf-8"))
     assert manifest["status"] == "passed"
-
-
-def test_run_store_does_not_persist_runtime_process_handles(tmp_path) -> None:
-    from ade_api.features.test_center.run_store import TestRunStore
-
-    state_root = tmp_path / "runtime" / "test-runs"
-    run_store = TestRunStore(state_root)
-    run_id, output_dir = run_store.allocate_output_directory()
-    run_store.create_run(
-        run_id=run_id,
-        run_type="ade_api_e2e_check",
-        output_dir=output_dir,
-        command=[sys.executable, "workflows/smoke/ade_api_e2e_check.py"],
-    )
-
-    manifest = json.loads((output_dir / "run.json").read_text(encoding="utf-8"))
     assert "_process" not in manifest

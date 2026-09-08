@@ -10,9 +10,8 @@ title: ADE API（中文）
 
 - 本地开发默认地址：
   - ADE Web：`http://127.0.0.1:3000`
-  - ADE API v2：`http://127.0.0.1:8000`
-  - ADE 原生 Agent Studio v3：`http://127.0.0.1:8002`
-  - Model Router 与 Letta：Compose 网络内部服务，不暴露宿主机端口。
+  - ADE API：`http://127.0.0.1:8000`
+  - Model Router：Compose 网络内部服务，不暴露宿主机端口。
 - 浏览器请求通过 ADE 同源代理访问后端；直接 API 客户端使用 Reader、Operator
   或 Admin Bearer Key。
 - 默认服务仅绑定回环地址，面向本地开发。公开部署仍需 TLS、托管密钥、限流、
@@ -20,13 +19,13 @@ title: ADE API（中文）
 
 ## 文档覆盖范围
 
-- ADE 原生 Agent Studio 的 Definition、显式 Memory Subject、Conversation、
-  Turn、类型化 Memory、Summary、Run 与 Event 接口。
+- ADE API 通过 `/api/v3` 提供的原生 Agent Studio Definition、显式 Memory Subject、
+  Conversation、Turn、类型化 Memory、Summary、Run 与 Event 接口。
 - Agent Studio Conversation、Definition 与 Subject 的归档/恢复，以及仅限
   Admin 的全新起点重置接口。
 - 面向检查与 Runner 的测试编排接口。
 - Comment Lab 与基于 Schema 的 Label Lab 无状态生成接口。
-- Prompt、Persona、Schema 与自定义 Tool 生命周期接口。
+- Prompt、Persona 与 Schema 生命周期接口。
 
 ## Agent Studio 生命周期
 
@@ -57,8 +56,8 @@ Agent Studio 将可复用行为、用户记忆归属与会话历史明确分离�
 
 - 默认列表不返回已归档资源；恢复前不能继续执行。
 - Turn 异步执行并提供规范化 Run Event，不暴露模型私有推理或原始 Provider Body。
-- 原生存储从全新状态开始，不提供 Letta 导入、双写、运行时切换或按请求回退。
-- 保留的 v2 Letta 接口仅作为 Phase 5 的发布级回滚通道；切换后不再是浏览器主契约。
+- Agent Studio 状态由 ADE 的 PostgreSQL 数据库持久化管理；运行时没有第二个智能体
+  后端、双写、运行时切换或按请求回退。
 
 ## 错误返回格式
 
@@ -84,7 +83,6 @@ FastAPI 返回的错误 JSON 结构如下：
 - 请求流程：`docs/architecture/request-flows.md`
 - 上游参考资料：`docs/references.md`
 - OpenAPI 英文产物：`docs/openapi/ade-api-openapi.json`
-- 原生 OpenAPI 英文产物：`docs/openapi/ade-native-api-openapi.json`
 - OpenAPI 中文产物：`docs/openapi/ade-api-openapi-zh.json`
 - 前端静态 OpenAPI 英文产物：`apps/ade-web/public/openapi/ade-api-openapi.json`
 - 前端静态 OpenAPI 中文产物：`apps/ade-web/public/openapi/ade-api-openapi-zh.json`

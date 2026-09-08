@@ -31,7 +31,7 @@ def test_importing_app_does_not_create_runtime_state(tmp_path) -> None:
     assert not runtime_dir.exists()
 
 
-def test_building_application_services_initializes_runtime_state_without_sdk_retries(
+def test_building_application_services_initializes_first_party_runtime_state(
     tmp_path,
 ) -> None:
     settings = AdeApiSettings(
@@ -43,4 +43,4 @@ def test_building_application_services_initializes_runtime_state_without_sdk_ret
     services = build_application_services(settings=settings, project_root=tmp_path)
 
     assert (tmp_path / "runtime" / "personas" / "personas.sqlite3").is_file()
-    assert services.client.max_retries == 0
+    assert services.model_router_client is not None

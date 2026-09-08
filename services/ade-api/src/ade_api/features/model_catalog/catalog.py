@@ -2,22 +2,24 @@ from __future__ import annotations
 
 from typing import Any
 
-from letta_client import Letta
-
 from ade_api.integrations.model_router.client import ModelRouterClient
 
-from . import letta_catalog
 
-
-def enriched_catalog_items(
+def router_catalog_items(
     *,
     model_router_client: ModelRouterClient,
-    letta_client: Letta,
     force_refresh: bool = False,
 ) -> list[dict[str, Any]]:
     payload = model_router_client.catalog(force_refresh=force_refresh)
-    letta_model_handles, _ = letta_catalog.resolve_letta_catalog_handles(letta_client)
-    router_base_url = model_router_client.v1_base_url()
+    return _catalog_items_from_payload(
+        payload,
+        router_base_url=model_router_client.v1_base_url(),
+    )
+
+
+def _catalog_items_from_payload(
+    payload: dict[str, Any], *, router_base_url: str
+) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
     for raw_item in payload.get("items", []):
         if not isinstance(raw_item, dict):
@@ -25,20 +27,10 @@ def enriched_catalog_items(
         model_key = str(
             raw_item.get("model_key") or raw_item.get("router_model_id") or ""
         ).strip()
-        upstream_provider_model_id = str(
-            raw_item.get("provider_model_id", "") or ""
-        ).strip()
+        provider_model_id = str(raw_item.get("provider_model_id", "") or "").strip()
         if not model_key:
             continue
         is_embedding = str(raw_item.get("model_type", "") or "").strip() == "embedding"
-        letta_handle = str(raw_item.get("letta_handle", "") or "").strip() or None
-        router_agent_available = bool(raw_item.get("agent_studio_available", False))
-        letta_catalog_visible = bool(
-            letta_handle and letta_handle in letta_model_handles
-        )
-        agent_studio_available = (
-            (not is_embedding) and router_agent_available and bool(letta_handle)
-        )
         module_visibility = [
             str(item or "").strip()
             for item in raw_item.get("module_visibility", [])
@@ -59,13 +51,10 @@ def enriched_catalog_items(
                 "source_base_url": str(raw_item.get("source_base_url", "") or ""),
                 "enabled_for": module_visibility,
                 "module_visibility": module_visibility,
-                "provider_model_id": model_key,
-                "upstream_provider_model_id": upstream_provider_model_id,
+                "provider_model_id": provider_model_id,
                 "model_type": str(raw_item.get("model_type", "") or "unknown"),
-                "letta_handle": letta_handle,
-                "letta_catalog_visible": letta_catalog_visible,
-                "agent_studio_available": agent_studio_available,
-                "router_agent_studio_available": router_agent_available,
+                "agent_studio_available": (not is_embedding)
+                and bool(raw_item.get("agent_studio_available", False)),
                 "comment_lab_available": (not is_embedding)
                 and bool(raw_item.get("comment_lab_available", False)),
                 "label_lab_available": (not is_embedding)
@@ -112,7 +101,6 @@ def enriched_catalog_items(
 def model_catalog(
     *,
     model_router_client: ModelRouterClient,
-    letta_client: Letta,
     force_refresh: bool = False,
 ) -> dict[str, Any]:
     payload = model_router_client.catalog(force_refresh=force_refresh)
@@ -125,15 +113,13 @@ def model_catalog(
         normalized_source["enabled_for"] = (
             list(module_visibility) if isinstance(module_visibility, list) else []
         )
-        normalized_source.setdefault("letta_handle_prefix", "openai-proxy")
         sources.append(normalized_source)
     return {
         "generated_at": payload.get("generated_at"),
         "sources": sources,
-        "items": enriched_catalog_items(
-            model_router_client=model_router_client,
-            letta_client=letta_client,
-            force_refresh=force_refresh,
+        "items": _catalog_items_from_payload(
+            payload,
+            router_base_url=model_router_client.v1_base_url(),
         ),
         "router": {
             "enabled": True,

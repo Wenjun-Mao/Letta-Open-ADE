@@ -11,9 +11,8 @@ workflows.
 
 - Local development defaults:
 	- ADE Web: `http://127.0.0.1:3000`
-	- ADE API v2: `http://127.0.0.1:8000`
-	- ADE-native Agent Studio v3: `http://127.0.0.1:8002`
-	- Model Router and Letta: Compose-network services, not host endpoints.
+	- ADE API: `http://127.0.0.1:8000`
+	- Model Router: a Compose-network service, not a host endpoint.
 - Browser requests use ADE's same-origin proxy. Direct API clients authenticate
   with the configured reader, operator, or admin Bearer key.
 - The stack is loopback-bound and intended for local development. Public ingress
@@ -22,13 +21,13 @@ workflows.
 
 ## What this includes
 
-- ADE-native Agent Studio definitions, explicit subjects, conversations, turns,
-  typed memories, summaries, runs, and events.
+- Native Agent Studio definitions, explicit subjects, conversations, turns, typed
+  memories, summaries, runs, and events, served by the ADE API under `/api/v3`.
 - Archive and restore lifecycle for Agent Studio conversations, definitions, and
   subjects, plus an admin-only fresh-start reset.
 - Test orchestration endpoints for checks and runners.
 - Stateless Comment Lab and schema-driven Label Lab generation endpoints.
-- Prompt, persona, schema, and custom-tool lifecycle endpoints.
+- Prompt, persona, and schema lifecycle endpoints.
 
 ## Current Product Direction
 
@@ -69,10 +68,8 @@ Behavior notes:
   explicitly restored.
 - Turns are asynchronous and expose normalized run events without private model
   reasoning or raw provider bodies.
-- The native store starts fresh; no Letta importer, dual write, runtime toggle, or
-  per-request fallback exists.
-- The retained v2 Letta endpoints are a Phase 5 release-level rollback lane, not the
-  active browser contract after cutover.
+- Agent Studio state is ADE-owned PostgreSQL data. The runtime has no second agent
+  backend, dual write, runtime toggle, or per-request fallback.
 
 ## Error handling shape
 
@@ -100,7 +97,6 @@ Common status patterns:
 - Historical maintenance record: `docs/maintenance-roadmap.md`
 - Upstream references: `docs/references.md`
 - OpenAPI artifact: `docs/openapi/ade-api-openapi.json`
-- Native OpenAPI artifact: `docs/openapi/ade-native-api-openapi.json`
 - Frontend artifact: `apps/ade-web/public/openapi/ade-api-openapi.json`
 - Chinese OpenAPI artifact: `docs/openapi/ade-api-openapi-zh.json`
 - Chinese docs pages: `docs/zh/`

@@ -48,7 +48,7 @@ def test_generate_labels_strict_json_schema_succeeds(monkeypatch) -> None:
     result = service.generate_labels(
         base_url="https://ark.example/v3",
         api_key="ark-token",
-        model="openai-proxy/doubao-seed-1-8-251228",
+        model="ark::doubao-seed-1-8-251228",
         system_prompt="Return grouped entities.",
         article_input="Messi scored for Inter Miami.",
         output_mode="strict_json_schema",
@@ -214,7 +214,7 @@ def test_generate_labels_best_effort_strips_think_tags(monkeypatch) -> None:
     result = service.generate_labels(
         base_url="http://127.0.0.1:2234/v1",
         api_key="local-token",
-        model="lmstudio_openai/gemma-4-31b-it",
+        model="local_llama_server::qwen3527b",
         system_prompt="Return grouped entities.",
         article_input="Messi scored for Inter Miami.",
         output_mode="best_effort_prompt_json",
@@ -328,7 +328,7 @@ def test_generate_labels_uses_repair_attempt_after_validation_failure(
     service.generate_labels(
         base_url="http://127.0.0.1:2234/v1",
         api_key="local-token",
-        model="lmstudio_openai/gemma-4-31b-it",
+        model="local_llama_server::qwen3527b",
         system_prompt="Return grouped entities.",
         article_input="Messi scored for Inter Miami.",
         output_mode="best_effort_prompt_json",
@@ -422,7 +422,7 @@ def test_generate_labels_raises_validation_error_after_repair_failure(
         service.generate_labels(
             base_url="http://127.0.0.1:2234/v1",
             api_key="local-token",
-            model="lmstudio_openai/gemma-4-31b-it",
+            model="local_llama_server::qwen3527b",
             system_prompt="Return grouped entities.",
             article_input="Messi scored for Inter Miami.",
             output_mode="best_effort_prompt_json",

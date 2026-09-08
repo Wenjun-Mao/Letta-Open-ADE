@@ -19,6 +19,7 @@ class ApiCommentingRuntimeDefaultsResponse(BaseModel):
 
 class CommentingGenerateRequest(BaseModel):
     model_config = ConfigDict(
+        extra="forbid",
         json_schema_extra={
             "examples": [
                 {
@@ -26,7 +27,7 @@ class CommentingGenerateRequest(BaseModel):
                     "input": "Summarize the reader reaction and write one concise editor-style reply.",
                     "prompt_key": "comment_v20260418",
                     "persona_key": "comment_linxiaotang",
-                    "model_key": "local_llama_server::gemma4",
+                    "model_key": "local_llama_server::qwen3527b",
                     "max_tokens": 512,
                     "timeout_seconds": 120,
                     "retry_count": 1,
@@ -38,7 +39,7 @@ class CommentingGenerateRequest(BaseModel):
                     "top_k": 64,
                 }
             ]
-        }
+        },
     )
 
     scenario: ScenarioType = Field(
@@ -57,13 +58,8 @@ class CommentingGenerateRequest(BaseModel):
     )
     model_key: str | None = Field(
         default=None,
-        description="Router-scoped model key from `/api/v2/model-catalog/options?scenario=comment`, for example `local_llama_server::gemma4`.",
-        examples=["local_llama_server::gemma4"],
-    )
-    model: str | None = Field(
-        default=None,
-        description="Legacy selector kept for backward compatibility. Prefer `model_key`.",
-        deprecated=True,
+        description="Router-scoped model key from `/api/v2/model-catalog/options?scenario=comment`, for example `local_llama_server::qwen3527b`.",
+        examples=["local_llama_server::qwen3527b"],
     )
     max_tokens: int | None = Field(
         default=None,

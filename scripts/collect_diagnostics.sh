@@ -153,7 +153,7 @@ run_cmd "compose_ps" "cd '${PROJECT_ROOT}' && ${COMPOSE_CMD} --env-file '${ENV_F
 
 if [[ -f "${PROJECT_ROOT}/${ENV_FILE}" ]]; then
   log "Writing allowlisted environment summary from ${ENV_FILE}"
-  grep -E '^(COMPOSE_PROJECT_NAME|LETTA_SERVER_IMAGE|LETTA_PG_|LETTA_REDIS_|LETTA_API_PORT|LETTA_DEBUG|ADE_WEB_BIND_HOST|ADE_WEB_PORT|ADE_API_BIND_HOST|ADE_API_PORT|MODEL_ROUTER_CACHE_TTL_SECONDS|MODEL_ROUTER_DISCOVERY_TIMEOUT_SECONDS|MODEL_ROUTER_REQUEST_TIMEOUT_SECONDS|MODEL_ROUTER_SOURCES_FILE|MODEL_ROUTER_MODEL_PROFILES_FILE|ADE_API_AUTH_ENABLED|ADE_API_MODEL_ROUTER_BASE_URL|ADE_API_RUNTIME_DATA_DIR|ADE_API_PERSONA_DB_PATH|ADE_API_PERSONA_SEED_JSONL_PATH|ADE_API_COMMENT_LAB_|ADE_API_LABEL_LAB_|ADE_API_AGENT_STUDIO_)=' \
+  grep -E '^(COMPOSE_PROJECT_NAME|ADE_PG_|ADE_WEB_BIND_HOST|ADE_WEB_PORT|ADE_API_BIND_HOST|ADE_API_PORT|MODEL_ROUTER_CACHE_TTL_SECONDS|MODEL_ROUTER_DISCOVERY_TIMEOUT_SECONDS|MODEL_ROUTER_REQUEST_TIMEOUT_SECONDS|MODEL_ROUTER_SOURCES_FILE|MODEL_ROUTER_MODEL_PROFILES_FILE|ADE_API_AUTH_ENABLED|ADE_API_MODEL_ROUTER_BASE_URL|ADE_API_RUNTIME_DATA_DIR|ADE_API_PERSONA_DB_PATH|ADE_API_PERSONA_SEED_JSONL_PATH|ADE_API_COMMENT_LAB_|ADE_API_LABEL_LAB_|ADE_API_AGENT_RUNTIME_)=' \
     "${PROJECT_ROOT}/${ENV_FILE}" | redact_stream >"${OUT_DIR}/env_safe_summary.txt" || true
 else
   log "WARN: env file not found at ${PROJECT_ROOT}/${ENV_FILE}"
@@ -167,7 +167,7 @@ while IFS= read -r service; do
   [[ -n "${service}" ]] && SERVICES+=("${service}")
 done < <(cd "${PROJECT_ROOT}" && ${COMPOSE_CMD} --env-file "${ENV_FILE}" config --services 2>/dev/null || true)
 if [[ ${#SERVICES[@]} -eq 0 ]]; then
-  SERVICES=(postgres redis model-router letta ade-api ade-web)
+  SERVICES=(postgres model-router ade-runtime-migrate ade-runtime-worker ade-api ade-web)
 fi
 
 log "Services discovered: ${SERVICES[*]}"
@@ -185,17 +185,9 @@ for svc in "${SERVICES[@]}"; do
   fi
 done
 
-LETTA_CID="$(get_service_cid letta)"
-if [[ -n "${LETTA_CID}" ]]; then
-  run_cmd "probe_letta_from_container" "docker exec '${LETTA_CID}' python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8283/v1/health/', timeout=5).read(); print('letta_health_ok')\""
-  run_cmd "letta_env_selected" "docker exec '${LETTA_CID}' /bin/sh -lc \"env | grep -E '^(OPENAI_API_BASE|OPENAI_BASE_URL|LETTA_DEFAULT_EMBEDDING_HANDLE|LETTA_MODEL_HANDLE|LETTA_REDIS_HOST|LETTA_REDIS_PORT|LETTA_DB_HOST|LETTA_PG_PORT|LETTA_API_PORT)='\""
-  run_cmd "letta_processes" "docker exec '${LETTA_CID}' /bin/sh -lc 'ps -ef'"
-  run_cmd "letta_listen_ports" "docker exec '${LETTA_CID}' /bin/sh -lc 'ss -ltnp 2>/dev/null || netstat -ltnp 2>/dev/null || true'"
-fi
-
 ADE_API_CID="$(get_service_cid ade-api)"
 if [[ -n "${ADE_API_CID}" ]]; then
-  run_cmd "ade_api_env_selected" "docker exec '${ADE_API_CID}' /bin/sh -lc \"env | grep -E '^(ADE_API_MODEL_ROUTER_BASE_URL|ADE_API_COMMENT_LAB_|ADE_API_LABEL_LAB_|ADE_API_AGENT_STUDIO_|LETTA_BASE_URL)=' || true\""
+  run_cmd "ade_api_env_selected" "docker exec '${ADE_API_CID}' /bin/sh -lc \"env | grep -E '^(ADE_API_MODEL_ROUTER_BASE_URL|ADE_API_COMMENT_LAB_|ADE_API_LABEL_LAB_|ADE_API_AGENT_RUNTIME_)=' || true\""
 fi
 
 MODEL_ROUTER_CID="$(get_service_cid model-router)"

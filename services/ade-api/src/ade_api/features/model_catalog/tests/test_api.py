@@ -3,10 +3,15 @@ from __future__ import annotations
 import asyncio
 from types import SimpleNamespace
 
+import pytest
+
 from ade_api.platform.app import app
 from ade_api.features.model_catalog import api
-from ade_api.features.model_catalog import letta_catalog
 from ade_api.features.model_catalog import agent_studio as agent_studio_options
+from ade_api.features.model_catalog.selection import (
+    resolve_comment_model_selection,
+    resolve_label_model_selection,
+)
 
 
 class _FakeRouterClient:
@@ -92,7 +97,6 @@ class _FakeRouterClient:
                     "module_visibility": ["agent_studio", "comment_lab", "label_lab"],
                     "provider_model_id": "gemma4",
                     "model_type": "llm",
-                    "letta_handle": "openai-proxy/local_llama_server::gemma4",
                     "agent_studio_available": True,
                     "comment_lab_available": True,
                     "label_lab_available": True,
@@ -118,7 +122,6 @@ class _FakeRouterClient:
                     "module_visibility": ["agent_studio", "comment_lab"],
                     "provider_model_id": "doubao-seed-1-8-251228",
                     "model_type": "llm",
-                    "letta_handle": "openai-proxy/ark::doubao-seed-1-8-251228",
                     "agent_studio_available": True,
                     "comment_lab_available": True,
                     "label_lab_available": False,
@@ -144,7 +147,6 @@ class _FakeRouterClient:
                     "module_visibility": ["comment_lab", "label_lab"],
                     "provider_model_id": "gemma4-31b-nvfp4",
                     "model_type": "llm",
-                    "letta_handle": None,
                     "agent_studio_available": False,
                     "comment_lab_available": True,
                     "label_lab_available": True,
@@ -177,7 +179,6 @@ class _FakeRouterClient:
                     "module_visibility": ["agent_studio", "comment_lab", "label_lab"],
                     "provider_model_id": "qwen3.6-35b-a3b-fp8",
                     "model_type": "llm",
-                    "letta_handle": "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
                     "agent_studio_available": True,
                     "comment_lab_available": True,
                     "label_lab_available": True,
@@ -227,28 +228,30 @@ class _FakeRouterClient:
                     "agent_studio_candidate": True,
                     "agent_studio_compatible": True,
                 },
+                {
+                    "router_model_id": "local_embeddings::qwen3-embedding-0.6b",
+                    "model_key": "local_embeddings::qwen3-embedding-0.6b",
+                    "source_id": "local_embeddings",
+                    "source_label": "Local embeddings",
+                    "source_kind": "openai-compatible",
+                    "source_adapter": "generic_openai",
+                    "source_base_url": "http://127.0.0.1:8082/v1",
+                    "module_visibility": ["agent_studio"],
+                    "provider_model_id": "qwen3-embedding-0.6b",
+                    "model_type": "embedding",
+                    "agent_studio_available": False,
+                    "comment_lab_available": False,
+                    "label_lab_available": False,
+                },
             ],
         }
 
 
 def test_options_api_uses_router_catalog_for_all_scenarios(monkeypatch) -> None:
     monkeypatch.setattr(api, "ensure_ade_api_enabled", lambda: None)
-    monkeypatch.setattr(
-        letta_catalog,
-        "resolve_letta_catalog_handles",
-        lambda _client: (
-            {
-                "openai-proxy/local_llama_server::gemma4",
-                "openai-proxy/ark::doubao-seed-1-8-251228",
-                "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
-            },
-            {"letta/letta-free"},
-        ),
-    )
     services = get_application_services()
     dependencies = (
         _FakeRouterClient(),
-        object(),
         services.prompt_persona_registry,
         services.label_schema_registry,
         services.commenting_service,
@@ -272,9 +275,9 @@ def test_options_api_uses_router_catalog_for_all_scenarios(monkeypatch) -> None:
         "chat_v20260516",
     }
     assert [item["key"] for item in chat_payload["models"]] == [
-        "openai-proxy/local_llama_server::gemma4",
-        "openai-proxy/ark::doubao-seed-1-8-251228",
-        "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
+        "local_llama_server::gemma4",
+        "ark::doubao-seed-1-8-251228",
+        "dgx_vllm::qwen3.6-35b-a3b-fp8",
     ]
     assert [item["key"] for item in comment_payload["models"]] == [
         "local_llama_server::gemma4",
@@ -301,7 +304,7 @@ def test_options_api_uses_router_catalog_for_all_scenarios(monkeypatch) -> None:
     qwen_chat = next(
         item
         for item in chat_payload["models"]
-        if item["key"] == "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8"
+        if item["key"] == "dgx_vllm::qwen3.6-35b-a3b-fp8"
     )
     assert dgx_comment["scenario_sampling_defaults"]["comment_lab"] == {
         "temperature": 1.0,
@@ -325,6 +328,13 @@ def test_options_api_uses_router_catalog_for_all_scenarios(monkeypatch) -> None:
     assert qwen_chat["thinking_default_enabled"] is True
     assert qwen_chat["tool_call_thinking_default_enabled"] is False
     assert qwen_chat["agent_studio_compatible"] is True
+    assert [item["key"] for item in chat_payload["embeddings"]] == [
+        "local_embeddings::qwen3-embedding-0.6b"
+    ]
+    assert chat_payload["embeddings"][0]["provider_model_id"] == (
+        "qwen3-embedding-0.6b"
+    )
+    assert chat_payload["embeddings"][0]["is_default"] is False
     assert label_payload["defaults"]["schema_key"] == "label_entity_groups_v1"
     assert chat_payload["agent_studio"] == {
         "temperature": None,
@@ -340,24 +350,34 @@ def test_options_api_uses_router_catalog_for_all_scenarios(monkeypatch) -> None:
     assert label_payload["labeling"]["top_k"] is None
 
 
+def test_router_only_selection_resolves_canonical_model_keys() -> None:
+    router_client = _FakeRouterClient()
+
+    comment_selection = resolve_comment_model_selection(
+        model_key="local_llama_server::gemma4",
+        model_router_client=router_client,
+    )
+    label_selection = resolve_label_model_selection(
+        model_key="local_llama_server::gemma4",
+        model_router_client=router_client,
+    )
+
+    for selection in (comment_selection, label_selection):
+        assert selection["model_key"] == "local_llama_server::gemma4"
+        assert selection["provider_model_id"] == "gemma4"
+        assert selection["base_url"] == "http://model-router.local/v1"
+        assert selection["api_key"] == "router-token"
+
+    with pytest.raises(ValueError, match="model_key is required"):
+        resolve_comment_model_selection(model_router_client=router_client)
+
+
 def test_model_catalog_api_reports_router_source_health_and_items(monkeypatch) -> None:
     monkeypatch.setattr(api, "ensure_ade_api_enabled", lambda: None)
-    monkeypatch.setattr(
-        letta_catalog,
-        "resolve_letta_catalog_handles",
-        lambda _client: (
-            {
-                "openai-proxy/local_llama_server::gemma4",
-                "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
-            },
-            {"letta/letta-free"},
-        ),
-    )
 
     payload = asyncio.run(
         api.get_model_catalog(
             _FakeRouterClient(),
-            object(),
             refresh=True,
         )
     )
@@ -380,11 +400,12 @@ def test_model_catalog_api_reports_router_source_health_and_items(monkeypatch) -
     assert ark_source["allowlist_applied"] is True
     assert ark_source["raw_model_count"] == 3
     assert ark_source["filtered_model_count"] == 1
-    assert llama_model["provider_model_id"] == "local_llama_server::gemma4"
-    assert llama_model["upstream_provider_model_id"] == "gemma4"
+    assert llama_model["provider_model_id"] == "gemma4"
     assert llama_model["label_lab_available"] is True
     assert ark_model["agent_studio_available"] is True
-    assert ark_model["letta_catalog_visible"] is False
+    assert "letta_handle" not in ark_model
+    assert "letta_catalog_visible" not in ark_model
+    assert "letta_handle_prefix" not in ark_source
     assert dgx_model["profile_applied"] is True
     assert dgx_model["supports_top_k"] is True
     assert dgx_model["supports_thinking"] is True
@@ -392,7 +413,6 @@ def test_model_catalog_api_reports_router_source_health_and_items(monkeypatch) -
     assert dgx_model["agent_studio_candidate"] is True
     assert dgx_model["agent_studio_compatible"] is False
     assert qwen_model["agent_studio_available"] is True
-    assert qwen_model["letta_catalog_visible"] is True
     assert qwen_model["comment_lab_available"] is True
     assert qwen_model["label_lab_available"] is True
     assert qwen_model["thinking_default_enabled"] is True
@@ -409,7 +429,7 @@ def test_agent_studio_llm_config_is_owned_by_model_catalog(monkeypatch) -> None:
     )
 
     config = agent_studio_options.agent_studio_llm_config_for_model(
-        "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
+        "dgx_vllm::qwen3.6-35b-a3b-fp8",
         temperature=1,
         top_p=0.95,
         top_k=20,
@@ -420,7 +440,6 @@ def test_agent_studio_llm_config_is_owned_by_model_catalog(monkeypatch) -> None:
         "model": "dgx_vllm::qwen3.6-35b-a3b-fp8",
         "model_endpoint_type": "openai",
         "model_endpoint": "http://router/v1",
-        "handle": "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8",
         "max_tokens": 16384,
         "parallel_tool_calls": False,
         "temperature": 1.0,
@@ -434,9 +453,9 @@ def test_model_catalog_routes_remain_registered_during_wiring_migration() -> Non
 
     assert {
         "/api/v2/model-catalog/options",
-        "/api/v2/model-catalog/capabilities",
         "/api/v2/model-catalog/models",
     } <= paths
+    assert "/api/v2/model-catalog/capabilities" not in paths
 
 
 from ade_api.platform.dependencies import get_application_services

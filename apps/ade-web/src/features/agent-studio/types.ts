@@ -91,7 +91,7 @@ export type AgentStudioBundle = {
 };
 
 export type AgentStudioOptions = {
-  runtime: "ade_native_v3";
+  runtime: "ade_native";
   default_bundle_key: string;
   bundles: AgentStudioBundle[];
   default_timeout_seconds: number;

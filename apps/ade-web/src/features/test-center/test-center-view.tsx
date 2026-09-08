@@ -1,77 +1,77 @@
 import type {
-  AgentRuntimeParityDetail,
-  AgentRuntimeParityListItem,
-  ChatMemoryEvaluationConfig,
-  EvaluationComparison,
-  EvaluationDecisionOutcome,
-  EvaluationDetail,
-  EvaluationListItem,
   CreateTestRunPayload,
   TestArtifact,
+  TestCenterOptions,
   TestRunRecord,
 } from "./api";
-import { ChatMemoryEvaluationView } from "./chat-memory-evaluation-view";
-import type { ChatMemoryEvaluationForm } from "./chat-memory-evaluation-helpers";
+import { BehaviorEvaluationLauncher } from "./behavior-evaluation-launcher";
+import { CurrentStackSmokeLauncher } from "./current-stack-smoke-launcher";
+import { NativeRuntimeQualificationLauncher } from "./native-runtime-qualification-launcher";
 import { RunArtifactViewer } from "./run-artifact-viewer";
-import { AgentRuntimeParityResultView } from "./agent-runtime-parity-result-view";
-import {
-  BEHAVIOR_EVALUATION_RUN_TYPES,
-  OPERATIONAL_RUN_TYPES,
-  PARITY_EVALUATION_RUN_TYPES,
-  type TestCenterCopy,
-} from "./test-center-copy";
-import { TestRunLauncher } from "./test-run-launcher";
+import type { TestCenterCopy } from "./test-center-copy";
+
+export type TestCenterArea = "behavior" | "native" | "smoke";
+
+type AreaDefinition = {
+  id: TestCenterArea;
+  runType: CreateTestRunPayload["run_type"];
+  tabLabel: keyof TestCenterCopy;
+  title: keyof TestCenterCopy;
+  intro: keyof TestCenterCopy;
+};
+
+const AREAS: readonly AreaDefinition[] = [
+  {
+    id: "behavior",
+    runType: "chat_memory_eval",
+    tabLabel: "behaviorTab",
+    title: "behaviorTitle",
+    intro: "behaviorIntro",
+  },
+  {
+    id: "native",
+    runType: "agent_runtime_acceptance",
+    tabLabel: "nativeTab",
+    title: "nativeTitle",
+    intro: "nativeIntro",
+  },
+  {
+    id: "smoke",
+    runType: "ade_api_e2e_check",
+    tabLabel: "smokeTab",
+    title: "smokeTitle",
+    intro: "smokeIntro",
+  },
+];
 
 type Props = {
-  copy: TestCenterCopy;
-  loading: boolean;
+  activeArea: TestCenterArea;
+  artifactContent: string;
+  artifacts: TestArtifact[];
   busy: boolean;
+  copy: TestCenterCopy;
   error: string;
-  status: string;
+  onCancelSelectedRun: () => void;
+  onCreateRun: (payload: CreateTestRunPayload) => void;
+  onReadArtifact: (artifactId: string) => void;
+  onRefreshArtifacts: () => void;
+  onRefreshRuns: () => void;
+  onRefreshSelectedRun: () => void;
+  onSelectArea: (area: TestCenterArea) => void;
+  onSelectRun: (runId: string) => void;
+  options: TestCenterOptions | null;
+  optionsLoading: boolean;
   runs: TestRunRecord[];
+  selectedArtifactId: string;
+  selectedRun: TestRunRecord | null;
   selectedRunId: string;
   selectedRunSummary: TestRunRecord | null;
-  selectedRun: TestRunRecord | null;
-  artifacts: TestArtifact[];
-  selectedArtifactId: string;
-  artifactContent: string;
-  evaluationItems: EvaluationListItem[];
-  selectedEvaluationId: string;
-  selectedEvaluationSummary: EvaluationListItem | null;
-  selectedEvaluation: EvaluationDetail | null;
-  evaluationBaselineRunId: string;
-  evaluationComparison: EvaluationComparison | null;
-  parityEvaluationItems: AgentRuntimeParityListItem[];
-  selectedParityEvaluationId: string;
-  selectedParityEvaluationSummary: AgentRuntimeParityListItem | null;
-  selectedParityEvaluation: AgentRuntimeParityDetail | null;
-  launcherPreset: ChatMemoryEvaluationForm | null;
-  onCreateRun: (payload: CreateTestRunPayload) => Promise<void>;
-  onRefreshRuns: () => Promise<void>;
-  onLauncherError: (message: string) => void;
-  onSelectRun: (runId: string) => void;
-  onRefreshSelectedRun: () => void;
-  onCancelSelectedRun: () => void;
-  onRefreshArtifacts: () => void;
-  onReadArtifact: (artifactId: string) => void;
-  onSelectEvaluation: (runId: string) => void;
-  onSelectEvaluationBaseline: (runId: string) => void;
-  onRecordEvaluationDecision: (
-    outcome: EvaluationDecisionOutcome,
-    note: string,
-  ) => void;
-  onRefreshEvaluations: () => void;
-  onRerunEvaluationSetup: (config: ChatMemoryEvaluationConfig) => void;
-  onSelectParityEvaluation: (runId: string) => void;
-  onRefreshParityEvaluation: () => void;
+  status: string;
 };
 
 export function TestCenterView(props: Props) {
-  const operationalRuns = props.runs.filter((run) => run.run_type !== "chat_memory_eval");
-  const nonParityOperationalRuns = operationalRuns.filter((run) => run.run_type !== "agent_runtime_parity_eval");
-  const hasSelectedParityRun = props.selectedParityEvaluationId === props.selectedRunId;
-  const hasSelectedOperationalRun = nonParityOperationalRuns.some((run) => run.run_id === props.selectedRunId);
-  const selectedOperationalRunId = hasSelectedOperationalRun ? props.selectedRunId : "";
+  const active = AREAS.find((area) => area.id === props.activeArea) || AREAS[0];
+  const areaRuns = props.runs.filter((run) => run.run_type === active.runType);
 
   return (
     <section>
@@ -79,115 +79,80 @@ export function TestCenterView(props: Props) {
       <h1 className="section-title">{props.copy.title}</h1>
       <p className="muted" style={{ maxWidth: 820 }}>{props.copy.intro}</p>
 
-      <section className="test-center-section" aria-labelledby="behavior-evaluation-title">
+      <div className="toolbar" role="tablist" aria-label={props.copy.title} style={{ marginTop: 18 }}>
+        {AREAS.map((area) => (
+          <button
+            aria-controls={`${area.id}-panel`}
+            aria-selected={area.id === active.id}
+            className={area.id === active.id ? "button" : "button muted"}
+            id={`${area.id}-tab`}
+            key={area.id}
+            onClick={() => props.onSelectArea(area.id)}
+            role="tab"
+          >
+            {props.copy[area.tabLabel]}
+          </button>
+        ))}
+      </div>
+
+      <section aria-labelledby={`${active.id}-tab`} id={`${active.id}-panel`} role="tabpanel" style={{ marginTop: 18 }}>
         <div className="test-center-section-heading">
-          <div className="kicker">{props.copy.behaviorKicker}</div>
-          <h2 id="behavior-evaluation-title">{props.copy.behaviorTitle}</h2>
-          <p className="muted">{props.copy.behaviorIntro}</p>
+          <h2>{props.copy[active.title]}</h2>
+          <p className="muted">{props.copy[active.intro]}</p>
         </div>
 
-        <TestRunLauncher
-          copy={props.copy}
-          title={props.copy.behaviorLaunchTitle}
-          intro={props.copy.behaviorLaunchIntro}
-          availableRunTypes={BEHAVIOR_EVALUATION_RUN_TYPES}
-          initialRunType="chat_memory_eval"
-          hydrateLaunchState
-          busy={props.busy}
-          loading={props.loading}
-          preset={props.launcherPreset}
-          onCreateRun={props.onCreateRun}
-          onRefreshRuns={props.onRefreshRuns}
-          onError={props.onLauncherError}
-        />
+        {props.optionsLoading || !props.options ? (
+          <div className="card"><p className="muted">{props.copy.loadingOptions}</p></div>
+        ) : null}
+        {props.options && active.id === "behavior" ? (
+          <BehaviorEvaluationLauncher
+            busy={props.busy}
+            catalog={props.options.catalog}
+            copy={props.copy}
+            onCreateRun={props.onCreateRun}
+            options={props.options.chat_memory_eval}
+          />
+        ) : null}
+        {props.options && active.id === "native" ? (
+          <NativeRuntimeQualificationLauncher
+            busy={props.busy}
+            catalog={props.options.catalog}
+            copy={props.copy}
+            onCreateRun={props.onCreateRun}
+            options={props.options.agent_runtime_acceptance}
+          />
+        ) : null}
+        {props.options && active.id === "smoke" ? (
+          <CurrentStackSmokeLauncher
+            busy={props.busy}
+            copy={props.copy}
+            onCreateRun={props.onCreateRun}
+          />
+        ) : null}
 
-        <ChatMemoryEvaluationView
-          copy={props.copy}
-          busy={props.busy}
-          items={props.evaluationItems}
-          selectedEvaluationId={props.selectedEvaluationId}
-          selectedEvaluationSummary={props.selectedEvaluationSummary}
-          selectedEvaluation={props.selectedEvaluation}
-          baselineRunId={props.evaluationBaselineRunId}
-          comparison={props.evaluationComparison}
-          onSelectEvaluation={props.onSelectEvaluation}
-          onSelectBaseline={props.onSelectEvaluationBaseline}
-          onRecordDecision={props.onRecordEvaluationDecision}
-          onRefreshEvaluations={props.onRefreshEvaluations}
-          onRerunSetup={props.onRerunEvaluationSetup}
-        />
-      </section>
-
-      <section className="test-center-section" aria-labelledby="agent-runtime-parity-title">
-        <div className="test-center-section-heading">
-          <div className="kicker">{props.copy.parityKicker}</div>
-          <h2 id="agent-runtime-parity-title">{props.copy.parityTitle}</h2>
-          <p className="muted">{props.copy.parityIntro}</p>
-        </div>
-
-        <TestRunLauncher
-          copy={props.copy}
-          title={props.copy.parityLaunchTitle}
-          intro={props.copy.parityLaunchIntro}
-          availableRunTypes={PARITY_EVALUATION_RUN_TYPES}
-          initialRunType="agent_runtime_parity_eval"
-          busy={props.busy}
-          loading={props.loading}
-          preset={null}
-          onCreateRun={props.onCreateRun}
-          onRefreshRuns={props.onRefreshRuns}
-          onError={props.onLauncherError}
-        />
-
-        <AgentRuntimeParityResultView
-          copy={props.copy}
-          busy={props.busy}
-          items={props.parityEvaluationItems}
-          selectedId={props.selectedParityEvaluationId}
-          selectedSummary={props.selectedParityEvaluationSummary}
-          selected={props.selectedParityEvaluation}
-          artifacts={hasSelectedParityRun ? props.artifacts : []}
-          selectedArtifactId={hasSelectedParityRun ? props.selectedArtifactId : ""}
-          artifactContent={hasSelectedParityRun ? props.artifactContent : ""}
-          onSelect={props.onSelectParityEvaluation}
-          onRefresh={props.onRefreshParityEvaluation}
-          onReadArtifact={props.onReadArtifact}
-        />
-      </section>
-
-      <details className="card test-center-operations">
-        <summary><strong>{props.copy.operationsTitle}</strong></summary>
-        <p className="muted test-center-operations-intro">{props.copy.operationsIntro}</p>
-        <TestRunLauncher
-          copy={props.copy}
-          title={props.copy.operationsLaunchTitle}
-          intro={props.copy.operationsLaunchIntro}
-          availableRunTypes={OPERATIONAL_RUN_TYPES}
-          initialRunType="ade_api_e2e_check"
-          busy={props.busy}
-          loading={props.loading}
-          preset={null}
-          onCreateRun={props.onCreateRun}
-          onRefreshRuns={props.onRefreshRuns}
-          onError={props.onLauncherError}
-        />
         <RunArtifactViewer
-          copy={props.copy}
-          busy={props.busy}
-          runs={nonParityOperationalRuns}
-          selectedRunId={selectedOperationalRunId}
-          selectedRunSummary={hasSelectedOperationalRun ? props.selectedRunSummary : null}
-          selectedRun={hasSelectedOperationalRun ? props.selectedRun : null}
-          artifacts={props.artifacts}
-          selectedArtifactId={props.selectedArtifactId}
           artifactContent={props.artifactContent}
-          onSelectRun={props.onSelectRun}
-          onRefreshSelectedRun={props.onRefreshSelectedRun}
+          artifacts={props.artifacts}
+          busy={props.busy}
+          copy={props.copy}
           onCancelSelectedRun={props.onCancelSelectedRun}
-          onRefreshArtifacts={props.onRefreshArtifacts}
           onReadArtifact={props.onReadArtifact}
+          onRefreshArtifacts={props.onRefreshArtifacts}
+          onRefreshSelectedRun={props.onRefreshSelectedRun}
+          onSelectRun={props.onSelectRun}
+          runs={areaRuns}
+          selectedArtifactId={props.selectedArtifactId}
+          selectedRun={props.selectedRun}
+          selectedRunId={props.selectedRunId}
+          selectedRunSummary={props.selectedRunSummary}
         />
-      </details>
+      </section>
+
+      <div className="toolbar" style={{ marginTop: 14 }}>
+        <button className="button muted" disabled={props.busy} onClick={props.onRefreshRuns}>
+          {props.copy.refreshRuns}
+        </button>
+      </div>
 
       {props.status ? (
         <div className="card" style={{ marginTop: 12, borderColor: "#bbf7d0" }}>
@@ -195,7 +160,6 @@ export function TestCenterView(props: Props) {
           <p className="muted">{props.status}</p>
         </div>
       ) : null}
-
       {props.error ? (
         <div className="card" style={{ marginTop: 12, borderColor: "#fecaca" }}>
           <h3>{props.copy.errorTitle}</h3>

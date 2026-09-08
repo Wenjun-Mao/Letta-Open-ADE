@@ -7,7 +7,6 @@ from ade_api.integrations.model_router.openai_chat import (
     OpenAIChatClient,
     chat_completions_url,
     parse_sse_chat_completion_response,
-    resolve_provider_model,
 )
 from ade_api.platform.settings import get_settings
 from ade_api.features.comment_lab.request_builder import (
@@ -108,10 +107,6 @@ class CommentingService:
     def _chat_completions_url(base_url: str) -> str:
         return chat_completions_url(base_url)
 
-    @classmethod
-    def _resolve_provider_model(cls, model: str) -> str:
-        return resolve_provider_model(model)
-
     def _post_chat_completions_once(
         self,
         payload: dict[str, Any],
@@ -175,7 +170,7 @@ class CommentingService:
         if not resolved_base_url:
             raise ValueError("base_url is required")
 
-        resolved_model = self._resolve_provider_model(str(model or ""))
+        resolved_model = str(model or "").strip()
         if not resolved_model:
             raise ValueError("model is required")
 

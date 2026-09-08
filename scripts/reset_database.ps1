@@ -1,11 +1,11 @@
 $ErrorActionPreference = 'Stop'
 
-$envFile = if ($args.Count -gt 0 -and $args[0]) { $args[0] } elseif ($env:LETTA_ENV_FILE) { $env:LETTA_ENV_FILE } else { '.env' }
-$env:LETTA_ENV_FILE = $envFile
+$envFile = if ($args.Count -gt 0 -and $args[0]) { $args[0] } elseif ($env:ADE_ENV_FILE) { $env:ADE_ENV_FILE } else { '.env' }
+$env:ADE_ENV_FILE = $envFile
 
 Write-Host "Using env file: $envFile" -ForegroundColor DarkCyan
 
-Write-Host "Stopping Letta containers..." -ForegroundColor Cyan
+Write-Host "Stopping ADE containers..." -ForegroundColor Cyan
 docker compose --env-file $envFile down
 
 Write-Host "Wiping old PostgreSQL data in .\data\pgdata\..." -ForegroundColor Yellow
@@ -16,7 +16,7 @@ if (Test-Path ".\data\pgdata") {
     Write-Host "No data found or folder is already empty." -ForegroundColor Green
 }
 
-Write-Host "Starting Letta containers with new environment..." -ForegroundColor Cyan
+Write-Host "Starting ADE containers with new environment..." -ForegroundColor Cyan
 docker compose --env-file $envFile up -d
 
 Write-Host "Done! New fresh database is initializing." -ForegroundColor Green

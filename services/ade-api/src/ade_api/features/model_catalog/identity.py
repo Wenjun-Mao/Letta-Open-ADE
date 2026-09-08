@@ -9,7 +9,6 @@ _IDENTITY_FIELDS = (
     "key",
     "source_id",
     "provider_model_id",
-    "upstream_provider_model_id",
     "sampling_defaults",
     "scenario_sampling_defaults",
     "supports_top_k",

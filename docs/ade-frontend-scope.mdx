@@ -5,7 +5,7 @@ title: ADE Frontend Scope
 # ADE Frontend Scope
 
 ADE Web is the primary operator UI. It is a Next.js + TypeScript app at
-`apps/ade-web/`; its same-origin `/api/v2/...` proxy authenticates to the
+`apps/ade-web/`; its same-origin `/api/...` proxy authenticates to the
 `ade-api` service with a server-only credential.
 
 ## Maintained modules
@@ -16,19 +16,19 @@ ADE Web is the primary operator UI. It is a Next.js + TypeScript app at
 - Label Lab
 - Schema Center
 - Prompt Center
-- Tool Center
 - Test Center
 - API Docs
 
-Prompt Center and Tool Center are the maintained editing surfaces; no secondary
-frontend implementation owns their behavior.
+Prompt Center and Schema Center are the maintained content-editing surfaces; no
+secondary frontend implementation owns their behavior.
 
 ## Runtime boundaries
 
-- Agent Studio owns persistent Letta agents, memory layers, attached tools, and
+- Agent Studio uses the ADE-owned native runtime at `/api/v3` for persistent
+  definitions, memory subjects, conversations, memory layers, curated tools, and
   execution traces.
 - Comment Lab and Label Lab are stateless generation workspaces.
-- Prompt, schema, and tool centers own reviewed workspace content and lifecycle
+- Prompt Center and Schema Center own reviewed workspace content and lifecycle
   operations.
 - Test Center launches maintained checks/evals and reads run-scoped artifacts.
 - Browser code never receives provider credentials or the ADE API key.

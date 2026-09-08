@@ -37,7 +37,6 @@ export type CommentingGenerateRequest = {
   prompt_key: string;
   persona_key: string;
   model_key?: string;
-  model?: string;
   max_tokens?: number;
   timeout_seconds?: number;
   retry_count?: number;
@@ -52,6 +51,10 @@ export type CommentingGenerateRequest = {
 export function generateComment(payload: CommentingGenerateRequest) {
   return requestJson<CommentingGenerateResponse>("/api/v2/comment-lab/generations", {
     method: "POST",
-    body: { scenario: "comment", ...payload, model_key: payload.model_key?.trim() || undefined, model: payload.model?.trim() || undefined },
+    body: {
+      scenario: "comment",
+      ...payload,
+      model_key: payload.model_key?.trim() || undefined,
+    },
   });
 }

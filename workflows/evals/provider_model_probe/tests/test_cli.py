@@ -37,7 +37,6 @@ def test_probe_provider_models_script_writes_report(monkeypatch, tmp_path) -> No
                     base_url="https://ark.example/v3",
                     kind="openai-compatible",
                     enabled_for=["chat", "comment"],
-                    letta_handle_prefix="openai-proxy",
                 )
             ],
             discovery_timeout_seconds=5.0,
@@ -99,7 +98,6 @@ def test_probe_provider_models_script_supports_label_structured_mode(
                     base_url="https://ark.example/v3",
                     kind="openai-compatible",
                     enabled_for=["chat", "comment", "label"],
-                    letta_handle_prefix="openai-proxy",
                 )
             ],
             discovery_timeout_seconds=5.0,

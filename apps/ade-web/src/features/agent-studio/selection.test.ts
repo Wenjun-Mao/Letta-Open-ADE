@@ -4,7 +4,7 @@ import { NEW_RESOURCE_VALUE, activeSessionForConversation, defaultBundle, isArch
 import type { AgentStudioOptions, AgentStudioSession } from "./types";
 
 const options: AgentStudioOptions = {
-  runtime: "ade_native_v3",
+  runtime: "ade_native",
   default_bundle_key: "dgx",
   bundles: [{
     key: "dgx", name: "DGX", model_key: "model", reviewer_model_key: "reviewer", embedding_model_key: "embedding",

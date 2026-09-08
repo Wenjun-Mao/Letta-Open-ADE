@@ -7,13 +7,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends
-from letta_client import Letta
-
-from ade_api.features.agent_studio.lifecycle_registry import AgentLifecycleRegistry
 from ade_api.features.schema_center.registry import LabelSchemaRegistry
-from ade_api.features.tool_center.registry import CustomToolRegistry
-from ade_api.integrations.letta.agent_service import LettaAgentService
-from ade_api.integrations.letta.tool_service import LettaToolService
 from ade_api.integrations.model_router.client import ModelRouterClient
 from ade_api.features.prompt_center.registry import PromptPersonaRegistry
 from ade_api.features.comment_lab.service import CommentingService
@@ -37,14 +31,9 @@ REVISION_LOG_FILE = REVISION_LOG_DIR / "prompt_persona_revisions.jsonl"
 
 @dataclass(frozen=True)
 class ApplicationServices:
-    client: Letta
-    letta_agent_service: LettaAgentService
-    letta_tool_service: LettaToolService
     test_orchestrator: TestRunOrchestrator
     prompt_persona_registry: PromptPersonaRegistry
     label_schema_registry: LabelSchemaRegistry
-    custom_tool_registry: CustomToolRegistry
-    agent_lifecycle_registry: AgentLifecycleRegistry
     model_router_client: ModelRouterClient
     commenting_service: CommentingService
     labeling_service: LabelingService
@@ -63,14 +52,7 @@ def build_application_services(
         return path if path.is_absolute() else resolved_project_root / path
 
     runtime_data_dir = resolve_path(resolved_settings.runtime_data_dir).resolve()
-    letta_client = Letta(
-        base_url=os.getenv("LETTA_BASE_URL", "http://localhost:8283"),
-        max_retries=0,
-    )
     return ApplicationServices(
-        client=letta_client,
-        letta_agent_service=LettaAgentService(letta_client),
-        letta_tool_service=LettaToolService(letta_client),
         test_orchestrator=TestRunOrchestrator(
             project_root=resolved_project_root,
             state_root=runtime_data_dir / "test-runs",
@@ -83,11 +65,6 @@ def build_application_services(
             ),
         ),
         label_schema_registry=LabelSchemaRegistry(resolved_project_root),
-        custom_tool_registry=CustomToolRegistry(resolved_project_root),
-        agent_lifecycle_registry=AgentLifecycleRegistry(
-            resolved_project_root,
-            base_dir=runtime_data_dir / "agent-lifecycle",
-        ),
         model_router_client=ModelRouterClient(),
         commenting_service=CommentingService(),
         labeling_service=LabelingService(),
@@ -109,22 +86,7 @@ def shutdown_dependencies() -> None:
         return
     services = get_application_services()
     services.test_orchestrator.shutdown()
-    close = getattr(services.client, "close", None)
-    if callable(close):
-        close()
     get_application_services.cache_clear()
-
-
-def get_letta_client() -> Letta:
-    return get_application_services().client
-
-
-def get_letta_agent_service() -> LettaAgentService:
-    return get_application_services().letta_agent_service
-
-
-def get_letta_tool_service() -> LettaToolService:
-    return get_application_services().letta_tool_service
 
 
 def get_test_orchestrator() -> TestRunOrchestrator:
@@ -139,14 +101,6 @@ def get_label_schema_registry() -> LabelSchemaRegistry:
     return get_application_services().label_schema_registry
 
 
-def get_custom_tool_registry() -> CustomToolRegistry:
-    return get_application_services().custom_tool_registry
-
-
-def get_agent_lifecycle_registry() -> AgentLifecycleRegistry:
-    return get_application_services().agent_lifecycle_registry
-
-
 def get_model_router_client() -> ModelRouterClient:
     return get_application_services().model_router_client
 
@@ -159,15 +113,6 @@ def get_labeling_service() -> LabelingService:
     return get_application_services().labeling_service
 
 
-LettaClientDependency = Annotated[Letta, Depends(get_letta_client)]
-LettaAgentServiceDependency = Annotated[
-    LettaAgentService,
-    Depends(get_letta_agent_service),
-]
-LettaToolServiceDependency = Annotated[
-    LettaToolService,
-    Depends(get_letta_tool_service),
-]
 TestOrchestratorDependency = Annotated[
     TestRunOrchestrator,
     Depends(get_test_orchestrator),
@@ -179,14 +124,6 @@ PromptPersonaRegistryDependency = Annotated[
 LabelSchemaRegistryDependency = Annotated[
     LabelSchemaRegistry,
     Depends(get_label_schema_registry),
-]
-CustomToolRegistryDependency = Annotated[
-    CustomToolRegistry,
-    Depends(get_custom_tool_registry),
-]
-AgentLifecycleRegistryDependency = Annotated[
-    AgentLifecycleRegistry,
-    Depends(get_agent_lifecycle_registry),
 ]
 ModelRouterClientDependency = Annotated[
     ModelRouterClient,

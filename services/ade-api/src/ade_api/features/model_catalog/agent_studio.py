@@ -6,31 +6,27 @@ from ade_api.platform.settings import get_settings
 
 
 def agent_studio_llm_config_for_model(
-    model_handle: str,
+    model_key: str,
     *,
     temperature: float | None = None,
     top_p: float | None = None,
     top_k: int | None = None,
 ) -> dict[str, Any] | None:
-    """Build Letta's router-backed LLM config for a validated chat-model handle."""
-    handle = str(model_handle or "").strip()
-    if not handle.startswith("openai-proxy/") or "::" not in handle:
+    """Build a router-backed LLM config for a validated canonical model key."""
+    resolved_model_key = str(model_key or "").strip()
+    source_id, separator, provider_model_id = resolved_model_key.partition("::")
+    if not separator or not source_id.strip() or not provider_model_id.strip():
         return None
 
     router_base_url = get_settings().model_router_v1_base_url()
     if not router_base_url:
         return None
 
-    provider_model_id = handle.split("/", 1)[1].strip()
-    if not provider_model_id:
-        return None
-
     config: dict[str, Any] = {
         "context_window": 16384,
-        "model": provider_model_id,
+        "model": resolved_model_key,
         "model_endpoint_type": "openai",
         "model_endpoint": router_base_url,
-        "handle": handle,
         "max_tokens": 16384,
         "parallel_tool_calls": False,
     }

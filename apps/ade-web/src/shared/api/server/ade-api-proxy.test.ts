@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   adeApiAuthorization,
   adeApiBaseUrl,
-  adeNativeApiBaseUrl,
   buildAdeApiHeaders,
   buildAdeApiUrl,
 } from "./ade-api-proxy";
@@ -20,11 +19,11 @@ describe("ADE API proxy URL", () => {
     expect(() => adeApiBaseUrl("")).toThrow("ADE_API_BASE_URL must be configured");
   });
 
-  it("keeps native v3 traffic on its dedicated server-side base URL", () => {
-    const base = adeNativeApiBaseUrl("http://ade-native-api:8000/");
+  it("routes v3 traffic through the same ADE API base URL", () => {
+    const base = adeApiBaseUrl("http://ade-api:8000/");
     const target = buildAdeApiUrl(["runs", "run-1", "events"], "", base, "v3");
 
-    expect(target.toString()).toBe("http://ade-native-api:8000/api/v3/runs/run-1/events");
+    expect(target.toString()).toBe("http://ade-api:8000/api/v3/runs/run-1/events");
   });
 
   it("builds authorization only from the server-side API key", () => {

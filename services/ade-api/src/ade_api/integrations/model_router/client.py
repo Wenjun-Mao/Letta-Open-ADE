@@ -4,23 +4,8 @@ import time
 from typing import Any
 
 import httpx
-from tenacity import (
-    Retrying,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 from ade_api.platform.settings import get_settings
-
-
-_RETRYABLE_ROUTER_EXCEPTIONS = (
-    httpx.TimeoutException,
-    httpx.ConnectError,
-    httpx.ReadError,
-    httpx.RemoteProtocolError,
-    httpx.WriteError,
-)
 
 
 class ModelRouterClient:
@@ -69,26 +54,13 @@ class ModelRouterClient:
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
 
-        retrying = Retrying(
-            stop=stop_after_attempt(2),
-            wait=wait_exponential(multiplier=1, min=1, max=4),
-            retry=retry_if_exception_type(_RETRYABLE_ROUTER_EXCEPTIONS),
-            reraise=True,
-        )
-        for attempt in retrying:
-            with attempt:
-                with httpx.Client(
-                    timeout=settings.model_discovery_timeout_seconds
-                ) as session:
-                    response = session.get(url, headers=headers)
-                if response.status_code >= 400:
-                    raise RuntimeError(
-                        f"Model router catalog request failed ({response.status_code}): {response.text}"
-                    )
-                payload = response.json()
-                if not isinstance(payload, dict):
-                    raise RuntimeError("Model router catalog returned invalid payload")
-                return payload
-        raise RuntimeError(
-            "Model router catalog retry execution did not produce a result"
-        )
+        with httpx.Client(timeout=settings.model_discovery_timeout_seconds) as session:
+            response = session.get(url, headers=headers)
+        if response.status_code >= 400:
+            raise RuntimeError(
+                f"Model router catalog request failed ({response.status_code}): {response.text}"
+            )
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise RuntimeError("Model router catalog returned invalid payload")
+        return payload

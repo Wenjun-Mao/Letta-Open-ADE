@@ -19,7 +19,6 @@ ENV NODE_ENV=production
 ENV PORT=3000
 # This is read by the dynamic Next route at request time, never bundled for browsers.
 ENV ADE_API_BASE_URL=http://ade-api:8000
-ENV ADE_NATIVE_API_BASE_URL=http://ade-native-api:8000
 EXPOSE 3000
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static

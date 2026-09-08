@@ -5,7 +5,6 @@ export type NavigationItemKey =
   | "labelLab"
   | "schemaCenter"
   | "promptCenter"
-  | "toolCenter"
   | "testCenter"
   | "apiDocs";
 
@@ -38,7 +37,6 @@ export function buildNavigationGroups(): readonly NavigationGroup[] {
     items: [
       { href: "/schema-center", key: "schemaCenter" },
       { href: "/prompt-center", key: "promptCenter" },
-      { href: "/tool-center", key: "toolCenter" },
     ],
   },
   {

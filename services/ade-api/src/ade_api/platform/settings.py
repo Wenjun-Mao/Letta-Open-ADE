@@ -45,15 +45,15 @@ class AdeApiSettings(BaseSettings):
     runtime_data_dir: str = "data/runtime"
     persona_db_path: str = "data/runtime/personas/personas.sqlite3"
     persona_seed_jsonl_path: str = "content/personas/personas.jsonl"
-    agent_runtime_v3_enabled: bool = False
-    agent_runtime_v3_mode: Literal["release", "development"] = "release"
+    agent_runtime_enabled: bool = False
+    agent_runtime_mode: Literal["release", "development"] = "release"
     database_url: str = ""
-    agent_runtime_v3_worker_id: str = "ade-runtime-worker"
-    agent_runtime_v3_worker_poll_seconds: float = 0.5
-    agent_runtime_v3_lease_seconds: int = 60
-    agent_runtime_v3_heartbeat_seconds: int = 15
-    agent_runtime_v3_worker_heartbeat_seconds: float = 5.0
-    agent_runtime_v3_worker_stale_seconds: float = 15.0
+    agent_runtime_worker_id: str = "ade-runtime-worker"
+    agent_runtime_worker_poll_seconds: float = 0.5
+    agent_runtime_lease_seconds: int = 60
+    agent_runtime_heartbeat_seconds: int = 15
+    agent_runtime_worker_heartbeat_seconds: float = 5.0
+    agent_runtime_worker_stale_seconds: float = 15.0
 
     model_config = SettingsConfigDict(
         env_prefix="ADE_API_",
@@ -96,41 +96,41 @@ class AdeApiSettings(BaseSettings):
         "model_router_api_key_env",
         "model_router_api_key_secret",
         "database_url",
-        "agent_runtime_v3_worker_id",
+        "agent_runtime_worker_id",
     )
     @classmethod
     def _strip_router_text_fields(cls, value: str) -> str:
         return str(value or "").strip()
 
-    @field_validator("agent_runtime_v3_worker_poll_seconds")
+    @field_validator("agent_runtime_worker_poll_seconds")
     @classmethod
     def _clamp_worker_poll_seconds(cls, value: float) -> float:
         return max(0.1, min(30.0, float(value)))
 
-    @field_validator("agent_runtime_v3_lease_seconds")
+    @field_validator("agent_runtime_lease_seconds")
     @classmethod
     def _clamp_lease_seconds(cls, value: int) -> int:
         return max(15, min(600, int(value)))
 
-    @field_validator("agent_runtime_v3_heartbeat_seconds")
+    @field_validator("agent_runtime_heartbeat_seconds")
     @classmethod
     def _clamp_heartbeat_seconds(cls, value: int) -> int:
         return max(5, min(120, int(value)))
 
-    @field_validator("agent_runtime_v3_worker_heartbeat_seconds")
+    @field_validator("agent_runtime_worker_heartbeat_seconds")
     @classmethod
     def _clamp_worker_health_heartbeat_seconds(cls, value: float) -> float:
         return max(1.0, min(60.0, float(value)))
 
-    @field_validator("agent_runtime_v3_worker_stale_seconds")
+    @field_validator("agent_runtime_worker_stale_seconds")
     @classmethod
     def _clamp_worker_stale_seconds(cls, value: float) -> float:
         return max(3.0, min(300.0, float(value)))
 
     @model_validator(mode="after")
     def _validate_worker_health_window(self):
-        minimum = self.agent_runtime_v3_worker_heartbeat_seconds * 3
-        if self.agent_runtime_v3_worker_stale_seconds < minimum:
+        minimum = self.agent_runtime_worker_heartbeat_seconds * 3
+        if self.agent_runtime_worker_stale_seconds < minimum:
             raise ValueError(
                 "agent runtime worker stale threshold must be at least three "
                 "heartbeat intervals"

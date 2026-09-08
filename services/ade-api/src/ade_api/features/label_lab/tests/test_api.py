@@ -21,7 +21,7 @@ def test_labeling_generate_uses_model_key_and_selected_source_connection(
     monkeypatch.setattr(
         label_lab,
         "resolve_label_model_selection",
-        lambda model_key, **_kwargs: {
+        lambda model_key, *, model_router_client: {
             "model_key": "local_llama_server::gemma4",
             "source_id": "local_llama_server",
             "source_label": "Local llama-server",
@@ -99,12 +99,11 @@ def test_labeling_generate_uses_model_key_and_selected_source_connection(
         object(),
         object(),
         object(),
-        object(),
     )
 
     assert captured["base_url"] == "http://127.0.0.1:8081/v1"
     assert captured["api_key"] == "local-token"
-    assert captured["model"] == "gemma4"
+    assert captured["model"] == "local_llama_server::gemma4"
     assert captured["temperature"] == 0.2
     assert captured["top_p"] == 0.9
     assert captured["top_k"] == 64
@@ -117,7 +116,7 @@ def test_labeling_generate_uses_model_key_and_selected_source_connection(
     assert payload["top_p"] == 0.9
     assert payload["top_k"] == 64
     assert payload["result"]["people"] == ["Messi"]
-    assert payload["raw_request"] == {"model": "gemma4"}
+    assert payload["raw_request"] == {"model": "local_llama_server::gemma4"}
     assert payload["raw_reply"] == {"choices": []}
 
 
@@ -149,7 +148,7 @@ def test_labeling_generate_returns_validation_errors_on_failure(monkeypatch) -> 
     monkeypatch.setattr(
         label_lab,
         "resolve_label_model_selection",
-        lambda model_key, **_kwargs: {
+        lambda model_key, *, model_router_client: {
             "model_key": "local_llama_server::gemma4",
             "source_id": "local_llama_server",
             "source_label": "Local llama-server",
@@ -207,7 +206,6 @@ def test_labeling_generate_returns_validation_errors_on_failure(monkeypatch) -> 
             ),
             AdePrincipal(role=AdeRole.ADMIN, key_name="test"),
             labeling_service,
-            object(),
             object(),
             object(),
             object(),

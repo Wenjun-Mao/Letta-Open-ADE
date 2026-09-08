@@ -5,6 +5,7 @@ import threading
 from types import SimpleNamespace
 
 import httpx
+import pytest
 
 from model_router.catalog import (
     RouterCatalogService,
@@ -72,7 +73,6 @@ def test_router_catalog_unions_healthy_sources_and_visibility(monkeypatch) -> No
         "local_llama_server::gemma4",
         "ark::doubao-seed-1-8-251228",
     ]
-    assert models[0].letta_handle == "openai-proxy/local_llama_server::gemma4"
     assert models[0].label_lab_available is True
     assert models[0].structured_output_mode == "json_schema"
     assert models[1].label_lab_available is False
@@ -408,7 +408,6 @@ def test_router_catalog_enriches_models_from_profiles_and_gates_agent_studio(
     assert model.agent_studio_candidate is True
     assert model.agent_studio_compatible is False
     assert model.agent_studio_available is False
-    assert model.letta_handle is None
     assert model.comment_lab_available is True
     assert model.label_lab_available is True
 
@@ -498,7 +497,6 @@ def test_router_catalog_exposes_qwen_vllm_profile_to_all_modules(
     assert len(models) == 1
     model = models[0]
     assert model.router_model_id == "dgx_vllm::qwen3.6-35b-a3b-fp8"
-    assert model.letta_handle == "openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8"
     assert model.agent_studio_available is True
     assert model.comment_lab_available is True
     assert model.label_lab_available is True
@@ -517,8 +515,10 @@ def test_router_catalog_exposes_qwen_vllm_profile_to_all_modules(
 
 def test_router_model_id_helpers() -> None:
     assert build_router_model_id("local", "gemma4") == "local::gemma4"
-    assert normalize_router_model_id("openai-proxy/local::gemma4") == "local::gemma4"
-    assert parse_router_model_id("openai-proxy/local::gemma4") == ("local", "gemma4")
+    assert normalize_router_model_id(" local::gemma4 ") == "local::gemma4"
+    assert parse_router_model_id("local::gemma4") == ("local", "gemma4")
+    with pytest.raises(ValueError, match="canonical"):
+        parse_router_model_id("openai-proxy/local::gemma4")
 
 
 def test_extract_model_records_normalizes_gguf_paths() -> None:

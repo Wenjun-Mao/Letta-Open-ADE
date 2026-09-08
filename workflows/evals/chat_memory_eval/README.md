@@ -1,6 +1,7 @@
 # Chat Memory Eval
 
-Runs fresh Agent Studio agents through a fixed multi-turn conversation and checks whether the selected model stays in persona while updating user memory.
+Runs isolated native evaluation sessions through a fixed multi-turn conversation and
+checks whether the selected model stays in persona while updating typed user memory.
 
 ## Quick Commands
 
@@ -21,10 +22,9 @@ Outputs stream to `workflows/evals/chat_memory_eval/outputs/` as timestamped CSV
 ## What It Checks
 
 - The assistant does not self-disclose as an AI, bot, virtual assistant, or generated program.
-- The final `human` memory block changed from its initial value.
-- The final `human` memory contains expected user facts from the fixture: `张伟`, `Rocky`, and `哈士奇/Husky`.
-- Per-turn tool calls and memory-tool calls are recorded when visible in the ADE
-  API response.
+- Typed subject memory changed from its initial value.
+- Active memory facts contain `张伟`, `Rocky`, and `哈士奇/Husky`.
+- Per-turn tool calls and committed memory operations are recorded from run events.
 
 The optional LLM judge is diagnostic only. The process exit code uses deterministic checks.
 The judge inherits `ADE_API_MODEL_ROUTER_BASE_URL`, which is
@@ -41,17 +41,19 @@ The default config is `workflows/evals/chat_memory_eval/config.toml`.
 | `api_base_url` | `http://127.0.0.1:8000` | ADE API base URL. |
 | `output_dir` | `workflows/evals/chat_memory_eval/outputs` | Directory for generated artifacts. |
 | `fixture_key` | `recent_user_chat_turns` | Fixture JSON in `fixtures/`. |
-| `rounds` | `3` | Number of fresh agents to run. |
-| `model` | `openai-proxy/dgx_vllm::qwen3.6-35b-a3b-fp8` | Agent Studio model handle. |
+| `rounds` | `3` | Number of isolated sessions to run. |
+| `model` | `dgx_vllm::qwen3.6-35b-a3b-fp8` | Canonical Model Router key. |
 | `prompt_key` | `chat_v20260516` | Chat prompt key. |
 | `persona_key` | `chat_linxiaotang` | Chat persona key. |
-| `embedding` | `letta/letta-free` | Letta embedding handle. |
-| `timeout_seconds` | `180` | Runtime timeout sent with each Agent Studio message. |
-| `retry_count` | `0` | Runtime retry count sent with each Agent Studio message. |
+| `embedding` | `dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B` | Canonical embedding route key. |
+| `timeout_seconds` | `180` | Runtime timeout for each turn. |
+| `retry_count` | `0` | Additional ADE-owned attempts for each idempotent turn. |
 | `judge_enabled` | `true` | Run advisory router-backed LLM judge. |
 | `judge_model_key` | blank | Router model key for judge; blank derives it from `model`. |
 
-The evaluator makes exactly one HTTP attempt for every ADE API and advisory-judge request. It does not retry a timed-out or failed POST because the server may already have accepted a state-changing request. `retry_count` remains the explicit Agent Studio runtime setting for each chat turn.
+The evaluator makes exactly one HTTP attempt for every ADE API and advisory-judge
+request. Each turn has a stable idempotency key; `retry_count` controls only the
+additional attempts owned by the ADE runtime.
 
 Each run captures immutable provenance: the requested run ID, prompt/persona snapshots, catalog deployment identities, every effective execution control, and `ADE_SOURCE_REVISION`, `ADE_SOURCE_DIRTY`, and `ADE_SOURCE_FINGERPRINT`. The configuration digest excludes the run ID and capture time, so equivalent runs remain comparable.
 
@@ -63,4 +65,5 @@ ADE Test Center can launch this workflow with a focused form. It passes its allo
 
 - If options validation fails, refresh ADE options and confirm the selected chat model, prompt, persona, and embedding are available.
 - If judge calls fail but deterministic checks pass, inspect the JSONL `judge.error`; judge failures are advisory.
-- If temporary agents remain after an interrupted run, archive/purge them from Agent Studio.
+- Cleanup is idempotent. If a process is interrupted, delete its evaluation session
+  through `DELETE /api/v3/evaluation-sessions/{conversation_id}`.

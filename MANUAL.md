@@ -1,18 +1,15 @@
-# Letta Open ADE Manual
+# ADE Manual
 
-This runbook operates the local Compose stack. For code ownership, use the
+This runbook operates the local ADE stack. For code ownership, use the
 [codebase map](docs/codebase-map.md); for runtime boundaries, use the
 [request flows](docs/architecture/request-flows.md).
 
 ## Before Starting
 
 - Install Docker Compose, Python 3.12 with `uv`, and Node.js 22 for web checks.
-- Create `.env` from `.env.example`. Replace every placeholder secret and keep
-  `LETTA_ENCRYPTION_KEY` stable and backed up; changing it makes existing
-  encrypted Letta credentials unreadable.
+- Create `.env` from `.env.example` and replace every placeholder secret.
 - Review `config/model-router/sources.json` and enable only reachable providers.
-- Treat the stack as local-only. Loopback bindings are a development baseline,
-  not an internet deployment design.
+- Treat the stack as local-only. Loopback binding is not an internet deployment design.
 
 ## Start And Stop
 
@@ -23,95 +20,57 @@ make logs SERVICE=ade-api
 make down
 ```
 
-The Compose services are `ade-web`, `ade-api`, `ade-native-api`,
-`ade-runtime-worker`, `ade-runtime-migrate`, `model-router`, `letta`, `postgres`,
-and `redis`. Do not run two Compose projects from the same checkout:
-they would both mount `data/pgdata`. If a previous checkout used another Compose
-project name, inspect its working directory before stopping it and do not use
-`-v` unless a database reset is intentional.
+The Compose services are `postgres`, `model-router`, `ade-runtime-migrate`,
+`ade-runtime-worker`, `ade-api`, and `ade-web`. Do not run two Compose projects
+from the same checkout: both would mount `data/pgdata`.
 
-```text
-docker compose ls
-docker inspect <container-name> --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}'
-docker compose -p <old-project-name> down --remove-orphans
-```
+The migration job applies the Alembic schema before the API and runtime worker
+serve Agent Studio. The worker executes accepted Agent Studio runs from the same
+ADE PostgreSQL authority as the API.
 
-The one-shot migration, isolated native API, and long-running native worker are
-part of the ordinary stack because Agent Studio uses them. Letta and Redis remain
-for the v2 product areas that have not yet migrated.
-
-```text
-make agent-studio-migrate
-make agent-studio-db-test
-make agent-studio-lane-check
-make agent-studio-development-up
-make agent-studio-qualification
-make agent-studio-conformance
-make agent-studio-rollback-rehearsal AGENT_STUDIO_LEGACY_REVISION=<commit>
-make agent-studio-release-gate
-make agent-studio-release-up
-```
-
-`agent-studio-development-up` explicitly enables unqualified development runs.
-`agent-studio-release-up` validates the exact promotion and policy identity before
-starting the supported stack. Release mode rejects unqualified deployment
-fingerprints and never falls back to Letta.
-Follow the [Agent Studio cutover runbook](docs/operations/agent-studio-cutover.md)
-for promotion, Test Center parity evidence, conformance, rollback rehearsal, and
-the reviewed release ledger. Qualification runs in the explicit development lane;
-it cannot depend on the release gate it is intended to satisfy.
-
-## Endpoints And Network Boundary
+## Endpoints
 
 - ADE Web: `http://127.0.0.1:3000`
 - ADE API health: `http://127.0.0.1:8000/api/v2/health`
 - ADE API OpenAPI: `http://127.0.0.1:8000/openapi.json`
-- Native Agent Studio API liveness: `http://127.0.0.1:8002/health`
+- Agent Studio worker readiness: authenticated `GET /api/v3/worker-health`
 
-`model-router`, `letta`, `postgres`, and `redis` are intentionally not exposed
-on host ports. Diagnose them through Compose:
+Model Router and PostgreSQL are Compose-network services. Diagnose them through
+Compose rather than exposing extra host ports:
 
 ```text
 docker compose logs --tail=200 model-router
-docker compose logs --tail=200 letta
+docker compose logs --tail=200 ade-runtime-worker
 docker compose exec ade-api python -c "import urllib.request; print(urllib.request.urlopen('http://model-router:8010/v1/health').read().decode())"
 ```
 
 ## Rebuild One Service
 
-Rebuild after changing a service's dependencies, Dockerfile, or copied runtime
-assets:
+Rebuild after changing dependencies, a Dockerfile, or copied runtime assets:
 
 ```text
 docker compose build ade-api
 docker compose up -d --force-recreate ade-api
 ```
 
-Replace `ade-api` with `model-router` or `ade-web` as appropriate. If Letta
-cannot find local NLTK data, run `scripts/seed_nltk_data.sh`, then recreate the
-`letta` service.
+Replace `ade-api` with `model-router` or `ade-web` as appropriate. Recreate the
+runtime worker after changing execution, persistence, or release-policy code.
 
 ## Verification
-
-Run the deterministic suite before sharing a change:
 
 ```text
 uv sync --all-packages --frozen --group dev
 uv run ruff check services packages workflows scripts tests
-uv run python scripts/check_python_format.py --base origin/main
 uv run python -m pytest
 uv run python scripts/export_openapi.py --check
-uv run python scripts/generate_openapi_zh_manual.py
-git diff --exit-code -- docs/openapi/ade-api-openapi-zh.json apps/ade-web/public/openapi/ade-api-openapi-zh.json docs/openapi/zh_openapi_missing_terms.json
 npm ci --prefix apps/ade-web
 npm --prefix apps/ade-web run test
 npm --prefix apps/ade-web run lint
-npm audit --prefix apps/ade-web --audit-level=high
 npm --prefix apps/ade-web run build
 docker compose --env-file .env.example config --quiet
 ```
 
-Run live checks only after the stack and required providers are healthy:
+Run live checks only after the stack and selected providers are healthy:
 
 ```text
 make smoke
@@ -120,33 +79,30 @@ make eval-comment-persona
 make probe-models SOURCE=ark
 ```
 
-Each workflow records its own artifacts and interpretation notes under
-`workflows/evals/` or `workflows/smoke/`. Provider probe writes update reviewed
-catalog material, so use `make probe-models` only for a deliberate refresh.
+## Runtime Qualification And Recovery
 
-## Recovery And Diagnostics
+The release ledger binds the reviewed runtime revision, API/worker build
+identity, policy hashes, active model aliases, agent bundle, deterministic
+conformance, native qualification, and llama-server compatibility. Use the
+release commands documented by `make help`; a failed gate requires a new
+qualification and promotion, not a hidden fallback.
 
-Create a redacted diagnostics bundle when the stack is unhealthy:
-
-```text
-scripts/collect_diagnostics.sh .env
-```
-
-Review the archive before sharing it. For a deliberately clean local database,
-use `scripts/reset_database.sh` on POSIX systems or `scripts/reset_database.ps1`
-on Windows. Both commands remove `data/pgdata` and restart the stack; they do not
-delete reviewed `content/` or `config/` assets.
+Recovery is an explicit deployment rollback paired with PostgreSQL
+backup/restore. Existing PostgreSQL data is preserved across normal rebuilds.
+For a deliberately clean local database, use `scripts/reset_database.sh` on
+POSIX or `scripts/reset_database.ps1` on Windows. Those commands remove
+`data/pgdata` and restart Compose; they do not delete reviewed `content/` or
+`config/` assets.
 
 ## Content And Runtime State
 
-- Reviewed prompts, personas, schemas, tools, and model reports live under
-  `content/`.
+- Reviewed prompts, personas, schemas, and model reports live under `content/`.
 - Model sources and profiles live under `config/model-router/`.
-- Runtime SQLite, test runs, and local service state live under `data/runtime/`.
+- Agent Studio state and Test Center runs live in PostgreSQL and ignored runtime
+  artifact directories.
 - Browser requests use ADE Web's same-origin `/api/v2/...` and `/api/v3/...`
-  proxies; both keep the `ADE_API_ADMIN_KEY` server-side and route to their fixed
-  backend authority without fallback.
+  proxies. Both route to the one ADE API and keep `ADE_API_ADMIN_KEY` server-side.
 
-The backend resolves scenario defaults through
-`/api/v2/model-catalog/options`. Query that endpoint rather than hard-coding a
-prompt, persona, model, or embedding key in operational automation.
+The backend resolves feature options through `/api/v2/model-catalog/options`.
+Operational automation should query that endpoint rather than hard-code a
+model, prompt, persona, or embedding key.

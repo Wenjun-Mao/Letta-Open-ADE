@@ -1,4 +1,4 @@
-# Letta Open ADE Screenshot Plan
+# ADE Screenshot Plan
 
 This document collects screenshots for five ADE workspace surfaces: schema-first labeling, editable schemas and prompts, model routing, and persistent agent work. Agent Studio uses two screenshots because one image cannot clearly show both memory layers and the tool interface.
 
@@ -30,8 +30,8 @@ The model router centralizes model availability across local servers, DGX Spark 
 
 ![Agent Studio persistent memory layers](agent-studio-memory-layers.png)
 
-Agent Studio works with persistent Letta agents rather than one-off chat completions. The main workspace brings together model, prompt, persona, runtime controls, execution trace review, and persistent memory inspection; the memory panel shows durable `human` and `persona` layers with direct edit affordances.
+Agent Studio works with ADE-native persistent conversations rather than one-off chat completions. The main workspace brings together an immutable definition, explicit memory subject, execution trace review, and persistent memory inspection; the memory panel shows typed fact lineage and summary state.
 
 ![Agent Studio tool attachment and probe panel](agent-studio-tools-panel.png)
 
-The tools panel shows the agent-facing tool surface: attached memory/search tools, attach/detach controls for optional tools, and the Tool Probe workflow used to test whether an agent chooses the expected tool path.
+The runtime evidence panel shows the curated product tool surface, including subject-bound memory search, the tool events recorded for a turn, and the relationship between those events and typed memory updates.

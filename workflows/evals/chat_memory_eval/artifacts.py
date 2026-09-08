@@ -34,8 +34,7 @@ CSV_FIELDS = [
     "judge_ok",
     "judge_pass",
     "judge_score",
-    "agent_id",
-    "archived",
+    "session_id",
     "purged",
     "error",
 ]

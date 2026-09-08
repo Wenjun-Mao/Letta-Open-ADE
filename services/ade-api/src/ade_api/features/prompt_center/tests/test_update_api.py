@@ -2,18 +2,12 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-import ade_api.platform.app as app_module
 from ade_api.platform.app import create_app
 from ade_api.platform.dependencies import get_prompt_persona_registry
 from ade_api.features.prompt_center.registry import PromptPersonaRegistry
 
 
-def _client(monkeypatch, registry: PromptPersonaRegistry) -> TestClient:
-    monkeypatch.setattr(
-        app_module,
-        "validate_capabilities_startup",
-        lambda *_args: None,
-    )
+def _client(registry: PromptPersonaRegistry) -> TestClient:
     app = create_app()
     app.dependency_overrides[get_prompt_persona_registry] = lambda: registry
     return TestClient(app)
@@ -31,7 +25,7 @@ def test_update_persona_template_content_only_with_scenario(
         description="Initial persona",
     )
 
-    with _client(monkeypatch, registry) as client:
+    with _client(registry) as client:
         response = client.patch(
             "/api/v2/prompt-center/personas/chat_patch_persona?scenario=chat",
             json={"content": "2"},
@@ -58,7 +52,7 @@ def test_update_prompt_template_content_only_with_scenario(
         description="Initial prompt",
     )
 
-    with _client(monkeypatch, registry) as client:
+    with _client(registry) as client:
         response = client.patch(
             "/api/v2/prompt-center/prompts/chat_patch_prompt?scenario=chat",
             json={"content": "2"},
@@ -76,7 +70,7 @@ def test_update_prompt_template_content_only_with_scenario(
 def test_update_label_persona_returns_clean_400(monkeypatch, tmp_path) -> None:
     registry = PromptPersonaRegistry(tmp_path)
 
-    with _client(monkeypatch, registry) as client:
+    with _client(registry) as client:
         response = client.patch(
             "/api/v2/prompt-center/personas/label_patch_persona?scenario=label",
             json={"content": "2"},
@@ -94,7 +88,7 @@ def test_update_prompt_template_requires_at_least_one_field(
     registry = PromptPersonaRegistry(tmp_path)
     registry.create_template("prompt", key="chat_patch_empty", content="1")
 
-    with _client(monkeypatch, registry) as client:
+    with _client(registry) as client:
         response = client.patch(
             "/api/v2/prompt-center/prompts/chat_patch_empty?scenario=chat",
             json={},
@@ -121,7 +115,7 @@ def test_list_personas_supports_search_query(monkeypatch, tmp_path) -> None:
         scenario="comment",
     )
 
-    with _client(monkeypatch, registry) as client:
+    with _client(registry) as client:
         response = client.get(
             "/api/v2/prompt-center/personas?scenario=comment&search=Messi",
         )

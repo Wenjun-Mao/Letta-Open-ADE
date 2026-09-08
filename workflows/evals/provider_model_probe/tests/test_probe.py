@@ -27,7 +27,6 @@ def _source() -> RouterSourceConfig:
         base_url="https://ark.example/v3",
         kind="openai-compatible",
         enabled_for=["chat", "comment"],
-        letta_handle_prefix="openai-proxy",
     )
 
 
