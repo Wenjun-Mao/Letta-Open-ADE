@@ -10,6 +10,8 @@ from ade_api.features.agent_runtime.agent_studio_sessions import (
 )
 from ade_api.features.agent_runtime.contracts import (
     CreateAgentDefinitionRequest,
+    CreateAgentStudioSessionRequest,
+    CreateMemorySubjectRequest,
     CreateEvaluationSessionRequest,
 )
 from ade_api.features.agent_runtime.errors import (
@@ -93,6 +95,37 @@ def test_agent_studio_rejects_evaluation_only_tools() -> None:
 
     with pytest.raises(RuntimeValidationError, match="not available for agent_studio"):
         asyncio.run(service.create_definition(definition))
+
+
+def test_existing_definition_session_creation_reaches_the_lifecycle_path() -> None:
+    class _ReadyDatabase:
+        async def ensure_ready(self) -> None:
+            return None
+
+    service = AgentStudioSessionService(
+        database=_ReadyDatabase(),  # type: ignore[arg-type]
+        definitions=None,  # type: ignore[arg-type]
+    )
+    request = CreateAgentStudioSessionRequest(
+        idempotency_key="existing-definition-session",
+        agent_definition_id="definition-version-1",
+        new_subject=CreateMemorySubjectRequest(external_key="subject-1"),
+    )
+    existing = ({"id": "definition"}, {"id": "subject"}, {"id": "conversation"})
+
+    async def read_existing(_identity, _request):
+        return existing
+
+    async def response(_session_id, resources, *, replayed):
+        assert resources is existing
+        return {"idempotent_replay": replayed}
+
+    service._read_existing = read_existing  # type: ignore[method-assign]
+    service._response = response  # type: ignore[method-assign]
+
+    result = asyncio.run(service.create(request))
+
+    assert result == {"idempotent_replay": True}
 
 
 class _PurgeDatabase:

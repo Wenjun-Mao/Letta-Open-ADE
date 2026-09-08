@@ -83,7 +83,6 @@ class PurposeSessionService:
 
     async def create(self, request: CreateAgentStudioSessionRequest) -> dict[str, Any]:
         await self.database.ensure_ready()
-        self._require_allowed_tools(request)
         identity = session_identity(
             request.idempotency_key, namespace=self.session_namespace
         )
@@ -229,7 +228,7 @@ class PurposeSessionService:
     async def create_definition(
         self, request: CreateAgentDefinitionRequest
     ) -> dict[str, Any]:
-        self._require_allowed_tools(request)
+        self._require_allowed_tool_names(request.tool_names)
         return await self.definitions.create(request, purpose=self.purpose)
 
     async def set_definition_archived(
@@ -330,11 +329,6 @@ class PurposeSessionService:
                     subject_id, archived=archived
                 )
         return subject_response(subject)
-
-    def _require_allowed_tools(
-        self, request: CreateAgentStudioSessionRequest | CreateAgentDefinitionRequest
-    ) -> None:
-        self._require_allowed_tool_names(request.tool_names)
 
     def _require_allowed_tool_names(self, tool_names: list[str]) -> None:
         disallowed = sorted(set(tool_names) - self.allowed_tool_names)
