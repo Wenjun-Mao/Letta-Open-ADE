@@ -20,7 +20,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 from workflows.smoke.config_defaults import (
     DEFAULT_ADE_API_BASE_URL,
-    DEFAULT_EMBEDDING_MODEL_KEY,
     DEFAULT_PROMPT_KEY,
     DEFAULT_TEST_MODEL_KEY,
     ade_api_headers,
@@ -116,6 +115,28 @@ def _load_options(http: httpx.Client, scenario: str) -> dict[str, Any]:
     )
 
 
+def _agent_studio_bundle(payload: dict[str, Any]) -> dict[str, Any]:
+    bundles = payload.get("bundles")
+    if not isinstance(bundles, list) or not bundles:
+        raise SmokeCheckError("Agent Studio has no configured runtime bundle")
+    default_key = str(payload.get("default_bundle_key", "") or "")
+    bundle = next(
+        (
+            item
+            for item in bundles
+            if isinstance(item, dict) and item.get("key") == default_key
+        ),
+        bundles[0],
+    )
+    if not isinstance(bundle, dict):
+        raise SmokeCheckError("Agent Studio default bundle is invalid")
+    for field in ("model_key", "reviewer_model_key", "embedding_model_key"):
+        _require_canonical_router_key(
+            str(bundle.get(field, "") or ""), collection=field
+        )
+    return bundle
+
+
 def _require_removed_routes(http: httpx.Client) -> dict[str, int]:
     # These paths belonged to the retired Letta/Tool Center and generic-runtime
     # surfaces. A 404 proves the old capability cannot be used accidentally.
@@ -206,18 +227,6 @@ def main() -> None:
             chat_options = _load_options(http, "chat")
             comment_options = _load_options(http, "comment")
             label_options = _load_options(http, "label")
-            chat_model_key = _option_key(
-                chat_options,
-                collection="models",
-                fallback=DEFAULT_TEST_MODEL_KEY,
-                require_router_key=True,
-            )
-            embedding_model_key = _option_key(
-                chat_options,
-                collection="embeddings",
-                fallback=DEFAULT_EMBEDDING_MODEL_KEY,
-                require_router_key=True,
-            )
             chat_prompt_key = _option_key(
                 chat_options, collection="prompts", fallback=DEFAULT_PROMPT_KEY
             )
@@ -238,13 +247,6 @@ def main() -> None:
             )
             label_prompt_key = _option_key(label_options, collection="prompts")
             label_schema_key = _option_key(label_options, collection="schemas")
-            summary["steps"]["model_options"] = {
-                "ok": True,
-                "chat_model_key": chat_model_key,
-                "comment_model_key": comment_model_key,
-                "label_model_key": label_model_key,
-                "embedding_model_key": embedding_model_key,
-            }
 
             prompt_catalog = _require_object(
                 http.get("/api/v2/prompt-center/catalog", params={"scenario": "chat"}),
@@ -267,6 +269,15 @@ def main() -> None:
                 raise SmokeCheckError(
                     "Agent Studio did not report the native ADE runtime"
                 )
+            runtime_bundle = _agent_studio_bundle(agent_studio_options)
+            summary["steps"]["model_options"] = {
+                "ok": True,
+                "runtime_model_key": runtime_bundle["model_key"],
+                "runtime_reviewer_model_key": runtime_bundle["reviewer_model_key"],
+                "runtime_embedding_model_key": runtime_bundle["embedding_model_key"],
+                "comment_model_key": comment_model_key,
+                "label_model_key": label_model_key,
+            }
             summary["steps"]["product_catalogs"] = {
                 "ok": True,
                 "chat_prompt_key": chat_prompt_key,
@@ -326,12 +337,12 @@ def main() -> None:
                     json={
                         "idempotency_key": f"current-stack-smoke-{uuid.uuid4()}",
                         "title": "Current stack smoke",
-                        "model_key": chat_model_key,
-                        "reviewer_model_key": chat_model_key,
-                        "embedding_model_key": embedding_model_key,
-                        "prompt_key": chat_prompt_key,
-                        "persona_key": chat_persona_key,
-                        "tool_names": ["search_memory"],
+                        "model_key": runtime_bundle["model_key"],
+                        "reviewer_model_key": runtime_bundle["reviewer_model_key"],
+                        "embedding_model_key": runtime_bundle["embedding_model_key"],
+                        "prompt_key": runtime_bundle["prompt_key"],
+                        "persona_key": runtime_bundle["persona_key"],
+                        "tool_names": runtime_bundle["tool_names"],
                     },
                 ),
                 step="evaluation-session creation",
