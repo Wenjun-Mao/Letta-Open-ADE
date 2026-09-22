@@ -46,6 +46,7 @@ Browser -> apps/ade-web -> services/ade-api -> PostgreSQL and Model Router
 | Change prompt/persona behavior | Prompt Center and `content/prompts/` or `content/personas/` |
 | Change a label schema | Schema Center and `content/label-schemas/` |
 | Add a Test Center workflow | Test Center descriptor plus a self-contained workflow |
+| Run local character experiments without Spark | [Character memory development](../workflows/evals/character_memory_dev/README.md) |
 | Regenerate API artifacts | `uv run python scripts/export_openapi.py` |
 
 Features may depend on `platform/` and external integrations, but not on another

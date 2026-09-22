@@ -1,0 +1,73 @@
+# Character Memory Development
+
+Host-only experiments with the existing `chat_linxiaotang` (林小棠) persona,
+using GPT-5.6 Luna through the installed Codex CLI and its ChatGPT login.
+Run from the repository root on macOS/Linux. No Docker stack or Spark access
+is required. This consumes the account's Codex allowance.
+
+## Run
+
+```sh
+uv run python -m workflows.evals.character_memory_dev.run \
+  --runtime luna-subscription --task dialogue \
+  --input workflows/evals/character_memory_dev/fixtures/linxiaotang.json
+```
+
+Each invocation launches at most one generation session. Defaults: medium
+reasoning, default service tier, 180-second generation timeout, no adapter
+retries or fallback. Use `--timeout-seconds` to change the limit (maximum 600).
+Run serially. Authentication and CLI availability are checked before generation.
+API-key login is rejected; provider environment variables are not inherited.
+Custom `CODEX_HOME` is not supported by this lane.
+
+`--task memory-review` proposes source-linked user facts and shared experiences
+from the same input format. `--task judge` requires a final assistant message
+and nonempty `expectations`; its assessment is advisory.
+
+Inputs contain `messages` with unique `id`, `role` (`user` or `assistant`), and
+`content`, plus optional `memories` and `expectations` lists of strings. Supply
+all relevant context explicitly. The workflow snapshots the actual persona
+content into the captured prompt. It does not load Codex conversation history.
+
+## Read The Result
+
+An ignored `outputs/<unique-id>/` directory contains the prompt, raw stdout
+events, stderr, final text, transport manifest, and task validation. Successful
+task validation also produces `result.json`. Use `--output <new-directory>` for
+a named run. Existing directories are rejected before launch, even after a
+failed or interrupted run. There is no automatic resume or replay.
+
+`transport_validated` in the manifest means the CLI returned one expected turn;
+check `validation.json` separately for the task schema. A process crash can leave
+`reserved` or `running`; these are incomplete records, never successful results.
+Timeouts and post-launch failures are recorded as `uncertain_or_invalid` because
+usage may have occurred. Raw evidence is preserved for inspection. Captures are
+limited to 2 MB per output file (checked during execution); inputs to 64 KB.
+CLI-version changes require rechecking the accepted event sequence.
+
+Only requested model/effort and observable CLI metadata are recorded. One CLI
+turn does not prove one internal network request or disable SDK-internal retries.
+Missing usage remains unknown. Cache/reasoning tokens are subsets, not extras.
+
+These experiments do not test ADE persistence, native provider tool calling,
+embeddings, Qwen behavior, or release qualification. The sample supplies facts
+in-context; correct recall is not evidence of long-term memory. Memory proposal
+validation checks source IDs and author roles, not semantic truth. Review them
+before any future use; this workflow never writes production memory.
+
+The CLI has its own instruction context; role-labelled input is not equivalent
+to Chat Completions role precedence. An empty temporary cwd and read-only sandbox
+reduce accidental context access, but do not isolate hostile inputs from the host.
+Use synthetic/trusted development data. Do not use this as a public service or
+forward credentials/private transcripts. Captured prompts and output remain on
+disk until the operator removes them.
+
+## Verification
+
+```sh
+uv run pytest -q workflows/evals/character_memory_dev/tests
+```
+
+Tests use synthetic subprocesses and make no paid/subscription model calls.
+Live experiments are explicit commands. No Luna endpoint is registered in Model
+Router, and the native Chat Memory Eval remains unchanged.
