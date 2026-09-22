@@ -63,7 +63,9 @@ def test_success_and_existing_output_never_replayed(monkeypatch, tmp_path, task)
     manifest = json.loads((output / "manifest.json").read_text())
     assert manifest["status"] == "transport_validated"
     assert manifest["requested_model"] == "gpt-6-luna"
-    assert manifest["runtime_qualification"] == "configured_unqualified"
+    assert manifest["runtime_qualification"] == (
+        "schema_smoke_verified" if task else "configured_unqualified"
+    )
     assert manifest["usage"] is None
     assert manifest["adapter_retry_count"] == 0
     if task:

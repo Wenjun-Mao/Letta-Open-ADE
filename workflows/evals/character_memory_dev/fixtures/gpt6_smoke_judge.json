@@ -1,0 +1,9 @@
+{
+  "messages": [
+    {"id": "u1", "role": "user", "content": "我叫张伟，我家狗叫Rocky，是只哈士奇。"},
+    {"id": "a1", "role": "assistant", "content": "记住啦，张伟。Rocky平时是不是特别爱出去玩呀？"},
+    {"id": "u2", "role": "user", "content": "小棠，你还记得我家狗叫什么、是什么品种吗？"},
+    {"id": "a2", "role": "assistant", "content": "记得呀，张伟，你家狗狗叫Rocky，是只哈士奇呢。"}
+  ],
+  "expectations": ["自然地提到Rocky和哈士奇，不捏造共同经历。"]
+}

@@ -24,8 +24,14 @@ Evidence: `workflows/evals/character_memory_dev/outputs/gpt6-luna-smoke-20260922
 (ignored). Diagnose the output-format contract before any newly budgeted call;
 do not weaken validation or relabel this result. The structured-output follow-up
 now passes per-task JSON Schema through the CLI and records `json-schema-v1`;
-92 focused tests and workflow Ruff checks pass. No new generation was attempted,
-so the schema-enabled path still needs a separately budgeted live smoke.
+92 focused tests and workflow Ruff checks pass. A subsequent authorized three-call
+smoke passed dialogue, memory-review and advisory-judge transport/task validation
+with `json-schema-v1`, medium effort, 180-second caps and zero adapter retries.
+Records: `outputs/gpt6-schema-{dialogue,review,judge}-20260922/` under the workflow.
+The judge input preserves the actual dialogue reply. These are task-shape smoke
+checks (the dialogue fixture includes expectations), not blind quality scores or
+native runtime qualification. Future manifests record `schema_smoke_verified`;
+earlier artifacts retain the qualification state at their launch.
 Historical M1/M2 GPT-5.6 Luna
 captures and comparison inputs remain frozen.
 

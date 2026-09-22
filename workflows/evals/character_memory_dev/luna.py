@@ -16,7 +16,7 @@ from .json_contract import loads
 
 
 MODEL = "gpt-6-luna"
-RUNTIME_QUALIFICATION = "configured_unqualified"
+RUNTIME_QUALIFICATION = "schema_smoke_verified"
 MAX_BYTES = 2_000_000
 
 
@@ -133,7 +133,9 @@ def generate(
     manifest = {
         "status": "reserved",
         "requested_model": MODEL,
-        "runtime_qualification": RUNTIME_QUALIFICATION,
+        "runtime_qualification": (
+            RUNTIME_QUALIFICATION if output_schema is not None else "configured_unqualified"
+        ),
         "reasoning_effort": "medium",
         "service_tier": "default",
         "timeout_seconds": timeout_seconds,

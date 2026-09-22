@@ -6,8 +6,9 @@ Run from the repository root on macOS/Linux. No Docker stack or Spark access
 is required. This consumes the account's Codex allowance.
 
 New development calls request `gpt-6-luna` with medium reasoning effort and the
-default service tier. This is configuration only: live entitlement and
-generation qualification require a separately agreed budget. Frozen M1/M2
+default service tier. Three schema-enabled smoke calls passed on 2026-09-22:
+dialogue, memory-review, and advisory judge. This verifies bounded task-shape
+compatibility, not broad model quality or native runtime qualification. Frozen M1/M2
 captures, matrices, manifests, and validators remain historical `gpt-5.6-luna`
 evidence and must not be relabeled or mixed into GPT-6 comparisons.
 
@@ -15,7 +16,9 @@ evidence and must not be relabeled or mixed into GPT-6 comparisons.
 
 New calls pass a task-specific `--output-schema` to the CLI and save its exact
 JSON as `output-schema.json` beside the raw captures. The manifest records
-`output_contract=json-schema-v1`. This contract is not yet live-qualified.
+`output_contract=json-schema-v1` and `runtime_qualification=schema_smoke_verified`.
+Raw smoke records are in `outputs/gpt6-schema-{dialogue,review,judge}-20260922/`;
+their launch-time qualification labels remain unchanged.
 The first GPT-6 smoke returned plain text despite the prompt's JSON instruction;
 its transport passed but task validation failed. That record is preserved.
 Schemas constrain shape only: strict task/source validation still runs, with
