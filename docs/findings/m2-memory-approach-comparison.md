@@ -8,7 +8,8 @@ Status: In progress — no architecture selected or adopted
 This is a bounded comparison for 林小棠's everyday Chinese companionship. The
 [M2 plan](../plans/m2-memory-approach-comparison.md) and
 [workflow-local specification](../../workflows/evals/character_memory_dev/fixtures/m2/comparison.json)
-fix seven cases and this common candidate budget:
+fix seven cases, concrete role/timestamp/subject/conversation inputs, expected
+semantic state, negative probes, and this common candidate budget:
 
 | Budget | Limit |
 | --- | ---: |
@@ -23,6 +24,11 @@ correctness, extraction quality, retrieval quality, dialogue quality, and
 latency are recorded separately; fixture/fake assertions are not semantic or
 live-provider results.
 
+The specification links the applicable M1 fixtures but adds the missing second
+conversations, two-subject inputs, correction/forget/resolution turns, and
+negative probes. Its loader validates references and shape only: it does not
+run a candidate, retrieve memory, or score dialogue quality.
+
 ## Current ADE Evidence
 
 | Requirement | Observed contract | M2 status |
@@ -33,13 +39,24 @@ live-provider results.
 | Subject isolation and cross-conversation recall | Facts and embeddings are queried with the bound subject ID; a conversation loads that subject's active facts. | Boundary supported in source; cross-conversation semantic recall pending. |
 | Concern lifecycle | Registry has no concern type, expiry, resolution, or current-versus-historical lifecycle. | Unsupported; do not encode it as a preference. |
 | Promise/shared transcript event | Reviewer evidence is one current user-message span; registry has no promise/shared-event type. | Unsupported; no invented schema in M2. |
-| Relevance/repetition | Up to twelve recency-sorted active facts enter the profile before semantic retrieval. Dog/travel distractors therefore reach dialogue context even when current stress makes them irrelevant. | Current context-selection limitation, not a proved embedding failure. |
-| No fabricated physical shared experience | No dedicated transcript-event representation or dialogue assertion exists. | Unsupported; requires a negative dialogue review in a live comparison. |
+| Relevance/repetition | Up to twelve recency-sorted active facts enter the profile before semantic retrieval. Dog/travel distractors can therefore reach dialogue context when current stress may make them irrelevant. | Context-selection risk, not a proved bad dialogue or embedding outcome. |
+| No fabricated physical shared experience | No dedicated transcript-event representation or dialogue assertion establishes this boundary. | Not yet an ADE dialogue contract; live negative review is required. |
 
-The compact workflow checks these claims directly against ADE contracts: typed
-correction/forget preparation, active subject/status retrieval SQL, active
-profile context, and absent temporal/transcript types. They are intentionally
-not a fake persistence service or a substitute for native retrieval.
+The fixture test validates the fixed input contract. Separate native structural
+checks exercise typed correction/forget preparation, active subject/status
+retrieval predicates, active-profile context, and absent temporal/transcript
+types. They are intentionally not a fake persistence service, candidate run,
+or substitute for retrieval and dialogue-quality evidence.
+
+### Retrieval Check Correction
+
+The earlier structural query test only searched rendered SQL for column names
+and unrelated parameter values. A missing predicate could still have left both
+strings present. It now traverses the SQLAlchemy expression: each fact-subject,
+embedding-subject, and active-status equality must bind its expected value, and
+the fact/revision join equalities must exist. Counterfactual statements missing
+each required boundary are rejected. This guards query construction only; it is
+not database-backed isolation evidence.
 
 ## Hindsight Source Review
 
@@ -55,8 +72,8 @@ assumed from a moving `main` branch.
   versioned fact.
 - [Banks/tags](https://github.com/vectorize-io/hindsight/blob/v0.10.1/skills/hindsight-docs/references/developer/api/retain.md)
   support visibility filtering: retained tags must intersect the recall filter.
-  This makes one-bank-per-subject or strict per-user tags plausible, but only an
-  adversarial live run proves that chosen configuration is isolated.
+  M2 fixes one bank per subject as the trial configuration rather than adding a
+  tag variant; an adversarial live run must still prove that it is isolated.
 - The [recall API](https://github.com/vectorize-io/hindsight/blob/v0.10.1/skills/hindsight-docs/references/developer/api/recall.md)
   can return raw source chunks, source facts for observations, and a retrieval
   trace with timings. Its source granularity is chunks/facts, not confirmed
@@ -76,8 +93,8 @@ assumed from a moving `main` branch.
 | --- | --- | --- | --- |
 | Durable preference/correction/forget | Extend existing typed facts only where an M1 case demands it; preserve source spans, optimistic versioning, and tombstones. | Document replacement/deletion is documented; individual correction, tombstone, and lineage equivalence are unproven. | ADE structural advantage; no live quality result. |
 | Concerns, promises, transcript events | Requires a new, explicitly designed temporal/transcript contract. | Can retain full conversations with timestamps, but extraction and lifecycle behavior on these cases are unmeasured. | No candidate winner. |
-| Isolation | Existing subject ownership at write and query boundaries. | Requires intentional bank or strict-tag configuration. | Both need adversarial live proof. |
-| Relevance and repetition | Existing profile injects recent active facts before semantic retrieval; minimal extension must address selection rather than blame embeddings. | Recall supplies ranked results and trace diagnostics. | Hindsight has inspection features; quality/latency unmeasured. |
+| Isolation | Existing subject ownership at write and query boundaries. | M2 fixes one bank per subject for the trial. | Both need adversarial live proof. |
+| Relevance and repetition | Existing profile injects recent active facts before semantic retrieval; minimal extension must address selection rather than blame embeddings. | Recall supplies ranked results and trace diagnostics. | Context risk and Hindsight inspection features; quality/latency unmeasured. |
 | Provenance | Exact message spans and revision predecessor lineage. | Documents, source chunks, source facts, and trace are available; exact-span and revision correspondence unverified. | Different observability models. |
 | Operational burden | No new service; uses existing ADE PostgreSQL, Model Router, worker, and release gates. | Adds Hindsight deployment, storage/vector extension, extraction/embedding/reranking provider configuration, and lifecycle operations. | Material external-service cost. |
 | Latency | Current turn embeds query and fact writes; no M2 measurement. | Retain includes extraction/entity/embedding work; recall offers timing trace; no M2 measurement. | No numeric comparison. |
@@ -98,10 +115,10 @@ provider and external-service authority:
    fact IDs, revision source/lineage, query and write latency, and negative
    cross-subject probes for correction, forgetting, recall, distractors, and
    repeated callbacks.
-2. Provision Hindsight **v0.10.1** outside production with one bank per subject
-   or strict user tags. Retain the same role/timestamp-labelled fixtures, then
-   capture retain latency, recall traces, source facts/chunks, correction and
-   delete scope, and negative cross-subject probes.
+2. Provision Hindsight **v0.10.1** outside production with one bank per
+   subject. Retain the same role/timestamp-labelled fixtures, then capture
+   retain latency, recall traces, source facts/chunks, correction and delete
+   scope, and negative cross-subject probes.
 3. Feed each candidate's capped 3,000-token memory result to the same ADE
    dialogue deployment. Human-review natural Chinese voice, relevance,
    correction, forgetting, and no fabricated physical shared experience.
@@ -121,8 +138,8 @@ not M2 completion or an external-service decision.
 
 ## Verification
 
-- `uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_comparison.py services/ade-api/tests/agent_runtime/test_memory_policy.py services/ade-api/tests/agent_runtime/test_tool_policy.py`: **46 passed**.
-- `uv run pytest -q`: **559 passed, 5 skipped, 1 failed**. The failure is the existing checked-in production-policy fingerprint gate in `workflows/evals/agent_runtime_acceptance/tests/test_policy.py`; this work does not rebind or promote that policy artifact.
-- Static checks and diff validation are rerun before committing this interim checkpoint.
+- Before this correction checkpoint, `uv run pytest -q`: **559 passed, 5 skipped, 1 failed**. The failure is the existing checked-in production-policy fingerprint gate in `workflows/evals/agent_runtime_acceptance/tests/test_policy.py`; this work does not rebind or promote that policy artifact.
+- `uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_comparison.py services/ade-api/tests/agent_runtime/test_memory_policy.py services/ade-api/tests/agent_runtime/test_tool_policy.py`: **49 passed**.
+- `uv run ruff check services packages workflows scripts tests`, `uv run ruff format --check services packages workflows scripts tests`, and `git diff --check`: passed.
 - No new Luna calls were made; M1's ten ignored captures remain the only Luna
   evidence in scope.

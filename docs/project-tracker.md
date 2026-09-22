@@ -9,10 +9,11 @@ M2: compare the smallest ADE extension with Hindsight against M1's 林小棠
 (`chat_linxiaotang`) continuity cases. See the
 [M2 plan](plans/m2-memory-approach-comparison.md) and
 [interim findings](findings/m2-memory-approach-comparison.md). The initial
-provider-independent source-contract mapping, workflow-local checks, and
-external capability review are complete. Identical provider-backed experiments
-are pending authority and availability. Fresh native release qualification
-remains pending; it is not waived by this development evidence.
+provider-independent source-contract mapping, fixed test specification,
+structural checks, and external capability review are complete. No candidate
+comparison has been executed. Identical provider-backed experiments are pending
+authority and availability. Fresh native release qualification remains pending;
+it is not waived by this development evidence.
 
 The user authorized continued delivery between checkpoints. Escalate material
 scope/tradeoff decisions, unsafe actions, or blockers needing user input. Routine
@@ -31,7 +32,7 @@ implementation and verification choices do not need repeated confirmation.
 ## M2 Work Checklist
 
 - [x] Map current ADE representation and contracts to every M1 requirement.
-- [x] Add and run compact workflow-local comparison fixtures and deterministic checks.
+- [x] Add a compact, repeatable workflow-local test specification and structural checks.
 - [x] Inspect and cite pinned official Hindsight retain/recall, isolation,
   lifecycle, provenance, dependency, and provider evidence.
 - [x] Record common budget, quality-layer, latency, and operational comparison.
@@ -58,7 +59,7 @@ implementation and verification choices do not need repeated confirmation.
 - 2026-09-22: Roadmap/tracker established; everyday companionship selected; M1 started. Later milestone detail depends on findings.
 - 2026-09-22: M1 baseline completed in this worktree: ten serial Luna development records validated, two policy defects fixed with native regressions, and [findings](findings/m1-character-continuity-baseline.md) recorded. This invalidates the prior governed-policy fingerprint; native release requalification is pending, not waived.
 - 2026-09-22: M2 comparison started with the [plan](plans/m2-memory-approach-comparison.md). No memory architecture has been selected or adopted.
-- 2026-09-22: M2 interim structural evidence and compact workflow checks completed; see [findings](findings/m2-memory-approach-comparison.md). Provider-backed candidate comparison and any external-service decision remain pending.
+- 2026-09-22: M2 interim structural evidence, a repeatable input specification, and compact structural checks completed; see [findings](findings/m2-memory-approach-comparison.md). No candidate comparison was executed; provider-backed comparison and any external-service decision remain pending.
 
 ## Updating This Tracker
 

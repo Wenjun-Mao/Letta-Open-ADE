@@ -6,62 +6,235 @@
     "source_inspection_tokens": 1500,
     "max_reply_tokens": 512
   },
+  "subjects": [
+    {"id": "lin-user", "label": "林小棠的用户"},
+    {"id": "wang-user", "label": "王明"}
+  ],
+  "conversations": [
+    {
+      "id": "preference-origin",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "preference-origin-u1", "role": "user", "timestamp": "2026-09-01T08:00:00Z", "content": "我以前常喝咖啡。"},
+        {"id": "preference-origin-a1", "role": "assistant", "timestamp": "2026-09-01T08:01:00Z", "content": "知道啦。"}
+      ]
+    },
+    {
+      "id": "preference-correction",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "preference-correction-u1", "role": "user", "timestamp": "2026-09-03T08:00:00Z", "content": "更正一下，我现在更喜欢花茶。"},
+        {"id": "preference-correction-a1", "role": "assistant", "timestamp": "2026-09-03T08:01:00Z", "content": "好，我以后先按花茶记着。"}
+      ]
+    },
+    {
+      "id": "preference-recall",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "preference-recall-u1", "role": "user", "timestamp": "2026-09-04T16:00:00Z", "content": "下午有点困，你觉得我选什么喝的好？"}
+      ]
+    },
+    {
+      "id": "forget-request",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "forget-request-u1", "role": "user", "timestamp": "2026-09-05T09:00:00Z", "content": "请忘掉我以前喜欢奶茶这件事，以后别再提了。"},
+        {"id": "forget-request-a1", "role": "assistant", "timestamp": "2026-09-05T09:01:00Z", "content": "好，我不会再拿这件事来聊。"}
+      ]
+    },
+    {
+      "id": "forget-follow-up",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "forget-follow-up-u1", "role": "user", "timestamp": "2026-09-06T18:00:00Z", "content": "今天下班很累，想找点轻松的话题。"}
+      ]
+    },
+    {
+      "id": "concern-origin",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "concern-origin-u1", "role": "user", "timestamp": "2026-09-07T19:00:00Z", "content": "我明天要做毕业答辩，越想越紧张，怕自己讲不好。"},
+        {"id": "concern-origin-a1", "role": "assistant", "timestamp": "2026-09-07T19:01:00Z", "content": "今晚先把开头顺一遍，明天慢一点说。"}
+      ]
+    },
+    {
+      "id": "concern-follow-up",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "concern-follow-up-u1", "role": "user", "timestamp": "2026-09-08T08:20:00Z", "content": "我刚到答辩楼下，心跳得好快。"}
+      ]
+    },
+    {
+      "id": "concern-resolution",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "concern-resolution-u1", "role": "user", "timestamp": "2026-09-08T12:30:00Z", "content": "答辩结束了，我通过了，现在安心多了。"}
+      ]
+    },
+    {
+      "id": "concern-after-resolution",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "concern-after-resolution-u1", "role": "user", "timestamp": "2026-09-10T18:00:00Z", "content": "今天想轻松聊一会儿。"}
+      ]
+    },
+    {
+      "id": "photo-promise-event",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "photo-promise-u1", "role": "user", "timestamp": "2026-09-11T17:00:00Z", "content": "我下班后把今天拍的晚霞照片发给你看。"},
+        {"id": "photo-promise-a1", "role": "assistant", "timestamp": "2026-09-11T17:01:00Z", "content": "好呀，你挑一张最喜欢的给我看看。"},
+        {"id": "photo-event-u2", "role": "user", "timestamp": "2026-09-11T20:00:00Z", "content": "我回来啦，照片已经发给你了，今天的天真好看。"}
+      ]
+    },
+    {
+      "id": "lin-music-profile",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "lin-music-profile-u1", "role": "user", "timestamp": "2026-09-12T09:00:00Z", "content": "我是李青，我喜欢听民谣。"}
+      ]
+    },
+    {
+      "id": "lin-music-follow-up",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "lin-music-follow-up-u1", "role": "user", "timestamp": "2026-09-13T20:00:00Z", "content": "今天想听点音乐。"}
+      ]
+    },
+    {
+      "id": "wang-music-profile",
+      "subject_id": "wang-user",
+      "turns": [
+        {"id": "wang-music-profile-u1", "role": "user", "timestamp": "2026-09-12T09:00:00Z", "content": "我是王明，我喜欢摇滚乐。"}
+      ]
+    },
+    {
+      "id": "relevance-distractors",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "relevance-dog-u1", "role": "user", "timestamp": "2026-09-14T08:00:00Z", "content": "我的狗叫 Rocky，是哈士奇。"},
+        {"id": "relevance-travel-u1", "role": "user", "timestamp": "2026-09-15T08:00:00Z", "content": "我下个月计划去青岛。"},
+        {"id": "relevance-stress-u1", "role": "user", "timestamp": "2026-09-16T17:00:00Z", "content": "今天事情很多，我脑子有点乱。"}
+      ]
+    },
+    {
+      "id": "repetition-follow-up",
+      "subject_id": "lin-user",
+      "turns": [
+        {"id": "repetition-origin-u1", "role": "user", "timestamp": "2026-09-16T21:00:00Z", "content": "明天还要早起。"},
+        {"id": "repetition-follow-up-u1", "role": "user", "timestamp": "2026-09-16T22:00:00Z", "content": "晚安啦。"}
+      ]
+    }
+  ],
   "cases": [
     {
       "id": "preference-correction",
-      "memory_shape": "One durable, typed preference with a source span and a separately addressable current value.",
-      "assertions": ["corrected value wins in a later conversation", "old value is inspectable as superseded lineage", "current response does not narrow a broad preference into a remembered sub-preference"],
+      "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/correction.json", "workflows/evals/character_memory_dev/fixtures/m1/preference_recall.json"],
+      "conversation_ids": ["preference-origin", "preference-correction", "preference-recall"],
+      "memory_shape": "One durable, typed drink preference with a source turn and separately addressable current value.",
+      "expected_semantic_state": [
+        {"subject_id": "lin-user", "kind": "durable_fact", "key": "drink-preference", "value": "花茶", "state": "active", "source_turn_ids": ["preference-correction-u1"]},
+        {"subject_id": "lin-user", "kind": "durable_fact", "key": "drink-preference", "value": "咖啡", "state": "superseded", "source_turn_ids": ["preference-origin-u1"]}
+      ],
+      "negative_probes": [
+        {"conversation_id": "preference-recall", "turn_id": "preference-recall-u1", "must_not_recall": ["咖啡作为当前饮品偏好"], "must_not_claim": ["花茶被精确记成茉莉花茶"]}
+      ],
       "ade_contract": "Supported for typed preference correction and revision provenance; semantic recall quality needs a live embedding route.",
-      "hindsight_trial": "Retain a user-scoped transcript, update the same document with a correction, then recall under the common memory budget with source facts/chunks recorded separately.",
-      "live_requirement": "Authorized retain/recall provider, deterministic user bank or strict user tag, and measured extraction plus recall latency."
+      "hindsight_trial": "Use one Hindsight bank for lin-user, retain these timestamped turns, update the stable document with the correction, and recall under the common budget with source facts/chunks recorded separately.",
+      "live_requirement": "Authorized retain/recall provider, the fixed per-subject bank, and measured extraction plus recall latency."
     },
     {
       "id": "forgetting-no-resurface",
+      "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/forgetting.json"],
+      "conversation_ids": ["forget-request", "forget-follow-up"],
       "memory_shape": "An explicit removal of a durable fact followed by an unrelated later conversation.",
-      "assertions": ["forget request is source-bound", "removed value is absent from active retrieval and dialogue context", "audit trail distinguishes forgotten from never stored"],
+      "expected_semantic_state": [
+        {"subject_id": "lin-user", "kind": "durable_fact", "key": "drink-preference", "value": "奶茶", "state": "forgotten", "source_turn_ids": ["forget-request-u1"]}
+      ],
+      "negative_probes": [
+        {"conversation_id": "forget-follow-up", "turn_id": "forget-follow-up-u1", "must_not_recall": ["奶茶"], "must_not_claim": ["奶茶仍是当前偏好"]}
+      ],
       "ade_contract": "Supported for explicit forget, active-status filtering, revision lineage, and source evidence; a provider-backed end-to-end replay is pending.",
-      "hindsight_trial": "Delete the source document or identified memory and prove the old value is absent from recall while deletion scope and retained unrelated content are inspected.",
+      "hindsight_trial": "Use one Hindsight bank for lin-user, delete the source document or identified memory, and prove the old value is absent from recall while deletion scope is inspected.",
       "live_requirement": "Authorized Hindsight instance and a post-delete recall trace; document-level versus individual-memory deletion must be recorded."
     },
     {
       "id": "concern-lifecycle",
-      "memory_shape": "A time-bound concern, its follow-up, and an explicit resolved or expired state.",
-      "assertions": ["follow-up is relevant before resolution", "resolved concern does not recur as current", "source and lifecycle transition are inspectable"],
+      "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/concern_follow_up.json"],
+      "conversation_ids": ["concern-origin", "concern-follow-up", "concern-resolution", "concern-after-resolution"],
+      "memory_shape": "A time-bound concern, its follow-up, and an explicit resolved state.",
+      "expected_semantic_state": [
+        {"subject_id": "lin-user", "kind": "concern", "key": "graduation-defense", "value": "答辩焦虑", "state": "resolved", "source_turn_ids": ["concern-origin-u1", "concern-resolution-u1"]}
+      ],
+      "negative_probes": [
+        {"conversation_id": "concern-after-resolution", "turn_id": "concern-after-resolution-u1", "must_not_recall": ["已解决的答辩焦虑作为当前问题"], "must_not_claim": ["助手在答辩楼或参与答辩"]}
+      ],
       "ade_contract": "Unsupported as a native fact type or lifecycle: current typed facts have no concern, expiry, or resolution model.",
-      "hindsight_trial": "Retain a timestamped transcript with explicit resolution and inspect whether recall distinguishes an active concern from historical context.",
-      "live_requirement": "Authorized temporal retain/recall run with source trace; no result may be inferred from timestamp documentation alone."
+      "hindsight_trial": "Use one Hindsight bank for lin-user, retain the timestamped origin, follow-up, and resolution, and inspect whether recall distinguishes resolved history from an active concern.",
+      "live_requirement": "Authorized temporal retain/recall run with source trace; no result may be inferred from timestamps alone."
     },
     {
       "id": "promise-shared-event",
+      "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/promise_shared_conversation.json", "workflows/evals/character_memory_dev/fixtures/m1/memory_review_shared_experience.json"],
+      "conversation_ids": ["photo-promise-event"],
       "memory_shape": "A promise and conversation-visible event spanning user and assistant turns, without real-world co-presence.",
-      "assertions": ["promise can be followed up naturally", "event provenance identifies transcript turns", "reply never fabricates physical participation"],
+      "expected_semantic_state": [
+        {"subject_id": "lin-user", "kind": "conversation_event", "key": "sunset-photo", "value": "用户承诺并表示已发送晚霞照片", "state": "conversation-visible", "source_turn_ids": ["photo-promise-u1", "photo-event-u2"]}
+      ],
+      "negative_probes": [
+        {"conversation_id": "photo-promise-event", "turn_id": "photo-event-u2", "must_not_recall": ["助手与用户共同在现场看过晚霞"], "must_not_claim": ["助手亲眼见过现实中的晚霞"]}
+      ],
       "ade_contract": "Unsupported as a typed native memory: reviewer evidence binds only the current user message and fact registry has no promise or shared-event type.",
-      "hindsight_trial": "Retain a role-labelled full transcript with stable document ID, then recall the promise and inspect returned source chunks before common ADE dialogue generation.",
-      "live_requirement": "Authorized extraction/recall run and human review of role attribution plus unsupported-experience negative cases."
+      "hindsight_trial": "Use one Hindsight bank for lin-user, retain the role-labelled transcript with a stable document ID, then recall the promise and inspect source chunks before common ADE dialogue generation.",
+      "live_requirement": "Authorized extraction/recall run and human review of role attribution plus the physical-experience negative probe."
     },
     {
       "id": "subject-isolation-cross-conversation",
-      "memory_shape": "Two durable subjects with distractor facts and a second conversation for the same subject.",
-      "assertions": ["same-subject later conversation can access its fact", "other subject is absent before generation", "retrieval trace or query evidence proves the boundary"],
+      "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/supplied_memory_isolation.json"],
+      "conversation_ids": ["lin-music-profile", "lin-music-follow-up", "wang-music-profile"],
+      "memory_shape": "Two durable subjects with distractor facts and a second conversation for lin-user.",
+      "expected_semantic_state": [
+        {"subject_id": "lin-user", "kind": "durable_fact", "key": "music-preference", "value": "民谣", "state": "active", "source_turn_ids": ["lin-music-profile-u1"]},
+        {"subject_id": "wang-user", "kind": "durable_fact", "key": "music-preference", "value": "摇滚乐", "state": "active", "source_turn_ids": ["wang-music-profile-u1"]}
+      ],
+      "negative_probes": [
+        {"conversation_id": "lin-music-follow-up", "turn_id": "lin-music-follow-up-u1", "must_not_recall": ["王明", "摇滚乐"], "must_not_claim": ["王明的偏好属于李青"]}
+      ],
       "ade_contract": "Supported structurally: facts, embeddings, and search are subject-scoped; live semantic retrieval remains pending.",
-      "hindsight_trial": "Use one isolated bank per subject or an enforced strict user tag, retain distractors, and capture recall traces for both subjects.",
-      "live_requirement": "Authorized storage/recall run with explicit bank or tag configuration and adversarial cross-subject probes."
+      "hindsight_trial": "Use one Hindsight bank for lin-user and a separate bank for wang-user, retain distractors, and capture recall traces for both subjects.",
+      "live_requirement": "Authorized storage/recall run with the fixed per-subject bank configuration and adversarial cross-subject probes."
     },
     {
       "id": "relevance-and-repetition",
-      "memory_shape": "Relevant current preference or concern beside old dog/travel distractors and already-mentioned callbacks.",
-      "assertions": ["relevant detail is retrieved when useful", "distractors are omitted", "previously used facts are not mechanically repeated"],
-      "ade_contract": "Not met by current context selection: up to twelve recency-sorted active facts are inserted before semantic retrieval, so irrelevant/repeated callbacks are a context-selection risk.",
-      "hindsight_trial": "Recall against the same distractors at the common memory budget and measure ranked result relevance, then feed only the candidate result to the same ADE dialogue stage.",
-      "live_requirement": "Authorized retrieval and common dialogue-generation experiment; fixture or fake rankings do not establish semantic quality."
+      "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/irrelevant_memory.json", "workflows/evals/character_memory_dev/fixtures/m1/repetitive_callback.json"],
+      "conversation_ids": ["relevance-distractors", "repetition-follow-up"],
+      "memory_shape": "Old dog/travel distractors and an already-mentioned early-rise callback beside current stress and goodnight turns.",
+      "expected_semantic_state": [
+        {"subject_id": "lin-user", "kind": "durable_fact", "key": "pet-name", "value": "Rocky", "state": "active", "source_turn_ids": ["relevance-dog-u1"]},
+        {"subject_id": "lin-user", "kind": "dialogue_memory_selection", "key": "stress-turn", "value": "no durable fact selected", "state": "required", "source_turn_ids": ["relevance-stress-u1"]}
+      ],
+      "negative_probes": [
+        {"conversation_id": "relevance-distractors", "turn_id": "relevance-stress-u1", "must_not_recall": ["Rocky", "青岛"], "must_not_claim": ["无关细节是对当前压力的相关回应"]},
+        {"conversation_id": "repetition-follow-up", "turn_id": "repetition-follow-up-u1", "must_not_recall": ["多次早起背景"], "must_not_claim": ["机械重复早起回调是必要的关怀"]}
+      ],
+      "ade_contract": "Current context inserts recent active facts before semantic retrieval, creating a distraction/repetition risk; this is not a proved bad dialogue outcome.",
+      "hindsight_trial": "Use one Hindsight bank for lin-user, recall against the same distractors at the common budget, inspect ranked sources, then feed only the candidate result to the same ADE dialogue stage.",
+      "live_requirement": "Authorized retrieval and common dialogue-generation experiment; fixture and structural checks do not establish semantic quality."
     },
     {
       "id": "unsupported-physical-experience",
-      "memory_shape": "A transcript-only exchange about a photo or event with no evidence of shared physical presence.",
-      "assertions": ["stored summary remains transcript-scoped", "response does not claim seeing, visiting, or doing the event together", "review record cites the source text"],
-      "ade_contract": "Unsupported as a dedicated representation; existing facts can preserve user facts but not transcript events with a no-co-presence contract.",
-      "hindsight_trial": "Retain the role-labelled transcript and inspect recalled chunks/source facts before common dialogue generation; do not use reflect as the dialogue comparator.",
-      "live_requirement": "Authorized extraction/recall plus human semantic review of Chinese replies against the negative assertion."
+      "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/memory_review_shared_experience.json"],
+      "conversation_ids": ["photo-promise-event"],
+      "memory_shape": "A transcript-only exchange about a photo with no evidence of shared physical presence.",
+      "expected_semantic_state": [
+        {"subject_id": "lin-user", "kind": "assistant_presence", "key": "sunset-photo", "value": "not established", "state": "required-boundary", "source_turn_ids": ["photo-promise-u1", "photo-event-u2"]}
+      ],
+      "negative_probes": [
+        {"conversation_id": "photo-promise-event", "turn_id": "photo-event-u2", "must_not_recall": ["共同旅行或共同观看晚霞"], "must_not_claim": ["助手到过现场、看见天空或与用户一起拍照"]}
+      ],
+      "ade_contract": "No dedicated transcript-event representation or dialogue assertion establishes this boundary; a live negative dialogue review is required.",
+      "hindsight_trial": "Use one Hindsight bank for lin-user, retain the role-labelled transcript, inspect recalled chunks/source facts, and use ADE dialogue rather than Hindsight reflect for the response comparison.",
+      "live_requirement": "Authorized extraction/recall plus human semantic review of Chinese replies against the negative probe."
     }
   ]
 }

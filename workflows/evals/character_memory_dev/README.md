@@ -76,14 +76,18 @@ Router, and the native Chat Memory Eval remains unchanged.
 
 [`fixtures/m2/comparison.json`](fixtures/m2/comparison.json) is the compact,
 workflow-local comparison contract for M2. It fixes a common context budget and
-the M1 cases to use when comparing an ADE extension with an external candidate.
-It does not implement memory, call Hindsight, or make a provider claim.
+the M1-linked, timestamped two-subject cases to use when comparing an ADE
+extension with an external candidate. It specifies expected semantic state and
+negative probes; it does not implement memory, call Hindsight, or make a
+provider claim.
 
 ```sh
 uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_comparison.py
 ```
 
-Those tests exercise current ADE contracts where they exist: typed correction,
-explicit forgetting, subject/status-scoped retrieval SQL, and context assembly.
-They deliberately surface unsupported concern/promise/shared-event semantics and
-the current active-profile distractor behavior rather than simulating parity.
+The fixture test validates input references and shape only. Separate tests
+exercise current ADE structural contracts where they exist: typed correction,
+explicit forgetting, subject/status-scoped retrieval predicates, and context
+assembly. They deliberately surface unsupported concern/promise/shared-event
+semantics and active-profile distraction risk rather than simulating parity or
+claiming memory-quality evidence.

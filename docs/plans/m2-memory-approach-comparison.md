@@ -12,10 +12,12 @@ This work compares evidence; it does not adopt either candidate.
 
 1. Map the current ADE facts, evidence provenance, correction/forgetting,
    subject boundary, and retrieval contracts against the M1 cases.
-2. Add a workflow-local specification, fixtures, and deterministic checks for
-   the parts those contracts can actually exercise. Report unsupported concern,
-   promise, shared-event, and semantic-retrieval requirements rather than
-   inventing a production representation.
+2. Add a workflow-local specification with timestamped multi-conversation,
+   two-subject inputs, expected state, and negative probes, plus deterministic
+   checks for the parts current contracts can actually exercise. This is a test
+   specification, not an executed candidate comparison. Report unsupported
+   concern, promise, shared-event, and semantic-retrieval requirements rather
+   than inventing a production representation.
 3. Inspect pinned official Hindsight documentation and source for retain/recall,
    bank isolation, deletion/correction, provenance, dependencies, and provider
    requirements. Record citations and operational implications.

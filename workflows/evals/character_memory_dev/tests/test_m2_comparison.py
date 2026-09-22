@@ -4,8 +4,10 @@ import asyncio
 from typing import Any, cast
 
 import pytest
-from sqlalchemy.dialects.postgresql import dialect
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncConnection
+from sqlalchemy.sql import operators, visitors
+from sqlalchemy.sql.elements import BinaryExpression, BindParameter, ClauseElement
 
 from ade_api.features.agent_runtime.context import ContextBudget, build_context
 from ade_api.features.agent_runtime.errors import RuntimeValidationError
@@ -16,6 +18,10 @@ from ade_api.features.agent_runtime.fact_registry import (
 from ade_api.features.agent_runtime.memory_policy import prepare_memory_review
 from ade_api.features.agent_runtime.memory_review import ReviewDecision
 from ade_api.features.agent_runtime.persistence.memory import MemoryRepository
+from ade_api.features.agent_runtime.persistence.metadata import (
+    memory_embeddings,
+    memory_facts,
+)
 from workflows.evals.character_memory_dev.m2_comparison import (
     REQUIRED_CASE_IDS,
     load_comparison_spec,
@@ -48,6 +54,49 @@ class _SearchConnection:
         return _EmptyRows()
 
 
+def _has_bound_equality(
+    statement: ClauseElement, column: Any, expected_value: str
+) -> bool:
+    """Find a real equality predicate and the value bound to its column."""
+
+    return any(
+        isinstance(expression, BinaryExpression)
+        and expression.operator is operators.eq
+        and expression.left.compare(column)
+        and isinstance(expression.right, BindParameter)
+        and expression.right.value == expected_value
+        for expression in visitors.iterate(statement)
+    )
+
+
+def _has_column_equality(statement: ClauseElement, left: Any, right: Any) -> bool:
+    """Find a join equality independent of SQL rendering details."""
+
+    return any(
+        isinstance(expression, BinaryExpression)
+        and expression.operator is operators.eq
+        and (
+            (expression.left.compare(left) and expression.right.compare(right))
+            or (expression.left.compare(right) and expression.right.compare(left))
+        )
+        for expression in visitors.iterate(statement)
+    )
+
+
+def _assert_active_subject_retrieval_predicates(statement: ClauseElement) -> None:
+    assert _has_bound_equality(statement, memory_facts.c.subject_id, SUBJECT_ID)
+    assert _has_bound_equality(statement, memory_embeddings.c.subject_id, SUBJECT_ID)
+    assert _has_bound_equality(statement, memory_facts.c.status, "active")
+    assert _has_column_equality(
+        statement, memory_embeddings.c.fact_id, memory_facts.c.id
+    )
+    assert _has_column_equality(
+        statement,
+        memory_embeddings.c.revision_id,
+        memory_facts.c.current_revision_id,
+    )
+
+
 def _subject_entities() -> list[dict[str, str]]:
     return [
         {"id": SUBJECT_ID, "subject_id": SUBJECT_ID, "kind": "subject", "label": ""}
@@ -71,7 +120,7 @@ def _active_preference() -> list[dict[str, Any]]:
     ]
 
 
-def test_m2_fixture_has_one_common_budget_and_every_required_case() -> None:
+def test_m2_fixture_is_a_repeatable_unexecuted_comparison_spec() -> None:
     specification = load_comparison_spec()
 
     assert specification["shared_budget"] == {
@@ -81,6 +130,16 @@ def test_m2_fixture_has_one_common_budget_and_every_required_case() -> None:
         "max_reply_tokens": 512,
     }
     assert {case["id"] for case in specification["cases"]} == REQUIRED_CASE_IDS
+    assert {subject["id"] for subject in specification["subjects"]} == {
+        "lin-user",
+        "wang-user",
+    }
+    assert any(
+        case["id"] == "concern-lifecycle"
+        and "concern-resolution" in case["conversation_ids"]
+        for case in specification["cases"]
+    )
+    assert all(case["negative_probes"] for case in specification["cases"])
 
 
 def test_current_ade_preference_is_separately_correctable_and_forgettable() -> None:
@@ -146,14 +205,41 @@ def test_current_ade_retrieval_contract_filters_subject_and_forgotten_facts() ->
 
     assert rows == []
     assert connection.statement is not None
-    statement = connection.statement.compile(dialect=dialect())
-    sql = str(statement)
-    assert "memory_facts.subject_id" in sql
-    assert "memory_embeddings.subject_id" in sql
-    assert "memory_facts.status" in sql
-    assert "active" in statement.params.values()
-    assert SUBJECT_ID in statement.params.values()
-    assert OTHER_SUBJECT_ID not in statement.params.values()
+    _assert_active_subject_retrieval_predicates(connection.statement)
+
+
+@pytest.mark.parametrize(
+    "conditions",
+    [
+        (
+            memory_facts.c.status == "active",
+            memory_embeddings.c.subject_id == SUBJECT_ID,
+        ),
+        (
+            memory_facts.c.subject_id == SUBJECT_ID,
+            memory_facts.c.status == "active",
+        ),
+        (
+            memory_facts.c.subject_id == SUBJECT_ID,
+            memory_embeddings.c.subject_id == SUBJECT_ID,
+        ),
+    ],
+    ids=("fact-subject", "embedding-subject", "active-status"),
+)
+def test_retrieval_predicate_check_rejects_each_missing_boundary(
+    conditions: tuple[Any, ...],
+) -> None:
+    statement = select(memory_facts).join(
+        memory_embeddings,
+        and_(
+            memory_embeddings.c.fact_id == memory_facts.c.id,
+            memory_embeddings.c.revision_id == memory_facts.c.current_revision_id,
+        ),
+    )
+    statement = statement.where(*conditions)
+
+    with pytest.raises(AssertionError):
+        _assert_active_subject_retrieval_predicates(statement)
 
 
 def test_current_ade_context_exposes_active_distractors_before_semantic_retrieval() -> (
