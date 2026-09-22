@@ -89,6 +89,39 @@ def test_disabled_or_ambiguous_actions_are_not_forced() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "content",
+    [
+        "Please do not search memory for that.",
+        "Don't search your memory.",
+        "请不要搜索记忆。",
+        "不用查记忆。",
+    ],
+)
+def test_negated_memory_search_is_not_forced(content: str) -> None:
+    assert resolve_tool_requirement(content, ("search_memory",)) is None
+
+
+def test_affirmative_action_is_selected_when_another_tool_is_negated() -> None:
+    requirement = resolve_tool_requirement(
+        "Please search memory, but do not check the weather.",
+        ("get_weather", "search_memory"),
+    )
+
+    assert requirement is not None
+    assert requirement.tool_name == "search_memory"
+
+
+def test_affirmative_weather_is_selected_after_negated_memory_search() -> None:
+    requirement = resolve_tool_requirement(
+        "Do not search memory; please check Toronto weather.",
+        ("get_weather", "search_memory"),
+    )
+
+    assert requirement is not None
+    assert requirement.tool_name == "get_weather"
+
+
 def test_fault_fixture_values_do_not_drive_policy_resolution() -> None:
     ordinary = resolve_tool_requirement(
         "Please check Toronto weather.", ("get_weather",)

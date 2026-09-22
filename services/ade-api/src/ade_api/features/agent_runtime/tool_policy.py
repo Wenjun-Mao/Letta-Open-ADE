@@ -19,6 +19,16 @@ TOOL_USE_POLICY: Final = """Tool rules:
 """
 
 _IDENTIFIER = re.compile(r"[a-z][a-z0-9_.]{0,127}")
+_CLAUSE_START = re.compile(r"(?:^|[.!?;。！？；\n])([^.!?;。！？；\n]*)$")
+_ENGLISH_NEGATED_ACTION = re.compile(
+    r"\b(?:do\s+not|don't|never|avoid|without|rather\s+than|stop|"
+    r"no\s+need\s+to|needn't|cannot|can't|not)"
+    r"(?:\s+[a-z][a-z'-]*){0,5}\s*$",
+    re.IGNORECASE,
+)
+_CHINESE_NEGATED_ACTION = re.compile(
+    r"(?:不要|别(?:再)?|勿|無需|无需|不(?:要|用|必|需|想|是))(?:.{0,12})$"
+)
 
 
 @dataclass(frozen=True)
@@ -63,7 +73,9 @@ class _FreeFormRule:
 
     def matches(self, content: str) -> bool:
         return any(item in content for item in self.capability_markers) and any(
-            item in content for item in self.action_markers
+            not _action_is_negated(content, action_start)
+            for marker in self.action_markers
+            for action_start in _marker_offsets(content, marker)
         )
 
 
@@ -86,7 +98,6 @@ _RULES: Final = (
             "預報",
         ),
         action_markers=(
-            "please",
             "check",
             "look up",
             "lookup",
@@ -101,8 +112,6 @@ _RULES: Final = (
             "weather in",
             "forecast for",
             "temperature in",
-            "请",
-            "請",
             "查",
             "查询",
             "查詢",
@@ -165,4 +174,32 @@ def resolve_tool_requirement(
     return ToolRequirement(
         tool_name=selected.tool_name,
         capability=selected.capability,
+    )
+
+
+def _marker_offsets(content: str, marker: str) -> tuple[int, ...]:
+    """Return every literal marker occurrence so one negated action is not decisive."""
+
+    offsets: list[int] = []
+    start = content.find(marker)
+    while start >= 0:
+        offsets.append(start)
+        start = content.find(marker, start + 1)
+    return tuple(offsets)
+
+
+def _action_is_negated(content: str, action_start: int) -> bool:
+    """Recognize a direct opt-out in the action's local clause.
+
+    This is intentionally a bounded syntactic check: it only suppresses a forced
+    call. Ambiguous wording remains discretionary instead of inventing a tool
+    requirement from keywords alone.
+    """
+
+    prefix = content[:action_start]
+    clause = _CLAUSE_START.search(prefix)
+    local_prefix = clause.group(1) if clause else prefix
+    return bool(
+        _ENGLISH_NEGATED_ACTION.search(local_prefix)
+        or _CHINESE_NEGATED_ACTION.search(local_prefix)
     )

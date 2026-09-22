@@ -20,15 +20,18 @@ from .memory_review import (
 
 
 _UNCERTAIN_MARKERS = (
-    "maybe",
-    "perhaps",
-    "might",
-    "possibly",
-    "guess",
     "也许",
     "可能",
     "大概",
     "猜",
+)
+_ENGLISH_UNCERTAIN_MARKERS = re.compile(
+    r"\b(?:maybe|perhaps|might|possibly|guess)\b", re.IGNORECASE
+)
+_CLAUSE_BOUNDARY = re.compile(r"[.!?;。！？；\n]+")
+_CONTRAST_CLAUSE_BOUNDARY = re.compile(
+    r"[,，]\s*(?:but|however|yet|whereas|though|但|不过|可是|然而|反而|只是)\s*",
+    re.IGNORECASE,
 )
 _VALUE_STOPWORDS = {"a", "an", "and", "as", "is", "my", "the", "to"}
 
@@ -81,7 +84,7 @@ def prepare_memory_review(
 
     for index, proposal in enumerate(decision.proposals):
         evidence = bind_evidence(proposal, user_messages=[current_user_message])
-        _validate_claim_semantics(proposal, content, facts_by_id)
+        _validate_claim_semantics(proposal, content, evidence, facts_by_id)
         existing_fact: dict[str, Any] | None = None
         if isinstance(proposal, (CorrectProposal, ForgetProposal)):
             existing_fact = facts_by_id.get(proposal.fact_id)
@@ -160,11 +163,11 @@ def prepare_memory_review(
 def _validate_claim_semantics(
     proposal: ReviewProposal,
     current_content: str,
+    evidence: BoundEvidence,
     facts_by_id: dict[str, dict[str, Any]],
 ) -> None:
-    normalized_content = _normalize(current_content)
-    if not isinstance(proposal, ForgetProposal) and any(
-        marker in normalized_content for marker in _UNCERTAIN_MARKERS
+    if not isinstance(proposal, ForgetProposal) and _claim_is_uncertain(
+        current_content, evidence
     ):
         raise RuntimeValidationError(
             "Uncertain or hypothetical claims cannot become durable memory"
@@ -182,6 +185,40 @@ def _validate_claim_semantics(
         raise RuntimeValidationError(
             "Memory value is not supported by current evidence and referenced facts"
         )
+
+
+def _claim_is_uncertain(content: str, evidence: BoundEvidence) -> bool:
+    """Check confidence in the evidence's claim clause, never the whole turn.
+
+    Evidence is already bound to one user-authored span. Restricting the check to
+    that span's clause preserves the no-hypothetical-memory rule without treating
+    a different thought in the same turn as uncertainty about this fact.
+    """
+
+    claim = _claim_clause(content, evidence.start_char, evidence.end_char)
+    normalized = _normalize(claim)
+    return bool(_ENGLISH_UNCERTAIN_MARKERS.search(normalized)) or any(
+        marker in normalized for marker in _UNCERTAIN_MARKERS
+    )
+
+
+def _claim_clause(content: str, start: int, end: int) -> str:
+    boundaries = [
+        (match.start(), match.end()) for match in _CLAUSE_BOUNDARY.finditer(content)
+    ]
+    boundaries.extend(
+        (match.start(), match.end())
+        for match in _CONTRAST_CLAUSE_BOUNDARY.finditer(content)
+    )
+    left = max(
+        (boundary_end for _, boundary_end in boundaries if boundary_end <= start),
+        default=0,
+    )
+    right = min(
+        (boundary_start for boundary_start, _ in boundaries if boundary_start >= end),
+        default=len(content),
+    )
+    return content[left:right]
 
 
 def _validate_existing_fact(
