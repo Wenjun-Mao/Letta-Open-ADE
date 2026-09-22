@@ -134,6 +134,55 @@ Its ignored raw captures are development evidence only. A dialogue prompt with
 omitted memory cannot prove forgetting or subject isolation; a valid
 `memory-review` proposal is not a durable ADE fact.
 
+## M2 ADE PostgreSQL Context-Conditioning Slice
+
+This bounded development slice connects committed state from the existing ADE
+PostgreSQL typed-fact path to the Luna dialogue task. It uses one fresh
+synthetic case in the explicitly disposable local database only. The workflow
+creates source records and writes typed add/correct/forget operations through
+the existing Pydantic review validation, `prepare_memory_review`, and
+`commit_memory_review` path. These operations are scripted setup, not
+model-generated extraction and not evidence that prose is automatically
+converted into typed facts.
+
+The exact serial chronology is: (1) commit Subject One's scripted drink
+preference and probe; (2) correct it in a distinct Subject One conversation,
+commit, and probe; (3) forget the corrected fact, commit, and probe; (4) add a
+different explicit preference for Subject Two, commit, and probe. Each probe
+reads the current subject's active facts through `MemoryRepository` only after
+the preceding transaction commits. Its dialogue input includes those active
+fact values and one new recall question. It excludes source/origin, correction,
+and forget transcripts and expected answers. The separate-subject output is
+not post-filtered: the repository query is scoped to Subject Two before its
+facts are passed to the prompt. Raw model calls, exact prompt contexts, and
+source fact/revision IDs are retained together in the ignored output folder.
+
+The four calls are limited to the existing Luna subscription adapter, medium
+effort, default tier, 180-second timeout, JSON Schema dialogue contract, and
+zero adapter retries/fallbacks. Calls run serially and once; a failed or
+uncertain call is not retried. This is database-backed context-conditioning
+development evidence only—not semantic retrieval quality, extraction quality,
+native runtime behavior, a security proof, or a head-to-head Hindsight result.
+Review exact claims and source attribution, specifically whether the forgotten
+preference is resurrected and whether Subject One's preference is attributed
+to Subject Two; distinguish pass, fail, and uncertain rather than grading
+vocabulary alone.
+
+After applying the checked-in ADE migrations to the named disposable local DB,
+run the case once with a passwordless loopback `ADE_TEST_DATABASE_URL` for
+`ade_m2_memory_test_01a0ca1b`:
+
+```sh
+ADE_TEST_DATABASE_URL='postgresql+psycopg://ade_owner@127.0.0.1:<mapped-port>/ade_m2_memory_test_01a0ca1b' \
+  uv run --locked python -m workflows.evals.character_memory_dev.m2_postgres_luna
+```
+
+The angle-bracket port is the local Docker mapping, not a value to copy
+literally. The workflow verifies the connected database and role before any
+case write. It does not migrate, drop, truncate, or clean up the database. The
+new case IDs are random; the case manifest and per-call captures are written
+under ignored `outputs/m2-postgres-luna-<case-id>/`.
+
 ### Review Claims, Not Vocabulary
 
 Assess a factual-recall answer against the source it attributes: it must not

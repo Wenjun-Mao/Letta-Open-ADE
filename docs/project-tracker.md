@@ -44,6 +44,16 @@ quality, model extraction, native runtime behavior, or Hindsight. `ade-api`
 declares SQLAlchemy's `asyncio` extra so locked installs include the `greenlet`
 runtime dependency required by `AsyncEngine` on this Mac architecture.
 
+A separate ADE-only M2 context-conditioning slice has now passed four serial
+GPT-6 Luna dialogue probes. Each prompt was built from active preference facts
+read back from committed PostgreSQL state for that probe's subject plus a new
+question; scripted typed writes were explicitly not model extraction. The
+sample showed red-tea recall, corrected green-tea recall, no tea preference
+resurrection after forget, and the separate subject's folk-music preference.
+This remains development evidence, not semantic retrieval, extraction,
+security, native-runtime, or ADE/Hindsight comparison evidence; exact source
+and revision IDs and claim review are in [M2 findings](findings/m2-memory-approach-comparison.md).
+
 For future delegation, follow Relay's current model-choice guide: GPT-6 Luna /
 high for bounded implementation and focused verification; GPT-6 Sol / medium
 for challenging integration, or high for difficult architecture/high-risk work.
@@ -101,6 +111,7 @@ implementation and verification choices do not need repeated confirmation.
 - 2026-09-22: GPT-6 Luna configured for future development calls without a live generation run. Entitlement and transport qualification remain pending a separately agreed budget; frozen M1/M2 GPT-5.6 Luna evidence remains historically labeled and separate.
 - 2026-09-22: Added and passed isolated PostgreSQL coverage for the supported typed-fact add/correct/forget path across two conversations and two subjects. Synthetic vectors validate SQL selection and filtering only; semantic retrieval/provider and Hindsight comparison remain pending.
 - 2026-09-22: Changed the lifecycle test to commit each transition and read committed state through separate connections; test URLs now fail closed unless they target a passwordless loopback database with a unique M2 test name. Added SQLAlchemy's asyncio extra to `ade-api` and synced the lockfile after confirming the documented `greenlet` requirement.
+- 2026-09-22: Added the workflow-local PostgreSQL read-back dialogue slice. The fake-dialogue DB pipeline check and chronological input tests passed before exactly four one-shot subscription Luna calls; all task validations passed. Findings record exact contexts, replies, and source/revision IDs. This does not close the provider-backed ADE/Hindsight comparison.
 
 ## Updating This Tracker
 

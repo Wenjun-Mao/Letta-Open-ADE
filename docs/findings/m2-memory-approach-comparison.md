@@ -76,6 +76,51 @@ between stages, including after forgetting.
 The test used the fresh local `pgvector/pgvector:0.8.1-pg15` container and
 database `ade_m2_memory_test_01a0ca1b`, migrated to the current Alembic head.
 
+### ADE PostgreSQL Read-Back Dialogue Slice (2026-09-22)
+
+One fresh synthetic case then connected the committed typed-fact path to the
+existing Luna dialogue task. Scripted add/correct/forget proposals passed the
+existing Pydantic review validation, `prepare_memory_review`, and
+`commit_memory_review` path; they were not model-generated extraction. Each
+operation committed before a separate repository read-back. Each of four
+serial `gpt-6-luna` dialogue prompts contained the active facts returned for
+that subject and one new recall question only—no source, correction, or forget
+transcript and no expected answers. The shared prompt builder appended only its
+existing task instructions and persona. Subject Two had a distinct music
+preference. The exact prompts, raw calls, transport manifests, repository
+contexts, and case IDs are captured under the ignored
+[case manifest](../../workflows/evals/character_memory_dev/outputs/m2-postgres-luna-4b1c473a550247ec9ba51b61c82a6981/case.json) and its sibling per-call artifacts.
+
+The database lineage is inspectable in `case.json` and each call's
+`database-context.json`: Subject One fact
+`2b1b0b43-24dd-43ed-96fd-9d3f3a9f0ff7` had add revision
+`f74a3ddf-abb7-4344-9626-d47aac3b1fc2` (source message
+`3681d78c-d670-4851-a800-978cdbe4ae41`, quote `喜欢红茶`), correction revision
+`ac8f8072-dff9-474a-9610-38835194479b` (second conversation, source
+`6e026b89-6809-4cf6-93b5-a0d01a715ec5`, quote `更喜欢绿茶`), and forget revision
+`3cd6b197-085a-49bf-b1c9-8bca00b8d8f1` (source
+`32197e72-6798-41b7-b3fd-93b401c936ae`, quote `请把这个偏好忘掉`). The
+separate Subject Two fact `7534ce5e-f858-47a7-aede-25b34d8ed665` remained
+active at revision `26885fb1-e1de-4e8c-860d-7c2b1b2a1b4e` (source
+`918a9687-2733-4c08-9cce-fe241926a6a4`, quote `喜欢听民谣`).
+
+| Probe | Exact repository-derived prompt context | Luna claim / source attribution | Review |
+| --- | --- | --- | --- |
+| Subject One, after add | `用户饮品偏好：红茶` (add revision `f74a3ddf…`) | “记得呀，你平时更偏爱红茶呢。” Attributes red tea to the prompted user, matching the add source. | Pass for this supplied-context sample. |
+| Subject One, after correction | `用户饮品偏好：绿茶` (correction revision `ac8f8072…`) | “你之前说过喜欢绿茶呢…” The corrected value and its source are supported by the second-conversation correction. | Pass for the current preference claim; one sample does not establish robust correction behavior. |
+| Subject One, after forget | empty list; fact current revision is forget `3cd6b197…`, status `forgotten` | “我这边没有记下你偏爱喝什么茶呢。” Does not resurrect either tea preference. | Pass for non-resurrection in this prompt. The follow-up “我会记住的呀” is conversational language, not a persisted write or promise-system capability. |
+| Subject Two | `用户音乐偏好：民谣` (Subject Two revision `26885fb1…`) | “你平常更喜欢民谣呀。” Attributes the distinct music preference correctly and does not attribute Subject One's tea preference to Subject Two. | Pass for this repository-scoped input; not adversarial cross-subject leakage or a security proof. |
+
+All four calls used the subscription adapter with `gpt-6-luna`, medium effort,
+default tier, a 180-second cap, JSON Schema dialogue output, and zero adapter
+retries. All four transport and task validations passed. Workflow fakes verify
+commit/read/dialogue order and input derivation; a DB-backed fake-dialogue run
+also exercised the real scripted write/read path before the four calls. This is
+ADE database-backed context-conditioning development evidence only. It does
+not test semantic retrieval quality, model extraction, native runtime,
+embedding behavior, security, or Hindsight parity, and is not candidate
+comparison evidence.
+
 Recreate the local test database without a password or external service:
 
 ```sh
@@ -206,3 +251,5 @@ not M2 completion or an external-service decision.
   comparison's native/provider evidence boundary.
 - SQLAlchemy's [2.0 installation FAQ](https://docs.sqlalchemy.org/en/20/faq/installation.html) identifies `sqlalchemy[asyncio]` as the install target that ensures `greenlet` is present. `ade-api` now declares that extra; `uv lock` and `uv sync --locked` completed, and `uv run --locked` confirms `greenlet` is installed.
 - The focused storage, repository-contract, PostgreSQL migration, memory-policy, and tool-policy regression command passed: **49 passed, 1 skipped**. The skipped migration-transition test requires a separate `ADE_DATABASE_MIGRATION_URL`.
+- The character-memory workflow suite passed: **61 passed, 1 skipped** (the DB-backed fake-dialogue test is opt-in). With the named local database enabled, that test plus the lifecycle regression passed: **9 passed**. Changed workflow files pass Ruff checks and formatting; checking the entire workflow directory for formatting also reports an unchanged pre-existing formatting difference in `character_memory_dev/luna.py`.
+- Exactly four new serial GPT-6 Luna calls were run once for the PostgreSQL read-back dialogue slice; all four schema/task validations passed. Their evidence is scoped above and does not alter the pending native ADE/Hindsight comparison.

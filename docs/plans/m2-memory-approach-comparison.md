@@ -25,7 +25,10 @@ This work compares evidence; it does not adopt either candidate.
    connection read-backs, source/revision lineage, current-revision embedding
    join, and subject filters with deterministic synthetic vectors. This
    verifies storage/query wiring only; provider-backed semantic retrieval
-   remains pending.
+   remains pending. A separate ADE-only development slice may condition Luna
+   dialogue on facts read back from committed PostgreSQL state; it must remain
+   distinct from candidate-comparison evidence and use no historical source
+   turns or expected answers in its probes.
 3. Inspect pinned official Hindsight documentation and source for retain/recall,
    bank isolation, deletion/correction, provenance, dependencies, and provider
    requirements. Record citations and operational implications.
@@ -34,7 +37,9 @@ This work compares evidence; it does not adopt either candidate.
    and latency. M1 and the bounded M2 Luna records may diagnose source-linked
    extraction, supplied-context dialogue, and factual-recall versus
    recommendation attribution only; they are not candidate comparison or
-   native-provider evidence.
+   native-provider evidence. The PostgreSQL read-back dialogue slice is
+   likewise development context-conditioning evidence, not semantic retrieval
+   or head-to-head evidence.
 5. Publish a concise comparison finding, exact pending live experiments, and a
    confidence-qualified recommendation. Do not select or install Hindsight.
 
