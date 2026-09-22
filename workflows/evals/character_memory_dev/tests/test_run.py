@@ -18,6 +18,12 @@ def test_task_validation_artifacts(monkeypatch, tmp_path, answer, exit_code):
     calls = []
 
     def generate(prompt, destination, **kwargs):
+        assert kwargs["output_schema"] == {
+            "type": "object",
+            "properties": {"reply": {"type": "string"}},
+            "required": ["reply"],
+            "additionalProperties": False,
+        }
         calls.append(prompt)
         destination.mkdir()
         return answer

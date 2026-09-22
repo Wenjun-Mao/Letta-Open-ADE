@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from workflows.evals.character_memory_dev import luna
+from workflows.evals.character_memory_dev.output_schemas import output_schema
 from workflows.evals.character_memory_dev.tasks import build_prompt, validate_result
 
 
@@ -48,7 +49,8 @@ def fake_cli(monkeypatch, source):
     return calls
 
 
-def test_success_and_existing_output_never_replayed(monkeypatch, tmp_path):
+@pytest.mark.parametrize("task", [None, "dialogue", "memory-review", "judge"])
+def test_success_and_existing_output_never_replayed(monkeypatch, tmp_path, task):
     raw = '{"reply":"hello"}'
     source = (
         "import sys; from pathlib import Path; sys.stdin.read(); "
@@ -56,13 +58,24 @@ def test_success_and_existing_output_never_replayed(monkeypatch, tmp_path):
     )
     calls = fake_cli(monkeypatch, source)
     output = tmp_path / "one"
-    assert luna.generate("test", output) == raw
+    schema = output_schema(task) if task else None
+    assert luna.generate("test", output, output_schema=schema) == raw
     manifest = json.loads((output / "manifest.json").read_text())
     assert manifest["status"] == "transport_validated"
     assert manifest["requested_model"] == "gpt-6-luna"
     assert manifest["runtime_qualification"] == "configured_unqualified"
     assert manifest["usage"] is None
     assert manifest["adapter_retry_count"] == 0
+    if task:
+        args = calls[0]
+        schema_path = Path(args[args.index("--output-schema") + 1])
+        assert schema_path.is_absolute()
+        assert schema_path.parent == output
+        assert json.loads(schema_path.read_text()) == schema
+        assert manifest["output_contract"] == "json-schema-v1"
+        assert args[-1] == "-"
+    else:
+        assert "--output-schema" not in calls[0]
     with pytest.raises(FileExistsError):
         luna.generate("test", output)
     assert len(calls) == 1

@@ -22,7 +22,11 @@ returned plain text instead of required JSON; task validation failed. Access
 was demonstrated, not workflow qualification. No retry or fallback was made.
 Evidence: `workflows/evals/character_memory_dev/outputs/gpt6-luna-smoke-20260922/`
 (ignored). Diagnose the output-format contract before any newly budgeted call;
-do not weaken validation or relabel this result. Historical M1/M2 GPT-5.6 Luna
+do not weaken validation or relabel this result. The structured-output follow-up
+now passes per-task JSON Schema through the CLI and records `json-schema-v1`;
+92 focused tests and workflow Ruff checks pass. No new generation was attempted,
+so the schema-enabled path still needs a separately budgeted live smoke.
+Historical M1/M2 GPT-5.6 Luna
 captures and comparison inputs remain frozen.
 
 For future delegation, follow Relay's current model-choice guide: GPT-6 Luna /

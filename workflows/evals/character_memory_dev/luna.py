@@ -114,7 +114,13 @@ def _termination_signals():
             signal.signal(signum, handler)
 
 
-def generate(prompt: str, output: Path, *, timeout_seconds: float = 180) -> str:
+def generate(
+    prompt: str,
+    output: Path,
+    *,
+    timeout_seconds: float = 180,
+    output_schema: dict | None = None,
+) -> str:
     """Reserve an output directory once; never replay a failed/uncertain call."""
     if not math.isfinite(timeout_seconds) or not 0 < timeout_seconds <= 600:
         raise ValueError("timeout_seconds must be in (0, 600]")
@@ -148,6 +154,11 @@ def generate(prompt: str, output: Path, *, timeout_seconds: float = 180) -> str:
         manifest["cli_version"] = preflight(env)
         manifest["authentication"] = "ChatGPT"
         (output / "prompt.txt").write_text(prompt, encoding="utf-8")
+        schema_path = output / "output-schema.json"
+        if output_schema is not None:
+            schema_path.write_text(json.dumps(output_schema) + "\n", encoding="utf-8")
+            manifest["output_contract"] = "json-schema-v1"
+            save()
         final_path = output / "final.txt"
         with tempfile.TemporaryDirectory(prefix="ade-luna-") as cwd:
             args = [
@@ -175,6 +186,8 @@ def generate(prompt: str, output: Path, *, timeout_seconds: float = 180) -> str:
                 "-",
             ]
             paths = [output / "events.jsonl", output / "stderr.txt", final_path]
+            if output_schema is not None:
+                args[-1:-1] = ["--output-schema", str(schema_path)]
             with (
                 (output / "prompt.txt").open("rb") as stdin,
                 paths[0].open("wb") as stdout,

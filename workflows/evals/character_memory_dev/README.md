@@ -13,6 +13,15 @@ evidence and must not be relabeled or mixed into GPT-6 comparisons.
 
 ## Run
 
+New calls pass a task-specific `--output-schema` to the CLI and save its exact
+JSON as `output-schema.json` beside the raw captures. The manifest records
+`output_contract=json-schema-v1`. This contract is not yet live-qualified.
+The first GPT-6 smoke returned plain text despite the prompt's JSON instruction;
+its transport passed but task validation failed. That record is preserved.
+Schemas constrain shape only: strict task/source validation still runs, with
+no text wrapping, repair, or automatic retry. Historical GPT-5.6 captures used
+prompt-only formatting and remain unchanged.
+
 ```sh
 uv run python -m workflows.evals.character_memory_dev.run \
   --runtime luna-subscription --task dialogue \

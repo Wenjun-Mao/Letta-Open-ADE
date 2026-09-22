@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from .json_contract import loads
 from .luna import generate
+from .output_schemas import output_schema
 from .tasks import TASKS, build_prompt, validate_result
 
 
@@ -23,7 +24,12 @@ def main() -> int:
     try:
         data = loads(args.input.read_text(encoding="utf-8"))
         prompt = build_prompt(args.task, data)
-        raw = generate(prompt, output, timeout_seconds=args.timeout_seconds)
+        raw = generate(
+            prompt,
+            output,
+            timeout_seconds=args.timeout_seconds,
+            output_schema=output_schema(args.task),
+        )
     except (ValueError, OSError, RuntimeError, subprocess.SubprocessError) as exc:
         print(f"Failed: {exc}; requested artifacts: {output}")
         return 1

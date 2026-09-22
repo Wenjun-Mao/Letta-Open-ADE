@@ -5,6 +5,18 @@
 
 ## Context
 
+### Structured Output Follow-Up (2026-09-22)
+
+The first GPT-6 call returned plain text despite JSON prompt instructions. The
+transport succeeded; task validation correctly rejected it. New workflow calls
+therefore supply a task-specific JSON Schema using the supported CLI
+`--output-schema` flag, saving the schema and contract identifier with captures.
+Prompt-only enforcement and wrapping plain text after generation are rejected:
+neither establishes the requested structured-output contract. Existing semantic
+and event validators stay authoritative. Synthetic command tests pass separately
+from live qualification, which is still pending. Frozen runs are not rewritten.
+See [CLI documentation](https://learn.chatgpt.com/docs/non-interactive-mode).
+
 DGX Spark is shared with other projects. Character dialogue and memory-review
 experiments need a development option while it is occupied. The installed Codex
 CLI can request Luna using ChatGPT subscription authentication, but does not
