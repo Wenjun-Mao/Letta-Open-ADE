@@ -5,13 +5,14 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 
 ## Current Focus
 
-M1 is complete as an implementation baseline for 林小棠 (`chat_linxiaotang`) in
-everyday Chinese companionship. See the [M1 plan](plans/m1-character-continuity-baseline.md)
-and [findings](findings/m1-character-continuity-baseline.md). Next action:
-M2 ADE-extension versus Hindsight comparison, following director review and
-the additional cross-clause tool-policy regression fix.
-Fresh native release qualification remains pending provider availability; it is
-not waived by this development evidence.
+M2: compare the smallest ADE extension with Hindsight against M1's 林小棠
+(`chat_linxiaotang`) continuity cases. See the
+[M2 plan](plans/m2-memory-approach-comparison.md) and
+[interim findings](findings/m2-memory-approach-comparison.md). The initial
+provider-independent source-contract mapping, workflow-local checks, and
+external capability review are complete. Identical provider-backed experiments
+are pending authority and availability. Fresh native release qualification
+remains pending; it is not waived by this development evidence.
 
 The user authorized continued delivery between checkpoints. Escalate material
 scope/tradeoff decisions, unsafe actions, or blockers needing user input. Routine
@@ -23,19 +24,19 @@ implementation and verification choices do not need repeated confirmation.
 | --- | --- | --- | --- | --- |
 | M0 | complete | None | Maintain verified foundation | [Native release ledger](../config/agent-studio/release-evidence.json), [ADR 0019](adr/0019-ade-steady-state-runtime.md), [Luna workflow](../workflows/evals/character_memory_dev/README.md), commits `f8de9d7` and `7799439`. |
 | M1 | complete | M0 | Director review and M2 comparison definition | [Findings](findings/m1-character-continuity-baseline.md), policy tests, and ten serial Luna records. Implementation baseline is complete; native persistence/provider qualification remains pending. |
-| M2 | planned | M1 | Specify comparison from baseline findings | Requires evidence-backed selection considering correctness, isolation, forgetting, latency, and maintenance burden. External service adoption is a material decision. |
+| M2 | in progress | M1 | Run identical provider-backed ADE/Hindsight cases when authorized and available | [Interim findings](findings/m2-memory-approach-comparison.md) record structural evidence and precise live prerequisites. Requires measured correctness, isolation, forgetting, latency, and maintenance comparison before any external-service decision. |
 | M3 | planned | M2 decision | Detail one complete Agent Studio implementation | Requires persisted continuity, source inspection, correction/forgetting, and stable relationship identity across persona edits. |
 | M4 | planned | M3 | Define deployment-provider and real-use acceptance cases | Requires longer-session results, deployment-model qualification, and actual operator review. |
 
-## M1 Work Checklist
+## M2 Work Checklist
 
-- [x] Reproduce whole-message uncertainty false positives, including `Mighty` and a definite fact beside unrelated uncertainty.
-- [x] Reproduce negation-insensitive tool requirements, including requests not to search memory.
-- [x] Fix responsible policy contracts with regression coverage; record durable decisions where needed.
-- [x] Define conversations for preferences, worries/follow-ups, promises, shared conversational experiences, corrections, forgetting, and isolation between users.
-- [x] Review accuracy, unsupported experiences, repetitive callbacks, irrelevant recall, and natural Chinese voice.
-- [x] Separate in-context experiments, persisted-memory tests, and provider qualification in results.
-- [x] Produce a findings report attributing failures and identifying M2 requirements.
+- [x] Map current ADE representation and contracts to every M1 requirement.
+- [x] Add and run compact workflow-local comparison fixtures and deterministic checks.
+- [x] Inspect and cite pinned official Hindsight retain/recall, isolation,
+  lifecycle, provenance, dependency, and provider evidence.
+- [x] Record common budget, quality-layer, latency, and operational comparison.
+- [x] Record exact blocked live experiments and a confidence-qualified recommendation.
+- [ ] Run identical provider-backed ADE/Hindsight experiments before selecting a memory approach.
 
 ## Constraints And Open Questions
 
@@ -56,6 +57,8 @@ implementation and verification choices do not need repeated confirmation.
 - 2026-09-22: Luna workflow delivered at `7799439`; 535 Python tests passed, 5 skipped, and three live development tasks passed. These were in-context generation checks.
 - 2026-09-22: Roadmap/tracker established; everyday companionship selected; M1 started. Later milestone detail depends on findings.
 - 2026-09-22: M1 baseline completed in this worktree: ten serial Luna development records validated, two policy defects fixed with native regressions, and [findings](findings/m1-character-continuity-baseline.md) recorded. This invalidates the prior governed-policy fingerprint; native release requalification is pending, not waived.
+- 2026-09-22: M2 comparison started with the [plan](plans/m2-memory-approach-comparison.md). No memory architecture has been selected or adopted.
+- 2026-09-22: M2 interim structural evidence and compact workflow checks completed; see [findings](findings/m2-memory-approach-comparison.md). Provider-backed candidate comparison and any external-service decision remain pending.
 
 ## Updating This Tracker
 
