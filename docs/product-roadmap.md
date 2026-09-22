@@ -21,8 +21,8 @@ status, blockers, next actions, and evidence.
 | M3 | Complete Agent Studio experience | Cross-conversation memory, source inspection, correction/forgetting, and relationship continuity across persona edits work. |
 | M4 | Real-use validation | Longer-session trials, deployment-provider validation, and operator review meet agreed acceptance criteria. |
 
-M1 is the next implementation priority. Detail later milestones after preceding
-results establish what is necessary. Scene-based roleplay is deferred.
+M2 is the next priority. Detail later milestones after preceding results
+establish what is necessary. Scene-based roleplay is deferred.
 
 ## Delivered
 

@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "shared_budget": {
+    "recent_transcript_tokens": 3000,
+    "memory_to_dialogue_tokens": 3000,
+    "source_inspection_tokens": 1500,
+    "max_reply_tokens": 512
+  },
+  "cases": [
+    {
+      "id": "preference-correction",
+      "memory_shape": "One durable, typed preference with a source span and a separately addressable current value.",
+      "assertions": ["corrected value wins in a later conversation", "old value is inspectable as superseded lineage", "current response does not narrow a broad preference into a remembered sub-preference"],
+      "ade_contract": "Supported for typed preference correction and revision provenance; semantic recall quality needs a live embedding route.",
+      "hindsight_trial": "Retain a user-scoped transcript, update the same document with a correction, then recall under the common memory budget with source facts/chunks recorded separately.",
+      "live_requirement": "Authorized retain/recall provider, deterministic user bank or strict user tag, and measured extraction plus recall latency."
+    },
+    {
+      "id": "forgetting-no-resurface",
+      "memory_shape": "An explicit removal of a durable fact followed by an unrelated later conversation.",
+      "assertions": ["forget request is source-bound", "removed value is absent from active retrieval and dialogue context", "audit trail distinguishes forgotten from never stored"],
+      "ade_contract": "Supported for explicit forget, active-status filtering, revision lineage, and source evidence; a provider-backed end-to-end replay is pending.",
+      "hindsight_trial": "Delete the source document or identified memory and prove the old value is absent from recall while deletion scope and retained unrelated content are inspected.",
+      "live_requirement": "Authorized Hindsight instance and a post-delete recall trace; document-level versus individual-memory deletion must be recorded."
+    },
+    {
+      "id": "concern-lifecycle",
+      "memory_shape": "A time-bound concern, its follow-up, and an explicit resolved or expired state.",
+      "assertions": ["follow-up is relevant before resolution", "resolved concern does not recur as current", "source and lifecycle transition are inspectable"],
+      "ade_contract": "Unsupported as a native fact type or lifecycle: current typed facts have no concern, expiry, or resolution model.",
+      "hindsight_trial": "Retain a timestamped transcript with explicit resolution and inspect whether recall distinguishes an active concern from historical context.",
+      "live_requirement": "Authorized temporal retain/recall run with source trace; no result may be inferred from timestamp documentation alone."
+    },
+    {
+      "id": "promise-shared-event",
+      "memory_shape": "A promise and conversation-visible event spanning user and assistant turns, without real-world co-presence.",
+      "assertions": ["promise can be followed up naturally", "event provenance identifies transcript turns", "reply never fabricates physical participation"],
+      "ade_contract": "Unsupported as a typed native memory: reviewer evidence binds only the current user message and fact registry has no promise or shared-event type.",
+      "hindsight_trial": "Retain a role-labelled full transcript with stable document ID, then recall the promise and inspect returned source chunks before common ADE dialogue generation.",
+      "live_requirement": "Authorized extraction/recall run and human review of role attribution plus unsupported-experience negative cases."
+    },
+    {
+      "id": "subject-isolation-cross-conversation",
+      "memory_shape": "Two durable subjects with distractor facts and a second conversation for the same subject.",
+      "assertions": ["same-subject later conversation can access its fact", "other subject is absent before generation", "retrieval trace or query evidence proves the boundary"],
+      "ade_contract": "Supported structurally: facts, embeddings, and search are subject-scoped; live semantic retrieval remains pending.",
+      "hindsight_trial": "Use one isolated bank per subject or an enforced strict user tag, retain distractors, and capture recall traces for both subjects.",
+      "live_requirement": "Authorized storage/recall run with explicit bank or tag configuration and adversarial cross-subject probes."
+    },
+    {
+      "id": "relevance-and-repetition",
+      "memory_shape": "Relevant current preference or concern beside old dog/travel distractors and already-mentioned callbacks.",
+      "assertions": ["relevant detail is retrieved when useful", "distractors are omitted", "previously used facts are not mechanically repeated"],
+      "ade_contract": "Not met by current context selection: up to twelve recency-sorted active facts are inserted before semantic retrieval, so irrelevant/repeated callbacks are a context-selection risk.",
+      "hindsight_trial": "Recall against the same distractors at the common memory budget and measure ranked result relevance, then feed only the candidate result to the same ADE dialogue stage.",
+      "live_requirement": "Authorized retrieval and common dialogue-generation experiment; fixture or fake rankings do not establish semantic quality."
+    },
+    {
+      "id": "unsupported-physical-experience",
+      "memory_shape": "A transcript-only exchange about a photo or event with no evidence of shared physical presence.",
+      "assertions": ["stored summary remains transcript-scoped", "response does not claim seeing, visiting, or doing the event together", "review record cites the source text"],
+      "ade_contract": "Unsupported as a dedicated representation; existing facts can preserve user facts but not transcript events with a no-co-presence contract.",
+      "hindsight_trial": "Retain the role-labelled transcript and inspect recalled chunks/source facts before common dialogue generation; do not use reflect as the dialogue comparator.",
+      "live_requirement": "Authorized extraction/recall plus human semantic review of Chinese replies against the negative assertion."
+    }
+  ]
+}

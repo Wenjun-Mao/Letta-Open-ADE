@@ -71,3 +71,19 @@ uv run pytest -q workflows/evals/character_memory_dev/tests
 Tests use synthetic subprocesses and make no paid/subscription model calls.
 Live experiments are explicit commands. No Luna endpoint is registered in Model
 Router, and the native Chat Memory Eval remains unchanged.
+
+## M2 Comparison Contract
+
+[`fixtures/m2/comparison.json`](fixtures/m2/comparison.json) is the compact,
+workflow-local comparison contract for M2. It fixes a common context budget and
+the M1 cases to use when comparing an ADE extension with an external candidate.
+It does not implement memory, call Hindsight, or make a provider claim.
+
+```sh
+uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_comparison.py
+```
+
+Those tests exercise current ADE contracts where they exist: typed correction,
+explicit forgetting, subject/status-scoped retrieval SQL, and context assembly.
+They deliberately surface unsupported concern/promise/shared-event semantics and
+the current active-profile distractor behavior rather than simulating parity.

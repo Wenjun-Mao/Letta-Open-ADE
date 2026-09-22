@@ -1,0 +1,34 @@
+# M2 Memory-Approach Comparison Plan
+
+Status: In progress
+
+## Decision Question
+
+For 林小棠's everyday Chinese companionship, does the smallest source-owned ADE
+extension meet the M1 continuity cases more safely and simply than Hindsight?
+This work compares evidence; it does not adopt either candidate.
+
+## Bounded Work
+
+1. Map the current ADE facts, evidence provenance, correction/forgetting,
+   subject boundary, and retrieval contracts against the M1 cases.
+2. Add a workflow-local specification, fixtures, and deterministic checks for
+   the parts those contracts can actually exercise. Report unsupported concern,
+   promise, shared-event, and semantic-retrieval requirements rather than
+   inventing a production representation.
+3. Inspect pinned official Hindsight documentation and source for retain/recall,
+   bank isolation, deletion/correction, provenance, dependencies, and provider
+   requirements. Record citations and operational implications.
+4. Use the common fixtures and a common input/context budget to distinguish
+   storage correctness, retrieval quality, extraction quality, dialogue quality,
+   and latency. Reuse M1's Luna records; do not run new calls unless a suitable
+   provider is explicitly available and authorized.
+5. Publish a concise comparison finding, exact pending live experiments, and a
+   confidence-qualified recommendation. Do not select or install Hindsight.
+
+## Non-Goals And Gates
+
+No production API, database migration, memory service, Compose change, Spark
+generation, cloud billing, proxy, or release-evidence update belongs to M2
+comparison work. Native Qwen/embedding/provider experiments and qualification
+remain pending an authorized available provider.
