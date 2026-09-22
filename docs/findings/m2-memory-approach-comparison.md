@@ -121,6 +121,15 @@ not test semantic retrieval quality, model extraction, native runtime,
 embedding behavior, security, or Hindsight parity, and is not candidate
 comparison evidence.
 
+Director review: Subject Two was probed only after Subject One's tea fact was
+forgotten. This sequence does not test leakage between simultaneously active
+subject memories; the earlier PostgreSQL lifecycle regression, not these Luna
+calls, supplies that storage-filter evidence. The full correction reply also
+offers to make tea in response to a hypothetical question. That is not evidence
+of an actual physical action or a passed no-physical-co-presence requirement.
+Independent verification reran the workflow suite and PostgreSQL lifecycle test:
+63 passed, using fake dialogue for the database workflow and no new model calls.
+
 Recreate the local test database without a password or external service:
 
 ```sh
