@@ -16,9 +16,21 @@ executed. Identical provider-backed experiments are pending authority and
 availability. Fresh native release qualification remains pending; it is not
 waived by this development evidence.
 
-GPT-6 Luna is configured for future development calls, but live entitlement and
-generation qualification remain pending a separately agreed budget. Historical
-M1/M2 GPT-5.6 Luna captures and comparison inputs remain frozen.
+GPT-6 Luna is configured for future development calls. The authorized single
+smoke call on 2026-09-22 completed transport validation in 6.705 seconds but
+returned plain text instead of required JSON; task validation failed. Access
+was demonstrated, not workflow qualification. No retry or fallback was made.
+Evidence: `workflows/evals/character_memory_dev/outputs/gpt6-luna-smoke-20260922/`
+(ignored). Diagnose the output-format contract before any newly budgeted call;
+do not weaken validation or relabel this result. Historical M1/M2 GPT-5.6 Luna
+captures and comparison inputs remain frozen.
+
+For future delegation, follow Relay's current model-choice guide: GPT-6 Luna /
+high for bounded implementation and focused verification; GPT-6 Sol / medium
+for challenging integration, or high for difficult architecture/high-risk work.
+Check tool support before dispatch and disclose unavailable selectors. This
+supersedes the previous Terra default, not the experimental generation lane's
+separately specified medium reasoning setting.
 
 The user authorized continued delivery between checkpoints. Escalate material
 scope/tradeoff decisions, unsafe actions, or blockers needing user input. Routine
