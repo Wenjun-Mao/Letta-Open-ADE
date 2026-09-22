@@ -36,10 +36,13 @@ Historical M1/M2 GPT-5.6 Luna
 captures and comparison inputs remain frozen.
 
 The existing typed-fact add/correct/forget path and subject-filtered pgvector
-query now have an isolated PostgreSQL storage regression using synthetic
-vectors. It verifies persistence, revision/source lineage, current-revision
-selection, forgotten-fact exclusion, and subject isolation. It does not qualify
-embedding quality, model extraction, native runtime behavior, or Hindsight.
+query now have an isolated PostgreSQL regression with separate committed
+transitions and fresh connection read-backs, using synthetic vectors. It
+verifies persistence, revision/source lineage, current-revision selection,
+forgotten-fact exclusion, and subject isolation. It does not qualify embedding
+quality, model extraction, native runtime behavior, or Hindsight. `ade-api`
+declares SQLAlchemy's `asyncio` extra so locked installs include the `greenlet`
+runtime dependency required by `AsyncEngine` on this Mac architecture.
 
 For future delegation, follow Relay's current model-choice guide: GPT-6 Luna /
 high for bounded implementation and focused verification; GPT-6 Sol / medium
@@ -97,6 +100,7 @@ implementation and verification choices do not need repeated confirmation.
 - 2026-09-22: M2 Luna-only development matrix completed with fourteen serial captures, including a factual-recall versus recommendation contrast; see [Luna findings](findings/m2-luna-development-evidence.md). This supplied-context evidence does not test native persistence, retrieval, or Hindsight.
 - 2026-09-22: GPT-6 Luna configured for future development calls without a live generation run. Entitlement and transport qualification remain pending a separately agreed budget; frozen M1/M2 GPT-5.6 Luna evidence remains historically labeled and separate.
 - 2026-09-22: Added and passed isolated PostgreSQL coverage for the supported typed-fact add/correct/forget path across two conversations and two subjects. Synthetic vectors validate SQL selection and filtering only; semantic retrieval/provider and Hindsight comparison remain pending.
+- 2026-09-22: Changed the lifecycle test to commit each transition and read committed state through separate connections; test URLs now fail closed unless they target a passwordless loopback database with a unique M2 test name. Added SQLAlchemy's asyncio extra to `ade-api` and synced the lockfile after confirming the documented `greenlet` requirement.
 
 ## Updating This Tracker
 

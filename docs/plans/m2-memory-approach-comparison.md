@@ -21,9 +21,10 @@ This work compares evidence; it does not adopt either candidate.
    case state and chronological turns; a forgetting run must prove the prior
    fact was stored and recalled before it is deleted.
    A bounded isolated PostgreSQL test also exercises the existing typed-fact
-   add/correct/forget writes, source/revision lineage, current-revision
-   embedding join, and subject filters with deterministic synthetic vectors.
-   This verifies storage/query wiring only; provider-backed semantic retrieval
+   add/correct/forget writes as committed transactions with separate
+   connection read-backs, source/revision lineage, current-revision embedding
+   join, and subject filters with deterministic synthetic vectors. This
+   verifies storage/query wiring only; provider-backed semantic retrieval
    remains pending.
 3. Inspect pinned official Hindsight documentation and source for retain/recall,
    bank isolation, deletion/correction, provenance, dependencies, and provider

@@ -70,8 +70,38 @@ forgetting, and retrieval isolation from a second subject. Three-dimensional
 deterministic vectors exercise pgvector SQL only. This verifies storage and
 filter correctness; it says nothing about semantic embedding quality, LLM
 extraction correctness, runtime qualification, or Hindsight parity.
+Each add, correction, second-subject add, and forget commits in its own
+transaction. The test reads the committed state through a separate connection
+between stages, including after forgetting.
 The test used the fresh local `pgvector/pgvector:0.8.1-pg15` container and
 database `ade_m2_memory_test_01a0ca1b`, migrated to the current Alembic head.
+
+Recreate the local test database without a password or external service:
+
+```sh
+M2_TEST_SUFFIX="$(uuidgen | tr -d '-' | cut -c1-8 | tr '[:upper:]' '[:lower:]')"
+M2_TEST_CONTAINER="ade-m2-memory-it-${M2_TEST_SUFFIX}"
+M2_TEST_DATABASE="ade_m2_memory_test_${M2_TEST_SUFFIX}"
+docker run -d --name "$M2_TEST_CONTAINER" \
+  -e POSTGRES_USER=ade_owner \
+  -e POSTGRES_DB="$M2_TEST_DATABASE" \
+  -e POSTGRES_HOST_AUTH_METHOD=trust \
+  -p 127.0.0.1::5432 pgvector/pgvector:0.8.1-pg15
+M2_TEST_PORT="$(docker port "$M2_TEST_CONTAINER" 5432/tcp | sed 's/.*://')"
+M2_TEST_URL="postgresql+psycopg://ade_owner@127.0.0.1:${M2_TEST_PORT}/${M2_TEST_DATABASE}"
+docker exec "$M2_TEST_CONTAINER" psql -U ade_owner -d "$M2_TEST_DATABASE" \
+  -c 'CREATE SCHEMA ade AUTHORIZATION ade_owner'
+docker exec "$M2_TEST_CONTAINER" psql -U ade_owner -d "$M2_TEST_DATABASE" \
+  -c "ALTER ROLE ade_owner IN DATABASE ${M2_TEST_DATABASE} SET search_path TO ade, extensions, public"
+ADE_DATABASE_MIGRATION_URL="$M2_TEST_URL" uv run --locked alembic \
+  -c services/ade-api/alembic.ini upgrade head
+ADE_TEST_DATABASE_URL="$M2_TEST_URL" uv run --locked pytest -q \
+  services/ade-api/tests/agent_runtime/persistence/test_postgres_memory_lifecycle.py
+```
+
+The test rejects URLs that are not passwordless loopback PostgreSQL URLs for
+the `ade_owner` role and a database name matching
+`ade_m2_memory_test_<hex-id>`; it fails before connecting or writing otherwise.
 
 ### Retrieval Check Correction
 
@@ -174,5 +204,5 @@ not M2 completion or an external-service decision.
 - Fourteen new Luna development calls are recorded separately in
   [M2 Luna findings](m2-luna-development-evidence.md); they do not change this
   comparison's native/provider evidence boundary.
-- `ADE_TEST_DATABASE_URL=… uv run --with greenlet pytest -q services/ade-api/tests/agent_runtime/persistence/test_postgres_memory_lifecycle.py` against a fresh named pgvector test database: **1 passed**. The optional `greenlet` was supplied for this invocation because it was absent from the active environment; dependency declarations and the lockfile were unchanged.
-- The combined storage, repository-contract, PostgreSQL migration, memory-policy, and tool-policy regression command: **49 passed, 1 skipped**. The skipped migration-transition test requires a separate `ADE_DATABASE_MIGRATION_URL`.
+- SQLAlchemy's [2.0 installation FAQ](https://docs.sqlalchemy.org/en/20/faq/installation.html) identifies `sqlalchemy[asyncio]` as the install target that ensures `greenlet` is present. `ade-api` now declares that extra; `uv lock` and `uv sync --locked` completed, and `uv run --locked` confirms `greenlet` is installed.
+- The focused storage, repository-contract, PostgreSQL migration, memory-policy, and tool-policy regression command passed: **49 passed, 1 skipped**. The skipped migration-transition test requires a separate `ADE_DATABASE_MIGRATION_URL`.

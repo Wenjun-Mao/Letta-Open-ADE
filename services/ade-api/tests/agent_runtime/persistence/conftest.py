@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-from types import SimpleNamespace
 from typing import Any
 from uuid import uuid4
 
@@ -24,12 +23,18 @@ from ade_api.features.agent_runtime.persistence.metadata import (
 
 
 @pytest.fixture
-def m2_memory_lifecycle_support():
-    return SimpleNamespace(
-        prepare_review=prepare_review,
-        record_turn=record_turn,
-        seed_resources=seed_resources,
-    )
+def seed_m2_memory_resources():
+    return seed_resources
+
+
+@pytest.fixture
+def record_m2_memory_turn():
+    return record_turn
+
+
+@pytest.fixture
+def prepare_m2_memory_review():
+    return prepare_review
 
 
 async def seed_resources(connection: AsyncConnection) -> dict[str, str]:
