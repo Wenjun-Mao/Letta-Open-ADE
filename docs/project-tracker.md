@@ -5,6 +5,13 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 
 ## Current Focus
 
+Director recommendation: [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md)
+proposes retaining ADE's current memory store for a bounded
+[M3 product slice](plans/m3-agent-studio-continuity.md), while explicitly
+deferring the unexecuted external-service comparison. This changes the original
+M2-to-M3 sequencing and awaits approval; M2 is not marked complete and M3
+implementation has not started. No comparative quality winner is claimed.
+
 M2: compare the smallest ADE extension with Hindsight against M1's 林小棠
 (`chat_linxiaotang`) continuity cases. See the
 [M2 plan](plans/m2-memory-approach-comparison.md) and
