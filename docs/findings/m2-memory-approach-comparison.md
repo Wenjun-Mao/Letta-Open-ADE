@@ -45,10 +45,10 @@ store-and-successful-recall checkpoint after `forget-origin` and before
 
 | Requirement | Observed contract | M2 status |
 | --- | --- | --- |
-| Separately correctable preference | `person.preference` is typed by qualifier; a correction preserves its normalized key, binds one user evidence span, and advances the existing fact. | Structurally supported; live semantic retrieval pending. |
-| Forgetting/no resurfacing | Explicit forget creates a revision and marks the fact forgotten; active-profile and semantic-search queries filter `status=active`. The fixture requires store and recall of a separate milk-tea fact before deletion. | Structurally supported; chronological provider-backed replay pending. |
-| Source inspection | Revision sources preserve message ID, exact character span, quote, message hash, and predecessor lineage. | Structurally supported. |
-| Subject isolation and cross-conversation recall | Facts and embeddings are queried with the bound subject ID; a conversation loads that subject's active facts. | Boundary supported in source; cross-conversation semantic recall pending. |
+| Separately correctable preference | `person.preference` is typed by qualifier; a correction preserves its normalized key, binds one user evidence span, and advances the existing fact. | PostgreSQL storage path verified with synthetic vectors; semantic retrieval quality pending. |
+| Forgetting/no resurfacing | Explicit forget creates a revision and marks the fact forgotten; active-profile and semantic-search queries filter `status=active`. The fixture requires store and recall of a separate milk-tea fact before deletion. | PostgreSQL lifecycle and active-query behavior verified; chronological provider-backed replay pending. |
+| Source inspection | Revision sources preserve message ID, exact character span, quote, message hash, and predecessor lineage. | Revision/source rows and predecessor links verified against PostgreSQL. |
+| Subject isolation and cross-conversation recall | Facts and embeddings are queried with the bound subject ID; a conversation loads that subject's active facts. | PostgreSQL subject-filter behavior verified across two subjects and two conversations for one subject; semantic recall quality pending. |
 | Concern lifecycle | Registry has no concern type, expiry, resolution, or current-versus-historical lifecycle. | Unsupported; do not encode it as a preference. |
 | Promise/shared transcript event | Reviewer evidence is one current user-message span; registry has no promise/shared-event type. | Unsupported; no invented schema in M2. |
 | Relevance/repetition | Up to twelve recency-sorted active facts enter the profile before semantic retrieval. Dog/travel distractors can therefore reach dialogue context when current stress may make them irrelevant. | Context-selection risk, not a proved bad dialogue or embedding outcome. |
@@ -57,8 +57,21 @@ store-and-successful-recall checkpoint after `forget-origin` and before
 The fixture test validates the fixed input contract. Separate native structural
 checks exercise typed correction/forget preparation, active subject/status
 retrieval predicates, active-profile context, and absent temporal/transcript
-types. They are intentionally not a fake persistence service, candidate run,
-or substitute for retrieval and dialogue-quality evidence.
+types.
+
+### PostgreSQL Storage Check (2026-09-22)
+
+An isolated PostgreSQL integration test exercised the existing review and
+repository path: add a preference in one conversation, correct it in a second
+conversation for the same subject, then forget it. It checked versioned
+add/correct/forget revisions, exact source-message quotes and predecessor
+links, current-revision embedding selection, no active retrieval after
+forgetting, and retrieval isolation from a second subject. Three-dimensional
+deterministic vectors exercise pgvector SQL only. This verifies storage and
+filter correctness; it says nothing about semantic embedding quality, LLM
+extraction correctness, runtime qualification, or Hindsight parity.
+The test used the fresh local `pgvector/pgvector:0.8.1-pg15` container and
+database `ade_m2_memory_test_01a0ca1b`, migrated to the current Alembic head.
 
 ### Retrieval Check Correction
 
@@ -161,3 +174,5 @@ not M2 completion or an external-service decision.
 - Fourteen new Luna development calls are recorded separately in
   [M2 Luna findings](m2-luna-development-evidence.md); they do not change this
   comparison's native/provider evidence boundary.
+- `ADE_TEST_DATABASE_URL=… uv run --with greenlet pytest -q services/ade-api/tests/agent_runtime/persistence/test_postgres_memory_lifecycle.py` against a fresh named pgvector test database: **1 passed**. The optional `greenlet` was supplied for this invocation because it was absent from the active environment; dependency declarations and the lockfile were unchanged.
+- The combined storage, repository-contract, PostgreSQL migration, memory-policy, and tool-policy regression command: **49 passed, 1 skipped**. The skipped migration-transition test requires a separate `ADE_DATABASE_MIGRATION_URL`.
