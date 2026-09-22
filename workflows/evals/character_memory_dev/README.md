@@ -81,6 +81,13 @@ extension with an external candidate. It specifies expected semantic state and
 negative probes; it does not implement memory, call Hindsight, or make a
 provider claim.
 
+For a future candidate run, initialize fresh state for every `case_state_id`
+and process that case's `conversation_ids` in their listed chronological order.
+Do not retain future turns before an earlier probe. In the forgetting case,
+store and successfully recall the milk-tea preference after `forget-origin`
+before processing `forget-request`; its `forget-user` state is separate from
+the corrected coffee/flower-tea preference case.
+
 ```sh
 uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_comparison.py
 ```

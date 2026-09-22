@@ -120,23 +120,39 @@ def load_comparison_spec(path: Path = FIXTURE_PATH) -> dict[str, Any]:
     if not isinstance(cases, list):
         raise ValueError("M2 comparison fixture cases must be a list")
     ids: set[str] = set()
+    case_state_ids: set[str] = set()
+    case_fields = {
+        "id",
+        "case_state_id",
+        "m1_fixture_refs",
+        "conversation_ids",
+        "memory_shape",
+        "expected_semantic_state",
+        "negative_probes",
+        "ade_contract",
+        "hindsight_trial",
+        "live_requirement",
+    }
     for case in cases:
-        if not isinstance(case, dict) or set(case) != {
-            "id",
-            "m1_fixture_refs",
-            "conversation_ids",
-            "memory_shape",
-            "expected_semantic_state",
-            "negative_probes",
-            "ade_contract",
-            "hindsight_trial",
-            "live_requirement",
-        }:
+        if not isinstance(case, dict) or (
+            set(case) != case_fields
+            and set(case) != case_fields | {"pre_delete_checkpoint"}
+        ):
             raise ValueError("M2 comparison case has an invalid shape")
         case_id = case["id"]
         if not isinstance(case_id, str) or not case_id or case_id in ids:
             raise ValueError("M2 comparison case IDs must be unique nonempty strings")
         ids.add(case_id)
+        case_state_id = case["case_state_id"]
+        if (
+            not isinstance(case_state_id, str)
+            or not case_state_id
+            or case_state_id in case_state_ids
+        ):
+            raise ValueError(
+                "M2 comparison case state IDs must be unique nonempty strings"
+            )
+        case_state_ids.add(case_state_id)
         if (
             not isinstance(case["m1_fixture_refs"], list)
             or not case["m1_fixture_refs"]
@@ -221,6 +237,30 @@ def load_comparison_spec(path: Path = FIXTURE_PATH) -> dict[str, Any]:
             )
         ):
             raise ValueError("M2 comparison cases require descriptive fields")
+        checkpoint = case.get("pre_delete_checkpoint")
+        if case_id == "forgetting-no-resurface":
+            if (
+                not isinstance(checkpoint, dict)
+                or set(checkpoint)
+                != {
+                    "after_conversation_id",
+                    "before_conversation_id",
+                    "required_active_value",
+                    "must_recall",
+                }
+                or checkpoint["after_conversation_id"] not in case["conversation_ids"]
+                or checkpoint["before_conversation_id"] not in case["conversation_ids"]
+                or any(
+                    not isinstance(checkpoint[name], str)
+                    or not checkpoint[name].strip()
+                    for name in ("required_active_value", "must_recall")
+                )
+            ):
+                raise ValueError(
+                    "M2 forgetting case requires a concrete pre-delete checkpoint"
+                )
+        elif checkpoint is not None:
+            raise ValueError("only the M2 forgetting case defines a delete checkpoint")
     if ids != REQUIRED_CASE_IDS:
         raise ValueError("M2 comparison fixture does not cover the required cases")
     return payload

@@ -29,12 +29,20 @@ conversations, two-subject inputs, correction/forget/resolution turns, and
 negative probes. Its loader validates references and shape only: it does not
 run a candidate, retrieve memory, or score dialogue quality.
 
+Each candidate replay must start with fresh state for the fixture's
+`case_state_id` and process its `conversation_ids` in their listed
+chronological order; later turns must not be retained before earlier probes.
+The forgetting case has a separate `forget-user` state, so its milk-tea fact
+does not collide with the corrected coffee/flower-tea case. It requires a
+store-and-successful-recall checkpoint after `forget-origin` and before
+`forget-request`; deletion evidence without that precondition is invalid.
+
 ## Current ADE Evidence
 
 | Requirement | Observed contract | M2 status |
 | --- | --- | --- |
 | Separately correctable preference | `person.preference` is typed by qualifier; a correction preserves its normalized key, binds one user evidence span, and advances the existing fact. | Structurally supported; live semantic retrieval pending. |
-| Forgetting/no resurfacing | Explicit forget creates a revision and marks the fact forgotten; active-profile and semantic-search queries filter `status=active`. | Structurally supported; provider-backed replay pending. |
+| Forgetting/no resurfacing | Explicit forget creates a revision and marks the fact forgotten; active-profile and semantic-search queries filter `status=active`. The fixture requires store and recall of a separate milk-tea fact before deletion. | Structurally supported; chronological provider-backed replay pending. |
 | Source inspection | Revision sources preserve message ID, exact character span, quote, message hash, and predecessor lineage. | Structurally supported. |
 | Subject isolation and cross-conversation recall | Facts and embeddings are queried with the bound subject ID; a conversation loads that subject's active facts. | Boundary supported in source; cross-conversation semantic recall pending. |
 | Concern lifecycle | Registry has no concern type, expiry, resolution, or current-versus-historical lifecycle. | Unsupported; do not encode it as a preference. |
@@ -110,15 +118,18 @@ embedding, or Hindsight service was used.
 Before a selection can be made, run these isolated experiments with explicit
 provider and external-service authority:
 
-1. Verify available ADE conversation, reviewer, and embedding routes; create two
-   evaluation subjects and two conversations for one subject. Record retrieved
-   fact IDs, revision source/lineage, query and write latency, and negative
-   cross-subject probes for correction, forgetting, recall, distractors, and
-   repeated callbacks.
+1. Verify available ADE conversation, reviewer, and embedding routes. For each
+   fixture case, initialize fresh `case_state_id` state and process its
+   conversations in order; do not retain future turns before earlier probes.
+   For forgetting, record successful milk-tea storage and recall before the
+   delete request. Record retrieved fact IDs, revision source/lineage, query
+   and write latency, and negative probes for correction, forgetting, recall,
+   distractors, and repeated callbacks.
 2. Provision Hindsight **v0.10.1** outside production with one bank per
-   subject. Retain the same role/timestamp-labelled fixtures, then capture
-   retain latency, recall traces, source facts/chunks, correction and delete
-   scope, and negative cross-subject probes.
+   subject for each fresh case state. Retain the same role/timestamp-labelled
+   fixtures chronologically, satisfy the forgetting pre-delete recall
+   checkpoint, then capture retain latency, recall traces, source facts/chunks,
+   correction and delete scope, and negative cross-subject probes.
 3. Feed each candidate's capped 3,000-token memory result to the same ADE
    dialogue deployment. Human-review natural Chinese voice, relevance,
    correction, forgetting, and no fabricated physical shared experience.
@@ -139,7 +150,7 @@ not M2 completion or an external-service decision.
 ## Verification
 
 - Before this correction checkpoint, `uv run pytest -q`: **559 passed, 5 skipped, 1 failed**. The failure is the existing checked-in production-policy fingerprint gate in `workflows/evals/agent_runtime_acceptance/tests/test_policy.py`; this work does not rebind or promote that policy artifact.
-- `uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_comparison.py services/ade-api/tests/agent_runtime/test_memory_policy.py services/ade-api/tests/agent_runtime/test_tool_policy.py`: **49 passed**.
+- `uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_comparison.py services/ade-api/tests/agent_runtime/test_memory_policy.py services/ade-api/tests/agent_runtime/test_tool_policy.py`: **50 passed**.
 - `uv run ruff check services packages workflows scripts tests`, `uv run ruff format --check services packages workflows scripts tests`, and `git diff --check`: passed.
 - No new Luna calls were made; M1's ten ignored captures remain the only Luna
   evidence in scope.

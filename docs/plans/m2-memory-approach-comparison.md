@@ -17,7 +17,9 @@ This work compares evidence; it does not adopt either candidate.
    checks for the parts current contracts can actually exercise. This is a test
    specification, not an executed candidate comparison. Report unsupported
    concern, promise, shared-event, and semantic-retrieval requirements rather
-   than inventing a production representation.
+   than inventing a production representation. Future runs use fresh isolated
+   case state and chronological turns; a forgetting run must prove the prior
+   fact was stored and recalled before it is deleted.
 3. Inspect pinned official Hindsight documentation and source for retain/recall,
    bank isolation, deletion/correction, provenance, dependencies, and provider
    requirements. Record citations and operational implications.

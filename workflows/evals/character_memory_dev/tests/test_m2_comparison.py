@@ -132,6 +132,7 @@ def test_m2_fixture_is_a_repeatable_unexecuted_comparison_spec() -> None:
     assert {case["id"] for case in specification["cases"]} == REQUIRED_CASE_IDS
     assert {subject["id"] for subject in specification["subjects"]} == {
         "lin-user",
+        "forget-user",
         "wang-user",
     }
     assert any(
@@ -140,6 +141,54 @@ def test_m2_fixture_is_a_repeatable_unexecuted_comparison_spec() -> None:
         for case in specification["cases"]
     )
     assert all(case["negative_probes"] for case in specification["cases"])
+
+
+def test_m2_fixture_requires_chronological_isolated_replay_prerequisites() -> None:
+    specification = load_comparison_spec()
+    conversations = {
+        conversation["id"]: conversation
+        for conversation in specification["conversations"]
+    }
+    cases = {case["id"]: case for case in specification["cases"]}
+
+    assert len({case["case_state_id"] for case in cases.values()}) == len(cases)
+    for conversation in conversations.values():
+        turn_timestamps = [turn["timestamp"] for turn in conversation["turns"]]
+        assert turn_timestamps == sorted(turn_timestamps)
+    for case in cases.values():
+        timestamps = [
+            conversations[conversation_id]["turns"][0]["timestamp"]
+            for conversation_id in case["conversation_ids"]
+        ]
+        assert timestamps == sorted(timestamps)
+
+    preference_origin = conversations["preference-origin"]["turns"][0]
+    assert preference_origin["content"] == "我喜欢喝咖啡。"
+
+    forgetting = cases["forgetting-no-resurface"]
+    checkpoint = forgetting["pre_delete_checkpoint"]
+    assert (
+        forgetting["case_state_id"] != cases["preference-correction"]["case_state_id"]
+    )
+    assert forgetting["expected_semantic_state"][0]["subject_id"] == "forget-user"
+    assert forgetting["conversation_ids"][:2] == ["forget-origin", "forget-request"]
+    assert checkpoint == {
+        "after_conversation_id": "forget-origin",
+        "before_conversation_id": "forget-request",
+        "required_active_value": "奶茶",
+        "must_recall": "奶茶",
+    }
+    assert conversations["forget-origin"]["turns"][0]["content"].startswith(
+        "我喜欢喝奶茶"
+    )
+
+    repetition_turns = conversations["repetition-follow-up"]["turns"]
+    assert [turn["id"] for turn in repetition_turns] == [
+        "repetition-origin-u1",
+        "repetition-callback-a1",
+        "repetition-follow-up-u1",
+    ]
+    assert repetition_turns[1]["role"] == "assistant"
 
 
 def test_current_ade_preference_is_separately_correctable_and_forgettable() -> None:

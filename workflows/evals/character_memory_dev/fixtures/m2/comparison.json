@@ -8,6 +8,7 @@
   },
   "subjects": [
     {"id": "lin-user", "label": "林小棠的用户"},
+    {"id": "forget-user", "label": "林小棠的用户（遗忘回放）"},
     {"id": "wang-user", "label": "王明"}
   ],
   "conversations": [
@@ -15,7 +16,7 @@
       "id": "preference-origin",
       "subject_id": "lin-user",
       "turns": [
-        {"id": "preference-origin-u1", "role": "user", "timestamp": "2026-09-01T08:00:00Z", "content": "我以前常喝咖啡。"},
+        {"id": "preference-origin-u1", "role": "user", "timestamp": "2026-09-01T08:00:00Z", "content": "我喜欢喝咖啡。"},
         {"id": "preference-origin-a1", "role": "assistant", "timestamp": "2026-09-01T08:01:00Z", "content": "知道啦。"}
       ]
     },
@@ -35,8 +36,16 @@
       ]
     },
     {
+      "id": "forget-origin",
+      "subject_id": "forget-user",
+      "turns": [
+        {"id": "forget-origin-u1", "role": "user", "timestamp": "2026-09-04T08:00:00Z", "content": "我喜欢喝奶茶，下午喝一杯会很开心。"},
+        {"id": "forget-origin-a1", "role": "assistant", "timestamp": "2026-09-04T08:01:00Z", "content": "好，我按奶茶这个偏好记着。"}
+      ]
+    },
+    {
       "id": "forget-request",
-      "subject_id": "lin-user",
+      "subject_id": "forget-user",
       "turns": [
         {"id": "forget-request-u1", "role": "user", "timestamp": "2026-09-05T09:00:00Z", "content": "请忘掉我以前喜欢奶茶这件事，以后别再提了。"},
         {"id": "forget-request-a1", "role": "assistant", "timestamp": "2026-09-05T09:01:00Z", "content": "好，我不会再拿这件事来聊。"}
@@ -44,7 +53,7 @@
     },
     {
       "id": "forget-follow-up",
-      "subject_id": "lin-user",
+      "subject_id": "forget-user",
       "turns": [
         {"id": "forget-follow-up-u1", "role": "user", "timestamp": "2026-09-06T18:00:00Z", "content": "今天下班很累，想找点轻松的话题。"}
       ]
@@ -122,6 +131,7 @@
       "subject_id": "lin-user",
       "turns": [
         {"id": "repetition-origin-u1", "role": "user", "timestamp": "2026-09-16T21:00:00Z", "content": "明天还要早起。"},
+        {"id": "repetition-callback-a1", "role": "assistant", "timestamp": "2026-09-16T21:01:00Z", "content": "记得明早要早起，今晚早点休息。"},
         {"id": "repetition-follow-up-u1", "role": "user", "timestamp": "2026-09-16T22:00:00Z", "content": "晚安啦。"}
       ]
     }
@@ -129,6 +139,7 @@
   "cases": [
     {
       "id": "preference-correction",
+      "case_state_id": "m2-preference-correction",
       "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/correction.json", "workflows/evals/character_memory_dev/fixtures/m1/preference_recall.json"],
       "conversation_ids": ["preference-origin", "preference-correction", "preference-recall"],
       "memory_shape": "One durable, typed drink preference with a source turn and separately addressable current value.",
@@ -145,21 +156,24 @@
     },
     {
       "id": "forgetting-no-resurface",
+      "case_state_id": "m2-forgetting-no-resurface",
       "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/forgetting.json"],
-      "conversation_ids": ["forget-request", "forget-follow-up"],
+      "conversation_ids": ["forget-origin", "forget-request", "forget-follow-up"],
+      "pre_delete_checkpoint": {"after_conversation_id": "forget-origin", "before_conversation_id": "forget-request", "required_active_value": "奶茶", "must_recall": "奶茶"},
       "memory_shape": "An explicit removal of a durable fact followed by an unrelated later conversation.",
       "expected_semantic_state": [
-        {"subject_id": "lin-user", "kind": "durable_fact", "key": "drink-preference", "value": "奶茶", "state": "forgotten", "source_turn_ids": ["forget-request-u1"]}
+        {"subject_id": "forget-user", "kind": "durable_fact", "key": "milk-tea-preference", "value": "奶茶", "state": "forgotten", "source_turn_ids": ["forget-origin-u1", "forget-request-u1"]}
       ],
       "negative_probes": [
         {"conversation_id": "forget-follow-up", "turn_id": "forget-follow-up-u1", "must_not_recall": ["奶茶"], "must_not_claim": ["奶茶仍是当前偏好"]}
       ],
       "ade_contract": "Supported for explicit forget, active-status filtering, revision lineage, and source evidence; a provider-backed end-to-end replay is pending.",
-      "hindsight_trial": "Use one Hindsight bank for lin-user, delete the source document or identified memory, and prove the old value is absent from recall while deletion scope is inspected.",
+      "hindsight_trial": "Use one Hindsight bank for forget-user, satisfy the pre-delete recall checkpoint, then delete the source document or identified memory and prove the old value is absent from recall while deletion scope is inspected.",
       "live_requirement": "Authorized Hindsight instance and a post-delete recall trace; document-level versus individual-memory deletion must be recorded."
     },
     {
       "id": "concern-lifecycle",
+      "case_state_id": "m2-concern-lifecycle",
       "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/concern_follow_up.json"],
       "conversation_ids": ["concern-origin", "concern-follow-up", "concern-resolution", "concern-after-resolution"],
       "memory_shape": "A time-bound concern, its follow-up, and an explicit resolved state.",
@@ -175,6 +189,7 @@
     },
     {
       "id": "promise-shared-event",
+      "case_state_id": "m2-promise-shared-event",
       "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/promise_shared_conversation.json", "workflows/evals/character_memory_dev/fixtures/m1/memory_review_shared_experience.json"],
       "conversation_ids": ["photo-promise-event"],
       "memory_shape": "A promise and conversation-visible event spanning user and assistant turns, without real-world co-presence.",
@@ -190,8 +205,9 @@
     },
     {
       "id": "subject-isolation-cross-conversation",
+      "case_state_id": "m2-subject-isolation",
       "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/supplied_memory_isolation.json"],
-      "conversation_ids": ["lin-music-profile", "lin-music-follow-up", "wang-music-profile"],
+      "conversation_ids": ["lin-music-profile", "wang-music-profile", "lin-music-follow-up"],
       "memory_shape": "Two durable subjects with distractor facts and a second conversation for lin-user.",
       "expected_semantic_state": [
         {"subject_id": "lin-user", "kind": "durable_fact", "key": "music-preference", "value": "民谣", "state": "active", "source_turn_ids": ["lin-music-profile-u1"]},
@@ -206,6 +222,7 @@
     },
     {
       "id": "relevance-and-repetition",
+      "case_state_id": "m2-relevance-and-repetition",
       "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/irrelevant_memory.json", "workflows/evals/character_memory_dev/fixtures/m1/repetitive_callback.json"],
       "conversation_ids": ["relevance-distractors", "repetition-follow-up"],
       "memory_shape": "Old dog/travel distractors and an already-mentioned early-rise callback beside current stress and goodnight turns.",
@@ -223,6 +240,7 @@
     },
     {
       "id": "unsupported-physical-experience",
+      "case_state_id": "m2-physical-experience-boundary",
       "m1_fixture_refs": ["workflows/evals/character_memory_dev/fixtures/m1/memory_review_shared_experience.json"],
       "conversation_ids": ["photo-promise-event"],
       "memory_shape": "A transcript-only exchange about a photo with no evidence of shared physical presence.",
