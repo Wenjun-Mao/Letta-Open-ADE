@@ -11,7 +11,13 @@
     "fallbacks": 0
   },
   "maximum_generation_sessions": 14,
-  "planned_generation_sessions": 10,
+  "planned_generation_sessions": 14,
+  "preference_intent_contrast_rubric": {
+    "same_supplied_context": "All four exploratory prompts receive the identical source-derived broad flower-tea statement.",
+    "factual_recall": "A factual-recall answer must not attribute jasmine specificity to the user's remembered preference without source evidence.",
+    "recommendation": "A recommendation may suggest jasmine or another subtype when phrased as advice; lexical subtype presence alone is not a false-memory claim.",
+    "classification": "Review the reply's assertion and source attribution, preserve every output, and treat four samples as exploratory rather than a score."
+  },
   "calls": [
     {
       "id": "preference-correction-extraction",
@@ -59,7 +65,7 @@
       "chronological_cutoff": "Current prompt is preference-recall-u1; supplied context derives only from earlier correction turns.",
       "context_mode": "source-derived-supplied-context-not-retrieval",
       "data_lineage": "One manually curated flower-tea statement from preference-correction-u1; it is not an ADE retrieval result.",
-      "independent_review_focus": "Whether the reply keeps the broad flower-tea preference rather than inventing a narrower stored preference."
+      "independent_review_focus": "Whether the reply frames any subtype as a recommendation rather than attributing a narrower stored preference to the user."
     },
     {
       "id": "forgetting-dialogue",
@@ -131,7 +137,55 @@
       "chronological_cutoff": "Prompt includes repetition-origin-u1 and repetition-callback-a1 before current repetition-follow-up-u1.",
       "context_mode": "source-transcript-only",
       "data_lineage": "Synthetic chronological early-rise callback sequence copied from the M2 comparison fixture.",
-      "independent_review_focus": "Whether the goodnight reply mechanically repeats the already-issued early-rise callback."
+      "independent_review_focus": "Whether the goodnight reply mechanically repeats the already-issued early-rise callback; a gentle callback alone is not an automatic failure."
+    },
+    {
+      "id": "preference-factual-broad-recall",
+      "task": "dialogue",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/preference_factual_broad_recall.json",
+      "case_ids": ["preference-correction"],
+      "case_state_ids": ["m2-preference-intent-contrast"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "Current factual-recall question follows preference-correction-u1; supplied context derives only from that earlier turn.",
+      "context_mode": "source-derived-supplied-context-not-retrieval",
+      "data_lineage": "The identical manually curated broad flower-tea statement used by every preference intent-contrast prompt; it is not retrieval.",
+      "independent_review_focus": "Factual recall should attribute only the source-supported broad preference."
+    },
+    {
+      "id": "preference-factual-jasmine-attribution",
+      "task": "dialogue",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/preference_factual_jasmine_attribution.json",
+      "case_ids": ["preference-correction"],
+      "case_state_ids": ["m2-preference-intent-contrast"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "Current factual-attribution question follows preference-correction-u1; supplied context derives only from that earlier turn.",
+      "context_mode": "source-derived-supplied-context-not-retrieval",
+      "data_lineage": "The identical manually curated broad flower-tea statement used by every preference intent-contrast prompt; it is not retrieval.",
+      "independent_review_focus": "Factual recall must distinguish an unsupported jasmine attribution from the broad source statement."
+    },
+    {
+      "id": "preference-recommendation-jasmine",
+      "task": "dialogue",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/preference_recommendation_jasmine.json",
+      "case_ids": ["preference-correction"],
+      "case_state_ids": ["m2-preference-intent-contrast"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "Current recommendation question follows preference-correction-u1; supplied context derives only from that earlier turn.",
+      "context_mode": "source-derived-supplied-context-not-retrieval",
+      "data_lineage": "The identical manually curated broad flower-tea statement used by every preference intent-contrast prompt; it is not retrieval.",
+      "independent_review_focus": "A jasmine recommendation is ordinary advice unless it attributes jasmine to the user's remembered preference."
+    },
+    {
+      "id": "preference-recommendation-open",
+      "task": "dialogue",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/preference_recommendation_open.json",
+      "case_ids": ["preference-correction"],
+      "case_state_ids": ["m2-preference-intent-contrast"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "Current recommendation question follows preference-correction-u1; supplied context derives only from that earlier turn.",
+      "context_mode": "source-derived-supplied-context-not-retrieval",
+      "data_lineage": "The identical manually curated broad flower-tea statement used by every preference intent-contrast prompt; it is not retrieval.",
+      "independent_review_focus": "Distinguish ordinary drink advice from a factual claim about remembered subtype preference."
     }
   ]
 }

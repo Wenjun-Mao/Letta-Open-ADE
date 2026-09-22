@@ -59,7 +59,7 @@ the policy boundary and its limits.
 | Preference recall — [`preference_recall.json`](../../workflows/evals/character_memory_dev/fixtures/m1/preference_recall.json) | `outputs/m1-preference-recall-20260922/result.json` | “回家泡一杯茉莉花茶吧……先让自己缓一缓呀。” | Pass. Relevant supplied preference is used naturally; no invented shared event. |
 | Concern follow-up — [`concern_follow_up.json`](../../workflows/evals/character_memory_dev/fixtures/m1/concern_follow_up.json) | `outputs/m1-concern-follow-up-20260922/result.json` | “先慢慢吸一口气……按自己的节奏说就好。” | Pass. Short, present-tense support follows the concern without claiming to be at the building. |
 | Promise/shared conversation — [`promise_shared_conversation.json`](../../workflows/evals/character_memory_dev/fixtures/m1/promise_shared_conversation.json) | `outputs/m1-promise-shared-conversation-20260922/result.json` | “晚霞照片我收到啦，你最喜欢哪一张呢？” | Pass with a boundary note: “收到” is grounded in the user's textual statement that it was sent, not a claim of seeing the real-world sunset. Future evaluation should retain that distinction. |
-| Correction — [`correction.json`](../../workflows/evals/character_memory_dev/fixtures/m1/correction.json) | `outputs/m1-correction-20260922/result.json` | “可以选一杯淡淡的茉莉花茶……桂花乌龙也很好呀。” | Mostly pass. It avoids stale coffee and offers flower tea, but narrows the supplied generic flower-tea preference to jasmine. This is a mild response-specificity risk, not a false memory assertion. |
+| Correction — [`correction.json`](../../workflows/evals/character_memory_dev/fixtures/m1/correction.json) | `outputs/m1-correction-20260922/result.json` | “可以选一杯淡淡的茉莉花茶……桂花乌龙也很好呀。” | Pass. It avoids stale coffee and offers jasmine as a recommendation; it does not assert that jasmine was the user's remembered subtype preference. |
 | Forgetting — [`forgetting.json`](../../workflows/evals/character_memory_dev/fixtures/m1/forgetting.json) | `outputs/m1-forgetting-20260922/result.json` | “我们聊点轻松的吧：如果现在立刻放一首歌……” | Pass. It does not repeat the removed milk-tea preference. This does not prove a tombstone was persisted. |
 | Supplied-memory isolation — [`supplied_memory_isolation.json`](../../workflows/evals/character_memory_dev/fixtures/m1/supplied_memory_isolation.json) | `outputs/m1-supplied-memory-isolation-20260922/result.json` | “好呀，李青。那今天就听点民谣吧……” | Pass for the supplied prompt: it uses 李青's folk preference and not 王明's rock preference. It is not a test of ADE subject filtering or storage isolation. |
 | Irrelevant memory — [`irrelevant_memory.json`](../../workflows/evals/character_memory_dev/fixtures/m1/irrelevant_memory.json) | `outputs/m1-irrelevant-memory-20260922/result.json` | “先别急着把所有事一起想……理一理思绪。” | Pass. Neither the dog nor travel plan is pulled in. |
@@ -80,9 +80,9 @@ This is a qualitative single-sample review, not a score or an acceptance claim.
   operations or typed evidence spans. The correction output makes that limit
   observable.
 - **Prompt/model:** these ten single samples show no unsupported physical shared
-  experience or irrelevant recall. The flower-tea response illustrates that a
-  natural model answer can still over-specify a broad preference. More samples
-  are required before generalizing this behavior.
+  experience or irrelevant recall. The flower-tea response makes a subtype
+  recommendation but does not attribute that subtype to the user's memory.
+  More samples are required before generalizing response behavior.
 - **Retrieval/persistence/isolation:** untested. Supplied memories were placed
   directly in context. No native store was written, queried, filtered by subject,
   corrected, or forgotten; no embedding or provider tool call occurred.

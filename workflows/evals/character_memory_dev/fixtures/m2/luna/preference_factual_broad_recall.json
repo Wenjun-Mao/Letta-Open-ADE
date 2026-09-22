@@ -1,0 +1,8 @@
+{
+  "messages": [
+    {"id": "preference-factual-broad-u1", "role": "user", "content": "你还记得我现在更喜欢喝什么吗？"}
+  ],
+  "memories": [
+    "[source-derived supplied context; not retrieval] 用户当前饮品偏好为花茶。来源：preference-correction-u1。"
+  ]
+}

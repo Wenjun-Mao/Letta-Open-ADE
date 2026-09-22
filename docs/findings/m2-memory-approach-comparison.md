@@ -158,6 +158,6 @@ not M2 completion or an external-service decision.
 - Before this correction checkpoint, `uv run pytest -q`: **559 passed, 5 skipped, 1 failed**. The failure is the existing checked-in production-policy fingerprint gate in `workflows/evals/agent_runtime_acceptance/tests/test_policy.py`; this work does not rebind or promote that policy artifact.
 - `uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_comparison.py services/ade-api/tests/agent_runtime/test_memory_policy.py services/ade-api/tests/agent_runtime/test_tool_policy.py`: **50 passed**.
 - `uv run ruff check services packages workflows scripts tests`, `uv run ruff format --check services packages workflows scripts tests`, and `git diff --check`: passed.
-- Ten new Luna development calls are recorded separately in
+- Fourteen new Luna development calls are recorded separately in
   [M2 Luna findings](m2-luna-development-evidence.md); they do not change this
   comparison's native/provider evidence boundary.

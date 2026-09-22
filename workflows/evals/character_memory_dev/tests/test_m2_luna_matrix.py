@@ -15,7 +15,7 @@ def test_m2_luna_matrix_is_bounded_and_uses_existing_task_contracts() -> None:
 
     assert matrix["schema_version"] == 1
     assert matrix["maximum_generation_sessions"] == 14
-    assert matrix["planned_generation_sessions"] == 10
+    assert matrix["planned_generation_sessions"] == 14
     assert (
         matrix["planned_generation_sessions"] <= matrix["maximum_generation_sessions"]
     )
@@ -27,6 +27,12 @@ def test_m2_luna_matrix_is_bounded_and_uses_existing_task_contracts() -> None:
         "timeout_seconds": 180,
         "adapter_retries": 0,
         "fallbacks": 0,
+    }
+    assert matrix["preference_intent_contrast_rubric"] == {
+        "same_supplied_context": "All four exploratory prompts receive the identical source-derived broad flower-tea statement.",
+        "factual_recall": "A factual-recall answer must not attribute jasmine specificity to the user's remembered preference without source evidence.",
+        "recommendation": "A recommendation may suggest jasmine or another subtype when phrased as advice; lexical subtype presence alone is not a false-memory claim.",
+        "classification": "Review the reply's assertion and source attribution, preserve every output, and treat four samples as exploratory rather than a score.",
     }
 
     calls = matrix["calls"]
@@ -41,6 +47,10 @@ def test_m2_luna_matrix_is_bounded_and_uses_existing_task_contracts() -> None:
         "subject-isolation-dialogue",
         "relevance-dialogue",
         "repetition-dialogue",
+        "preference-factual-broad-recall",
+        "preference-factual-jasmine-attribution",
+        "preference-recommendation-jasmine",
+        "preference-recommendation-open",
     ]
     assert all(call["task"] in TASKS for call in calls)
     assert all(call["chronological_cutoff"].strip() for call in calls)
@@ -82,6 +92,10 @@ def test_m2_luna_dialogue_inputs_keep_review_answers_out_of_prompts() -> None:
             "repetition-callback-a1",
             "repetition-follow-up-u1",
         ],
+        "preference-factual-broad-recall": ["preference-factual-broad-u1"],
+        "preference-factual-jasmine-attribution": ["preference-factual-jasmine-u1"],
+        "preference-recommendation-jasmine": ["preference-recommendation-jasmine-u1"],
+        "preference-recommendation-open": ["preference-recommendation-open-u1"],
     }
 
     for call in matrix["calls"]:
@@ -107,3 +121,25 @@ def test_m2_luna_dialogue_inputs_keep_review_answers_out_of_prompts() -> None:
                 "source-transcript-only",
             }
             assert "memories" not in data
+
+    contrast_inputs = [
+        ROOT / call["input"]
+        for call in matrix["calls"]
+        if call["id"].startswith("preference-")
+        and call["id"]
+        in {
+            "preference-factual-broad-recall",
+            "preference-factual-jasmine-attribution",
+            "preference-recommendation-jasmine",
+            "preference-recommendation-open",
+        }
+    ]
+    assert len(contrast_inputs) == 4
+    assert {
+        tuple(json.loads(path.read_text(encoding="utf-8"))["memories"])
+        for path in contrast_inputs
+    } == {
+        (
+            "[source-derived supplied context; not retrieval] 用户当前饮品偏好为花茶。来源：preference-correction-u1。",
+        )
+    }

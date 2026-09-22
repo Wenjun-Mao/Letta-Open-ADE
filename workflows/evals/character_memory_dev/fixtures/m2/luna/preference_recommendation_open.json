@@ -1,0 +1,8 @@
+{
+  "messages": [
+    {"id": "preference-recommendation-open-u1", "role": "user", "content": "下午有点困，你会怎么推荐一杯花茶？"}
+  ],
+  "memories": [
+    "[source-derived supplied context; not retrieval] 用户当前饮品偏好为花茶。来源：preference-correction-u1。"
+  ]
+}

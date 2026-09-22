@@ -1,0 +1,8 @@
+{
+  "messages": [
+    {"id": "preference-factual-jasmine-u1", "role": "user", "content": "我之前有明确说过自己最喜欢茉莉花茶吗？"}
+  ],
+  "memories": [
+    "[source-derived supplied context; not retrieval] 用户当前饮品偏好为花茶。来源：preference-correction-u1。"
+  ]
+}

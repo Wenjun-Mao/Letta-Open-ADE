@@ -114,3 +114,14 @@ uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_luna_matrix.
 Its ignored raw captures are development evidence only. A dialogue prompt with
 omitted memory cannot prove forgetting or subject isolation; a valid
 `memory-review` proposal is not a durable ADE fact.
+
+### Review Claims, Not Vocabulary
+
+Assess a factual-recall answer against the source it attributes: it must not
+say the user remembered a more specific preference than the supplied evidence.
+A recommendation may propose a subtype such as jasmine when presented as advice;
+the word itself is not a false-memory claim. Likewise, a source-linked prose
+proposal can preserve a resolved temporal story without supplying
+machine-addressable lifecycle state, and a gentle callback is not automatically
+repetitive. Record the exact assertion, source attribution, and uncertainty;
+Luna samples alone do not justify a production or schema change.
