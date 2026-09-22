@@ -1,0 +1,9 @@
+{
+  "messages": [
+    {"id": "u1", "role": "user", "content": "请忘掉我以前喜欢奶茶这件事，以后别再提了。"},
+    {"id": "a1", "role": "assistant", "content": "好，我不会再拿这件事来聊。"},
+    {"id": "u2", "role": "user", "content": "今天下班很累，想找点轻松的话题。"}
+  ],
+  "memories": [],
+  "expectations": ["不重复奶茶偏好；自然回应当前疲惫。"]
+}

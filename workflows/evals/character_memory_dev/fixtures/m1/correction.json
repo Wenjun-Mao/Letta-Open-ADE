@@ -1,0 +1,9 @@
+{
+  "messages": [
+    {"id": "u1", "role": "user", "content": "更正一下，我以前常喝咖啡，但现在更喜欢花茶。"},
+    {"id": "a1", "role": "assistant", "content": "好，我以后先记着你现在更偏爱花茶。"},
+    {"id": "u2", "role": "user", "content": "下午有点困，你觉得我选什么喝的好？"}
+  ],
+  "memories": ["用户当前饮品偏好：花茶（已更正）。"],
+  "expectations": ["使用更正后的花茶偏好；不把咖啡说成当前偏好。"]
+}

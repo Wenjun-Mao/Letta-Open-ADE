@@ -5,9 +5,12 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 
 ## Current Focus
 
-M1: establish a character-continuity baseline for 林小棠 (`chat_linxiaotang`) in
-everyday Chinese companionship. Next action: reproduce the two confirmed policy
-defects and define representative conversations with observable expectations.
+M1 is complete as an implementation baseline for 林小棠 (`chat_linxiaotang`) in
+everyday Chinese companionship. See the [M1 plan](plans/m1-character-continuity-baseline.md)
+and [findings](findings/m1-character-continuity-baseline.md). Next action:
+director review, then define the M2 ADE-extension versus Hindsight comparison.
+Fresh native release qualification remains pending provider availability; it is
+not waived by this development evidence.
 
 The user authorized continued delivery between checkpoints. Escalate material
 scope/tradeoff decisions, unsafe actions, or blockers needing user input. Routine
@@ -18,20 +21,20 @@ implementation and verification choices do not need repeated confirmation.
 | ID | Status | Dependencies | Next action | Evidence / completion boundary |
 | --- | --- | --- | --- | --- |
 | M0 | complete | None | Maintain verified foundation | [Native release ledger](../config/agent-studio/release-evidence.json), [ADR 0019](adr/0019-ade-steady-state-runtime.md), [Luna workflow](../workflows/evals/character_memory_dev/README.md), commits `f8de9d7` and `7799439`. |
-| M1 | in progress | M0 | Reproduce policy failures; run and review baseline cases | Requires findings report and regression evidence; Luna in-context results alone do not prove persisted memory. |
+| M1 | complete | M0 | Director review and M2 comparison definition | [Findings](findings/m1-character-continuity-baseline.md), policy tests, and ten serial Luna records. Implementation baseline is complete; native persistence/provider qualification remains pending. |
 | M2 | planned | M1 | Specify comparison from baseline findings | Requires evidence-backed selection considering correctness, isolation, forgetting, latency, and maintenance burden. External service adoption is a material decision. |
 | M3 | planned | M2 decision | Detail one complete Agent Studio implementation | Requires persisted continuity, source inspection, correction/forgetting, and stable relationship identity across persona edits. |
 | M4 | planned | M3 | Define deployment-provider and real-use acceptance cases | Requires longer-session results, deployment-model qualification, and actual operator review. |
 
 ## M1 Work Checklist
 
-- [ ] Reproduce whole-message uncertainty false positives, including `Mighty` and a definite fact beside unrelated uncertainty.
-- [ ] Reproduce negation-insensitive tool requirements, including requests not to search memory.
-- [ ] Fix responsible policy contracts with regression coverage; record durable decisions where needed.
-- [ ] Define conversations for preferences, worries/follow-ups, promises, shared conversational experiences, corrections, forgetting, and isolation between users.
-- [ ] Review accuracy, unsupported experiences, repetitive callbacks, irrelevant recall, and natural Chinese voice.
-- [ ] Separate in-context experiments, persisted-memory tests, and provider qualification in results.
-- [ ] Produce a findings report attributing failures and identifying M2 requirements.
+- [x] Reproduce whole-message uncertainty false positives, including `Mighty` and a definite fact beside unrelated uncertainty.
+- [x] Reproduce negation-insensitive tool requirements, including requests not to search memory.
+- [x] Fix responsible policy contracts with regression coverage; record durable decisions where needed.
+- [x] Define conversations for preferences, worries/follow-ups, promises, shared conversational experiences, corrections, forgetting, and isolation between users.
+- [x] Review accuracy, unsupported experiences, repetitive callbacks, irrelevant recall, and natural Chinese voice.
+- [x] Separate in-context experiments, persisted-memory tests, and provider qualification in results.
+- [x] Produce a findings report attributing failures and identifying M2 requirements.
 
 ## Constraints And Open Questions
 
@@ -51,6 +54,7 @@ implementation and verification choices do not need repeated confirmation.
 - 2026-09-08: Native transition qualified and promoted; release recorded in the ledger.
 - 2026-09-22: Luna workflow delivered at `7799439`; 535 Python tests passed, 5 skipped, and three live development tasks passed. These were in-context generation checks.
 - 2026-09-22: Roadmap/tracker established; everyday companionship selected; M1 started. Later milestone detail depends on findings.
+- 2026-09-22: M1 baseline completed in this worktree: ten serial Luna development records validated, two policy defects fixed with native regressions, and [findings](findings/m1-character-continuity-baseline.md) recorded. This invalidates the prior governed-policy fingerprint; native release requalification is pending, not waived.
 
 ## Updating This Tracker
 
