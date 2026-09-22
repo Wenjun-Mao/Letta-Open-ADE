@@ -97,6 +97,7 @@ backup/restore, not a second application runtime.
 - [Request flows](docs/architecture/request-flows.md): browser, runtime, and workflow paths.
 - [Codebase map](docs/codebase-map.md): where to change a capability.
 - [Product roadmap](docs/product-roadmap.md): current product direction.
+- [Project tracker](docs/project-tracker.md): milestone status, evidence, and next actions.
 - [ADR 0019](docs/adr/0019-ade-steady-state-runtime.md): steady-state runtime and release policy.
 
 ## Local-Only Default

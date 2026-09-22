@@ -2,6 +2,9 @@
 
 Read these pages in order when joining the project:
 
+For delivery priorities, consult the [roadmap](product-roadmap.md) and
+[project tracker](project-tracker.md) before choosing work.
+
 1. [System status](architecture/system-status.md) for the current authority.
 2. [Architecture overview](architecture/overview.md) for service and data boundaries.
 3. [Request flows](architecture/request-flows.md) for a product request end to end.
