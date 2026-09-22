@@ -3,6 +3,20 @@
 Date: 2026-09-22
 Status: Implementation baseline complete; native deployment qualification pending
 
+## Director Review Follow-Up
+
+Director review verified all ten saved transport/task validation records and
+found one remaining tool-policy defect: `Do not search my memory. Find a rhyme
+for cat.` still forced memory search. The capability and affirmative action
+were matched across different clauses. They now must match within the same
+clause; six English/Chinese regression cases cover unrelated actions.
+
+After this correction: focused memory/tool tests **38 passed**; full Python
+suite **551 passed, 5 skipped, 1 failed**. The sole failure is the unchanged
+release-policy fingerprint gate, not a pytest expected-failure marker. Ruff,
+formatting, and diff checks passed for the follow-up. No release approval was
+rebound. Keep this implementation isolated until fresh qualification succeeds.
+
 ## Scope And Method
 
 This is the M1 baseline for `chat_linxiaotang` (林小棠), everyday Chinese

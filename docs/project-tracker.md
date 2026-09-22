@@ -8,7 +8,8 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 M1 is complete as an implementation baseline for 林小棠 (`chat_linxiaotang`) in
 everyday Chinese companionship. See the [M1 plan](plans/m1-character-continuity-baseline.md)
 and [findings](findings/m1-character-continuity-baseline.md). Next action:
-director review, then define the M2 ADE-extension versus Hindsight comparison.
+M2 ADE-extension versus Hindsight comparison, following director review and
+the additional cross-clause tool-policy regression fix.
 Fresh native release qualification remains pending provider availability; it is
 not waived by this development evidence.
 

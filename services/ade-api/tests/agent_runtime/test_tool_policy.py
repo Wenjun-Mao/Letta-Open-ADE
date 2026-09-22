@@ -102,6 +102,21 @@ def test_negated_memory_search_is_not_forced(content: str) -> None:
     assert resolve_tool_requirement(content, ("search_memory",)) is None
 
 
+@pytest.mark.parametrize(
+    "content",
+    [
+        "Do not search my memory. Find a rhyme for cat.",
+        "Do not search my memory, find a rhyme for cat.",
+        "Don't search memory but find a rhyme for cat.",
+        "Memory is personal. Find a rhyme for cat.",
+        "不要搜索记忆。搜索这个词的意思。",
+        "不要搜索记忆，查找这个词的意思。",
+    ],
+)
+def test_unrelated_action_cannot_force_memory_search(content: str) -> None:
+    assert resolve_tool_requirement(content, ("search_memory",)) is None
+
+
 def test_affirmative_action_is_selected_when_another_tool_is_negated() -> None:
     requirement = resolve_tool_requirement(
         "Please search memory, but do not check the weather.",

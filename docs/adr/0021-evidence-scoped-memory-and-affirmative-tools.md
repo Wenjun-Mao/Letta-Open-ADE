@@ -22,7 +22,9 @@ unique, source-bound, and value-supporting.
 
 A curated tool becomes required only when a matched action phrase is
 affirmative in its local clause. Direct English and Chinese negation suppresses
-the requirement; ambiguity remains discretionary. The executor still requires a
+the requirement, and the capability must occur in that same clause. An unrelated
+action in another clause cannot override an opt-out; ambiguity remains
+discretionary. The executor still requires a
 corresponding tool result before a response can claim a call or its success.
 
 ## Consequences

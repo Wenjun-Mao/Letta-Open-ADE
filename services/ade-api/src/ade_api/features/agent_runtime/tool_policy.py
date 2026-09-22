@@ -19,7 +19,7 @@ TOOL_USE_POLICY: Final = """Tool rules:
 """
 
 _IDENTIFIER = re.compile(r"[a-z][a-z0-9_.]{0,127}")
-_CLAUSE_START = re.compile(r"(?:^|[.!?;。！？；\n])([^.!?;。！？；\n]*)$")
+_CLAUSE_BOUNDARY = re.compile(r"[.!?;,。！？；，\n]+|\b(?:but|however|whereas)\b")
 _ENGLISH_NEGATED_ACTION = re.compile(
     r"\b(?:do\s+not|don't|never|avoid|without|rather\s+than|stop|"
     r"no\s+need\s+to|needn't|cannot|can't|not)"
@@ -72,10 +72,14 @@ class _FreeFormRule:
     action_markers: tuple[str, ...]
 
     def matches(self, content: str) -> bool:
-        return any(item in content for item in self.capability_markers) and any(
-            not _action_is_negated(content, action_start)
-            for marker in self.action_markers
-            for action_start in _marker_offsets(content, marker)
+        return any(
+            any(item in clause for item in self.capability_markers)
+            and any(
+                not _action_is_negated(clause, action_start)
+                for marker in self.action_markers
+                for action_start in _marker_offsets(clause, marker)
+            )
+            for clause in _CLAUSE_BOUNDARY.split(content)
         )
 
 
@@ -196,9 +200,7 @@ def _action_is_negated(content: str, action_start: int) -> bool:
     requirement from keywords alone.
     """
 
-    prefix = content[:action_start]
-    clause = _CLAUSE_START.search(prefix)
-    local_prefix = clause.group(1) if clause else prefix
+    local_prefix = content[:action_start]
     return bool(
         _ENGLISH_NEGATED_ACTION.search(local_prefix)
         or _CHINESE_NEGATED_ACTION.search(local_prefix)
