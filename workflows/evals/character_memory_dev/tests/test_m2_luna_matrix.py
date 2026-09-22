@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from workflows.evals.character_memory_dev import luna
 from workflows.evals.character_memory_dev.tasks import TASKS, build_prompt
 
 
@@ -56,6 +57,13 @@ def test_m2_luna_matrix_is_bounded_and_uses_existing_task_contracts() -> None:
     assert all(call["chronological_cutoff"].strip() for call in calls)
     assert all(call["data_lineage"].strip() for call in calls)
     assert all(call["independent_review_focus"].strip() for call in calls)
+
+
+def test_active_luna_target_is_distinct_from_frozen_m2_evidence() -> None:
+    matrix = json.loads(MATRIX_PATH.read_text(encoding="utf-8"))
+
+    assert luna.MODEL == "gpt-6-luna"
+    assert matrix["lane"]["model"] == "gpt-5.6-luna"
 
 
 def test_m2_luna_dialogue_inputs_keep_review_answers_out_of_prompts() -> None:

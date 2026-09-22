@@ -16,6 +16,10 @@ executed. Identical provider-backed experiments are pending authority and
 availability. Fresh native release qualification remains pending; it is not
 waived by this development evidence.
 
+GPT-6 Luna is configured for future development calls, but live entitlement and
+generation qualification remain pending a separately agreed budget. Historical
+M1/M2 GPT-5.6 Luna captures and comparison inputs remain frozen.
+
 The user authorized continued delivery between checkpoints. Escalate material
 scope/tradeoff decisions, unsafe actions, or blockers needing user input. Routine
 implementation and verification choices do not need repeated confirmation.
@@ -63,6 +67,7 @@ implementation and verification choices do not need repeated confirmation.
 - 2026-09-22: M2 comparison started with the [plan](plans/m2-memory-approach-comparison.md). No memory architecture has been selected or adopted.
 - 2026-09-22: M2 interim structural evidence, a repeatable chronological input specification with isolated case state, and compact structural checks completed; see [findings](findings/m2-memory-approach-comparison.md). No candidate comparison was executed; provider-backed comparison and any external-service decision remain pending.
 - 2026-09-22: M2 Luna-only development matrix completed with fourteen serial captures, including a factual-recall versus recommendation contrast; see [Luna findings](findings/m2-luna-development-evidence.md). This supplied-context evidence does not test native persistence, retrieval, or Hindsight.
+- 2026-09-22: GPT-6 Luna configured for future development calls without a live generation run. Entitlement and transport qualification remain pending a separately agreed budget; frozen M1/M2 GPT-5.6 Luna evidence remains historically labeled and separate.
 
 ## Updating This Tracker
 

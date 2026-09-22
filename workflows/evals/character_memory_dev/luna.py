@@ -15,7 +15,8 @@ from pathlib import Path
 from .json_contract import loads
 
 
-MODEL = "gpt-5.6-luna"
+MODEL = "gpt-6-luna"
+RUNTIME_QUALIFICATION = "configured_unqualified"
 MAX_BYTES = 2_000_000
 
 
@@ -126,6 +127,7 @@ def generate(prompt: str, output: Path, *, timeout_seconds: float = 180) -> str:
     manifest = {
         "status": "reserved",
         "requested_model": MODEL,
+        "runtime_qualification": RUNTIME_QUALIFICATION,
         "reasoning_effort": "medium",
         "service_tier": "default",
         "timeout_seconds": timeout_seconds,

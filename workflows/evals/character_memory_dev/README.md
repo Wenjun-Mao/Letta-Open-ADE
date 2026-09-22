@@ -1,9 +1,15 @@
 # Character Memory Development
 
 Host-only experiments with the existing `chat_linxiaotang` (林小棠) persona,
-using GPT-5.6 Luna through the installed Codex CLI and its ChatGPT login.
+using GPT-6 Luna through the installed Codex CLI and its ChatGPT login.
 Run from the repository root on macOS/Linux. No Docker stack or Spark access
 is required. This consumes the account's Codex allowance.
+
+New development calls request `gpt-6-luna` with medium reasoning effort and the
+default service tier. This is configuration only: live entitlement and
+generation qualification require a separately agreed budget. Frozen M1/M2
+captures, matrices, manifests, and validators remain historical `gpt-5.6-luna`
+evidence and must not be relabeled or mixed into GPT-6 comparisons.
 
 ## Run
 
@@ -102,10 +108,11 @@ claiming memory-quality evidence.
 ## M2 Luna Development Matrix
 
 [`fixtures/m2/luna_matrix.json`](fixtures/m2/luna_matrix.json) fixes a bounded
-ten-session Luna development matrix: three source-transcript `memory-review`
-calls and seven dialogue calls. It uses the existing task contract and is not a
-runner. The matrix keeps review criteria out of dialogue inputs and labels all
-manually curated context as source-derived supplied context, not retrieval.
+fourteen-session GPT-5.6 Luna development matrix: three source-transcript
+`memory-review` calls and eleven dialogue calls. It uses the existing task
+contract and is not a runner. The matrix keeps review criteria out of dialogue
+inputs and labels all manually curated context as source-derived supplied
+context, not retrieval.
 
 ```sh
 uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_luna_matrix.py

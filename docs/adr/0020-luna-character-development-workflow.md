@@ -35,3 +35,16 @@ CLI behavior and subscription availability can change. Preserve version and
 raw results; reject unexpected events and requalify before reuse. Tests cover
 authentication, event/schema failures, exact adapter attempts, output reuse,
 and timeout cleanup. No claim is made about internal CLI network retry counts.
+
+## 2026-09-22 GPT-6 Luna configuration clarification
+
+Future development calls request `gpt-6-luna` through the existing strict
+subscription-CLI transport. The configuration retains medium reasoning effort,
+the default service tier, the 180-second timeout, and no retry or fallback
+behavior. It does not establish account entitlement or a qualified GPT-6
+generation run; that requires a separately agreed live-call budget.
+
+Existing M1/M2 GPT-5.6 Luna matrices, raw captures, manifests, results, and
+historical validators remain frozen. They are not relabeled as GPT-6 evidence
+and must not be compared with a future GPT-6 batch until that batch is
+separately qualified.

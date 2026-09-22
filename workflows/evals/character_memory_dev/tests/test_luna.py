@@ -37,7 +37,7 @@ def fake_cli(monkeypatch, source):
     def launch(args, **kwargs):
         calls.append(args)
         assert args[0:4] == ["codex", "exec", "--ignore-user-config", "--ignore-rules"]
-        assert args[args.index("--model") + 1] == "gpt-5.6-luna"
+        assert args[args.index("--model") + 1] == "gpt-6-luna"
         assert args[args.index("--sandbox") + 1] == "read-only"
         assert not list(Path(kwargs["cwd"]).iterdir())
         assert kwargs["env"] == luna.subscription_environment()
@@ -59,6 +59,8 @@ def test_success_and_existing_output_never_replayed(monkeypatch, tmp_path):
     assert luna.generate("test", output) == raw
     manifest = json.loads((output / "manifest.json").read_text())
     assert manifest["status"] == "transport_validated"
+    assert manifest["requested_model"] == "gpt-6-luna"
+    assert manifest["runtime_qualification"] == "configured_unqualified"
     assert manifest["usage"] is None
     assert manifest["adapter_retry_count"] == 0
     with pytest.raises(FileExistsError):
