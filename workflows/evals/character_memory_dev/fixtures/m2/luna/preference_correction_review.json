@@ -1,0 +1,7 @@
+{
+  "messages": [
+    {"id": "preference-origin-u1", "role": "user", "content": "我喜欢喝咖啡。"},
+    {"id": "preference-origin-a1", "role": "assistant", "content": "知道啦。"},
+    {"id": "preference-correction-u1", "role": "user", "content": "更正一下，我现在更喜欢花茶。"}
+  ]
+}

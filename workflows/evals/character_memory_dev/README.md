@@ -98,3 +98,19 @@ explicit forgetting, subject/status-scoped retrieval predicates, and context
 assembly. They deliberately surface unsupported concern/promise/shared-event
 semantics and active-profile distraction risk rather than simulating parity or
 claiming memory-quality evidence.
+
+## M2 Luna Development Matrix
+
+[`fixtures/m2/luna_matrix.json`](fixtures/m2/luna_matrix.json) fixes a bounded
+ten-session Luna development matrix: three source-transcript `memory-review`
+calls and seven dialogue calls. It uses the existing task contract and is not a
+runner. The matrix keeps review criteria out of dialogue inputs and labels all
+manually curated context as source-derived supplied context, not retrieval.
+
+```sh
+uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_luna_matrix.py
+```
+
+Its ignored raw captures are development evidence only. A dialogue prompt with
+omitted memory cannot prove forgetting or subject isolation; a valid
+`memory-review` proposal is not a durable ADE fact.

@@ -1,0 +1,8 @@
+{
+  "messages": [
+    {"id": "lin-music-follow-up-u1", "role": "user", "content": "今天想听点音乐。"}
+  ],
+  "memories": [
+    "[source-derived supplied context; not retrieval] 当前用户李青喜欢听民谣。来源：lin-music-profile-u1。"
+  ]
+}

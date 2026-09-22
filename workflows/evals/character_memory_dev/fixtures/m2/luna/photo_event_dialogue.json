@@ -1,0 +1,10 @@
+{
+  "messages": [
+    {"id": "photo-promise-u1", "role": "user", "content": "我下班后把今天拍的晚霞照片发给你看。"},
+    {"id": "photo-promise-a1", "role": "assistant", "content": "好呀，你挑一张最喜欢的给我看看。"},
+    {"id": "photo-event-u2", "role": "user", "content": "我回来啦，照片已经发给你了，今天的天真好看。"}
+  ],
+  "memories": [
+    "[source-derived supplied context; not retrieval] 用户先前承诺分享晚霞照片，并在本次对话中表示已经发送。来源：photo-promise-u1、photo-event-u2；没有附件或现场证据。"
+  ]
+}

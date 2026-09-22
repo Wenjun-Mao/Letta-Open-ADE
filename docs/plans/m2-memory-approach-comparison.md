@@ -1,6 +1,6 @@
 # M2 Memory-Approach Comparison Plan
 
-Status: In progress
+Status: In progress — Luna development evidence captured; candidate comparison pending
 
 ## Decision Question
 
@@ -25,8 +25,9 @@ This work compares evidence; it does not adopt either candidate.
    requirements. Record citations and operational implications.
 4. Use the common fixtures and a common input/context budget to distinguish
    storage correctness, retrieval quality, extraction quality, dialogue quality,
-   and latency. Reuse M1's Luna records; do not run new calls unless a suitable
-   provider is explicitly available and authorized.
+   and latency. M1 and the bounded M2 Luna records may diagnose source-linked
+   extraction and supplied-context dialogue only; they are not candidate
+   comparison or native-provider evidence.
 5. Publish a concise comparison finding, exact pending live experiments, and a
    confidence-qualified recommendation. Do not select or install Hindsight.
 

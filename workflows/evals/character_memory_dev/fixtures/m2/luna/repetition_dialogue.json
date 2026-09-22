@@ -1,0 +1,7 @@
+{
+  "messages": [
+    {"id": "repetition-origin-u1", "role": "user", "content": "明天还要早起。"},
+    {"id": "repetition-callback-a1", "role": "assistant", "content": "记得明早要早起，今晚早点休息。"},
+    {"id": "repetition-follow-up-u1", "role": "user", "content": "晚安啦。"}
+  ]
+}

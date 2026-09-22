@@ -10,10 +10,11 @@ M2: compare the smallest ADE extension with Hindsight against M1's 林小棠
 [M2 plan](plans/m2-memory-approach-comparison.md) and
 [interim findings](findings/m2-memory-approach-comparison.md). The initial
 provider-independent source-contract mapping, fixed test specification,
-structural checks, and external capability review are complete. No candidate
-comparison has been executed. Identical provider-backed experiments are pending
-authority and availability. Fresh native release qualification remains pending;
-it is not waived by this development evidence.
+structural checks, external capability review, and bounded Luna development
+evidence are complete. No native ADE/Hindsight candidate comparison has been
+executed. Identical provider-backed experiments are pending authority and
+availability. Fresh native release qualification remains pending; it is not
+waived by this development evidence.
 
 The user authorized continued delivery between checkpoints. Escalate material
 scope/tradeoff decisions, unsafe actions, or blockers needing user input. Routine
@@ -25,7 +26,7 @@ implementation and verification choices do not need repeated confirmation.
 | --- | --- | --- | --- | --- |
 | M0 | complete | None | Maintain verified foundation | [Native release ledger](../config/agent-studio/release-evidence.json), [ADR 0019](adr/0019-ade-steady-state-runtime.md), [Luna workflow](../workflows/evals/character_memory_dev/README.md), commits `f8de9d7` and `7799439`. |
 | M1 | complete | M0 | Director review and M2 comparison definition | [Findings](findings/m1-character-continuity-baseline.md), policy tests, and ten serial Luna records. Implementation baseline is complete; native persistence/provider qualification remains pending. |
-| M2 | in progress | M1 | Run identical provider-backed ADE/Hindsight cases when authorized and available | [Interim findings](findings/m2-memory-approach-comparison.md) record structural evidence and precise live prerequisites. Requires measured correctness, isolation, forgetting, latency, and maintenance comparison before any external-service decision. |
+| M2 | in progress | M1 | Run identical provider-backed ADE/Hindsight cases when authorized and available | [Interim findings](findings/m2-memory-approach-comparison.md) and [Luna evidence](findings/m2-luna-development-evidence.md) record distinct structural and supplied-context development evidence. Requires measured correctness, isolation, forgetting, latency, and maintenance comparison before any external-service decision. |
 | M3 | planned | M2 decision | Detail one complete Agent Studio implementation | Requires persisted continuity, source inspection, correction/forgetting, and stable relationship identity across persona edits. |
 | M4 | planned | M3 | Define deployment-provider and real-use acceptance cases | Requires longer-session results, deployment-model qualification, and actual operator review. |
 
@@ -37,6 +38,7 @@ implementation and verification choices do not need repeated confirmation.
   lifecycle, provenance, dependency, and provider evidence.
 - [x] Record common budget, quality-layer, latency, and operational comparison.
 - [x] Record exact blocked live experiments and a confidence-qualified recommendation.
+- [x] Run the bounded Luna-only source-extraction and supplied-context dialogue matrix; retain its non-native limits.
 - [ ] Run identical provider-backed ADE/Hindsight experiments before selecting a memory approach.
 
 ## Constraints And Open Questions
@@ -60,6 +62,7 @@ implementation and verification choices do not need repeated confirmation.
 - 2026-09-22: M1 baseline completed in this worktree: ten serial Luna development records validated, two policy defects fixed with native regressions, and [findings](findings/m1-character-continuity-baseline.md) recorded. This invalidates the prior governed-policy fingerprint; native release requalification is pending, not waived.
 - 2026-09-22: M2 comparison started with the [plan](plans/m2-memory-approach-comparison.md). No memory architecture has been selected or adopted.
 - 2026-09-22: M2 interim structural evidence, a repeatable chronological input specification with isolated case state, and compact structural checks completed; see [findings](findings/m2-memory-approach-comparison.md). No candidate comparison was executed; provider-backed comparison and any external-service decision remain pending.
+- 2026-09-22: M2 Luna-only development matrix completed with ten serial captures; see [Luna findings](findings/m2-luna-development-evidence.md). This supplied-context evidence does not test native persistence, retrieval, or Hindsight.
 
 ## Updating This Tracker
 

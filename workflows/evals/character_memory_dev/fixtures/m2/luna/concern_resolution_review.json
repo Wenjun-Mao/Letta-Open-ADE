@@ -1,0 +1,8 @@
+{
+  "messages": [
+    {"id": "concern-origin-u1", "role": "user", "content": "我明天要做毕业答辩，越想越紧张，怕自己讲不好。"},
+    {"id": "concern-origin-a1", "role": "assistant", "content": "今晚先把开头顺一遍，明天慢一点说。"},
+    {"id": "concern-follow-up-u1", "role": "user", "content": "我刚到答辩楼下，心跳得好快。"},
+    {"id": "concern-resolution-u1", "role": "user", "content": "答辩结束了，我通过了，现在安心多了。"}
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "messages": [
+    {"id": "concern-after-resolution-u1", "role": "user", "content": "今天想轻松聊一会儿。"}
+  ],
+  "memories": [
+    "[source-derived supplied context; not retrieval] 用户先前的毕业答辩焦虑已经解决；用户说自己通过答辩并安心多了。来源：concern-resolution-u1。"
+  ]
+}

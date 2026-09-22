@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "run_id": "m2-luna-development-20260922",
+  "lane": {
+    "runtime": "luna-subscription",
+    "model": "gpt-5.6-luna",
+    "reasoning_effort": "medium",
+    "service_tier": "default",
+    "timeout_seconds": 180,
+    "adapter_retries": 0,
+    "fallbacks": 0
+  },
+  "maximum_generation_sessions": 14,
+  "planned_generation_sessions": 10,
+  "calls": [
+    {
+      "id": "preference-correction-extraction",
+      "task": "memory-review",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/preference_correction_review.json",
+      "case_ids": ["preference-correction"],
+      "case_state_ids": ["m2-preference-correction"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "After preference-correction-u1; no later recall turn is supplied.",
+      "context_mode": "source-transcript-only",
+      "data_lineage": "Synthetic source turns copied from the M2 comparison preference origin and correction sequence.",
+      "independent_review_focus": "Whether proposals preserve correction chronology and source IDs without treating validated JSON as a durable fact."
+    },
+    {
+      "id": "concern-resolution-extraction",
+      "task": "memory-review",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/concern_resolution_review.json",
+      "case_ids": ["concern-lifecycle"],
+      "case_state_ids": ["m2-concern-lifecycle"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "After concern-resolution-u1; no later casual-chat probe is supplied.",
+      "context_mode": "source-transcript-only",
+      "data_lineage": "Synthetic source turns copied from the M2 concern origin, follow-up, and resolution sequence.",
+      "independent_review_focus": "Whether proposals distinguish resolved history from a current concern and retain only grounded source references."
+    },
+    {
+      "id": "photo-event-extraction",
+      "task": "memory-review",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/photo_event_review.json",
+      "case_ids": ["promise-shared-event", "unsupported-physical-experience"],
+      "case_state_ids": ["m2-promise-shared-event", "m2-physical-experience-boundary"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "After photo-event-u2; no later transcript is supplied.",
+      "context_mode": "source-transcript-only",
+      "data_lineage": "Synthetic source turns copied from the M2 promise and user-reported photo event.",
+      "independent_review_focus": "Whether transcript events are source-linked without claiming attachment observation or physical co-presence."
+    },
+    {
+      "id": "preference-correction-dialogue",
+      "task": "dialogue",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/preference_correction_dialogue.json",
+      "case_ids": ["preference-correction"],
+      "case_state_ids": ["m2-preference-correction"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "Current prompt is preference-recall-u1; supplied context derives only from earlier correction turns.",
+      "context_mode": "source-derived-supplied-context-not-retrieval",
+      "data_lineage": "One manually curated flower-tea statement from preference-correction-u1; it is not an ADE retrieval result.",
+      "independent_review_focus": "Whether the reply keeps the broad flower-tea preference rather than inventing a narrower stored preference."
+    },
+    {
+      "id": "forgetting-dialogue",
+      "task": "dialogue",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/forgetting_dialogue.json",
+      "case_ids": ["forgetting-no-resurface"],
+      "case_state_ids": ["m2-forgetting-no-resurface"],
+      "current_subject": "forget-user",
+      "chronological_cutoff": "Current prompt is forget-follow-up-u1; the earlier preference and deletion turns are intentionally absent.",
+      "context_mode": "no-supplied-memory-oracle",
+      "data_lineage": "Synthetic post-forgetting user turn with no retained fact supplied; absence is manually conditioned, not a deletion proof.",
+      "independent_review_focus": "Whether the reply remains natural without the omitted fact; this cannot prove storage, deletion, or no-resurfacing."
+    },
+    {
+      "id": "concern-resolution-dialogue",
+      "task": "dialogue",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/concern_resolution_dialogue.json",
+      "case_ids": ["concern-lifecycle"],
+      "case_state_ids": ["m2-concern-lifecycle"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "Current prompt is concern-after-resolution-u1; supplied context derives only from resolution turn concern-resolution-u1.",
+      "context_mode": "source-derived-supplied-context-not-retrieval",
+      "data_lineage": "One manually curated resolved-concern statement from concern-resolution-u1; it is not an ADE retrieval result.",
+      "independent_review_focus": "Whether the reply does not recast the resolved defense anxiety as a current problem."
+    },
+    {
+      "id": "photo-event-dialogue",
+      "task": "dialogue",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/photo_event_dialogue.json",
+      "case_ids": ["promise-shared-event", "unsupported-physical-experience"],
+      "case_state_ids": ["m2-promise-shared-event", "m2-physical-experience-boundary"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "Prompt ends at photo-event-u2 and includes only its preceding promise sequence.",
+      "context_mode": "source-derived-supplied-context-not-retrieval",
+      "data_lineage": "One manually curated transcript-only event statement grounded in photo-promise-u1 and photo-event-u2; no attachment is available.",
+      "independent_review_focus": "Whether the reply distinguishes user-reported sending from seeing an attachment or sharing a physical sunset."
+    },
+    {
+      "id": "subject-isolation-dialogue",
+      "task": "dialogue",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/subject_isolation_dialogue.json",
+      "case_ids": ["subject-isolation-cross-conversation"],
+      "case_state_ids": ["m2-subject-isolation"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "Current prompt is lin-music-follow-up-u1; supplied context derives only from lin-music-profile-u1.",
+      "context_mode": "source-derived-supplied-context-not-retrieval",
+      "data_lineage": "One manually filtered folk-preference statement for lin-user; wang-user facts are deliberately not supplied.",
+      "independent_review_focus": "Whether the reply stays on the supplied folk preference; filtering cannot prove native subject isolation."
+    },
+    {
+      "id": "relevance-dialogue",
+      "task": "dialogue",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/relevance_dialogue.json",
+      "case_ids": ["relevance-and-repetition"],
+      "case_state_ids": ["m2-relevance-and-repetition"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "Current prompt is relevance-stress-u1; prior dog and travel details are intentionally absent.",
+      "context_mode": "no-supplied-memory-oracle",
+      "data_lineage": "Synthetic current stress turn with manually omitted distractors; omission is not a ranked-retrieval result.",
+      "independent_review_focus": "Whether the reply remains relevant without distractors; this cannot score semantic retrieval precision."
+    },
+    {
+      "id": "repetition-dialogue",
+      "task": "dialogue",
+      "input": "workflows/evals/character_memory_dev/fixtures/m2/luna/repetition_dialogue.json",
+      "case_ids": ["relevance-and-repetition"],
+      "case_state_ids": ["m2-relevance-and-repetition"],
+      "current_subject": "lin-user",
+      "chronological_cutoff": "Prompt includes repetition-origin-u1 and repetition-callback-a1 before current repetition-follow-up-u1.",
+      "context_mode": "source-transcript-only",
+      "data_lineage": "Synthetic chronological early-rise callback sequence copied from the M2 comparison fixture.",
+      "independent_review_focus": "Whether the goodnight reply mechanically repeats the already-issued early-rise callback."
+    }
+  ]
+}

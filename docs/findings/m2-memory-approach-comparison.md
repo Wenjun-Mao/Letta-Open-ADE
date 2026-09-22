@@ -24,6 +24,10 @@ correctness, extraction quality, retrieval quality, dialogue quality, and
 latency are recorded separately; fixture/fake assertions are not semantic or
 live-provider results.
 
+[Luna development evidence](m2-luna-development-evidence.md) records a bounded
+source-extraction and supplied-context dialogue pass. It remains distinct from
+this candidate comparison and does not validate native retrieval or Hindsight.
+
 The specification links the applicable M1 fixtures but adds the missing second
 conversations, two-subject inputs, correction/forget/resolution turns, and
 negative probes. Its loader validates references and shape only: it does not
@@ -112,8 +116,10 @@ assumed from a moving `main` branch.
 The configured qualified ADE retriever is
 `dgx_embedding_sidecar::qwen3-embedding-0.6b`, but no local Compose service was
 running during this check and Spark remains occupied. The manifest's historical
-qualification is not availability evidence. No provider credential, generation,
-embedding, or Hindsight service was used.
+qualification is not availability evidence. No native ADE provider credential,
+Spark generation, embedding, or Hindsight service was used. The separate
+Luna-only development pass used the subscription workflow and is documented in
+[its findings](m2-luna-development-evidence.md).
 
 Before a selection can be made, run these isolated experiments with explicit
 provider and external-service authority:
@@ -152,5 +158,6 @@ not M2 completion or an external-service decision.
 - Before this correction checkpoint, `uv run pytest -q`: **559 passed, 5 skipped, 1 failed**. The failure is the existing checked-in production-policy fingerprint gate in `workflows/evals/agent_runtime_acceptance/tests/test_policy.py`; this work does not rebind or promote that policy artifact.
 - `uv run pytest -q workflows/evals/character_memory_dev/tests/test_m2_comparison.py services/ade-api/tests/agent_runtime/test_memory_policy.py services/ade-api/tests/agent_runtime/test_tool_policy.py`: **50 passed**.
 - `uv run ruff check services packages workflows scripts tests`, `uv run ruff format --check services packages workflows scripts tests`, and `git diff --check`: passed.
-- No new Luna calls were made; M1's ten ignored captures remain the only Luna
-  evidence in scope.
+- Ten new Luna development calls are recorded separately in
+  [M2 Luna findings](m2-luna-development-evidence.md); they do not change this
+  comparison's native/provider evidence boundary.

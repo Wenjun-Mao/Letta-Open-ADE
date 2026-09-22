@@ -1,0 +1,7 @@
+{
+  "messages": [
+    {"id": "photo-promise-u1", "role": "user", "content": "我下班后把今天拍的晚霞照片发给你看。"},
+    {"id": "photo-promise-a1", "role": "assistant", "content": "好呀，你挑一张最喜欢的给我看看。"},
+    {"id": "photo-event-u2", "role": "user", "content": "我回来啦，照片已经发给你了，今天的天真好看。"}
+  ]
+}
