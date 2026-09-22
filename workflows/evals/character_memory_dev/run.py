@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 from uuid import uuid4
 
+from .json_contract import loads
 from .luna import generate
 from .tasks import TASKS, build_prompt, validate_result
 
@@ -20,7 +21,7 @@ def main() -> int:
     args = parser.parse_args()
     output = args.output or Path(__file__).parent / "outputs" / str(uuid4())
     try:
-        data = json.loads(args.input.read_text(encoding="utf-8"))
+        data = loads(args.input.read_text(encoding="utf-8"))
         prompt = build_prompt(args.task, data)
         raw = generate(prompt, output, timeout_seconds=args.timeout_seconds)
     except (ValueError, OSError, RuntimeError, subprocess.SubprocessError) as exc:

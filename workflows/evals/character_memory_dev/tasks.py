@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+from .json_contract import loads
+
 
 ROOT = Path(__file__).resolve().parents[3]
 TASKS = {
@@ -75,7 +77,7 @@ def build_prompt(task: str, data: dict) -> str:
 
 
 def validate_result(task: str, raw: str, data: dict) -> dict:
-    result = json.loads(raw)
+    result = loads(raw)
     if not isinstance(result, dict):
         raise ValueError("Expected a JSON object")
     if task == "dialogue":

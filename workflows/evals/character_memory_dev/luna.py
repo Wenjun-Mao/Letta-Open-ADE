@@ -9,7 +9,10 @@ import signal
 import subprocess
 import tempfile
 import time
+from contextlib import contextmanager
 from pathlib import Path
+
+from .json_contract import loads
 
 
 MODEL = "gpt-5.6-luna"
@@ -50,7 +53,7 @@ def preflight(env: dict[str, str]) -> str:
 
 
 def validate_events(raw: str, final: str) -> dict:
-    events = [json.loads(line) for line in raw.splitlines() if line.strip()]
+    events = [loads(line) for line in raw.splitlines() if line.strip()]
     if any(not isinstance(event, dict) for event in events):
         raise LunaFailure("CLI event must be an object")
     if [event.get("type") for event in events] != [
@@ -90,6 +93,24 @@ def _stop(proc: subprocess.Popen) -> None:
     except ProcessLookupError:
         pass
     proc.wait()
+
+
+@contextmanager
+def _termination_signals():
+    requested = []
+    previous = {}
+
+    def defer(signum, frame):
+        # Do not raise between spawning the process and acquiring its handle.
+        requested.append(signum)
+
+    try:
+        for signum in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+            previous[signum] = signal.signal(signum, defer)
+        yield requested
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
 
 
 def generate(prompt: str, output: Path, *, timeout_seconds: float = 180) -> str:
@@ -156,23 +177,29 @@ def generate(prompt: str, output: Path, *, timeout_seconds: float = 180) -> str:
                 (output / "prompt.txt").open("rb") as stdin,
                 paths[0].open("wb") as stdout,
                 paths[1].open("wb") as stderr,
+                _termination_signals() as termination,
             ):
                 manifest["status"] = "running"
                 save()
-                proc = subprocess.Popen(
-                    args,
-                    cwd=cwd,
-                    env=env,
-                    stdin=stdin,
-                    stdout=stdout,
-                    stderr=stderr,
-                    start_new_session=True,
-                )
-                manifest["generation_started"] = True
-                deadline = time.monotonic() + timeout_seconds
+                proc = None
                 try:
+                    if termination:
+                        raise LunaFailure("Terminated before generation")
+                    proc = subprocess.Popen(
+                        args,
+                        cwd=cwd,
+                        env=env,
+                        stdin=stdin,
+                        stdout=stdout,
+                        stderr=stderr,
+                        start_new_session=True,
+                    )
+                    manifest["generation_started"] = True
+                    deadline = time.monotonic() + timeout_seconds
                     save()
                     while proc.poll() is None:
+                        if termination:
+                            raise LunaFailure(f"Terminated by signal {termination[0]}")
                         if time.monotonic() >= deadline:
                             raise LunaFailure(
                                 "Generation timed out; usage is uncertain"
@@ -182,9 +209,12 @@ def generate(prompt: str, output: Path, *, timeout_seconds: float = 180) -> str:
                         ):
                             raise LunaFailure("CLI output exceeded capture limit")
                         time.sleep(0.05)
+                    if termination:
+                        raise LunaFailure(f"Terminated by signal {termination[0]}")
                 finally:
-                    _stop(proc)
-                    manifest["exit_code"] = proc.returncode
+                    if proc is not None:
+                        _stop(proc)
+                        manifest["exit_code"] = proc.returncode
             if proc.returncode:
                 raise LunaFailure(f"CLI exited {proc.returncode}; inspect stderr.txt")
             if any(p.exists() and p.stat().st_size > MAX_BYTES for p in paths):

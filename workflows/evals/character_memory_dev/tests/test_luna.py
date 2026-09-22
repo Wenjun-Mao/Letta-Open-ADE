@@ -1,4 +1,5 @@
 import json
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -207,3 +208,24 @@ def test_timeout_kills_spawned_child(monkeypatch, tmp_path):
         ["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True
     )
     assert result.returncode != 0 or result.stdout.strip().startswith("Z")
+
+
+@pytest.mark.parametrize("signum", [signal.SIGINT, signal.SIGTERM, signal.SIGHUP])
+def test_termination_reaps_cli_and_restores_handler(monkeypatch, tmp_path, signum):
+    previous = signal.getsignal(signum)
+    source = f"import os,time; os.kill(os.getppid(), {int(signum)}); time.sleep(30)"
+    calls = fake_cli(monkeypatch, source)
+    with pytest.raises(luna.LunaFailure, match="Terminated by signal"):
+        luna.generate("test", tmp_path / "call", timeout_seconds=5)
+    assert signal.getsignal(signum) == previous
+    assert len(calls) == 1
+    manifest = json.loads((tmp_path / "call/manifest.json").read_text())
+    assert manifest["exit_code"] == -signal.SIGTERM
+    assert manifest["status"] == "uncertain_or_invalid"
+
+
+def test_duplicate_json_keys_rejected():
+    with pytest.raises(ValueError, match="Duplicate JSON key"):
+        validate_result("dialogue", '{"reply":"one","reply":"two"}', DATA)
+    with pytest.raises(ValueError, match="Duplicate JSON key"):
+        luna.validate_events('{"type":"thread.started","type":"turn.started"}', "x")
