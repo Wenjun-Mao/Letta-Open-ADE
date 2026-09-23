@@ -13,12 +13,14 @@ import pytest
 from workflows.evals.character_memory_dev.app_server_spike import (
     SpikeProtocolError,
     StdioProbe,
+    DISABLED_TOOL_FEATURES,
     app_server_command,
     disabled_mcp_server_names,
     mcp_inventory_command,
     prospective_thread_params,
     stop_process_group,
     verify_app_server_mcp_config,
+    verify_app_server_tool_features,
 )
 
 
@@ -97,6 +99,7 @@ def test_thread_shape_is_explicit_and_not_submitted(tmp_path: Path) -> None:
     assert 'web_search="disabled"' in command
     assert "features.shell_tool=false" in command
     assert "features.apps=false" in command
+    assert "features.plugins=false" in command
     assert "mcp_servers.cua_repl.enabled=false" in command
     assert "mcp_servers.node_repl.enabled=false" in command
     assert "mcp_servers.openaiDeveloperDocs.enabled=false" in command
@@ -136,6 +139,14 @@ def test_app_server_mcp_config_fails_closed() -> None:
     ):
         with pytest.raises(SpikeProtocolError, match="does not disable"):
             verify_app_server_mcp_config(config)
+
+
+def test_app_server_tool_feature_config_fails_closed() -> None:
+    disabled = dict.fromkeys(DISABLED_TOOL_FEATURES, False)
+    verify_app_server_tool_features({"features": disabled})
+    for config in ({}, {"features": {**disabled, "plugins": True}}):
+        with pytest.raises(SpikeProtocolError, match="feature config"):
+            verify_app_server_tool_features(config)
 
 
 def test_fake_server_initialize_config_and_bound_tool_dispatch() -> None:

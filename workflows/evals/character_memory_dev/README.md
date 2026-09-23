@@ -89,8 +89,13 @@ uv run --locked pytest -q workflows/evals/character_memory_dev/tests/test_app_se
 
 The fake-server tests exercise prospective dynamic-tool protocol handling;
 the MCP inventory check covers only that layer. They do not establish that the
-installed app-server exposes only ADE tools, that internal retries are zero,
-or that a Luna model call succeeds. The spike bounds each operation and total
+installed app-server exposes only ADE tools or that a Luna model call succeeds.
+The user accepted unknown internal CLI transport retries for at most four
+serial synthetic turn starts in this experiment only; no ADE/application
+reroll or fallback is allowed. This is not a four-network-attempt guarantee,
+and it does not qualify production or release behavior. No turn may begin
+until exhaustive tool restriction or an independent host-isolation boundary
+is established. The spike bounds each operation and total
 captured messages, binds synthetic tool calls to one explicit thread/turn,
 rejects duplicate call IDs, and terminates its process group. Requalify on
 any CLI/schema version change.

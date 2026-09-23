@@ -27,6 +27,16 @@ MAX_NOTIFICATIONS = 128
 REQUEST_TIMEOUT_SECONDS = 10.0
 CLI_VERSION = "codex-cli 0.155.0-alpha.9.2"
 PROTOCOL_VERSION = "codex-cli-0.155.0-alpha.9.2-app-server-v2"
+DISABLED_TOOL_FEATURES = (
+    "shell_tool",
+    "unified_exec",
+    "apps",
+    "plugins",
+    "hooks",
+    "multi_agent",
+    "browser_use",
+    "computer_use",
+)
 APP_SERVER_SETTINGS = (
     'approval_policy="never"',
     'sandbox_mode="read-only"',
@@ -38,6 +48,7 @@ APP_SERVER_SETTINGS = (
     "features.shell_tool=false",
     "features.unified_exec=false",
     "features.apps=false",
+    "features.plugins=false",
     "features.hooks=false",
     "features.multi_agent=false",
     "features.browser_use=false",
@@ -106,6 +117,14 @@ def verify_app_server_mcp_config(config: dict[str, Any]) -> None:
         for server in servers.values()
     ):
         raise SpikeProtocolError("app-server config does not disable every MCP server")
+
+
+def verify_app_server_tool_features(config: dict[str, Any]) -> None:
+    features = config.get("features")
+    if not isinstance(features, dict) or any(
+        features.get(name) is not False for name in DISABLED_TOOL_FEATURES
+    ):
+        raise SpikeProtocolError("app-server tool feature config is not disabled")
 
 
 def synthetic_search_memory_spec() -> dict[str, Any]:
@@ -392,6 +411,7 @@ async def inspect_installed_config() -> dict[str, Any]:
             if not isinstance(config, dict):
                 raise SpikeProtocolError("config/read omitted effective config")
             verify_app_server_mcp_config(config)
+            verify_app_server_tool_features(config)
             safe_keys = (
                 "model",
                 "model_provider",
@@ -407,6 +427,7 @@ async def inspect_installed_config() -> dict[str, Any]:
                 "platform_family": initialized.get("platformFamily"),
                 "config": {key: config.get(key) for key in safe_keys},
                 "disabled_mcp_servers": disabled_mcp_servers,
+                "disabled_tool_features": list(DISABLED_TOOL_FEATURES),
             }
         finally:
             await stop_process_group(process)
