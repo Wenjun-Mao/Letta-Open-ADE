@@ -73,6 +73,10 @@ in-context; correct recall is not evidence of long-term memory. Memory proposal
 validation checks source IDs and author roles, not semantic truth. Review them
 before any future use; this workflow never writes production memory.
 
+The local single-operator backend feasibility decision, missing native
+contracts, and conditional live-call budget are recorded in
+[ADR 0024](../../../docs/adr/0024-local-luna-agent-backend-feasibility.md).
+
 The CLI has its own instruction context; role-labelled input is not equivalent
 to Chat Completions role precedence. An empty temporary cwd and read-only sandbox
 reduce accidental context access, but do not isolate hostile inputs from the host.
