@@ -23,6 +23,10 @@ def test_m3_ledger_reserves_before_calls_and_survives_reopen(tmp_path: Path) -> 
     assert reopened.counts() == {"generation": 2, "embedding": 1}
     with pytest.raises(ValueError, match="limits differ"):
         RequestLedger(path, generation_limit=3, embedding_limit=1)
+    with pytest.raises(ValueError, match="must be positive"):
+        RequestLedger(
+            tmp_path / "invalid.sqlite3", generation_limit=0, embedding_limit=1
+        )
 
 
 def test_m3_transport_caps_timeout_and_counts_a_failed_send(tmp_path: Path) -> None:

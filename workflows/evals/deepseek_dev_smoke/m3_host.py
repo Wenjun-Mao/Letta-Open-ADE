@@ -49,6 +49,8 @@ class RequestLedger:
     """SQLite reservation is committed before any outbound provider request."""
 
     def __init__(self, path: Path, *, generation_limit: int, embedding_limit: int):
+        if generation_limit < 1 or embedding_limit < 1:
+            raise ValueError("M3 provider limits must be positive")
         path.parent.mkdir(parents=True, exist_ok=True)
         self.path = path
         self.limits = {"generation": generation_limit, "embedding": embedding_limit}
@@ -139,6 +141,8 @@ async def _serve(
     env_file: Path,
     database_url: str,
     ledger_path: Path,
+    generation_limit: int,
+    embedding_limit: int,
     api_port: int,
     router_port: int,
 ) -> None:
@@ -180,7 +184,11 @@ async def _serve(
             settings_factory=lambda: configured_router
         )
         forwarding.get_settings = lambda: configured_router
-        ledger = RequestLedger(ledger_path, generation_limit=24, embedding_limit=24)
+        ledger = RequestLedger(
+            ledger_path,
+            generation_limit=generation_limit,
+            embedding_limit=embedding_limit,
+        )
         transport = BudgetedTransport(
             RouterTransport(base_url=f"http://127.0.0.1:{router_port}/v1"), ledger
         )
@@ -283,6 +291,8 @@ if __name__ == "__main__":
     parser.add_argument("--env-file", type=Path, required=True)
     parser.add_argument("--database-url", required=True)
     parser.add_argument("--ledger", type=Path, required=True)
+    parser.add_argument("--generation-limit", type=int, default=24)
+    parser.add_argument("--embedding-limit", type=int, default=24)
     parser.add_argument("--api-port", type=int, default=8130)
     parser.add_argument("--router-port", type=int, default=8131)
     arguments = parser.parse_args()
@@ -291,6 +301,8 @@ if __name__ == "__main__":
             env_file=arguments.env_file,
             database_url=arguments.database_url,
             ledger_path=arguments.ledger,
+            generation_limit=arguments.generation_limit,
+            embedding_limit=arguments.embedding_limit,
             api_port=arguments.api_port,
             router_port=arguments.router_port,
         )

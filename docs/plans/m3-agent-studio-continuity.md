@@ -18,13 +18,21 @@ repeated with the native provider.
 Two generated replies failed the product boundary: the removal reply promised
 future nonmention, and an unsupported-concern reply promised remembering and
 proactive follow-up despite no saved revision. [ADR 0026](../adr/0026-memory-removal-reply-boundary.md)
-fixes the shared runtime instruction contract and adds regressions; neither
-failed request was rerolled, so compliance with the amended prompt remains
-unobserved. No positive semantic-retrieval case was observed (`retrieved_fact_ids`
-was empty); recall used active profile context. M3 stays in progress pending
-director review of this partial native acceptance and a separate fresh
-release-evidence route. Do not reinterpret the earlier mock-only checkpoint
-below as the latest status.
+fixes the shared runtime instruction contract and adds regressions. A separate
+post-fix budget then supported exactly two planned real-UI/native turns:
+removing an existing committed B preference and asking an unsupported concern
+for a newly created subject. Both generated replies respected the capability
+boundary, with matching reviewer/storage results. The original failures were
+not rerolled or relabeled. This bounded pass spent 4/6 generation and 2/6
+embedding calls in a distinct durable ledger; the original 22/24 and 14/24
+counts stayed frozen. No positive semantic-retrieval case was observed
+(`retrieved_fact_ids` was empty); recall used active profile context. M3 stays
+in progress pending director review of this partial native acceptance and a
+separate fresh release-evidence route. The read-only release trace found DGX
+chat and llama-server are the currently configured target, while role aliases
+are configurable; current authorization permits neither DGX chat calls nor a
+production DeepSeek switch. Do not reinterpret the earlier mock-only
+checkpoint below as the latest status.
 
 The real isolated Prompt Center edit → new immutable Agent Studio version →
 same-subject conversation journey is now covered by the

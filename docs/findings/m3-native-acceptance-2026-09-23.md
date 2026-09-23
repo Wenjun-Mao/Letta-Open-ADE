@@ -1,6 +1,7 @@
 # M3 Native Profile-Memory and Real-UI Acceptance (2026-09-23)
 
-Status: partial behavioral acceptance; **not** M3 completion or release
+Status: bounded post-fix reply regressions passed; broader behavioral and
+release acceptance remain partial. **Not** M3 completion or release
 qualification. All inputs are synthetic. The real ADE API, worker, reviewer,
 PostgreSQL persistence, official DeepSeek development route, and Spark
 embedding sidecar ran through a loopback router. The Agent Studio UI used the
@@ -56,10 +57,61 @@ storage or subject filtering. Runtime system context previously prohibited
 claiming a write but did not explain pending removal, retained history, absent
 concern schema, or lack of scheduled outreach. [ADR 0026](../adr/0026-memory-removal-reply-boundary.md)
 records the provider-neutral boundary and regression tests. The failed replies
-remain intact; neither failed request was rerolled after the fix. Thus provider
-compliance with the new wording is still **unobserved**, and M3 native
-behavioral acceptance remains partial. No concern, promise, relationship, or
-shared-experience schema is inferred from these samples.
+remain intact; neither failed request was rerolled after the fix. At this
+original checkpoint, provider compliance with the new wording was unobserved.
+The separately budgeted post-fix cases below add bounded behavioral evidence,
+not a retroactive pass. No concern, promise, relationship, or shared-experience
+schema is inferred from these samples.
+
+## Separately authorized post-fix regressions
+
+The original ledger above remains **22/24 generation and 14/24 embedding**.
+A new ignored ledger, `data/runtime/m3_postfix_01a0ca1b.sqlite3`, reserved
+requests before sending with an independent **6-generation/6-embedding** cap.
+Final read-back was **4/6 generation and 2/6 embedding**, all completed: one
+conversation and one reviewer request plus one retrieval embedding per case.
+Each native run used one worker attempt, a 180-second cap, retry 0, repair 0,
+no tool continuation, no compaction, and no reroll. Both ran against the final
+immutable definition `0747a64e-bedf-5faf-8b50-9164d1a8ccfc` and matching
+unqualified policy fingerprint `40e9c64f66a8da1acc5dfe2d029143568a68cc2539bcbec63f5a87705685208d`.
+The already committed B preference was reused rather than spending another
+turn to establish an identical supported fact; its original add revision and
+source message remain inspectable.
+
+1. **Removal:** In real Agent Studio, a new B conversation
+   `5aadd5eb-2a66-582e-8f36-07c6f7254b47` selected the final definition
+   and existing subject `527cc88c-753d-526e-892f-d91e427d14af`. The
+   operator expanded B's active jasmine-tea fact v1, clicked **Remove saved
+   information**, reviewed the limited draft, and sent normally. Run
+   `ba6a7225-1f82-4108-8d56-e1e47d917dc7` emitted reviewer proposal and
+   `memory.committed` for `forget` revision
+   `95d44cca-d5b5-4b70-a2b5-2a57598e05d3` at v2, with exact source
+   message #1 and predecessor v1 revision. A separate subject-memory read
+   returned value null/status forgotten and the UI showed no active facts.
+   The generated reply said, in part, “这个删除请求我收到了，会交给审核流程去处理，在确认之前我不会主动拿它当依据” and
+   “之前聊过的内容和记录没法一并抹掉，我也不能保证以后完全不会再被提到”. Semantically it treated
+   review as pending, acknowledged retained history, and declined a permanent
+   nonmention guarantee. It did not claim completed erasure. This is one
+   bounded post-fix pass, not proof against future model drift. The phrase about
+   not proactively using the detail while review is pending is a conversational
+   intention, not a server-enforced guarantee; no intervening turn was tested.
+2. **Unsupported concern:** The UI created a genuinely new subject
+   `a5451263-275e-58a0-8443-1ad4f5672f55` and conversation
+   `10d77281-796e-55d0-9f82-2e1628adbdc7`; the operator sent the same
+   synthetic concern/check-in request as the original failure exactly once.
+   Run `3b1987f9-9a45-42c7-9341-015a73aa2c7e` had no memory proposal or
+   revision, and a separate subject-memory read returned `facts: []`. The
+   reply said, in part, “我没法保证下次一开口就主动来问你，那样说反而像在给你空头承诺” and invited
+   discussion now (“你慢慢讲，我听着”). It was empathetic without promising
+   cross-session persistence or proactive outreach. This tests the reply
+   boundary, not later recall or concern support.
+
+The two original failures and these two new passing samples are distinct
+records; there was no iterative sampling until a favorable answer. Active
+profile context held B's preference before the removal turn, while retrieved
+fact IDs were empty in both new runs. Positive semantic retrieval, non-profile
+memory quality, longer-session behavior, and a general provider guarantee
+remain unproven.
 
 ## Real UI and provenance
 
@@ -103,15 +155,39 @@ Read-only release-path audit: the current qualified deployment fingerprints
 and promoted `config/agent-studio/release-evidence.json` predate governed
 runtime changes. The fresh DeepSeek entry is development-only and unqualified;
 its fingerprint refresh does not requalify existing deployment routes. The
-exact release route is a clean reviewed revision, deliberate policy rebind
-that invalidates old qualification, matching API/worker clean build,
-deterministic conformance receipt, **three clean full primary DGX matrices**
-plus llama-server compatibility from the canonical acceptance workflow,
-provider/route consistency, independent reviewer approval, explicit promotion
-proposal application, and final release gate. The opt-in M3 diagnostic or
+exact release route for the **currently configured incumbent target** is a
+clean reviewed revision, deliberate policy rebind that invalidates old
+qualification, matching API/worker clean build, deterministic conformance
+receipt, **three clean full primary matrices on the configured DGX
+conversation/reviewer and Spark retriever routes**, plus a passing
+llama-server compatibility artifact, provider/route consistency, independent
+reviewer approval, explicit promotion proposal application, and final release
+gate. The opt-in M3 diagnostic or
 single-case run cannot create a promotion proposal. None of those new
 qualification rounds, promotion, or deployment actions were authorized or
 performed here. Existing qualified deployments and release ledger were not
 altered. The release gate's clean-tree/source-lineage and governed fingerprint
 requirements will remain unsatisfied by historical evidence until that fresh
 route is executed and reviewed.
+
+The provider names are **defaults and checked-in target configuration**, not
+hardcoded identities in the qualification invariant: `config.toml` and
+`AcceptanceConfig` allow role aliases to change; proposal review compares
+each configured role alias to its manifest deployment binding and round
+fingerprint. Three full rounds, exact source/policy identity, zero retries,
+canonical cases, and qualified conversation/reviewer/retriever roles are the
+invariants. Current *Agent Studio release promotion* additionally requires a
+passing llama compatibility artifact (`promote_agent_studio_release.py` and
+`release_evidence.py`), even though older ADR 0010 described compatibility as
+nonblocking for a separately qualified DGX role set. We have not weakened or
+reinterpreted the implemented release gate.
+
+**Decision needed before release work:** either make the incumbent DGX chat
+and local llama-server routes available and separately authorize their
+generation budget for fresh qualification, keeping the existing release
+target; or explicitly choose and approve a different production chat target,
+with its deployment, privacy/operational review, full fresh qualification,
+and release evidence. The current authorization permits DeepSeek only for
+development/testing and Spark only for embeddings; it does not authorize
+DGX chat calls or a production DeepSeek switch. Keeping the incumbent target
+and waiting for its endpoints/authority is the least contract-changing path.

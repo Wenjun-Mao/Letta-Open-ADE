@@ -42,12 +42,18 @@ exhausted; do not run it again without a new explicit budget.
 against the same disposable database guard. It is an interactive diagnostic,
 not a unit test or release route. Supply an explicit `--ledger` path: its SQLite
 reservations are committed before each outbound generation or embedding request,
-survive process/browser restarts, and fail closed at the separately authorized
-24-generation/24-embedding ceiling. Each request is capped at 180 seconds;
+survive process/browser restarts, and fail closed at the explicit
+`--generation-limit`/`--embedding-limit` ceilings (default 24 each, which was
+the initial M3 authorization). Reopening a ledger with different limits fails.
+Each request is capped at 180 seconds;
 the host neither retries nor changes the application reviewer policy. Inspect
 `calls` in that ledger before any continuation. Never delete or substitute a
 ledger to reset the budget. The M3 run spent 22 generation and 14 embedding
 requests; the remaining allowance is not a reason to rerun failed behavior.
+The separately authorized post-fix regression used a **new** ledger with
+explicit 6/6 limits and spent 4 generation plus 2 embedding requests, leaving
+the original ledger frozen. Both are development diagnostics, not release
+qualification.
 
 The synthetic browser run used `ADE_API_BASE_URL` pointed at this host and a
 separate Next development server. `seed_older_citation.py` is a one-shot,
