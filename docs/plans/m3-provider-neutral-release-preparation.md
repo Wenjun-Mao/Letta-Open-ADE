@@ -1,6 +1,6 @@
 # M3 Provider-Neutral Release Preparation
 
-Status: static candidate prepared under [ADR 0027](../adr/0027-provider-neutral-release-and-embedding-space.md) and [ADR 0028](../adr/0028-agent-runtime-qualification-request-ledger.md); independent review, live qualification, and promotion pending.
+Status: static candidate prepared under [ADR 0027](../adr/0027-provider-neutral-release-and-embedding-space.md) and [ADR 0028](../adr/0028-agent-runtime-qualification-request-ledger.md). The separately approved single Stage A attempt failed; Stage B, release qualification, and promotion are blocked. See the [Stage A finding](../findings/stage-a-provider-neutral-preflight-2026-09-23.md).
 
 1. Trace schema-v3 evidence, promotion, native qualification configuration,
    router source resolution, and stored vector lookup. Preserve the historical
@@ -22,7 +22,7 @@ Status: static candidate prepared under [ADR 0027](../adr/0027-provider-neutral-
 End state: a clean source checkpoint with exact candidate routes and a bounded
 synthetic qualification request budget estimate, not a release claim.
 
-## Proposed next-stage gates and request caps (no calls made here)
+## Stage gates and request caps
 
 The M3 `RequestLedger` and `BudgetedTransport` design now lives in the shared
 Agent Runtime transport construction path; the historical M3 host reuses it.
@@ -41,7 +41,10 @@ traced call paths, and cap exhaustion with fake providers. A cap only in the
 black-box runner would not constrain a worker's internal requests. The
 existing M3 host is development-mode and marks its source dirty; it cannot
 be used unchanged as a clean qualification or release-mode host. No actual
-qualification host, provider request, or approved budget exists yet.
+qualification host or Stage B approval exists yet. Stage A was separately
+approved and attempted once with the 32/32 caps; it failed a required-tool
+turn after 7 generation and 7 embedding requests. The retained ledger and
+failed artifacts are linked in the finding. No reroll or Stage B call followed.
 Direct origin/candidate canary requests are outside the canonical runner;
 their caller must reserve through the same stage ledger before sending.
 
@@ -70,7 +73,8 @@ most 183 fact-write batches + 915 tool searches); a response can contain
 multiple tool calls, so **that figure is not an intrinsic runtime upper
 bound**. The ledger's 1,281/1,285 limit is the proposed enforceable bound:
 if actual tool use exceeds it, stop and request a new decision rather than
-weakening cases or silently expanding spend. The director must approve the
-caps and clean-host invocation before any calls. The transport's 180-second
+weakening cases or silently expanding spend. The director must separately
+approve later-stage caps and clean-host invocation before those calls. The
+transport's 180-second
 limit applies to each request; the worker also supplies its remaining turn
 deadline, so continuations do not each receive a fresh 180-second turn.

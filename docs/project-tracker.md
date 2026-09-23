@@ -30,6 +30,14 @@ HTTP API/worker/persistence turn in a disposable database. Existing
 release evidence is not rebound; the governed policy-freshness gate remains
 expectedly stale.
 
+The separately approved [Stage A provider-neutral preflight](findings/stage-a-provider-neutral-preflight-2026-09-23.md)
+ran once on a clean isolated development-mode API/worker host. Two correction
+turns and the 13-fact setup passed, but the scored deep-search turn failed:
+DeepSeek returned no required `search_memory` call, and the runtime rejected
+it as `conversation_required_tool_missing`. The retained preflight ledger
+spent 7/32 DeepSeek and 7/32 Qwen requests, with no reroll. Stage B and
+release qualification remain blocked; no route was promoted.
+
 [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md) is accepted:
 retain ADE's current memory store for the bounded
 [M3 usable-profile-memory slice](plans/m3-agent-studio-continuity.md). The
