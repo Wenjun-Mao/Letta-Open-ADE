@@ -2,6 +2,12 @@
 
 Status: In progress under accepted [ADR 0022](../adr/0022-incumbent-memory-first-product-slice.md).
 
+The real isolated Prompt Center edit → new immutable Agent Studio version →
+same-subject conversation journey is now covered by the
+[Step 1 UI/API finding](../findings/m3-prompt-center-immutable-version-journey.md).
+Its catalog-only router stand-in and synthetic saved fact do not satisfy native
+reviewer, embedding, generation, or release acceptance.
+
 ## Implementation Checkpoint (2026-09-22)
 
 Correction pass: the generated correction draft was not recognized by the
