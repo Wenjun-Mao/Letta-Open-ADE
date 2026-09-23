@@ -77,13 +77,10 @@ def validate_embedding_compatibility_receipt(
                 raise EmbeddingCompatibilityError(
                     "embedding canary request provenance is missing"
                 )
-        baseline = _vector(canary.get("origin_vector"), dimensions)
-        candidate = _vector(canary.get("candidate_vector"), dimensions)
-        cosine = sum(a * b for a, b in zip(baseline, candidate, strict=True))
-        cosine /= math.sqrt(sum(a * a for a in baseline)) * math.sqrt(
-            sum(b * b for b in candidate)
-        )
-        if 1.0 - min(1.0, cosine) > _MAX_COSINE_DISTANCE:
+        baseline = _unit_vector(_vector(canary.get("origin_vector"), dimensions))
+        candidate = _unit_vector(_vector(canary.get("candidate_vector"), dimensions))
+        cosine = math.fsum(a * b for a, b in zip(baseline, candidate, strict=True))
+        if not math.isfinite(cosine) or 1.0 - cosine > _MAX_COSINE_DISTANCE:
             raise EmbeddingCompatibilityError(
                 "embedding canary vectors are not numerically compatible"
             )
@@ -95,7 +92,21 @@ def _vector(value: object, dimensions: int) -> list[float]:
         raise EmbeddingCompatibilityError("embedding canary dimensions differ")
     if any(type(item) not in {int, float} for item in value):
         raise EmbeddingCompatibilityError("embedding canary must contain numbers")
-    result = [float(item) for item in value]
+    try:
+        result = [float(item) for item in value]
+    except (OverflowError, ValueError) as exc:
+        raise EmbeddingCompatibilityError("embedding canary vector is invalid") from exc
     if not all(math.isfinite(item) for item in result) or not any(result):
         raise EmbeddingCompatibilityError("embedding canary vector is invalid")
     return result
+
+
+def _unit_vector(vector: list[float]) -> list[float]:
+    # Scaling before squaring avoids overflow and tiny-norm underflow while
+    # preserving the direction used by cosine comparison.
+    scale = max(abs(component) for component in vector)
+    scaled = [component / scale for component in vector]
+    norm = math.sqrt(math.fsum(component * component for component in scaled))
+    if not math.isfinite(norm) or norm <= 0:
+        raise EmbeddingCompatibilityError("embedding canary norm is invalid")
+    return [component / norm for component in scaled]

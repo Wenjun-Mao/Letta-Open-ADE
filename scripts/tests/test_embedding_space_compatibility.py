@@ -79,3 +79,42 @@ def test_relocation_receipt_fails_closed(failure: str) -> None:
         )
     with pytest.raises(EmbeddingCompatibilityError):
         validate_embedding_compatibility_receipt(receipt, **BOUND)
+
+
+@pytest.mark.parametrize(
+    ("origin", "candidate", "compatible"),
+    [
+        ([1e308, 1e308, 0.0], [1e308, -1e308, 0.0], False),
+        ([1e308, 1e308, 0.0], [1e307, 1e307, 0.0], True),
+        ([1e-300, 0.0, 0.0], [0.0, 1e-300, 0.0], False),
+        ([1e-300, 0.0, 0.0], [1e-310, 0.0, 0.0], True),
+    ],
+)
+def test_extreme_finite_vectors_compare_without_overflow_or_underflow(
+    origin: list[float], candidate: list[float], compatible: bool
+) -> None:
+    receipt = _receipt()
+    receipt["canaries"][0]["origin_vector"] = origin
+    receipt["canaries"][0]["candidate_vector"] = candidate
+    receipt["artifact_sha256"] = canonical_sha256(
+        {key: value for key, value in receipt.items() if key != "artifact_sha256"}
+    )
+
+    if compatible:
+        assert (
+            validate_embedding_compatibility_receipt(receipt, **BOUND)
+            == receipt["artifact_sha256"]
+        )
+    else:
+        with pytest.raises(EmbeddingCompatibilityError, match="numerically compatible"):
+            validate_embedding_compatibility_receipt(receipt, **BOUND)
+
+
+def test_huge_integer_component_reports_a_domain_error() -> None:
+    receipt = _receipt()
+    receipt["canaries"][0]["origin_vector"] = [10**1000, 0, 0]
+    receipt["artifact_sha256"] = canonical_sha256(
+        {key: value for key, value in receipt.items() if key != "artifact_sha256"}
+    )
+    with pytest.raises(EmbeddingCompatibilityError, match="vector is invalid"):
+        validate_embedding_compatibility_receipt(receipt, **BOUND)

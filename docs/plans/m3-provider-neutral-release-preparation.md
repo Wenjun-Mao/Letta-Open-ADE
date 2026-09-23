@@ -22,34 +22,49 @@ Status: static candidate prepared under [ADR 0027](../adr/0027-provider-neutral-
 End state: a clean source checkpoint with exact candidate routes and a bounded
 synthetic qualification request budget estimate, not a release claim.
 
-## Next-stage request envelope (no calls made here)
+## Proposed next-stage gates and request caps (no calls made here)
 
-The canonical matrix has 10 cases and 20 scored turns, plus one initial-fact
-setup turn and 40 long-history prelude turns per round. Three full rounds mean
-183 runtime turns. With the candidate's six conversation requests per turn,
-one reviewer request (zero repair), and at most one compaction request per
-turn, the conservative DeepSeek ceiling is 1,464 requests: 1,098
-conversation + 183 reviewer + 183 compaction. Ordinary execution should be
-much lower, but the prelude turns are real model calls, not inserted history.
-Each request must observe the configured 180-second turn deadline and zero
-requested turn retries; a fresh failed round requires separate authorization.
+Before any live stage, reuse the M3 `RequestLedger` and `BudgetedTransport`
+reservation design in `workflows/evals/deepseek_dev_smoke/m3_host.py`. A fresh,
+ignored SQLite ledger with immutable stage limits must be shared by the clean
+API and worker through their common `RouterTransport`: reserve and commit one
+slot **before** every outbound `chat_completion` or `embeddings` request.
+That boundary covers conversation continuations, reviewer, compaction,
+automatic and tool retrieval, and fact-document embedding; cap exceptions
+fail the turn and stop the stage. Record failed/time-out requests as spent.
+Any direct origin/candidate canary requests must reserve through the same
+stage ledger. Test cap exhaustion through each call path and verify both
+processes use the same ledger before starting. A cap only in the black-box
+runner would not constrain a worker's internal requests. The existing M3
+host is development-mode and marks its source dirty; it cannot be used
+unchanged as a clean qualification or release-mode host. The standard
+canonical runner does **not** enforce these aggregate caps today, so this
+wiring and its tests are a prerequisite for live work, not a completed gate.
 
-Every turn can make one Qwen retrieval query, and a nonempty fact-write batch
-adds one document-embedding request. Search-memory tool calls add further
-query requests. An illustrative envelope of one search call per conversation
-continuation is 1,281 Qwen requests (183 retrieval + at most 183 fact batches
-+ 915 tool searches); this is **not a hard upper bound**, because a model
-response may contain multiple tool calls. The next stage must set an external
-aggregate Qwen spend cap and stop when reached; do not interpret the estimate
-as permission for unlimited calls. A relocated endpoint additionally needs
-four synthetic canary embeddings (query and document at origin and candidate)
-and independent provenance review. An origin endpoint needs no relocation
-receipt.
+| Stage | Exact synthetic work | Proposed hard stage cap | Stop condition |
+| --- | --- | --- | --- |
+| A — small preflight | One diagnostic round of canonical `correction_chain` and `old_memory_deep_search`: two correction turns, one initial-fact setup turn, one scored tool/retrieval turn; no proposal. | 32 DeepSeek, 32 Qwen requests | Any failed assertion, route/source mismatch, cap hit, or provider failure stops before B. No reroll. |
+| B — qualification | Exactly three full, unmodified canonical 10-case rounds on one clean source/build; required conformance and independent review remain separate. If Qwen has relocated, collect paired synthetic query/document canaries from origin and candidate before promoting the space. | 1,464 DeepSeek, 1,281 Qwen at origin; 1,285 Qwen if four relocation canary calls are needed | A failed turn, cap hit, missing receipt, or incomplete round stops; no partial matrix or diagnostic case substitutes for a full round. |
+| C — later release-mode acceptance | Only after separate promotion approval: clean release-mode API and worker in a disposable database, an actual synthetic Agent Studio definition/subject/conversation, then `我现在住在北京。` followed by `更正一下，我现在住在多伦多。`; verify completed runs, committed correction lineage, Toronto active, Beijing inactive, and API/worker source identity. | 16 DeepSeek, 16 Qwen requests | Any gate or behavior failure stops without changing production or reusing the stage as a reroll. |
 
-For one separate synthetic release-mode API/worker turn, reserve up to eight
-DeepSeek requests (six conversation, one reviewer, one possible compaction)
-and, assuming one search per continuation, up to seven Qwen requests (one
-retrieval, five tool searches, one document batch). This is an estimate per
-turn, not a new qualification round or a claim that release mode is enabled.
-The director should approve actual global request caps and exact acceptance
-cases before any live run.
+Each stage gets one fixed ledger and one planned attempt; retaining the ledgers
+prevents restart from resetting spend. The proposed campaign ceiling is
+**1,512 DeepSeek requests and 1,329 Qwen requests at the original endpoint**,
+or **1,333 Qwen with relocation canaries**, conditional on all three stages
+being separately approved. A stage never borrows unused calls from another.
+Zero requested worker retries, zero reviewer repairs, no automatic rerolls or
+provider fallback, and 180-second request caps remain mandatory. An exhausted
+cap is a failed/incomplete qualification, not authority to raise the cap.
+
+These caps are proposals, not predicted usage. The canonical matrix contains
+20 scored turns, one initial-fact setup turn, and 40 real prelude turns per
+round: 183 turns across three rounds. Its DeepSeek ceiling follows six
+conversation + one reviewer + at most one compaction request per turn
+(1,098 + 183 + 183 = 1,464). The 1,281 Qwen planning figure assumes one
+search request per conversation continuation (183 automatic queries + at
+most 183 fact-write batches + 915 tool searches); a response can contain
+multiple tool calls, so **that figure is not an intrinsic runtime upper
+bound**. The ledger's 1,281/1,285 limit is the proposed enforceable bound:
+if actual tool use exceeds it, stop and request a new decision rather than
+weakening cases or silently expanding spend. The director must approve the
+caps and clean-host design before implementation or calls.
