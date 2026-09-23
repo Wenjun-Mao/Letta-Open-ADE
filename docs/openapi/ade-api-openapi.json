@@ -3288,6 +3288,10 @@
       },
       "MemoryEvidenceResponse": {
         "properties": {
+          "conversation_id": {
+            "title": "Conversation Id",
+            "type": "string"
+          },
           "end_char": {
             "title": "End Char",
             "type": "integer"
@@ -3295,6 +3299,10 @@
           "message_id": {
             "title": "Message Id",
             "type": "string"
+          },
+          "message_sequence": {
+            "title": "Message Sequence",
+            "type": "integer"
           },
           "message_sha256": {
             "title": "Message Sha256",
@@ -3311,6 +3319,8 @@
         },
         "required": [
           "message_id",
+          "conversation_id",
+          "message_sequence",
           "start_char",
           "end_char",
           "quote",

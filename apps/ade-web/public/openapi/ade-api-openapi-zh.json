@@ -3288,6 +3288,10 @@
       },
       "MemoryEvidenceResponse": {
         "properties": {
+          "conversation_id": {
+            "title": "会话 ID",
+            "type": "string"
+          },
           "end_char": {
             "title": "结束 字符",
             "type": "integer"
@@ -3295,6 +3299,10 @@
           "message_id": {
             "title": "消息 ID",
             "type": "string"
+          },
+          "message_sequence": {
+            "title": "消息 序号",
+            "type": "integer"
           },
           "message_sha256": {
             "title": "消息 SHA 256",
@@ -3311,6 +3319,8 @@
         },
         "required": [
           "message_id",
+          "conversation_id",
+          "message_sequence",
           "start_char",
           "end_char",
           "quote",

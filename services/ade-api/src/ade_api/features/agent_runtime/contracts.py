@@ -467,6 +467,8 @@ class RunEventListResponse(BaseModel):
 
 class MemoryEvidenceResponse(BaseModel):
     message_id: str
+    conversation_id: str
+    message_sequence: int
     start_char: int
     end_char: int
     quote: str

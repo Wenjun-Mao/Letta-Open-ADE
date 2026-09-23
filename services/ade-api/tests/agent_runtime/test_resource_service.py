@@ -76,11 +76,23 @@ class _MemoryRepository:
         assert revision_id == "revision-2"
         return ["revision-1"]
 
-    async def list_revision_sources(self, revision_id: str) -> list[dict[str, Any]]:
+    async def list_revision_sources(
+        self,
+        revision_id: str,
+        *,
+        workspace_id: str,
+        subject_id: str,
+        purpose: str | None,
+    ) -> list[dict[str, Any]]:
         assert revision_id == "revision-2"
+        assert workspace_id == DEFAULT_WORKSPACE_ID
+        assert subject_id == "subject-1"
+        assert purpose is None
         return [
             {
                 "message_id": "message-2",
+                "conversation_id": "conversation-2",
+                "message_sequence": 42,
                 "start_char": 10,
                 "end_char": 15,
                 "quote": "Rocky",
@@ -97,6 +109,7 @@ class _ConversationRepository:
             "agent_definition_version_id": "definition-1",
             "memory_subject_id": "subject-1",
             "version": 3,
+            "archived_at": NOW,
             "created_at": NOW,
         }
 
@@ -163,6 +176,8 @@ def test_subject_memory_read_model_exposes_entity_metadata_and_revision_lineage(
     assert fact["entity_label"] == "Rocky"
     assert fact["revisions"][0]["predecessor_revision_ids"] == ["revision-1"]
     assert fact["revisions"][0]["evidence"][0]["message_id"] == "message-2"
+    assert fact["revisions"][0]["evidence"][0]["conversation_id"] == "conversation-2"
+    assert fact["revisions"][0]["evidence"][0]["message_sequence"] == 42
 
 
 def test_conversation_state_exposes_latest_summary_with_boundary_and_provenance(
@@ -176,6 +191,9 @@ def test_conversation_state_exposes_latest_summary_with_boundary_and_provenance(
     response = asyncio.run(
         ResourceService(_Database()).get_conversation_state("conversation-1")
     )
+
+    assert response["archived_at"] == NOW
+    assert response["messages"][0]["id"] == "message-1"
 
     assert response["summary"] == {
         "id": "summary-1",

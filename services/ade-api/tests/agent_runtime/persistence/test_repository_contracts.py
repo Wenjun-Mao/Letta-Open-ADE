@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy.dialects.postgresql import dialect
 from sqlalchemy.ext.asyncio import AsyncConnection
 
+from ade_api.features.agent_runtime.errors import RuntimeValidationError
 from ade_api.features.agent_runtime.persistence.base import IdempotencyConflictError
 from ade_api.features.agent_runtime.persistence.conversations import (
     ConversationRepository,
@@ -265,6 +266,78 @@ def test_memory_read_join_keeps_entity_subject_and_workspace_matched() -> None:
     assert facts[0]["entity_label"] == "Rocky"
     assert "memory_entities.subject_id = ade.memory_facts.subject_id" in statement
     assert "memory_entities.workspace_id = ade.memory_facts.workspace_id" in statement
+
+
+def _source_row(**overrides: str) -> dict[str, Any]:
+    return {
+        "id": "source-1",
+        "revision_id": "revision-1",
+        "message_id": "message-1",
+        "start_char": 0,
+        "end_char": 4,
+        "quote": "Rocky",
+        "message_sha256": "a" * 64,
+        "conversation_id": "conversation-1",
+        "message_sequence": 151,
+        "source_workspace_id": "workspace-1",
+        "conversation_workspace_id": "workspace-1",
+        "conversation_subject_id": "subject-1",
+        "conversation_purpose": "agent_studio",
+        "revision_workspace_id": "workspace-1",
+        "revision_subject_id": "subject-1",
+        "fact_workspace_id": "workspace-1",
+        "fact_subject_id": "subject-1",
+        "subject_workspace_id": "workspace-1",
+        "subject_purpose": "agent_studio",
+    } | overrides
+
+
+def test_memory_sources_join_authoritative_conversation_and_message_position() -> None:
+    connection = _RowsConnection([_source_row()])
+    repository = MemoryRepository(cast(AsyncConnection, connection))
+
+    sources = asyncio.run(
+        repository.list_revision_sources(
+            "revision-1",
+            workspace_id="workspace-1",
+            subject_id="subject-1",
+            purpose="agent_studio",
+        )
+    )
+
+    statement = str(connection.statements[0].compile(dialect=dialect()))
+    assert sources[0]["conversation_id"] == "conversation-1"
+    assert sources[0]["message_sequence"] == 151
+    assert "JOIN ade.messages" in statement
+    assert "JOIN ade.conversations" in statement
+    assert "JOIN ade.memory_revisions" in statement
+    assert "JOIN ade.memory_facts" in statement
+    assert "JOIN ade.memory_subjects" in statement
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"source_workspace_id": "other-workspace"},
+        {"conversation_subject_id": "other-subject"},
+        {"conversation_purpose": "evaluation"},
+    ],
+)
+def test_memory_source_cross_boundary_reference_is_rejected(
+    overrides: dict[str, str],
+) -> None:
+    connection = _RowsConnection([_source_row(**overrides)])
+    repository = MemoryRepository(cast(AsyncConnection, connection))
+
+    with pytest.raises(RuntimeValidationError, match="memory source boundary"):
+        asyncio.run(
+            repository.list_revision_sources(
+                "revision-1",
+                workspace_id="workspace-1",
+                subject_id="subject-1",
+                purpose="agent_studio",
+            )
+        )
 
 
 def test_read_repository_orders_lineage_and_summary_sources_deterministically() -> None:

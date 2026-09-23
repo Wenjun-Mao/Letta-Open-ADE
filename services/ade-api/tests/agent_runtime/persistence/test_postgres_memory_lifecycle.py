@@ -138,9 +138,16 @@ def test_postgres_memory_lifecycle_lineage_and_subject_isolation(
                 assert active_fact["value"] == "红茶"
                 first_revision = await repository.list_revisions(fact_id)
                 assert [row["id"] for row in first_revision] == [first_revision_id]
-                assert (await repository.list_revision_sources(first_revision_id))[0][
-                    "message_id"
-                ] == add_turn["id"]
+                first_source = (
+                    await repository.list_revision_sources(
+                        first_revision_id,
+                        workspace_id=ids["workspace"],
+                        subject_id=ids["subject_one"],
+                    )
+                )[0]
+                assert first_source["message_id"] == add_turn["id"]
+                assert first_source["conversation_id"] == ids["conversation_one"]
+                assert first_source["message_sequence"] == 1
 
             async with engine.begin() as connection:
                 correction_turn = await record_m2_memory_turn(
@@ -201,6 +208,10 @@ def test_postgres_memory_lifecycle_lineage_and_subject_isolation(
                     second_revision_id
                 )
                 assert correction_sources[0]["message_id"] == correction_turn["id"]
+                assert (
+                    correction_sources[0]["conversation_id"] == ids["conversation_two"]
+                )
+                assert correction_sources[0]["message_sequence"] == 1
                 assert correction_sources[0]["quote"] == "绿茶"
                 current_hits = await _search_active_facts(
                     connection, ids["subject_one"], [0.0, 1.0, 0.0]

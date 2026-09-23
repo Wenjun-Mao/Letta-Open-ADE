@@ -137,6 +137,8 @@ export type ConversationState = Conversation & {
 
 export type MemoryEvidence = {
   message_id: string;
+  conversation_id: string;
+  message_sequence: number;
   start_char: number;
   end_char: number;
   quote: string;

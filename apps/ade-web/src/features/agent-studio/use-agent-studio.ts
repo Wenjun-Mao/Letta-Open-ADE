@@ -26,6 +26,8 @@ import {
   updateAgentStudioSubject,
 } from "./api";
 import { openRunEventStream, TERMINAL_RUN_EVENT_TYPES } from "./event-stream";
+import { memoryActionOutcome, type PendingMemoryAction } from "./memory-action";
+import { useDefinitionVersion } from "./use-definition-version";
 import {
   defaultBundle,
   identityKey,
@@ -42,6 +44,7 @@ import type {
   Run,
   RunEvent,
   SubjectMemories,
+  MemoryEvidence,
 } from "./types";
 
 const TERMINAL_RUN_STATUSES = new Set(["succeeded", "failed", "cancelled"]);
@@ -63,6 +66,11 @@ export function useAgentStudio() {
   const eventSourceRef = useRef<EventSource | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const terminalRunRef = useRef("");
+  const selectedIdRef = useRef(conversationId);
+  const selectionEpochRef = useRef(0);
+  const evidenceTargetRef = useRef<MemoryEvidence | null>(null);
+  const runConversationRef = useRef("");
+  const monitorEpochRef = useRef(0);
 
   const [options, setOptions] = useState<AgentStudioOptions | null>(null);
   const [sessions, setSessions] = useState<AgentStudioSession[]>([]);
@@ -90,6 +98,9 @@ export function useAgentStudio() {
   const [subjectName, setSubjectName] = useState("New memory subject");
   const [subjectKey, setSubjectKey] = useState("local-user");
   const [subjectRename, setSubjectRename] = useState("");
+  const [evidenceMessageId, setEvidenceMessageId] = useState("");
+  const [evidenceError, setEvidenceError] = useState("");
+  const [memoryAction, setMemoryAction] = useState<PendingMemoryAction | null>(null);
 
   const stopMonitoring = useCallback(() => {
     eventSourceRef.current?.close();
@@ -101,12 +112,25 @@ export function useAgentStudio() {
   }, []);
 
   const selectConversation = useCallback((nextConversationId: string | null) => {
+    selectedIdRef.current = nextConversationId;
+    selectionEpochRef.current += 1;
+    stopMonitoring();
+    setSession(null);
+    setConversation(null);
+    setMemories(null);
+    setRuns([]);
+    setRun(null);
+    setEvents([]);
+    setEvidenceMessageId("");
+    setEvidenceError("");
+    setMemoryAction(null);
+    if (!evidenceTargetRef.current || evidenceTargetRef.current.conversation_id !== nextConversationId) evidenceTargetRef.current = null;
     const params = new URLSearchParams(searchParams.toString());
     if (nextConversationId) params.set("conversation", nextConversationId);
     else params.delete("conversation");
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname);
-  }, [pathname, router, searchParams]);
+  }, [pathname, router, searchParams, stopMonitoring]);
 
   const refreshWorkspace = useCallback(async () => {
     setLoading(true);
@@ -131,40 +155,69 @@ export function useAgentStudio() {
     }
   }, [includeArchived]);
 
+  const definitionVersion = useDefinitionVersion({
+    session, definitions, refreshWorkspace, setDefinitionChoice, setBusy, setError,
+  });
+
   const refreshSelected = useCallback(async (selectedId: string) => {
+    const epoch = ++selectionEpochRef.current;
     try {
       const nextSession = await getAgentStudioSession(selectedId);
+      const target = evidenceTargetRef.current?.conversation_id === selectedId ? evidenceTargetRef.current : null;
       const [nextConversation, nextMemories, nextRuns] = await Promise.all([
-        getConversationState(selectedId),
+        getConversationState(selectedId, target ? target.message_sequence + 1 : undefined),
         getSubjectMemories(nextSession.memory_subject.id),
         listConversationRuns(selectedId),
       ]);
+      if (epoch !== selectionEpochRef.current || selectedIdRef.current !== selectedId) return null;
+      if (target && !nextConversation.messages.some((entry) => entry.id === target.message_id && entry.sequence === target.message_sequence)) {
+        setEvidenceError("The cited message could not be verified in its original conversation.");
+        evidenceTargetRef.current = null;
+        return null;
+      }
       setSession(nextSession);
       setConversation(nextConversation);
       setMemories(nextMemories);
       setRuns(nextRuns.items);
-      setRun((current) => current || nextSession.latest_run);
+      setRun(nextSession.latest_run);
       setSubjectRename(nextSession.memory_subject.display_name);
+      setSubjectChoice(nextSession.memory_subject.id);
+      setDefinitionChoice(nextSession.agent_definition.id);
+      if (target) {
+        setEvidenceMessageId(target.message_id);
+        setEvidenceError("");
+        evidenceTargetRef.current = null;
+        window.requestAnimationFrame(() => document.getElementById(`message-${target.message_id}`)?.scrollIntoView({ block: "center" }));
+      }
+      return nextMemories;
     } catch (exc) {
-      setError(messageFrom(exc));
+      if (epoch === selectionEpochRef.current && selectedIdRef.current === selectedId) setError(messageFrom(exc));
+      return null;
     }
   }, []);
 
   const finishRun = useCallback(async (runId: string) => {
     if (terminalRunRef.current === runId) return;
+    const monitoredEpoch = monitorEpochRef.current;
     terminalRunRef.current = runId;
     try {
       const [nextRun, eventLog] = await Promise.all([getRun(runId), getRunEventLog(runId)]);
+      if (selectedIdRef.current !== nextRun.conversation_id || runConversationRef.current !== nextRun.conversation_id || monitoredEpoch !== selectionEpochRef.current) return;
       setRun(nextRun);
       setEvents(eventLog.items);
-      if (conversationId) await refreshSelected(conversationId);
+      const refreshedMemories = await refreshSelected(nextRun.conversation_id);
+      setMemoryAction((current) => {
+        if (selectedIdRef.current !== nextRun.conversation_id) return current;
+        if (!current || current.runId !== runId) return current;
+        return { ...current, outcome: memoryActionOutcome(current, nextRun, eventLog.items, refreshedMemories) };
+      });
       stopMonitoring();
       setStreamWarning("");
     } catch (exc) {
       terminalRunRef.current = "";
       setError(messageFrom(exc));
     }
-  }, [conversationId, refreshSelected, stopMonitoring]);
+  }, [refreshSelected, stopMonitoring]);
 
   const recordEvent = useCallback((event: RunEvent) => {
     setEvents((current) => {
@@ -175,21 +228,23 @@ export function useAgentStudio() {
 
   const monitorRun = useCallback((runId: string) => {
     stopMonitoring();
+    monitorEpochRef.current = selectionEpochRef.current;
     terminalRunRef.current = "";
     setStreamWarning("");
     eventSourceRef.current = openRunEventStream(runId, {
-      onEvent: recordEvent,
+      onEvent: (event) => { if (selectedIdRef.current === runConversationRef.current && monitorEpochRef.current === selectionEpochRef.current) recordEvent(event); },
       onTerminal: () => void finishRun(runId),
-      onError: () => setStreamWarning("Event stream reconnecting; status polling remains active."),
+      onError: () => { if (selectedIdRef.current === runConversationRef.current && monitorEpochRef.current === selectionEpochRef.current) setStreamWarning("Event stream reconnecting; status polling remains active."); },
     });
     pollRef.current = setInterval(() => {
       void Promise.all([getRun(runId), getRunEventLog(runId)])
         .then(([nextRun, eventLog]) => {
+          if (selectedIdRef.current !== nextRun.conversation_id || runConversationRef.current !== nextRun.conversation_id || monitorEpochRef.current !== selectionEpochRef.current) return;
           setRun(nextRun);
           setEvents(eventLog.items);
           if (TERMINAL_RUN_STATUSES.has(nextRun.status)) void finishRun(runId);
         })
-        .catch((exc) => setError(messageFrom(exc)));
+        .catch((exc) => { if (selectedIdRef.current === runConversationRef.current) setError(messageFrom(exc)); });
     }, 1500);
   }, [finishRun, recordEvent, stopMonitoring]);
 
@@ -198,16 +253,17 @@ export function useAgentStudio() {
   }, [refreshWorkspace]);
 
   useEffect(() => {
+    selectedIdRef.current = conversationId;
+    selectionEpochRef.current += 1;
     stopMonitoring();
     setEvents([]);
     setRun(null);
+    setMemoryAction(null);
+    setSession(null);
+    setConversation(null);
+    setMemories(null);
+    setRuns([]);
     if (conversationId) void refreshSelected(conversationId);
-    else {
-      setSession(null);
-      setConversation(null);
-      setMemories(null);
-      setRuns([]);
-    }
   }, [conversationId, refreshSelected, stopMonitoring]);
 
   useEffect(() => () => stopMonitoring(), [stopMonitoring]);
@@ -260,6 +316,43 @@ export function useAgentStudio() {
       setBusy(false);
     }
   }
+
+  async function loadOlderMessages() {
+    if (!conversation?.next_before_sequence || !session) return;
+    const selectedId = session.conversation.id;
+    const epoch = selectionEpochRef.current;
+    try {
+      const older = await getConversationState(selectedId, conversation.next_before_sequence);
+      if (selectedIdRef.current !== selectedId || epoch !== selectionEpochRef.current) return;
+      setConversation((current) => current && current.id === selectedId ? {
+        ...current,
+        messages: [...older.messages, ...current.messages],
+        messages_truncated: older.messages_truncated,
+        next_before_sequence: older.next_before_sequence,
+      } : current);
+    } catch (exc) {
+      if (selectedIdRef.current === selectedId) setError(messageFrom(exc));
+    }
+  }
+
+  async function openEvidence(evidence: MemoryEvidence) {
+    evidenceTargetRef.current = evidence;
+    setEvidenceMessageId("");
+    setEvidenceError("");
+    if (selectedIdRef.current === evidence.conversation_id) await refreshSelected(evidence.conversation_id);
+    else selectConversation(evidence.conversation_id);
+  }
+
+  function prepareMemoryAction(factId: string, version: number, operation: "correct" | "forget") {
+    const fact = memories?.facts.find((item) => item.id === factId && item.version === version && item.status === "active");
+    if (!fact || !session || isArchived(session.conversation)) return;
+    const instruction = operation === "forget"
+      ? `Please remove this saved information from active memory: ${fact.fact_type} about ${fact.entity_label || fact.entity_kind}: ${fact.value}. Do not treat this as a request to erase past conversations or revision history.`
+      : `Please correct this saved fact: ${fact.fact_type} about ${fact.entity_label || fact.entity_kind}: ${fact.value}. The correct information is: `;
+    setMessage(instruction);
+    setMemoryAction({ factId, version, operation, runId: null, outcome: "Prepared. Edit this message and send it to request review; no memory has changed yet." });
+  }
+
 
   async function setSessionArchived(archived: boolean) {
     if (!session) return;
@@ -339,14 +432,19 @@ export function useAgentStudio() {
         timeout_seconds: clampNumber(timeoutSeconds, 5, 600),
         retry_count: clampNumber(retryCount, 0, options?.max_retry_count || 5),
       });
+      runConversationRef.current = selected.conversation.id;
+      setMemoryAction((current) => current && current.runId === null ? { ...current, runId: accepted.run_id, outcome: "Turn accepted; waiting for review and a committed revision." } : current);
       const [acceptedRun, eventLog] = await Promise.all([getRun(accepted.run_id), getRunEventLog(accepted.run_id)]);
+      if (selectedIdRef.current !== selected.conversation.id) return;
       setRun(acceptedRun);
       setEvents(eventLog.items);
-      monitorRun(accepted.run_id);
       await refreshSelected(selected.conversation.id);
+      if (selectedIdRef.current === selected.conversation.id) monitorRun(accepted.run_id);
     } catch (exc) {
-      setMessage(content);
-      setError(messageFrom(exc));
+      if (selectedIdRef.current === selected.conversation.id) {
+        setMessage(content);
+        setError(messageFrom(exc));
+      }
     } finally {
       setBusy(false);
     }
@@ -369,11 +467,12 @@ export function useAgentStudio() {
     options, sessions, definitions, subjects, session, conversation, memories, runs, run, events,
     loading, busy, error, streamWarning, includeArchived, message, timeoutSeconds, retryCount,
     title, definitionChoice, definitionName, definitionKey, subjectChoice, subjectName, subjectKey, subjectRename,
+    evidenceMessageId, evidenceError, memoryAction, ...definitionVersion,
     activeRun: Boolean(run && !TERMINAL_RUN_STATUSES.has(run.status)),
     setIncludeArchived, setMessage, setTimeoutSeconds: (value: number) => setTimeoutSeconds(clampNumber(value, 5, 600)),
     setRetryCount: (value: number) => setRetryCount(clampNumber(value, 0, options?.max_retry_count || 5)),
     setTitle, setDefinitionChoice, setDefinitionName, setDefinitionKey, setSubjectChoice, setSubjectName, setSubjectKey, setSubjectRename,
     selectConversation, refreshWorkspace, createSession, setSessionArchived, setDefinitionArchived, setSubjectArchived,
-    renameSubject, sendMessage, cancelActiveRun,
+    renameSubject, sendMessage, cancelActiveRun, loadOlderMessages, openEvidence, prepareMemoryAction,
   };
 }

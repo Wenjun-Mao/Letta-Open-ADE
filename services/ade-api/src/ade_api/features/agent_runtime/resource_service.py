@@ -75,7 +75,13 @@ class ResourceService:
                 require_default_workspace(subject)
                 _require_purpose(subject, required_purpose, "memory subject")
                 facts = [
-                    await _memory_fact_response(repository, fact)
+                    await _memory_fact_response(
+                        repository,
+                        fact,
+                        workspace_id=str(subject["workspace_id"]),
+                        subject_id=subject_id,
+                        purpose=required_purpose,
+                    )
                     for fact in await repository.list_facts_with_entities(subject_id)
                 ]
         return {"subject_id": subject_id, "facts": facts}
@@ -169,11 +175,21 @@ def _require_purpose(
 
 
 async def _memory_fact_response(
-    repository: MemoryRepository, fact: dict[str, Any]
+    repository: MemoryRepository,
+    fact: dict[str, Any],
+    *,
+    workspace_id: str,
+    subject_id: str,
+    purpose: str | None,
 ) -> dict[str, Any]:
     revisions = []
     for revision in await repository.list_revisions(str(fact["id"])):
-        sources = await repository.list_revision_sources(str(revision["id"]))
+        sources = await repository.list_revision_sources(
+            str(revision["id"]),
+            workspace_id=workspace_id,
+            subject_id=subject_id,
+            purpose=purpose,
+        )
         revisions.append(
             memory_revision_response(
                 revision,
@@ -183,6 +199,8 @@ async def _memory_fact_response(
                 evidence=[
                     {
                         "message_id": str(source["message_id"]),
+                        "conversation_id": str(source["conversation_id"]),
+                        "message_sequence": int(source["message_sequence"]),
                         "start_char": source["start_char"],
                         "end_char": source["end_char"],
                         "quote": source["quote"],

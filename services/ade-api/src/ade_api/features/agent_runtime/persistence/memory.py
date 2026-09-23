@@ -10,6 +10,7 @@ from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from .base import OptimisticLockError, fetch_one, values
+from .memory_source_read import list_revision_sources as read_revision_sources
 from .metadata import (
     memory_embeddings,
     memory_entities,
@@ -231,16 +232,21 @@ class MemoryRepository:
         )
         return [dict(row) for row in result.mappings()]
 
-    async def list_revision_sources(self, revision_id: str) -> list[dict[str, Any]]:
-        result = await self._connection.execute(
-            select(memory_revision_sources)
-            .where(memory_revision_sources.c.revision_id == revision_id)
-            .order_by(
-                memory_revision_sources.c.message_id,
-                memory_revision_sources.c.start_char,
-            )
+    async def list_revision_sources(
+        self,
+        revision_id: str,
+        *,
+        workspace_id: str | None = None,
+        subject_id: str | None = None,
+        purpose: str | None = None,
+    ) -> list[dict[str, Any]]:
+        return await read_revision_sources(
+            self._connection,
+            revision_id,
+            workspace_id=workspace_id,
+            subject_id=subject_id,
+            purpose=purpose,
         )
-        return [dict(row) for row in result.mappings()]
 
     async def list_revision_predecessor_ids(self, revision_id: str) -> list[str]:
         result = await self._connection.execute(
