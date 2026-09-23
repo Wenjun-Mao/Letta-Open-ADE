@@ -59,9 +59,11 @@ describe("buildCommentGenerationRequest", () => {
     expect(result.request?.top_k).toBeUndefined();
   });
 
-  it("rejects a disabled DeepSeek thinking state before submitting", () => {
-    expect(buildCommentGenerationRequest(
+  it("preserves an explicit non-thinking DeepSeek request and temperature", () => {
+    const result = buildCommentGenerationRequest(
       { ...validForm, enableThinking: false }, COMMENT_LAB_COPY.en, "deepseek_openai",
-    )).toEqual({ request: null, error: COMMENT_LAB_COPY.en.deepseekThinkingRequired });
+    );
+    expect(result.request?.enable_thinking).toBe(false);
+    expect(result.request?.temperature).toBe(0.6);
   });
 });

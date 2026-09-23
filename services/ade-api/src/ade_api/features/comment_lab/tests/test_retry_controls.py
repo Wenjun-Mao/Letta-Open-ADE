@@ -36,25 +36,43 @@ def test_chat_completions_url_supports_v1_and_v3_bases() -> None:
     ) == ("https://ark.cn-beijing.volces.com/api/v3/chat/completions")
 
 
-def test_deepseek_disabled_thinking_fails_before_provider_request(monkeypatch) -> None:
+def test_deepseek_explicit_non_thinking_preserves_temperature(monkeypatch) -> None:
     service = _build_service()
+    calls = []
+
+    def fake_post(payload, *, base_url, api_key, timeout_seconds, retry_count):
+        calls.append(payload)
+        return {
+            "choices": [
+                {
+                    "finish_reason": "stop",
+                    "message": {"content": "这是一条完整的合成测试评论。"},
+                }
+            ]
+        }
+
     monkeypatch.setattr(
         service,
         "_post_chat_completions",
-        lambda *args, **kwargs: pytest.fail("provider should not be called"),
+        fake_post,
     )
 
-    with pytest.raises(ValueError, match="requires thinking enabled"):
-        service.generate_comment(
-            base_url="http://127.0.0.1:8010/v1",
-            model="deepseek::deepseek-flash",
-            source_adapter="deepseek_openai",
-            system_prompt="Synthetic prompt",
-            persona_prompt="Synthetic persona",
-            news_input="Synthetic news",
-            enable_thinking=False,
-            retry_count=0,
-        )
+    result = service.generate_comment(
+        base_url="http://127.0.0.1:8010/v1",
+        model="deepseek::deepseek-flash",
+        source_adapter="deepseek_openai",
+        system_prompt="Synthetic prompt",
+        persona_prompt="Synthetic persona",
+        news_input="Synthetic news",
+        enable_thinking=False,
+        temperature=0.4,
+        retry_count=0,
+    )
+
+    assert result["content"]
+    assert len(calls) == 1
+    assert calls[0]["thinking"] == {"type": "disabled"}
+    assert calls[0]["temperature"] == 0.4
 
 
 def test_parse_sse_chat_completion_response_aggregates_chunks() -> None:

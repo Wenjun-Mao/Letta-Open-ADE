@@ -48,6 +48,8 @@ from ade_api.features.label_lab.service import LabelingService
 from ade_api.features.prompt_center import build_prompt_template_reader
 from ade_api.platform.settings import AdeApiSettings
 
+from native_turn import run_native_turn
+
 
 ROOT = Path(__file__).resolve().parents[3]
 MODEL = "deepseek::deepseek-flash"
@@ -387,7 +389,7 @@ async def _run_bind(transport: RouterTransport, database_url: str) -> None:
 
 
 async def main(mode: str, env_file: Path, database_url: str | None) -> None:
-    settings = _settings(env_file, include_spark=mode == "bind")
+    settings = _settings(env_file, include_spark=mode in {"bind", "native"})
     router_app.get_settings = lambda: settings
     router_app.catalog_service = RouterCatalogService(settings_factory=lambda: settings)
     forwarding.get_settings = lambda: settings
@@ -418,6 +420,16 @@ async def main(mode: str, env_file: Path, database_url: str | None) -> None:
             if not database_url:
                 raise ValueError("Binding requires --database-url")
             await _run_bind(transport, database_url)
+        elif mode == "native":
+            if not database_url:
+                raise ValueError("Native turn requires --database-url")
+            checked_url, expected_name = _isolated_database_url(database_url)
+            await run_native_turn(
+                transport,
+                database_url=checked_url,
+                database_name=expected_name,
+                root=ROOT,
+            )
         else:
             await _run_lab(mode, base_url)
     finally:
@@ -428,7 +440,7 @@ async def main(mode: str, env_file: Path, database_url: str | None) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "mode", choices=("tool", "reviewer", "comment", "label", "bind")
+        "mode", choices=("tool", "reviewer", "comment", "label", "bind", "native")
     )
     parser.add_argument("--env-file", type=Path, required=True)
     parser.add_argument("--database-url")

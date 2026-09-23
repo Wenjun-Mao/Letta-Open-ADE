@@ -317,10 +317,37 @@ def test_deepseek_thinking_defaults_and_unsupported_shapes_fail_closed() -> None
     explicit = router_app._apply_sampling_defaults(
         model,
         source,
-        {**payload, "thinking": {"type": "enabled"}, "reasoning_effort": "high"},
+        {**payload, "thinking": {"type": "enabled"}, "reasoning_effort": "max"},
     )
     assert explicit["thinking"] == {"type": "enabled"}
-    assert explicit["reasoning_effort"] == "high"
+    assert explicit["reasoning_effort"] == "max"
+    disabled = router_app._apply_sampling_defaults(
+        model,
+        source,
+        {**payload, "thinking": {"type": "disabled"}, "temperature": 0.2},
+    )
+    assert disabled["thinking"] == {"type": "disabled"}
+    assert "reasoning_effort" not in disabled
+    assert router_app._normalize_adapter_payload(source, disabled) == disabled
+    effort_none = router_app._apply_sampling_defaults(
+        model, source, {**payload, "reasoning_effort": "none"}
+    )
+    assert effort_none["thinking"] == {"type": "disabled"}
+    assert effort_none["reasoning_effort"] == "none"
+    assert router_app._normalize_adapter_payload(source, effort_none) == effort_none
+    streamed = {**payload, "stream": True}
+    assert router_app._normalize_adapter_payload(source, streamed) == streamed
+    low_top_p = {**payload, "top_p": 0.1}
+    assert router_app._normalize_adapter_payload(source, low_top_p) == low_top_p
+    forced_without_thinking = {
+        **payload,
+        "thinking": {"type": "disabled"},
+        "tool_choice": "required",
+    }
+    assert (
+        router_app._normalize_adapter_payload(source, forced_without_thinking)
+        == forced_without_thinking
+    )
 
     with pytest.raises(ValueError, match="thinking mode"):
         router_app._normalize_adapter_payload(
@@ -340,10 +367,9 @@ def test_deepseek_thinking_defaults_and_unsupported_shapes_fail_closed() -> None
         )
     for unsupported in (
         {"thinking": "enabled"},
-        {"thinking": {"type": "disabled"}},
-        {"reasoning_effort": "low"},
+        {"thinking": {"type": "disabled"}, "reasoning_effort": "high"},
+        {"reasoning_effort": "invalid"},
         {"top_k": 20},
-        {"stream": True},
         {"temperature": 0.2},
     ):
         with pytest.raises(ValueError):

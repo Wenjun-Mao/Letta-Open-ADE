@@ -22,10 +22,10 @@
         "runtime_implementation": "DeepSeek hosted API",
         "runtime_version": null,
         "runtime_image_digest": null,
-        "prompt_policy_sha256": "ffefed54be77c0a69d95eb372091c918b0bcecadb8df3a569446911a23ef6a16",
-        "tool_policy_sha256": "a27eccc7d3b816557fb183f84d1f3dadf0e3842da6ecea1eadcabd2b896eaed0",
-        "schema_policy_sha256": "626a8b0d35a35afe712eec8a227d44a872f56046bd2e985bdebaa4ceba1e6718",
-        "retrieval_policy_sha256": "0b99d599907706c56a7f4170cb70dd5bed6e897cbad617692f0e839bde2ba689",
+        "prompt_policy_sha256": "7174456245b99a84744fa7e34d2393855e0016fa84a49f5ac4d3250a52496fe3",
+        "tool_policy_sha256": "5d74b6ae08edd3d4e33f0f04c767bc40490b0ad1ec492176be9dac511627564d",
+        "schema_policy_sha256": "0ed8abb4c0767b3c4966c8bdf6fc78254718a33b2a73bd90845b76309401568d",
+        "retrieval_policy_sha256": "72953044b4edacb83dd926aa1e345e6d1cf975f98323080bf6e5aa56ea608462",
         "sampling_settings": {
           "thinking": "enabled",
           "reasoning_effort": "high",
@@ -37,7 +37,8 @@
           "total_tokens": 16384,
           "response_reserve_tokens": 4096,
           "max_output_tokens": 4096,
-          "max_model_requests": 6
+          "max_model_requests": 6,
+          "reviewer_repair_count": 0
         },
         "hardware_metadata": {
           "host_class": "hosted API",
@@ -45,7 +46,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "e0a682a85211679031f1d85f6ec7a630658c2a90bcd73bcd3cf2d1b0c7e4b33a",
+        "fingerprint_sha256": "378da1a5483f864f9ec30807d933debf518b163bc5f52e083988e6ea2bf731df",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [

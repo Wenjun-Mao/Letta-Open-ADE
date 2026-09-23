@@ -316,10 +316,28 @@ def _normalize_deepseek_payload(payload: dict[str, Any]) -> dict[str, Any]:
         or thinking.get("type") not in {"enabled", "disabled"}
     ):
         raise ValueError("DeepSeek thinking must have type enabled or disabled")
-    if isinstance(thinking, dict) and thinking["type"] != "enabled":
-        raise ValueError("DeepSeek development lane requires thinking enabled")
-    if "reasoning_effort" in payload and payload["reasoning_effort"] != "high":
-        raise ValueError("DeepSeek development lane requires reasoning_effort high")
+    reasoning_effort = payload.get("reasoning_effort")
+    if reasoning_effort is not None and reasoning_effort not in {
+        "none",
+        "minimal",
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max",
+        "ultra",
+    }:
+        raise ValueError("DeepSeek reasoning_effort is unsupported")
+    thinking_enabled = not (
+        (isinstance(thinking, dict) and thinking["type"] == "disabled")
+        or reasoning_effort == "none"
+    )
+    if (
+        thinking is not None
+        and reasoning_effort is not None
+        and ((thinking["type"] == "disabled") != (reasoning_effort == "none"))
+    ):
+        raise ValueError("DeepSeek thinking and reasoning_effort conflict")
     response_format = payload.get("response_format")
     if response_format is not None and (
         not isinstance(response_format, dict)
@@ -332,23 +350,24 @@ def _normalize_deepseek_payload(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("DeepSeek does not support chat_template_kwargs")
     if "top_k" in payload:
         raise ValueError("DeepSeek does not support top_k")
-    if payload.get("stream") is True:
-        raise ValueError("DeepSeek development lane requires stream=false")
-    if (
-        isinstance(payload.get("tool_choice"), dict)
-        or payload.get("tool_choice") == "required"
-    ):
-        raise ValueError("DeepSeek thinking mode does not support forced tool_choice")
-    for field in ("temperature", "presence_penalty", "frequency_penalty"):
-        if field in payload:
-            raise ValueError(f"DeepSeek thinking mode ignores {field}")
+    if thinking_enabled:
+        if (
+            isinstance(payload.get("tool_choice"), dict)
+            or payload.get("tool_choice") == "required"
+        ):
+            raise ValueError(
+                "DeepSeek thinking mode does not support forced tool_choice"
+            )
+        for field in ("temperature", "presence_penalty", "frequency_penalty"):
+            if field in payload:
+                raise ValueError(f"DeepSeek thinking mode ignores {field}")
     if "top_p" in payload:
         try:
             top_p = float(payload["top_p"])
         except (TypeError, ValueError) as exc:
             raise ValueError("DeepSeek top_p must be numeric") from exc
-        if top_p < 0.95:
-            raise ValueError("DeepSeek thinking mode requires top_p >= 0.95")
+        if not 0 < top_p <= 1:
+            raise ValueError("DeepSeek top_p must be between 0 and 1")
     return payload
 
 
@@ -362,9 +381,13 @@ def _apply_sampling_defaults(
     if source.adapter == "deepseek_openai":
         if _payload_missing(next_payload, "thinking"):
             next_payload["thinking"] = {
-                "type": "enabled"
-                if routed_model.thinking_default_enabled
-                else "disabled"
+                "type": (
+                    "disabled"
+                    if next_payload.get("reasoning_effort") == "none"
+                    else "enabled"
+                    if routed_model.thinking_default_enabled
+                    else "disabled"
+                )
             }
         if (
             next_payload["thinking"].get("type") == "enabled"

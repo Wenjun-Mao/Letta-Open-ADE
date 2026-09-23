@@ -7,7 +7,7 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 
 [ADR 0025](adr/0025-deepseek-development-lane.md) replaces Luna as the
 current development-generation lane: official DeepSeek API,
-`deepseek-flash`, thinking enabled/high, and Spark embeddings through the
+`deepseek-flash`, thinking enabled/high by default, and Spark embeddings through the
 existing retriever source. The Luna/AppServer feasibility experiment in
 [ADR 0024](adr/0024-local-luna-agent-backend-feasibility.md) is on hold with
 its four starts unspent. DeepSeek is development-only and unqualified; it is
@@ -15,10 +15,10 @@ not a release provider, a Spark chat fallback, or evidence that the M2
 ADE/Hindsight comparison was run. Initial synthetic smoke is bounded by
 eight DeepSeek generation requests including continuations, four Spark
 embeddings, no rerolls, and 180 seconds per request. The
-[synthetic smoke](findings/deepseek-development-smoke.md) spent six DeepSeek
-generation requests and one Spark embedding, passed native required-tool and
-typed reviewer checks, and persisted an unqualified Agent Studio binding in a
-disposable database. It did not run a full native Agent Studio turn. Existing
+[synthetic smoke](findings/deepseek-development-smoke.md) spent all eight DeepSeek
+generation requests and three Spark embeddings with zero rerolls, passed native
+required-tool and typed reviewer checks, and completed one synthetic Agent Studio
+HTTP API/worker/persistence turn in a disposable database. Existing
 release evidence is not rebound; the governed policy-freshness gate remains
 expectedly stale.
 

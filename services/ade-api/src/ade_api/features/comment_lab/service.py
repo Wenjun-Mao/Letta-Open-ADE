@@ -214,9 +214,8 @@ class CommentingService:
         )
         deepseek_thinking = (
             str(source_adapter or "").strip().lower() == "deepseek_openai"
+            and enable_thinking is not False
         )
-        if deepseek_thinking and enable_thinking is False:
-            raise ValueError("DeepSeek development lane requires thinking enabled")
         if deepseek_thinking and temperature is not None:
             raise ValueError("DeepSeek thinking mode ignores explicit temperature")
         if (

@@ -100,22 +100,44 @@ def test_executor_runs_only_subject_bound_memory_search() -> None:
     }
 
 
-def test_deepseek_required_search_uses_auto_and_replays_reasoning_with_tool_result() -> None:
+def test_deepseek_required_search_uses_auto_and_replays_reasoning_with_tool_result() -> (
+    None
+):
     transport = _Transport(
         [
             {
-                "choices": [{"finish_reason": "tool_calls", "message": {
-                    "role": "assistant",
-                    "content": None,
-                    "reasoning_content": "private synthetic reasoning",
-                    "tool_calls": [{"id": "call-1", "type": "function", "function": {
-                        "name": "search_memory", "arguments": '{"query":"oolong"}'
-                    }}],
-                }}],
+                "choices": [
+                    {
+                        "finish_reason": "tool_calls",
+                        "message": {
+                            "role": "assistant",
+                            "content": None,
+                            "reasoning_content": "private synthetic reasoning",
+                            "tool_calls": [
+                                {
+                                    "id": "call-1",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "search_memory",
+                                        "arguments": '{"query":"oolong"}',
+                                    },
+                                }
+                            ],
+                        },
+                    }
+                ],
             },
-            {"choices": [{"finish_reason": "stop", "message": {
-                "role": "assistant", "content": "Your favorite tea is oolong.",
-            }}]},
+            {
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {
+                            "role": "assistant",
+                            "content": "Your favorite tea is oolong.",
+                        },
+                    }
+                ]
+            },
         ]
     )
 
@@ -142,6 +164,27 @@ def test_deepseek_required_search_uses_auto_and_replays_reasoning_with_tool_resu
     assert replay[-2]["reasoning_content"] == "private synthetic reasoning"
     assert replay[-1]["role"] == "tool"
     assert "private synthetic reasoning" not in result.assistant_text
+
+
+def test_reviewer_repair_budget_is_explicit_in_deployment_and_defaults_for_existing_models() -> (
+    None
+):
+    budget = turn_execution_module._reviewer_max_model_requests
+    assert (
+        budget(
+            {"fingerprint_payload": {"context_settings": {"reviewer_repair_count": 0}}}
+        )
+        == 1
+    )
+    assert budget({"fingerprint_payload": {"context_settings": {}}}) == 2
+    with pytest.raises(RuntimeValidationError, match="repair budget"):
+        budget(
+            {
+                "fingerprint_payload": {
+                    "context_settings": {"reviewer_repair_count": True}
+                }
+            }
+        )
 
 
 def test_executor_rejects_arbitrary_tool_names() -> None:

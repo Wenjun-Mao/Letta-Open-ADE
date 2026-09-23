@@ -67,19 +67,38 @@ below after execution.
    `d04d067f-f146-5c0d-afec-9219cdff2545`. Independent SQL read-back
    confirmed `purpose=agent_studio`, `unqualified`, and conversation
    fingerprint `e0a682a85211679031f1d85f6ec7a630658c2a90bcd73bcd3cf2d1b0c7e4b33a`,
-   exactly matching the final checked-in unqualified manifest. All three
+   exactly matching that checked-in unqualified manifest at the time. The
+   subsequent caller-override and reviewer-budget correction produced a new
+   development fingerprint for the native turn. All three
    synthetic sessions remain available for inspection; no production data was
    touched.
+10. After preserving explicit supported caller overrides and naming a zero-repair
+    reviewer budget, one synthetic native Agent Studio turn ran through the
+    `/api/v3/agent-studio/sessions` and `/api/v3/conversations/{id}/turns` HTTP
+    endpoints, one real worker attempt, and the disposable database. A separate
+    database connection read back `run_status=succeeded`, one active
+    `person.current_location=Toronto` fact at version 1, one memory revision,
+    and `memory.committed`/`run.completed` events. Conversation
+    `1eab6fbc-dc86-56c9-ad54-228ac48b2ac3`, subject
+    `8986c374-8e70-5f0f-ba1e-4a0e94999263`, run
+    `c32c2352-cf58-4e5d-8668-97c646f6af2b` remain in the disposable DB.
+    The turn reserved and used exactly two DeepSeek generation requests
+    (conversation and reviewer) and two Spark embedding requests (retrieval
+    query and fact vector). It had zero tools, zero retries, zero reviewer
+    repairs, and no compaction. Two preflight harness failures occurred before
+    session creation and before any provider call; they corrected source
+    provenance setup and Python module loading, then this single authorized
+    turn completed. No private history was used.
 
-Final generation count: **6 of 8** (2 unspent). Spark embedding count: **1 of
-4** (3 unspent). No rerolls. This smoke is development readiness for the
-adapter/binding path only, not a complete native Agent Studio turn or release
+Final generation count: **8 of 8** (none unspent). Spark embedding count:
+**3 of 4** (one unspent). No rerolls. This establishes one synthetic native
+development turn, not model quality, private-data approval, or release
 qualification.
 
 ## Verification and remaining gate
 
 The repository test run excluding only the intentional checked-in-manifest
-policy-freshness gate passed: 617 Python tests, 7 skipped. The web suite passed
+policy-freshness gate passed: 619 Python tests, 7 skipped. The web suite passed
 73 tests; lint, TypeScript/production build, Ruff, formatting, OpenAPI artifact
 check, and `git diff --check` passed. The full Python run still fails the
 checked-in-manifest policy-freshness test because the pre-existing qualified

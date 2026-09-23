@@ -22,8 +22,12 @@ manifest, logs, or test fixtures. The base URL must resolve to the official
 unrelated host. The configured source allowlist excludes other
 models even if the account's discovery endpoint advertises them. DeepSeek uses
 `thinking: {"type":"enabled"}`, `reasoning_effort: "high"`, and
-`stream: false` as a lane invariant. Unsupported provider payloads fail before the
-upstream call; no implicit provider substitution or retry is introduced.
+`stream: false` as profile defaults. Explicit supported overrides remain
+caller-owned: non-thinking mode can use temperature or forced tool choice,
+and thinking mode can select a supported effort. Thinking mode still rejects
+parameters the provider ignores and required/named tool choice. Unsupported
+provider payloads fail before the upstream call; no implicit provider
+substitution or transport retry is introduced.
 
 ADE's native executor remains the owner of prompts, subject-bound tools,
 memory writes, request budgets, and validation. DeepSeek thinking mode does not
@@ -36,9 +40,14 @@ but never turn it into user-visible dialogue or lab result content.
 DeepSeek's structured output is `json_object`, not the vLLM JSON Schema wire
 mode. The reviewer, compaction, and labs include the schema and a JSON example
 in their prompts, then perform the existing strict local parsing and typed
-validation. Invalid output remains a failure unless an explicitly budgeted
-repair is requested. Comment/Label Lab UI omits thinking-mode sampling fields
-the provider ignores; other adapters retain their existing behavior.
+validation. The DeepSeek reviewer deployment names a zero-repair budget;
+older deployments retain their existing one-repair default. Invalid output
+remains a failure unless a repair is budgeted. Comment/Label Lab UI omits
+thinking-mode sampling fields the provider ignores; other adapters retain
+their existing behavior. In ordinary native execution, the DeepSeek
+conversation deployment permits at most six model requests (including tool
+continuations), followed by at most one reviewer request; the synthetic
+single-turn smoke applies a stricter two-generation-request transport cap.
 
 Enable the existing Spark Qwen3-Embedding-0.6B source for the retriever path,
 without changing its fingerprint, dimensions, vector policy, or qualification

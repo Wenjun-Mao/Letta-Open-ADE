@@ -305,6 +305,7 @@ class TurnExecution:
             active_facts=active_facts,
             entities=state["entities"],
             timeout_seconds=_remaining(deadline),
+            max_model_requests=_reviewer_max_model_requests(reviewer_deployment),
             validate_decision=lambda decision: _validate_review_decision(
                 decision=decision,
                 subject_id=subject_id,
@@ -448,6 +449,19 @@ def _max_model_requests(deployment: dict[str, Any]) -> int:
     if not isinstance(context, dict):
         return 6
     return max(1, min(8, int(context.get("max_model_requests") or 6)))
+
+
+def _reviewer_max_model_requests(deployment: dict[str, Any]) -> int:
+    fingerprint = deployment.get("fingerprint_payload")
+    context = (
+        fingerprint.get("context_settings") if isinstance(fingerprint, dict) else None
+    )
+    repair_count = (
+        context.get("reviewer_repair_count", 1) if isinstance(context, dict) else 1
+    )
+    if type(repair_count) is not int or repair_count not in {0, 1}:
+        raise RuntimeValidationError("Reviewer repair budget must be zero or one")
+    return 1 + repair_count
 
 
 def _embedding_dimensions(deployment: dict[str, Any]) -> int:

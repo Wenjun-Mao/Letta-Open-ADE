@@ -43,9 +43,6 @@ export function buildCommentGenerationRequest(
   if (!form.userInput.trim()) {
     return { request: null, error: copy.inputRequired };
   }
-  if (sourceAdapter === "deepseek_openai" && !form.enableThinking) {
-    return { request: null, error: copy.deepseekThinkingRequired };
-  }
 
   const maxTokens = parseNonNegativeInteger(form.maxTokens);
   if (maxTokens === null) {
