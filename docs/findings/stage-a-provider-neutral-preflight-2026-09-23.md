@@ -49,6 +49,9 @@ contract boundary. The trace does not establish *why* the model omitted it;
 that requires a separately authorized diagnosis before changing prompts,
 tool wiring, provider behavior, or another live attempt. The runner retained
 failed evidence and did not start Stage B or Stage C.
+The subsequent [offline required-tool diagnosis](stage-a-required-tool-offline-diagnosis-2026-09-23.md)
+identifies the thinking-mode `tool_choice=auto` enforcement mismatch and a
+separate fixture/context ambiguity; it does not authorize a rerun.
 
 ## Retained evidence and limits
 

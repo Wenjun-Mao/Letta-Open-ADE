@@ -36,7 +36,11 @@ turns and the 13-fact setup passed, but the scored deep-search turn failed:
 DeepSeek returned no required `search_memory` call, and the runtime rejected
 it as `conversation_required_tool_missing`. The retained preflight ledger
 spent 7/32 DeepSeek and 7/32 Qwen requests, with no reroll. Stage B and
-release qualification remain blocked; no route was promoted.
+release qualification remain blocked; no route was promoted. The
+[offline diagnosis](findings/stage-a-required-tool-offline-diagnosis-2026-09-23.md)
+finds a mandatory-tool versus DeepSeek thinking-mode `auto` enforcement gap
+and an unresolved conditional-fixture/context contract. No source repair or
+new live attempt is approved.
 
 [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md) is accepted:
 retain ADE's current memory store for the bounded
