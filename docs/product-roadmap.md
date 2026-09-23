@@ -17,12 +17,15 @@ status, blockers, next actions, and evidence.
 | --- | --- | --- |
 | M0 | Development foundation | Native ADE and Luna development route verified, with their limits recorded. |
 | M1 | Character-continuity baseline | Conversations reviewed; failures attributed to model, prompt, representation, retrieval, or policy; known policy defects covered by regression tests. |
-| M2 | Memory approach decision | Minimal ADE extension and Hindsight compared against M1 cases; quality, latency, complexity, and recommendation documented. |
-| M3 | Complete Agent Studio experience | Cross-conversation memory, source inspection, correction/forgetting, and relationship continuity across persona edits work. |
+| M2 | Memory approach comparison (deferred) | Original criterion remains: compare ADE and Hindsight against M1 cases for quality, latency, complexity, and recommendation. No comparison winner has been established. |
+| M3 | Usable profile memory in Agent Studio (in progress) | The four operator journeys in the [M3 plan](plans/m3-agent-studio-continuity.md) pass UI/API acceptance, native behavioral acceptance and release readiness separately. Subject facts persist across conversations and persona versions; private character relationship history is not claimed. |
 | M4 | Real-use validation | Longer-session trials, deployment-provider validation, and operator review meet agreed acceptance criteria. |
 
-M2 is the next priority. Detail later milestones after preceding results
-establish what is necessary. Scene-based roleplay is deferred.
+Under [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md), M3's
+bounded profile-memory slice is the current priority. The original measured
+M2 comparison is deferred with its historical findings preserved. Review
+remaining capability gaps at the end of M3 before adding memory machinery.
+Scene-based roleplay is deferred.
 
 ## Delivered
 
@@ -62,7 +65,8 @@ persistence, embeddings, Qwen, or tool protocols. See the
 - Improve task-specific evaluation where a concrete success contract exists.
 - Keep model aliases configurable so providers and underlying local models can
   evolve without source changes.
-- Establish M1's failure cases before adding a new memory service.
+- Complete the four supported M3 operator journeys and inspect the diagnostic
+  before considering further memory machinery.
 
 ## Later
 

@@ -1,6 +1,6 @@
 # ADR 0022: Incumbent Memory First For The Next Product Slice
 
-Status: Proposed. Requires approval of the M2 sequencing change below.
+Status: Accepted on 2026-09-22 for one bounded M3 slice.
 
 ## Context
 
@@ -15,22 +15,41 @@ The approved development lane is Luna, not Spark; it does not supply native
 provider protocol or embedding qualification. Adding a memory service now
 would add operational scope without a demonstrated product benefit.
 
-## Proposed Decision
+## Decision
 
 Retain the existing ADE PostgreSQL memory implementation as the incumbent for
 one bounded Agent Studio product slice. Defer the external-service comparison
-rather than declare it passed. No new service, schema family, retrieval layer,
-or provider compatibility bridge is authorized by this decision.
+rather than declare it passed. The original measured M2 comparison remains
+unexecuted and deferred; ADE has not won a head-to-head quality comparison.
+No new service, schema family, retrieval layer, or provider compatibility
+bridge is authorized by this decision.
 
-Allow M3's supported-fact workflow to proceed after approval, while native
-provider/retrieval acceptance remains pending. Keep concerns, promises, shared
-experiences, and long-history relevance as explicit open requirements, not
-capabilities implied by successful preference recall.
+Proceed with four usable operator journeys for saved profile facts: choose an
+existing conversation, start a new conversation with the same subject, start
+an isolated subject, inspect current and historical evidence, prepare a
+correction/removal in the composer and explicitly send it through the existing
+turn/reviewer/write path, and create a new immutable persona definition version
+through Prompt Center. A subject intentionally shares saved facts across its
+conversations and persona versions. It does not denote private relationship
+history with one character.
 
-This is a cost-and-scope decision under uncertainty, not selection of a proven
-quality winner. The original measured M2 comparison remains incomplete. If
-approved, mark that experiment deferred and record the revised milestone
-criterion explicitly in the roadmap and tracker; do not rewrite its history.
+Use the wording **Remove saved information** for the supported forget action.
+It removes a fact from active-fact and search input through the existing
+tombstone path. Historical revisions, evidence, summaries, and old
+conversation context remain, so old context may still contain the information.
+This is not data erasure, suppression across all contexts, or a promise that
+the user cannot state the fact again. The action requires explicit user send;
+an acknowledgment or an unsuccessful run cannot be reported as a committed
+change.
+
+Keep `/api/v3` and existing resource ownership. Only additive evidence fields
+for authoritative source conversation and message position are in scope. Keep
+concerns, promises, shared experiences, and long-history relevance as open
+requirements, not capabilities implied by preference recall.
+
+This is a cost-and-scope decision under uncertainty. The roadmap and tracker
+show M2's original comparison as deferred and M3's narrower profile-memory
+slice as in progress without rewriting the M2 evidence history.
 
 ## Alternatives
 
@@ -48,11 +67,15 @@ optimistic memory revisions, and forgetting tombstones. Do not change the
 meaning of an existing subject to silently create character-private memory.
 Do not treat a persona edit as permission to rewrite historical conversations.
 
-Reopen the comparison when a repeatable product case fails because of memory
-representation or retrieval, not merely wording, and the smallest ADE change
-has a concrete maintenance cost worth comparing with another service. Before
-a trial, authorize providers and installation, preserve chronological fixtures,
-and compare identical budgets and operator-reviewed outcomes.
+At the end of this slice, review the operator journeys and remaining capability
+gaps **before substantial new memory machinery**. This review is mandatory
+even if a plainly required capability is absent without a failed benchmark.
+For each gap, record user impact, whether ADE already has an adequate
+contract, the smallest source-owned change, and the cost of comparing or
+adopting a service. A failed case is useful evidence but is not a prerequisite
+for reopening the comparison. Before a Hindsight trial, authorize providers
+and installation, preserve chronological fixtures, and compare identical
+budgets and operator-reviewed outcomes.
 
 No release-gate waiver follows. Governed changes still need fresh native
 qualification before merge/deployment. Luna remains development-only.

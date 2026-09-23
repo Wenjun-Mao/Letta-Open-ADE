@@ -5,12 +5,11 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 
 ## Current Focus
 
-Director recommendation: [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md)
-proposes retaining ADE's current memory store for a bounded
-[M3 product slice](plans/m3-agent-studio-continuity.md), while explicitly
-deferring the unexecuted external-service comparison. This changes the original
-M2-to-M3 sequencing and awaits approval; M2 is not marked complete and M3
-implementation has not started. No comparative quality winner is claimed.
+[ADR 0022](adr/0022-incumbent-memory-first-product-slice.md) is accepted:
+retain ADE's current memory store for the bounded
+[M3 usable-profile-memory slice](plans/m3-agent-studio-continuity.md). The
+original measured M2 ADE/Hindsight comparison is deferred, not complete; no
+comparative quality winner is claimed. M3 implementation is in progress.
 
 M2: compare the smallest ADE extension with Hindsight against M1's 林小棠
 (`chat_linxiaotang`) continuity cases. See the
@@ -78,11 +77,11 @@ implementation and verification choices do not need repeated confirmation.
 | --- | --- | --- | --- | --- |
 | M0 | complete | None | Maintain verified foundation | [Native release ledger](../config/agent-studio/release-evidence.json), [ADR 0019](adr/0019-ade-steady-state-runtime.md), [Luna workflow](../workflows/evals/character_memory_dev/README.md), commits `f8de9d7` and `7799439`. |
 | M1 | complete | M0 | Director review and M2 comparison definition | [Findings](findings/m1-character-continuity-baseline.md), policy tests, and ten serial Luna records. Implementation baseline is complete; native persistence/provider qualification remains pending. |
-| M2 | in progress | M1 | Run identical provider-backed ADE/Hindsight cases when authorized and available | [Interim findings](findings/m2-memory-approach-comparison.md) and [Luna evidence](findings/m2-luna-development-evidence.md) record distinct structural and supplied-context development evidence. Requires measured correctness, isolation, forgetting, latency, and maintenance comparison before any external-service decision. |
-| M3 | planned | M2 decision | Detail one complete Agent Studio implementation | Requires persisted continuity, source inspection, correction/forgetting, and stable relationship identity across persona edits. |
+| M2 | deferred | M1 | Reopen at the mandatory end-of-M3 capability review if a measured service comparison is justified and authorized | [Interim findings](findings/m2-memory-approach-comparison.md) and [Luna evidence](findings/m2-luna-development-evidence.md) preserve the original evidence. The original ADE/Hindsight quality, latency and maintenance comparison was not executed. |
+| M3 | in progress | [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md) | Deliver four usable profile-memory operator journeys, then complete separate native and release acceptance | [M3 plan](plans/m3-agent-studio-continuity.md). Shared subject facts and immutable persona versions are in scope; character-private relationship continuity is not established. |
 | M4 | planned | M3 | Define deployment-provider and real-use acceptance cases | Requires longer-session results, deployment-model qualification, and actual operator review. |
 
-## M2 Work Checklist
+## Original M2 Work Checklist (Deferred)
 
 - [x] Map current ADE representation and contracts to every M1 requirement.
 - [x] Add a compact, repeatable workflow-local test specification and structural checks.
@@ -119,6 +118,7 @@ implementation and verification choices do not need repeated confirmation.
 - 2026-09-22: Added and passed isolated PostgreSQL coverage for the supported typed-fact add/correct/forget path across two conversations and two subjects. Synthetic vectors validate SQL selection and filtering only; semantic retrieval/provider and Hindsight comparison remain pending.
 - 2026-09-22: Changed the lifecycle test to commit each transition and read committed state through separate connections; test URLs now fail closed unless they target a passwordless loopback database with a unique M2 test name. Added SQLAlchemy's asyncio extra to `ade-api` and synced the lockfile after confirming the documented `greenlet` requirement.
 - 2026-09-22: Added the workflow-local PostgreSQL read-back dialogue slice. The fake-dialogue DB pipeline check and chronological input tests passed before exactly four one-shot subscription Luna calls; all task validations passed. Findings record exact contexts, replies, and source/revision IDs. This does not close the provider-backed ADE/Hindsight comparison.
+- 2026-09-22: Accepted ADR 0022 and began the narrower M3 usable-profile-memory slice. The original M2 comparison is deferred with its earlier evidence intact. M3 UI/API, native behavioral and release readiness are separate gates; no new model calls are authorized for implementation.
 
 ## Updating This Tracker
 
