@@ -58,6 +58,43 @@ fingerprint, prove vector-space compatibility with paired synthetic query and
 document canaries, and run fresh qualification before promotion. Merely
 changing the environment variable fails the Agent Runtime deployment binding.
 
+Full qualification now fails preflight unless API and worker use the same
+configured, source-bound request budget. Configure all four
+`ADE_API_AGENT_RUNTIME_BUDGET_*` settings in an isolated host **only after**
+its stage caps are approved: a unique ignored ledger path under
+`data/runtime`, stage `qualification`, and positive generation/embedding
+limits. The API and worker share that volume. Each outbound generation or
+embedding request reserves a SQLite slot before send; failed and interrupted
+requests remain spent across restart. A different cap, stage, source build, or
+runtime mode cannot reopen the same ledger. The runner checks the worker's
+budget compatibility fingerprint and requires zero requested retries. A
+diagnostic preflight can use stage `preflight` with its own ledger; it cannot
+produce a promotion proposal. Do not reuse one stage's ledger as a reroll.
+
+No-generation verification from the repository root:
+
+```bash
+uv run pytest -q services/ade-api/tests/agent_runtime/test_request_budget.py \
+  workflows/evals/deepseek_dev_smoke/test_m3_host.py \
+  workflows/evals/agent_runtime_acceptance/tests/test_run.py \
+  workflows/evals/agent_runtime_acceptance/tests/test_rounds.py
+ADE_ENV_FILE=.env.example docker compose --env-file .env.example config --quiet
+```
+
+For an approved stage, start clean API/worker builds with the *same* four
+budget settings and a disposable database, confirm matching build health,
+then invoke this runner inside the ADE API container. Stage A uses
+`--case-key correction_chain --case-key old_memory_deep_search` and stage
+`preflight`; stage B uses the entire matrix and stage `qualification`. See
+the [stage plan](../../../docs/plans/m3-provider-neutral-release-preparation.md)
+for proposed caps and stop conditions. These settings are disabled in the
+checked-in example and do not authorize calls. The 180-second transport
+limit is per request; the worker also passes the **remaining** turn deadline
+to each request, so it does not restart a 180-second turn for each
+continuation. Direct origin/candidate relocation canaries are not sent by
+the canonical runner and must be reserved through the same approved ledger
+before any such calls.
+
 Each round artifact includes a per-turn `chronology` diagnostic assembled from
 the event log already collected here. It orders context/retrieval, generation,
 reviewer proposals after validation, storage commits, and provider observations

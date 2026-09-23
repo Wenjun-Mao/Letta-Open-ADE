@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import os
-import re
 import signal
 import subprocess
 import sys
@@ -18,6 +17,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import agent_runtime_eval_contracts  # noqa: E402
+from ade_api.features.agent_runtime.request_budget import budget_ledger  # noqa: E402
+from ade_api.platform.settings import get_settings  # noqa: E402
 from agent_runtime_eval_contracts import (  # noqa: E402
     FixtureError,
     load_cases,
@@ -43,6 +44,10 @@ from workflows.evals.agent_runtime_acceptance.proposal import (  # noqa: E402
 )
 from workflows.evals.agent_runtime_acceptance.policy import (  # noqa: E402
     production_policy_hashes,
+)
+from workflows.evals.agent_runtime_acceptance.preflight import (  # noqa: E402
+    budget_preflight_passed,
+    worker_preflight_passed,
 )
 from workflows.evals.agent_runtime_acceptance.runner import (  # noqa: E402
     QualificationRound,
@@ -127,12 +132,18 @@ async def run_acceptance(
     session_scopes: list[EvaluationSessionScope] = []
     try:
         health = await client.get_worker_health()
-        preflight_passed = _worker_preflight_passed(
-            health,
-            source_revision=source_revision,
-            source_dirty=source_dirty,
-            source_fingerprint=source_fingerprint,
-            diagnostic=diagnostic,
+        budget_verified = budget_preflight_passed(
+            health, diagnostic=diagnostic, retry_count=config.retry_count
+        )
+        preflight_passed = (
+            worker_preflight_passed(
+                health,
+                source_revision=source_revision,
+                source_dirty=source_dirty,
+                source_fingerprint=source_fingerprint,
+                diagnostic=diagnostic,
+            )
+            and budget_verified
         )
         preflight = writer.write_preflight(
             {
@@ -146,6 +157,7 @@ async def run_acceptance(
                     "fingerprint": source_fingerprint,
                 },
                 "health": health,
+                "budget_verified": budget_verified,
             }
         )
         if not preflight_passed:
@@ -160,6 +172,8 @@ async def run_acceptance(
                 "eligible": False,
                 "passed": False,
             }
+        ledger = budget_ledger(get_settings())
+        budget_exhausted = ledger.exhausted if ledger is not None else None
         primary = await run_primary_rounds(
             client=client,
             cases=cases,
@@ -176,10 +190,15 @@ async def run_acceptance(
             session_scope_sink=session_scopes,
             on_round_complete=lambda result: _write_rounds(writer, (result,))[0],
             diagnostic=diagnostic,
+            budget_exhausted=budget_exhausted,
         )
         materialized_primary = primary
         compatibility = None
-        if config.include_llama_compatibility and not diagnostic:
+        if (
+            config.include_llama_compatibility
+            and not diagnostic
+            and (budget_exhausted is None or not budget_exhausted())
+        ):
             try:
                 compatibility = await run_llama_compatibility_round(
                     client=client,
@@ -405,34 +424,6 @@ def _agent_bundle(config: AcceptanceConfig) -> dict[str, object]:
         "persona_key": config.persona_key,
         "tool_names": list(QUALIFIED_AGENT_TOOL_NAMES),
     }
-
-
-def _worker_preflight_passed(
-    health: dict[str, Any],
-    *,
-    source_revision: str | None,
-    source_dirty: bool | None,
-    source_fingerprint: str | None,
-    diagnostic: bool,
-) -> bool:
-    return (
-        source_revision is not None
-        and re.fullmatch(r"[0-9a-f]{40,64}", source_revision) is not None
-        and source_dirty is not None
-        and (diagnostic or source_dirty is False)
-        and source_fingerprint is not None
-        and re.fullmatch(r"[0-9a-f]{64}", source_fingerprint) is not None
-        and health.get("http_status") == 200
-        and health.get("status") == "ready"
-        and health.get("database_ready") is True
-        and health.get("worker_ready") is True
-        and isinstance(health.get("matching_build_worker_count"), int)
-        and not isinstance(health.get("matching_build_worker_count"), bool)
-        and health["matching_build_worker_count"] >= 1
-        and health.get("source_revision") == source_revision
-        and health.get("source_dirty") is source_dirty
-        and health.get("source_fingerprint") == source_fingerprint
-    )
 
 
 def _source_revision() -> str | None:

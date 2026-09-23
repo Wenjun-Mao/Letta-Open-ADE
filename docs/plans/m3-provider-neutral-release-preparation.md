@@ -1,6 +1,6 @@
 # M3 Provider-Neutral Release Preparation
 
-Status: static candidate prepared under [ADR 0027](../adr/0027-provider-neutral-release-and-embedding-space.md); independent review, live qualification, and promotion pending.
+Status: static candidate prepared under [ADR 0027](../adr/0027-provider-neutral-release-and-embedding-space.md) and [ADR 0028](../adr/0028-agent-runtime-qualification-request-ledger.md); independent review, live qualification, and promotion pending.
 
 1. Trace schema-v3 evidence, promotion, native qualification configuration,
    router source resolution, and stored vector lookup. Preserve the historical
@@ -24,22 +24,26 @@ synthetic qualification request budget estimate, not a release claim.
 
 ## Proposed next-stage gates and request caps (no calls made here)
 
-Before any live stage, reuse the M3 `RequestLedger` and `BudgetedTransport`
-reservation design in `workflows/evals/deepseek_dev_smoke/m3_host.py`. A fresh,
-ignored SQLite ledger with immutable stage limits must be shared by the clean
-API and worker through their common `RouterTransport`: reserve and commit one
-slot **before** every outbound `chat_completion` or `embeddings` request.
+The M3 `RequestLedger` and `BudgetedTransport` design now lives in the shared
+Agent Runtime transport construction path; the historical M3 host reuses it.
+A fresh, ignored SQLite ledger with immutable stage limits must be shared by
+the clean API and worker: reserve and commit one slot **before** every
+outbound `chat_completion` or `embeddings` request.
 That boundary covers conversation continuations, reviewer, compaction,
 automatic and tool retrieval, and fact-document embedding; cap exceptions
 fail the turn and stop the stage. Record failed/time-out requests as spent.
-Any direct origin/candidate canary requests must reserve through the same
-stage ledger. Test cap exhaustion through each call path and verify both
-processes use the same ledger before starting. A cap only in the black-box
-runner would not constrain a worker's internal requests. The existing M3
-host is development-mode and marks its source dirty; it cannot be used
-unchanged as a clean qualification or release-mode host. The standard
-canonical runner does **not** enforce these aggregate caps today, so this
-wiring and its tests are a prerequisite for live work, not a completed gate.
+The standard API/worker builders now use the same configurable ledger path;
+Compose mounts the runtime directory into both services. API/worker health
+compatibility includes stage and limits, and the full canonical runner fails
+preflight without a matching budget and zero requested retries. Tests cover
+concurrent cross-process reservations, restart persistence, real builders,
+traced call paths, and cap exhaustion with fake providers. A cap only in the
+black-box runner would not constrain a worker's internal requests. The
+existing M3 host is development-mode and marks its source dirty; it cannot
+be used unchanged as a clean qualification or release-mode host. No actual
+qualification host, provider request, or approved budget exists yet.
+Direct origin/candidate canary requests are outside the canonical runner;
+their caller must reserve through the same stage ledger before sending.
 
 | Stage | Exact synthetic work | Proposed hard stage cap | Stop condition |
 | --- | --- | --- | --- |
@@ -67,4 +71,6 @@ multiple tool calls, so **that figure is not an intrinsic runtime upper
 bound**. The ledger's 1,281/1,285 limit is the proposed enforceable bound:
 if actual tool use exceeds it, stop and request a new decision rather than
 weakening cases or silently expanding spend. The director must approve the
-caps and clean-host design before implementation or calls.
+caps and clean-host invocation before any calls. The transport's 180-second
+limit applies to each request; the worker also supplies its remaining turn
+deadline, so continuations do not each receive a fresh 180-second turn.

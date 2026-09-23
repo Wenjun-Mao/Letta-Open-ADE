@@ -31,6 +31,7 @@ from .errors import RuntimeNotReady
 from .persistence.database import create_persistence_engine
 from .resource_service import ResourceService
 from .router_transport import RouterTransport
+from .request_budget import build_runtime_router_transport
 from .run_service import RunService
 from .release_policy import ensure_agent_studio_release_ready
 from .worker_health import RuntimeWorkerHealthService
@@ -260,10 +261,7 @@ def build_agent_runtime_service() -> AgentRuntimeApplication:
         engine=create_persistence_engine(settings.database_url),
         settings=settings,
         prompt_registry=registry,
-        router_transport=RouterTransport(
-            base_url=router_base_url,
-            api_key=settings.resolve_model_router_api_key(),
-        ),
+        router_transport=build_runtime_router_transport(settings),
     )
 
 

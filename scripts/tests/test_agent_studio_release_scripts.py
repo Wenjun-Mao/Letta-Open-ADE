@@ -33,6 +33,9 @@ def test_governed_lineage_includes_new_runtime_files_but_not_unrelated_areas() -
     assert release_gate.is_governed_source_path(
         "scripts/rebind_agent_runtime_policy.py"
     )
+    assert release_gate.is_governed_source_path(
+        "workflows/evals/agent_runtime_acceptance/preflight.py"
+    )
     assert not release_gate.is_governed_source_path("docs/release-notes.md")
     assert not release_gate.is_governed_source_path("apps/ade-web/src/app/page.tsx")
     assert not release_gate.is_governed_source_path(

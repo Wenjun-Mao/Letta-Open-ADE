@@ -21,6 +21,7 @@ GOVERNED_SOURCE_ROOTS = (
     "services/ade-api/src/ade_api/integrations/model_router/",
     "services/ade-api/src/ade_api/platform/",
     "services/model-router/src/model_router/",
+    "workflows/evals/agent_runtime_acceptance/",
 )
 GOVERNED_SOURCE_FILES = frozenset(
     {

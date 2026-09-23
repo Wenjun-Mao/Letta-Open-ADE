@@ -7,13 +7,10 @@ import asyncio
 import json
 import os
 import signal
-import sqlite3
 import subprocess
 import sys
 import tempfile
-from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 import uvicorn
 from sqlalchemy import text as sql_text
@@ -32,6 +29,10 @@ from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
 )
 from ade_api.features.agent_runtime.router_transport import RouterTransport
+from ade_api.features.agent_runtime.request_budget import (
+    BudgetedTransport,
+    RequestLedger,
+)
 from ade_api.features.agent_runtime.worker import AgentRuntimeWorker
 from ade_api.features.prompt_center import build_prompt_template_reader
 from ade_api.platform.auth import AdePrincipal, AdeRole, authenticate_ade_request
@@ -43,97 +44,6 @@ from workflows.evals.deepseek_dev_smoke.isolation import (
     isolated_database_url,
     router_settings,
 )
-
-
-class RequestLedger:
-    """SQLite reservation is committed before any outbound provider request."""
-
-    def __init__(self, path: Path, *, generation_limit: int, embedding_limit: int):
-        if generation_limit < 1 or embedding_limit < 1:
-            raise ValueError("M3 provider limits must be positive")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self.path = path
-        self.limits = {"generation": generation_limit, "embedding": embedding_limit}
-        with sqlite3.connect(path) as connection:
-            connection.execute(
-                "CREATE TABLE IF NOT EXISTS calls (id INTEGER PRIMARY KEY, kind TEXT NOT NULL, "
-                "model TEXT NOT NULL, reserved_at TEXT NOT NULL, outcome TEXT)"
-            )
-            connection.execute(
-                "CREATE TABLE IF NOT EXISTS limits (kind TEXT PRIMARY KEY, cap INTEGER NOT NULL)"
-            )
-            for kind, cap in self.limits.items():
-                connection.execute(
-                    "INSERT OR IGNORE INTO limits(kind, cap) VALUES (?, ?)",
-                    (kind, cap),
-                )
-            stored = dict(connection.execute("SELECT kind, cap FROM limits"))
-            if stored != self.limits:
-                raise ValueError("M3 ledger limits differ from the authorized budget")
-
-    def reserve(self, kind: str, model: str) -> int:
-        with sqlite3.connect(self.path) as connection:
-            connection.execute("BEGIN IMMEDIATE")
-            count = connection.execute(
-                "SELECT count(*) FROM calls WHERE kind = ?", (kind,)
-            ).fetchone()[0]
-            if count >= self.limits[kind]:
-                raise RuntimeError(f"M3 {kind} provider budget exhausted")
-            cursor = connection.execute(
-                "INSERT INTO calls(kind, model, reserved_at) VALUES (?, ?, ?)",
-                (kind, model, datetime.now(UTC).isoformat()),
-            )
-            return int(cursor.lastrowid)
-
-    def finish(self, call_id: int, outcome: str) -> None:
-        with sqlite3.connect(self.path) as connection:
-            connection.execute(
-                "UPDATE calls SET outcome = ? WHERE id = ?", (outcome, call_id)
-            )
-
-    def counts(self) -> dict[str, int]:
-        with sqlite3.connect(self.path) as connection:
-            return {
-                kind: int(
-                    connection.execute(
-                        "SELECT count(*) FROM calls WHERE kind = ?", (kind,)
-                    ).fetchone()[0]
-                )
-                for kind in self.limits
-            }
-
-
-class BudgetedTransport:
-    def __init__(self, inner: RouterTransport, ledger: RequestLedger):
-        self.inner = inner
-        self.ledger = ledger
-
-    async def catalog(self, *, timeout_seconds: float = 10.0) -> dict[str, Any]:
-        return await self.inner.catalog(timeout_seconds=timeout_seconds)
-
-    async def chat_completion(
-        self, payload: dict[str, Any], *, timeout_seconds: float
-    ) -> dict[str, Any]:
-        return await self._send(
-            "generation", payload, timeout_seconds, self.inner.chat_completion
-        )
-
-    async def embeddings(
-        self, payload: dict[str, Any], *, timeout_seconds: float
-    ) -> dict[str, Any]:
-        return await self._send(
-            "embedding", payload, timeout_seconds, self.inner.embeddings
-        )
-
-    async def _send(self, kind: str, payload: dict[str, Any], timeout: float, send):
-        call_id = self.ledger.reserve(kind, str(payload.get("model") or ""))
-        try:
-            result = await send(payload, timeout_seconds=min(timeout, 180.0))
-        except Exception as exc:
-            self.ledger.finish(call_id, f"failed:{type(exc).__name__}")
-            raise
-        self.ledger.finish(call_id, "completed")
-        return result
 
 
 async def _serve(

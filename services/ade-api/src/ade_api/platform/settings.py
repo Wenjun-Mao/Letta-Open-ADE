@@ -50,6 +50,10 @@ class AdeApiSettings(BaseSettings):
     persona_seed_jsonl_path: str = "content/personas/personas.jsonl"
     agent_runtime_enabled: bool = False
     agent_runtime_mode: Literal["release", "development"] = "release"
+    agent_runtime_budget_ledger_path: str = ""
+    agent_runtime_budget_stage: str = ""
+    agent_runtime_budget_generation_limit: int = 0
+    agent_runtime_budget_embedding_limit: int = 0
     database_url: str = ""
     agent_runtime_worker_id: str = "ade-runtime-worker"
     agent_runtime_worker_poll_seconds: float = 0.5
@@ -140,7 +144,34 @@ class AdeApiSettings(BaseSettings):
             )
         return self
 
-    @field_validator("runtime_data_dir", "persona_db_path", "persona_seed_jsonl_path")
+    @model_validator(mode="after")
+    def _validate_runtime_budget(self):
+        values = (
+            self.agent_runtime_budget_ledger_path,
+            self.agent_runtime_budget_stage,
+            self.agent_runtime_budget_generation_limit,
+            self.agent_runtime_budget_embedding_limit,
+        )
+        if any(values) and not all(values):
+            raise ValueError("runtime budget requires path, stage, and both limits")
+        if self.agent_runtime_budget_stage and not re.fullmatch(
+            r"[a-z][a-z0-9_-]{0,63}", self.agent_runtime_budget_stage
+        ):
+            raise ValueError("runtime budget stage is invalid")
+        if (
+            self.agent_runtime_budget_generation_limit < 0
+            or self.agent_runtime_budget_embedding_limit < 0
+        ):
+            raise ValueError("runtime budget limits must not be negative")
+        return self
+
+    @field_validator(
+        "runtime_data_dir",
+        "persona_db_path",
+        "persona_seed_jsonl_path",
+        "agent_runtime_budget_ledger_path",
+        "agent_runtime_budget_stage",
+    )
     @classmethod
     def _strip_path_fields(cls, value: str) -> str:
         return str(value or "").strip()

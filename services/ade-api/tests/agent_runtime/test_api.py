@@ -389,6 +389,7 @@ def test_disabled_runtime_health_returns_typed_not_ready_body(
         {
             "agent_runtime_enabled": False,
             "agent_runtime_mode": "release",
+            "agent_runtime_budget_ledger_path": "",
             "agent_runtime_worker_stale_seconds": 15.0,
             "database_url": None,
         },

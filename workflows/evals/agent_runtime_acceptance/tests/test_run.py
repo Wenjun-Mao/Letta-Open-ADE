@@ -7,7 +7,13 @@ from types import SimpleNamespace
 
 import pytest
 
+from ade_api.features.agent_runtime.request_budget import budget_identity
+from ade_api.features.agent_runtime.worker_health import (
+    worker_compatibility_fingerprint,
+)
+from ade_api.platform.settings import AdeApiSettings
 from workflows.evals.agent_runtime_acceptance import run as run_module
+from workflows.evals.agent_runtime_acceptance import preflight
 from workflows.evals.agent_runtime_acceptance.runner import (
     EvaluationSessionScope,
     QualificationRound,
@@ -21,6 +27,36 @@ def test_run_id_uses_portable_utc_timestamp() -> None:
         random_suffix="deadbeef",
     )
     assert run_id == "agent-runtime-20260829t222217z-deadbeef"
+
+
+def test_full_qualification_preflight_requires_matching_shared_budget(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    settings = AdeApiSettings(_env_file=None, agent_runtime_mode="development")
+    monkeypatch.setattr(preflight, "get_settings", lambda: settings)
+    health: dict[str, object] = {}
+    assert not preflight.budget_preflight_passed(
+        health, diagnostic=False, retry_count=0
+    )
+    assert preflight.budget_preflight_passed(health, diagnostic=True, retry_count=0)
+
+    settings.agent_runtime_budget_ledger_path = str(tmp_path / "stage.sqlite3")
+    settings.agent_runtime_budget_stage = "qualification"
+    settings.agent_runtime_budget_generation_limit = 10
+    settings.agent_runtime_budget_embedding_limit = 10
+    budget = budget_identity(settings)
+    assert budget is not None
+    health["compatibility_fingerprint"] = worker_compatibility_fingerprint(
+        runtime_mode="development", budget=budget
+    )
+    assert preflight.budget_preflight_passed(health, diagnostic=False, retry_count=0)
+    assert not preflight.budget_preflight_passed(
+        health, diagnostic=False, retry_count=1
+    )
+    settings.agent_runtime_budget_stage = "preflight"
+    assert not preflight.budget_preflight_passed(
+        health, diagnostic=False, retry_count=0
+    )
 
 
 def test_session_purge_is_reverse_order_idempotent_and_closes_client() -> None:

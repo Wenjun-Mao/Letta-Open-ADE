@@ -536,9 +536,12 @@ async def run_primary_rounds(
     diagnostic: bool = False,
     session_scope_sink: list[EvaluationSessionScope] | None = None,
     on_round_complete: Callable[[QualificationRound], QualificationRound] | None = None,
+    budget_exhausted: Callable[[], bool] | None = None,
 ) -> tuple[QualificationRound, ...]:
     results: list[QualificationRound] = []
     for index in range(1, rounds + 1):
+        if budget_exhausted is not None and budget_exhausted():
+            break
         executions: list[CaseExecution] = []
         for case in cases:
             case_scopes: list[EvaluationSessionScope] = []
@@ -566,6 +569,8 @@ async def run_primary_rounds(
                 if session_scope_sink is not None:
                     session_scope_sink.extend(case_scopes)
             executions.append(execution)
+            if budget_exhausted is not None and budget_exhausted():
+                break
         materialized_executions = tuple(executions)
         fingerprints = _combined_fingerprints(materialized_executions)
         case_keys = tuple(item.case_key for item in materialized_executions)
@@ -574,9 +579,8 @@ async def run_primary_rounds(
             kind="diagnostic" if diagnostic else "primary",
             execution_mode=("live-api-diagnostic" if diagnostic else execution_mode),
             complete_matrix=not diagnostic and case_keys == canonical_case_keys,
-            passed=all(
-                bool(item.score.get("pass")) for item in materialized_executions
-            ),
+            passed=(diagnostic or case_keys == canonical_case_keys)
+            and all(bool(item.score.get("pass")) for item in materialized_executions),
             case_keys=case_keys,
             cases=materialized_executions,
             deployment_fingerprints=fingerprints,

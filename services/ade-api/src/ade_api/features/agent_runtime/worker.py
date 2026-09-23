@@ -14,6 +14,7 @@ from .persistence.validation import validate_database_at_head
 from .provider_tracing import AttemptTrace
 from .retry import execute_with_retries
 from .router_transport import RouterTransport
+from .request_budget import build_runtime_router_transport
 from .turn_execution import AttemptResult, TurnExecution
 from .worker_claims import ClaimedRun, RunClaimer
 from .worker_control import (
@@ -248,10 +249,7 @@ def build_worker() -> AgentRuntimeWorker:
     return AgentRuntimeWorker(
         engine=create_persistence_engine(settings.database_url),
         settings=settings,
-        transport=RouterTransport(
-            base_url=router_base_url,
-            api_key=settings.resolve_model_router_api_key(),
-        ),
+        transport=build_runtime_router_transport(settings),
     )
 
 
