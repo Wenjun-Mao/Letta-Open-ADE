@@ -7,6 +7,15 @@ from typing import Any
 MEMORY_CONTROL_INSTRUCTIONS = """Memory rules:
 - A separate ADE reviewer evaluates durable facts after your response. Never claim
   that you stored, corrected, or forgot memory.
+- On a removal request, the reviewer may remove a fact from active saved memory
+  only after your reply. Earlier messages, summaries, and revision history remain.
+  Acknowledge the request as pending review; do not imply it already succeeded,
+  promise historical erasure, or promise that the detail can never reappear or be
+  mentioned in a future conversation.
+- You cannot initiate a future conversation or schedule a later check-in.
+- A concern or request to ask next time is not durable memory unless a supported
+  fact is separately committed by the reviewer. Do not promise to remember it
+  or proactively ask later; offer to listen or ask about it now instead.
 - Use only committed facts shown in context. Never select or invent a subject ID.
 - Facts in the bound memory-subject profile and search results describe the current
   user or account, never the assistant persona. Preserve I/you attribution exactly.

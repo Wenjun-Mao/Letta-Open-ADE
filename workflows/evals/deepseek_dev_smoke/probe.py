@@ -5,25 +5,19 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import os
-import re
 import socket
 import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
-from urllib.parse import urlsplit
 from uuid import uuid4
 
 import uvicorn
-from dotenv import dotenv_values
 from sqlalchemy import text as sql_text
-from sqlalchemy.engine import make_url
 
 import model_router.app as router_app
 import model_router.forwarding as forwarding
 from model_router.catalog import RouterCatalogService
-from model_router.settings import ModelRouterSettings, RouterSourceConfig
 
 from ade_api.features.agent_runtime.executor import ConversationExecutor, curated_tools
 from ade_api.features.agent_runtime.agent_studio_sessions import (
@@ -48,10 +42,10 @@ from ade_api.features.label_lab.service import LabelingService
 from ade_api.features.prompt_center import build_prompt_template_reader
 from ade_api.platform.settings import AdeApiSettings
 
+from isolation import ROOT, isolated_database_url, router_settings
 from native_turn import run_native_turn
 
 
-ROOT = Path(__file__).resolve().parents[3]
 MODEL = "deepseek::deepseek-flash"
 SUBJECT_ID = "00000000-0000-0000-0000-000000000001"
 
@@ -84,34 +78,6 @@ class CountedRouter:
             for choice in response.get("choices", [])
         )
         return response
-
-
-def _settings(env_file: Path, *, include_spark: bool) -> ModelRouterSettings:
-    values = dotenv_values(env_file)
-    key = str(values.get("DEEPSEEK_API_KEY") or "").strip()
-    base = str(values.get("DEEPSEEK_API_BASE") or "https://api.deepseek.com").strip()
-    parsed = urlsplit(base)
-    if not key or parsed.scheme != "https" or parsed.hostname != "api.deepseek.com":
-        raise ValueError("Official DeepSeek key/base URL is not configured")
-    os.environ["DEEPSEEK_API_KEY"] = key
-    os.environ["DEEPSEEK_API_BASE"] = base
-    sources = json.loads((ROOT / "config/model-router/sources.json").read_text())
-    selected = [next(item for item in sources if item["id"] == "deepseek")]
-    if include_spark:
-        host = str(values.get("DGX_SPARK_HOST") or "").strip()
-        if not host or "/" in host or "@" in host:
-            raise ValueError("Spark host is not configured for isolated binding")
-        embedding_key = str(values.get("DGX_EMBEDDING_API_KEY") or "").strip()
-        if embedding_key:
-            os.environ["DGX_EMBEDDING_API_KEY"] = embedding_key
-        spark = next(item for item in sources if item["id"] == "dgx_embedding_sidecar")
-        selected.append({**spark, "base_url": f"http://{host}:8001/v1"})
-    return ModelRouterSettings(
-        sources=[RouterSourceConfig.model_validate(item) for item in selected],
-        api_key="",
-        api_key_secret="",
-        request_timeout_seconds=180,
-    )
 
 
 async def _run_tool(transport: RouterTransport) -> None:
@@ -304,23 +270,8 @@ async def _run_lab(mode: str, base_url: str) -> None:
         )
 
 
-def _isolated_database_url(database_url: str) -> tuple[str, str]:
-    url = make_url(database_url)
-    if (
-        url.drivername != "postgresql+psycopg"
-        or url.host not in {"localhost", "127.0.0.1", "::1"}
-        or url.username != "ade_owner"
-        or url.password is not None
-        or not re.fullmatch(r"ade_m2_memory_test_[0-9a-f]{8,}", url.database or "")
-    ):
-        raise ValueError(
-            "Binding requires the disposable passwordless loopback test DB"
-        )
-    return database_url, str(url.database)
-
-
 async def _run_bind(transport: RouterTransport, database_url: str) -> None:
-    checked_url, expected_name = _isolated_database_url(database_url)
+    checked_url, expected_name = isolated_database_url(database_url)
     engine = create_persistence_engine(checked_url)
     try:
         async with engine.connect() as connection:
@@ -389,7 +340,7 @@ async def _run_bind(transport: RouterTransport, database_url: str) -> None:
 
 
 async def main(mode: str, env_file: Path, database_url: str | None) -> None:
-    settings = _settings(env_file, include_spark=mode in {"bind", "native"})
+    settings = router_settings(env_file, include_spark=mode in {"bind", "native"})
     router_app.get_settings = lambda: settings
     router_app.catalog_service = RouterCatalogService(settings_factory=lambda: settings)
     forwarding.get_settings = lambda: settings
@@ -423,7 +374,7 @@ async def main(mode: str, env_file: Path, database_url: str | None) -> None:
         elif mode == "native":
             if not database_url:
                 raise ValueError("Native turn requires --database-url")
-            checked_url, expected_name = _isolated_database_url(database_url)
+            checked_url, expected_name = isolated_database_url(database_url)
             await run_native_turn(
                 transport,
                 database_url=checked_url,

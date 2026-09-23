@@ -2,6 +2,30 @@
 
 Status: In progress under accepted [ADR 0022](../adr/0022-incumbent-memory-first-product-slice.md).
 
+## Native/UI Checkpoint (2026-09-23)
+
+The separately authorized synthetic [native and real-UI acceptance run](../findings/m3-native-acceptance-2026-09-23.md)
+used 22/24 DeepSeek generations and 14/24 Spark embeddings with a durable
+pre-request ledger, no retries, and no rerolls. It observed supported add,
+correction, cross-conversation active-profile recall, forget, a fresh
+no-active-fact probe, simultaneous subject isolation, and reviewed composer
+send/confirmation. An archived source citation opened at exact original
+message #1 beyond the newest 120-message page without restoration; 125
+scripted pagination rows are labeled UI fixture data, not native behavior.
+The earlier Prompt Center persona-version evidence still applies but was not
+repeated with the native provider.
+
+Two generated replies failed the product boundary: the removal reply promised
+future nonmention, and an unsupported-concern reply promised remembering and
+proactive follow-up despite no saved revision. [ADR 0026](../adr/0026-memory-removal-reply-boundary.md)
+fixes the shared runtime instruction contract and adds regressions; neither
+failed request was rerolled, so compliance with the amended prompt remains
+unobserved. No positive semantic-retrieval case was observed (`retrieved_fact_ids`
+was empty); recall used active profile context. M3 stays in progress pending
+director review of this partial native acceptance and a separate fresh
+release-evidence route. Do not reinterpret the earlier mock-only checkpoint
+below as the latest status.
+
 The real isolated Prompt Center edit → new immutable Agent Studio version →
 same-subject conversation journey is now covered by the
 [Step 1 UI/API finding](../findings/m3-prompt-center-immutable-version-journey.md).

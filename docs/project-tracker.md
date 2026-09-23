@@ -27,6 +27,12 @@ retain ADE's current memory store for the bounded
 [M3 usable-profile-memory slice](plans/m3-agent-studio-continuity.md). The
 original measured M2 ADE/Hindsight comparison is deferred, not complete; no
 comparative quality winner is claimed. M3 implementation is in progress.
+The [M3 native/real-UI finding](findings/m3-native-acceptance-2026-09-23.md)
+records 22/24 separately authorized DeepSeek generations and 14/24 Spark
+embeddings, supported profile-fact continuity and isolated subjects, and two
+misleading generated promises after removal/unsupported concern. The shared
+prompt contract now states the limits, but the failed turns were not rerolled;
+new-prompt provider compliance and positive semantic retrieval remain open.
 
 M2: compare the smallest ADE extension with Hindsight against M1's 林小棠
 (`chat_linxiaotang`) continuity cases. See the
@@ -96,7 +102,7 @@ implementation and verification choices do not need repeated confirmation.
 | M0 | complete | None | Maintain verified foundation | [Native release ledger](../config/agent-studio/release-evidence.json), [ADR 0019](adr/0019-ade-steady-state-runtime.md), [Luna workflow](../workflows/evals/character_memory_dev/README.md), commits `f8de9d7` and `7799439`. |
 | M1 | complete | M0 | Director review and M2 comparison definition | [Findings](findings/m1-character-continuity-baseline.md), policy tests, and ten serial Luna records. Implementation baseline is complete; native persistence/provider qualification remains pending. |
 | M2 | deferred | M1 | Reopen at the mandatory end-of-M3 capability review if a measured service comparison is justified and authorized | [Interim findings](findings/m2-memory-approach-comparison.md) and [Luna evidence](findings/m2-luna-development-evidence.md) preserve the original evidence. The original ADE/Hindsight quality, latency and maintenance comparison was not executed. |
-| M3 | in progress | [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md) | Review mock-backed UI/API slice, then seek separate authority for native chronological and release acceptance | [M3 plan](plans/m3-agent-studio-continuity.md). Four operator paths are implemented and tested with mock-backed browser data plus isolated PostgreSQL contracts; live reviewer/provider behavior, full archived-source browser coverage, and governed release qualification remain open. Character-private relationship continuity is not established. |
+| M3 | in progress | [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md) | Director review of partial native acceptance, then separately authorize any remaining behavior probe and fresh release route | [M3 finding](findings/m3-native-acceptance-2026-09-23.md) and [plan](plans/m3-agent-studio-continuity.md). Real UI/native reviewer and persistence covered typed fact/correction/removal, two subjects, and archived old-page citation. Two generated promises failed capability boundaries; new-prompt compliance and positive semantic retrieval are unobserved. Persona-version UI/API evidence is inherited. Character-private relationship continuity and governed release qualification are not established. |
 | M4 | planned | M3 | Define deployment-provider and real-use acceptance cases | Requires longer-session results, deployment-model qualification, and actual operator review. |
 
 ## Original M2 Work Checklist (Deferred)
@@ -139,6 +145,7 @@ implementation and verification choices do not need repeated confirmation.
 - 2026-09-22: Added the workflow-local PostgreSQL read-back dialogue slice. The fake-dialogue DB pipeline check and chronological input tests passed before exactly four one-shot subscription Luna calls; all task validations passed. Findings record exact contexts, replies, and source/revision IDs. This does not close the provider-backed ADE/Hindsight comparison.
 - 2026-09-22: Accepted ADR 0022 and began the narrower M3 usable-profile-memory slice. The original M2 comparison is deferred with its earlier evidence intact. M3 UI/API, native behavioral and release readiness are separate gates; no new model calls are authorized for implementation.
 - 2026-09-22: M3 UI/API checkpoint: subject reuse/isolation, boundary-checked historical citations, reviewed correction/removal drafts, and immutable persona version selection implemented. Mock-backed browser journeys and isolated PostgreSQL provenance tests passed; an opt-in native chronological diagnostic was added without executing provider calls. Broad policy fingerprint checks remain failed and unwaived. [M3 plan](plans/m3-agent-studio-continuity.md) records the end-of-slice capability review and remaining gates.
+- 2026-09-23: M3 synthetic native and real-UI checkpoint: 11 one-attempt turns under a durable 22-generation/14-embedding spend, exact revision-confirmed correction/removal, active-profile cross-conversation recall, simultaneous subject isolation, and archived older-message citation. Two generated replies overpromised removal/future concern behavior; [ADR 0026](adr/0026-memory-removal-reply-boundary.md) records the shared prompt correction and unrerolled evidence. No positive semantic retrieval, relationship schema, long-session operator acceptance, fresh qualified-provider matrix, conformance, ledger promotion, or release is claimed. [Finding](findings/m3-native-acceptance-2026-09-23.md) and [M3 plan](plans/m3-agent-studio-continuity.md) hold exact boundaries for director review.
 
 ## Updating This Tracker
 

@@ -35,3 +35,26 @@ generation or fourth embedding fails before sending. It does not touch the
 release ledger or qualify the provider. The mode is not a background monitor
 or an automated test-suite step. The authorized initial live budget has been
 exhausted; do not run it again without a new explicit budget.
+
+## M3 isolated UI/native acceptance host
+
+`m3_host.py` starts the real ADE HTTP API, worker, and a loopback Model Router
+against the same disposable database guard. It is an interactive diagnostic,
+not a unit test or release route. Supply an explicit `--ledger` path: its SQLite
+reservations are committed before each outbound generation or embedding request,
+survive process/browser restarts, and fail closed at the separately authorized
+24-generation/24-embedding ceiling. Each request is capped at 180 seconds;
+the host neither retries nor changes the application reviewer policy. Inspect
+`calls` in that ledger before any continuation. Never delete or substitute a
+ledger to reset the budget. The M3 run spent 22 generation and 14 embedding
+requests; the remaining allowance is not a reason to rerun failed behavior.
+
+The synthetic browser run used `ADE_API_BASE_URL` pointed at this host and a
+separate Next development server. `seed_older_citation.py` is a one-shot,
+identity-guarded pagination fixture for the exact synthetic source conversation:
+it appends 125 explicitly labeled messages after six native messages so the
+original citation falls beyond the latest 120. These rows have no native run
+ID and are **not** behavioral evidence. The script refuses a second seed and
+does not archive or restore the source. See the
+[M3 acceptance finding](../../../docs/findings/m3-native-acceptance-2026-09-23.md)
+for the model-call ledger, failed claims, and UI observations.

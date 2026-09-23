@@ -24,7 +24,7 @@ def test_context_keeps_current_user_and_drops_oldest_recent_messages() -> None:
         recent_messages=recent,
         current_user_content="当前消息必须保留",
         budget=ContextBudget(
-            context_window=1_000,
+            context_window=1_400,
             max_output_tokens=200,
             tool_schema_tokens=100,
             recent_tokens=150,
@@ -32,7 +32,7 @@ def test_context_keeps_current_user_and_drops_oldest_recent_messages() -> None:
     )
     assert context.messages[-1] == {"role": "user", "content": "当前消息必须保留"}
     assert context.omitted_message_ids
-    assert context.estimated_input_tokens <= 650
+    assert context.estimated_input_tokens <= 844
 
 
 def test_context_rejects_mandatory_input_that_cannot_fit() -> None:
@@ -147,3 +147,55 @@ def test_context_labels_bound_memory_as_current_user_facts() -> None:
         "Retrieved older facts about the current user (bound memory subject)"
         in system_message
     )
+
+
+def test_removal_reply_contract_does_not_promise_future_suppression() -> None:
+    context = build_context(
+        system_prompt="system",
+        persona="persona",
+        active_facts=[
+            {
+                "id": "fact-drink",
+                "version": 2,
+                "key": "person.preference|subject-1|drink",
+                "value": "绿茶",
+            }
+        ],
+        retrieved_facts=[],
+        recent_messages=[],
+        current_user_content="请从已保存的信息中移除我喜欢喝绿茶这件事。",
+        budget=ContextBudget(
+            context_window=2_000,
+            max_output_tokens=200,
+            tool_schema_tokens=100,
+        ),
+    )
+    system_message = context.messages[0]["content"]
+    assert "only after your reply" in system_message
+    assert "Earlier messages, summaries, and revision history remain" in system_message
+    assert "Acknowledge the request as pending review" in system_message
+    assert "do not imply it already succeeded" in system_message
+    assert "promise that the detail can never reappear" in system_message
+
+
+def test_future_check_in_request_does_not_become_a_memory_promise() -> None:
+    context = build_context(
+        system_prompt="system",
+        persona="persona",
+        active_facts=[],
+        retrieved_facts=[],
+        recent_messages=[],
+        current_user_content="下次聊天时你能问问我还好吗？",
+        budget=ContextBudget(
+            context_window=2_000,
+            max_output_tokens=200,
+            tool_schema_tokens=100,
+        ),
+    )
+    system_message = context.messages[0]["content"]
+    assert "cannot initiate a future conversation" in system_message
+    assert (
+        "A concern or request to ask next time is not durable memory" in system_message
+    )
+    assert "Do not promise to remember it" in system_message
+    assert "offer to listen or ask about it now" in system_message

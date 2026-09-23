@@ -27,8 +27,10 @@ describe("reviewed memory action status", () => {
     expect(memoryActionOutcome(action, run, [], memories)).toContain("not confirmed changed");
   });
 
-  it("does not treat no-op, wrong version, cancellation, or another run as success", () => {
+  it("does not treat no-op, rejection, stale version, failure, cancellation, or another run as success", () => {
     expect(memoryActionOutcome(action, run, [{ ...event, payload: { ...event.payload, fact_version: 4 } }], memories)).toContain("not confirmed changed");
+    expect(memoryActionOutcome(action, run, [], memories)).toContain("not confirmed changed");
+    expect(memoryActionOutcome(action, { ...run, status: "failed" }, [event], memories)).toContain("Run failed");
     expect(memoryActionOutcome(action, { ...run, status: "cancelled" }, [event], memories)).toContain("cancelled");
     expect(memoryActionOutcome(action, { ...run, id: "other" }, [event], memories)).toBe("Waiting for review.");
   });
