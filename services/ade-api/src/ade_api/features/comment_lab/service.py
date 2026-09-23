@@ -212,12 +212,26 @@ class CommentingService:
         resolved_top_k = (
             runtime_defaults["top_k"] if top_k is None else self._clamp_top_k(top_k)
         )
+        deepseek_thinking = (
+            str(source_adapter or "").strip().lower() == "deepseek_openai"
+        )
+        if deepseek_thinking and enable_thinking is False:
+            raise ValueError("DeepSeek development lane requires thinking enabled")
+        if deepseek_thinking and temperature is not None:
+            raise ValueError("DeepSeek thinking mode ignores explicit temperature")
+        if (
+            str(source_adapter or "").strip().lower() == "deepseek_openai"
+            and top_k is not None
+        ):
+            raise ValueError("DeepSeek does not support top_k")
+        if str(source_adapter or "").strip().lower() == "deepseek_openai":
+            resolved_top_k = None
         response_runtime = {
             "max_tokens": resolved_max_tokens,
             "timeout_seconds": resolved_timeout_seconds,
             "task_shape": resolved_task_shape,
             "cache_prompt": resolved_cache_prompt,
-            "enable_thinking": resolved_enable_thinking,
+            "enable_thinking": True if deepseek_thinking else resolved_enable_thinking,
             "temperature": resolved_temperature,
             "top_p": resolved_top_p,
             "top_k": resolved_top_k,
@@ -250,7 +264,10 @@ class CommentingService:
         except ValueError as exc:
             # Some OpenAI-compatible runtimes reject `response_format` when strict
             # structured decoding is disabled. Fall back to prompt-enforced JSON.
-            if resolved_task_shape != "structured_output":
+            if (
+                resolved_task_shape != "structured_output"
+                or str(source_adapter or "").strip().lower() == "deepseek_openai"
+            ):
                 raise
 
             error_text = str(exc).lower()
@@ -272,6 +289,7 @@ class CommentingService:
             runtime=response_runtime,
             task_shape=resolved_task_shape,
             max_tokens=resolved_max_tokens,
+            provider_adapter=str(source_adapter or "").strip().lower(),
         )
 
     @staticmethod

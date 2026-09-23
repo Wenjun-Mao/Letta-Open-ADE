@@ -85,6 +85,7 @@ class RoutedModel:
     supports_top_k: bool = False
     supports_thinking: bool = False
     thinking_default_enabled: bool = False
+    reasoning_effort_default: str | None = None
     tool_call_thinking_default_enabled: bool | None = None
     profile_applied: bool = False
     profile_source: str = ""
@@ -116,6 +117,7 @@ class RoutedModel:
             "supports_top_k": self.supports_top_k,
             "supports_thinking": self.supports_thinking,
             "thinking_default_enabled": self.thinking_default_enabled,
+            "reasoning_effort_default": self.reasoning_effort_default,
             "tool_call_thinking_default_enabled": (
                 self.tool_call_thinking_default_enabled
             ),
@@ -258,6 +260,9 @@ class RouterCatalogService:
                         supports_thinking=bool(profile and profile.supports_thinking),
                         thinking_default_enabled=bool(
                             profile and profile.thinking_default_enabled
+                        ),
+                        reasoning_effort_default=(
+                            profile.reasoning_effort_default if profile else None
                         ),
                         tool_call_thinking_default_enabled=(
                             profile.tool_call_thinking_default_enabled
@@ -453,9 +458,22 @@ class RouterCatalogService:
         records: tuple[RouterModelRecord, ...],
     ) -> tuple[tuple[RouterModelRecord, ...], bool | None, str | None, int, str]:
         raw_model_count = len(records)
+        if source.model_allowlist:
+            allowed = set(source.model_allowlist)
+            records = tuple(
+                record for record in records if record.provider_model_id in allowed
+            )
         allowlist = load_configured_source_allowlist(source.id)
         if allowlist is None:
-            return records, None, None, raw_model_count, "ok"
+            return (
+                records,
+                bool(source.model_allowlist) or None,
+                None,
+                raw_model_count,
+                "ok"
+                if len(records) == raw_model_count
+                else f"Configured model allowlist: {len(records)} of {raw_model_count} catalog entries remain selectable.",
+            )
         if not allowlist.applied:
             return (
                 (),
@@ -552,6 +570,8 @@ class RouterCatalogService:
 
     @staticmethod
     def _structured_output_mode(source: RouterSourceSnapshot) -> str:
+        if source.adapter == "deepseek_openai":
+            return "json_object"
         if source.adapter == "llama_cpp_server":
             return "json_schema"
         if source.adapter == "vllm_openai":

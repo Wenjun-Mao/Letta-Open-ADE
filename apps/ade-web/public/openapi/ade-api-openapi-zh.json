@@ -968,6 +968,7 @@
             "enum": [
               "strict_json_schema",
               "json_schema",
+              "json_object",
               "best_effort_prompt_json"
             ],
             "title": "输出模式",
@@ -1301,6 +1302,17 @@
             "title": "场景 采样 默认值",
             "type": "object"
           },
+          "source_adapter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "来源 适配器"
+          },
           "source_id": {
             "anyOf": [
               {
@@ -1329,6 +1341,7 @@
                 "enum": [
                   "strict_json_schema",
                   "json_schema",
+                  "json_object",
                   "best_effort_prompt_json"
                 ],
                 "type": "string"
@@ -3710,6 +3723,7 @@
                 "enum": [
                   "strict_json_schema",
                   "json_schema",
+                  "json_object",
                   "best_effort_prompt_json"
                 ],
                 "type": "string"

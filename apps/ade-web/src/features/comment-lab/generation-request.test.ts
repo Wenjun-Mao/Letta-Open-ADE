@@ -51,4 +51,17 @@ describe("buildCommentGenerationRequest", () => {
       error: COMMENT_LAB_COPY.en.inputRequired,
     });
   });
+
+  it("omits ignored DeepSeek thinking controls", () => {
+    const result = buildCommentGenerationRequest(validForm, COMMENT_LAB_COPY.en, "deepseek_openai");
+    expect(result.request?.enable_thinking).toBe(true);
+    expect(result.request?.temperature).toBeUndefined();
+    expect(result.request?.top_k).toBeUndefined();
+  });
+
+  it("rejects a disabled DeepSeek thinking state before submitting", () => {
+    expect(buildCommentGenerationRequest(
+      { ...validForm, enableThinking: false }, COMMENT_LAB_COPY.en, "deepseek_openai",
+    )).toEqual({ request: null, error: COMMENT_LAB_COPY.en.deepseekThinkingRequired });
+  });
 });

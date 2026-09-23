@@ -35,12 +35,16 @@ export type CommentGenerationRequestResult =
 export function buildCommentGenerationRequest(
   form: CommentGenerationForm,
   copy: Copy,
+  sourceAdapter?: string | null,
 ): CommentGenerationRequestResult {
   if (!form.model || !form.promptKey || !form.personaKey) {
     return { request: null, error: copy.selectRequired };
   }
   if (!form.userInput.trim()) {
     return { request: null, error: copy.inputRequired };
+  }
+  if (sourceAdapter === "deepseek_openai" && !form.enableThinking) {
+    return { request: null, error: copy.deepseekThinkingRequired };
   }
 
   const maxTokens = parseNonNegativeInteger(form.maxTokens);
@@ -81,9 +85,9 @@ export function buildCommentGenerationRequest(
       task_shape: form.taskShape,
       cache_prompt: form.cachePrompt,
       enable_thinking: form.enableThinking,
-      temperature,
+      temperature: sourceAdapter === "deepseek_openai" && form.enableThinking ? undefined : temperature,
       top_p: topP,
-      top_k: topK,
+      top_k: sourceAdapter === "deepseek_openai" ? undefined : topK,
     },
   };
 }

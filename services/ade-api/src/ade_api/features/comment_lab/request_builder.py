@@ -82,12 +82,24 @@ def build_comment_request_payload(
         "structured_output": structured_output_payload,
     }.get(task_shape, classic_payload)
 
+    adapter = str(source_adapter or "").strip().lower()
+    if adapter == "deepseek_openai":
+        payload.pop("temperature", None)
+        if task_shape == "structured_output":
+            payload["response_format"] = {"type": "json_object"}
+            payload["messages"][0]["content"] += (
+                '\n示例 JSON: {"comment":"这是一条可发布的中文评论。"}'
+            )
+        if enable_thinking_is_explicit:
+            payload["thinking"] = {"type": "enabled" if enable_thinking else "disabled"}
+            if not enable_thinking:
+                payload["temperature"] = temperature
+
     if max_tokens == 0:
         payload.pop("max_tokens", None)
-    if top_k is not None:
+    if top_k is not None and adapter != "deepseek_openai":
         payload["top_k"] = top_k
 
-    adapter = str(source_adapter or "").strip().lower()
     if adapter == "llama_cpp_server":
         payload["cache_prompt"] = cache_prompt
     if adapter == "vllm_openai" and enable_thinking_is_explicit:

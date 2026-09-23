@@ -5,6 +5,7 @@ from typing import Any
 
 from ade_api.integrations.model_router.openai_chat import (
     OpenAIChatClient,
+    redact_reasoning_content,
 )
 from ade_api.platform.settings import get_settings
 from ade_api.features.label_lab.helpers import (
@@ -46,7 +47,12 @@ DEFAULT_LABELING_TOP_K: int | None = None
 class LabelingService:
     """Stateless structured labeling through an OpenAI-compatible chat completions API."""
 
-    _OUTPUT_MODES = {"strict_json_schema", "json_schema", "best_effort_prompt_json"}
+    _OUTPUT_MODES = {
+        "strict_json_schema",
+        "json_schema",
+        "json_object",
+        "best_effort_prompt_json",
+    }
 
     def __init__(
         self,
@@ -147,6 +153,7 @@ class LabelingService:
         base_url: str,
         api_key: str = "",
         model: str,
+        source_adapter: str = "",
         system_prompt: str,
         article_input: str,
         output_mode: str,
@@ -205,6 +212,15 @@ class LabelingService:
             runtime_defaults["top_k"] if top_k is None else self._clamp_top_k(top_k)
         )
         resolved_output_mode = self._resolve_output_mode(output_mode)
+        deepseek = str(source_adapter or "").strip().lower() == "deepseek_openai"
+        if deepseek and resolved_output_mode != "json_object":
+            raise ValueError("DeepSeek Label Lab requires json_object mode")
+        if deepseek and temperature is not None:
+            raise ValueError("DeepSeek thinking mode ignores explicit temperature")
+        if deepseek and top_k is not None:
+            raise ValueError("DeepSeek does not support top_k")
+        if deepseek:
+            resolved_top_k = None
 
         attempts: list[tuple[str, dict[str, Any]]] = [
             (
@@ -244,10 +260,11 @@ class LabelingService:
                     data=data,
                     article_input=article,
                     output_schema=output_schema,
+                    allow_reasoning_fallback=not deepseek,
                 )
             )
             last_payload = payload
-            last_data = data
+            last_data = redact_reasoning_content(data) if deepseek else data
             last_errors = validation_errors
             last_invalid_output = invalid_output
             last_finish_reason = finish_reason
@@ -258,7 +275,7 @@ class LabelingService:
                     output_mode=resolved_output_mode,
                     selected_attempt=attempt_name,
                     finish_reason=finish_reason,
-                    data=data,
+                    data=last_data,
                     payload=payload,
                     runtime={
                         "max_tokens": resolved_max_tokens,

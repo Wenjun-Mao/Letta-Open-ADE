@@ -41,4 +41,11 @@ describe("buildLabelGenerationRequest", () => {
       error: LABEL_LAB_COPY.en.invalidRepairRetryCount,
     });
   });
+
+  it("omits ignored DeepSeek thinking controls while retaining the chosen model", () => {
+    const result = buildLabelGenerationRequest(validForm, LABEL_LAB_COPY.en, "deepseek_openai");
+    expect(result.request).toMatchObject({ model_key: "router::model", top_p: 1 });
+    expect(result.request?.temperature).toBeUndefined();
+    expect(result.request?.top_k).toBeUndefined();
+  });
 });

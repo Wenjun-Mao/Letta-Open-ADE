@@ -5,6 +5,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -14,7 +15,7 @@ from model_router.config_files import load_json_config_list
 
 RouterSourceKind = Literal["openai-compatible"]
 RouterSourceAdapter = Literal[
-    "generic_openai", "ark_openai", "llama_cpp_server", "vllm_openai"
+    "generic_openai", "ark_openai", "llama_cpp_server", "vllm_openai", "deepseek_openai"
 ]
 RouterSourceStatus = Literal[
     "healthy", "auth_error", "unreachable", "empty", "disabled"
@@ -34,11 +35,13 @@ class RouterSourceConfig(BaseModel):
     id: str
     label: str
     base_url: str
+    base_url_env: str = ""
     kind: RouterSourceKind = "openai-compatible"
     adapter: RouterSourceAdapter = "generic_openai"
     enabled: bool = True
     enabled_for: list[str] = Field(default_factory=list)
     module_visibility: list[str] = Field(default_factory=list)
+    model_allowlist: list[str] = Field(default_factory=list)
     api_key_env: str = ""
     api_key_secret: str = ""
 
@@ -46,6 +49,7 @@ class RouterSourceConfig(BaseModel):
         "id",
         "label",
         "base_url",
+        "base_url_env",
         "adapter",
         "api_key_env",
         "api_key_secret",
@@ -65,13 +69,16 @@ class RouterSourceConfig(BaseModel):
             "ark_openai",
             "llama_cpp_server",
             "vllm_openai",
+            "deepseek_openai",
         }:
             raise ValueError(
-                "adapter must be 'generic_openai', 'ark_openai', 'llama_cpp_server', or 'vllm_openai'"
+                "adapter must be 'generic_openai', 'ark_openai', 'llama_cpp_server', 'vllm_openai', or 'deepseek_openai'"
             )
         return normalized
 
-    @field_validator("enabled_for", "module_visibility", mode="before")
+    @field_validator(
+        "enabled_for", "module_visibility", "model_allowlist", mode="before"
+    )
     @classmethod
     def _normalize_string_list(cls, value: object) -> object:
         if isinstance(value, str):
@@ -88,8 +95,37 @@ class RouterSourceConfig(BaseModel):
                 deduped.append(normalized)
         return deduped
 
+    @field_validator("model_allowlist")
+    @classmethod
+    def _dedupe_model_allowlist(cls, value: list[str]) -> list[str]:
+        return list(
+            dict.fromkeys(str(item).strip() for item in value if str(item).strip())
+        )
+
     def normalized_base_url(self) -> str:
-        return self.base_url.rstrip("/")
+        base = (
+            str(os.environ.get(self.base_url_env, "") or "").strip()
+            if self.base_url_env
+            else ""
+        )
+        base = (base or self.base_url).rstrip("/")
+        if self.adapter == "deepseek_openai":
+            parsed = urlsplit(base)
+            if (
+                parsed.scheme != "https"
+                or parsed.hostname != "api.deepseek.com"
+                or parsed.port not in {None, 443}
+                or parsed.path
+                not in {"", "/v1", "/chat/completions", "/v1/chat/completions"}
+                or parsed.username
+                or parsed.password
+                or parsed.query
+                or parsed.fragment
+            ):
+                raise ValueError(
+                    "DeepSeek base URL must use the official API endpoint without credentials or query"
+                )
+        return base
 
     def models_endpoint(self) -> str:
         base = self.normalized_base_url()
@@ -99,6 +135,8 @@ class RouterSourceConfig(BaseModel):
             return base
         if base.endswith("/chat/completions"):
             return f"{base[: -len('/chat/completions')]}/models"
+        if self.adapter == "deepseek_openai" and not _VERSION_PATH_RE.search(base):
+            return f"{base}/models"
         if _VERSION_PATH_RE.search(base):
             return f"{base}/models"
         return f"{base}/v1/models"
@@ -111,6 +149,8 @@ class RouterSourceConfig(BaseModel):
             return base
         if base.endswith("/embeddings"):
             return f"{base[: -len('/embeddings')]}/chat/completions"
+        if self.adapter == "deepseek_openai" and not _VERSION_PATH_RE.search(base):
+            return f"{base}/chat/completions"
         if _VERSION_PATH_RE.search(base):
             return f"{base}/chat/completions"
         return f"{base}/v1/chat/completions"

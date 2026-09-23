@@ -1,4 +1,15 @@
 {
+  "deepseek::deepseek-flash": {
+    "base_model": "DeepSeek-V4.1-Flash",
+    "profile_source": "docs/adr/0025-deepseek-development-lane.md",
+    "supports_top_k": false,
+    "supports_thinking": true,
+    "thinking_default_enabled": true,
+    "reasoning_effort_default": "high",
+    "tool_call_thinking_default_enabled": true,
+    "agent_studio_candidate": true,
+    "agent_studio_compatible": true
+  },
   "dgx_vllm::qwen3.6-35b-a3b-fp8": {
     "base_model": "Qwen/Qwen3.6-35B-A3B-FP8",
     "profile_source": "docs/adr/0015-model-scoped-tool-call-thinking-mode.md",

@@ -15,6 +15,7 @@ def extract_validated_label_response(
     data: dict[str, Any],
     article_input: str,
     output_schema: dict[str, Any],
+    allow_reasoning_fallback: bool = True,
 ) -> tuple[dict[str, list[str]] | None, str, list[str], str | None]:
     """Map the first provider choice into a validated label result or repair diagnostics."""
     choices = data.get("choices", [])
@@ -30,7 +31,11 @@ def extract_validated_label_response(
     )
     content_candidate = normalize_label_content(message.get("content", ""))
     reasoning_candidate = normalize_label_content(message.get("reasoning_content", ""))
-    candidates = [content_candidate] if content_candidate else [reasoning_candidate]
+    candidates = (
+        [content_candidate]
+        if content_candidate
+        else [reasoning_candidate if allow_reasoning_fallback else ""]
+    )
     validation_errors: list[str] = []
     invalid_output = ""
     for candidate in candidates:

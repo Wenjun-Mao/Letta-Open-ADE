@@ -250,6 +250,58 @@ def test_explicit_forgetting_uses_a_forget_only_schema_on_first_request() -> Non
     assert "CorrectProposal" not in schema_text
 
 
+def test_deepseek_reviewer_uses_json_object_with_local_typed_forget_validation() -> None:
+    fact_id = "00000000-0000-0000-0000-000000000003"
+    message = {"id": "message-1", "content": "Please forget that I like blue."}
+    facts = [{
+        "id": fact_id,
+        "subject_id": SUBJECT_ID,
+        "entity_id": SUBJECT_ID,
+        "normalized_key": f"person.preference|{SUBJECT_ID}|color",
+        "fact_type": "person.preference",
+        "qualifier": "color",
+        "value": "blue",
+        "status": "active",
+        "version": 2,
+    }]
+    entities = [{"id": SUBJECT_ID, "subject_id": SUBJECT_ID, "kind": "subject", "label": ""}]
+    transport = _Transport([{"proposals": [{
+        "operation": "forget",
+        "value": None,
+        "fact_id": fact_id,
+        "expected_version": 2,
+        "evidence_quote": message["content"],
+    }]}])
+
+    result = asyncio.run(
+        MemoryReviewer(transport, provider_adapter="deepseek_openai").review(
+            model_key="deepseek::deepseek-flash",
+            current_user_message=message,
+            recent_user_messages=[],
+            active_facts=facts,
+            entities=entities,
+            timeout_seconds=30,
+            max_model_requests=1,
+            validate_decision=lambda decision: prepare_memory_review(
+                decision=decision,
+                subject_id=SUBJECT_ID,
+                current_user_message=message,
+                active_facts=facts,
+                entities=entities,
+            ),
+        )
+    )
+    assert result.model_request_count == 1
+    assert result.decision.proposals[0].fact_id == fact_id
+    request = transport.calls[0][0]
+    assert request["response_format"] == {"type": "json_object"}
+    assert request["thinking"] == {"type": "enabled"}
+    assert request["reasoning_effort"] == "high"
+    assert "temperature" not in request
+    assert "chat_template_kwargs" not in request
+    assert "JSON" in request["messages"][0]["content"]
+
+
 def test_ordinary_new_fact_uses_add_only_schema_when_other_facts_exist() -> None:
     message = {
         "id": "00000000-0000-0000-0000-000000000002",

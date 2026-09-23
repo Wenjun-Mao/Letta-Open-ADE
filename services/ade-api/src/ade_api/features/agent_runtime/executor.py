@@ -113,8 +113,11 @@ def curated_tools(
 
 
 class ConversationExecutor:
-    def __init__(self, transport: RouterTransport) -> None:
+    def __init__(
+        self, transport: RouterTransport, *, provider_adapter: str = ""
+    ) -> None:
         self.transport = transport
+        self.provider_adapter = provider_adapter
 
     async def execute(
         self,
@@ -147,14 +150,18 @@ class ConversationExecutor:
                 "stream": False,
             }
             if enabled_tools:
+                required_choice = (
+                    tool_requirement.tool_choice()
+                    if tool_requirement is not None and not requirement_satisfied
+                    else "auto"
+                )
                 payload.update(
                     {
                         "tools": [tool.definition for tool in enabled_tools.values()],
                         "tool_choice": (
-                            tool_requirement.tool_choice()
-                            if tool_requirement is not None
-                            and not requirement_satisfied
-                            else "auto"
+                            "auto"
+                            if self.provider_adapter == "deepseek_openai"
+                            else required_choice
                         ),
                     }
                 )
@@ -250,30 +257,53 @@ class ConversationExecutor:
         max_output_tokens: int,
         summary_token_budget: int,
     ) -> ModelCompaction:
+        compaction_system = COMPACTION_SYSTEM
+        if self.provider_adapter == "deepseek_openai":
+            compaction_system += (
+                "\nReturn a JSON object matching this schema: "
+                f"{json.dumps(COMPACTION_RESPONSE_SCHEMA, ensure_ascii=False)}"
+                '\nExample JSON: {"summary":"A concise factual summary."}'
+            )
+        payload = {
+            "model": model_key,
+            "messages": [
+                {"role": "system", "content": compaction_system},
+                {"role": "user", "content": compaction_model_input_json(plan)},
+            ],
+            "max_tokens": max(
+                256,
+                min(
+                    max_output_tokens,
+                    4096 if self.provider_adapter == "deepseek_openai" else 1024,
+                ),
+            ),
+            "stream": False,
+        }
+        if self.provider_adapter == "deepseek_openai":
+            payload.update(
+                {
+                    "thinking": {"type": "enabled"},
+                    "reasoning_effort": "high",
+                    "response_format": {"type": "json_object"},
+                }
+            )
+        else:
+            payload.update(
+                {
+                    "temperature": 0,
+                    "response_format": {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "ade_conversation_compaction",
+                            "strict": True,
+                            "schema": COMPACTION_RESPONSE_SCHEMA,
+                        },
+                    },
+                    "chat_template_kwargs": {"enable_thinking": False},
+                }
+            )
         response = await self.transport.chat_completion(
-            {
-                "model": model_key,
-                "messages": [
-                    {"role": "system", "content": COMPACTION_SYSTEM},
-                    {
-                        "role": "user",
-                        "content": compaction_model_input_json(plan),
-                    },
-                ],
-                "max_tokens": max(256, min(max_output_tokens, 1024)),
-                "stream": False,
-                "temperature": 0,
-                "response_format": {
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "ade_conversation_compaction",
-                        "strict": True,
-                        "schema": COMPACTION_RESPONSE_SCHEMA,
-                    },
-                },
-                "chat_template_kwargs": {"enable_thinking": False},
-            },
-            timeout_seconds=timeout_seconds,
+            payload, timeout_seconds=timeout_seconds
         )
         message, _ = _first_choice(response)
         content = parse_compaction_response(
@@ -290,9 +320,9 @@ class ConversationExecutor:
             model_fingerprint=model_fingerprint,
             provider_request_id=provider_request_id,
             content_sha256=compaction_content_sha256(content),
-            prompt_sha256=compaction_prompt_sha256(),
+            prompt_sha256=compaction_prompt_sha256(compaction_system),
             input_sha256=compaction_input_sha256(plan),
-            policy_sha256=compaction_policy_sha256(),
+            policy_sha256=compaction_policy_sha256(compaction_system),
             usage=usage,
         )
 

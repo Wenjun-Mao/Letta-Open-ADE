@@ -88,6 +88,54 @@ def test_structured_output_compatibility_payload_removes_only_response_format() 
     assert fallback["max_tokens"] == primary["max_tokens"]
 
 
+def test_deepseek_structured_comment_uses_json_object_without_ignored_sampling() -> (
+    None
+):
+    payload = build_comment_request_payload(
+        model="deepseek::deepseek-flash",
+        system_prompt="Write a comment",
+        persona_prompt="Helpful",
+        news_input="Synthetic news",
+        task_shape="structured_output",
+        max_tokens=1024,
+        cache_prompt=False,
+        source_adapter="deepseek_openai",
+        enable_thinking=True,
+        enable_thinking_is_explicit=False,
+        temperature=0.6,
+        top_p=1.0,
+        top_k=None,
+    )
+    assert payload["response_format"] == {"type": "json_object"}
+    assert "temperature" not in payload
+    assert "thinking" not in payload
+    assert "JSON" in payload["messages"][0]["content"]
+
+
+def test_deepseek_comment_never_promotes_reasoning_to_user_content() -> None:
+    raw_reply = {
+        "choices": [
+            {
+                "finish_reason": "stop",
+                "message": {
+                    "content": '{"comment":"这是一条可发布的评论。"}',
+                    "reasoning_content": "private analysis",
+                },
+            }
+        ]
+    }
+    result = map_comment_provider_response(
+        data=raw_reply,
+        payload={"model": "deepseek::deepseek-flash"},
+        runtime={},
+        task_shape="structured_output",
+        max_tokens=1024,
+        provider_adapter="deepseek_openai",
+    )
+    assert result["content"] == "这是一条可发布的评论。"
+    assert "reasoning_content" not in result["raw_reply"]["choices"][0]["message"]
+
+
 def test_comment_response_mapper_returns_structured_reasoning_and_diagnostics() -> None:
     raw_request = {"model": "qwen", "response_format": {"type": "json_schema"}}
     raw_reply = {

@@ -1,5 +1,5 @@
 export type Scenario = "chat" | "comment" | "label";
-export type LabelingOutputMode = "strict_json_schema" | "json_schema" | "best_effort_prompt_json";
+export type LabelingOutputMode = "strict_json_schema" | "json_schema" | "json_object" | "best_effort_prompt_json";
 
 export type SamplingDefaults = {
   temperature?: number | null;
@@ -36,6 +36,7 @@ export type OptionEntry = {
   is_default?: boolean;
   source_id?: string | null;
   source_label?: string | null;
+  source_adapter?: string | null;
   provider_model_id?: string | null;
   label_lab_available?: boolean | null;
   structured_output_mode?: LabelingOutputMode | null;

@@ -8,6 +8,7 @@ from typing import Any
 _IDENTITY_FIELDS = (
     "key",
     "source_id",
+    "source_adapter",
     "provider_model_id",
     "sampling_defaults",
     "scenario_sampling_defaults",

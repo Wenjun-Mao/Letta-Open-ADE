@@ -189,8 +189,11 @@ class ReviewerResult:
 
 
 class MemoryReviewer:
-    def __init__(self, transport: RouterTransport) -> None:
+    def __init__(
+        self, transport: RouterTransport, *, provider_adapter: str = ""
+    ) -> None:
         self.transport = transport
+        self.provider_adapter = provider_adapter
 
     async def review(
         self,
@@ -202,7 +205,10 @@ class MemoryReviewer:
         entities: list[dict[str, Any]],
         timeout_seconds: float,
         validate_decision: Callable[[ReviewDecision], None],
+        max_model_requests: int = 2,
     ) -> ReviewerResult:
+        if max_model_requests not in {1, 2}:
+            raise ValueError("reviewer max_model_requests must be 1 or 2")
         entity_kinds = {str(item.get("id")): item.get("kind") for item in entities}
         current_content = str(current_user_message.get("content") or "")
         review_mode = (
@@ -278,25 +284,46 @@ class MemoryReviewer:
             {"role": "system", "content": REVIEWER_SYSTEM},
             {"role": "user", "content": json.dumps(packet, ensure_ascii=False)},
         ]
+        response_schema = review_json_schema(mode=review_mode)
+        if self.provider_adapter == "deepseek_openai":
+            messages[0]["content"] += (
+                "\nReturn JSON matching this exact schema: "
+                f"{json.dumps(response_schema, ensure_ascii=False)}"
+                '\nExample JSON: {"proposals":[]}'
+            )
         responses: list[dict[str, Any]] = []
-        for request_number in (1, 2):
-            response = await self.transport.chat_completion(
-                {
-                    "model": model_key,
-                    "messages": messages,
-                    "response_format": {
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": "ade_memory_review",
-                            "strict": True,
-                            "schema": review_json_schema(mode=review_mode),
+        for request_number in range(1, max_model_requests + 1):
+            payload: dict[str, Any] = {
+                "model": model_key,
+                "messages": messages,
+                "max_tokens": 2048,
+                "stream": False,
+            }
+            if self.provider_adapter == "deepseek_openai":
+                payload.update(
+                    {
+                        "thinking": {"type": "enabled"},
+                        "reasoning_effort": "high",
+                        "response_format": {"type": "json_object"},
+                    }
+                )
+            else:
+                payload.update(
+                    {
+                        "response_format": {
+                            "type": "json_schema",
+                            "json_schema": {
+                                "name": "ade_memory_review",
+                                "strict": True,
+                                "schema": response_schema,
+                            },
                         },
-                    },
-                    "temperature": 0,
-                    "max_tokens": 2048,
-                    "stream": False,
-                    "chat_template_kwargs": {"enable_thinking": False},
-                },
+                        "temperature": 0,
+                        "chat_template_kwargs": {"enable_thinking": False},
+                    }
+                )
+            response = await self.transport.chat_completion(
+                payload,
                 timeout_seconds=timeout_seconds,
             )
             responses.append(response)
@@ -305,9 +332,10 @@ class MemoryReviewer:
                 decision = parse_review_decision(json.loads(content), mode=review_mode)
                 validate_decision(decision)
             except (RuntimeValidationError, json.JSONDecodeError, ValueError) as exc:
-                if request_number == 2:
+                if request_number == max_model_requests:
                     raise RuntimeValidationError(
-                        f"Memory reviewer failed its closed schema after repair: {exc}"
+                        "Memory reviewer failed its closed schema"
+                        f" after {request_number} request(s): {exc}"
                     ) from exc
                 messages.extend(
                     [

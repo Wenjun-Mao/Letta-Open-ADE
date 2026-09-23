@@ -113,6 +113,7 @@ def api_labeling_generate(
         generation_result = labeling_service.generate_labels(
             base_url=str(model_selection.get("base_url", "") or ""),
             model=str(model_selection.get("model_key", "") or ""),
+            source_adapter=str(model_selection.get("source_adapter", "") or ""),
             api_key=str(model_selection.get("api_key", "") or ""),
             system_prompt=str(prompt_record.get("content", "") or ""),
             article_input=text,

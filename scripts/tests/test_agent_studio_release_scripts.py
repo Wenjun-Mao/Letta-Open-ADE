@@ -6,13 +6,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
-from model_catalog_contracts.deployment_manifest import load_deployment_manifest
+from model_catalog_contracts.deployment_manifest import (
+    DeploymentFingerprint,
+    load_deployment_manifest,
+)
 
 from ade_api.features.agent_runtime.release_evidence import (
     REQUIRED_CONFORMANCE_TESTS,
     canonical_sha256,
 )
-from ade_api.features.agent_runtime.release_policy import fingerprint_policy_hashes
 from scripts import check_agent_studio_release_gate as release_gate
 from scripts import record_agent_studio_conformance as conformance
 from scripts import rebind_agent_runtime_policy as rebind
@@ -106,7 +108,20 @@ def test_prepare_release_builds_steady_state_evidence_without_legacy_receipts(
             encoding="utf-8"
         )
     )
+    policy_hashes = {
+        policy: manifest_payload["deployments"][0]["fingerprint"][
+            f"{policy}_policy_sha256"
+        ]
+        for policy in ("prompt", "tool", "schema", "retrieval")
+    }
     for deployment in manifest_payload["deployments"]:
+        # This synthetic promotion fixture must use one policy cohort. The
+        # checked-in manifest deliberately retains stale qualified entries.
+        for policy, digest in policy_hashes.items():
+            deployment["fingerprint"][f"{policy}_policy_sha256"] = digest
+        deployment["qualification"]["fingerprint_sha256"] = (
+            DeploymentFingerprint.from_payload(deployment["fingerprint"]).sha256
+        )
         deployment["lifecycle"] = "qualified"
         deployment["qualification"]["qualified"] = True
         deployment["qualification"]["stale_round_count"] = 0
@@ -116,7 +131,6 @@ def test_prepare_release_builds_steady_state_evidence_without_legacy_receipts(
             role_result["qualified"] = True
     manifest_path.write_text(json.dumps(manifest_payload), encoding="utf-8")
     manifest = load_deployment_manifest(manifest_path, project_root=tmp_path)
-    policy_hashes = fingerprint_policy_hashes(manifest.deployments[0].fingerprint)
     bindings = {
         role: {
             "route_alias": deployment.route_aliases[0],

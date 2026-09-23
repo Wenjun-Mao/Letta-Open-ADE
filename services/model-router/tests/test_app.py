@@ -282,6 +282,74 @@ def test_router_preserves_exact_named_tool_selection_for_vllm(
     assert captured["payload"]["tool_choice"] == selection
 
 
+def test_deepseek_thinking_defaults_and_unsupported_shapes_fail_closed() -> None:
+    source = RouterSourceConfig(
+        id="deepseek",
+        label="DeepSeek",
+        base_url="https://api.deepseek.com",
+        adapter="deepseek_openai",
+        enabled_for=["agent_studio"],
+    )
+    model = RoutedModel(
+        router_model_id="deepseek::deepseek-flash",
+        source_id="deepseek",
+        source_label=source.label,
+        source_kind="openai-compatible",
+        source_adapter=source.adapter,
+        source_base_url=source.base_url,
+        module_visibility=("agent_studio",),
+        provider_model_id="deepseek-flash",
+        model_type="llm",
+        agent_studio_available=True,
+        comment_lab_available=True,
+        label_lab_available=True,
+        structured_output_mode="json_object",
+        supports_thinking=True,
+        thinking_default_enabled=True,
+        reasoning_effort_default="high",
+    )
+    payload = {"model": "deepseek-flash", "messages": [], "stream": False}
+    normalized = router_app._apply_sampling_defaults(model, source, payload)
+    assert normalized["thinking"] == {"type": "enabled"}
+    assert normalized["reasoning_effort"] == "high"
+    assert "temperature" not in normalized
+    assert "chat_template_kwargs" not in normalized
+    explicit = router_app._apply_sampling_defaults(
+        model,
+        source,
+        {**payload, "thinking": {"type": "enabled"}, "reasoning_effort": "high"},
+    )
+    assert explicit["thinking"] == {"type": "enabled"}
+    assert explicit["reasoning_effort"] == "high"
+
+    with pytest.raises(ValueError, match="thinking mode"):
+        router_app._normalize_adapter_payload(
+            source,
+            {
+                **payload,
+                "tool_choice": {
+                    "type": "function",
+                    "function": {"name": "search_memory"},
+                },
+            },
+        )
+    with pytest.raises(ValueError, match="json_schema"):
+        router_app._normalize_adapter_payload(
+            source,
+            {**payload, "response_format": {"type": "json_schema"}},
+        )
+    for unsupported in (
+        {"thinking": "enabled"},
+        {"thinking": {"type": "disabled"}},
+        {"reasoning_effort": "low"},
+        {"top_k": 20},
+        {"stream": True},
+        {"temperature": 0.2},
+    ):
+        with pytest.raises(ValueError):
+            router_app._normalize_adapter_payload(source, {**payload, **unsupported})
+
+
 def test_router_adapts_named_tool_selection_for_llama_cpp(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

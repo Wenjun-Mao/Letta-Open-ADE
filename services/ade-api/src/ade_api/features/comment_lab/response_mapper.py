@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any
 
+from ade_api.integrations.model_router.openai_chat import redact_reasoning_content
 from ade_api.features.comment_lab.helpers import (
     extract_comment_from_reasoning,
     extract_structured_comment,
@@ -45,6 +47,7 @@ def map_comment_provider_response(
     runtime: dict[str, Any],
     task_shape: str,
     max_tokens: int,
+    provider_adapter: str = "",
 ) -> dict[str, Any]:
     """Select a publishable comment or raise the established provider-response error."""
     choices = data.get("choices", [])
@@ -64,9 +67,17 @@ def map_comment_provider_response(
     reasoning = normalize_content(
         message.get("reasoning_content", "") or message.get("reasoning", "")
     )
+    is_deepseek = provider_adapter == "deepseek_openai"
+    if is_deepseek:
+        reasoning = ""
+        data = redact_reasoning_content(data)
 
     if task_shape == "structured_output":
-        content = extract_structured_comment(content)
+        content = (
+            _strict_json_comment(content)
+            if is_deepseek
+            else extract_structured_comment(content)
+        )
         if not content:
             reasoning_structured = extract_structured_comment(reasoning)
             if reasoning_structured:
@@ -117,3 +128,14 @@ def map_comment_provider_response(
     raise ValueError(
         f"Comment provider returned empty content; task_shape={task_shape}; max_tokens={max_tokens}"
     )
+
+
+def _strict_json_comment(content: str) -> str:
+    try:
+        value = json.loads(content)
+    except json.JSONDecodeError:
+        return ""
+    if not isinstance(value, dict) or set(value) != {"comment"}:
+        return ""
+    comment = value["comment"]
+    return comment.strip() if isinstance(comment, str) else ""

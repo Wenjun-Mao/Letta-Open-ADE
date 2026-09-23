@@ -14,6 +14,7 @@ type PanelProps = {
 export function CommentLabSettingsPanel({ copy, controller }: PanelProps) {
   const { form } = controller;
   const disabled = controller.submitting;
+  const deepseek = controller.models.find((item) => item.key === form.model)?.source_adapter === "deepseek_openai";
 
   return (
     <div className="card studio-panel">
@@ -54,11 +55,11 @@ export function CommentLabSettingsPanel({ copy, controller }: PanelProps) {
             <option value="structured_output">{copy.taskShapeStructuredOutput}</option>
           </select>
         </label>
-        <NumberField label={copy.temperature} value={form.temperature} onChange={controller.setTemperature} disabled={disabled} min={0} max={2} step={0.1} />
+        <NumberField label={copy.temperature} value={form.temperature} onChange={controller.setTemperature} disabled={disabled || deepseek} min={0} max={2} step={0.1} />
         <NumberField label={copy.topP} value={form.topP} onChange={controller.setTopP} disabled={disabled} min={0.01} max={1} step={0.05} />
-        <NumberField label={copy.topK} value={form.topK} onChange={controller.setTopK} disabled={disabled} min={1} placeholder="64" />
+        <NumberField label={copy.topK} value={form.topK} onChange={controller.setTopK} disabled={disabled || deepseek} min={1} placeholder="64" />
         <ToggleField label={copy.cachePrompt} hint={copy.cachePromptHint} checked={form.cachePrompt} onChange={controller.setCachePrompt} disabled={disabled} />
-        <ToggleField label={copy.enableThinking} hint={copy.enableThinkingHint} checked={form.enableThinking} onChange={controller.setEnableThinking} disabled={disabled} />
+        <ToggleField label={copy.enableThinking} hint={copy.enableThinkingHint} checked={form.enableThinking} onChange={controller.setEnableThinking} disabled={disabled || deepseek} />
       </div>
       <div className="toolbar" style={{ marginTop: 12 }}>
         <button className="button" onClick={() => void controller.generate()} disabled={controller.loadingOptions || disabled}>

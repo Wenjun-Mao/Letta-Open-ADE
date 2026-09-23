@@ -1,10 +1,14 @@
 # ADR 0024: Investigate A Private Luna Backend Through A Separate Tool Bridge
 
-- Status: Proposed feasibility checkpoint, not backend acceptance
+- Status: On hold; superseded as the current development lane by ADR 0025
 - Date: 2026-09-23
 - Scope: one operator on this Mac; no public, multi-user, production, or release claim
 
 ## Question and current position
+
+The operator put this live experiment aside on 2026-09-23. Its conditional
+four-start budget remains unspent and cannot be carried into the separately
+bounded DeepSeek work in [ADR 0025](0025-deepseek-development-lane.md).
 
 Could ADE eventually use ChatGPT-authenticated GPT-6 Luna for a private local
 Agent Studio without losing ADE's subject, memory, tool, and retry authority?

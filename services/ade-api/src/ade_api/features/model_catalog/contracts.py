@@ -20,6 +20,7 @@ class ApiOptionEntryResponse(BaseModel):
     is_default: bool | None = None
     source_id: str | None = None
     source_label: str | None = None
+    source_adapter: str | None = None
     provider_model_id: str | None = None
     label_lab_available: bool | None = None
     structured_output_mode: LabelingOutputMode | None = None

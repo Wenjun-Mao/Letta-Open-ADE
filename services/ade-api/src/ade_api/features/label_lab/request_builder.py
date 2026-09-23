@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from ade_api.features.label_lab.helpers import (
@@ -24,7 +25,28 @@ def build_label_request_payload(
     top_k: int | None,
 ) -> dict[str, Any]:
     """Build the provider request for one Label Lab extraction attempt."""
-    if output_mode in {"strict_json_schema", "json_schema"}:
+    if output_mode == "json_object":
+        example = {key: [] for key in output_schema.get("properties", {})}
+        payload = {
+            "model": model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        build_best_effort_label_system_prompt(
+                            system_prompt=system_prompt, schema=output_schema
+                        )
+                        + "\n[Example JSON]\n"
+                        + json.dumps(example, ensure_ascii=False)
+                    ),
+                },
+                {"role": "user", "content": build_label_user_payload(article_input)},
+            ],
+            "top_p": top_p,
+            "max_tokens": max_tokens,
+            "response_format": {"type": "json_object"},
+        }
+    elif output_mode in {"strict_json_schema", "json_schema"}:
         payload = {
             "model": model,
             "messages": [
@@ -58,7 +80,7 @@ def build_label_request_payload(
 
     if max_tokens == 0:
         payload.pop("max_tokens", None)
-    if top_k is not None:
+    if top_k is not None and output_mode != "json_object":
         payload["top_k"] = top_k
     return payload
 

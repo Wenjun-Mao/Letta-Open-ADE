@@ -133,8 +133,8 @@ def compaction_model_input_json(plan: CompactionPlan) -> str:
     return _canonical_json(compaction_model_input(plan))
 
 
-def compaction_prompt_sha256() -> str:
-    return _sha256(COMPACTION_SYSTEM)
+def compaction_prompt_sha256(system_prompt: str = COMPACTION_SYSTEM) -> str:
+    return _sha256(system_prompt)
 
 
 def compaction_input_sha256(plan: CompactionPlan) -> str:
@@ -145,14 +145,14 @@ def compaction_content_sha256(content: str) -> str:
     return _sha256(content)
 
 
-def compaction_policy_sha256() -> str:
+def compaction_policy_sha256(system_prompt: str = COMPACTION_SYSTEM) -> str:
     return _sha256(
         _canonical_json(
             {
                 "max_unsummarized_messages": COMPACTION_MAX_UNSUMMARIZED_MESSAGES,
                 "retain_recent_messages": COMPACTION_RETAIN_RECENT_MESSAGES,
                 "response_schema": COMPACTION_RESPONSE_SCHEMA,
-                "system_prompt_sha256": compaction_prompt_sha256(),
+                "system_prompt_sha256": compaction_prompt_sha256(system_prompt),
                 "version": "conversation-compaction-v1",
             }
         )

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from model_router.settings import RouterSourceConfig, clear_settings_cache, get_settings
 
 
@@ -176,3 +178,42 @@ def test_dgx_vllm_router_source_auth_is_optional(tmp_path) -> None:
         )
         == "spark-token"
     )
+
+
+def test_deepseek_source_resolves_configured_base_and_key_without_v1_suffix(
+    monkeypatch, tmp_path
+) -> None:
+    source = RouterSourceConfig(
+        id="deepseek",
+        label="DeepSeek",
+        base_url="https://api.deepseek.com",
+        base_url_env="DEEPSEEK_API_BASE",
+        adapter="deepseek_openai",
+        enabled_for=["agent_studio", "comment_lab", "label_lab"],
+        api_key_env="DEEPSEEK_API_KEY",
+    )
+    monkeypatch.setenv("DEEPSEEK_API_BASE", "https://api.deepseek.com/")
+    assert source.models_endpoint() == "https://api.deepseek.com/models"
+    assert source.chat_completions_url() == "https://api.deepseek.com/chat/completions"
+    assert (
+        source.resolve_api_key(
+            secrets_dir=tmp_path, environ={"DEEPSEEK_API_KEY": "synthetic-key"}
+        )
+        == "synthetic-key"
+    )
+    monkeypatch.setenv(
+        "DEEPSEEK_API_BASE", "https://api.deepseek.com/v1/chat/completions"
+    )
+    assert (
+        source.chat_completions_url() == "https://api.deepseek.com/v1/chat/completions"
+    )
+    assert source.models_endpoint() == "https://api.deepseek.com/v1/models"
+    for unsafe_base in (
+        "http://api.deepseek.com",
+        "https://other.example/v1",
+        "https://api.deepseek.com/v1?key=secret",
+        "https://user:secret@api.deepseek.com/v1",
+    ):
+        monkeypatch.setenv("DEEPSEEK_API_BASE", unsafe_base)
+        with pytest.raises(ValueError, match="official API endpoint"):
+            source.normalized_base_url()

@@ -100,6 +100,50 @@ def test_executor_runs_only_subject_bound_memory_search() -> None:
     }
 
 
+def test_deepseek_required_search_uses_auto_and_replays_reasoning_with_tool_result() -> None:
+    transport = _Transport(
+        [
+            {
+                "choices": [{"finish_reason": "tool_calls", "message": {
+                    "role": "assistant",
+                    "content": None,
+                    "reasoning_content": "private synthetic reasoning",
+                    "tool_calls": [{"id": "call-1", "type": "function", "function": {
+                        "name": "search_memory", "arguments": '{"query":"oolong"}'
+                    }}],
+                }}],
+            },
+            {"choices": [{"finish_reason": "stop", "message": {
+                "role": "assistant", "content": "Your favorite tea is oolong.",
+            }}]},
+        ]
+    )
+
+    async def search(query: str, limit: int):
+        assert (query, limit) == ("oolong", 8)
+        return [{"id": "fact-1", "value": "oolong"}]
+
+    result = asyncio.run(
+        ConversationExecutor(transport, provider_adapter="deepseek_openai").execute(
+            model_key="deepseek::deepseek-flash",
+            messages=[{"role": "user", "content": "Search my older memory for tea."}],
+            tools=curated_tools(("search_memory",), search_memory=search),
+            tool_requirement=ToolRequirement(
+                tool_name="search_memory", capability="memory.deep_search"
+            ),
+            timeout_seconds=30,
+            max_output_tokens=100,
+        )
+    )
+    assert result.tool_requirement_satisfied is True
+    assert result.assistant_text == "Your favorite tea is oolong."
+    assert all(call[0]["tool_choice"] == "auto" for call in transport.calls)
+    replay = transport.calls[1][0]["messages"]
+    assert replay[-2]["reasoning_content"] == "private synthetic reasoning"
+    assert replay[-1]["role"] == "tool"
+    assert "private synthetic reasoning" not in result.assistant_text
+
+
 def test_executor_rejects_arbitrary_tool_names() -> None:
     transport = _Transport(
         [

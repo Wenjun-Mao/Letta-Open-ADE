@@ -97,26 +97,31 @@ class TurnExecution:
         conversation_deployment = _required_deployment(deployments, "conversation")
         reviewer_deployment = _required_deployment(deployments, "reviewer")
         retriever_deployment = _required_deployment(deployments, "retriever")
+        conversation_adapter = _deployment_adapter(catalog, conversation_deployment)
+        reviewer_adapter = _deployment_adapter(catalog, reviewer_deployment)
         conversation_executor = ConversationExecutor(
             trace.transport(
                 self.transport,
                 stage="conversation",
                 model_fingerprint=str(conversation_deployment["fingerprint"]),
-            )
+            ),
+            provider_adapter=conversation_adapter,
         )
         compaction_executor = ConversationExecutor(
             trace.transport(
                 self.transport,
                 stage="compaction",
                 model_fingerprint=str(conversation_deployment["fingerprint"]),
-            )
+            ),
+            provider_adapter=conversation_adapter,
         )
         reviewer = MemoryReviewer(
             trace.transport(
                 self.transport,
                 stage="reviewer",
                 model_fingerprint=str(reviewer_deployment["fingerprint"]),
-            )
+            ),
+            provider_adapter=reviewer_adapter,
         )
         retrieval_embeddings = EmbeddingClient(
             trace.transport(
@@ -396,6 +401,29 @@ def _required_deployment(
         raise RuntimeValidationError(
             f"Agent definition has no {role} deployment snapshot"
         ) from exc
+
+
+def _deployment_adapter(catalog: dict[str, Any], deployment: dict[str, Any]) -> str:
+    route_alias = str(deployment.get("route_alias") or "")
+    items = catalog.get("items")
+    if not isinstance(items, list):
+        raise RuntimeValidationError("Model Router catalog did not contain items")
+    matches = [
+        item
+        for item in items
+        if isinstance(item, dict)
+        and (
+            route_alias
+            == str(item.get("model_key") or item.get("router_model_id") or "")
+            or (
+                isinstance(item.get("route_aliases"), list)
+                and route_alias in item["route_aliases"]
+            )
+        )
+    ]
+    if len(matches) != 1 or not str(matches[0].get("source_adapter") or ""):
+        raise RuntimeValidationError("Bound deployment has no unique provider adapter")
+    return str(matches[0]["source_adapter"])
 
 
 def _current_user_message(

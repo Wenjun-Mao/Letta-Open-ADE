@@ -36,6 +36,27 @@ def test_chat_completions_url_supports_v1_and_v3_bases() -> None:
     ) == ("https://ark.cn-beijing.volces.com/api/v3/chat/completions")
 
 
+def test_deepseek_disabled_thinking_fails_before_provider_request(monkeypatch) -> None:
+    service = _build_service()
+    monkeypatch.setattr(
+        service,
+        "_post_chat_completions",
+        lambda *args, **kwargs: pytest.fail("provider should not be called"),
+    )
+
+    with pytest.raises(ValueError, match="requires thinking enabled"):
+        service.generate_comment(
+            base_url="http://127.0.0.1:8010/v1",
+            model="deepseek::deepseek-flash",
+            source_adapter="deepseek_openai",
+            system_prompt="Synthetic prompt",
+            persona_prompt="Synthetic persona",
+            news_input="Synthetic news",
+            enable_thinking=False,
+            retry_count=0,
+        )
+
+
 def test_parse_sse_chat_completion_response_aggregates_chunks() -> None:
     payload = "\n".join(
         [

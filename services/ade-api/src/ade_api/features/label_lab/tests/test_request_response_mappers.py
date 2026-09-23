@@ -52,6 +52,45 @@ def test_label_request_builder_preserves_schema_and_sampling_controls() -> None:
     }
 
 
+def test_deepseek_label_request_uses_json_object_and_retains_schema_prompt() -> None:
+    payload = build_label_request_payload(
+        model="deepseek::deepseek-flash",
+        system_prompt="Extract labels",
+        article_input="Synthetic article",
+        output_schema=_schema(),
+        output_schema_name="football",
+        output_mode="json_object",
+        max_tokens=1024,
+        temperature=0,
+        top_p=1,
+        top_k=None,
+    )
+    assert payload["response_format"] == {"type": "json_object"}
+    assert "temperature" not in payload
+    assert "[JSON Schema]" in payload["messages"][0]["content"]
+
+
+def test_deepseek_label_response_does_not_use_reasoning_as_output() -> None:
+    result, _, errors, _ = extract_validated_label_response(
+        data={
+            "choices": [
+                {
+                    "finish_reason": "stop",
+                    "message": {
+                        "content": "",
+                        "reasoning_content": '{"players":[],"teams":[]}',
+                    },
+                }
+            ]
+        },
+        article_input="Synthetic article",
+        output_schema=_schema(),
+        allow_reasoning_fallback=False,
+    )
+    assert result is None
+    assert errors == ["Provider returned empty content."]
+
+
 def test_label_repair_builder_preserves_primary_provider_shape() -> None:
     kwargs = {
         "model": "gemma",

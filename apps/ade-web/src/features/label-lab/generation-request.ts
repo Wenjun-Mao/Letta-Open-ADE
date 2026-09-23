@@ -29,7 +29,7 @@ export type LabelGenerationRequestResult =
   | { request: null; error: string };
 
 /** Keeps Label Lab validation and its API payload under one tested contract. */
-export function buildLabelGenerationRequest(form: LabelGenerationForm, copy: Copy): LabelGenerationRequestResult {
+export function buildLabelGenerationRequest(form: LabelGenerationForm, copy: Copy, sourceAdapter?: string | null): LabelGenerationRequestResult {
   if (!form.model || !form.promptKey || !form.schemaKey) {
     return { request: null, error: copy.selectRequired };
   }
@@ -59,9 +59,9 @@ export function buildLabelGenerationRequest(form: LabelGenerationForm, copy: Cop
       max_tokens: maxTokens,
       timeout_seconds: timeoutSeconds,
       repair_retry_count: repairRetryCount,
-      temperature,
+      temperature: sourceAdapter === "deepseek_openai" ? undefined : temperature,
       top_p: topP,
-      top_k: topK,
+      top_k: sourceAdapter === "deepseek_openai" ? undefined : topK,
     },
   };
 }

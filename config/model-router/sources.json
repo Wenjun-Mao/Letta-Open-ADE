@@ -38,10 +38,23 @@
     "base_url": "http://dgx-spark:8001/v1",
     "kind": "openai-compatible",
     "adapter": "vllm_openai",
-    "enabled": false,
+    "enabled": true,
     "enabled_for": ["embedding"],
     "api_key_env": "DGX_EMBEDDING_API_KEY",
     "api_key_secret": "dgx-embedding-api-key"
+  },
+  {
+    "id": "deepseek",
+    "label": "DeepSeek official API",
+    "base_url": "https://api.deepseek.com",
+    "base_url_env": "DEEPSEEK_API_BASE",
+    "kind": "openai-compatible",
+    "adapter": "deepseek_openai",
+    "enabled": true,
+    "enabled_for": ["agent_studio", "comment_lab", "label_lab"],
+    "model_allowlist": ["deepseek-flash"],
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "api_key_secret": ""
   },
   {
     "id": "local_unsloth",

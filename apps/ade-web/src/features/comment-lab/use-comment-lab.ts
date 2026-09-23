@@ -182,7 +182,8 @@ export function useCommentLab(copy: Copy): CommentLabController {
     setStatus("");
     setPopOutCard(null);
     setResult((current) => ({ ...current, responseSeconds: "" }));
-    const built = buildCommentGenerationRequest(form, copy);
+    const selectedModel = models.find((option) => option.key === model);
+    const built = buildCommentGenerationRequest(form, copy, selectedModel?.source_adapter);
     if (!built.request) {
       setError(built.error);
       return;

@@ -1,9 +1,26 @@
 # ADE Project Tracker
 
-Updated: 2026-09-22. Owner: this ADE task, using Relay for delegated reporting.
+Updated: 2026-09-23. Owner: this ADE task, using Relay for delegated reporting.
 Direction and milestone completion criteria live in the [roadmap](product-roadmap.md).
 
 ## Current Focus
+
+[ADR 0025](adr/0025-deepseek-development-lane.md) replaces Luna as the
+current development-generation lane: official DeepSeek API,
+`deepseek-flash`, thinking enabled/high, and Spark embeddings through the
+existing retriever source. The Luna/AppServer feasibility experiment in
+[ADR 0024](adr/0024-local-luna-agent-backend-feasibility.md) is on hold with
+its four starts unspent. DeepSeek is development-only and unqualified; it is
+not a release provider, a Spark chat fallback, or evidence that the M2
+ADE/Hindsight comparison was run. Initial synthetic smoke is bounded by
+eight DeepSeek generation requests including continuations, four Spark
+embeddings, no rerolls, and 180 seconds per request. The
+[synthetic smoke](findings/deepseek-development-smoke.md) spent six DeepSeek
+generation requests and one Spark embedding, passed native required-tool and
+typed reviewer checks, and persisted an unqualified Agent Studio binding in a
+disposable database. It did not run a full native Agent Studio turn. Existing
+release evidence is not rebound; the governed policy-freshness gate remains
+expectedly stale.
 
 [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md) is accepted:
 retain ADE's current memory store for the bounded
@@ -22,7 +39,8 @@ executed. Identical provider-backed experiments are pending authority and
 availability. Fresh native release qualification remains pending; it is not
 waived by this development evidence.
 
-GPT-6 Luna is configured for future development calls. The authorized single
+Historical GPT-6 Luna development evidence remains available, but new Luna
+calls are on hold under ADR 0025. The authorized single
 smoke call on 2026-09-22 completed transport validation in 6.705 seconds but
 returned plain text instead of required JSON; task validation failed. Access
 was demonstrated, not workflow qualification. No retry or fallback was made.
@@ -94,8 +112,9 @@ implementation and verification choices do not need repeated confirmation.
 
 ## Constraints And Open Questions
 
-- DGX Spark is occupied by other projects. Do not send generation work there
-  automatically; Luna is the explicit development lane.
+- DGX Spark chat is occupied by other projects. Do not send generation work
+  there; DeepSeek is the explicit development lane. The Spark embedding
+  sidecar is separately authorized and available.
 - Native retrieval experiments need a verified embedding provider. The CLI lane
   does not provide embeddings or native tool-call protocol coverage.
 - Governed runtime changes require fresh release evidence. Keep implementation

@@ -42,6 +42,7 @@ def embedding_options(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "available": True,
                     "source_id": item["source_id"],
                     "source_label": item["source_label"],
+                    "source_adapter": item.get("source_adapter", "generic_openai"),
                     "provider_model_id": item["provider_model_id"],
                 }
             )

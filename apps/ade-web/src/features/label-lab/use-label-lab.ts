@@ -106,6 +106,8 @@ export function useLabelLab(copy: Copy): LabelLabController {
     ? copy.capabilityStrict
     : selectedModel?.structured_output_mode === "json_schema"
       ? copy.capabilityJsonSchema
+      : selectedModel?.structured_output_mode === "json_object"
+        ? copy.capabilityJsonObject
       : selectedModel?.structured_output_mode === "best_effort_prompt_json"
         ? copy.capabilityBestEffort
         : "-";
@@ -173,7 +175,7 @@ export function useLabelLab(copy: Copy): LabelLabController {
     setError("");
     setStatus("");
     setResult((current) => ({ ...current, responseSeconds: "" }));
-    const built = buildLabelGenerationRequest(form, copy);
+    const built = buildLabelGenerationRequest(form, copy, selectedModel?.source_adapter);
     if (!built.request) {
       setError(built.error);
       return;

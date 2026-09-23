@@ -78,6 +78,43 @@ def test_router_catalog_unions_healthy_sources_and_visibility(monkeypatch) -> No
     assert models[1].label_lab_available is False
 
 
+def test_configured_source_model_allowlist_excludes_other_provider_models(
+    monkeypatch,
+) -> None:
+    deepseek = RouterSourceConfig(
+        id="deepseek",
+        label="DeepSeek",
+        base_url="https://api.deepseek.com",
+        adapter="deepseek_openai",
+        enabled_for=["agent_studio", "comment_lab", "label_lab"],
+        model_allowlist=["deepseek-flash"],
+    )
+    service = RouterCatalogService(
+        settings_factory=lambda: _settings_with_sources(deepseek)
+    )
+    monkeypatch.setattr(
+        router_catalog_module,
+        "load_configured_source_allowlist",
+        lambda source_id: None,
+    )
+    monkeypatch.setattr(
+        service,
+        "_fetch_models_payload",
+        lambda source, *, settings: {
+            "data": [{"id": "deepseek-flash"}, {"id": "deepseek-v4-pro"}]
+        },
+    )
+
+    snapshot = service.snapshot(force_refresh=True)
+
+    assert [model.provider_model_id for model in service.flatten(snapshot)] == [
+        "deepseek-flash"
+    ]
+    assert snapshot.sources[0].raw_model_count == 2
+    assert snapshot.sources[0].filtered_model_count == 1
+    assert snapshot.sources[0].allowlist_applied is True
+
+
 def test_router_catalog_filters_ark_through_chat_allowlist(monkeypatch) -> None:
     ark = RouterSourceConfig(
         id="ark",

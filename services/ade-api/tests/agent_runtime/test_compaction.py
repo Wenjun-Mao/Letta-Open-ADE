@@ -93,6 +93,49 @@ def test_compaction_summarizes_an_omitted_contiguous_history_prefix() -> None:
     )
 
 
+def test_deepseek_compaction_uses_json_object_and_hashes_the_actual_prompt() -> None:
+    messages = [
+        {
+            "id": f"message-{sequence}",
+            "sequence": sequence,
+            "role": "user" if sequence % 2 else "assistant",
+            "content": f"history {sequence}",
+        }
+        for sequence in range(1, 72)
+    ]
+    plan = plan_compaction(
+        messages=messages,
+        current_user_message_id="message-71",
+        summary=None,
+        recent_token_budget=100_000,
+        compaction_input_token_budget=100_000,
+    )
+    assert plan is not None
+    transport = _Transport()
+    result = asyncio.run(
+        ConversationExecutor(transport, provider_adapter="deepseek_openai").compact(
+            model_key="deepseek::deepseek-flash",
+            model_fingerprint="f" * 64,
+            plan=plan,
+            timeout_seconds=30,
+            max_output_tokens=4096,
+            summary_token_budget=1_500,
+        )
+    )
+    payload = transport.calls[0][0]
+    assert result.content
+    assert payload["response_format"] == {"type": "json_object"}
+    assert payload["thinking"] == {"type": "enabled"}
+    assert payload["reasoning_effort"] == "high"
+    assert payload["max_tokens"] == 4096
+    assert "temperature" not in payload
+    assert "chat_template_kwargs" not in payload
+    assert "JSON" in payload["messages"][0]["content"]
+    assert result.prompt_sha256 == hashlib.sha256(
+        payload["messages"][0]["content"].encode("utf-8")
+    ).hexdigest()
+
+
 def test_compaction_extends_the_prior_summary_with_only_the_contiguous_delta() -> None:
     messages = [
         {

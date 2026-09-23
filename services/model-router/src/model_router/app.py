@@ -191,7 +191,9 @@ async def chat_completions(
     except ValueError as exc:
         return router_error(
             400,
-            "invalid_tool_choice",
+            "invalid_tool_choice"
+            if source.adapter == "llama_cpp_server"
+            else "unsupported_provider_payload",
             str(exc),
             model=routed_model.router_model_id,
             source_id=source.id,
@@ -267,6 +269,8 @@ def _normalize_adapter_payload(
     """Preserve tool-choice meaning across provider wire-protocol variants."""
 
     next_payload = dict(payload)
+    if source.adapter == "deepseek_openai":
+        return _normalize_deepseek_payload(next_payload)
     if source.adapter != "llama_cpp_server":
         return next_payload
 
@@ -305,6 +309,49 @@ def _normalize_adapter_payload(
     return next_payload
 
 
+def _normalize_deepseek_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    thinking = payload.get("thinking")
+    if thinking is not None and (
+        not isinstance(thinking, dict)
+        or thinking.get("type") not in {"enabled", "disabled"}
+    ):
+        raise ValueError("DeepSeek thinking must have type enabled or disabled")
+    if isinstance(thinking, dict) and thinking["type"] != "enabled":
+        raise ValueError("DeepSeek development lane requires thinking enabled")
+    if "reasoning_effort" in payload and payload["reasoning_effort"] != "high":
+        raise ValueError("DeepSeek development lane requires reasoning_effort high")
+    response_format = payload.get("response_format")
+    if response_format is not None and (
+        not isinstance(response_format, dict)
+        or response_format.get("type") not in {"text", "json_object"}
+    ):
+        raise ValueError(
+            "DeepSeek supports text or json_object response_format, not json_schema"
+        )
+    if "chat_template_kwargs" in payload:
+        raise ValueError("DeepSeek does not support chat_template_kwargs")
+    if "top_k" in payload:
+        raise ValueError("DeepSeek does not support top_k")
+    if payload.get("stream") is True:
+        raise ValueError("DeepSeek development lane requires stream=false")
+    if (
+        isinstance(payload.get("tool_choice"), dict)
+        or payload.get("tool_choice") == "required"
+    ):
+        raise ValueError("DeepSeek thinking mode does not support forced tool_choice")
+    for field in ("temperature", "presence_penalty", "frequency_penalty"):
+        if field in payload:
+            raise ValueError(f"DeepSeek thinking mode ignores {field}")
+    if "top_p" in payload:
+        try:
+            top_p = float(payload["top_p"])
+        except (TypeError, ValueError) as exc:
+            raise ValueError("DeepSeek top_p must be numeric") from exc
+        if top_p < 0.95:
+            raise ValueError("DeepSeek thinking mode requires top_p >= 0.95")
+    return payload
+
+
 def _apply_sampling_defaults(
     routed_model: RoutedModel,
     source: RouterSourceConfig,
@@ -312,6 +359,21 @@ def _apply_sampling_defaults(
 ) -> dict[str, Any]:
     defaults = routed_model.sampling_defaults or {}
     next_payload = dict(payload)
+    if source.adapter == "deepseek_openai":
+        if _payload_missing(next_payload, "thinking"):
+            next_payload["thinking"] = {
+                "type": "enabled"
+                if routed_model.thinking_default_enabled
+                else "disabled"
+            }
+        if (
+            next_payload["thinking"].get("type") == "enabled"
+            and _payload_missing(next_payload, "reasoning_effort")
+            and routed_model.reasoning_effort_default is not None
+        ):
+            next_payload["reasoning_effort"] = routed_model.reasoning_effort_default
+        next_payload.setdefault("stream", False)
+        return next_payload
     for field in ("temperature", "top_p"):
         if _payload_missing(next_payload, field) and defaults.get(field) is not None:
             next_payload[field] = defaults[field]

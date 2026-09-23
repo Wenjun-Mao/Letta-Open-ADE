@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -119,6 +119,7 @@ class ModelProfile(BaseModel):
     supports_top_k: bool = False
     supports_thinking: bool = False
     thinking_default_enabled: bool = False
+    reasoning_effort_default: Literal["low", "high", "max"] | None = None
     tool_call_thinking_default_enabled: bool | None = None
     agent_studio_candidate: bool = False
     agent_studio_compatible: bool = True

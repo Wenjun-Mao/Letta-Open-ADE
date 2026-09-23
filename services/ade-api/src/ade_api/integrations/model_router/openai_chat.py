@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from collections.abc import Callable
 from typing import Any
 
@@ -27,6 +28,18 @@ RETRYABLE_OPENAI_CHAT_EXCEPTIONS = (
     httpx.RemoteProtocolError,
     httpx.WriteError,
 )
+
+
+def redact_reasoning_content(data: dict[str, Any]) -> dict[str, Any]:
+    """Keep provider diagnostics without returning private reasoning to lab clients."""
+    redacted = deepcopy(data)
+    choices = redacted.get("choices")
+    if isinstance(choices, list):
+        for choice in choices:
+            if isinstance(choice, dict) and isinstance(choice.get("message"), dict):
+                choice["message"].pop("reasoning_content", None)
+                choice["message"].pop("reasoning", None)
+    return redacted
 
 
 def chat_completions_url(base_url: str) -> str:
