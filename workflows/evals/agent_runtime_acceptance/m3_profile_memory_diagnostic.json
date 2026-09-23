@@ -1,0 +1,31 @@
+{
+  "cases": [
+    {
+      "key": "m3_profile_memory_chronology",
+      "description": "Diagnostic only: natural fact, unrelated turns, correction, same-subject recall, removal, new-conversation probe, and unsupported concern follow-up.",
+      "agent_keys": ["companion"],
+      "subject_keys": ["person"],
+      "conversations": {
+        "initial": {"agent_key": "companion", "subject_key": "person"},
+        "recall": {"agent_key": "companion", "subject_key": "person"},
+        "removal": {"agent_key": "companion", "subject_key": "person"},
+        "after_removal": {"agent_key": "companion", "subject_key": "person"},
+        "follow_up": {"agent_key": "companion", "subject_key": "person"}
+      },
+      "turns": [
+        {"conversation_key": "initial", "user": "我喜欢喝红茶。"},
+        {"conversation_key": "initial", "user": "今天下雨，我在家读了一会儿书。"},
+        {"conversation_key": "initial", "user": "更正一下，我现在更喜欢喝绿茶，不是红茶。"},
+        {"conversation_key": "recall", "user": "你记得我现在更喜欢喝什么茶吗？"},
+        {"conversation_key": "removal", "user": "请从已保存的信息中移除我喜欢喝绿茶这件事；我知道旧对话仍会保留。"},
+        {"conversation_key": "after_removal", "user": "你现在知道我喜欢喝什么茶吗？"},
+        {"conversation_key": "after_removal", "user": "最近工作压力有点大，下次聊天时你能问问我还好吗？"},
+        {"conversation_key": "follow_up", "user": "上次我说工作压力大，你记得这件事吗？"}
+      ],
+      "fact_assertions": [
+        {"subject_key": "person", "aliases": ["红茶", "red tea"], "absent": true},
+        {"subject_key": "person", "aliases": ["绿茶", "green tea"], "absent": true}
+      ]
+    }
+  ]
+}

@@ -7,7 +7,6 @@ import re
 import signal
 import subprocess
 import sys
-from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -27,6 +26,10 @@ from agent_runtime_eval_contracts import (  # noqa: E402
 )
 
 from workflows.evals.agent_runtime_acceptance.artifacts import RoundArtifactWriter  # noqa: E402
+from workflows.evals.agent_runtime_acceptance.round_artifacts import (  # noqa: E402
+    _round_summary,
+    _write_rounds,
+)
 from workflows.evals.agent_runtime_acceptance.client import RuntimeClient  # noqa: E402
 from workflows.evals.agent_runtime_acceptance.config import (  # noqa: E402
     AcceptanceConfig,
@@ -68,6 +71,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--timeout-seconds", type=float)
     parser.add_argument("--retry-count", type=int)
     parser.add_argument("--case-key", dest="case_keys", action="append", default=[])
+    parser.add_argument("--diagnostic-fixture", default="")
     parser.add_argument(
         "--include-llama-compatibility",
         action=argparse.BooleanOptionalAction,
@@ -84,22 +88,30 @@ def _new_run_id(
     return f"agent-runtime-{timestamp.strftime('%Y%m%dt%H%M%Sz')}-{suffix}"
 
 
-async def run_acceptance(config: AcceptanceConfig) -> dict[str, Any]:
+async def run_acceptance(
+    config: AcceptanceConfig, diagnostic_fixture: Path | None = None
+) -> dict[str, Any]:
     canonical_cases = tuple(load_cases(study_cases_path()))
     canonical_case_keys = tuple(str(getattr(case, "key")) for case in canonical_cases)
     if not canonical_case_keys or len(canonical_case_keys) != len(
         set(canonical_case_keys)
     ):
         raise RuntimeError("shared canonical case matrix is empty or non-unique")
-    diagnostic = bool(config.case_keys)
+    diagnostic = bool(config.case_keys or diagnostic_fixture)
     try:
-        cases = select_cases(canonical_cases, config.case_keys)
+        fixture_cases = (
+            load_cases(diagnostic_fixture) if diagnostic_fixture else canonical_cases
+        )
+        cases = select_cases(fixture_cases, config.case_keys)
     except FixtureError as exc:
         raise RuntimeError(f"invalid diagnostic case selection: {exc}") from exc
     if diagnostic:
         selected_case_keys = tuple(str(getattr(case, "key")) for case in cases)
         expected_order = tuple(
-            key for key in canonical_case_keys if key in set(config.case_keys)
+            str(getattr(case, "key"))
+            for case in fixture_cases
+            if not config.case_keys
+            or str(getattr(case, "key")) in set(config.case_keys)
         )
         if selected_case_keys != expected_order:
             raise RuntimeError(
@@ -262,7 +274,14 @@ def main(argv: list[str] | None = None) -> int:
         case_keys=tuple(args.case_keys) if args.case_keys else None,
     )
     try:
-        result = asyncio.run(_run_interruptible(config))
+        result = asyncio.run(
+            _run_interruptible(
+                config,
+                Path(args.diagnostic_fixture).resolve()
+                if args.diagnostic_fixture
+                else None,
+            )
+        )
     except AcceptanceCancelled:
         print(
             "Acceptance run cancelled after evaluation-session cleanup.",
@@ -273,12 +292,14 @@ def main(argv: list[str] | None = None) -> int:
         print("Acceptance run cancelled before startup completed.", file=sys.stderr)
         return 130
     print(result)
-    if config.case_keys:
+    if config.case_keys or args.diagnostic_fixture:
         return 0 if result["passed"] else 1
     return 0 if result["eligible"] else 1
 
 
-async def _run_interruptible(config: AcceptanceConfig) -> dict[str, Any]:
+async def _run_interruptible(
+    config: AcceptanceConfig, diagnostic_fixture: Path | None = None
+) -> dict[str, Any]:
     loop = asyncio.get_running_loop()
     task = asyncio.current_task()
     if task is None:
@@ -296,7 +317,9 @@ async def _run_interruptible(config: AcceptanceConfig) -> dict[str, Any]:
     for signum in (signal.SIGINT, signal.SIGTERM):
         previous_handlers[signum] = signal.signal(signum, request_cancellation)
     try:
-        return await run_acceptance(config)
+        if diagnostic_fixture is None:
+            return await run_acceptance(config)
+        return await run_acceptance(config, diagnostic_fixture)
     except asyncio.CancelledError as exc:
         if cancellation_requested:
             raise AcceptanceCancelled from exc
@@ -322,65 +345,6 @@ async def _close_client_and_purge(
             await client.purge_evaluation_session(conversation_id)
     finally:
         await client.aclose()
-
-
-def _write_rounds(
-    writer: RoundArtifactWriter, rounds: tuple[QualificationRound, ...]
-) -> tuple[QualificationRound, ...]:
-    results: list[QualificationRound] = []
-    for round_result in rounds:
-        events = [
-            {
-                "event_id": str(getattr(event, "event_id", "")),
-                "run_id": str(getattr(event, "run_id", "")),
-                "sequence": int(getattr(event, "sequence", 0)),
-                "event_type": str(getattr(event, "event_type", "")),
-                "attempt": getattr(event, "attempt", None),
-                "correlation_id": str(getattr(event, "correlation_id", "")),
-                "causation_id": getattr(event, "causation_id", None),
-                "payload": getattr(event, "payload", {}),
-            }
-            for case in round_result.cases
-            for event in case.events
-        ]
-        artifact = writer.write_round(
-            round_result.index, _round_summary(round_result), events
-        )
-        results.append(replace(round_result, artifact_sha256=artifact.sha256))
-    return tuple(results)
-
-
-def _round_summary(round_result: QualificationRound) -> dict[str, Any]:
-    return {
-        "index": round_result.index,
-        "kind": round_result.kind,
-        "execution_mode": round_result.execution_mode,
-        "complete_matrix": round_result.complete_matrix,
-        "passed": round_result.passed,
-        "case_keys": list(round_result.case_keys),
-        "deployment_fingerprints": round_result.deployment_fingerprints,
-        "deployment_snapshots": [
-            snapshot
-            for case in round_result.cases
-            for snapshot in case.resources.deployment_snapshots
-        ],
-        "artifact_sha256": round_result.artifact_sha256,
-        "cases": [
-            {
-                "case_key": case.case_key,
-                "score": case.score,
-                "infrastructure": case.infrastructure,
-                "turns": [asdict(item) for item in case.turns],
-                "tools": [asdict(item) for item in case.tools],
-                "facts": [asdict(item) for item in case.facts],
-                "setup_run_ids": list(case.setup_run_ids),
-                "resources": {
-                    "conversation_ids": list(case.resources.conversation_ids),
-                },
-            }
-            for case in round_result.cases
-        ],
-    }
 
 
 def _provenance(

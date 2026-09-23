@@ -2,6 +2,33 @@
 
 Status: In progress under accepted [ADR 0022](../adr/0022-incumbent-memory-first-product-slice.md).
 
+## Implementation Checkpoint (2026-09-22)
+
+The UI/API slice now defaults a new conversation to the selected subject and
+definition, distinguishes active from historical facts, resolves citations
+through a boundary-checked conversation/message locator, prepares editable
+correction/removal turns, and requires a matching run event **and persisted
+fact revision** before confirming a change. It exposes Prompt Center content
+preview and immutable definition-version creation with the expected current
+version. Old conversation bindings remain frozen. The existing acceptance
+workflow has an opt-in chronological M3 fixture and a read-only per-turn stage
+timeline; the canonical qualification matrix is unchanged.
+
+Focused API/UI tests, an isolated PostgreSQL lifecycle test, web tests/lint/
+production build, and mock-backed browser journeys passed. The mock browser
+pass covered same-subject/new-subject creation, a citation outside the newest
+120 messages and from another conversation, no-op removal, and a new persona
+version bound only to a later conversation. It did **not** exercise a live
+reviewer, actual persona edit in Prompt Center, archived-source citation,
+or every terminal outcome in a browser. The backend source read allows
+archived conversations and is covered by purpose/subject/workspace guards.
+
+The API suite passes with `ADE_REPOSITORY_ROOT` set to this checkout. The
+workflow suite's governed manifest/policy fingerprint check still fails after
+policy-source changes. That gate is not rebound or waived here. The opt-in
+native diagnostic was validated structurally but not
+executed: provider, reviewer, and embedding use require separate authority.
+
 ## Outcome And Ownership
 
 Deliver four operator journeys for 林小棠's supported saved profile facts:
@@ -106,6 +133,14 @@ comparison, or a scope change. Concern, promise, shared-experience and
 relationship-history schemas are not inferred from these samples. The
 original ADE/Hindsight comparison remains deferred with its historical
 evidence intact.
+
+Current review finds no demonstrated need for a new relationship schema or
+external memory service. The plainly missing evidence is native extraction,
+retrieval, correction/removal, unsupported concern follow-up, and operator
+use over time. Run the isolated diagnostic only when the routes are authorized,
+then review whether the gap is in extraction, validation, storage, context,
+generation, or provider behavior before proposing new machinery. Do not treat
+the absence of a failed benchmark as evidence that those capabilities exist.
 
 Use reviewable commits on the existing isolated branch. Preserve production
 state, ignored research captures, and the disposable test container. No push,

@@ -48,3 +48,18 @@ zero requested retries, matching API/worker source identity, and consistent
 deployment fingerprints. Provider errors, cancellations, malformed events, or
 missing reviewer and memory evidence fail closed. Promotion review remains an
 explicit separate step; this workflow only produces evidence.
+
+Each round artifact includes a per-turn `chronology` diagnostic assembled from
+the event log already collected here. It orders context/retrieval, generation,
+reviewer proposals after validation, storage commits, and provider observations
+by event sequence. An empty stage means unobserved or unnecessary, not
+automatically failed. Validation has no independent event when a proposal is
+rejected; inspect the run trace before assigning a cause.
+
+`m3_profile_memory_diagnostic.json` is an opt-in chronological M3 case, kept
+out of the canonical qualification matrix. When the native provider, reviewer,
+and embedding routes are separately authorized, run it with
+`--diagnostic-fixture workflows/evals/agent_runtime_acceptance/m3_profile_memory_diagnostic.json`.
+This runs one diagnostic round, produces no promotion proposal, and uses the
+existing evaluation-session cleanup. Merely checking the fixture and event
+annotation makes no model calls; executing this command does.
