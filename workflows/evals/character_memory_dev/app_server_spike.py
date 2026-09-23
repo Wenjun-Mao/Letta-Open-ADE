@@ -27,6 +27,29 @@ MAX_NOTIFICATIONS = 128
 REQUEST_TIMEOUT_SECONDS = 10.0
 CLI_VERSION = "codex-cli 0.155.0-alpha.9.2"
 PROTOCOL_VERSION = "codex-cli-0.155.0-alpha.9.2-app-server-v2"
+APP_SERVER_SETTINGS = (
+    'approval_policy="never"',
+    'sandbox_mode="read-only"',
+    'forced_login_method="chatgpt"',
+    'model="gpt-6-luna"',
+    'model_reasoning_effort="medium"',
+    'service_tier="default"',
+    'web_search="disabled"',
+    "features.shell_tool=false",
+    "features.unified_exec=false",
+    "features.apps=false",
+    "features.hooks=false",
+    "features.multi_agent=false",
+    "features.browser_use=false",
+    "features.computer_use=false",
+    # Host-injected stdio servers have no transport in the invocation config
+    # layer. A disabled override still needs a valid transport to parse.
+    'mcp_servers.cua_repl.command="/usr/bin/false"',
+    "mcp_servers.cua_repl.enabled=false",
+    'mcp_servers.node_repl.command="/usr/bin/false"',
+    "mcp_servers.node_repl.enabled=false",
+    "mcp_servers.openaiDeveloperDocs.enabled=false",
+)
 
 
 class SpikeProtocolError(RuntimeError):
@@ -35,29 +58,54 @@ class SpikeProtocolError(RuntimeError):
 
 def app_server_command(binary: str) -> list[str]:
     # These are candidate restrictions, not proof that only dynamic tools exist.
-    settings = (
-        'approval_policy="never"',
-        'sandbox_mode="read-only"',
-        'forced_login_method="chatgpt"',
-        'model="gpt-6-luna"',
-        'model_reasoning_effort="medium"',
-        'service_tier="default"',
-        'web_search="disabled"',
-        "features.shell_tool=false",
-        "features.unified_exec=false",
-        "features.apps=false",
-        "features.hooks=false",
-        "features.multi_agent=false",
-        "features.browser_use=false",
-        "features.computer_use=false",
-    )
     return [
         binary,
         "app-server",
         "--stdio",
         "--strict-config",
-        *(part for setting in settings for part in ("-c", setting)),
+        *(part for setting in APP_SERVER_SETTINGS for part in ("-c", setting)),
     ]
+
+
+def mcp_inventory_command(binary: str) -> list[str]:
+    return [
+        binary,
+        *(part for setting in APP_SERVER_SETTINGS for part in ("-c", setting)),
+        "mcp",
+        "list",
+        "--json",
+    ]
+
+
+def disabled_mcp_server_names(stdout: bytes) -> list[str]:
+    if len(stdout) > MAX_LINE_BYTES:
+        raise SpikeProtocolError("MCP inventory exceeded size limit")
+    try:
+        inventory = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise SpikeProtocolError("MCP inventory was malformed") from exc
+    if not isinstance(inventory, list) or any(
+        not isinstance(server, dict)
+        or not isinstance(server.get("name"), str)
+        or not isinstance(server.get("enabled"), bool)
+        for server in inventory
+    ):
+        raise SpikeProtocolError("MCP inventory had an unexpected shape")
+    names = [server["name"] for server in inventory]
+    if len(names) != len(set(names)) or any(
+        server["enabled"] for server in inventory
+    ):
+        raise SpikeProtocolError("MCP inventory still exposes a server")
+    return names
+
+
+def verify_app_server_mcp_config(config: dict[str, Any]) -> None:
+    servers = config.get("mcp_servers")
+    if not isinstance(servers, dict) or any(
+        not isinstance(server, dict) or server.get("enabled") is not False
+        for server in servers.values()
+    ):
+        raise SpikeProtocolError("app-server config does not disable every MCP server")
 
 
 def synthetic_search_memory_spec() -> dict[str, Any]:
@@ -281,6 +329,41 @@ async def stop_process_group(process: asyncio.subprocess.Process) -> None:
     await process.wait()
 
 
+async def inspect_mcp_inventory(binary: str, env: dict[str, str], cwd: str) -> list[str]:
+    """Fail closed if this exact invocation still exposes an MCP server."""
+    process = await asyncio.create_subprocess_exec(
+        *mcp_inventory_command(binary),
+        cwd=cwd,
+        env=env,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    try:
+        deadline = time.monotonic() + REQUEST_TIMEOUT_SECONDS
+        try:
+            if process.stdout is None:
+                raise SpikeProtocolError("MCP inventory stdout is unavailable")
+            stdout = await asyncio.wait_for(
+                process.stdout.read(MAX_LINE_BYTES + 1),
+                timeout=_remaining(deadline),
+            )
+        except asyncio.TimeoutError as exc:
+            raise SpikeProtocolError("MCP inventory timed out") from exc
+        if len(stdout) > MAX_LINE_BYTES:
+            raise SpikeProtocolError("MCP inventory exceeded size limit")
+        try:
+            await asyncio.wait_for(process.wait(), timeout=_remaining(deadline))
+        except asyncio.TimeoutError as exc:
+            raise SpikeProtocolError("MCP inventory timed out") from exc
+        if process.returncode != 0:
+            raise SpikeProtocolError("MCP inventory command failed")
+        return disabled_mcp_server_names(stdout)
+    finally:
+        if process.returncode is None:
+            await stop_process_group(process)
+
+
 async def inspect_installed_config() -> dict[str, Any]:
     """Read only a safe allowlist; never print a raw effective config or secrets."""
     env = subscription_environment()
@@ -290,6 +373,7 @@ async def inspect_installed_config() -> dict[str, Any]:
     if binary is None:
         raise SpikeProtocolError("installed codex binary was not found")
     with tempfile.TemporaryDirectory(prefix="ade-luna-appserver-") as directory:
+        disabled_mcp_servers = await inspect_mcp_inventory(binary, env, directory)
         process = await asyncio.create_subprocess_exec(
             *app_server_command(binary),
             cwd=directory,
@@ -307,6 +391,7 @@ async def inspect_installed_config() -> dict[str, Any]:
             config = result.get("config")
             if not isinstance(config, dict):
                 raise SpikeProtocolError("config/read omitted effective config")
+            verify_app_server_mcp_config(config)
             safe_keys = (
                 "model",
                 "model_provider",
@@ -321,6 +406,7 @@ async def inspect_installed_config() -> dict[str, Any]:
                 "protocol": PROTOCOL_VERSION,
                 "platform_family": initialized.get("platformFamily"),
                 "config": {key: config.get(key) for key in safe_keys},
+                "disabled_mcp_servers": disabled_mcp_servers,
             }
         finally:
             await stop_process_group(process)

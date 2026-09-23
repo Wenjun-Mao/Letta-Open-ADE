@@ -78,8 +78,9 @@ conditional live-call budget are recorded in
 [ADR 0024](../../../docs/adr/0024-local-luna-agent-backend-feasibility.md).
 The version-pinned `app_server_spike.py` is a no-generation stdio preflight,
 not an ADE backend. It checks the installed CLI's ChatGPT login, initializes
-the app-server in an empty temporary cwd, reads only filtered nonsecret config
-fields, and terminates its process group. It never starts a thread or turn:
+the app-server in an empty temporary cwd, checks that the same invocation has
+no enabled MCP servers, reads only filtered nonsecret config fields, and
+terminates its process group. It never starts a thread or turn:
 
 ```sh
 uv run --locked python -m workflows.evals.character_memory_dev.app_server_spike
@@ -87,8 +88,9 @@ uv run --locked pytest -q workflows/evals/character_memory_dev/tests/test_app_se
 ```
 
 The fake-server tests exercise prospective dynamic-tool protocol handling;
-they do not establish that the installed app-server exposes only ADE tools or
-that a Luna model call succeeds. The spike bounds each operation and total
+the MCP inventory check covers only that layer. They do not establish that the
+installed app-server exposes only ADE tools, that internal retries are zero,
+or that a Luna model call succeeds. The spike bounds each operation and total
 captured messages, binds synthetic tool calls to one explicit thread/turn,
 rejects duplicate call IDs, and terminates its process group. Requalify on
 any CLI/schema version change.

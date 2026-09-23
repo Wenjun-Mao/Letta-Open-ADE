@@ -14,8 +14,11 @@ from workflows.evals.character_memory_dev.app_server_spike import (
     SpikeProtocolError,
     StdioProbe,
     app_server_command,
+    disabled_mcp_server_names,
+    mcp_inventory_command,
     prospective_thread_params,
     stop_process_group,
+    verify_app_server_mcp_config,
 )
 
 
@@ -94,7 +97,45 @@ def test_thread_shape_is_explicit_and_not_submitted(tmp_path: Path) -> None:
     assert 'web_search="disabled"' in command
     assert "features.shell_tool=false" in command
     assert "features.apps=false" in command
+    assert "mcp_servers.cua_repl.enabled=false" in command
+    assert "mcp_servers.node_repl.enabled=false" in command
+    assert "mcp_servers.openaiDeveloperDocs.enabled=false" in command
+    assert "mcp_servers.cua_repl.enabled=false" in mcp_inventory_command(
+        "/usr/bin/codex"
+    )
     assert "model_providers.openai.request_max_retries=0" not in command
+
+
+@pytest.mark.parametrize(
+    "inventory, error",
+    [
+        ([{"name": "node_repl", "enabled": True}], "exposes a server"),
+        ([{"name": "node_repl", "enabled": "false"}], "unexpected shape"),
+        ([{"name": "node_repl", "enabled": False}] * 2, "exposes a server"),
+    ],
+)
+def test_mcp_inventory_fails_closed(inventory: list[dict], error: str) -> None:
+    with pytest.raises(SpikeProtocolError, match=error):
+        disabled_mcp_server_names(json.dumps(inventory).encode())
+
+
+def test_mcp_inventory_accepts_only_disabled_servers() -> None:
+    assert disabled_mcp_server_names(
+        json.dumps([{"name": "node_repl", "enabled": False}]).encode()
+    ) == ["node_repl"]
+
+
+def test_app_server_mcp_config_fails_closed() -> None:
+    verify_app_server_mcp_config(
+        {"mcp_servers": {"node_repl": {"enabled": False}}}
+    )
+    for config in (
+        {},
+        {"mcp_servers": {"node_repl": {"enabled": True}}},
+        {"mcp_servers": {"node_repl": {}}},
+    ):
+        with pytest.raises(SpikeProtocolError, match="does not disable"):
+            verify_app_server_mcp_config(config)
 
 
 def test_fake_server_initialize_config_and_bound_tool_dispatch() -> None:
