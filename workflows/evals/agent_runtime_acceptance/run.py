@@ -197,6 +197,8 @@ async def run_acceptance(
         if (
             config.include_llama_compatibility
             and not diagnostic
+            and len(primary) == config.rounds
+            and all(round_result.passed for round_result in primary)
             and (budget_exhausted is None or not budget_exhausted())
         ):
             try:
@@ -215,6 +217,7 @@ async def run_acceptance(
                     on_round_complete=lambda result: _write_rounds(writer, (result,))[
                         0
                     ],
+                    budget_exhausted=budget_exhausted,
                 )
             except Exception as exc:
                 compatibility = {
@@ -268,7 +271,7 @@ async def run_acceptance(
             else compatibility,
             "promotion_proposal": str(proposal.path) if proposal else None,
             "eligible": proposal is not None,
-            "passed": bool(materialized_primary)
+            "passed": len(materialized_primary) == (1 if diagnostic else config.rounds)
             and all(item.passed for item in materialized_primary),
         }
     finally:

@@ -50,6 +50,11 @@ zero requested retries, matching API/worker source identity, and consistent
 deployment fingerprints. Provider errors, cancellations, malformed events, or
 missing reviewer and memory evidence fail closed. Promotion review remains an
 explicit separate step; this workflow only produces evidence.
+After a failed terminal turn or case score, the runner retains the observed
+turn and stops before later turns, cases, rounds, or optional compatibility.
+An exhausted request cap has the same scheduling effect. A partial matrix is
+failed and cannot qualify; reaching the cap on the final required turn does
+not retroactively fail an otherwise complete matrix.
 
 The checked-in DeepSeek and Qwen manifest entries are candidates with zero
 passing rounds, not approved release routes. If `QWEN_EMBEDDING_API_BASE`

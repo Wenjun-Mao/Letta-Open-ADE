@@ -53,6 +53,7 @@ class _FakeClient:
         self.retry = retry
         self.session_payloads: list[dict[str, Any]] = []
         self.cancelled: list[str] = []
+        self.accepted: list[str] = []
         self._counter = 0
         self._conversations: dict[str, tuple[str, str]] = {}
 
@@ -74,6 +75,7 @@ class _FakeClient:
         }
 
     async def accept_turn(self, *_args: Any, **_kwargs: Any) -> dict[str, Any]:
+        self.accepted.append(str(_args[1]))
         self._counter += 1
         return {
             "run_id": f"run-{self._counter}",
@@ -420,7 +422,7 @@ def test_qualification_and_summary_requirements_stay_fail_closed() -> None:
     assert all(check["pass"] for check in checks)
 
 
-def test_failed_matrix_stops_after_the_completed_first_round() -> None:
+def test_failed_case_stops_before_later_case_and_marks_matrix_incomplete() -> None:
     class _UnavailableClient(_FakeClient):
         async def create_evaluation_session(self, **_payload: Any) -> dict[str, Any]:
             raise ConnectionError("router unavailable")
@@ -443,7 +445,8 @@ def test_failed_matrix_stops_after_the_completed_first_round() -> None:
             session_scope_sink=scopes,
         )
         assert len(rounds) == 1
-        assert rounds[0].complete_matrix is True
+        assert rounds[0].case_keys == ("case-a",)
+        assert rounds[0].complete_matrix is False
         assert rounds[0].passed is False
         assert scopes == []
 
