@@ -1,121 +1,108 @@
-# ADR 0024: Do Not Bind Subscription Luna As An ADE Agent Backend Yet
+# ADR 0024: Investigate A Private Luna Backend Through A Separate Tool Bridge
 
-- Status: Proposed; backend integration deferred pending contract qualification
+- Status: Proposed feasibility checkpoint, not backend acceptance
 - Date: 2026-09-22
-- Scope: private, single-operator ADE on this Mac only; no public or multi-user claim
+- Scope: one operator on this Mac; no public, multi-user, production, or release claim
 
-## Problem and finding
+## Question and current position
 
-ADE's steady-state runtime is not a generic text-generation caller. An immutable
-agent definition binds three Router deployments (`conversation`, `reviewer`,
-`retriever`) to catalog fingerprints. The worker assembles subject-bound context,
-executes curated native function calls, embeds queries and committed facts, reviews
-typed memory, optionally compacts history, and commits the result transactionally.
-Router transport and tracing are the current provider boundary. See ADR 0019 and
-`agent_runtime/{deployments,turn_execution,executor,reviewer,embeddings,worker_finalization}.py`.
+Could ADE eventually use ChatGPT-authenticated GPT-6 Luna for a private local
+Agent Studio without losing ADE's subject, memory, tool, and retry authority?
+**Yes, it is worth a bounded protocol experiment; no, the current evidence does
+not yet justify wiring it into the worker.** The incumbent Router identity model
+and the lack of a Luna embedding endpoint are integration tasks, not by
+themselves incompatibilities. ADR 0019 still governs the product runtime.
 
-The installed `codex-cli 0.155.0-alpha.9.2` reports ChatGPT login. Its supported
-`exec` command and the existing `workflows/evals/character_memory_dev/luna.py`
-prove a *different*, narrower local development contract: one fresh ephemeral
-Codex turn, schema-constrained final text, captured events, bounded subprocess,
-and no adapter retry/fallback. The workflow's 61 passing synthetic tests and
-three prior schema smoke calls establish task-shape feasibility, not native ADE
-backend compatibility or future account entitlement. No model call was made for
-this assessment. [Codex authentication](https://learn.chatgpt.com/docs/auth),
-[non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode).
+The existing `workflows/evals/character_memory_dev/luna.py` is an `exec`-based
+development adapter. Its earlier tests and schema smoke runs establish one-turn
+text task-shape feasibility only. They are *not* a test of app-server dynamic
+tools, built-in tool isolation, ADE embeddings, or Agent Studio execution.
 
-## Decision
+## New no-generation protocol evidence
 
-Keep the existing subscription workflow as a host-only, explicitly selected
-character-development prototype. Do not register Luna as a Router alias, replace
-`RouterTransport`, alter immutable definition/deployment snapshots, or wire the
-CLI into the Agent Studio worker yet. Do not fall back to Spark, another model,
-or API-key billing. This is a contract-level deferral, not a conclusion that
-Luna cannot generate useful dialogue.
+The installed `codex-cli 0.155.0-alpha.9.2` reports ChatGPT login. Its
+version-matched generated app-server v2 schema declares `thread/start` fields
+for `ephemeral`, `baseInstructions`, `developerInstructions`, `dynamicTools`,
+`allowProviderModelFallback`, sandbox, model, and per-thread config. A function
+dynamic tool declares `inputSchema`; server `item/tool/call` requests carry
+`threadId`, `turnId`, `callId`, `tool`, and `arguments`; responses carry
+`contentItems` and `success`. [App-server documentation](https://learn.chatgpt.com/docs/app-server)
+calls dynamic tools experimental and describes `turn/interrupt`. Schema presence
+does not establish runtime instruction precedence, an exhaustive tool catalog,
+or model behavior.
+The [Codex SDK](https://learn.chatgpt.com/docs/codex-sdk) wraps the CLI/app-server
+protocol, so it does not independently settle these controls; stdio keeps this
+spike dependency-free.
 
-| ADE contract | Current local subscription evidence | Integration gap |
-|---|---|---|
-| Catalog-qualified conversation/reviewer/retriever identities | CLI model name and observed events | No Router-style immutable deployment/fingerprint or embedding identity |
-| Role-separated chat messages and native `tool_calls` | One Codex task prompt and final agent message | Role-labelled text is not equivalent to message-role precedence; final JSON proposals are not native calls |
-| Subject-bound `search_memory` and required-tool enforcement | Development prompt prohibits tools and rejects tool events | No proven mapping from ADE's curated function schema to CLI `exec` |
-| Qwen query/fact embeddings with versioned vector policy | No subscription embedding endpoint | Retrieval and memory commit cannot use the existing fingerprint/policy contract |
-| ADE-owned attempts, timeout, cancellation, and retries | One bounded process, no adapter retry/fallback | CLI internal request retries and partial-turn cancellation/usage remain unqualified |
-| Curated tool-only authority | Empty cwd, read-only sandbox, prompt prohibition | Read-only still permits reads; rejecting a tool event afterward does not prevent it |
+The workflow-local `app_server_spike.py` pins that CLI/schema version. Its
+operator entrypoint performs only ChatGPT/version preflight, stdio `initialize`,
+and a *filtered* `config/read` in an empty temporary cwd; it never starts a
+thread or turn. The installed app-server accepted the handshake and reported
+the requested `gpt-6-luna`, medium effort, default tier, read-only sandbox,
+`never` approval, disabled web search, and ChatGPT-only login setting. Three
+fake-server tests passed for framing, prospective thread fields, one
+allowlisted synthetic tool response, interruption response shape, and rejection
+of an unlisted tool. These tests prove the client-side spike's behavior against
+synthetic messages, **not** a live Codex tool invocation. No generation call
+was made for this checkpoint.
 
-The [Codex App Server](https://learn.chatgpt.com/docs/app-server) offers a
-documented stdio JSON-RPC transport, turn interruption, and *experimental*
-`dynamicTools`; the [Codex SDK](https://learn.chatgpt.com/docs/codex-sdk) wraps
-that CLI/app-server protocol. Neither is an OpenAI-compatible chat/embeddings
-endpoint. Dynamic tools may be a future ADE-owned bridge, but their event and
-approval semantics must be qualified before a turn is allowed to affect memory.
-The current app-server schema and CLI help do not establish a complete built-in
-tool denylist, a no-read process boundary, or zero internal network retries.
-Official configuration documents provider retry defaults, but not a verified
-subscription-builtin override for this lane. Therefore the adapter's zero
-*application* retries must not be described as zero network attempts.
-[Codex sample configuration](https://learn.chatgpt.com/docs/config-file/config-sample).
+## Classified gaps
 
-## Rejected shortcuts
+| Class | Evidence and implication |
+|---|---|
+| Demonstrated local control | `features.shell_tool`, Apps, hooks, multi-agent, browser use, and computer use report disabled with invocation overrides. The app-server filtered config confirms the listed model/auth/sandbox settings. This is narrower than proving an ADE-only tool set. |
+| Hard under the requested zero-internal-retry contract | [Configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference) exposes `request_max_retries` and `stream_max_retries` only under `model_providers.<id>`. Parser-only override of `model_providers.openai.request_max_retries=0` fails because `openai` is a reserved built-in provider. The existing adapter has zero *application* retries, but zero subscription transport retries cannot currently be configured through this documented path. Do not claim exactly one network attempt. A supported control or an explicitly revised risk contract is needed before backend use. |
+| Testable isolation unknown | App-server help has no `--ignore-user-config`. `mcp_servers={}` on the invocation did not clear inherited MCP entries; a fresh isolated `CODEX_HOME` reported “Not logged in.” The candidate flags disabled `shell_tool`, but `features.unified_exec=false` still reported `unified_exec=true` in `features list`. Neither observation proves a command tool remains callable, yet neither proves only ADE's dynamic tool is exposed. A complete effective tool inventory or independently enforced process boundary remains necessary. |
+| Testable protocol unknown | `baseInstructions`, `developerInstructions`, and per-thread `config` are schema fields, not verified instruction or override precedence. The fake bridge handles `item/tool/call`, but actual dynamic tool choice, required-call enforcement, event order, timeout, and `turn/interrupt` cleanup need live and fault-injected qualification. Unknown server requests must fail closed before ADE side effects. |
+| Ordinary ADE integration work | Add a local-subscription deployment/provenance kind without pretending it is a Router fingerprint; keep immutable snapshots, subject-bound context, reviewer validation, attempt/retry ownership, and release rejection. This is a named contract change with tests, not a transparent `/chat/completions` proxy. |
+| Separate local retrieval work | Luna supplies no embedding route. Current `dgx_embedding_sidecar` source is disabled and Spark-based; its Qwen3-Embedding-0.6B fingerprint names a specific artifact revision, vLLM runtime, 1024 dimensions, and retrieval policy. A local OpenAI-compatible embedding service is architecturally possible through Model Router's existing source/embedding path, but read-only checks found no installed `ollama`, `llama-server`, or `mlx_lm` executable, running embedding process, or matching Hugging Face cache in the checked locations. This is not proof none exists elsewhere. A candidate needs its own artifact/runtime fingerprint, vector compatibility or re-embedding plan, and calibrated retrieval policy. No service or model was installed. |
 
-- Wrapping Codex final text in a `/chat/completions`-shaped response would hide
-  tool and role semantics, and could make memory-search policy look satisfied
-  without a native authorized call.
-- Inventing a local retriever alias or mixing a different embedding model into
-  existing vectors would break deployment identity and retrieval-policy meaning.
-- Treating `read-only`, `--ignore-user-config`, `--ignore-rules`, or a prompt ban
-  as a tool-free security boundary would misstate what those controls guarantee.
-- Calling the existing development workflow a passed backend prototype would
-  conflate task-shape validation with ADE's transaction and release contracts.
+## Layered next gates
 
-## Reopen gates for a bounded local-only implementation
+1. **Standalone tool-bridge gate (no embeddings or ADE database required):**
+   establish a complete invocation-scoped tool inventory or stronger host
+   isolation, resolve the internal-retry requirement, validate effective
+   per-thread instructions, and pin experimental app-server protocol/event
+   shapes. Expand fake-server tests for malformed IDs/arguments, unexpected
+   tool and approval requests, timeout, interruption, and process-tree cleanup.
+2. **Small live synthetic bridge gate:** only with an approved call budget,
+   observe actual dynamic-tool events and cancellation in fresh ephemeral
+   threads; reject unexpected tools/events. Keep ADE memory writes disabled.
+3. **Retriever gate, independently:** qualify a versioned local embedding route,
+   dimensions, query instruction, distance threshold, and migration/rebuild
+   behavior. No existing vector fingerprint may be silently reused.
+4. **ADE integration gate:** introduce explicit deployment/provider contracts
+   and run isolated add/correct/forget, required search, compaction,
+   cancellation, stale-fingerprint, and no-fallback tests. Only then consider
+   a private development flag. Product/release acceptance remains separate.
 
-1. Define an explicit local-subscription deployment kind and provenance model,
-   separate from Router-backed snapshots, including observed-versus-requested
-   runtime identity. Preserve release rejection until independently qualified.
-2. Prove an ADE-owned tool bridge with exactly the curated tool set, required
-   calls, subject binding, and native call/result validation. If app-server
-   dynamic tools are used, pin and test the experimental protocol and reject
-   unknown items before any ADE side effect.
-3. Provide an independently versioned local embedding service/model, measured
-   dimensions and retrieval threshold, or redesign the memory/retrieval contract
-   with a new policy version. Never reuse existing Qwen vector fingerprints for
-   another model.
-4. Qualify process isolation and operation ownership: no inherited project
-   context or unapproved built-in tools, bounded stdout/stderr, process-tree
-   cleanup, cancellation, timeout, uncertain outcomes, explicit ADE retry
-   budget, and no provider/model fallback.
-5. Add fake-protocol tests first, then isolated database tests for add/correct/
-   forget, required search, compaction, cancellation, and stale fingerprints.
-   Only then consider live calls or a development-only feature flag.
+## Exact proposed live-call budget (not authorized or run)
 
-## Proposed live-call budget (not authorized or run here)
+After gate 1 is resolved, request permission for **at most four serial calls**
+under ChatGPT login, `gpt-6-luna`, medium effort, default tier, one ephemeral
+thread per call, 180-second timeout, synthetic inputs, no adapter reroll or
+fallback. Stage A is calls 1-2; stop if either fails. Stage B is calls 3-4 only
+after inspecting Stage A:
 
-After gates 1-4 have a testable prototype, ask the operator to approve **at
-most six serial calls**, each through ChatGPT login, `gpt-6-luna`, medium effort,
-default tier, fresh ephemeral session, 180-second limit, and no adapter reroll:
+1. No-tool baseline: synthetic persona says the user's favorite tea is oolong;
+   user asks for that value. Check requested/observed identity and event shape.
+2. Native-tool probe: omit a synthetic older tea fact from active profile;
+   ask for it with only `search_memory` supplied by the client. Check one
+   validated call/result and the final answer's attribution to the bound user.
+3. Structured reviewer probe: synthetic current message explicitly asks to
+   forget a supplied active preference. Check JSON Schema and ADE's typed
+   validator for `forget`, exact fact ID/version, and JSON null; do not commit.
+4. Interrupted probe: start a synthetic long task, send `turn/interrupt`, and
+   verify interrupted status, process cleanup, uncertain usage, and no replay.
 
-1. One dialogue turn: supplied synthetic persona/context, user asks for the
-   stated favorite drink; verify role attribution and exact final-event shape.
-2. One required `search_memory` turn: synthetic older fact absent from profile;
-   verify one native call, validated arguments, current-subject-only result, and
-   final answer after the tool result.
-3. One add-only memory review: current synthetic user message states a new pet
-   name; verify schema, source quote, entity/type, and no write before ADE review.
-4. One explicit forget review: current synthetic user asks to forget a supplied
-   active preference; verify `forget`, fact ID/version, JSON null, no add.
-5. One compaction turn: synthetic prior messages and summary boundary; verify
-   structured output and ADE token/sequence limits.
-6. One deliberately interrupted turn: verify process/turn termination, uncertain
-   usage classification, no retry, and no commit.
-
-Capture exact inputs, CLI version, requested settings, raw events, timing,
-validation, and missing/observed usage without credentials or private user
-transcripts. Stop on the first unqualified behavior; do not spend the remaining
-budget automatically. This budget is a proposal only, not permission to call.
+Capture exact synthetic inputs, CLI version, requested settings, raw events,
+timing, validation, and observed/missing usage—never credentials or private
+transcripts. Stop after any unqualified event; unused calls are not spent.
+This is a proposal for director/user review, not permission to call.
 
 ## Consequences
 
-ADE product and release paths remain unchanged. The development workflow can
-inform prompt and memory-policy work with synthetic data, but it must continue
-to label results as non-native evidence. A future backend implementation needs
-a separate decision and requalification of the changed runtime contract.
+ADE product, release protections, Spark configuration, and global Codex
+configuration remain unchanged. The spike is a workflow-local disposable
+feasibility artifact, not an SDK or production backend. This proposed ADR
+should be revised after the tool-authority and retry questions have evidence.

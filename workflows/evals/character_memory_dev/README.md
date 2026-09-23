@@ -73,9 +73,22 @@ in-context; correct recall is not evidence of long-term memory. Memory proposal
 validation checks source IDs and author roles, not semantic truth. Review them
 before any future use; this workflow never writes production memory.
 
-The local single-operator backend feasibility decision, missing native
-contracts, and conditional live-call budget are recorded in
+The proposed local single-operator backend investigation, classified gaps, and
+conditional live-call budget are recorded in
 [ADR 0024](../../../docs/adr/0024-local-luna-agent-backend-feasibility.md).
+The version-pinned `app_server_spike.py` is a no-generation stdio preflight,
+not an ADE backend. It checks the installed CLI's ChatGPT login, initializes
+the app-server in an empty temporary cwd, reads only filtered nonsecret config
+fields, and terminates its process group. It never starts a thread or turn:
+
+```sh
+uv run --locked python -m workflows.evals.character_memory_dev.app_server_spike
+uv run --locked pytest -q workflows/evals/character_memory_dev/tests/test_app_server_spike.py
+```
+
+The fake-server tests exercise prospective dynamic-tool protocol handling;
+they do not establish that the installed app-server exposes only ADE tools or
+that a Luna model call succeeds. Requalify on any CLI/schema version change.
 
 The CLI has its own instruction context; role-labelled input is not equivalent
 to Chat Completions role precedence. An empty temporary cwd and read-only sandbox
