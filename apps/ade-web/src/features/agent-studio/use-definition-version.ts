@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { listPersonaTemplates, listPromptTemplates, type PromptTemplateRecord } from "@/features/prompt-center/api";
 
@@ -23,9 +23,21 @@ export function useDefinitionVersion({ session, definitions, refreshWorkspace, s
   const [versionPersonaKey, setVersionPersonaKey] = useState("");
   const [versionName, setVersionName] = useState("");
 
+  const fetchTemplates = useCallback(() => Promise.all([listPromptTemplates(false, "chat"), listPersonaTemplates(false, "chat")]), []);
+
+  const refreshTemplates = useCallback(async () => {
+    try {
+      const [nextPrompts, nextPersonas] = await fetchTemplates();
+      setPrompts(nextPrompts.items);
+      setPersonas(nextPersonas.items);
+    } catch (exc) {
+      setError(exc instanceof Error ? exc.message : String(exc));
+    }
+  }, [fetchTemplates, setError]);
+
   useEffect(() => {
     let active = true;
-    void Promise.all([listPromptTemplates(false, "chat"), listPersonaTemplates(false, "chat")])
+    void fetchTemplates()
       .then(([nextPrompts, nextPersonas]) => {
         if (!active) return;
         setPrompts(nextPrompts.items);
@@ -33,7 +45,13 @@ export function useDefinitionVersion({ session, definitions, refreshWorkspace, s
       })
       .catch((exc) => { if (active) setError(exc instanceof Error ? exc.message : String(exc)); });
     return () => { active = false; };
-  }, [setError]);
+  }, [fetchTemplates, setError]);
+
+  useEffect(() => {
+    const onFocus = () => { void refreshTemplates(); };
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [refreshTemplates]);
 
   const selectedDefinition = session?.agent_definition;
   useEffect(() => {
@@ -58,6 +76,17 @@ export function useDefinitionVersion({ session, definitions, refreshWorkspace, s
     setBusy(true);
     setError("");
     try {
+      const [freshPrompts, freshPersonas] = await fetchTemplates();
+      const priorPrompt = prompts.find((item) => item.key === versionPromptKey);
+      const priorPersona = personas.find((item) => item.key === versionPersonaKey);
+      const freshPrompt = freshPrompts.items.find((item) => item.key === versionPromptKey);
+      const freshPersona = freshPersonas.items.find((item) => item.key === versionPersonaKey);
+      setPrompts(freshPrompts.items);
+      setPersonas(freshPersonas.items);
+      if (!freshPrompt || !freshPersona || priorPrompt?.content !== freshPrompt.content || priorPersona?.content !== freshPersona.content) {
+        setError("Templates changed in Prompt Center. Review the refreshed previews before creating a version.");
+        return;
+      }
       const created = await createAgentStudioDefinition({
         definition_key: prior.definition_key,
         name: versionName.trim(),
@@ -79,5 +108,5 @@ export function useDefinitionVersion({ session, definitions, refreshWorkspace, s
   }
 
   return { prompts, personas, versionPromptKey, versionPersonaKey, versionName,
-    setVersionPromptKey, setVersionPersonaKey, setVersionName, createDefinitionVersion };
+    setVersionPromptKey, setVersionPersonaKey, setVersionName, refreshTemplates, createDefinitionVersion };
 }

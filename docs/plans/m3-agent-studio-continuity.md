@@ -4,6 +4,24 @@ Status: In progress under accepted [ADR 0022](../adr/0022-incumbent-memory-first
 
 ## Implementation Checkpoint (2026-09-22)
 
+Correction pass: the generated correction draft was not recognized by the
+reviewer's explicit-intent detector, so it could select add mode. The shared
+draft fixture and reviewer regression now bind those layers. Run monitoring
+previously used the same epoch as evidence refresh, so a read of the cited
+message could disable terminal handling; selection, read, and monitor identity
+are now separate. Real-hook tests cover same-conversation evidence during a
+run, stale cross-conversation callbacks/errors and turn acceptance, revisit,
+definition choice, old-page deduplication, and return to latest. Template
+previews refresh on focus/manual request; version creation checks for changed
+text and pauses for review. See [ADR 0023](../adr/0023-agent-studio-intent-and-async-ownership.md).
+
+A mock-backed browser pass opened an archived source at exact original message
+5 without restore/mutation, returned to the archived conversation's latest
+page, and continued an active conversation at its latest page. These checks
+exercise UI navigation and rendering, not native extraction or reviewer
+behavior. The unwaived policy-fingerprint failure and native qualification
+gap below remain; M3 is not complete.
+
 The UI/API slice now defaults a new conversation to the selected subject and
 definition, distinguishes active from historical facts, resolves citations
 through a boundary-checked conversation/message locator, prepares editable
@@ -19,8 +37,8 @@ production build, and mock-backed browser journeys passed. The mock browser
 pass covered same-subject/new-subject creation, a citation outside the newest
 120 messages and from another conversation, no-op removal, and a new persona
 version bound only to a later conversation. It did **not** exercise a live
-reviewer, actual persona edit in Prompt Center, archived-source citation,
-or every terminal outcome in a browser. The backend source read allows
+reviewer, actual persona edit in Prompt Center, or every terminal outcome in a
+browser. Archived-source citation was added in the correction pass above. The backend source read allows
 archived conversations and is covered by purpose/subject/workspace guards.
 
 The API suite passes with `ADE_REPOSITORY_ROOT` set to this checkout. The

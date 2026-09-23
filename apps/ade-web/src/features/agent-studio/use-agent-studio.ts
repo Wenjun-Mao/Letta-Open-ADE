@@ -26,10 +26,10 @@ import {
   updateAgentStudioSubject,
 } from "./api";
 import { openRunEventStream, TERMINAL_RUN_EVENT_TYPES } from "./event-stream";
-import { memoryActionOutcome, type PendingMemoryAction } from "./memory-action";
+import { memoryActionDraft, memoryActionOutcome, type PendingMemoryAction } from "./memory-action";
+import { sessionDraftPayload } from "./session-draft";
 import { useDefinitionVersion } from "./use-definition-version";
 import {
-  defaultBundle,
   identityKey,
   isArchived,
   NEW_RESOURCE_VALUE,
@@ -68,9 +68,11 @@ export function useAgentStudio() {
   const terminalRunRef = useRef("");
   const selectedIdRef = useRef(conversationId);
   const selectionEpochRef = useRef(0);
+  const readEpochRef = useRef(0);
+  const bindingSelectionRef = useRef<string | null>(null);
+  const olderPageRef = useRef<{ conversationId: string; cursor: number } | null>(null);
   const evidenceTargetRef = useRef<MemoryEvidence | null>(null);
-  const runConversationRef = useRef("");
-  const monitorEpochRef = useRef(0);
+  const activeMonitorRunRef = useRef<string | null>(null);
 
   const [options, setOptions] = useState<AgentStudioOptions | null>(null);
   const [sessions, setSessions] = useState<AgentStudioSession[]>([]);
@@ -103,6 +105,7 @@ export function useAgentStudio() {
   const [memoryAction, setMemoryAction] = useState<PendingMemoryAction | null>(null);
 
   const stopMonitoring = useCallback(() => {
+    activeMonitorRunRef.current = null;
     eventSourceRef.current?.close();
     eventSourceRef.current = null;
     if (pollRef.current) {
@@ -112,8 +115,12 @@ export function useAgentStudio() {
   }, []);
 
   const selectConversation = useCallback((nextConversationId: string | null) => {
+    if (nextConversationId === selectedIdRef.current) return;
     selectedIdRef.current = nextConversationId;
     selectionEpochRef.current += 1;
+    readEpochRef.current += 1;
+    bindingSelectionRef.current = null;
+    olderPageRef.current = null;
     stopMonitoring();
     setSession(null);
     setConversation(null);
@@ -160,7 +167,9 @@ export function useAgentStudio() {
   });
 
   const refreshSelected = useCallback(async (selectedId: string) => {
-    const epoch = ++selectionEpochRef.current;
+    const selectionEpoch = selectionEpochRef.current;
+    const readEpoch = ++readEpochRef.current;
+    olderPageRef.current = null;
     try {
       const nextSession = await getAgentStudioSession(selectedId);
       const target = evidenceTargetRef.current?.conversation_id === selectedId ? evidenceTargetRef.current : null;
@@ -169,7 +178,7 @@ export function useAgentStudio() {
         getSubjectMemories(nextSession.memory_subject.id),
         listConversationRuns(selectedId),
       ]);
-      if (epoch !== selectionEpochRef.current || selectedIdRef.current !== selectedId) return null;
+      if (selectionEpoch !== selectionEpochRef.current || readEpoch !== readEpochRef.current || selectedIdRef.current !== selectedId) return null;
       if (target && !nextConversation.messages.some((entry) => entry.id === target.message_id && entry.sequence === target.message_sequence)) {
         setEvidenceError("The cited message could not be verified in its original conversation.");
         evidenceTargetRef.current = null;
@@ -179,10 +188,19 @@ export function useAgentStudio() {
       setConversation(nextConversation);
       setMemories(nextMemories);
       setRuns(nextRuns.items);
-      setRun(nextSession.latest_run);
+      setRun((current) => {
+        const latest = nextSession.latest_run;
+        if (current?.conversation_id !== selectedId) return latest;
+        if (!latest) return current;
+        if (current.id !== latest.id) return latest;
+        return TERMINAL_RUN_STATUSES.has(current.status) || !TERMINAL_RUN_STATUSES.has(latest.status) ? current : latest;
+      });
       setSubjectRename(nextSession.memory_subject.display_name);
-      setSubjectChoice(nextSession.memory_subject.id);
-      setDefinitionChoice(nextSession.agent_definition.id);
+      if (bindingSelectionRef.current !== selectedId) {
+        bindingSelectionRef.current = selectedId;
+        setSubjectChoice(nextSession.memory_subject.id);
+        setDefinitionChoice(nextSession.agent_definition.id);
+      }
       if (target) {
         setEvidenceMessageId(target.message_id);
         setEvidenceError("");
@@ -191,31 +209,35 @@ export function useAgentStudio() {
       }
       return nextMemories;
     } catch (exc) {
-      if (epoch === selectionEpochRef.current && selectedIdRef.current === selectedId) setError(messageFrom(exc));
+      if (selectionEpoch === selectionEpochRef.current && readEpoch === readEpochRef.current && selectedIdRef.current === selectedId) setError(messageFrom(exc));
       return null;
     }
   }, []);
 
-  const finishRun = useCallback(async (runId: string) => {
-    if (terminalRunRef.current === runId) return;
-    const monitoredEpoch = monitorEpochRef.current;
+  const finishRun = useCallback(async (runId: string, monitoredConversationId: string, monitoredEpoch: number) => {
+    const isCurrent = () => activeMonitorRunRef.current === runId
+      && selectedIdRef.current === monitoredConversationId
+      && selectionEpochRef.current === monitoredEpoch;
+    if (!isCurrent() || terminalRunRef.current === runId) return;
     terminalRunRef.current = runId;
     try {
       const [nextRun, eventLog] = await Promise.all([getRun(runId), getRunEventLog(runId)]);
-      if (selectedIdRef.current !== nextRun.conversation_id || runConversationRef.current !== nextRun.conversation_id || monitoredEpoch !== selectionEpochRef.current) return;
+      if (!isCurrent() || nextRun.conversation_id !== monitoredConversationId) return;
       setRun(nextRun);
       setEvents(eventLog.items);
       const refreshedMemories = await refreshSelected(nextRun.conversation_id);
+      if (!isCurrent()) return;
       setMemoryAction((current) => {
-        if (selectedIdRef.current !== nextRun.conversation_id) return current;
-        if (!current || current.runId !== runId) return current;
+        if (!current || current.runId !== runId || current.conversationId !== monitoredConversationId) return current;
         return { ...current, outcome: memoryActionOutcome(current, nextRun, eventLog.items, refreshedMemories) };
       });
       stopMonitoring();
       setStreamWarning("");
     } catch (exc) {
-      terminalRunRef.current = "";
-      setError(messageFrom(exc));
+      if (isCurrent()) {
+        terminalRunRef.current = "";
+        setError(messageFrom(exc));
+      }
     }
   }, [refreshSelected, stopMonitoring]);
 
@@ -226,25 +248,29 @@ export function useAgentStudio() {
     });
   }, []);
 
-  const monitorRun = useCallback((runId: string) => {
+  const monitorRun = useCallback((runId: string, monitoredConversationId: string) => {
     stopMonitoring();
-    monitorEpochRef.current = selectionEpochRef.current;
+    const monitoredEpoch = selectionEpochRef.current;
+    activeMonitorRunRef.current = runId;
+    const isCurrent = () => activeMonitorRunRef.current === runId
+      && selectedIdRef.current === monitoredConversationId
+      && selectionEpochRef.current === monitoredEpoch;
     terminalRunRef.current = "";
     setStreamWarning("");
     eventSourceRef.current = openRunEventStream(runId, {
-      onEvent: (event) => { if (selectedIdRef.current === runConversationRef.current && monitorEpochRef.current === selectionEpochRef.current) recordEvent(event); },
-      onTerminal: () => void finishRun(runId),
-      onError: () => { if (selectedIdRef.current === runConversationRef.current && monitorEpochRef.current === selectionEpochRef.current) setStreamWarning("Event stream reconnecting; status polling remains active."); },
+      onEvent: (event) => { if (isCurrent()) recordEvent(event); },
+      onTerminal: () => { if (isCurrent()) void finishRun(runId, monitoredConversationId, monitoredEpoch); },
+      onError: () => { if (isCurrent()) setStreamWarning("Event stream reconnecting; status polling remains active."); },
     });
     pollRef.current = setInterval(() => {
       void Promise.all([getRun(runId), getRunEventLog(runId)])
         .then(([nextRun, eventLog]) => {
-          if (selectedIdRef.current !== nextRun.conversation_id || runConversationRef.current !== nextRun.conversation_id || monitorEpochRef.current !== selectionEpochRef.current) return;
+          if (!isCurrent() || nextRun.conversation_id !== monitoredConversationId) return;
           setRun(nextRun);
           setEvents(eventLog.items);
-          if (TERMINAL_RUN_STATUSES.has(nextRun.status)) void finishRun(runId);
+          if (TERMINAL_RUN_STATUSES.has(nextRun.status)) void finishRun(runId, monitoredConversationId, monitoredEpoch);
         })
-        .catch((exc) => { if (selectedIdRef.current === runConversationRef.current) setError(messageFrom(exc)); });
+        .catch((exc) => { if (isCurrent()) setError(messageFrom(exc)); });
     }, 1500);
   }, [finishRun, recordEvent, stopMonitoring]);
 
@@ -255,6 +281,9 @@ export function useAgentStudio() {
   useEffect(() => {
     selectedIdRef.current = conversationId;
     selectionEpochRef.current += 1;
+    readEpochRef.current += 1;
+    bindingSelectionRef.current = null;
+    olderPageRef.current = null;
     stopMonitoring();
     setEvents([]);
     setRun(null);
@@ -266,48 +295,23 @@ export function useAgentStudio() {
     if (conversationId) void refreshSelected(conversationId);
   }, [conversationId, refreshSelected, stopMonitoring]);
 
+  useEffect(() => {
+    const latest = session?.latest_run;
+    if (conversationId && session?.conversation.id === conversationId && latest
+      && !TERMINAL_RUN_STATUSES.has(latest.status) && activeMonitorRunRef.current !== latest.id) {
+      monitorRun(latest.id, conversationId);
+    }
+  }, [conversationId, session?.conversation.id, session?.latest_run, monitorRun]);
+
   useEffect(() => () => stopMonitoring(), [stopMonitoring]);
 
   async function createSession() {
-    const bundle = defaultBundle(options);
-    if (!bundle) {
-      setError("No configured Agent Studio bundle is available.");
-      return;
-    }
-    if (!title.trim()) {
-      setError("Conversation title is required.");
-      return;
-    }
-    if (definitionChoice === NEW_RESOURCE_VALUE && (!definitionName.trim() || !definitionKey.trim())) {
-      setError("A definition name and key are required.");
-      return;
-    }
-    if (subjectChoice === NEW_RESOURCE_VALUE && (!subjectName.trim() || !subjectKey.trim())) {
-      setError("A memory subject name and external key are required.");
-      return;
-    }
-    setBusy(true);
-    setError("");
     try {
-      const created = await createAgentStudioSession({
-        idempotency_key: identityKey("studio-session"),
-        title: title.trim(),
-        ...(definitionChoice === NEW_RESOURCE_VALUE
-          ? { new_definition: {
-            definition_key: definitionKey.trim(),
-            name: definitionName.trim(),
-            model_key: bundle.model_key,
-            reviewer_model_key: bundle.reviewer_model_key,
-            embedding_model_key: bundle.embedding_model_key,
-            prompt_key: bundle.prompt_key,
-            persona_key: bundle.persona_key,
-            tool_names: bundle.tool_names.filter((tool): tool is "search_memory" | "get_weather" => tool === "search_memory" || tool === "get_weather"),
-          } }
-          : { agent_definition_id: definitionChoice }),
-        ...(subjectChoice === NEW_RESOURCE_VALUE
-          ? { new_subject: { external_key: subjectKey.trim(), display_name: subjectName.trim() } }
-          : { memory_subject_id: subjectChoice }),
-      });
+      const payload = sessionDraftPayload(options, { title, definitionChoice, definitionName, definitionKey,
+        subjectChoice, subjectName, subjectKey }, identityKey("studio-session"));
+      setBusy(true);
+      setError("");
+      const created = await createAgentStudioSession(payload);
       await refreshWorkspace();
       selectConversation(created.conversation.id);
     } catch (exc) {
@@ -320,18 +324,26 @@ export function useAgentStudio() {
   async function loadOlderMessages() {
     if (!conversation?.next_before_sequence || !session) return;
     const selectedId = session.conversation.id;
-    const epoch = selectionEpochRef.current;
+    const cursor = conversation.next_before_sequence;
+    if (olderPageRef.current?.conversationId === selectedId && olderPageRef.current.cursor === cursor) return;
+    const request = { conversationId: selectedId, cursor };
+    olderPageRef.current = request;
+    const selectionEpoch = selectionEpochRef.current;
+    const readEpoch = readEpochRef.current;
     try {
-      const older = await getConversationState(selectedId, conversation.next_before_sequence);
-      if (selectedIdRef.current !== selectedId || epoch !== selectionEpochRef.current) return;
-      setConversation((current) => current && current.id === selectedId ? {
+      const older = await getConversationState(selectedId, cursor);
+      if (selectedIdRef.current !== selectedId || selectionEpoch !== selectionEpochRef.current || readEpoch !== readEpochRef.current) return;
+      setConversation((current) => current && current.id === selectedId && current.next_before_sequence === cursor ? {
         ...current,
-        messages: [...older.messages, ...current.messages],
+        messages: [...new Map([...older.messages, ...current.messages].map((entry) => [entry.id, entry])).values()]
+          .sort((left, right) => left.sequence - right.sequence),
         messages_truncated: older.messages_truncated,
         next_before_sequence: older.next_before_sequence,
       } : current);
     } catch (exc) {
-      if (selectedIdRef.current === selectedId) setError(messageFrom(exc));
+      if (selectedIdRef.current === selectedId && selectionEpoch === selectionEpochRef.current && readEpoch === readEpochRef.current) setError(messageFrom(exc));
+    } finally {
+      if (olderPageRef.current === request) olderPageRef.current = null;
     }
   }
 
@@ -343,14 +355,19 @@ export function useAgentStudio() {
     else selectConversation(evidence.conversation_id);
   }
 
+  async function returnToLatestMessages() {
+    if (!session) return;
+    evidenceTargetRef.current = null;
+    setEvidenceMessageId("");
+    setEvidenceError("");
+    await refreshSelected(session.conversation.id);
+  }
+
   function prepareMemoryAction(factId: string, version: number, operation: "correct" | "forget") {
     const fact = memories?.facts.find((item) => item.id === factId && item.version === version && item.status === "active");
     if (!fact || !session || isArchived(session.conversation)) return;
-    const instruction = operation === "forget"
-      ? `Please remove this saved information from active memory: ${fact.fact_type} about ${fact.entity_label || fact.entity_kind}: ${fact.value}. Do not treat this as a request to erase past conversations or revision history.`
-      : `Please correct this saved fact: ${fact.fact_type} about ${fact.entity_label || fact.entity_kind}: ${fact.value}. The correct information is: `;
-    setMessage(instruction);
-    setMemoryAction({ factId, version, operation, runId: null, outcome: "Prepared. Edit this message and send it to request review; no memory has changed yet." });
+    setMessage(memoryActionDraft(fact, operation));
+    setMemoryAction({ conversationId: session.conversation.id, factId, version, operation, runId: null, outcome: "Prepared. Edit this message and send it to request review; no memory has changed yet." });
   }
 
 
@@ -421,27 +438,36 @@ export function useAgentStudio() {
     const content = message.trim();
     const selected = session;
     if (!selected || !content || isArchived(selected.conversation) || (run && !TERMINAL_RUN_STATUSES.has(run.status))) return;
+    const selectedId = selected.conversation.id;
+    const selectionEpoch = selectionEpochRef.current;
+    const actionAtSend = memoryAction;
+    const isCurrent = () => selectedIdRef.current === selectedId && selectionEpochRef.current === selectionEpoch;
     setBusy(true);
     setError("");
     setEvents([]);
     setMessage("");
     try {
-      const accepted = await acceptTurn(selected.conversation.id, {
+      const accepted = await acceptTurn(selectedId, {
         content,
         idempotency_key: identityKey("turn"),
         timeout_seconds: clampNumber(timeoutSeconds, 5, 600),
         retry_count: clampNumber(retryCount, 0, options?.max_retry_count || 5),
       });
-      runConversationRef.current = selected.conversation.id;
-      setMemoryAction((current) => current && current.runId === null ? { ...current, runId: accepted.run_id, outcome: "Turn accepted; waiting for review and a committed revision." } : current);
+      if (!isCurrent()) return;
+      setMemoryAction((current) => current && actionAtSend && current.conversationId === selectedId
+        && current.factId === actionAtSend.factId && current.version === actionAtSend.version
+        && current.operation === actionAtSend.operation && current.runId === null
+        ? { ...current, runId: accepted.run_id, outcome: "Turn accepted; waiting for review and a committed revision." } : current);
       const [acceptedRun, eventLog] = await Promise.all([getRun(accepted.run_id), getRunEventLog(accepted.run_id)]);
-      if (selectedIdRef.current !== selected.conversation.id) return;
+      if (!isCurrent()) return;
       setRun(acceptedRun);
       setEvents(eventLog.items);
-      await refreshSelected(selected.conversation.id);
-      if (selectedIdRef.current === selected.conversation.id) monitorRun(accepted.run_id);
+      evidenceTargetRef.current = null;
+      setEvidenceMessageId("");
+      await refreshSelected(selectedId);
+      if (isCurrent() && activeMonitorRunRef.current !== accepted.run_id) monitorRun(accepted.run_id, selectedId);
     } catch (exc) {
-      if (selectedIdRef.current === selected.conversation.id) {
+      if (isCurrent()) {
         setMessage(content);
         setError(messageFrom(exc));
       }
@@ -452,12 +478,15 @@ export function useAgentStudio() {
 
   async function cancelActiveRun() {
     if (!run || TERMINAL_RUN_STATUSES.has(run.status)) return;
+    const selectedId = run.conversation_id;
+    const selectionEpoch = selectionEpochRef.current;
     setBusy(true);
     setError("");
     try {
-      setRun(await cancelRun(run.id));
+      const cancelled = await cancelRun(run.id);
+      if (selectedIdRef.current === selectedId && selectionEpochRef.current === selectionEpoch) setRun(cancelled);
     } catch (exc) {
-      setError(messageFrom(exc));
+      if (selectedIdRef.current === selectedId && selectionEpochRef.current === selectionEpoch) setError(messageFrom(exc));
     } finally {
       setBusy(false);
     }
@@ -473,6 +502,6 @@ export function useAgentStudio() {
     setRetryCount: (value: number) => setRetryCount(clampNumber(value, 0, options?.max_retry_count || 5)),
     setTitle, setDefinitionChoice, setDefinitionName, setDefinitionKey, setSubjectChoice, setSubjectName, setSubjectKey, setSubjectRename,
     selectConversation, refreshWorkspace, createSession, setSessionArchived, setDefinitionArchived, setSubjectArchived,
-    renameSubject, sendMessage, cancelActiveRun, loadOlderMessages, openEvidence, prepareMemoryAction,
+    renameSubject, sendMessage, cancelActiveRun, loadOlderMessages, openEvidence, returnToLatestMessages, prepareMemoryAction,
   };
 }

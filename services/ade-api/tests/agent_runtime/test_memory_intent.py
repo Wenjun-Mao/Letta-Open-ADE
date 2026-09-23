@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 
 from ade_api.features.agent_runtime.memory_intent import (
@@ -71,3 +74,13 @@ def test_explicit_correction_request_is_conservatively_recognized(
 )
 def test_ordinary_fact_language_is_not_classified_as_correction(content: str) -> None:
     assert is_explicit_correction_request(content) is False
+
+
+def test_agent_studio_composer_action_contract_is_recognized() -> None:
+    path = (
+        Path(__file__).resolve().parents[4]
+        / "config/agent-studio/memory-action-contract.json"
+    )
+    contract = json.loads(path.read_text(encoding="utf-8"))
+    assert is_explicit_correction_request(contract["correction_message"]) is True
+    assert is_explicit_forgetting_request(contract["removal_draft"]) is True

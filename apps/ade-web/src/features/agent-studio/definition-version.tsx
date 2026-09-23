@@ -13,7 +13,7 @@ export function DefinitionVersion({ controller, t }: { controller: Controller; t
   return <div className="studio-version-draft">
     <h3>{t("Create next immutable version", "创建下一个不可变版本")}</h3>
     <p className="muted">{t("Edit persona text in Prompt Center, then select the active prompt and persona here. This creates a new snapshot for future conversations; it does not change this conversation.", "在提示词中心编辑人设文本，再在这里选择活跃的提示词和人设。这将为未来对话创建新快照，不会更改当前对话。")}</p>
-    <a href="/prompt-center">{t("Open Prompt Center to edit persona", "打开提示词中心编辑人设")}</a>
+    <a href="/prompt-center">{t("Open Prompt Center to edit persona", "打开提示词中心编辑人设")}</a> · <button className="button muted" disabled={controller.busy} onClick={() => void controller.refreshTemplates()}>{t("Refresh template previews", "刷新模板预览")}</button>
     <label className="field"><span>{t("Version name", "版本名称")}</span><input className="input" value={controller.versionName} onChange={(event) => controller.setVersionName(event.target.value)} /></label>
     <label className="field"><span>{t("Prompt", "提示词")}</span><select className="input" value={controller.versionPromptKey} onChange={(event) => controller.setVersionPromptKey(event.target.value)}>{controller.prompts.map((item) => <option value={item.key} key={item.key}>{item.label || item.key}</option>)}</select></label>
     {prompt ? <pre className="studio-template-preview">{prompt.content}</pre> : null}

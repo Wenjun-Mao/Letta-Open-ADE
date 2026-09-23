@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path
 
 from ade_api.features.agent_runtime.memory_policy import prepare_memory_review
 from ade_api.features.agent_runtime.reviewer import MemoryReviewer
@@ -404,3 +405,39 @@ def test_explicit_correction_uses_correct_only_schema() -> None:
     assert "CorrectProposal" in schema_text
     assert "AddProposal" not in schema_text
     assert "ForgetProposal" not in schema_text
+
+
+def test_agent_studio_correction_draft_selects_correct_only_reviewer_mode() -> None:
+    path = (
+        Path(__file__).resolve().parents[4]
+        / "config/agent-studio/memory-action-contract.json"
+    )
+    contract = json.loads(path.read_text(encoding="utf-8"))
+    transport = _Transport([{"proposals": []}])
+    asyncio.run(
+        MemoryReviewer(transport).review(
+            model_key="source::reviewer",
+            current_user_message={
+                "id": "message-1",
+                "content": contract["correction_message"],
+            },
+            recent_user_messages=[],
+            active_facts=[
+                {
+                    "id": contract["fact"]["id"],
+                    "subject_id": SUBJECT_ID,
+                    "entity_id": SUBJECT_ID,
+                    "fact_type": contract["fact"]["fact_type"],
+                    "value": contract["fact"]["value"],
+                    "status": "active",
+                    "version": 1,
+                }
+            ],
+            entities=[{"id": SUBJECT_ID, "kind": "subject", "subject_id": SUBJECT_ID}],
+            timeout_seconds=30,
+            validate_decision=lambda _: None,
+        )
+    )
+    packet = json.loads(transport.calls[0][0]["messages"][1]["content"])
+    assert packet["review_mode"] == "explicit_correction"
+    assert set(packet["operation_contracts"]) == {"correct"}

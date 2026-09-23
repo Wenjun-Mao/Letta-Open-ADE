@@ -1,0 +1,12 @@
+{
+  "fact": {
+    "id": "fact-1",
+    "fact_type": "person.preference",
+    "entity_kind": "subject",
+    "entity_label": "User",
+    "value": "red tea"
+  },
+  "correction_draft": "Please correct this saved fact: person.preference about User: red tea. The correct information is: ",
+  "correction_message": "Please correct this saved fact: person.preference about User: red tea. The correct information is: green tea",
+  "removal_draft": "Please remove this saved information from active memory: person.preference about User: red tea. Do not treat this as a request to erase past conversations or revision history."
+}

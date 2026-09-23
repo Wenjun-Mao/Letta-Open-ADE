@@ -50,6 +50,10 @@ _CHINESE_CORRECTION_REQUESTS = (
 )
 _ENGLISH_CORRECTION_REQUESTS = (
     re.compile(
+        r"(?:^|[.!?]\s*)please\s+correct\s+this\s+saved\s+fact\s*:",
+        re.IGNORECASE,
+    ),
+    re.compile(
         r"(?:^|[.!?]\s*)(?:correction|actually|i\s+meant|i\s+was\s+wrong)\b",
         re.IGNORECASE,
     ),
