@@ -39,19 +39,21 @@ operator entrypoint performs only ChatGPT/version preflight, stdio `initialize`,
 and a *filtered* `config/read` in an empty temporary cwd; it never starts a
 thread or turn. The installed app-server accepted the handshake and reported
 the requested `gpt-6-luna`, medium effort, default tier, read-only sandbox,
-`never` approval, disabled web search, and ChatGPT-only login setting. Three
-fake-server tests passed for framing, prospective thread fields, one
-allowlisted synthetic tool response, interruption response shape, and rejection
-of an unlisted tool. These tests prove the client-side spike's behavior against
-synthetic messages, **not** a live Codex tool invocation. No generation call
-was made for this checkpoint.
+`never` approval, disabled web search, and ChatGPT-only login setting. Eleven
+spike test cases pass for framing, prospective thread fields, one allowlisted
+synthetic tool response, interruption response shape, rejection of unlisted,
+unbound, mismatched, or duplicate tool calls, an overall request deadline,
+bounded notifications/bytes, and process-group cleanup when a child ignores
+`SIGTERM`. These tests prove the client-side spike's behavior against synthetic
+messages, **not** a live Codex tool invocation. No generation call was made for
+this checkpoint.
 
 ## Classified gaps
 
 | Class | Evidence and implication |
 |---|---|
 | Demonstrated local control | `features.shell_tool`, Apps, hooks, multi-agent, browser use, and computer use report disabled with invocation overrides. The app-server filtered config confirms the listed model/auth/sandbox settings. This is narrower than proving an ADE-only tool set. |
-| Hard under the requested zero-internal-retry contract | [Configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference) exposes `request_max_retries` and `stream_max_retries` only under `model_providers.<id>`. Parser-only override of `model_providers.openai.request_max_retries=0` fails because `openai` is a reserved built-in provider. The existing adapter has zero *application* retries, but zero subscription transport retries cannot currently be configured through this documented path. Do not claim exactly one network attempt. A supported control or an explicitly revised risk contract is needed before backend use. |
+| Supported zero-retry override unresolved for this installed version | [Configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference) documents `request_max_retries` and `stream_max_retries` under `model_providers.<id>`. Parser-only override of `model_providers.openai.request_max_retries=0` fails because `openai` is a reserved built-in provider. This negative check does not prove no other supported control exists. The existing adapter has zero *application* retries, but zero subscription transport retries are not verified; do not claim exactly one network attempt. Resolve this through a supported control or an explicit risk decision before backend use. |
 | Testable isolation unknown | App-server help has no `--ignore-user-config`. `mcp_servers={}` on the invocation did not clear inherited MCP entries; a fresh isolated `CODEX_HOME` reported “Not logged in.” The candidate flags disabled `shell_tool`, but `features.unified_exec=false` still reported `unified_exec=true` in `features list`. Neither observation proves a command tool remains callable, yet neither proves only ADE's dynamic tool is exposed. A complete effective tool inventory or independently enforced process boundary remains necessary. |
 | Testable protocol unknown | `baseInstructions`, `developerInstructions`, and per-thread `config` are schema fields, not verified instruction or override precedence. The fake bridge handles `item/tool/call`, but actual dynamic tool choice, required-call enforcement, event order, timeout, and `turn/interrupt` cleanup need live and fault-injected qualification. Unknown server requests must fail closed before ADE side effects. |
 | Ordinary ADE integration work | Add a local-subscription deployment/provenance kind without pretending it is a Router fingerprint; keep immutable snapshots, subject-bound context, reviewer validation, attempt/retry ownership, and release rejection. This is a named contract change with tests, not a transparent `/chat/completions` proxy. |
@@ -63,8 +65,9 @@ was made for this checkpoint.
    establish a complete invocation-scoped tool inventory or stronger host
    isolation, resolve the internal-retry requirement, validate effective
    per-thread instructions, and pin experimental app-server protocol/event
-   shapes. Expand fake-server tests for malformed IDs/arguments, unexpected
-   tool and approval requests, timeout, interruption, and process-tree cleanup.
+   shapes. Remaining fake-server work includes malformed arguments, unexpected
+   approval requests, and cancellation races; the current bounds and cleanup
+   tests are not a live turn guarantee.
 2. **Small live synthetic bridge gate:** only with an approved call budget,
    observe actual dynamic-tool events and cancellation in fresh ephemeral
    threads; reject unexpected tools/events. Keep ADE memory writes disabled.

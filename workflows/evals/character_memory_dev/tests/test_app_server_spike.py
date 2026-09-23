@@ -15,6 +15,7 @@ from workflows.evals.character_memory_dev.app_server_spike import (
     StdioProbe,
     app_server_command,
     prospective_thread_params,
+    stop_process_group,
 )
 
 
@@ -22,6 +23,7 @@ FAKE_SERVER = r"""
 import json
 import os
 import sys
+import time
 
 def send(message):
     sys.stdout.write(json.dumps(message) + "\n")
@@ -30,6 +32,7 @@ def send(message):
 for line in sys.stdin:
     request = json.loads(line)
     method = request.get("method")
+    scenario = os.environ.get("FAKE_SCENARIO", "normal")
     if method == "initialize":
         send({"id": request["id"], "result": {"platformFamily": "unix"}})
     elif method == "initialized":
@@ -39,29 +42,42 @@ for line in sys.stdin:
     elif method == "thread/start":
         send({"id": request["id"], "result": {"thread": {"id": "fake-thread"}}})
     elif method == "turn/interrupt":
-        send({"id": 77, "method": "item/tool/call", "params": {
-            "threadId": "fake-thread", "turnId": "fake-turn", "callId": "fake-call",
+        if scenario == "notifications":
+            while True:
+                send({"method": "item/agentMessage/delta", "params": {"text": "x"}})
+                time.sleep(0.005)
+        params = {
+            "threadId": "other-thread" if scenario == "wrong-thread" else "fake-thread",
+            "turnId": "other-turn" if scenario == "wrong-turn" else "fake-turn",
+            "callId": "fake-call",
             "tool": os.environ.get("FAKE_TOOL", "search_memory"),
             "namespace": None,
             "arguments": {"query": "synthetic tea"},
-        }})
+        }
+        send({"id": 77, "method": "item/tool/call", "params": params})
         answer = json.loads(sys.stdin.readline())
+        if scenario == "duplicate":
+            send({"id": 78, "method": "item/tool/call", "params": params})
+            answer = json.loads(sys.stdin.readline())
         send({"method": "turn/completed", "params": {"turn": {
             "id": "fake-turn", "status": "interrupted"}}})
         send({"id": request["id"], "result": {"tool_answer": answer}})
 """
 
 
-async def _fake_process(tool: str = "search_memory") -> asyncio.subprocess.Process:
+async def _fake_process(
+    tool: str = "search_memory", scenario: str = "normal"
+) -> asyncio.subprocess.Process:
     return await asyncio.create_subprocess_exec(
         sys.executable,
         "-u",
         "-c",
         FAKE_SERVER,
-        env={**os.environ, "FAKE_TOOL": tool},
+        env={**os.environ, "FAKE_TOOL": tool, "FAKE_SCENARIO": scenario},
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
+        start_new_session=True,
     )
 
 
@@ -85,13 +101,13 @@ def test_fake_server_initialize_config_and_bound_tool_dispatch() -> None:
     async def exercise() -> None:
         process = await _fake_process()
         observed: list[dict] = []
+
+        async def handler(arguments: dict) -> dict:
+            observed.append(arguments)
+            return {"facts": ["synthetic tea"]}
+
         try:
-            probe = StdioProbe(
-                process,
-                tool_handler=lambda arguments: (
-                    observed.append(arguments) or {"facts": ["synthetic tea"]}
-                ),
-            )
+            probe = StdioProbe(process, tool_handler=handler)
             assert (await probe.initialize())["platformFamily"] == "unix"
             assert (await probe.request("config/read", {"includeLayers": False}))[
                 "config"
@@ -101,6 +117,7 @@ def test_fake_server_initialize_config_and_bound_tool_dispatch() -> None:
                     "thread/start", prospective_thread_params(Path("/tmp"))
                 )
             )["thread"]["id"] == "fake-thread"
+            probe.bind_tool_scope(thread_id="fake-thread", turn_id="fake-turn")
             interrupted = await probe.request(
                 "turn/interrupt", {"threadId": "fake-thread", "turnId": "fake-turn"}
             )
@@ -113,8 +130,7 @@ def test_fake_server_initialize_config_and_bound_tool_dispatch() -> None:
             }
             assert probe.notifications[-1]["method"] == "turn/completed"
         finally:
-            process.terminate()
-            await process.wait()
+            await stop_process_group(process)
 
     asyncio.run(exercise())
 
@@ -124,7 +140,7 @@ def test_fake_server_rejects_tool_outside_ade_allowlist() -> None:
         process = await _fake_process(tool="exec_command")
         called = False
 
-        def handler(arguments: dict) -> dict:
+        async def handler(arguments: dict) -> dict:
             nonlocal called
             called = True
             return {}
@@ -132,13 +148,102 @@ def test_fake_server_rejects_tool_outside_ade_allowlist() -> None:
         try:
             probe = StdioProbe(process, tool_handler=handler)
             await probe.initialize()
+            probe.bind_tool_scope(thread_id="fake-thread", turn_id="fake-turn")
             with pytest.raises(SpikeProtocolError, match="non-allowlisted"):
                 await probe.request(
                     "turn/interrupt", {"threadId": "fake-thread", "turnId": "fake-turn"}
                 )
             assert called is False
         finally:
-            process.terminate()
-            await process.wait()
+            await stop_process_group(process)
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.parametrize(
+    "scenario", ["unbound", "wrong-thread", "wrong-turn", "duplicate"]
+)
+def test_fake_server_rejects_unbound_or_duplicate_call_id(scenario: str) -> None:
+    async def exercise() -> None:
+        process = await _fake_process(scenario=scenario)
+        calls = 0
+
+        async def handler(arguments: dict) -> dict:
+            nonlocal calls
+            calls += 1
+            return {"facts": []}
+
+        try:
+            probe = StdioProbe(process, tool_handler=handler)
+            await probe.initialize()
+            if scenario != "unbound":
+                probe.bind_tool_scope(thread_id="fake-thread", turn_id="fake-turn")
+            with pytest.raises(SpikeProtocolError, match="non-allowlisted"):
+                await probe.request(
+                    "turn/interrupt", {"threadId": "fake-thread", "turnId": "fake-turn"}
+                )
+            assert calls == (1 if scenario == "duplicate" else 0)
+        finally:
+            await stop_process_group(process)
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.parametrize("limit", ["deadline", "notifications", "bytes"])
+def test_fake_server_notification_stream_is_bounded(limit: str) -> None:
+    async def exercise() -> None:
+        process = await _fake_process(scenario="notifications")
+        try:
+            probe = StdioProbe(
+                process,
+                request_timeout_seconds=0.06 if limit == "deadline" else 2,
+                max_notifications=2 if limit == "notifications" else 1000,
+                max_total_bytes=220 if limit == "bytes" else 2_000_000,
+            )
+            await probe.initialize()
+            expected = {
+                "deadline": "timeout",
+                "notifications": "notification limit",
+                "bytes": "total response bytes",
+            }[limit]
+            with pytest.raises(SpikeProtocolError, match=expected):
+                await probe.request(
+                    "turn/interrupt", {"threadId": "fake-thread", "turnId": "fake-turn"}
+                )
+        finally:
+            await stop_process_group(process)
+
+    asyncio.run(exercise())
+
+
+def test_fake_process_group_is_reaped_after_interruption() -> None:
+    async def exercise() -> None:
+        child_code = (
+            "import signal,time;"
+            "signal.signal(signal.SIGTERM, signal.SIG_IGN);"
+            "print('child-ready', flush=True);"
+            "time.sleep(30)"
+        )
+        parent_code = (
+            "import subprocess,sys,time;"
+            f"subprocess.Popen([sys.executable, '-u', '-c', {child_code!r}]);"
+            "time.sleep(30)"
+        )
+        process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-u",
+            "-c",
+            parent_code,
+            stdout=asyncio.subprocess.PIPE,
+            start_new_session=True,
+        )
+        assert process.stdout is not None
+        assert (
+            await asyncio.wait_for(process.stdout.readline(), timeout=2)
+            == b"child-ready\n"
+        )
+        await stop_process_group(process)
+        assert process.returncode is not None
+        assert await asyncio.wait_for(process.stdout.read(), timeout=2) == b""
 
     asyncio.run(exercise())

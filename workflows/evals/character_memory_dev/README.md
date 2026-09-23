@@ -88,7 +88,10 @@ uv run --locked pytest -q workflows/evals/character_memory_dev/tests/test_app_se
 
 The fake-server tests exercise prospective dynamic-tool protocol handling;
 they do not establish that the installed app-server exposes only ADE tools or
-that a Luna model call succeeds. Requalify on any CLI/schema version change.
+that a Luna model call succeeds. The spike bounds each operation and total
+captured messages, binds synthetic tool calls to one explicit thread/turn,
+rejects duplicate call IDs, and terminates its process group. Requalify on
+any CLI/schema version change.
 
 The CLI has its own instruction context; role-labelled input is not equivalent
 to Chat Completions role precedence. An empty temporary cwd and read-only sandbox
