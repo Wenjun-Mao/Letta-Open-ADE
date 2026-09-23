@@ -22,6 +22,10 @@ from ade_api.features.agent_runtime.release_evidence import (
     validate_agent_studio_release_evidence,
 )
 from ade_api.features.agent_runtime.release_policy import production_policy_hashes
+from scripts.embedding_space_compatibility import (
+    EmbeddingCompatibilityError,
+    validate_embedding_compatibility_receipt,
+)
 from workflows.evals.agent_runtime_acceptance.promotion_review import (
     GitState,
     PromotionReviewError,
@@ -44,6 +48,7 @@ def prepare_release_promotion(
     manifest_path: Path,
     project_root: Path,
     reviewer: str,
+    embedding_compatibility_receipt_path: Path | None = None,
     reviewed_at: datetime | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Validate one release and return its manifest and evidence payloads."""
@@ -68,12 +73,39 @@ def prepare_release_promotion(
         qualification_proposal_path.parent / "provenance.json",
         "qualification provenance",
     )
-    compatibility = _mapping(
-        provenance.get("llama_compatibility"), "llama compatibility"
-    )
+    effective_config = _mapping(provenance.get("effective_config"), "effective config")
+    include_compatibility = effective_config.get("include_llama_compatibility")
+    if type(include_compatibility) is not bool:
+        raise ReleasePromotionError("compatibility selection must be explicit")
+    compatibility = provenance.get("llama_compatibility")
+    compatibility_checks: list[dict[str, Any]] = []
+    if include_compatibility:
+        compatibility = _mapping(compatibility, "configured compatibility")
+        route_alias = _required_text(effective_config, "llama_compatibility_model_key")
+        snapshots = compatibility.get("deployment_snapshots")
+        if not isinstance(snapshots, list) or not any(
+            isinstance(item, dict)
+            and item.get("role") == "conversation"
+            and item.get("route_alias") == route_alias
+            for item in snapshots
+        ):
+            raise ReleasePromotionError(
+                "configured compatibility artifact does not bind its route"
+            )
+        compatibility_checks.append(
+            {
+                "route_alias": route_alias,
+                "passed": True,
+                "artifact_sha256": _required_text(compatibility, "artifact_sha256"),
+            }
+        )
+    elif compatibility is not None:
+        raise ReleasePromotionError(
+            "unselected compatibility evidence cannot authorize release"
+        )
     agent_bundle = _mapping(proposal.get("agent_bundle"), "agent bundle")
-    if compatibility.get("passed") is not True:
-        raise ReleasePromotionError("llama-server compatibility did not pass")
+    if include_compatibility and compatibility.get("passed") is not True:
+        raise ReleasePromotionError("configured compatibility did not pass")
 
     conformance = _read_signed_receipt(
         conformance_receipt_path,
@@ -95,8 +127,16 @@ def prepare_release_promotion(
     manifest = DeploymentManifest.from_payload(manifest_payload)
     manifest_sha256 = hashlib.sha256(_json_bytes(manifest_payload)).hexdigest()
     policies = production_policy_hashes(project_root)
+    qualified_routes = _qualified_routes(proposal, manifest)
+    embedding_compatibility = _embedding_space_evidence(
+        manifest=manifest,
+        retriever_alias=qualified_routes["retriever"]["route_alias"],
+        source_revision=source_revision,
+        source_fingerprint=source_fingerprint,
+        receipt_path=embedding_compatibility_receipt_path,
+    )
     evidence: dict[str, Any] = {
-        "schema_version": 3,
+        "schema_version": 4,
         "kind": "ade-agent-studio-release-evidence",
         "decision": "approved",
         "reviewed_by": reviewer.strip(),
@@ -115,7 +155,7 @@ def prepare_release_promotion(
         },
         "manifest_sha256": manifest_sha256,
         "policy_hashes": policies,
-        "qualified_routes": _qualified_routes(proposal, manifest),
+        "qualified_routes": qualified_routes,
         "agent_bundle": dict(agent_bundle),
         "qualification": {
             "run_id": _required_text(proposal, "run_id"),
@@ -125,10 +165,8 @@ def prepare_release_promotion(
                 provenance, "canonical_case_keys_sha256"
             ),
             "round_artifact_sha256s": proposal.get("round_artifact_sha256s"),
-            "llama_compatibility": {
-                "passed": True,
-                "artifact_sha256": _required_text(compatibility, "artifact_sha256"),
-            },
+            "compatibility_checks": compatibility_checks,
+            "embedding_space_compatibility": embedding_compatibility,
         },
         "conformance": {
             "passed": True,
@@ -226,6 +264,71 @@ def _qualified_routes(
     return routes
 
 
+def _embedding_space_evidence(
+    *,
+    manifest: DeploymentManifest,
+    retriever_alias: str,
+    source_revision: str,
+    source_fingerprint: str,
+    receipt_path: Path | None,
+) -> dict[str, Any]:
+    deployment = manifest.for_route_alias(retriever_alias)
+    if deployment is None:
+        raise ReleasePromotionError("retriever deployment is missing")
+    fingerprint = deployment.fingerprint
+    space = _mapping(
+        fingerprint.sampling_settings.get("vector_space"), "retriever vector space"
+    )
+    space_id = _required_text(space, "id")
+    context = fingerprint.context_settings
+    origin_url = _required_text(context, "vector_space_origin_url")
+    route_url = _required_text(context, "route_base_url")
+    origin_runtime = _mapping(
+        context.get("vector_space_origin_runtime"), "vector space origin runtime"
+    )
+    current_runtime = {
+        "implementation": fingerprint.runtime_implementation,
+        "version": fingerprint.runtime_version,
+        "image_digest": fingerprint.runtime_image_digest,
+    }
+    common = {
+        "space_id": space_id,
+        "route_alias": retriever_alias,
+        "deployment_fingerprint": fingerprint.sha256,
+    }
+    if route_url == origin_url and dict(origin_runtime) == current_runtime:
+        if receipt_path is not None:
+            raise ReleasePromotionError(
+                "origin embedding deployment must not substitute a relocation receipt"
+            )
+        return {**common, "mode": "origin"}
+    if receipt_path is None:
+        raise ReleasePromotionError(
+            "relocated embedding deployment requires a compatibility receipt"
+        )
+    receipt = _load_json(receipt_path, "embedding compatibility receipt")
+    try:
+        artifact_sha256 = validate_embedding_compatibility_receipt(
+            receipt,
+            source_revision=source_revision,
+            source_fingerprint=source_fingerprint,
+            space_id=space_id,
+            route_alias=retriever_alias,
+            deployment_fingerprint=fingerprint.sha256,
+            origin_url=origin_url,
+            candidate_url=route_url,
+            dimensions=int(space.get("dimensions") or 0),
+        )
+    except EmbeddingCompatibilityError as exc:
+        raise ReleasePromotionError(str(exc)) from exc
+    return {
+        **common,
+        "mode": "verified",
+        "passed": True,
+        "artifact_sha256": artifact_sha256,
+    }
+
+
 def _read_signed_receipt(path: Path, *, kind: str, digest_field: str) -> dict[str, Any]:
     payload = _load_json(path, kind)
     digest = _required_text(payload, digest_field)
@@ -303,6 +406,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--conformance-receipt", type=Path, required=True)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--reviewer", required=True)
+    parser.add_argument("--embedding-compatibility-receipt", type=Path)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--apply", action="store_true")
     args = parser.parse_args(argv)
@@ -313,6 +417,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             manifest_path=args.manifest,
             project_root=PROJECT_ROOT,
             reviewer=args.reviewer,
+            embedding_compatibility_receipt_path=args.embedding_compatibility_receipt,
         )
         if args.apply:
             apply_release_promotion(

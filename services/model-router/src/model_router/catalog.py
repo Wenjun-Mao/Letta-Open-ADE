@@ -217,6 +217,12 @@ class RouterCatalogService:
                 )
                 profile = profiles.get(router_model_id)
                 deployment = deployments.for_route_alias(router_model_id)
+                if deployment is not None:
+                    pinned_url = deployment.fingerprint.context_settings.get(
+                        "route_base_url"
+                    )
+                    if pinned_url is not None and pinned_url != source.base_url:
+                        deployment = None
                 agent_studio_compatible = (
                     True if profile is None else profile.agent_studio_compatible
                 )

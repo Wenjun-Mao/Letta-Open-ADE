@@ -34,8 +34,9 @@
   },
   {
     "id": "dgx_embedding_sidecar",
-    "label": "DGX Spark embedding sidecar",
+    "label": "Qwen embedding service (legacy DGX alias)",
     "base_url": "http://dgx-spark:8001/v1",
+    "base_url_env": "QWEN_EMBEDDING_API_BASE",
     "kind": "openai-compatible",
     "adapter": "vllm_openai",
     "enabled": true,

@@ -6,6 +6,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from model_catalog_contracts.deployment_manifest import (
     DeploymentFingerprint,
     load_deployment_manifest,
@@ -66,6 +68,61 @@ def test_rebind_invalidates_qualified_deployments_when_policy_changes() -> None:
     )
 
 
+def test_checked_in_deepseek_and_retriever_candidates_are_not_qualified() -> None:
+    manifest = load_deployment_manifest(
+        PROJECT_ROOT / "config/model-router/deployment-manifest.json",
+        project_root=PROJECT_ROOT,
+    )
+    for alias in (
+        "deepseek::deepseek-flash",
+        "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+    ):
+        deployment = manifest.for_route_alias(alias)
+        assert deployment is not None
+        assert deployment.lifecycle == "candidate"
+        assert deployment.qualification.qualified is False
+
+
+def test_relocated_retriever_requires_a_vector_compatibility_receipt() -> None:
+    payload = json.loads(
+        (PROJECT_ROOT / "config/model-router/deployment-manifest.json").read_text()
+    )
+    retriever = payload["deployments"][2]
+    retriever["fingerprint"]["context_settings"]["route_base_url"] = (
+        "https://embedding.example/v1"
+    )
+    retriever["fingerprint"]["endpoint_identity"] = "embedding.example:443"
+    retriever["qualification"]["fingerprint_sha256"] = (
+        DeploymentFingerprint.from_payload(retriever["fingerprint"]).sha256
+    )
+    from model_catalog_contracts.deployment_manifest import DeploymentManifest
+
+    manifest = DeploymentManifest.from_payload(payload)
+    with pytest.raises(promote.ReleasePromotionError, match="compatibility receipt"):
+        promote._embedding_space_evidence(
+            manifest=manifest,
+            retriever_alias="dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+            source_revision="a" * 40,
+            source_fingerprint="b" * 64,
+            receipt_path=None,
+        )
+
+
+def test_checked_in_retriever_is_its_original_vector_runtime() -> None:
+    manifest = load_deployment_manifest(
+        PROJECT_ROOT / "config/model-router/deployment-manifest.json",
+        project_root=PROJECT_ROOT,
+    )
+    evidence = promote._embedding_space_evidence(
+        manifest=manifest,
+        retriever_alias="dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+        source_revision="a" * 40,
+        source_fingerprint="b" * 64,
+        receipt_path=None,
+    )
+    assert evidence["mode"] == "origin"
+
+
 def test_record_conformance_writes_a_deterministic_receipt(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -99,8 +156,9 @@ def test_record_conformance_writes_a_deterministic_receipt(
     )
 
 
-def test_prepare_release_builds_steady_state_evidence_without_legacy_receipts(
-    tmp_path: Path, monkeypatch
+@pytest.mark.parametrize("require_compatibility", [False, True])
+def test_prepare_release_builds_selected_route_evidence(
+    tmp_path: Path, monkeypatch, require_compatibility: bool
 ) -> None:
     manifest_path = tmp_path / "manifest.json"
     manifest_payload = json.loads(
@@ -163,10 +221,24 @@ def test_prepare_release_builds_steady_state_evidence_without_legacy_receipts(
         json.dumps(
             {
                 "canonical_case_keys_sha256": "0" * 64,
-                "llama_compatibility": {
-                    "passed": True,
-                    "artifact_sha256": "1" * 64,
+                "effective_config": {
+                    "include_llama_compatibility": require_compatibility,
+                    "llama_compatibility_model_key": "local_llama_server::qwen3527b",
                 },
+                "llama_compatibility": (
+                    {
+                        "passed": True,
+                        "artifact_sha256": "1" * 64,
+                        "deployment_snapshots": [
+                            {
+                                "role": "conversation",
+                                "route_alias": "local_llama_server::qwen3527b",
+                            }
+                        ],
+                    }
+                    if require_compatibility
+                    else None
+                ),
             }
         ),
         encoding="utf-8",
@@ -203,7 +275,18 @@ def test_prepare_release_builds_steady_state_evidence_without_legacy_receipts(
 
     assert promoted_manifest == manifest_payload
     assert evidence["kind"] == "ade-agent-studio-release-evidence"
-    assert evidence["schema_version"] == 3
+    assert evidence["schema_version"] == 4
+    assert evidence["qualification"]["compatibility_checks"] == (
+        [
+            {
+                "route_alias": "local_llama_server::qwen3527b",
+                "passed": True,
+                "artifact_sha256": "1" * 64,
+            }
+        ]
+        if require_compatibility
+        else []
+    )
     assert "paired_parity" not in evidence
     assert "rollback_rehearsal" not in evidence
 

@@ -305,7 +305,10 @@ def test_router_resolves_stable_alias_through_the_discovered_deployment(
         "schema_policy_sha256": "e" * 64,
         "retrieval_policy_sha256": "f" * 64,
         "sampling_settings": {"dimensions": 1024},
-        "context_settings": {"request_timeout_seconds": 15},
+        "context_settings": {
+            "request_timeout_seconds": 15,
+            "route_base_url": "http://127.0.0.1:8001/v1",
+        },
         "hardware_metadata": {},
     }
     manifest_path = tmp_path / "deployment-manifest.json"
@@ -348,6 +351,7 @@ def test_router_resolves_stable_alias_through_the_discovered_deployment(
         id="embedding-source",
         label="Embedding source",
         base_url="http://127.0.0.1:8001/v1",
+        base_url_env="TEST_EMBEDDING_BASE_URL",
         adapter="vllm_openai",
         enabled_for=["embedding"],
     )
@@ -377,6 +381,13 @@ def test_router_resolves_stable_alias_through_the_discovered_deployment(
         "embedding-source::stable",
         "embedding-source::Qwen/Qwen3-Embedding-0.6B",
     ]
+
+    monkeypatch.setenv("TEST_EMBEDDING_BASE_URL", "https://relocated.example/v1")
+    relocated = service.find_routed_model(
+        "embedding-source::Qwen/Qwen3-Embedding-0.6B", force_refresh=True
+    )
+    assert relocated is not None
+    assert relocated.deployment is None
 
 
 def test_router_catalog_enriches_models_from_profiles_and_gates_agent_studio(

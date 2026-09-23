@@ -109,8 +109,23 @@ class RouterSourceConfig(BaseModel):
             else ""
         )
         base = (base or self.base_url).rstrip("/")
+        parsed = urlsplit(base)
+        if (
+            self.adapter != "deepseek_openai"
+            and base
+            and (
+                parsed.scheme not in {"http", "https"}
+                or not parsed.hostname
+                or parsed.username
+                or parsed.password
+                or parsed.query
+                or parsed.fragment
+            )
+        ):
+            raise ValueError(
+                "Model Router base URL must be HTTP(S) without credentials or query"
+            )
         if self.adapter == "deepseek_openai":
-            parsed = urlsplit(base)
             if (
                 parsed.scheme != "https"
                 or parsed.hostname != "api.deepseek.com"

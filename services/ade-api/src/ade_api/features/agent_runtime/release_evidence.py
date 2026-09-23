@@ -89,9 +89,10 @@ def validate_agent_studio_release_evidence(
         raise AgentStudioReleaseEvidenceError(
             "Agent Studio release evidence digest does not match its content"
         )
-    if material.get("schema_version") != 3:
+    schema_version = material.get("schema_version")
+    if schema_version not in {3, 4}:
         raise AgentStudioReleaseEvidenceError(
-            "Agent Studio release evidence schema_version must be 3"
+            "Agent Studio release evidence schema_version must be 3 or 4"
         )
     if material.get("kind") != "ade-agent-studio-release-evidence":
         raise AgentStudioReleaseEvidenceError(
@@ -146,7 +147,10 @@ def validate_agent_studio_release_evidence(
         _mapping(material.get("agent_bundle"), "agent_bundle")
     )
     qualification_run_id = _validate_native_qualification(
-        _mapping(material.get("qualification"), "qualification")
+        _mapping(material.get("qualification"), "qualification"),
+        schema_version=schema_version,
+        retriever=manifest.for_route_alias(route_aliases["retriever"]),
+        retriever_alias=route_aliases["retriever"],
     )
     _validate_conformance(_mapping(material.get("conformance"), "conformance"))
 
@@ -269,7 +273,13 @@ def _validate_agent_bundle(bundle: Mapping[str, Any]) -> AgentStudioAgentBundle:
     )
 
 
-def _validate_native_qualification(qualification: Mapping[str, Any]) -> str:
+def _validate_native_qualification(
+    qualification: Mapping[str, Any],
+    *,
+    schema_version: int,
+    retriever: Any,
+    retriever_alias: str,
+) -> str:
     qualification_run_id = _required_text(qualification, "run_id")
     if qualification.get("passed") is not True:
         raise AgentStudioReleaseEvidenceError(
@@ -287,17 +297,105 @@ def _validate_native_qualification(qualification: Mapping[str, Any]) -> str:
         raise AgentStudioReleaseEvidenceError(
             "Agent Studio qualification requires three distinct passing rounds"
         )
-    compatibility = _mapping(
-        qualification.get("llama_compatibility"), "llama_compatibility"
+    if schema_version == 3:
+        compatibility = _mapping(
+            qualification.get("llama_compatibility"), "llama_compatibility"
+        )
+        if compatibility.get("passed") is not True:
+            raise AgentStudioReleaseEvidenceError(
+                "Agent Studio qualification requires passing llama-server compatibility"
+            )
+        _required_digest(
+            compatibility.get("artifact_sha256"), "llama compatibility artifact"
+        )
+        if "compatibility_checks" in qualification:
+            raise AgentStudioReleaseEvidenceError(
+                "Legacy release evidence cannot use selected compatibility checks"
+            )
+    else:
+        if "llama_compatibility" in qualification:
+            raise AgentStudioReleaseEvidenceError(
+                "Selected-route release evidence cannot reuse legacy llama compatibility"
+            )
+        checks = qualification.get("compatibility_checks")
+        if not isinstance(checks, list):
+            raise AgentStudioReleaseEvidenceError(
+                "Selected-route compatibility checks must be a list"
+            )
+        aliases: set[str] = set()
+        for check in checks:
+            item = _mapping(check, "compatibility check")
+            if set(item) != {"route_alias", "passed", "artifact_sha256"}:
+                raise AgentStudioReleaseEvidenceError(
+                    "Selected-route compatibility check fields are invalid"
+                )
+            alias = _required_text(item, "route_alias")
+            if alias in aliases or item.get("passed") is not True:
+                raise AgentStudioReleaseEvidenceError(
+                    "Configured compatibility checks must pass once per route"
+                )
+            aliases.add(alias)
+            _required_digest(item.get("artifact_sha256"), "compatibility artifact")
+        _validate_embedding_space_compatibility(
+            qualification.get("embedding_space_compatibility"),
+            retriever=retriever,
+            retriever_alias=retriever_alias,
+        )
+    return qualification_run_id
+
+
+def _validate_embedding_space_compatibility(
+    raw: object, *, retriever: Any, retriever_alias: str
+) -> None:
+    if retriever is None:
+        raise AgentStudioReleaseEvidenceError("release retriever is missing")
+    fingerprint = retriever.fingerprint
+    sampling = fingerprint.sampling_settings
+    context = fingerprint.context_settings
+    space = _mapping(sampling.get("vector_space"), "retriever vector space")
+    space_id = _required_text(space, "id")
+    origin_url = _required_text(context, "vector_space_origin_url")
+    route_url = _required_text(context, "route_base_url")
+    origin_runtime = _mapping(
+        context.get("vector_space_origin_runtime"), "vector space origin runtime"
     )
-    if compatibility.get("passed") is not True:
+    current_runtime = {
+        "implementation": fingerprint.runtime_implementation,
+        "version": fingerprint.runtime_version,
+        "image_digest": fingerprint.runtime_image_digest,
+    }
+    evidence = _mapping(raw, "embedding_space_compatibility")
+    mode = evidence.get("mode")
+    expected = {
+        "space_id": space_id,
+        "route_alias": retriever_alias,
+        "deployment_fingerprint": fingerprint.sha256,
+        "mode": mode,
+    }
+    if route_url == origin_url and dict(origin_runtime) == current_runtime:
+        if mode != "origin" or dict(evidence) != expected:
+            raise AgentStudioReleaseEvidenceError(
+                "Origin embedding route must use exact origin-space evidence"
+            )
+        return
+    if mode != "verified" or set(evidence) != set(expected) | {
+        "passed",
+        "artifact_sha256",
+    }:
         raise AgentStudioReleaseEvidenceError(
-            "Agent Studio qualification requires passing llama-server compatibility"
+            "Relocated embedding route requires verified compatibility evidence"
+        )
+    if any(evidence.get(key) != value for key, value in expected.items()):
+        raise AgentStudioReleaseEvidenceError(
+            "Embedding compatibility evidence binds a different deployment"
+        )
+    if evidence.get("passed") is not True:
+        raise AgentStudioReleaseEvidenceError(
+            "Relocated embedding route compatibility did not pass"
         )
     _required_digest(
-        compatibility.get("artifact_sha256"), "llama compatibility artifact"
+        evidence.get("artifact_sha256"), "embedding compatibility artifact"
     )
-    return qualification_run_id
 
 
 def _validate_conformance(conformance: Mapping[str, Any]) -> None:

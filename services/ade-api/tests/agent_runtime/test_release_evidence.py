@@ -38,8 +38,24 @@ def _fingerprint(seed: str) -> dict[str, object]:
         "tool_policy_sha256": POLICY_HASHES["tool"],
         "schema_policy_sha256": POLICY_HASHES["schema"],
         "retrieval_policy_sha256": POLICY_HASHES["retrieval"],
-        "sampling_settings": {},
-        "context_settings": {},
+        "sampling_settings": (
+            {"vector_space": {"id": "synthetic-space", "dimensions": 3}}
+            if seed == "embedding"
+            else {}
+        ),
+        "context_settings": (
+            {
+                "route_base_url": "https://embedding.test/v1",
+                "vector_space_origin_url": "https://embedding.test/v1",
+                "vector_space_origin_runtime": {
+                    "implementation": "test-runtime",
+                    "version": None,
+                    "image_digest": None,
+                },
+            }
+            if seed == "embedding"
+            else {}
+        ),
         "hardware_metadata": {},
     }
 
@@ -146,6 +162,27 @@ def _evidence(manifest: DeploymentManifest) -> dict[str, object]:
     return payload
 
 
+def _v4_evidence(manifest: DeploymentManifest) -> dict[str, object]:
+    payload = _evidence(manifest)
+    payload["schema_version"] = 4
+    qualification = payload["qualification"]
+    assert isinstance(qualification, dict)
+    qualification.pop("llama_compatibility")
+    qualification["compatibility_checks"] = []
+    retriever = manifest.for_route_alias("router::embedding")
+    assert retriever is not None
+    qualification["embedding_space_compatibility"] = {
+        "space_id": "synthetic-space",
+        "route_alias": "router::embedding",
+        "deployment_fingerprint": retriever.fingerprint.sha256,
+        "mode": "origin",
+    }
+    payload["evidence_sha256"] = canonical_sha256(
+        {key: value for key, value in payload.items() if key != "evidence_sha256"}
+    )
+    return payload
+
+
 def test_v3_evidence_binds_native_qualification_routes_and_agent_bundle() -> None:
     manifest = _manifest()
     payload = _evidence(manifest)
@@ -176,6 +213,95 @@ def test_v3_evidence_does_not_require_legacy_parity_or_rollback_receipts() -> No
         manifest_sha256="c" * 64,
         policy_hashes=POLICY_HASHES,
     )
+
+
+def test_v4_selected_routes_need_no_unselected_compatibility_provider() -> None:
+    manifest = _manifest()
+    payload = _v4_evidence(manifest)
+
+    release = validate_agent_studio_release_evidence(
+        payload,
+        manifest=manifest,
+        manifest_sha256="c" * 64,
+        policy_hashes=POLICY_HASHES,
+    )
+
+    assert release.route_aliases["conversation"] == "router::chat"
+
+
+@pytest.mark.parametrize(
+    "checks",
+    [
+        None,
+        [
+            {
+                "route_alias": "router::other",
+                "passed": False,
+                "artifact_sha256": "8" * 64,
+            }
+        ],
+    ],
+)
+def test_v4_rejects_missing_or_failed_selected_compatibility(checks: object) -> None:
+    manifest = _manifest()
+    payload = _v4_evidence(manifest)
+    qualification = payload["qualification"]
+    assert isinstance(qualification, dict)
+    qualification.pop("compatibility_checks")
+    if checks is not None:
+        qualification["compatibility_checks"] = checks
+    payload["evidence_sha256"] = canonical_sha256(
+        {key: value for key, value in payload.items() if key != "evidence_sha256"}
+    )
+
+    with pytest.raises(AgentStudioReleaseEvidenceError, match="compatibility"):
+        validate_agent_studio_release_evidence(
+            payload,
+            manifest=manifest,
+            manifest_sha256="c" * 64,
+            policy_hashes=POLICY_HASHES,
+        )
+
+
+def test_v4_cannot_relabel_a_v3_llama_receipt_as_generic() -> None:
+    manifest = _manifest()
+    payload = _v4_evidence(manifest)
+    qualification = payload["qualification"]
+    assert isinstance(qualification, dict)
+    qualification["llama_compatibility"] = {"passed": True, "artifact_sha256": "8" * 64}
+    payload["evidence_sha256"] = canonical_sha256(
+        {key: value for key, value in payload.items() if key != "evidence_sha256"}
+    )
+    with pytest.raises(AgentStudioReleaseEvidenceError, match="legacy llama"):
+        validate_agent_studio_release_evidence(
+            payload,
+            manifest=manifest,
+            manifest_sha256="c" * 64,
+            policy_hashes=POLICY_HASHES,
+        )
+
+
+def test_v4_relocation_requires_exact_verified_embedding_receipt() -> None:
+    manifest = _manifest()
+    payload = _v4_evidence(manifest)
+    qualification = payload["qualification"]
+    assert isinstance(qualification, dict)
+    qualification["embedding_space_compatibility"] = {
+        **qualification["embedding_space_compatibility"],
+        "mode": "verified",
+        "passed": True,
+        "artifact_sha256": "8" * 64,
+    }
+    payload["evidence_sha256"] = canonical_sha256(
+        {key: value for key, value in payload.items() if key != "evidence_sha256"}
+    )
+    with pytest.raises(AgentStudioReleaseEvidenceError, match="Origin embedding"):
+        validate_agent_studio_release_evidence(
+            payload,
+            manifest=manifest,
+            manifest_sha256="c" * 64,
+            policy_hashes=POLICY_HASHES,
+        )
 
 
 def test_v3_evidence_rejects_nonmatching_api_or_worker_build_identity() -> None:

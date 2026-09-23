@@ -217,3 +217,31 @@ def test_deepseek_source_resolves_configured_base_and_key_without_v1_suffix(
         monkeypatch.setenv("DEEPSEEK_API_BASE", unsafe_base)
         with pytest.raises(ValueError, match="official API endpoint"):
             source.normalized_base_url()
+
+
+def test_embedding_endpoint_can_relocate_without_leaking_credentials(
+    monkeypatch, tmp_path
+) -> None:
+    source = RouterSourceConfig(
+        id="dgx_embedding_sidecar",
+        label="Qwen embedding service",
+        base_url="http://dgx-spark:8001/v1",
+        base_url_env="QWEN_EMBEDDING_API_BASE",
+        adapter="vllm_openai",
+        enabled_for=["embedding"],
+        api_key_env="DGX_EMBEDDING_API_KEY",
+    )
+    monkeypatch.setenv("QWEN_EMBEDDING_API_BASE", "https://embedding.example/v1/")
+    assert source.embeddings_url() == "https://embedding.example/v1/embeddings"
+    assert "secret" not in source.embeddings_url()
+    assert (
+        source.resolve_api_key(
+            secrets_dir=tmp_path, environ={"DGX_EMBEDDING_API_KEY": "synthetic-secret"}
+        )
+        == "synthetic-secret"
+    )
+    monkeypatch.setenv(
+        "QWEN_EMBEDDING_API_BASE", "https://user:secret@embedding.example/v1"
+    )
+    with pytest.raises(ValueError, match="without credentials"):
+        source.normalized_base_url()

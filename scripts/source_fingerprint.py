@@ -36,6 +36,7 @@ GOVERNED_SOURCE_FILES = frozenset(
         "services/model-router/Dockerfile",
         "services/model-router/pyproject.toml",
         "scripts/check_agent_studio_release_gate.py",
+        "scripts/embedding_space_compatibility.py",
         "scripts/promote_agent_studio_release.py",
         "scripts/rebind_agent_runtime_policy.py",
         "scripts/record_agent_studio_conformance.py",

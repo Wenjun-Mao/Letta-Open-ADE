@@ -20,6 +20,7 @@ from .embeddings import (
     AUTOMATIC_MAXIMUM_COSINE_DISTANCE,
     RETRIEVAL_POLICY_VERSION,
     EmbeddingClient,
+    embedding_space_key,
     qwen_query_text,
 )
 from .deployments import validate_definition_execution
@@ -97,6 +98,7 @@ class TurnExecution:
         conversation_deployment = _required_deployment(deployments, "conversation")
         reviewer_deployment = _required_deployment(deployments, "reviewer")
         retriever_deployment = _required_deployment(deployments, "retriever")
+        retriever_space_key = embedding_space_key(retriever_deployment)
         conversation_adapter = _deployment_adapter(catalog, conversation_deployment)
         reviewer_adapter = _deployment_adapter(catalog, reviewer_deployment)
         conversation_executor = ConversationExecutor(
@@ -184,10 +186,15 @@ class TurnExecution:
                 timeout_seconds=_remaining(deadline),
             )
         )[0]
+        expected_dimensions = _embedding_dimensions(retriever_deployment)
+        if expected_dimensions and len(query_vector) != expected_dimensions:
+            raise RuntimeValidationError(
+                "Embedding query dimensions do not match the deployment fingerprint"
+            )
         retrieved = await self._search(
             subject_id=subject_id,
             query_vector=query_vector,
-            fingerprint=str(retriever_deployment["fingerprint"]),
+            fingerprint=retriever_space_key,
             limit=8,
             maximum_distance=AUTOMATIC_MAXIMUM_COSINE_DISTANCE,
         )
@@ -238,10 +245,14 @@ class TurnExecution:
                     timeout_seconds=_remaining(deadline),
                 )
             )[0]
+            if expected_dimensions and len(vector) != expected_dimensions:
+                raise RuntimeValidationError(
+                    "Embedding tool-query dimensions do not match the deployment fingerprint"
+                )
             rows = await self._search(
                 subject_id=subject_id,
                 query_vector=vector,
-                fingerprint=str(retriever_deployment["fingerprint"]),
+                fingerprint=retriever_space_key,
                 limit=limit,
                 maximum_distance=None,
             )
@@ -336,7 +347,6 @@ class TurnExecution:
             None if operation.value is None else next(vector_iterator)
             for operation in prepared.operations
         )
-        expected_dimensions = _embedding_dimensions(retriever_deployment)
         dimensions = len(vectors[0]) if vectors else expected_dimensions
         if expected_dimensions and vectors and dimensions != expected_dimensions:
             raise RuntimeValidationError(
@@ -349,7 +359,7 @@ class TurnExecution:
             reviewer=reviewer_result,
             review=prepared,
             operation_embeddings=operation_embeddings,
-            embedding_fingerprint=str(retriever_deployment["fingerprint"]),
+            embedding_fingerprint=retriever_space_key,
             embedding_dimensions=dimensions,
             retrieval_policy_version=RETRIEVAL_POLICY_VERSION,
             compaction=compaction,

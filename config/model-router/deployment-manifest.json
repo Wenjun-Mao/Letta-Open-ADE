@@ -10,7 +10,7 @@
         "conversation",
         "reviewer"
       ],
-      "lifecycle": "discovered",
+      "lifecycle": "candidate",
       "fingerprint": {
         "provider": "deepseek",
         "endpoint_role": "openai-compatible-chat",
@@ -22,10 +22,10 @@
         "runtime_implementation": "DeepSeek hosted API",
         "runtime_version": null,
         "runtime_image_digest": null,
-        "prompt_policy_sha256": "fe10a5385ddbfc347e369900d8c3b39e1d7c9addd18aa7f4feb18e7f866f6310",
-        "tool_policy_sha256": "d2d898eedc4dee2ebbea9b0e231b7483328550658a06df81902c49d089b42351",
-        "schema_policy_sha256": "7f4eab20e2b390886d1772bc32322b24d17e50b838da36d8fe0b7f78e466b3cf",
-        "retrieval_policy_sha256": "e5344e9d27abca4399a5ca9c0a3e6f33c1455e1600722685eb1f5c839bc3663c",
+        "prompt_policy_sha256": "2e1f1fa3ea96d6be9917da70196f03c0f9c7ecf61b883214a7ad54b4b3adc5a3",
+        "tool_policy_sha256": "fb91b2b7451cf0c19bf17a55429083b58809391896cfc7bfafe5a1ad9844fcac",
+        "schema_policy_sha256": "35c8da44588ae7bdef868756d1bf62f4574f80ecf44fa1b8679f4a887c38fbee",
+        "retrieval_policy_sha256": "ee936e3c28b446277905109da634d852fc0e76fa815a7b13c046080e4277e195",
         "sampling_settings": {
           "thinking": "enabled",
           "reasoning_effort": "high",
@@ -38,7 +38,8 @@
           "response_reserve_tokens": 4096,
           "max_output_tokens": 4096,
           "max_model_requests": 6,
-          "reviewer_repair_count": 0
+          "reviewer_repair_count": 0,
+          "route_base_url": "https://api.deepseek.com"
         },
         "hardware_metadata": {
           "host_class": "hosted API",
@@ -46,7 +47,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "40e9c64f66a8da1acc5dfe2d029143568a68cc2539bcbec63f5a87705685208d",
+        "fingerprint_sha256": "63f42d881cf0dbcce81b2f17b26319e081921ceb753832c18b308cdc4e57b512",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [
@@ -141,7 +142,7 @@
       "roles": [
         "retriever"
       ],
-      "lifecycle": "qualified",
+      "lifecycle": "candidate",
       "fingerprint": {
         "provider": "dgx_embedding_sidecar",
         "endpoint_role": "openai-compatible-embeddings",
@@ -153,19 +154,38 @@
         "runtime_implementation": "vLLM",
         "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
         "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
-        "prompt_policy_sha256": "a7c25c67fa41bfda5fdab5102192c9b1261310fb55e0fbb98c38b97ffafd422d",
-        "tool_policy_sha256": "2b30616cdc949a59db4d9258dc6592b434efd7fd450cfc7d0caeea77f1d78840",
-        "schema_policy_sha256": "094c22c790aae6b332e974e9091d63e5aa3e0ef00b5faa887c51eb3563c9464a",
-        "retrieval_policy_sha256": "a3944d7124416ad36cb2785eb92755f64703f932e9ed01a14330ad68863518f9",
+        "prompt_policy_sha256": "2e1f1fa3ea96d6be9917da70196f03c0f9c7ecf61b883214a7ad54b4b3adc5a3",
+        "tool_policy_sha256": "fb91b2b7451cf0c19bf17a55429083b58809391896cfc7bfafe5a1ad9844fcac",
+        "schema_policy_sha256": "35c8da44588ae7bdef868756d1bf62f4574f80ecf44fa1b8679f4a887c38fbee",
+        "retrieval_policy_sha256": "ee936e3c28b446277905109da634d852fc0e76fa815a7b13c046080e4277e195",
         "sampling_settings": {
           "dimensions": 1024,
           "query_instruction_enabled": true,
           "strategy": "semantic",
-          "hidden_retries": 0
+          "hidden_retries": 0,
+          "vector_space": {
+            "id": "c549d7dc288d2112f10e8b1032b502eda74557d093bc1390fe0fc4f44de63086",
+            "artifact_reference": "Qwen/Qwen3-Embedding-0.6B",
+            "artifact_revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+            "dimensions": 1024,
+            "query_format": "qwen3-instruct-query-v1",
+            "document_format": "typed-fact-lines-v1",
+            "pooling": "provider-served",
+            "normalization": "provider-served",
+            "comparison": "pgvector-cosine-v1",
+            "retrieval_policy_version": "qwen3-semantic-facts-v1"
+          }
         },
         "context_settings": {
           "endpoint_port": 8001,
-          "request_timeout_seconds": 15
+          "request_timeout_seconds": 15,
+          "route_base_url": "http://dgx-spark:8001/v1",
+          "vector_space_origin_url": "http://dgx-spark:8001/v1",
+          "vector_space_origin_runtime": {
+            "implementation": "vLLM",
+            "version": "0.19.2rc1.dev134+gfe9c3d6c5",
+            "image_digest": "ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc"
+          }
         },
         "hardware_metadata": {
           "host_class": "NVIDIA DGX Spark",
@@ -173,15 +193,15 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "c549d7dc288d2112f10e8b1032b502eda74557d093bc1390fe0fc4f44de63086",
-        "qualified": true,
+        "fingerprint_sha256": "d574903255429f1335280f6646594e3a44d1a087a20edcc1ccb97d4a4686d7da",
+        "qualified": false,
         "stale_round_count": 0,
         "role_results": [
           {
             "role": "retriever",
-            "observed_rounds": 3,
-            "consecutive_passing_rounds": 3,
-            "qualified": true
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
           }
         ]
       }

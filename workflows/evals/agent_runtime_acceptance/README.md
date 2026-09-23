@@ -31,11 +31,13 @@ uv run python workflows/evals/agent_runtime_acceptance/run.py \
   --output-dir workflows/evals/agent_runtime_acceptance/outputs
 ```
 
-The default run performs three primary DGX qualification rounds and one
-llama-server compatibility round. It records preflight evidence, normalized
-SSE events, typed facts, tool outcomes, deployment snapshots, and a promotion
-proposal. A focused `--case-key` run is diagnostic only: it runs one round,
-skips llama compatibility, and cannot create a promotion proposal.
+The selected candidate runs three primary DeepSeek conversation/reviewer and
+Qwen retriever qualification rounds. Llama-server compatibility is optional
+and disabled for this candidate; select it only when that route belongs to
+the supported deployment contract. The runner records preflight evidence,
+normalized SSE events, typed facts, tool outcomes, deployment snapshots, and
+a promotion proposal. A focused `--case-key` run is diagnostic only: it runs
+one round, skips compatibility, and cannot create a promotion proposal.
 
 ```bash
 uv run python workflows/evals/agent_runtime_acceptance/run.py \
@@ -48,6 +50,13 @@ zero requested retries, matching API/worker source identity, and consistent
 deployment fingerprints. Provider errors, cancellations, malformed events, or
 missing reviewer and memory evidence fail closed. Promotion review remains an
 explicit separate step; this workflow only produces evidence.
+
+The checked-in DeepSeek and Qwen manifest entries are candidates with zero
+passing rounds, not approved release routes. If `QWEN_EMBEDDING_API_BASE`
+changes the effective endpoint, rebind its manifest URL and deployment
+fingerprint, prove vector-space compatibility with paired synthetic query and
+document canaries, and run fresh qualification before promotion. Merely
+changing the environment variable fails the Agent Runtime deployment binding.
 
 Each round artifact includes a per-turn `chronology` diagnostic assembled from
 the event log already collected here. It orders context/retrieval, generation,

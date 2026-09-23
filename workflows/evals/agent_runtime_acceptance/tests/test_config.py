@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 
 from workflows.evals.agent_runtime_acceptance.config import (
-    DEFAULT_DGX_CHAT_MODEL,
-    DEFAULT_DGX_EMBEDDING_MODEL,
+    DEFAULT_CHAT_MODEL,
+    DEFAULT_EMBEDDING_MODEL,
     DEFAULT_LLAMA_COMPATIBILITY_MODEL,
     DEFAULT_PERSONA_KEY,
     DEFAULT_PROMPT_KEY,
@@ -30,9 +30,9 @@ def test_defaults_match_production_qualification_contract(
     config = load_config(tmp_path / "missing.toml")
 
     assert config.api_base_url == "https://ade.test"
-    assert config.conversation_model_key == DEFAULT_DGX_CHAT_MODEL
-    assert config.reviewer_model_key == DEFAULT_DGX_CHAT_MODEL
-    assert config.embedding_model_key == DEFAULT_DGX_EMBEDDING_MODEL
+    assert config.conversation_model_key == DEFAULT_CHAT_MODEL
+    assert config.reviewer_model_key == DEFAULT_CHAT_MODEL
+    assert config.embedding_model_key == DEFAULT_EMBEDDING_MODEL
     assert config.llama_compatibility_model_key == DEFAULT_LLAMA_COMPATIBILITY_MODEL
     assert config.llama_compatibility_model_key == "local_llama_server::qwen3527b"
     assert config.rounds == 3
@@ -40,7 +40,7 @@ def test_defaults_match_production_qualification_contract(
     assert config.retry_count == 0
     assert config.prompt_key == DEFAULT_PROMPT_KEY
     assert config.persona_key == DEFAULT_PERSONA_KEY
-    assert config.include_llama_compatibility is True
+    assert config.include_llama_compatibility is False
     assert config.case_keys == ()
     assert public_config(config)["prompt_key"] == DEFAULT_PROMPT_KEY
     assert public_config(config)["persona_key"] == DEFAULT_PERSONA_KEY

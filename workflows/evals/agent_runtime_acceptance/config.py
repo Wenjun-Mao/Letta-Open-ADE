@@ -8,8 +8,8 @@ from typing import Any
 
 
 WORKFLOW_ROOT = Path(__file__).resolve().parent
-DEFAULT_DGX_CHAT_MODEL = "dgx_vllm::qwen3.6-35b-a3b-fp8"
-DEFAULT_DGX_EMBEDDING_MODEL = "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B"
+DEFAULT_CHAT_MODEL = "deepseek::deepseek-flash"
+DEFAULT_EMBEDDING_MODEL = "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B"
 DEFAULT_LLAMA_COMPATIBILITY_MODEL = "local_llama_server::qwen3527b"
 DEFAULT_PROMPT_KEY = "chat_v20260516"
 DEFAULT_PERSONA_KEY = "chat_linxiaotang"
@@ -25,16 +25,16 @@ class AcceptanceConfig:
     api_base_url: str
     api_key: str
     output_dir: Path
-    conversation_model_key: str = DEFAULT_DGX_CHAT_MODEL
-    reviewer_model_key: str = DEFAULT_DGX_CHAT_MODEL
-    embedding_model_key: str = DEFAULT_DGX_EMBEDDING_MODEL
+    conversation_model_key: str = DEFAULT_CHAT_MODEL
+    reviewer_model_key: str = DEFAULT_CHAT_MODEL
+    embedding_model_key: str = DEFAULT_EMBEDDING_MODEL
     llama_compatibility_model_key: str = DEFAULT_LLAMA_COMPATIBILITY_MODEL
     prompt_key: str = DEFAULT_PROMPT_KEY
     persona_key: str = DEFAULT_PERSONA_KEY
     rounds: int = 3
     timeout_seconds: float = 180.0
     retry_count: int = 0
-    include_llama_compatibility: bool = True
+    include_llama_compatibility: bool = False
     case_keys: tuple[str, ...] = ()
 
     def validate(self) -> None:
@@ -88,16 +88,16 @@ def load_config(path: Path | None = None) -> AcceptanceConfig:
             "CONVERSATION_MODEL_KEY",
             payload,
             "conversation_model_key",
-            DEFAULT_DGX_CHAT_MODEL,
+            DEFAULT_CHAT_MODEL,
         ),
         reviewer_model_key=_value(
-            "REVIEWER_MODEL_KEY", payload, "reviewer_model_key", DEFAULT_DGX_CHAT_MODEL
+            "REVIEWER_MODEL_KEY", payload, "reviewer_model_key", DEFAULT_CHAT_MODEL
         ),
         embedding_model_key=_value(
             "EMBEDDING_MODEL_KEY",
             payload,
             "embedding_model_key",
-            DEFAULT_DGX_EMBEDDING_MODEL,
+            DEFAULT_EMBEDDING_MODEL,
         ),
         llama_compatibility_model_key=_value(
             "LLAMA_COMPATIBILITY_MODEL_KEY",
@@ -113,7 +113,7 @@ def load_config(path: Path | None = None) -> AcceptanceConfig:
         ),
         retry_count=_int_value("RETRY_COUNT", payload, "retry_count", 0),
         include_llama_compatibility=_bool_value(
-            "INCLUDE_LLAMA_COMPATIBILITY", payload, "include_llama_compatibility", True
+            "INCLUDE_LLAMA_COMPATIBILITY", payload, "include_llama_compatibility", False
         ),
         case_keys=_case_keys_value(payload),
     )

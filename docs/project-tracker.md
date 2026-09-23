@@ -8,10 +8,18 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 [ADR 0025](adr/0025-deepseek-development-lane.md) replaces Luna as the
 current development-generation lane: official DeepSeek API,
 `deepseek-flash`, thinking enabled/high by default, and Spark embeddings through the
-existing retriever source. The Luna/AppServer feasibility experiment in
+existing retriever source. [ADR 0027](adr/0027-provider-neutral-release-and-embedding-space.md)
+now selects DeepSeek conversation/reviewer plus Qwen retriever as the *new
+unqualified release candidate*. This supersedes the earlier development-only
+restriction for this selected candidate, not the requirement for fresh
+qualification and promotion. The historical schema-v3 release ledger and
+DGX/llama receipts remain unchanged; neither route has been promoted. The
+Qwen endpoint may move only with an updated manifest binding, compatibility
+review, and fresh qualification. No live calls were made during this
+contract-preparation checkpoint. The Luna/AppServer feasibility experiment in
 [ADR 0024](adr/0024-local-luna-agent-backend-feasibility.md) is on hold with
-its four starts unspent. DeepSeek is development-only and unqualified; it is
-not a release provider, a Spark chat fallback, or evidence that the M2
+its four starts unspent. DeepSeek remains unqualified; it is
+not a Spark chat fallback or evidence that the M2
 ADE/Hindsight comparison was run. Initial synthetic smoke is bounded by
 eight DeepSeek generation requests including continuations, four Spark
 embeddings, no rerolls, and 180 seconds per request. The
@@ -36,7 +44,7 @@ post-fix native/UI regressions passed the reply boundary and persistence
 checks at 4/6 generation and 2/6 embedding calls; the failed turns were not
 rerolled. Positive semantic retrieval and broader provider reliability remain
 open. Release still needs a production chat-target/availability decision and
-fresh governed qualification; development DeepSeek is not production-approved.
+fresh governed qualification; selected DeepSeek is not production-approved.
 
 M2: compare the smallest ADE extension with Hindsight against M1's 林小棠
 (`chat_linxiaotang`) continuity cases. See the
@@ -106,7 +114,7 @@ implementation and verification choices do not need repeated confirmation.
 | M0 | complete | None | Maintain verified foundation | [Native release ledger](../config/agent-studio/release-evidence.json), [ADR 0019](adr/0019-ade-steady-state-runtime.md), [Luna workflow](../workflows/evals/character_memory_dev/README.md), commits `f8de9d7` and `7799439`. |
 | M1 | complete | M0 | Director review and M2 comparison definition | [Findings](findings/m1-character-continuity-baseline.md), policy tests, and ten serial Luna records. Implementation baseline is complete; native persistence/provider qualification remains pending. |
 | M2 | deferred | M1 | Reopen at the mandatory end-of-M3 capability review if a measured service comparison is justified and authorized | [Interim findings](findings/m2-memory-approach-comparison.md) and [Luna evidence](findings/m2-luna-development-evidence.md) preserve the original evidence. The original ADE/Hindsight quality, latency and maintenance comparison was not executed. |
-| M3 | in progress | [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md) | Director review of bounded post-fix pass; choose release target/availability before separately authorized qualification | [M3 finding](findings/m3-native-acceptance-2026-09-23.md) and [plan](plans/m3-agent-studio-continuity.md). Real UI/native reviewer and persistence covered typed fact/correction/removal, subject isolation, and archived old-page citation. Two original reply failures remain recorded; two distinct post-fix cases passed. Positive semantic retrieval, long-session reliability, character-private relationship continuity, and governed release qualification are not established. Persona-version UI/API evidence is inherited. |
+| M3 | in progress | [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md) | Independent review of selected-route static checkpoint; separately authorize and budget fresh qualification | [M3 finding](findings/m3-native-acceptance-2026-09-23.md), [continuity plan](plans/m3-agent-studio-continuity.md), and [release-preparation plan](plans/m3-provider-neutral-release-preparation.md). Real UI/native reviewer and persistence covered typed fact/correction/removal, subject isolation, and archived old-page citation. Two original reply failures remain recorded; two distinct post-fix cases passed. DeepSeek/Qwen are unqualified candidates. Positive semantic retrieval, long-session reliability, character-private relationship continuity, and governed release qualification are not established. Persona-version UI/API evidence is inherited. |
 | M4 | planned | M3 | Define deployment-provider and real-use acceptance cases | Requires longer-session results, deployment-model qualification, and actual operator review. |
 
 ## Original M2 Work Checklist (Deferred)
