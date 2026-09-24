@@ -15,12 +15,21 @@ the approved publication scope.
 
 ## Current Focus
 
+The user authorized offline implementation of revision-5 checkpoints 1–4 on
+2026-09-24 after both final Pro GO reviews. Work is assigned to the retained
+`codex/character-continuity` worktree, beginning at `6915cee`; checkpoint 5
+live diagnostic, push, merge, deployment and release remain unauthorized. The
+checkpoint status below will be updated as implementation and verification land.
+Checkpoint 1 contract freeze is recorded in [ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md)
+and the [complete-delta cases](findings/natural-memory-consultation/revision5-offline-contract-cases.md).
+The first focused wire tests are intentionally red against the old parser (3
+failures); checkpoints 2–4 and the green acceptance run remain outstanding.
+
 Both final Pros return **GO for revision 5 of the single
 [natural-memory implementation plan](plans/natural-memory-implementation.md)**,
 with no further mandatory planning amendment. The [final review assessment](findings/natural-memory-consultation/compact-plan-r5-go-assessment.md)
-preserves their reports and lists the implementation gates. Await implementation
-authorization; the next useful review is code and checkpoint evidence, not another
-prose-review cycle.
+preserves their reports and lists the implementation gates. The next useful
+review is code and checkpoint evidence.
 The prior live campaign and three development iterations are stopped, not A/B
 qualification. The [reviewer-interface assessment](findings/natural-memory-consultation/reviewer-interface-assessment.md)
 preserves both returned reports and records the offline endorsement counterexample.
