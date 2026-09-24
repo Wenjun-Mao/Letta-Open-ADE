@@ -1,12 +1,14 @@
 # Natural Memory: Bounded Implementation Plan
 
-Status: proposed for Pro/user review, not authorized implementation or live calls.
-Plan revision: 2, incorporating the first implementation-plan reviews.
+Status: checkpoints 1-5 authorized by the user on 2026-09-24; checkpoint 6,
+live calls, policy selection, deployment and release remain separately gated.
+Plan revision: 3, incorporating the second plan review's completion criteria.
 Design authority for review: [revision 4](../architecture/natural-memory-design.md).
 Source baseline: `4905ce15dbda6466b12f2d1ed7908eb3d03995a0`; revision-3 packet:
 `c01f45a045eb0fdd0fc6b3e18add82f2dbb57024`. The handoff pins this plan's later commit.
 Rationale: [round-three assessment](../findings/natural-memory-consultation/pro-round3-assessment.md).
 Execution corrections: [plan-review assessment](../findings/natural-memory-consultation/pro-plan-review-assessment.md).
+Final checkpoint requirements: [second plan-review assessment](../findings/natural-memory-consultation/pro-plan-round2-assessment.md).
 
 ## Outcome And Scope
 
@@ -116,6 +118,11 @@ bundle and both full reviewer requests fit. If no such region exists at the sele
 budgets, report that limitation before live approval, not an invented comparison.
 Freeze fixtures/thresholds before observing replies; do not reclassify failures as
 outside-envelope afterwards. No live winner is inferred from fake-model tests.
+Classify pressure cells explicitly: correct no-write after withheld antecedents can
+fail usefulness without being a corrupt mutation. Incorrect state in a designated
+required-mutation cell remains a campaign stop. Offline capacity disqualification
+does not prove B passes or count as a live attempt. Any reduced live schedule must
+preserve predeclared required coverage and be approved before calls, not after results.
 
 ### 2. Lifecycle, Provenance, And One Transaction Boundary
 
@@ -159,6 +166,16 @@ budgeted reindex before comparison; never relabel incompatible vectors or call
 providers inside SQL migration. Populated tests must retrieve legacy active facts,
 new current terminal descriptors, and exclude forgotten chains under the new reader.
 All variants start from the same coherent populated state, not differently indexed copies.
+If multiple compatible index versions are read, choose one eligible representation
+per fact/current revision before the distinct-fact result limit. Test overlapping
+indexes for F1 alongside F2, terminal and forgotten records; deduplicating after
+LIMIT must not lose F2. Do not add multi-version reads unless compatibility needs them.
+
+Use one documented lock order across admission, finalization, operator and cleanup
+transactions, accounting for all run/lease/conversation/subject locks. The baseline
+admission locks conversation then subject, while finalization sometimes reverses
+them by ID order. Add a coordinated two-connection PostgreSQL regression for that
+ordering and overlapping admission/finalization. Never hide deadlock with model retries.
 
 Exit: fresh and populated isolated PostgreSQL migration tests; add/revise/end/
 reassert/forget, source-role constraints, rollback, cancellation/lease fencing,
@@ -181,6 +198,11 @@ source spans/roles, current anchor, bound subject/conversation, compatible scope
 target state/version, one mutation per record, and same-turn no-save exclusions.
 Do not rely on new UUIDs to solve semantic duplicates. Stage all proposals before
 checking conflicting add/forget intents so order cannot bypass the rule.
+Apply permitted claim dispositions before finalizing the effective memory write set:
+retain only new entities justified by surviving operations, then generate and align
+embeddings for that set. An empty set produces no entities, facts, indexes or memory
+generation advance. Test mixed deferred-pet/valid-residence and all-deferred cases.
+Invalid proposals and contradictions remain failures, not silently discarded claims.
 
 Add a bounded, typed claim-consistency result from the same reviewer call with
 reason/source references. It must identify affected proposals/claims; free-form
@@ -211,6 +233,14 @@ bounded reason codes/references. A fake false-veto test must prove evaluable evi
 with zero assistant/memory commit and zero generation advance; cover later embedding/
 commit failures too. Failure to retain required evidence makes the cell unscorable,
 not successful; an unsafe capture boundary stops the campaign.
+Distinguish confirmed rejection, committed success and unconfirmed outcome using
+authoritative run/action readback, not a caught exception alone. Preserve the existing
+terminal-run protection in failure finalization. Inject faults before commit, after
+commit acknowledgment is lost, and during artifact retention. A committed result
+cannot become rejected because artifact writing failed; unresolved outcome/evidence
+is unscorable and follows infrastructure-stop rules. Recover with original IDs/keys,
+never automatic fresh submission or generation refresh. No database/file distributed
+transaction or new memory lifecycle status is required.
 
 ### 4. Context Construction And The Bounded Comparison
 
@@ -312,6 +342,8 @@ Replace run-only correct/forget success matching with typed outcomes for run mut
 operator receipts, per-claim deferral and terminal conflict/capacity/provider failure.
 Show action receipt and fresh state separately: restatement racing readback is neither
 proof of current absence nor evidence that the historical removal failed.
+On ambiguous network/commit outcomes, show unconfirmed until authoritative readback
+or same-key recovery establishes the receipt; do not automatically replace the action.
 
 Render multiple exact user spans and assistant referents with their roles; operator
 actions render as actions, not fake messages. Keep archived source viewing read-only,
@@ -348,6 +380,13 @@ end -> forget -> old history; use only manifest-proven equivalent cells to avoid
 duplicate calls. A0 is not a third product candidate. Before accepting A, run the
 actual compactor on both summary arcs and verify its output plus downstream reply/
 review outcomes; scripted summaries cannot substitute. Count every compaction call.
+Inside an existing compaction arc, require one source-supported useful detail (for
+example the chosen interview opening) to survive outside the admitted raw suffix,
+with its answer absent from facts, the probe and other inputs. Verify retained meaning,
+the exact generated summary in A's input, and an appropriate downstream answer.
+Harmless vague output is insufficient. This is A's component-specific acceptance
+gate: A0 may abstain and B gains no unsupported historical-retrieval requirement.
+Reused evidence is one attempt supporting equivalent cells, not independent replication.
 The frozen matrix must distinguish these cells and fit a reviewed request schedule
 under the same proposed caps; no automatic cap increase or assumed completion.
 

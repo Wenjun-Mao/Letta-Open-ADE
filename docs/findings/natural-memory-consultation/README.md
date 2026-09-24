@@ -1,5 +1,13 @@
 # Natural Memory Consultation Review
 
+The second implementation-plan reviews are back: [Round 2 A](reports/pro-plan-round2-a.md)
+and [Round 2 B](reports/pro-plan-round2-b.md). Both recommend bounded implementation.
+The [source-checked assessment](pro-plan-round2-assessment.md) records four focused
+engineering requirements and one positive-compaction acceptance clarification.
+These belong in the existing checkpoints, not another architecture round. The user
+authorized checkpoints 1-5 on 2026-09-24; plan revision 3 incorporates these criteria.
+Checkpoint 6, policy selection, deployment and release remain separately gated.
+
 The implementation-plan reviews are back, preserved unchanged as
 [Plan A](reports/pro-plan-a.md) and [Plan B](reports/pro-plan-b.md).
 The [plan-review assessment](pro-plan-review-assessment.md) checks their findings

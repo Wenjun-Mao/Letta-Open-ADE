@@ -37,8 +37,16 @@ specify legacy-index compatibility, dependency-safe cleanup and separate UI
 capabilities. The user authorized revision of the existing plan: revision 2 now
 incorporates those corrections and the review brief targets their closure. A0 is
 diagnostic-only in the proposal; A/B share usefulness/coverage requirements, with
-real compaction required before accepting summary-enabled A. Next: another Pro
-review, then bounded implementation approval. No runtime policy has been adopted.
+real compaction required before accepting summary-enabled A. The second plan reviews
+now recommend GO for bounded implementation; the
+[assessment](findings/natural-memory-consultation/pro-plan-round2-assessment.md)
+checks lock ordering, dependent staged effects, uncertain commit outcomes,
+distinct-fact retrieval limits and positive compaction retention. Next: obtain
+implementation of checkpoints 1-5, now authorized by the user on 2026-09-24 with
+those completion criteria incorporated into plan revision 3. Continue between static
+checkpoints without routine confirmation; pause for material scope/tradeoff decisions,
+unsafe actions or genuine blockers. No runtime context policy has been selected;
+checkpoint 6 and live calls still need separate authority.
 No runtime capability, live budget, or production context-policy selection is implied.
 The user authorized publication of the review checkpoint, not adoption of the
 design or a merge/release. Resolve plan-review findings before implementation or
