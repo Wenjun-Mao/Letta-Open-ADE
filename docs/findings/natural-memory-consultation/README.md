@@ -27,6 +27,10 @@ file-reference tokens do not resolve independently from these exports. Preserve
 them unchanged; use the checked primary links below for the claims we rely on.
 The imported architecture report exceeds the usual module-length guideline
 because it is an original evidence artifact, not authored implementation code.
+The originals also retain 22 trailing-space Markdown hard breaks reported by
+`git diff --check`. They are deliberately not normalized, preserving the hashes
+above. Authored review documents are checked separately for whitespace and links;
+this evidence-preservation exception does not apply to runtime code.
 
 ## Assessment
 
