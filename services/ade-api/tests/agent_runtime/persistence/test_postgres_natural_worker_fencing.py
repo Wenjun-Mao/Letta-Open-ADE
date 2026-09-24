@@ -290,10 +290,10 @@ def test_natural_commit_faults_use_authoritative_readback(
             run_id = accepted["run_id"]
             original = worker.finalizer.commit_success
 
-            async def faulty_commit(claim, attempt_id, result):
+            async def faulty_commit(claim, attempt_id, result, *, trace=None):
                 if fault == "before_commit":
                     raise ConnectionError("synthetic pre-commit fault")
-                await original(claim, attempt_id, result)
+                await original(claim, attempt_id, result, trace=trace)
                 if fault == "after_commit":
                     raise ConnectionError("synthetic lost commit acknowledgment")
 

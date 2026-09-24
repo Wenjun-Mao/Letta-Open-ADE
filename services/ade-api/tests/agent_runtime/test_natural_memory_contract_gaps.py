@@ -34,31 +34,15 @@ def test_subject_has_distinct_monotonic_memory_generation() -> None:
 def test_reviewer_accepts_closed_reason_for_natural_revision() -> None:
     decision = NaturalReviewDecision.model_validate(
         {
-            "proposals": [
+            "decisions": [
                 {
-                    "claim_id": "residence-update",
-                    "operation": "revise",
+                    "kind": "revise",
                     "reason": "supersede",
-                    "fact_id": "00000000-0000-0000-0000-000000000001",
-                    "expected_version": 1,
+                    "target": "F1",
                     "value": "Toronto",
-                    "evidence_quote": "我现在住多伦多",
-                    "sources": [
-                        {
-                            "message_id": "00000000-0000-0000-0000-000000000002",
-                            "quote": "我现在住多伦多",
-                            "role": "user_assertion",
-                        }
-                    ],
-                }
-            ],
-            "claim_dispositions": [
-                {
-                    "claim_id": "residence-update",
-                    "outcome": "allow",
-                    "reason": "supported",
+                    "evidence": {"mode": "direct", "current_quote": "我现在住多伦多"},
                 }
             ],
         }
     )
-    assert decision.proposals[0].operation == "revise"
+    assert decision.decisions[0].operation == "revise"

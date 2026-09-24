@@ -76,40 +76,21 @@ def test_postgres_natural_lifecycle_and_source_roles(
                     message["role"] = "user"
                     quote = content.rstrip(".")
                     proposal = {
-                        "claim_id": f"claim-{sequence}",
-                        "operation": operation,
-                        "evidence_quote": quote,
-                        "sources": [
-                            {
-                                "message_id": message["id"],
-                                "quote": quote,
-                                "role": "user_assertion",
-                            }
-                        ],
+                        "kind": "subject_add" if operation == "add" else operation,
+                        "evidence": {"mode": "direct", "current_quote": quote},
                     }
                     if operation == "add":
                         proposal.update(
                             fact_type="person.current_location", value=value
                         )
                     else:
-                        proposal.update(
-                            fact_id=fact_id,
-                            expected_version=sequence - 1,
-                            value=value,
-                        )
+                        proposal["target"] = "F1"
+                        if operation == "reassert":
+                            proposal["value"] = value
                         if operation == "end":
                             proposal["reason"] = reason
                     decision = NaturalReviewDecision.model_validate(
-                        {
-                            "proposals": [proposal],
-                            "claim_dispositions": [
-                                {
-                                    "claim_id": proposal["claim_id"],
-                                    "outcome": "allow",
-                                    "reason": "supported",
-                                }
-                            ],
-                        }
+                        {"decisions": [proposal]}
                     )
                     prepared = prepare_natural_memory_review(
                         decision=decision,
@@ -188,37 +169,16 @@ def test_lifecycle_search_deduplicates_indexes_before_fact_limit(
                 message["role"] = "user"
                 proposals = [
                     {
-                        "claim_id": claim_id,
-                        "operation": "add",
+                        "kind": "subject_add",
                         "fact_type": "person.preference",
                         "qualifier": "drink",
                         "value": value,
-                        "evidence_quote": value,
-                        "sources": [
-                            {
-                                "message_id": message["id"],
-                                "quote": value,
-                                "role": "user_assertion",
-                            }
-                        ],
+                        "evidence": {"mode": "direct", "current_quote": value},
                     }
-                    for claim_id, value in (
-                        ("morning", "coffee in the morning"),
-                        ("evening", "tea in the evening"),
-                    )
+                    for value in ("coffee in the morning", "tea in the evening")
                 ]
                 decision = NaturalReviewDecision.model_validate(
-                    {
-                        "proposals": proposals,
-                        "claim_dispositions": [
-                            {
-                                "claim_id": item["claim_id"],
-                                "outcome": "allow",
-                                "reason": "supported",
-                            }
-                            for item in proposals
-                        ],
-                    }
+                    {"decisions": proposals}
                 )
                 review = prepare_natural_memory_review(
                     decision=decision,

@@ -15,33 +15,32 @@ from .natural_memory_review import (
     parse_natural_review_decision,
 )
 from .natural_memory_policy import PreparedNaturalReview, prepare_natural_memory_review
+from .natural_memory_binding import NaturalBindingMap, build_natural_binding_map
 from .provider_tracing import AttemptTrace, safe_provider_request_id
 from .reviewer import _combined_usage, _response_content
 from .router_transport import RouterTransport
 
 
-NATURAL_REVIEWER_SYSTEM = """You are ADE's durable-memory reviewer.
-Return JSON object matching the schema. Review all current-user claims
-together: add, revise, end, reassert or forget. Give each proposal one unique
-claim_id and typed disposition.
-Every proposal cites exact current-user user_assertion or user_endorsement.
-Past user turns are context, never citable sources. For revisions, identify
-past facts by supplied fact_id/version; do not cite old user text.
-assistant_referent cites prior assistant text only with current-user endorsement.
-Cite exact message_id, quote, role. Use only supplied messages.
-Never infer or store fictional, quoted, hypothetical, uncertain, unconsented or
-no-save details. Use defer for unresolved reference or scoped no-save claims.
-If the visible candidate reply contradicts a proposed claim, cite one exact
-candidate reply quote and mark contradiction. Do not silently omit an affected
-claim to avoid reporting the conflict. One contradiction rejects the whole turn.
-Match fact_id and expected_version exactly for target operations. Revise keeps
-the same entity/type/qualifier slot and names enrich, supersede, correct or
-unspecified only when the source cannot distinguish the reason.
-End makes a former/invalidated assertion inactive; reassert activates only an
-inactive assertion. Forget requires an explicit user request. Never target a
-forgotten assertion or invent IDs. A new related entity requires a surviving
-identity proposal. Subject-kind adds need entity_ref:null; related adds need
-existing:/new: refs. Preserve time, place, frequency and condition in values.
+NATURAL_REVIEWER_SYSTEM = """You are ADE's one-call durable-memory reviewer.
+Return exactly one JSON object with required decisions array, at most 20 items.
+An empty decisions array means an explicit checked no-change.
+Use subject_add for subject facts without any entity field; related_add needs an
+E handle or new:local identity reference. Targets use F handles only. ADE owns all
+persistent IDs, versions, roles and source offsets. Preserve scope, time,
+frequency, condition and negation in supported values.
+Every write has one exact current-user quote and one evidence mode:
+direct (current assertion), resolve_user (earlier U assertion/request completed by
+current answer), endorse_assistant (current explicit assent to one A proposition
+or action). Earlier text is support, never independent current authority. Bare
+names do not endorse assistant-introduced properties. Uncertainty, hypothetical,
+quotation, withdrawal and no-save restrictions inherited from antecedents remain
+binding. Forget needs explicit removal assent; a factual ending is not forgetting.
+Use defer for unresolved/uncertain/nonasserted/no-save claims without executable
+fields. No-save on a claim blocks an equivalent write in either order; unrelated
+supported writes survive. Use conflict with exact candidate quote and read-only
+F/E grounding when the visible reply contradicts held memory, even with no write.
+A conflict rejects the whole attempt. Never invent an assertion to ground it.
+Do not repair malformed output or silently omit a contradictory sibling.
 """
 
 
@@ -76,6 +75,7 @@ class NaturalMemoryReviewer:
         max_output_tokens: int = 1024,
         observe_request: Callable[[dict[str, Any]], None] | None = None,
         observe_decision: Callable[[NaturalReviewDecision], None] | None = None,
+        binding_map: NaturalBindingMap | None = None,
     ) -> NaturalReviewerResult:
         payload = natural_review_request(
             model_key=model_key,
@@ -86,6 +86,7 @@ class NaturalMemoryReviewer:
             entities=entities,
             candidate_reply=candidate_reply,
             max_output_tokens=max_output_tokens,
+            binding_map=binding_map,
         )
         request_tokens = serialized_review_tokens(payload)
         if request_tokens > input_token_limit:
@@ -94,28 +95,55 @@ class NaturalMemoryReviewer:
                 detail_code="natural_reviewer_capacity",
             )
         if observe_request is not None:
-            observe_request(payload)
+            try:
+                observe_request(payload)
+            except Exception:
+                pass
         response = await self.transport.chat_completion(
             payload, timeout_seconds=timeout_seconds
         )
+        choices = response.get("choices")
+        choice = (
+            choices[0]
+            if isinstance(choices, list) and choices and isinstance(choices[0], dict)
+            else {}
+        )
+        finish = choice.get("finish_reason")
+        if finish == "length":
+            raise RuntimeValidationError(
+                "Natural reviewer output was truncated",
+                detail_code="natural_review_truncated",
+            )
+        if finish != "stop":
+            raise RuntimeValidationError(
+                "Natural reviewer did not finish normally",
+                detail_code="natural_review_refusal",
+            )
         try:
             decision = parse_natural_review_decision(
                 json.loads(_response_content(response))
             )
             if observe_decision is not None:
-                observe_decision(decision)
+                try:
+                    observe_decision(decision)
+                except Exception:
+                    pass
             validate_decision(decision)
         except RuntimeValidationError as exc:
-            if exc.detail_code == "natural_memory_reply_conflict":
+            if exc.detail_code in {
+                "natural_memory_reply_conflict",
+                "natural_review_schema",
+                "natural_review_binding",
+            }:
                 raise
             raise RuntimeValidationError(
-                f"Natural memory reviewer failed its closed schema: {exc}",
-                detail_code="natural_review_validation",
+                f"Natural memory reviewer decision was rejected: {exc}",
+                detail_code="natural_review_semantic",
             ) from exc
         except (json.JSONDecodeError, ValueError) as exc:
             raise RuntimeValidationError(
-                f"Natural memory reviewer failed its closed schema: {exc}",
-                detail_code="natural_review_validation",
+                f"Natural memory reviewer returned malformed JSON: {exc}",
+                detail_code="natural_review_json",
             ) from exc
         return NaturalReviewerResult(
             decision=decision,
@@ -136,62 +164,34 @@ def natural_review_request(
     entities: list[dict[str, Any]],
     candidate_reply: str,
     max_output_tokens: int = 1024,
+    binding_map: NaturalBindingMap | None = None,
 ) -> dict[str, Any]:
     """Build the sole reviewer wire shape used by preflight and execution."""
 
     schema = natural_review_json_schema()
-    packet = {
-        "current_user_message": {
-            "id": str(current_user_message["id"]),
-            "content": str(current_user_message["content"]),
-        },
-        "source_messages": [
-            {
-                "id": str(item["id"]),
-                "role": str(item["role"]),
-                "content": str(item["content"]),
-            }
-            for item in source_messages
-        ],
-        "candidate_visible_reply": candidate_reply,
-        "current_memory_targets": [
-            {
-                "fact_id": str(item["id"]),
-                "fact_type": item["fact_type"],
-                "qualifier": item.get("qualifier"),
-                "entity_id": str(item["entity_id"]),
-                "value": item.get("value"),
-                "status": item["status"],
-                "version": item["version"],
-            }
-            for item in facts
-            if item["status"] in {"active", "inactive"}
-        ],
-        "entities": [
-            {
-                "entity_id": str(item["id"]),
-                "kind": item["kind"],
-                "label": item["label"],
-            }
-            for item in entities
-        ],
-        "allowed_fact_contracts": [
-            {
-                "fact_type": spec.name,
-                "entity_kind": spec.entity_kind.value,
-                "qualifier_required": spec.qualifier_required,
-                "allowed_qualifiers": list(spec.allowed_qualifiers),
-                "defines_entity_identity": spec.defines_entity_identity,
-            }
-            for spec in FACT_TYPE_REGISTRY.values()
-        ],
-    }
+    binding = binding_map or build_natural_binding_map(
+        current_user_message=current_user_message,
+        source_messages=source_messages,
+        facts=facts,
+        entities=entities,
+    )
+    packet = binding.packet(candidate_reply)
+    packet["allowed_fact_contracts"] = [
+        {
+            "fact_type": spec.name,
+            "entity_kind": spec.entity_kind.value,
+            "qualifier_required": spec.qualifier_required,
+            "allowed_qualifiers": list(spec.allowed_qualifiers),
+            "defines_entity_identity": spec.defines_entity_identity,
+        }
+        for spec in FACT_TYPE_REGISTRY.values()
+    ]
     system = NATURAL_REVIEWER_SYSTEM
     if provider_adapter == "deepseek_openai":
         system += (
             "\nReturn JSON matching this exact schema: "
             f"{json.dumps(schema, ensure_ascii=False)}"
-            '\nExample JSON: {"proposals":[],"claim_dispositions":[]}'
+            '\nExample JSON: {"decisions":[]}'
         )
     payload: dict[str, Any] = {
         "model": model_key,
@@ -315,8 +315,17 @@ async def execute_natural_review(
 ) -> tuple[NaturalReviewerResult, PreparedNaturalReview]:
     """Bind one visible candidate and source bundle to one validated decision."""
 
+    binding_map = build_natural_binding_map(
+        current_user_message=current_user_message,
+        source_messages=source_messages,
+        facts=facts,
+        entities=entities,
+    )
+    prepared: PreparedNaturalReview | None = None
+
     def prepare(decision: NaturalReviewDecision) -> PreparedNaturalReview:
-        return prepare_natural_memory_review(
+        nonlocal prepared
+        prepared = prepare_natural_memory_review(
             decision=decision,
             subject_id=subject_id,
             current_user_message=current_user_message,
@@ -324,7 +333,9 @@ async def execute_natural_review(
             facts=facts,
             entities=entities,
             candidate_reply=candidate_reply,
+            binding_map=binding_map,
         )
+        return prepared
 
     reviewer = NaturalMemoryReviewer(
         trace.transport(
@@ -348,5 +359,8 @@ async def execute_natural_review(
         observe_request=evidence.capture_reviewer_request if evidence else None,
         observe_decision=evidence.capture_reviewer_decision if evidence else None,
         validate_decision=prepare,
+        binding_map=binding_map,
     )
-    return result, prepare(result.decision)
+    if prepared is None:
+        raise RuntimeValidationError("Natural review was not prepared")
+    return result, prepared

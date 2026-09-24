@@ -8,7 +8,7 @@ from ade_api.features.agent_runtime.persistence.validation import (
 
 
 def test_migration_has_one_reviewed_head() -> None:
-    assert migration_heads() == ("20260924_0007",)
+    assert migration_heads() == ("20260924_0008",)
 
 
 def test_initial_migration_is_static_not_live_metadata() -> None:

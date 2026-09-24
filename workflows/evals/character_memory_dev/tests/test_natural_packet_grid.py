@@ -163,7 +163,7 @@ async def _execute_grid(
                     "reviewer_tokens_with_max_reply": review_tokens,
                     "reviewer_input_limit": reviewer_limit,
                     "reviewer_overflow": overflow,
-                    "reviewer_target_count": len(packet["current_memory_targets"]),
+                    "reviewer_target_count": len(packet["targets"]),
                     "selected_fact_ids": built.context.retrieved_fact_ids,
                     "omitted_message_ids": built.context.omitted_message_ids,
                     "generation_request": requests[0],

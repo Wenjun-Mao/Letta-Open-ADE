@@ -258,7 +258,7 @@ class _Definitions:
             "persona_sha256": "b" * 64,
             "persona_content": "Lin Xiaotang",
             "tool_names": [],
-            "memory_policy_version": "natural-user-assertions-v2-b",
+            "memory_policy_version": "natural-user-assertions-v3-b",
             "qualification_state": "unqualified",
             "deployment_snapshot": snapshots,
         }
@@ -304,32 +304,26 @@ class _SyntheticNaturalTransport:
                     }
                 ],
             }
-        packet = json.loads(payload["messages"][1]["content"])
         self.reviewed = True
-        current = packet["current_user_message"]
         decision = {
-            "proposals": [
+            "decisions": [
                 {
-                    "claim_id": "residence",
-                    "operation": "add",
+                    "kind": "conflict",
+                    "current_quote": "I live in Toronto",
+                    "candidate_reply_quote": "Toronto",
+                    "references": ["F1"],
+                }
+            ]
+            if self.veto
+            else [
+                {
+                    "kind": "subject_add",
                     "fact_type": "person.current_location",
                     "value": "Toronto",
-                    "evidence_quote": "I live in Toronto",
-                    "sources": [
-                        {
-                            "message_id": current["id"],
-                            "quote": "I live in Toronto",
-                            "role": "user_assertion",
-                        }
-                    ],
-                }
-            ],
-            "claim_dispositions": [
-                {
-                    "claim_id": "residence",
-                    "outcome": "contradiction" if self.veto else "allow",
-                    "reason": "reply_conflict" if self.veto else "supported",
-                    **({"candidate_reply_quote": "Toronto"} if self.veto else {}),
+                    "evidence": {
+                        "mode": "direct",
+                        "current_quote": "I live in Toronto",
+                    },
                 }
             ],
         }

@@ -47,3 +47,10 @@ def test_missing_start_is_incomplete_and_known_start_can_be_unresolved() -> None
     )
     assert summary["complete"] is False
     assert summary["groups"][0]["unresolved"] == 1
+
+
+def test_failed_observation_marks_even_empty_retained_trace_incomplete() -> None:
+    assert dispatch_counts([], observation_incomplete=True) == {
+        "complete": False,
+        "groups": [],
+    }

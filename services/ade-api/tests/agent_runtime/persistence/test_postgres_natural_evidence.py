@@ -94,34 +94,21 @@ def test_failed_candidate_and_committed_readback_are_retained_separately(
             false_veto = NaturalAttemptEvidence(
                 run_id=rejected["run_id"],
                 attempt=1,
-                policy_binding="natural-user-assertions-v2-b",
+                policy_binding="natural-user-assertions-v3-b",
             )
             false_veto.capture_candidate("Okay, Toronto.", [])
             false_veto.capture_reviewer_decision(
                 NaturalReviewDecision.model_validate(
                     {
-                        "proposals": [
+                        "decisions": [
                             {
-                                "claim_id": "residence",
-                                "operation": "add",
+                                "kind": "subject_add",
                                 "fact_type": "person.current_location",
                                 "value": "Toronto",
-                                "evidence_quote": "I live in Toronto",
-                                "sources": [
-                                    {
-                                        "message_id": rejected["id"],
-                                        "quote": "I live in Toronto",
-                                        "role": "user_assertion",
-                                    }
-                                ],
-                            }
-                        ],
-                        "claim_dispositions": [
-                            {
-                                "claim_id": "residence",
-                                "outcome": "contradiction",
-                                "reason": "reply_conflict",
-                                "candidate_reply_quote": "Toronto",
+                                "evidence": {
+                                    "mode": "direct",
+                                    "current_quote": "I live in Toronto",
+                                },
                             }
                         ],
                     }
@@ -145,10 +132,8 @@ def test_failed_candidate_and_committed_readback_are_retained_separately(
             )
             assert rejected_artifact["candidate_visible_reply"] == "Okay, Toronto."
             assert (
-                rejected_artifact["reviewer_decision"]["claim_dispositions"][0][
-                    "outcome"
-                ]
-                == "contradiction"
+                rejected_artifact["reviewer_decision"]["decisions"][0]["kind"]
+                == "subject_add"
             )
             assert rejected_artifact["generation"] == {"stage": "absent"}
             assert rejected_path.stat().st_mode & 0o777 == 0o600
@@ -156,7 +141,7 @@ def test_failed_candidate_and_committed_readback_are_retained_separately(
             accepted = NaturalAttemptEvidence(
                 run_id=committed["run_id"],
                 attempt=1,
-                policy_binding="natural-user-assertions-v2-b",
+                policy_binding="natural-user-assertions-v3-b",
             )
             accepted.capture_candidate("Hello.", [])
             committed_path = await retain_attempt_evidence(engine, accepted)

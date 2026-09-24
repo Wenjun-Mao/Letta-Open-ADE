@@ -1,46 +1,69 @@
-"""Stage a mixed natural-memory review before any embeddings or database writes."""
+"""Bind compact natural decisions once to ADE-owned mutation records."""
 
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
 from .errors import RuntimeValidationError
-from .fact_registry import EntityKind, fact_key, fact_type_spec
+from .fact_registry import EntityKind, fact_key, fact_type_spec, normalize_qualifier
 from .memory_intent import is_explicit_forgetting_request
-from .memory_policy import NewEntity, _claim_is_uncertain, _normalize, _value_supported
+from .memory_policy import (
+    NewEntity,
+    _claim_clause,
+    _claim_is_uncertain,
+    _normalize,
+    _value_supported,
+)
 from .memory_review import BoundEvidence
+from .natural_memory_binding import NaturalBindingMap, build_natural_binding_map
 from .natural_memory_review import (
     BoundNaturalSource,
-    NaturalAdd,
+    DirectEvidence,
+    EndorseAssistantEvidence,
+    NaturalConflict,
+    NaturalDefer,
     NaturalEnd,
     NaturalForget,
-    NaturalProposal,
     NaturalReassert,
+    NaturalRelatedAdd,
     NaturalReviewDecision,
     NaturalRevise,
-    bind_natural_sources,
+    NaturalSubjectAdd,
+    NaturalWrite,
+    ResolveUserEvidence,
+    bind_exact_quote,
 )
 
-
 _NO_SAVE = re.compile(
-    r"\b(?:do not|don't|never)\s+(?:save|remember|store)\b|不要(?:记住|保存|存储)",
-    re.IGNORECASE,
+    r"\b(?:do not|don't|never)\s+(?:save|remember|store)\b|(?:不要|别)(?:记住|保存|存储)",
+    re.I,
+)
+_WITHDRAWN = re.compile(
+    r"\b(?:withdraw|take that back|ignore that claim)\b|撤回|收回", re.I
+)
+_AFFIRMATIVE = re.compile(
+    r"^(?:yes|yeah|yep|correct|exactly|sure|是|对|没错)(?:[\s,，.!。]|$)", re.I
+)
+_NEGATED = re.compile(
+    r"\b(?:no|not|don't|never|maybe|might|if)\b|不是|不对|可能|如果", re.I
 )
 
 
 @dataclass(frozen=True)
 class PreparedNaturalOperation:
-    proposal: NaturalProposal
+    proposal: NaturalWrite
     fact_type: str
     qualifier: str | None
     value: str | None
     normalized_key: str
     entity_id: str
     sources: tuple[BoundNaturalSource, ...]
-    existing_fact: dict[str, Any] | None
+    current_anchor: BoundNaturalSource
+    existing_fact: Mapping[str, Any] | None
     next_status: str
     revision_reason: str | None
 
@@ -61,333 +84,402 @@ def prepare_natural_memory_review(
     facts: list[dict[str, Any]],
     entities: list[dict[str, Any]],
     candidate_reply: str,
+    binding_map: NaturalBindingMap | None = None,
 ) -> PreparedNaturalReview:
-    facts_by_id = {str(fact["id"]): fact for fact in facts}
-    entities_by_id = {str(entity["id"]): entity for entity in entities}
-    if subject_id not in entities_by_id:
+    binding = binding_map or build_natural_binding_map(
+        current_user_message=current_user_message,
+        source_messages=available_messages,
+        facts=facts,
+        entities=entities,
+    )
+    if not any(
+        str(entity["id"]) == subject_id and entity["kind"] == "subject"
+        for entity in entities
+    ):
         raise RuntimeValidationError("Memory subject entity is missing")
-    staged_entities = _stage_identity_entities(decision.proposals)
-    dispositions = {item.claim_id: item for item in decision.claim_dispositions}
-    staged: list[PreparedNaturalOperation] = []
-    touched_fact_ids: set[str] = set()
+    staged_entities = _stage_related_identities(decision)
+    operations: list[PreparedNaturalOperation] = []
+    touched: set[str] = set()
     add_keys: set[str] = set()
-    forgotten_keys: set[str] = set()
-    added_preferences: set[tuple[str, str | None, str]] = set()
-    forgotten_preferences: set[tuple[str, str | None, str]] = set()
-    current_keys = {
-        str(fact["normalized_key"])
-        for fact in facts
-        if fact["status"] in {"active", "inactive"}
-    }
-
-    for index, proposal in enumerate(decision.proposals):
-        sources = bind_natural_sources(
-            proposal,
-            current_user_message=current_user_message,
-            available_messages=available_messages,
-        )
-        _validate_claim(proposal, sources, current_user_message, facts_by_id)
-        disposition = dispositions[proposal.claim_id]
-        if disposition.outcome == "allow" and not isinstance(proposal, NaturalForget):
-            if _claim_sentence_has_no_save(
-                str(current_user_message["content"]), sources, proposal
-            ):
-                raise RuntimeValidationError("No-save clause cannot authorize a write")
-        if disposition.reason == "reply_conflict":
-            quote = disposition.candidate_reply_quote
-            if not quote or candidate_reply.count(quote) != 1:
-                raise RuntimeValidationError(
-                    "Reply-conflict disposition must cite one visible candidate span"
-                )
-        existing: dict[str, Any] | None = None
-        if isinstance(proposal, NaturalAdd):
-            spec = fact_type_spec(proposal.fact_type)
-            fact_type = proposal.fact_type
-            qualifier = proposal.qualifier
-            entity_id = _resolve_add_entity(
-                proposal,
-                subject_id=subject_id,
-                expected_kind=spec.entity_kind,
-                entities_by_id=entities_by_id,
-                staged_entities=staged_entities,
-                index=index,
+    deferrals: list[dict[str, str]] = []
+    no_save_scopes: list[str] = []
+    current_text = str(binding.current["content"])
+    for item in decision.decisions:
+        if isinstance(item, NaturalDefer):
+            source = bind_exact_quote(
+                binding.current, item.current_quote, "user_assertion"
             )
-            value: str | None = proposal.value
-            next_status = "active"
+            if item.reason == "no_save":
+                if not _NO_SAVE.search(current_text):
+                    raise RuntimeValidationError(
+                        "No-save deferral lacks current restriction"
+                    )
+                no_save_scopes.append(_restricted_scope(current_text, source))
+            deferrals.append({"quote": item.current_quote, "reason": item.reason})
+            continue
+        if isinstance(item, NaturalConflict):
+            bind_exact_quote(binding.current, item.current_quote, "user_assertion")
+            if candidate_reply.count(item.candidate_reply_quote) != 1:
+                raise RuntimeValidationError(
+                    "Conflict must bind one exact candidate span",
+                    detail_code="natural_review_binding",
+                )
+            if len(item.references) != len(set(item.references)):
+                raise RuntimeValidationError(
+                    "Duplicate conflict reference", detail_code="natural_review_binding"
+                )
+            grounding = [
+                binding.targets.get(ref) or binding.identities.get(ref)
+                for ref in item.references
+            ]
+            if any(value is None for value in grounding):
+                raise RuntimeValidationError(
+                    "Conflict reference is outside held snapshot",
+                    detail_code="natural_review_binding",
+                )
+            if any(
+                _normalize(str(value.get("value") or value.get("label") or ""))
+                == _normalize(item.candidate_reply_quote)
+                for value in grounding
+                if value is not None
+            ):
+                raise RuntimeValidationError(
+                    "Candidate span agrees with cited snapshot"
+                )
+            raise RuntimeValidationError(
+                "Candidate reply conflicts with held memory",
+                detail_code="natural_memory_reply_conflict",
+            )
+        sources, anchor = _bind_evidence(item, binding)
+        existing = None
+        if isinstance(item, (NaturalSubjectAdd, NaturalRelatedAdd)):
+            spec = fact_type_spec(item.fact_type)
+            qualifier = normalize_qualifier(spec, item.qualifier)
+            if isinstance(item, NaturalSubjectAdd):
+                if spec.entity_kind is not EntityKind.SUBJECT:
+                    raise RuntimeValidationError("Related fact requires related add")
+                entity_id = subject_id
+            else:
+                if spec.entity_kind is EntityKind.SUBJECT:
+                    raise RuntimeValidationError("Subject fact requires subject add")
+                entity_id = _related_entity_id(
+                    item, binding, staged_entities, subject_id
+                )
+            fact_type = item.fact_type
+            value: str | None = item.value
+            status = "active"
             reason = None
         else:
-            existing = facts_by_id.get(proposal.fact_id)
+            existing = binding.targets.get(item.target)
             if existing is None or str(existing["subject_id"]) != subject_id:
                 raise RuntimeValidationError(
-                    "Memory target is outside the bound subject"
+                    "Target handle is outside held subject",
+                    detail_code="natural_review_binding",
                 )
-            if int(existing["version"]) != proposal.expected_version:
-                raise RuntimeValidationError("Memory target version changed")
-            if proposal.fact_id in touched_fact_ids:
+            fact_id = str(existing["id"])
+            if fact_id in touched:
                 raise RuntimeValidationError("A record can change only once per review")
-            touched_fact_ids.add(proposal.fact_id)
-            _validate_target_status(proposal, str(existing["status"]))
+            touched.add(fact_id)
+            _validate_target(item, str(existing["status"]))
             fact_type = str(existing["fact_type"])
             qualifier = existing.get("qualifier")
             entity_id = str(existing["entity_id"])
             value = (
                 None
-                if isinstance(proposal, NaturalForget)
-                else str(existing["value"])
-                if isinstance(proposal, NaturalEnd)
-                else proposal.value
+                if isinstance(item, NaturalForget)
+                else str(existing.get("value") or "")
+                if isinstance(item, NaturalEnd)
+                else item.value
             )
-            next_status = (
+            status = (
                 "forgotten"
-                if isinstance(proposal, NaturalForget)
+                if isinstance(item, NaturalForget)
                 else "inactive"
-                if isinstance(proposal, NaturalEnd)
-                or isinstance(proposal, NaturalRevise)
-                and proposal.value is None
+                if isinstance(item, NaturalEnd)
+                or isinstance(item, NaturalRevise)
+                and item.value is None
                 else "active"
             )
             reason = (
                 "forgotten"
-                if isinstance(proposal, NaturalForget)
+                if isinstance(item, NaturalForget)
                 else "reasserted"
-                if isinstance(proposal, NaturalReassert)
+                if isinstance(item, NaturalReassert)
                 else "invalidated"
-                if isinstance(proposal, NaturalRevise) and proposal.value is None
-                else proposal.reason
+                if isinstance(item, NaturalRevise) and item.value is None
+                else item.reason
             )
-        base_key = fact_key(fact_type, entity_id, qualifier)
+        _validate_semantics(item, binding, sources, anchor)
         key = (
-            f"{base_key}|assertion:{uuid4()}"
-            if isinstance(proposal, NaturalAdd) and fact_type == "person.preference"
-            else str(existing["normalized_key"])
+            str(existing["normalized_key"])
             if existing is not None
-            else base_key
+            else f"{fact_key(fact_type, entity_id, qualifier)}|assertion:{uuid4()}"
+            if fact_type == "person.preference"
+            else fact_key(fact_type, entity_id, qualifier)
         )
-        if isinstance(proposal, NaturalAdd):
-            if fact_type == "person.preference":
-                identity = (entity_id, qualifier, _normalize(proposal.value))
-                if identity in added_preferences or any(
-                    str(fact["entity_id"]) == entity_id
-                    and fact["fact_type"] == fact_type
-                    and fact.get("qualifier") == qualifier
-                    and fact["status"] in {"active", "inactive"}
-                    and _normalize(str(fact["value"])) == identity[2]
-                    for fact in facts
-                ):
-                    raise RuntimeValidationError(
-                        "Equivalent preference requires an existing assertion target"
-                    )
-                added_preferences.add(identity)
-            else:
-                if key in current_keys or key in add_keys:
-                    raise RuntimeValidationError(
-                        "Add collides with a current memory slot"
-                    )
-                add_keys.add(key)
-        if isinstance(proposal, NaturalForget):
-            if fact_type == "person.preference":
-                forgotten_preferences.add(
-                    (entity_id, qualifier, _normalize(str(existing["value"])))
+        if existing is None:
+            if key in add_keys or (
+                fact_type != "person.preference"
+                and any(
+                    str(fact["normalized_key"]) == key
+                    for fact in binding.targets.values()
                 )
-            else:
-                forgotten_keys.add(key)
-        staged.append(
+            ):
+                raise RuntimeValidationError(
+                    "Add collides with an existing memory slot"
+                )
+            add_keys.add(key)
+        operations.append(
             PreparedNaturalOperation(
-                proposal=proposal,
+                proposal=item,
                 fact_type=fact_type,
                 qualifier=qualifier,
                 value=value,
                 normalized_key=key,
                 entity_id=entity_id,
                 sources=sources,
+                current_anchor=anchor,
                 existing_fact=existing,
-                next_status=next_status,
+                next_status=status,
                 revision_reason=reason,
             )
         )
-
-    # Check across the complete proposal set, including deferred claims. Proposal
-    # order must never make a contradictory add/forget pair look valid.
-    if add_keys.intersection(forgotten_keys) or added_preferences.intersection(
-        forgotten_preferences
-    ):
-        raise RuntimeValidationError("A review cannot forget and recreate one slot")
-    if any(item.outcome == "contradiction" for item in dispositions.values()):
-        raise RuntimeValidationError(
-            "Candidate reply contradicts a reviewed memory claim",
-            detail_code="natural_memory_reply_conflict",
-        )
-    allowed = tuple(
-        operation
-        for operation in staged
-        if dispositions[operation.proposal.claim_id].outcome == "allow"
-    )
-    used_entities = {operation.entity_id for operation in allowed}
-    identity_entities = {
+    for operation in operations:
+        if operation.next_status == "forgotten":
+            continue
+        if any(
+            _value_supported(str(operation.value or ""), scope)
+            for scope in no_save_scopes
+        ):
+            raise RuntimeValidationError("No-save deferral conflicts with a write")
+    used = {operation.entity_id for operation in operations}
+    identity_ids = {
         operation.entity_id
-        for operation in allowed
-        if isinstance(operation.proposal, NaturalAdd)
-        and fact_type_spec(operation.proposal.fact_type).defines_entity_identity
+        for operation in operations
+        if isinstance(operation.proposal, NaturalRelatedAdd)
+        and fact_type_spec(operation.fact_type).defines_entity_identity
     }
-    staged_entity_ids = {entity.id for entity in staged_entities.values()}
-    if (used_entities & staged_entity_ids) - identity_entities:
+    if (used & {entity.id for entity in staged_entities.values()}) - identity_ids:
         raise RuntimeValidationError(
-            "A surviving related fact requires a surviving entity identity claim"
+            "Related write needs a surviving identity assertion"
         )
-    deferred = tuple(
-        {"claim_id": item.claim_id, "reason": item.reason}
-        for item in decision.claim_dispositions
-        if item.outcome == "defer"
-    )
     return PreparedNaturalReview(
         new_entities=tuple(
-            entity for entity in staged_entities.values() if entity.id in used_entities
+            entity for entity in staged_entities.values() if entity.id in used
         ),
-        operations=allowed,
-        deferred_claims=deferred,
+        operations=tuple(operations),
+        deferred_claims=tuple(deferrals),
     )
 
 
-def _validate_claim(
-    proposal: NaturalProposal,
+def _bind_evidence(
+    item: NaturalWrite, binding: NaturalBindingMap
+) -> tuple[tuple[BoundNaturalSource, ...], BoundNaturalSource]:
+    evidence = item.evidence
+    role = (
+        "user_assertion"
+        if isinstance(evidence, DirectEvidence)
+        else "user_resolution"
+        if isinstance(evidence, ResolveUserEvidence)
+        else "user_endorsement"
+    )
+    anchor = bind_exact_quote(binding.current, evidence.current_quote, role)
+    if isinstance(evidence, DirectEvidence):
+        return (anchor,), anchor
+    support = binding.messages.get(evidence.support_handle)
+    if support is None:
+        raise RuntimeValidationError(
+            "Support handle is outside admitted exchange",
+            detail_code="natural_review_binding",
+        )
+    expected_role = "user" if isinstance(evidence, ResolveUserEvidence) else "assistant"
+    if support["role"] != expected_role:
+        raise RuntimeValidationError(
+            "Support handle has wrong role", detail_code="natural_review_binding"
+        )
+    support_role = (
+        "user_antecedent" if expected_role == "user" else "assistant_referent"
+    )
+    source = bind_exact_quote(support, evidence.support_quote, support_role)
+    return (anchor, source), anchor
+
+
+def _validate_semantics(
+    item: NaturalWrite,
+    binding: NaturalBindingMap,
     sources: tuple[BoundNaturalSource, ...],
-    current_user_message: dict[str, Any],
-    facts_by_id: dict[str, dict[str, Any]],
+    anchor: BoundNaturalSource,
 ) -> None:
-    current_source = next(
-        item for item in sources if item.authority_role != "assistant_referent"
+    evidence = item.evidence
+    current = str(binding.current["content"])
+    current_bound = BoundEvidence(
+        anchor.message_id,
+        anchor.start_char,
+        anchor.end_char,
+        anchor.quote,
+        anchor.message_sha256,
     )
-    evidence = BoundEvidence(
-        message_id=current_source.message_id,
-        start_char=current_source.start_char,
-        end_char=current_source.end_char,
-        quote=current_source.quote,
-        message_sha256=current_source.message_sha256,
-    )
-    if not isinstance(proposal, NaturalForget) and _claim_is_uncertain(
-        str(current_user_message["content"]), evidence
+    if not isinstance(item, NaturalForget) and _claim_is_uncertain(
+        current, current_bound
     ):
-        raise RuntimeValidationError("Uncertain claims cannot become durable memory")
-    if isinstance(proposal, NaturalForget):
-        if not is_explicit_forgetting_request(current_source.quote):
-            raise RuntimeValidationError("Forget requires explicit user removal intent")
-        return
-    if isinstance(proposal, (NaturalAdd, NaturalRevise, NaturalReassert)) and (
-        proposal.value is not None
-    ):
-        support = " ".join(item.quote for item in sources)
-        prior = facts_by_id.get(getattr(proposal, "fact_id", ""))
-        if prior is not None:
-            support += f" {prior.get('value') or ''}"
-        if not _value_supported(proposal.value, support):
-            raise RuntimeValidationError("Memory value is unsupported by bound spans")
-
-
-def _claim_sentence_has_no_save(
-    content: str,
-    sources: tuple[BoundNaturalSource, ...],
-    proposal: NaturalProposal,
-) -> bool:
-    current = next(
-        item for item in sources if item.authority_role != "assistant_referent"
-    )
-    start = max(
-        (
-            match.end()
-            for match in re.finditer(r"[.!?。！？；\n]", content)
-            if match.end() <= current.start_char
-        ),
-        default=0,
-    )
-    next_boundary = re.search(r"[.!?。！？；\n]", content[current.end_char :])
-    end = (
-        current.end_char + next_boundary.start()
-        if next_boundary is not None
-        else len(content)
-    )
-    sentence = content[start:end]
-    if _NO_SAVE.search(proposal.evidence_quote):
-        return True
-    value = getattr(proposal, "value", None)
-    for match in _NO_SAVE.finditer(sentence):
-        after = re.split(
-            r"[,，]\s*(?:but|however|yet|不过|但|可是)\b",
-            sentence[match.start() :],
-            maxsplit=1,
-            flags=re.IGNORECASE,
-        )[0]
-        if value is not None and _normalize(str(value)) in _normalize(after):
-            return True
-        absolute_match_start = start + match.start()
-        if absolute_match_start >= current.end_char and re.search(
-            r"\b(?:that|it|this)\b|这(?:个|件|条)?|它", after, re.IGNORECASE
+        raise RuntimeValidationError("Uncertain current claim cannot become durable")
+    if not isinstance(item, NaturalForget) and _no_save_restricts(current, anchor):
+        raise RuntimeValidationError("No-save restriction blocks this write")
+    if isinstance(evidence, ResolveUserEvidence):
+        earlier = binding.messages[evidence.support_handle]
+        earlier_text = str(earlier["content"])
+        antecedent = sources[1]
+        earlier_bound = BoundEvidence(
+            antecedent.message_id,
+            antecedent.start_char,
+            antecedent.end_char,
+            antecedent.quote,
+            antecedent.message_sha256,
+        )
+        if (
+            _claim_is_uncertain(earlier_text, earlier_bound)
+            or _NO_SAVE.search(earlier_text)
+            or _WITHDRAWN.search(earlier_text)
         ):
-            return True
-    return False
+            raise RuntimeValidationError(
+                "Restricted antecedent cannot become definite memory"
+            )
+        ordered = [value for _, value in binding.ordered_messages]
+        start = ordered.index(earlier)
+        if any(
+            _NO_SAVE.search(str(value["content"]))
+            or _WITHDRAWN.search(str(value["content"]))
+            for value in ordered[start + 1 :]
+            if value["role"] == "user"
+        ):
+            raise RuntimeValidationError("Intervening restriction withdraws antecedent")
+    if isinstance(evidence, EndorseAssistantEvidence):
+        if not _AFFIRMATIVE.match(evidence.current_quote.strip()) or _NEGATED.search(
+            evidence.current_quote
+        ):
+            raise RuntimeValidationError("Current text is not explicit assent")
+        proposition = evidence.support_quote
+        if proposition.count("?") + proposition.count("？") != 1 or re.search(
+            r"\bor\b|还是|或者", proposition, re.I
+        ):
+            raise RuntimeValidationError("Assistant assent has ambiguous proposition")
+    if isinstance(item, NaturalForget):
+        if isinstance(evidence, DirectEvidence):
+            permitted = is_explicit_forgetting_request(current)
+        elif isinstance(evidence, ResolveUserEvidence):
+            permitted = is_explicit_forgetting_request(
+                str(binding.messages[evidence.support_handle]["content"])
+            )
+        else:
+            permitted = is_explicit_forgetting_request(
+                evidence.support_quote.replace("Shall I ", "Please ")
+            ) or bool(
+                re.search(
+                    r"\b(?:remove|delete|forget|erase)\b|删除|忘掉",
+                    evidence.support_quote,
+                    re.I,
+                )
+            )
+        if not permitted:
+            raise RuntimeValidationError(
+                "Forget requires operation-specific removal assent"
+            )
+        return
+    value = getattr(item, "value", None)
+    if value is not None:
+        factual = anchor.quote
+        if isinstance(evidence, ResolveUserEvidence):
+            factual += " " + sources[1].quote
+        elif isinstance(evidence, EndorseAssistantEvidence):
+            factual += " " + sources[1].quote
+        if not _value_supported(value, factual):
+            raise RuntimeValidationError(
+                "Value is unsupported by permitted factual sources"
+            )
 
 
-def _validate_target_status(proposal: NaturalProposal, status: str) -> None:
-    if isinstance(proposal, (NaturalRevise, NaturalEnd)) and status != "active":
-        raise RuntimeValidationError("Revision/end requires an active record")
-    if isinstance(proposal, NaturalReassert) and status != "inactive":
-        raise RuntimeValidationError("Reassert requires an inactive record")
-    if isinstance(proposal, NaturalForget) and status not in {"active", "inactive"}:
-        raise RuntimeValidationError("Forget requires an active or inactive record")
+def _no_save_restricts(content: str, anchor: BoundNaturalSource) -> bool:
+    if _NO_SAVE.search(_claim_clause(content, anchor.start_char, anchor.end_char)):
+        return True
+    # A following anaphoric restriction attaches to the preceding claim only.
+    after = content[anchor.end_char :]
+    next_sentence = re.match(r"\s*[.!?。！？;；]?\s*([^.!?。！？;；]*)", after)
+    return bool(
+        next_sentence
+        and _NO_SAVE.search(next_sentence.group(1))
+        and re.search(
+            r"\b(?:that|this|it)\b|这个|这件|这条|它", next_sentence.group(1), re.I
+        )
+    )
 
 
-def _stage_identity_entities(
-    proposals: list[NaturalProposal],
-) -> dict[str, NewEntity]:
+def _restricted_scope(content: str, source: BoundNaturalSource) -> str:
+    before = content[: source.start_char]
+    prior = re.split(r"[.!?。！？;；]", before)[-1]
+    return (
+        f"{prior} {source.quote}"
+        if _NO_SAVE.search(source.quote)
+        else _claim_clause(content, source.start_char, source.end_char)
+    )
+
+
+def _related_entity_id(
+    item: NaturalRelatedAdd,
+    binding: NaturalBindingMap,
+    staged: dict[str, NewEntity],
+    subject_id: str,
+) -> str:
+    spec = fact_type_spec(item.fact_type)
+    if item.entity_ref.startswith("E"):
+        entity = binding.identities.get(item.entity_ref)
+        if (
+            entity is None
+            or str(entity["subject_id"]) != subject_id
+            or entity["kind"] != spec.entity_kind.value
+        ):
+            raise RuntimeValidationError(
+                "Related identity handle is invalid",
+                detail_code="natural_review_binding",
+            )
+        return str(entity["id"])
+    if not re.fullmatch(r"new:[a-z][a-z0-9_-]{0,63}", item.entity_ref):
+        raise RuntimeValidationError(
+            "New entity reference is invalid", detail_code="natural_review_binding"
+        )
+    entity = staged.get(item.entity_ref)
+    if entity is None or entity.kind != spec.entity_kind.value:
+        raise RuntimeValidationError(
+            "New related fact requires identity assertion",
+            detail_code="natural_review_binding",
+        )
+    return entity.id
+
+
+def _stage_related_identities(decision: NaturalReviewDecision) -> dict[str, NewEntity]:
+    """Resolve local joins without making decision order part of the wire contract."""
+
     staged: dict[str, NewEntity] = {}
-    for index, proposal in enumerate(proposals):
-        if not isinstance(proposal, NaturalAdd):
+    for item in decision.decisions:
+        if not isinstance(item, NaturalRelatedAdd) or not item.entity_ref.startswith(
+            "new:"
+        ):
             continue
-        spec = fact_type_spec(proposal.fact_type)
-        if not spec.defines_entity_identity or spec.entity_kind is EntityKind.SUBJECT:
+        spec = fact_type_spec(item.fact_type)
+        if not spec.defines_entity_identity:
             continue
-        reference = str(proposal.entity_ref or "").strip() or f"new:auto-{index}"
-        if reference.startswith("existing:"):
-            continue
-        if not reference.startswith("new:") or not reference.removeprefix("new:"):
-            raise RuntimeValidationError("Identity requires a new or existing entity")
-        prior = staged.get(reference)
-        if prior is not None and prior.kind != spec.entity_kind.value:
-            raise RuntimeValidationError("Entity reference crosses entity kinds")
-        staged.setdefault(
-            reference,
-            NewEntity(
-                id=str(uuid4()),
-                kind=spec.entity_kind.value,
-                label=proposal.new_entity_label.strip() or proposal.value.strip(),
-            ),
+        identity = staged.get(item.entity_ref)
+        if identity is not None:
+            raise RuntimeValidationError("New related identity reference is duplicated")
+        staged[item.entity_ref] = NewEntity(
+            str(uuid4()), spec.entity_kind.value, item.value.strip()
         )
     return staged
 
 
-def _resolve_add_entity(
-    proposal: NaturalAdd,
-    *,
-    subject_id: str,
-    expected_kind: EntityKind,
-    entities_by_id: dict[str, dict[str, Any]],
-    staged_entities: dict[str, NewEntity],
-    index: int,
-) -> str:
-    if expected_kind is EntityKind.SUBJECT:
-        if proposal.entity_ref:
-            raise RuntimeValidationError("Subject facts cannot select an entity")
-        return subject_id
-    reference = str(proposal.entity_ref or "").strip() or f"new:auto-{index}"
-    if reference.startswith("existing:"):
-        entity = entities_by_id.get(reference.removeprefix("existing:"))
-        if (
-            entity is None
-            or str(entity["subject_id"]) != subject_id
-            or entity["kind"] != expected_kind.value
-        ):
-            raise RuntimeValidationError("Entity is outside the bound subject/kind")
-        return str(entity["id"])
-    entity = staged_entities.get(reference)
-    if entity is None or entity.kind != expected_kind.value:
-        raise RuntimeValidationError("New entity requires a staged identity claim")
-    return entity.id
+def _validate_target(item: NaturalWrite, status: str) -> None:
+    if isinstance(item, (NaturalRevise, NaturalEnd)) and status != "active":
+        raise RuntimeValidationError("Revision/end requires an active target")
+    if isinstance(item, NaturalReassert) and status != "inactive":
+        raise RuntimeValidationError("Reassert requires an inactive target")
+    if isinstance(item, NaturalForget) and status not in {"active", "inactive"}:
+        raise RuntimeValidationError("Forget requires active/inactive target")

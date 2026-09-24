@@ -145,7 +145,7 @@ export type MemoryEvidence = {
   end_char: number;
   quote: string;
   message_sha256: string;
-  authority_role?: "user_assertion" | "user_endorsement" | "assistant_referent";
+  authority_role?: "user_assertion" | "user_endorsement" | "user_resolution" | "user_antecedent" | "assistant_referent";
 };
 
 export type MemoryRevision = {

@@ -65,7 +65,7 @@ class FakeProvider:
     async def chat_completion(self, payload, *, timeout_seconds):
         self.calls.append("generation")
         content = (
-            json.dumps({"proposals": [], "claim_dispositions": []})
+            json.dumps({"decisions": []})
             if payload.get("response_format") is not None
             else "晚安。"
         )
@@ -100,7 +100,7 @@ def _catalog(natural_worker_support) -> dict:
 @pytest.mark.parametrize(
     "diagnostic_reviewer_output, expected_output", [(False, 1024), (True, 4096)]
 )
-def test_worker_uses_role_limits_and_one_shared_pre_request_ledger(
+def test_worker_uses_role_limits_and_retains_dispatch_observations(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     natural_worker_support,
@@ -221,7 +221,15 @@ def test_worker_uses_role_limits_and_one_shared_pre_request_ledger(
                 evidence["reviewer_request"]["serialized_visible_token_estimate"]
                 <= 6759
             )
-            assert ledger.counts() == {"generation": 2, "embedding": 2}
+            assert fake.calls.count("generation") == 2
+            assert fake.calls.count("embedding") == 2
+            assert (
+                sum(
+                    group["attempted"]
+                    for group in evidence["provider_request_counts"]["groups"]
+                )
+                == 3
+            )
             assert len(list((tmp_path / "raw").glob("*.json"))) == 4
         finally:
             await engine.dispose()

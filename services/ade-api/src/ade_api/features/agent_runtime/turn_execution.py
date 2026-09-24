@@ -95,6 +95,16 @@ class TurnExecution:
         natural_variant = NATURAL_POLICY_BINDINGS.get(
             definition["memory_policy_version"]
         )
+        if (
+            str(definition["memory_policy_version"]).startswith(
+                "natural-user-assertions-"
+            )
+            and natural_variant is None
+        ):
+            raise RuntimeValidationError(
+                "Obsolete natural reviewer binding is read-only for fresh sends",
+                detail_code="obsolete_natural_reviewer_binding",
+            )
         natural_mode = natural_variant is not None
         if natural_mode and self.settings.agent_runtime_mode != "development":
             raise RuntimeValidationError(

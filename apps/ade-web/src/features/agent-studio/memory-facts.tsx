@@ -6,6 +6,16 @@ import type { MemoryFact, MemoryEvidence } from "./types";
 
 type Translate = (english: string, chinese: string) => string;
 
+function sourceRoleLabel(role: MemoryEvidence["authority_role"], t: Translate): string {
+  switch (role) {
+    case "user_resolution": return t("Current answer", "当前回答");
+    case "user_antecedent": return t("Earlier user context", "先前用户上下文");
+    case "user_endorsement": return t("Current endorsement", "当前认可");
+    case "assistant_referent": return t("Assistant proposition", "助手提议");
+    default: return t("User assertion", "用户陈述");
+  }
+}
+
 export function MemoryFacts({ facts, t, openEvidence, prepareAction, removeSaved, canCorrect, canRemove }: {
   facts: MemoryFact[];
   t: Translate;
@@ -53,6 +63,6 @@ function FactRow({ fact, t, openEvidence, prepareAction, removeSaved, canCorrect
         <button className="button" onClick={() => { setConfirmingVersion(null); void removeSaved(fact.id, fact.version); }}>{t("Confirm exact removal", "确认精确移除")}</button>
       </div>
     </div> : <button className="button muted" onClick={() => setConfirmingVersion(fact.version)}>{t("Remove exact saved assertion", "移除这条已保存陈述")}</button> : null}
-    <div className="studio-revisions">{fact.revisions.map((revision) => <article key={revision.id}><strong>{revision.operation} · v{revision.fact_version}{revision.reason ? ` · ${revision.reason}` : ""}</strong><span>{revision.action_id ? `${t("operator action", "操作员动作")} ${revision.action_id.slice(0, 12)}` : `${t("run", "运行")} ${revision.run_id?.slice(0, 12) || "-"}`}</span>{revision.predecessor_revision_ids.length ? <small>{t("Predecessors", "前序修订")}: {revision.predecessor_revision_ids.join(", ")}</small> : null}{revision.evidence.map((evidence) => <blockquote key={`${evidence.message_id}-${evidence.start_char}-${evidence.authority_role || "legacy"}`}><button className="studio-citation" onClick={() => void openEvidence(evidence)}>“{evidence.quote}” <cite>{evidence.authority_role || "user_assertion"} · {t("Open original message", "打开原始消息")} #{evidence.message_sequence}</cite></button></blockquote>)}</article>)}</div>
+    <div className="studio-revisions">{fact.revisions.map((revision) => <article key={revision.id}><strong>{revision.operation} · v{revision.fact_version}{revision.reason ? ` · ${revision.reason}` : ""}</strong><span>{revision.action_id ? `${t("operator action", "操作员动作")} ${revision.action_id.slice(0, 12)}` : `${t("run", "运行")} ${revision.run_id?.slice(0, 12) || "-"}`}</span>{revision.predecessor_revision_ids.length ? <small>{t("Predecessors", "前序修订")}: {revision.predecessor_revision_ids.join(", ")}</small> : null}{revision.evidence.map((evidence) => <blockquote key={`${evidence.message_id}-${evidence.start_char}-${evidence.authority_role || "legacy"}`}><button className="studio-citation" onClick={() => void openEvidence(evidence)}>“{evidence.quote}” <cite>{sourceRoleLabel(evidence.authority_role, t)} · {t("Open original message", "打开原始消息")} #{evidence.message_sequence}</cite></button></blockquote>)}</article>)}</div>
   </details>;
 }

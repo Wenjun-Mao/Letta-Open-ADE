@@ -1,3 +1,5 @@
+"""Serialized request and strict completion for compact natural review."""
+
 from __future__ import annotations
 
 import asyncio
@@ -9,387 +11,153 @@ from ade_api.features.agent_runtime.errors import RuntimeValidationError
 from ade_api.features.agent_runtime.natural_memory_policy import (
     prepare_natural_memory_review,
 )
-from ade_api.features.agent_runtime.natural_memory_review import (
-    natural_review_json_schema,
-    parse_natural_review_decision,
-)
 from ade_api.features.agent_runtime.natural_memory_reviewer import (
     NaturalMemoryReviewer,
     natural_review_request,
     preflight_reviewer_bundle,
-    reviewer_suffix_limit,
     serialized_review_tokens,
 )
 
-
 SUBJECT = "00000000-0000-0000-0000-000000000001"
 USER = "00000000-0000-0000-0000-000000000002"
+CURRENT = {"id": USER, "role": "user", "content": "I live in Toronto.", "sequence": 2}
+ENTITIES = [{"id": SUBJECT, "subject_id": SUBJECT, "kind": "subject", "label": ""}]
+WRITE = {
+    "decisions": [
+        {
+            "kind": "subject_add",
+            "fact_type": "person.current_location",
+            "value": "Toronto",
+            "evidence": {"mode": "direct", "current_quote": "I live in Toronto"},
+        }
+    ]
+}
 
 
 class _Transport:
-    def __init__(self, decision: dict) -> None:
-        self.decision = decision
+    def __init__(self, content: object, finish_reason: str | None = "stop") -> None:
+        self.content = content
+        self.finish_reason = finish_reason
         self.calls: list[dict] = []
 
     async def chat_completion(self, payload, *, timeout_seconds):
         self.calls.append(payload)
         return {
             "id": "natural-review-request",
-            "choices": [{"message": {"content": json.dumps(self.decision)}}],
+            "choices": [
+                {
+                    "finish_reason": self.finish_reason,
+                    "message": {"content": self.content},
+                }
+            ],
             "usage": {"prompt_tokens": 40, "completion_tokens": 20},
         }
 
 
-def _review(transport: _Transport):
-    current = {"id": USER, "role": "user", "content": "I live in Toronto."}
-    entities = [{"id": SUBJECT, "subject_id": SUBJECT, "kind": "subject", "label": ""}]
-
+def _review(transport: _Transport, *, observe_request=None, observe_decision=None):
     def validate(decision) -> None:
         prepare_natural_memory_review(
             decision=decision,
             subject_id=SUBJECT,
-            current_user_message=current,
-            available_messages=[current],
+            current_user_message=CURRENT,
+            available_messages=[CURRENT],
             facts=[],
-            entities=entities,
+            entities=ENTITIES,
             candidate_reply="Okay.",
         )
 
     return asyncio.run(
         NaturalMemoryReviewer(transport, provider_adapter="deepseek_openai").review(
             model_key="source::reviewer",
-            current_user_message=current,
-            source_messages=[current],
+            current_user_message=CURRENT,
+            source_messages=[CURRENT],
             facts=[],
-            entities=entities,
+            entities=ENTITIES,
             candidate_reply="Okay.",
             timeout_seconds=10,
             validate_decision=validate,
             input_token_limit=100_000,
+            observe_request=observe_request,
+            observe_decision=observe_decision,
         )
     )
 
 
-def test_natural_reviewer_sends_mixed_schema_and_one_call() -> None:
-    transport = _Transport(
-        {
-            "proposals": [
-                {
-                    "claim_id": "residence",
-                    "operation": "add",
-                    "fact_type": "person.current_location",
-                    "value": "Toronto",
-                    "evidence_quote": "I live in Toronto",
-                    "sources": [
-                        {
-                            "message_id": USER,
-                            "quote": "I live in Toronto",
-                            "role": "user_assertion",
-                        }
-                    ],
-                }
-            ],
-            "claim_dispositions": [
-                {
-                    "claim_id": "residence",
-                    "outcome": "allow",
-                    "reason": "supported",
-                }
-            ],
-        }
-    )
+def test_reviewer_sends_one_compact_request_and_binds_accepted_write() -> None:
+    transport = _Transport(json.dumps(WRITE))
     result = _review(transport)
     assert result.model_request_count == 1
     assert result.protocol_repaired is False
     assert result.usage == {"prompt_tokens": 40, "completion_tokens": 20}
     assert len(transport.calls) == 1
-    request = transport.calls[0]
-    assert request["max_tokens"] == 1024
-    assert request["response_format"] == {"type": "json_object"}
-    packet = json.loads(request["messages"][1]["content"])
-    assert packet["candidate_visible_reply"] == "Okay."
-    assert packet["source_messages"][0]["id"] == USER
-    assert "NaturalRevise" in request["messages"][0]["content"]
+    packet = json.loads(transport.calls[0]["messages"][1]["content"])
+    assert packet["current_user"]["content"] == CURRENT["content"]
+    assert "id" not in packet["current_user"]
+    assert packet["targets"] == []
+    assert transport.calls[0]["response_format"] == {"type": "json_object"}
+    assert '"decisions":[]' in transport.calls[0]["messages"][0]["content"]
 
 
-def test_captured_subject_reference_is_rejected_without_remapping() -> None:
-    user = {"id": USER, "role": "user", "content": "我早上喜欢喝咖啡。"}
-    proposal = {
-        "claim_id": "p1",
-        "operation": "add",
-        "fact_type": "person.preference",
-        "qualifier": "drink",
-        "value": "咖啡",
-        "entity_ref": SUBJECT,
-        "evidence_quote": user["content"],
-        "sources": [
-            {"message_id": USER, "quote": user["content"], "role": "user_assertion"}
-        ],
-    }
-    payload = {
-        "proposals": [proposal],
-        "claim_dispositions": [
-            {"claim_id": "p1", "outcome": "allow", "reason": "supported"}
-        ],
-    }
-    with pytest.raises(
-        RuntimeValidationError, match="subject-kind add cannot select an entity"
-    ):
-        parse_natural_review_decision(payload)
-    valid = {**proposal, "entity_ref": None, "value": "早上喜欢喝咖啡"}
-    decision = parse_natural_review_decision({**payload, "proposals": [valid]})
-    prepared = prepare_natural_memory_review(
-        decision=decision,
-        subject_id=SUBJECT,
-        current_user_message=user,
-        available_messages=[user],
-        facts=[],
-        entities=[
-            {"id": SUBJECT, "subject_id": SUBJECT, "kind": "subject", "label": ""}
-        ],
-        candidate_reply="好的。",
-    )
-    assert prepared.operations[0].entity_id == SUBJECT
-    assert prepared.operations[0].value == "早上喜欢喝咖啡"
-
-
-def test_reviewer_request_states_entity_and_scope_rules_with_nullable_ref() -> None:
-    current = {"id": USER, "role": "user", "content": "我早上喜欢喝咖啡。"}
+def test_preflight_and_execution_serialize_the_same_bundle() -> None:
     request = natural_review_request(
-        model_key="deepseek::deepseek-flash",
-        provider_adapter="deepseek_openai",
-        current_user_message=current,
-        source_messages=[current],
-        facts=[],
-        entities=[{"id": SUBJECT, "kind": "subject", "label": ""}],
-        candidate_reply="好的。",
-    )
-    system = request["messages"][0]["content"]
-    assert "Subject-kind adds need entity_ref:null" in system
-    assert "Preserve time, place, frequency and condition in values" in system
-    assert "Past user turns are context, never citable sources" in system
-    assert "past facts by supplied fact_id/version" in system
-    ref = natural_review_json_schema()["$defs"]["NaturalAdd"]["properties"][
-        "entity_ref"
-    ]
-    assert ref["default"] is None
-    assert {option["type"] for option in ref["anyOf"]} == {"string", "null"}
-
-
-def test_diagnostic_output_envelope_preserves_reviewer_input_and_sampling() -> None:
-    current = {"id": USER, "role": "user", "content": "晚上我一般更喜欢花茶。"}
-    common = {
-        "model_key": "deepseek::deepseek-flash",
-        "provider_adapter": "deepseek_openai",
-        "current_user_message": current,
-        "source_messages": [current],
-        "facts": [],
-        "entities": [{"id": SUBJECT, "kind": "subject", "label": ""}],
-        "candidate_reply": "听起来很舒服。",
-    }
-    baseline = natural_review_request(**common)
-    diagnostic = natural_review_request(**common, max_output_tokens=4096)
-    assert baseline["max_tokens"] == 1024
-    assert diagnostic == {**baseline, "max_tokens": 4096}
-    assert serialized_review_tokens(diagnostic) == serialized_review_tokens(baseline)
-
-
-def test_related_identity_reference_remains_valid() -> None:
-    user = {"id": USER, "role": "user", "content": "我的狗叫 Roxy。"}
-    payload = {
-        "proposals": [
-            {
-                "claim_id": "pet",
-                "operation": "add",
-                "fact_type": "pet.name",
-                "value": "Roxy",
-                "entity_ref": "new:pet",
-                "evidence_quote": user["content"],
-                "sources": [
-                    {
-                        "message_id": USER,
-                        "quote": user["content"],
-                        "role": "user_assertion",
-                    }
-                ],
-            }
-        ],
-        "claim_dispositions": [
-            {"claim_id": "pet", "outcome": "allow", "reason": "supported"}
-        ],
-    }
-    decision = parse_natural_review_decision(payload)
-    prepared = prepare_natural_memory_review(
-        decision=decision,
-        subject_id=SUBJECT,
-        current_user_message=user,
-        available_messages=[user],
-        facts=[],
-        entities=[
-            {"id": SUBJECT, "subject_id": SUBJECT, "kind": "subject", "label": ""}
-        ],
-        candidate_reply="好的。",
-    )
-    assert len(prepared.new_entities) == 1
-    assert prepared.operations[0].entity_id == prepared.new_entities[0].id
-
-
-def test_natural_reviewer_rejects_false_veto_without_retry() -> None:
-    transport = _Transport(
-        {
-            "proposals": [],
-            "claim_dispositions": [
-                {
-                    "claim_id": "missing",
-                    "outcome": "contradiction",
-                    "reason": "reply_conflict",
-                    "candidate_reply_quote": "Okay",
-                }
-            ],
-        }
-    )
-    with pytest.raises(RuntimeValidationError, match="closed schema"):
-        _review(transport)
-    assert len(transport.calls) == 1
-
-
-def test_reviewer_required_capacity_is_checked_before_generation() -> None:
-    with pytest.raises(RuntimeValidationError) as error:
-        reviewer_suffix_limit(
-            model_key="source::reviewer",
-            provider_adapter="deepseek_openai",
-            current_user_message={
-                "id": USER,
-                "role": "user",
-                "content": "What about Roxy?",
-            },
-            facts=[
-                {
-                    "id": "fact-1",
-                    "fact_type": "pet.identity",
-                    "qualifier": None,
-                    "entity_id": SUBJECT,
-                    "value": "Roxy is a Husky" * 100,
-                    "status": "active",
-                    "version": 1,
-                }
-            ],
-            entities=[{"id": SUBJECT, "kind": "subject", "label": ""}],
-            input_token_limit=512,
-            candidate_reply_reserve=256,
-        )
-    assert error.value.detail_code == "natural_reviewer_capacity"
-
-
-def test_reviewer_preflight_uses_the_exact_provider_packet() -> None:
-    current = {"id": USER, "role": "user", "content": "What about Roxy?"}
-    facts = [
-        {
-            "id": "fact-1",
-            "fact_type": "pet.identity",
-            "qualifier": None,
-            "entity_id": SUBJECT,
-            "value": "Roxy is a Husky",
-            "status": "active",
-            "version": 1,
-        }
-    ]
-    entities = [{"id": SUBJECT, "kind": "subject", "label": ""}]
-    source = [
-        {"id": "prior", "role": "assistant", "content": "Roxy is a Husky."},
-        current,
-    ]
-    projected = natural_review_request(
         model_key="source::reviewer",
         provider_adapter="deepseek_openai",
-        current_user_message=current,
-        source_messages=source,
-        facts=facts,
-        entities=entities,
-        candidate_reply="x" * 1024,
+        current_user_message=CURRENT,
+        source_messages=[CURRENT],
+        facts=[],
+        entities=ENTITIES,
+        candidate_reply="Okay.",
+        max_output_tokens=4096,
     )
-    exact = serialized_review_tokens(projected)
-    assert (
-        preflight_reviewer_bundle(
-            model_key="source::reviewer",
-            provider_adapter="deepseek_openai",
-            current_user_message=current,
-            source_messages=source,
-            facts=facts,
-            entities=entities,
-            candidate_reply_reserve=256,
-            input_token_limit=exact,
-        )
-        == exact
-    )
+    assert request["max_tokens"] == 4096
+    assert preflight_reviewer_bundle(
+        model_key="source::reviewer",
+        provider_adapter="deepseek_openai",
+        current_user_message=CURRENT,
+        source_messages=[CURRENT],
+        facts=[],
+        entities=ENTITIES,
+        candidate_reply_reserve=512,
+        input_token_limit=100_000,
+        max_output_tokens=4096,
+    ) >= serialized_review_tokens(request)
+
+
+@pytest.mark.parametrize(
+    "finish,code",
+    [
+        ("length", "natural_review_truncated"),
+        ("content_filter", "natural_review_refusal"),
+        (None, "natural_review_refusal"),
+    ],
+)
+def test_partial_or_unsupported_finish_is_rejected_before_json_parse(
+    finish, code
+) -> None:
+    transport = _Transport(json.dumps({"decisions": []}), finish)
     with pytest.raises(RuntimeValidationError) as error:
-        preflight_reviewer_bundle(
-            model_key="source::reviewer",
-            provider_adapter="deepseek_openai",
-            current_user_message=current,
-            source_messages=source,
-            facts=facts,
-            entities=entities,
-            candidate_reply_reserve=256,
-            input_token_limit=exact - 1,
-        )
-    assert error.value.detail_code == "natural_reviewer_capacity"
-
-
-def test_typed_rejection_is_observed_before_terminal_validation() -> None:
-    transport = _Transport(
-        {
-            "proposals": [
-                {
-                    "claim_id": "residence",
-                    "operation": "add",
-                    "fact_type": "person.current_location",
-                    "value": "Toronto",
-                    "evidence_quote": "I live in Toronto",
-                    "sources": [
-                        {
-                            "message_id": USER,
-                            "quote": "I live in Toronto",
-                            "role": "user_assertion",
-                        }
-                    ],
-                }
-            ],
-            "claim_dispositions": [
-                {
-                    "claim_id": "residence",
-                    "outcome": "contradiction",
-                    "reason": "reply_conflict",
-                    "candidate_reply_quote": "Toronto",
-                }
-            ],
-        }
-    )
-    observed: list[dict] = []
-    current = {"id": USER, "role": "user", "content": "I live in Toronto."}
-
-    def reject(_decision) -> None:
-        raise RuntimeValidationError(
-            "false synthetic veto", detail_code="natural_memory_reply_conflict"
-        )
-
-    with pytest.raises(RuntimeValidationError) as error:
-        asyncio.run(
-            NaturalMemoryReviewer(transport, provider_adapter="deepseek_openai").review(
-                model_key="source::reviewer",
-                current_user_message=current,
-                source_messages=[current],
-                facts=[],
-                entities=[{"id": SUBJECT, "kind": "subject", "label": ""}],
-                candidate_reply="Okay, Toronto.",
-                timeout_seconds=10,
-                validate_decision=reject,
-                input_token_limit=100_000,
-                observe_decision=lambda decision: observed.append(
-                    decision.model_dump(mode="json")
-                ),
-            )
-        )
-    assert error.value.detail_code == "natural_memory_reply_conflict"
-    assert observed[0]["claim_dispositions"][0]["outcome"] == "contradiction"
+        _review(transport)
+    assert error.value.detail_code == code
     assert len(transport.calls) == 1
+
+
+def test_missing_shape_and_malformed_json_reject_without_repair() -> None:
+    for content, code in (
+        ("{}", "natural_review_schema"),
+        ("{", "natural_review_json"),
+    ):
+        transport = _Transport(content)
+        with pytest.raises(RuntimeValidationError) as error:
+            _review(transport)
+        assert error.value.detail_code == code
+        assert len(transport.calls) == 1
+
+
+def test_optional_reviewer_capture_cannot_veto_success() -> None:
+    def fail(_value):
+        raise OSError("synthetic capture error")
+
+    result = _review(
+        _Transport(json.dumps(WRITE)), observe_request=fail, observe_decision=fail
+    )
+    assert len(result.decision.decisions) == 1

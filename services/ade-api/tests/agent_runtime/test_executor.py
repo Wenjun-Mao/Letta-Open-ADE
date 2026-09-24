@@ -149,7 +149,7 @@ def test_deepseek_required_search_uses_auto_and_replays_reasoning_with_tool_resu
         return [{"id": "fact-1", "value": "oolong"}]
 
     evidence = NaturalAttemptEvidence(
-        run_id="synthetic-run", attempt=1, policy_binding="natural-user-assertions-v2-b"
+        run_id="synthetic-run", attempt=1, policy_binding="natural-user-assertions-v3-b"
     )
     result = asyncio.run(
         ConversationExecutor(transport, provider_adapter="deepseek_openai").execute(

@@ -30,6 +30,23 @@ describe("saved fact display", () => {
     expect(html).toContain("Former assertion:");
   });
 
+  it("labels current resolution authority separately from earlier user support", () => {
+    const resolved = fact("resolved", "active");
+    resolved.revisions[0].evidence = [
+      { message_id: "earlier", conversation_id: "conversation-1", message_sequence: 2,
+        start_char: 0, end_char: 5, quote: "Husky", message_sha256: "a".repeat(64),
+        authority_role: "user_antecedent" },
+      { message_id: "current", conversation_id: "conversation-1", message_sequence: 4,
+        start_char: 0, end_char: 4, quote: "Roxy", message_sha256: "b".repeat(64),
+        authority_role: "user_resolution" },
+    ];
+    const html = renderToStaticMarkup(<MemoryFacts facts={[resolved]}
+      t={(english) => english} openEvidence={async () => {}} prepareAction={() => {}}
+      canCorrect={false} />);
+    expect(html).toContain("Earlier user context");
+    expect(html).toContain("Current answer");
+  });
+
   it("requires an exact in-panel confirmation before removal", async () => {
     (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     const removeSaved = vi.fn(async () => {});

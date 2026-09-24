@@ -327,7 +327,7 @@ def test_memory_sources_join_authoritative_conversation_and_message_position() -
         )
     )
 
-    statement = str(connection.statements[1].compile(dialect=dialect()))
+    statement = str(connection.statements[-1].compile(dialect=dialect()))
     assert sources[0]["conversation_id"] == "conversation-1"
     assert sources[0]["message_sequence"] == 151
     assert "JOIN ade.messages" in statement

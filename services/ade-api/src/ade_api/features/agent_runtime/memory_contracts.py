@@ -66,7 +66,11 @@ class MemoryEvidenceResponse(BaseModel):
     quote: str
     message_sha256: str
     authority_role: Literal[
-        "user_assertion", "user_endorsement", "assistant_referent"
+        "user_assertion",
+        "user_endorsement",
+        "user_resolution",
+        "user_antecedent",
+        "assistant_referent",
     ] = "user_assertion"
 
 

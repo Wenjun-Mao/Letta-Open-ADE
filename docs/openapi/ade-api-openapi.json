@@ -3306,6 +3306,8 @@
             "enum": [
               "user_assertion",
               "user_endorsement",
+              "user_resolution",
+              "user_antecedent",
               "assistant_referent"
             ],
             "title": "Authority Role",

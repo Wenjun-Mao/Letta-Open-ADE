@@ -73,7 +73,7 @@ def test_paired_generated_summary_preserves_boundary_and_serialized_requests(
             async def prepare(self, request, *, purpose):
                 prepared = await base_definitions.prepare(request, purpose=purpose)
                 prepared["memory_policy_version"] = (
-                    "natural-user-assertions-v2-"
+                    "natural-user-assertions-v3-"
                     + request.definition_key.rsplit("_", 1)[-1]
                 )
                 prepared["tool_names"] = list(request.tool_names)
@@ -236,14 +236,16 @@ def test_paired_generated_summary_preserves_boundary_and_serialized_requests(
                     item["reviewer_request"]["serialized_visible_token_estimate"]
                     <= 6759
                 )
-                assert item["provider_request_counts"]["reviewer"] == 1
+                assert any(
+                    group["stage"] == "reviewer" and group["attempted"] == 1
+                    for group in item["provider_request_counts"]["groups"]
+                )
                 reviewer_packet = json.loads(
                     item["reviewer_request"]["messages"][1]["content"]
                 )
-                assert (
-                    reviewer_packet["source_messages"]
-                    == item["generation"]["source_messages"]
-                )
+                assert [row["content"] for row in reviewer_packet["context"]] == [
+                    row["content"] for row in item["generation"]["source_messages"][:-1]
+                ]
                 assert all(
                     request["serialized_visible_token_estimate"]
                     <= item["generation"]["input_limit"]
@@ -267,7 +269,10 @@ def test_paired_generated_summary_preserves_boundary_and_serialized_requests(
                     == 58
                 )
                 assert request["serialized_visible_token_estimate"] <= 6759
-                assert item["provider_request_counts"]["compaction"] == 1
+                assert any(
+                    group["stage"] == "compaction" and group["attempted"] == 1
+                    for group in item["provider_request_counts"]["groups"]
+                )
                 assert item["generation"]["source_messages"][0]["role"] == "user"
                 assert len(item["generation"]["source_messages"]) == 11
             assert [
@@ -292,7 +297,10 @@ def test_paired_generated_summary_preserves_boundary_and_serialized_requests(
             )
             assert a_messages[1:] == a0_messages[1:]
             assert b["compaction_request"] == {"stage": "absent"}
-            assert b["provider_request_counts"].get("compaction", 0) == 0
+            assert not any(
+                group["stage"] == "compaction"
+                for group in b["provider_request_counts"]["groups"]
+            )
             assert len(b["generation"]["source_messages"]) <= 17
             assert "afternoon 2pm product-role opening" not in json.dumps(
                 a["generation"]["source_messages"], ensure_ascii=False
@@ -301,9 +309,9 @@ def test_paired_generated_summary_preserves_boundary_and_serialized_requests(
                 a["reviewer_request"]["messages"][1]["content"]
             )
             assert "afternoon 2pm product-role opening" not in json.dumps(
-                a_reviewer_packet["source_messages"], ensure_ascii=False
+                a_reviewer_packet["context"], ensure_ascii=False
             )
-            assert a_reviewer_packet["current_memory_targets"] == []
+            assert a_reviewer_packet["targets"] == []
             assert a["candidate_visible_reply"] == (
                 "You chose the afternoon 2pm product-role opening."
             )
@@ -330,19 +338,25 @@ def test_paired_generated_summary_preserves_boundary_and_serialized_requests(
                 continuation["serialized_visible_token_estimate"]
                 <= tool_artifact["generation"]["input_limit"]
             )
-            assert tool_artifact["provider_request_counts"]["conversation"] == 2
+            assert any(
+                group["stage"] == "conversation" and group["attempted"] == 2
+                for group in tool_artifact["provider_request_counts"]["groups"]
+            )
             assert tool_artifact["terminal_readback"]["outcome"] == "committed"
             assert all(
                 request["serialized_visible_token_estimate"]
                 <= tool_artifact["generation"]["input_limit"]
                 for request in tool_artifact["generation_requests"]
             )
-            assert (
-                json.loads(tool_artifact["reviewer_request"]["messages"][1]["content"])[
-                    "source_messages"
-                ]
-                == tool_artifact["generation"]["source_messages"]
-            )
+            assert [
+                row["content"]
+                for row in json.loads(
+                    tool_artifact["reviewer_request"]["messages"][1]["content"]
+                )["context"]
+            ] == [
+                row["content"]
+                for row in tool_artifact["generation"]["source_messages"][:-1]
+            ]
         finally:
             await engine.dispose()
 

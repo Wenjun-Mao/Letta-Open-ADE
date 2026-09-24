@@ -648,7 +648,7 @@ memory_revision_sources = Table(
     CheckConstraint("start_char >= 0", name="ck_revision_sources_nonnegative_start"),
     CheckConstraint("end_char > start_char", name="ck_revision_sources_positive_span"),
     CheckConstraint(
-        "authority_role IN ('user_assertion', 'user_endorsement', 'assistant_referent')",
+        "authority_role IN ('user_assertion', 'user_endorsement', 'assistant_referent', 'user_resolution', 'user_antecedent')",
         name="ck_memory_revision_sources_authority_role",
     ),
 )

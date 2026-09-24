@@ -33,6 +33,7 @@ def test_failed_observation_before_send_cannot_veto_provider_result(
     assert response == {"id": "provider-ok"}
     assert sent == 1
     assert trace.normalized_events() == ()
+    assert trace.observation_incomplete is True
 
 
 def test_failed_terminal_observation_preserves_original_provider_error(
@@ -52,6 +53,7 @@ def test_failed_terminal_observation_preserves_original_provider_error(
     assert [event.event_type for event in trace.normalized_events()] == [
         "model.request.started"
     ]
+    assert trace.observation_incomplete is True
 
 
 class _StubTransport:

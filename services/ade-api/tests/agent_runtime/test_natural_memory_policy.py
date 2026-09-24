@@ -1,363 +1,455 @@
+"""Complete-delta mechanics for the revision-5 compact reviewer."""
+
 from __future__ import annotations
 
 import pytest
 
 from ade_api.features.agent_runtime.errors import RuntimeValidationError
+from ade_api.features.agent_runtime.natural_memory_binding import (
+    build_natural_binding_map,
+)
 from ade_api.features.agent_runtime.natural_memory_policy import (
     prepare_natural_memory_review,
 )
 from ade_api.features.agent_runtime.natural_memory_review import (
-    NaturalReviewDecision,
-    bind_natural_sources,
+    parse_natural_review_decision,
 )
-
 
 SUBJECT = "00000000-0000-0000-0000-000000000001"
 USER = "00000000-0000-0000-0000-000000000002"
 ASSISTANT = "00000000-0000-0000-0000-000000000003"
-FACT = "00000000-0000-0000-0000-000000000004"
+PRIOR = "00000000-0000-0000-0000-000000000004"
+FACT = "00000000-0000-0000-0000-000000000005"
 
 
-def _source(quote: str, *, role: str = "user_assertion", message_id: str = USER):
-    return {"message_id": message_id, "quote": quote, "role": role}
-
-
-def _add(claim_id: str, value: str, quote: str, **overrides):
+def _current(content: str):
     return {
-        "claim_id": claim_id,
-        "operation": "add",
-        "fact_type": "person.current_location",
-        "value": value,
-        "evidence_quote": quote,
-        "sources": [_source(quote)],
-        **overrides,
+        "id": USER,
+        "role": "user",
+        "content": content,
+        "sequence": 4,
+        "run_id": "run-1",
     }
 
 
-def _disposition(claim_id: str, outcome: str, reason: str, **overrides):
-    return {"claim_id": claim_id, "outcome": outcome, "reason": reason, **overrides}
+def _prior(role: str, content: str):
+    return {
+        "id": PRIOR if role == "user" else ASSISTANT,
+        "role": role,
+        "content": content,
+        "sequence": 2,
+    }
+
+
+def _fact(value: str = "morning coffee", status: str = "active"):
+    return {
+        "id": FACT,
+        "subject_id": SUBJECT,
+        "entity_id": SUBJECT,
+        "fact_type": "person.preference",
+        "qualifier": "drink",
+        "normalized_key": f"person.preference|{SUBJECT}|drink|assertion:old",
+        "value": value,
+        "status": status,
+        "version": 1,
+        "current_revision_id": "00000000-0000-0000-0000-000000000006",
+    }
+
+
+def _subject_add(value: str, quote: str, evidence: dict | None = None):
+    return {
+        "kind": "subject_add",
+        "fact_type": "person.preference",
+        "qualifier": "drink",
+        "value": value,
+        "evidence": evidence or {"mode": "direct", "current_quote": quote},
+    }
 
 
 def _prepare(
-    payload: dict,
+    decisions: list[dict],
     *,
     current: str,
-    prior_assistant: str | None = None,
+    prior: list[dict] | None = None,
     facts: list[dict] | None = None,
-    candidate_reply: str = "Okay.",
+    candidate: str = "Okay",
 ):
-    messages = [{"id": USER, "role": "user", "content": current}]
-    if prior_assistant is not None:
-        messages.insert(
-            0, {"id": ASSISTANT, "role": "assistant", "content": prior_assistant}
-        )
+    current_message = _current(current)
     return prepare_natural_memory_review(
-        decision=NaturalReviewDecision.model_validate(payload),
+        decision=parse_natural_review_decision({"decisions": decisions}),
         subject_id=SUBJECT,
-        current_user_message=messages[-1],
-        available_messages=messages,
+        current_user_message=current_message,
+        available_messages=[*(prior or []), current_message],
         facts=facts or [],
         entities=[{"id": SUBJECT, "subject_id": SUBJECT, "kind": "subject"}],
-        candidate_reply=candidate_reply,
+        candidate_reply=candidate,
     )
 
 
-def test_mixed_deferred_pet_and_valid_residence_stages_only_survivors() -> None:
-    text = "My dog is Rocky, but don't save that. I now live in Toronto."
-    payload = {
-        "proposals": [
+def test_deferral_is_no_write_and_unrelated_residence_survives() -> None:
+    text = "I prefer coffee in the morning. Don't save that. I now live in Toronto."
+    result = _prepare(
+        [
+            {"kind": "defer", "current_quote": "Don't save that", "reason": "no_save"},
             {
-                "claim_id": "pet",
-                "operation": "add",
-                "fact_type": "pet.name",
-                "value": "Rocky",
-                "entity_ref": "new:rocky",
-                "evidence_quote": "My dog is Rocky",
-                "sources": [_source("My dog is Rocky")],
+                "kind": "subject_add",
+                "fact_type": "person.current_location",
+                "value": "Toronto",
+                "evidence": {
+                    "mode": "direct",
+                    "current_quote": "I now live in Toronto",
+                },
             },
-            _add("residence", "Toronto", "I now live in Toronto"),
         ],
-        "claim_dispositions": [
-            _disposition("pet", "defer", "no_save"),
-            _disposition("residence", "allow", "supported"),
-        ],
-    }
-    prepared = _prepare(payload, current=text)
-    assert [item.proposal.claim_id for item in prepared.operations] == ["residence"]
-    assert prepared.new_entities == ()
-    assert prepared.deferred_claims == ({"claim_id": "pet", "reason": "no_save"},)
-
-    payload["claim_dispositions"][0] = _disposition("pet", "allow", "supported")
+        current=text,
+    )
+    assert [item.value for item in result.operations] == ["Toronto"]
+    assert result.new_entities == ()
+    assert result.deferred_claims == (
+        {"quote": "Don't save that", "reason": "no_save"},
+    )
     with pytest.raises(RuntimeValidationError, match="No-save"):
-        _prepare(payload, current=text)
-
-
-def test_no_save_for_dog_does_not_block_residence_in_same_sentence() -> None:
-    prepared = _prepare(
-        {
-            "proposals": [_add("residence", "Toronto", "I live in Toronto")],
-            "claim_dispositions": [_disposition("residence", "allow", "supported")],
-        },
-        current="Don't save Rocky the dog, but I live in Toronto.",
-    )
-    assert len(prepared.operations) == 1
-
-
-def test_all_deferred_has_no_entities_or_writes() -> None:
-    prepared = _prepare(
-        {
-            "proposals": [_add("residence", "Toronto", "I live in Toronto")],
-            "claim_dispositions": [
-                _disposition("residence", "defer", "unresolved_reference")
+        _prepare(
+            [
+                _subject_add("coffee in the morning", "I prefer coffee in the morning"),
+                {
+                    "kind": "subject_add",
+                    "fact_type": "person.current_location",
+                    "value": "Toronto",
+                    "evidence": {
+                        "mode": "direct",
+                        "current_quote": "I now live in Toronto",
+                    },
+                },
             ],
-        },
-        current="I live in Toronto",
-    )
-    assert prepared.operations == ()
-    assert prepared.new_entities == ()
+            current=text,
+        )
 
 
-def test_independent_preference_assertions_share_category_not_mutation_identity() -> (
-    None
-):
-    payload = {
-        "proposals": [
+def test_chinese_no_save_is_claim_scoped() -> None:
+    result = _prepare(
+        [
+            {"kind": "defer", "current_quote": "别保存这个", "reason": "no_save"},
             {
-                "claim_id": claim_id,
-                "operation": "add",
-                "fact_type": "person.preference",
-                "qualifier": "drink",
-                "value": value,
-                "evidence_quote": value,
-                "sources": [_source(value)],
-            }
-            for claim_id, value in (
-                ("morning", "coffee in the morning"),
-                ("evening", "flower tea in the evening"),
-            )
+                "kind": "subject_add",
+                "fact_type": "person.current_location",
+                "value": "多伦多",
+                "evidence": {"mode": "direct", "current_quote": "我现在住多伦多"},
+            },
         ],
-        "claim_dispositions": [
-            _disposition("morning", "allow", "supported"),
-            _disposition("evening", "allow", "supported"),
-        ],
-    }
-    prepared = _prepare(
-        payload,
-        current="I prefer coffee in the morning and flower tea in the evening.",
+        current="早上我喜欢咖啡。别保存这个。我现在住多伦多。",
     )
-    assert len(prepared.operations) == 2
-    assert len({item.normalized_key for item in prepared.operations}) == 2
-    assert all("|assertion:" in item.normalized_key for item in prepared.operations)
-    payload["proposals"][1]["value"] = "coffee in the morning"
-    payload["proposals"][1]["evidence_quote"] = "coffee in the morning"
-    payload["proposals"][1]["sources"] = [_source("coffee in the morning")]
-    with pytest.raises(RuntimeValidationError, match="Equivalent preference"):
-        _prepare(payload, current="I prefer coffee in the morning.")
+    assert len(result.operations) == 1
+    assert result.operations[0].value == "多伦多"
 
 
-def test_assistant_referent_requires_current_user_endorsement() -> None:
-    text = "Yes, Toronto is right."
-    payload = {
-        "proposals": [
-            _add(
-                "residence",
-                "Toronto",
-                "Yes, Toronto is right",
-                sources=[
-                    _source("Yes, Toronto is right", role="user_endorsement"),
-                    _source(
-                        "You live in Toronto",
-                        role="assistant_referent",
-                        message_id=ASSISTANT,
-                    ),
-                ],
-            )
-        ],
-        "claim_dispositions": [_disposition("residence", "allow", "supported")],
+@pytest.mark.parametrize("mode", ["direct", "resolve_user", "endorse_assistant"])
+def test_assistant_only_bare_name_cannot_write_breed_by_mode(mode: str) -> None:
+    evidence = {"mode": mode, "current_quote": "Roxy"}
+    if mode != "direct":
+        evidence.update(
+            support_handle="A1" if mode == "endorse_assistant" else "U1",
+            support_quote="Is Roxy a Husky?",
+        )
+    prior = [_prior("assistant", "Is Roxy a Husky?")]
+    with pytest.raises(RuntimeValidationError):
+        _prepare(
+            [
+                {
+                    "kind": "related_add",
+                    "fact_type": "pet.breed",
+                    "value": "Husky",
+                    "entity_ref": "new:roxy",
+                    "evidence": evidence,
+                }
+            ],
+            current="Roxy",
+            prior=prior,
+        )
+
+
+def test_user_antecedent_resolution_keeps_distinct_current_authority() -> None:
+    # The identity add supplies the new entity and the breed shares its local ref.
+    prior = [_prior("user", "One of my dogs is a Husky")]
+    decisions = [
+        {
+            "kind": "related_add",
+            "fact_type": "pet.name",
+            "value": "Roxy",
+            "entity_ref": "new:roxy",
+            "evidence": {"mode": "direct", "current_quote": "Roxy"},
+        },
+        {
+            "kind": "related_add",
+            "fact_type": "pet.breed",
+            "value": "Husky",
+            "entity_ref": "new:roxy",
+            "evidence": {
+                "mode": "resolve_user",
+                "current_quote": "Roxy",
+                "support_handle": "U1",
+                "support_quote": "One of my dogs is a Husky",
+            },
+        },
+    ]
+    result = _prepare(decisions, current="Roxy", prior=prior)
+    assert len(result.new_entities) == 1
+    assert [source.authority_role for source in result.operations[1].sources] == [
+        "user_resolution",
+        "user_antecedent",
+    ]
+    assert result.operations[1].current_anchor.message_id == USER
+    reordered = prepare_natural_memory_review(
+        decision=parse_natural_review_decision({"decisions": decisions}),
+        subject_id=SUBJECT,
+        current_user_message=_current("Roxy"),
+        available_messages=[_current("Roxy"), *prior],
+        facts=[],
+        entities=[{"id": SUBJECT, "subject_id": SUBJECT, "kind": "subject"}],
+        candidate_reply="Okay",
+    )
+    assert reordered.operations[1].current_anchor == result.operations[1].current_anchor
+
+
+def test_prior_support_handles_follow_chronology_when_input_is_permuted() -> None:
+    older = {**_prior("user", "One of my dogs is a Husky"), "sequence": 1}
+    newer = {**_prior("user", "Which one?"), "id": "different", "sequence": 2}
+    first = build_natural_binding_map(
+        current_user_message=_current("Roxy"),
+        source_messages=[older, newer, _current("Roxy")],
+        facts=[],
+        entities=[],
+    )
+    reversed_input = build_natural_binding_map(
+        current_user_message=_current("Roxy"),
+        source_messages=[_current("Roxy"), newer, older],
+        facts=[],
+        entities=[],
+    )
+    assert first.messages == reversed_input.messages
+    assert first.messages["U1"]["id"] == older["id"]
+
+
+def test_binding_snapshot_is_detached_from_caller_rows() -> None:
+    earlier = _prior("user", "One of my dogs is a Husky")
+    current = _current("Roxy")
+    binding = build_natural_binding_map(
+        current_user_message=current,
+        source_messages=[earlier, current],
+        facts=[],
+        entities=[],
+    )
+    earlier["content"] = "changed after snapshot"
+    current["content"] = "changed after snapshot"
+    assert binding.messages["U1"]["content"] == "One of my dogs is a Husky"
+    assert binding.current["content"] == "Roxy"
+    with pytest.raises(TypeError):
+        binding.messages["U1"]["content"] = "tampered"
+
+
+def test_new_related_identity_can_follow_its_dependent_fact() -> None:
+    prior = [_prior("user", "One of my dogs is a Husky")]
+    decisions = [
+        {
+            "kind": "related_add",
+            "fact_type": "pet.breed",
+            "value": "Husky",
+            "entity_ref": "new:roxy",
+            "evidence": {
+                "mode": "resolve_user",
+                "current_quote": "Roxy",
+                "support_handle": "U1",
+                "support_quote": "One of my dogs is a Husky",
+            },
+        },
+        {
+            "kind": "related_add",
+            "fact_type": "pet.name",
+            "value": "Roxy",
+            "entity_ref": "new:roxy",
+            "evidence": {"mode": "direct", "current_quote": "Roxy"},
+        },
+    ]
+    result = _prepare(decisions, current="Roxy", prior=prior)
+    assert len(result.new_entities) == 1
+    assert {item.entity_id for item in result.operations} == {result.new_entities[0].id}
+
+
+@pytest.mark.parametrize(
+    "antecedent",
+    [
+        "One of my dogs might be a Husky",
+        "Don't save that one dog is a Husky",
+        "I withdraw that one dog is a Husky",
+    ],
+)
+def test_resolution_inherits_restrictions(antecedent: str) -> None:
+    with pytest.raises(RuntimeValidationError):
+        _prepare(
+            [
+                {
+                    "kind": "related_add",
+                    "fact_type": "pet.breed",
+                    "value": "Husky",
+                    "entity_ref": "new:roxy",
+                    "evidence": {
+                        "mode": "resolve_user",
+                        "current_quote": "Roxy",
+                        "support_handle": "U1",
+                        "support_quote": antecedent,
+                    },
+                }
+            ],
+            current="Roxy",
+            prior=[_prior("user", antecedent)],
+        )
+
+
+def test_short_assent_to_one_assistant_proposition_can_authorize_fact() -> None:
+    # Existing identity is offered as E1, derived from a current pet.name fact.
+    pet_id = "00000000-0000-0000-0000-000000000007"
+    identity = {
+        **_fact("Roxy"),
+        "fact_type": "pet.name",
+        "qualifier": None,
+        "entity_id": pet_id,
+        "normalized_key": f"pet.name|{pet_id}",
     }
-    prepared = _prepare(payload, current=text, prior_assistant="You live in Toronto.")
-    assert [source.authority_role for source in prepared.operations[0].sources] == [
+    current = _current("Yes")
+    result = prepare_natural_memory_review(
+        decision=parse_natural_review_decision(
+            {
+                "decisions": [
+                    {
+                        "kind": "related_add",
+                        "fact_type": "pet.breed",
+                        "value": "Husky",
+                        "entity_ref": "E1",
+                        "evidence": {
+                            "mode": "endorse_assistant",
+                            "current_quote": "Yes",
+                            "support_handle": "A1",
+                            "support_quote": "Is Roxy a Husky?",
+                        },
+                    }
+                ]
+            }
+        ),
+        subject_id=SUBJECT,
+        current_user_message=current,
+        available_messages=[_prior("assistant", "Is Roxy a Husky?"), current],
+        facts=[identity],
+        entities=[
+            {"id": SUBJECT, "subject_id": SUBJECT, "kind": "subject"},
+            {"id": pet_id, "subject_id": SUBJECT, "kind": "pet", "label": "Roxy"},
+        ],
+        candidate_reply="Okay",
+    )
+    assert result.operations[0].entity_id == pet_id
+    assert [s.authority_role for s in result.operations[0].sources] == [
         "user_endorsement",
         "assistant_referent",
     ]
-    proposal = NaturalReviewDecision.model_validate(payload).proposals[0]
-    with pytest.raises(RuntimeValidationError, match="outside its bundle"):
-        bind_natural_sources(
-            proposal,
-            current_user_message={"id": USER, "role": "user", "content": text},
-            available_messages=[{"id": USER, "role": "user", "content": text}],
-        )
 
 
-def test_prior_user_correction_context_cannot_be_cited_as_write_authority() -> None:
-    prior = {
-        "id": "00000000-0000-0000-0000-000000000005",
-        "role": "user",
-        "content": "我家狗叫 Rocky。",
+def test_operation_specific_removal_and_factual_end_are_distinct() -> None:
+    removal = {
+        "kind": "forget",
+        "target": "F1",
+        "evidence": {
+            "mode": "endorse_assistant",
+            "current_quote": "Yes, please",
+            "support_handle": "A1",
+            "support_quote": "Shall I remove saved morning coffee?",
+        },
     }
-    current = {"id": USER, "role": "user", "content": "刚才打错了，它叫 Roxy。"}
-    fact = {
-        "id": FACT,
-        "subject_id": SUBJECT,
-        "entity_id": "00000000-0000-0000-0000-000000000006",
-        "fact_type": "pet.name",
-        "qualifier": None,
-        "normalized_key": "pet.name|subject|case-0",
-        "value": "Rocky",
-        "status": "active",
-        "version": 1,
-    }
-    captured_shape = {
-        "proposals": [
-            {
-                "claim_id": "correction",
-                "operation": "revise",
-                "reason": "correct",
-                "fact_id": FACT,
-                "expected_version": 1,
-                "value": "Roxy",
-                "evidence_quote": current["content"],
-                "sources": [
-                    _source(current["content"]),
-                    _source(prior["content"], message_id=prior["id"]),
-                ],
-            }
-        ],
-        "claim_dispositions": [_disposition("correction", "allow", "supported")],
-    }
-
-    def prepare(payload: dict):
-        return prepare_natural_memory_review(
-            decision=NaturalReviewDecision.model_validate(payload),
-            subject_id=SUBJECT,
-            current_user_message=current,
-            available_messages=[prior, current],
-            facts=[fact],
-            entities=[
-                {"id": SUBJECT, "subject_id": SUBJECT, "kind": "subject"},
+    result = _prepare(
+        [removal],
+        current="Yes, please",
+        prior=[_prior("assistant", "Shall I remove saved morning coffee?")],
+        facts=[_fact()],
+    )
+    assert result.operations[0].next_status == "forgotten"
+    with pytest.raises(RuntimeValidationError, match="Forget requires"):
+        _prepare(
+            [
                 {
-                    "id": fact["entity_id"],
-                    "subject_id": SUBJECT,
-                    "kind": "pet",
-                    "label": "Rocky",
-                },
-            ],
-            candidate_reply="好，是 Roxy。",
-        )
-
-    with pytest.raises(
-        RuntimeValidationError, match="Write authority must cite the current user"
-    ):
-        prepare(captured_shape)
-    current_only = {
-        **captured_shape,
-        "proposals": [
-            {
-                **captured_shape["proposals"][0],
-                "sources": [_source(current["content"])],
-            }
-        ],
-    }
-    prepared = prepare(current_only)
-    assert len(prepared.operations) == 1
-    assert prepared.operations[0].value == "Roxy"
-    assert prepared.operations[0].revision_reason == "correct"
-    assert [source.message_id for source in prepared.operations[0].sources] == [USER]
-
-
-def test_correction_can_invalidate_without_inventing_new_value() -> None:
-    fact = {
-        "id": FACT,
-        "subject_id": SUBJECT,
-        "entity_id": SUBJECT,
-        "fact_type": "person.current_location",
-        "qualifier": None,
-        "normalized_key": f"person.current_location|{SUBJECT}",
-        "value": "Beijing",
-        "status": "active",
-        "version": 1,
-    }
-    prepared = _prepare(
-        {
-            "proposals": [
-                {
-                    "claim_id": "invalidate",
-                    "operation": "revise",
-                    "reason": "correct",
-                    "fact_id": FACT,
-                    "expected_version": 1,
-                    "value": None,
-                    "evidence_quote": "Beijing was wrong",
-                    "sources": [_source("Beijing was wrong")],
+                    **removal,
+                    "evidence": {
+                        **removal["evidence"],
+                        "support_quote": "Is morning coffee no longer your preference?",
+                    },
                 }
             ],
-            "claim_dispositions": [_disposition("invalidate", "allow", "supported")],
-        },
-        current="Beijing was wrong. I won't say where I live.",
-        facts=[fact],
-    )
-    assert prepared.operations[0].value is None
-    assert prepared.operations[0].next_status == "inactive"
-    assert prepared.operations[0].revision_reason == "invalidated"
-
-
-def test_reply_conflict_is_terminal_and_bound_to_visible_candidate() -> None:
-    payload = {
-        "proposals": [_add("residence", "Toronto", "I live in Toronto")],
-        "claim_dispositions": [
-            _disposition(
-                "residence",
-                "contradiction",
-                "reply_conflict",
-                candidate_reply_quote="You live in Beijing",
-            )
-        ],
-    }
-    with pytest.raises(RuntimeValidationError, match="contradicts"):
-        _prepare(
-            payload,
-            current="I live in Toronto",
-            candidate_reply="You live in Beijing.",
+            current="Yes, please",
+            prior=[_prior("assistant", "Is morning coffee no longer your preference?")],
+            facts=[_fact()],
         )
-    with pytest.raises(RuntimeValidationError, match="visible candidate span"):
-        _prepare(payload, current="I live in Toronto")
-
-
-@pytest.mark.parametrize("reverse", [False, True])
-def test_add_forget_same_slot_rejected_independent_of_order(reverse: bool) -> None:
-    fact = {
-        "id": FACT,
-        "subject_id": SUBJECT,
-        "entity_id": SUBJECT,
-        "fact_type": "person.current_location",
-        "qualifier": None,
-        "normalized_key": f"person.current_location|{SUBJECT}",
-        "value": "Beijing",
-        "status": "active",
-        "version": 1,
-    }
-    add = _add("add", "Toronto", "I live in Toronto")
-    forget = {
-        "claim_id": "forget",
-        "operation": "forget",
-        "fact_id": FACT,
-        "expected_version": 1,
-        "value": None,
-        "evidence_quote": "Forget my old city",
-        "sources": [_source("Forget my old city")],
-    }
-    proposals = [add, forget]
-    if reverse:
-        proposals.reverse()
-    with pytest.raises(RuntimeValidationError):
-        _prepare(
+    ended = _prepare(
+        [
             {
-                "proposals": proposals,
-                "claim_dispositions": [
-                    _disposition("add", "allow", "supported"),
-                    _disposition("forget", "allow", "supported"),
-                ],
-            },
-            current="Forget my old city. I live in Toronto",
-            facts=[fact],
+                "kind": "end",
+                "target": "F1",
+                "reason": "ended",
+                "evidence": {
+                    "mode": "endorse_assistant",
+                    "current_quote": "Yes",
+                    "support_handle": "A1",
+                    "support_quote": "Is morning coffee no longer your preference?",
+                },
+            }
+        ],
+        current="Yes",
+        prior=[_prior("assistant", "Is morning coffee no longer your preference?")],
+        facts=[_fact()],
+    )
+    assert ended.operations[0].next_status == "inactive"
+
+
+def test_read_only_conflict_needs_no_fabricated_write() -> None:
+    with pytest.raises(RuntimeValidationError) as error:
+        _prepare(
+            [
+                {
+                    "kind": "conflict",
+                    "current_quote": "What do I prefer?",
+                    "candidate_reply_quote": "tea",
+                    "references": ["F1"],
+                }
+            ],
+            current="What do I prefer?",
+            facts=[_fact()],
+            candidate="tea",
+        )
+    assert error.value.detail_code == "natural_memory_reply_conflict"
+    with pytest.raises(RuntimeValidationError, match="agrees"):
+        _prepare(
+            [
+                {
+                    "kind": "conflict",
+                    "current_quote": "What do I prefer?",
+                    "candidate_reply_quote": "morning coffee",
+                    "references": ["F1"],
+                }
+            ],
+            current="What do I prefer?",
+            facts=[_fact()],
+            candidate="morning coffee",
+        )
+
+
+def test_target_handles_are_local_and_version_is_server_owned() -> None:
+    current = "Forget morning coffee memory."
+    decision = {
+        "kind": "forget",
+        "target": "F1",
+        "evidence": {"mode": "direct", "current_quote": current},
+    }
+    result = _prepare([decision], current=current, facts=[_fact()])
+    assert result.operations[0].existing_fact["version"] == 1
+    with pytest.raises(RuntimeValidationError):
+        _prepare([{**decision, "target": "F2"}], current=current, facts=[_fact()])
+    with pytest.raises(RuntimeValidationError):
+        parse_natural_review_decision(
+            {"decisions": [{**decision, "expected_version": 99}]}
         )

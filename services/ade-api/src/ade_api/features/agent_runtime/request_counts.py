@@ -6,7 +6,9 @@ from collections import defaultdict
 from typing import Any, Iterable
 
 
-def dispatch_counts(events: Iterable[dict[str, Any]]) -> dict[str, Any]:
+def dispatch_counts(
+    events: Iterable[dict[str, Any]], *, observation_incomplete: bool = False
+) -> dict[str, Any]:
     """Count local attempts, never infer billing or manufacture a missing start.
 
     Copies of one trace event across API/worker artifacts share request_id. A
@@ -16,7 +18,7 @@ def dispatch_counts(events: Iterable[dict[str, Any]]) -> dict[str, Any]:
 
     starts: dict[str, dict[str, Any]] = {}
     terminals: dict[str, str] = {}
-    incomplete = False
+    incomplete = observation_incomplete
     for event in events:
         event_type = event.get("event_type") or event.get("type")
         payload = event.get("payload") or {}

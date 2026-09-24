@@ -61,6 +61,20 @@ async def list_revision_sources(
         or (purpose is not None and origin["subject_purpose"] != purpose)
     ):
         raise RuntimeValidationError("memory revision boundary does not match its fact")
+    current_message = None
+    if origin["run_id"] is not None:
+        current_message = (
+            (
+                await connection.execute(
+                    select(messages.c.id, messages.c.sequence).where(
+                        messages.c.run_id == origin["run_id"],
+                        messages.c.role == "user",
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
     result = await connection.execute(
         select(
             *memory_revision_sources.c,
@@ -124,7 +138,13 @@ async def list_revision_sources(
             )
         authority = str(source["authority_role"])
         if (
-            authority in {"user_assertion", "user_endorsement"}
+            authority
+            in {
+                "user_assertion",
+                "user_endorsement",
+                "user_resolution",
+                "user_antecedent",
+            }
             and source["message_role"] != "user"
         ) or (
             authority == "assistant_referent" and source["message_role"] != "assistant"
@@ -132,6 +152,17 @@ async def list_revision_sources(
             raise RuntimeValidationError(
                 "memory source role does not match its message"
             )
+        if authority in {"user_resolution", "user_antecedent"}:
+            if current_message is None:
+                raise RuntimeValidationError("new natural source lacks current run")
+            if authority == "user_resolution" and str(source["message_id"]) != str(
+                current_message["id"]
+            ):
+                raise RuntimeValidationError("resolution is not current authority")
+            if authority == "user_antecedent" and int(
+                source["message_sequence"]
+            ) >= int(current_message["sequence"]):
+                raise RuntimeValidationError("antecedent does not precede authority")
         sources.append(
             {
                 key: source[key]
@@ -152,7 +183,8 @@ async def list_revision_sources(
     if origin["action_id"] is not None and sources:
         raise RuntimeValidationError("operator action cannot cite a message source")
     if origin["run_id"] is not None and not any(
-        source["authority_role"] in {"user_assertion", "user_endorsement"}
+        source["authority_role"]
+        in {"user_assertion", "user_endorsement", "user_resolution"}
         for source in sources
     ):
         raise RuntimeValidationError("run memory revision has no user authority")

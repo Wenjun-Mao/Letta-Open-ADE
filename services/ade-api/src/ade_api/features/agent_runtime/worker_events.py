@@ -192,8 +192,11 @@ async def append_success_events(
             "usage": _combined_usage(usage_by_role.values()),
             "usage_by_role": usage_by_role,
             "dispatch_counts": dispatch_counts(
-                {"event_type": event.event_type, "payload": event.payload}
-                for event in trace.normalized_events()
+                (
+                    {"event_type": event.event_type, "payload": event.payload}
+                    for event in trace.normalized_events()
+                ),
+                observation_incomplete=trace.observation_incomplete,
             )
             if trace is not None
             else {"complete": False, "groups": []},

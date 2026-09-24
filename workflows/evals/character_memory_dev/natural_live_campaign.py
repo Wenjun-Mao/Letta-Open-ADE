@@ -236,7 +236,7 @@ async def _run(args: argparse.Namespace) -> None:
                 async def prepare(self, request, *, purpose):
                     prepared = await base_definitions.prepare(request, purpose=purpose)
                     prepared["memory_policy_version"] = (
-                        f"natural-user-assertions-v2-{variant.casefold()}"
+                        f"natural-user-assertions-v3-{variant.casefold()}"
                     )
                     if cell["id"].startswith("pressure-"):
                         padding = (

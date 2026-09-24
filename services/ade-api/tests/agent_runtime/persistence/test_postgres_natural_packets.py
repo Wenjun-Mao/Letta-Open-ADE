@@ -77,7 +77,7 @@ def test_pressure_packets_are_real_worker_inputs(
             async def prepare(self, request, *, purpose):
                 prepared = await base_definitions.prepare(request, purpose=purpose)
                 prepared["memory_policy_version"] = (
-                    f"natural-user-assertions-v2-{request.definition_key.rsplit('_', 1)[-1]}"
+                    f"natural-user-assertions-v3-{request.definition_key.rsplit('_', 1)[-1]}"
                 )
                 prepared["prompt_content"] = "P" * 5310
                 return prepared
@@ -204,7 +204,7 @@ def test_pressure_packets_are_real_worker_inputs(
             assert all(
                 len(
                     json.loads(item["reviewer_request"]["messages"][1]["content"])[
-                        "current_memory_targets"
+                        "targets"
                     ]
                 )
                 == 48
@@ -217,11 +217,10 @@ def test_pressure_packets_are_real_worker_inputs(
                         target["qualifier"],
                         target["value"],
                         target["status"],
-                        target["version"],
                     )
                     for target in json.loads(
                         item["reviewer_request"]["messages"][1]["content"]
-                    )["current_memory_targets"]
+                    )["targets"]
                 )
                 for item in artifacts.values()
             ]
@@ -235,19 +234,20 @@ def test_pressure_packets_are_real_worker_inputs(
                 reviewer_packet = json.loads(
                     item["reviewer_request"]["messages"][1]["content"]
                 )
-                assert (
-                    reviewer_packet["source_messages"]
-                    == item["generation"]["source_messages"]
-                )
+                assert [row["content"] for row in reviewer_packet["context"]] == [
+                    row["content"] for row in item["generation"]["source_messages"][:-1]
+                ]
                 assert all(
                     request["serialized_visible_token_estimate"]
                     <= item["generation"]["input_limit"]
                     for request in item["generation_requests"]
                 )
             assert all(
-                item["provider_request_counts"]["conversation"] == 1
-                and item["provider_request_counts"]["reviewer"] == 1
-                and item["provider_request_counts"]["retrieval_query"] == 1
+                {
+                    group["stage"]: group["attempted"]
+                    for group in item["provider_request_counts"]["groups"]
+                }.items()
+                >= {"conversation": 1, "reviewer": 1, "retrieval_query": 1}.items()
                 for item in artifacts.values()
             )
         finally:

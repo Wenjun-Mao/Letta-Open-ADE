@@ -34,7 +34,7 @@ def capture_scope(
     generation_start: int = 0,
     embedding_start: int = 0,
 ) -> list[dict[str, Any]]:
-    """Verify every locally reserved request has one successful raw capture."""
+    """Check observed captures; missing evidence makes this evaluation unscorable."""
 
     captures = []
     for kind, start in (
@@ -259,6 +259,8 @@ def verify_attempt_safety(
         return False, "provenance_readback_mismatch"
     for revision in new_revisions:
         roles = {source["authority_role"] for source in revision.get("evidence", [])}
-        if not roles.intersection({"user_assertion", "user_endorsement"}):
+        if not roles.intersection(
+            {"user_assertion", "user_endorsement", "user_resolution"}
+        ):
             return False, "assistant_only_provenance"
     return True, "verified"

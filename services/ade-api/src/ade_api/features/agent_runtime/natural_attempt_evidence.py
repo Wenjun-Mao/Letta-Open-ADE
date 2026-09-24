@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from ade_api.platform.project_paths import PROJECT_ROOT
 
 from .errors import RuntimeNotReady
+from .request_counts import dispatch_counts
 from .context import BuiltContext
 from .context import estimate_tokens
 from .persistence.metadata import (
@@ -90,6 +91,7 @@ class NaturalAttemptEvidence:
     reviewer_decision: dict[str, Any] | None = None
     embedding_stage: dict[str, Any] | None = None
     provider_events: list[dict[str, Any]] = field(default_factory=list)
+    provider_observation_incomplete: bool = False
     excluded_fields: tuple[str, ...] = field(
         default=(
             "authentication_headers",
@@ -198,7 +200,10 @@ class NaturalAttemptEvidence:
     def capture_embeddings(self, count: int, dimensions: int) -> None:
         self.embedding_stage = {"count": count, "dimensions": dimensions}
 
-    def capture_provider_events(self, events: tuple[Any, ...]) -> None:
+    def capture_provider_events(
+        self, events: tuple[Any, ...], *, observation_incomplete: bool = False
+    ) -> None:
+        self.provider_observation_incomplete = observation_incomplete
         self.provider_events = [
             {"event_type": event.event_type, "payload": event.payload}
             for event in events
@@ -315,11 +320,10 @@ async def retain_attempt_evidence(
         assistant_message_ids=[str(value) for value in assistant_ids],
         revision_ids=[str(value) for value in revision_ids],
     )
-    provider_counts: dict[str, int] = {}
-    for event in evidence.provider_events:
-        if event["event_type"] == "model.request.started":
-            stage = str(event["payload"]["stage"])
-            provider_counts[stage] = provider_counts.get(stage, 0) + 1
+    provider_counts = dispatch_counts(
+        evidence.provider_events,
+        observation_incomplete=evidence.provider_observation_incomplete,
+    )
     payload = {
         "schema_version": 1,
         "run_id": evidence.run_id,

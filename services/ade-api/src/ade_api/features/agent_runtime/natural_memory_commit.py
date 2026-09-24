@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+import hashlib
 from typing import Any
 from uuid import uuid4
 
@@ -11,6 +12,85 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from .natural_memory_policy import PreparedNaturalOperation, PreparedNaturalReview
 from .persistence.base import OptimisticLockError
 from .persistence.memory import MemoryRepository
+
+
+def revalidate_bound_natural_review(
+    review: PreparedNaturalReview,
+    *,
+    subject_id: str,
+    run_id: str,
+    messages: list[dict[str, Any]],
+    facts: list[dict[str, Any]],
+    entities: list[dict[str, Any]],
+) -> None:
+    """Check held identity and source integrity without interpreting the review again."""
+
+    by_message = {str(item["id"]): item for item in messages}
+    by_fact = {str(item["id"]): item for item in facts}
+    by_entity = {str(item["id"]): item for item in entities}
+    current = [
+        item
+        for item in messages
+        if str(item.get("run_id")) == run_id and item.get("role") == "user"
+    ]
+    if len(current) != 1:
+        raise OptimisticLockError("originating current user message changed")
+    current_id = str(current[0]["id"])
+    current_sequence = int(current[0]["sequence"])
+    staged_ids = {item.id for item in review.new_entities}
+    for operation in review.operations:
+        anchor = operation.current_anchor
+        if anchor.message_id != current_id or anchor not in operation.sources:
+            raise OptimisticLockError("natural review current authority changed")
+        if operation.existing_fact is not None:
+            original = operation.existing_fact
+            latest = by_fact.get(str(original["id"]))
+            if (
+                latest is None
+                or str(latest["subject_id"]) != subject_id
+                or (
+                    int(latest["version"]) != int(original["version"])
+                    or latest["status"] != original["status"]
+                    or str(latest["current_revision_id"])
+                    != str(original["current_revision_id"])
+                )
+            ):
+                raise OptimisticLockError("natural target changed before commit")
+        elif operation.entity_id not in staged_ids:
+            entity = by_entity.get(operation.entity_id)
+            if entity is None or str(entity["subject_id"]) != subject_id:
+                raise OptimisticLockError("natural identity changed before commit")
+        for source in operation.sources:
+            message = by_message.get(source.message_id)
+            if message is None or str(message.get("conversation_id")) != str(
+                current[0]["conversation_id"]
+            ):
+                raise OptimisticLockError(
+                    "natural source left originating conversation"
+                )
+            role = (
+                "assistant" if source.authority_role == "assistant_referent" else "user"
+            )
+            if message["role"] != role:
+                raise OptimisticLockError("natural source role changed")
+            if source.authority_role in {
+                "user_assertion",
+                "user_endorsement",
+                "user_resolution",
+            }:
+                if source.message_id != current_id:
+                    raise OptimisticLockError("natural authority is not current user")
+            elif int(message["sequence"]) >= current_sequence:
+                raise OptimisticLockError(
+                    "natural support no longer precedes authority"
+                )
+            content = str(message["content"])
+            if (
+                content[source.start_char : source.end_char] != source.quote
+                or hashlib.sha256(content.encode()).hexdigest() != source.message_sha256
+                or content.count(source.quote) != 1
+            ):
+                raise OptimisticLockError("natural source span changed")
 
 
 async def commit_natural_memory_review(

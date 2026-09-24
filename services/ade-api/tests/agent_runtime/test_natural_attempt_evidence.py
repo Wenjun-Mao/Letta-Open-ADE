@@ -83,7 +83,7 @@ def test_outcome_classification_requires_authoritative_consistency() -> None:
 
 def test_evidence_has_explicit_absent_stages_without_raw_wire_fields() -> None:
     evidence = NaturalAttemptEvidence(
-        run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v2-b"
+        run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v3-b"
     )
     evidence.capture_generation(
         messages_for_model=[{"role": "user", "content": "I live in Toronto."}],

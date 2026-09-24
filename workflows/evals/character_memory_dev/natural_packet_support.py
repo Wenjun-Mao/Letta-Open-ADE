@@ -44,7 +44,7 @@ class PacketTransport:
         content = (
             "Roxy is your Husky."
             if model == "fake::conversation"
-            else json.dumps({"proposals": [], "claim_dispositions": []})
+            else json.dumps({"decisions": []})
         )
         return {
             "id": f"packet-{uuid4()}",

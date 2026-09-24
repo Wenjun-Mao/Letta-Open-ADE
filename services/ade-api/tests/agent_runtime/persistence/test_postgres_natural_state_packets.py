@@ -164,7 +164,7 @@ def test_lifecycle_and_narrative_packets_share_exact_reviewer_sources(
             async def prepare(self, request, *, purpose):
                 prepared = await base_definitions.prepare(request, purpose=purpose)
                 prepared["memory_policy_version"] = (
-                    "natural-user-assertions-v2-"
+                    "natural-user-assertions-v3-"
                     + request.definition_key.rsplit("_", 1)[-1]
                 )
                 return prepared
@@ -282,16 +282,17 @@ def test_lifecycle_and_narrative_packets_share_exact_reviewer_sources(
                     fact_id = seeded["fact_ids"][0]
                     targets = json.loads(
                         item["reviewer_request"]["messages"][1]["content"]
-                    )["current_memory_targets"]
+                    )["targets"]
                     selected = item["generation"]["retrieved_fact_ids"]
                     if case["expected_status"] == "forgotten":
                         assert fact_id not in selected
-                        assert fact_id not in {target["fact_id"] for target in targets}
+                        assert all(
+                            target["status"] != "forgotten" for target in targets
+                        )
                     else:
                         assert fact_id in selected
                         assert any(
-                            target["fact_id"] == fact_id
-                            and target["status"] == case["expected_status"]
+                            target["status"] == case["expected_status"]
                             for target in targets
                         )
                     assert item["terminal_readback"]["outcome"] == "committed"
@@ -303,8 +304,10 @@ def test_lifecycle_and_narrative_packets_share_exact_reviewer_sources(
                     source = item["generation"]["source_messages"]
                     reviewer_source = json.loads(
                         item["reviewer_request"]["messages"][1]["content"]
-                    )["source_messages"]
-                    assert source == reviewer_source
+                    )["context"]
+                    assert [row["content"] for row in source[:-1]] == [
+                        row["content"] for row in reviewer_source
+                    ]
                     assert all(
                         request["serialized_visible_token_estimate"]
                         <= item["generation"]["input_limit"]

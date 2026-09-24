@@ -189,10 +189,7 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
             assert rows == ["user"]
             assert revision_ids == []
             assert attempts == ["failed"]
-            assert (
-                failure_details[0]["error_detail_code"]
-                == "natural_memory_reply_conflict"
-            )
+            assert failure_details[0]["error_detail_code"] == "natural_review_binding"
             artifact = json.loads(
                 (
                     tmp_path / "artifacts" / accepted["run_id"] / "attempt-001.json"
@@ -204,10 +201,7 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
                 == "uncommitted_undelivered"
             )
             assert artifact["candidate_visible_reply"] == "Okay, Toronto."
-            assert (
-                artifact["reviewer_decision"]["claim_dispositions"][0]["outcome"]
-                == "contradiction"
-            )
+            assert artifact["reviewer_decision"]["decisions"][0]["kind"] == "conflict"
             assert artifact["reviewer_request"]["messages"][0]["role"] == "system"
             assert (
                 "I live in Toronto."
@@ -218,8 +212,10 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
                 artifact["generation_requests"][0]["messages"][-1]["content"]
                 == "I live in Toronto."
             )
-            assert artifact["provider_request_counts"]["conversation"] == 1
-            assert artifact["provider_request_counts"]["reviewer"] == 1
+            assert {
+                group["stage"]
+                for group in artifact["provider_request_counts"]["groups"]
+            } >= {"conversation", "reviewer"}
 
             transport.veto = False
             successful = await sessions.create(
@@ -273,7 +269,10 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
                 == "committed_visible_message"
             )
             assert success_artifact["embedding_stage"] == {"count": 1, "dimensions": 3}
-            assert success_artifact["provider_request_counts"]["memory_embeddings"] == 1
+            assert any(
+                group["stage"] == "memory_embeddings" and group["attempted"] == 1
+                for group in success_artifact["provider_request_counts"]["groups"]
+            )
 
             transport.fail_after_review = True
             transport.reviewed = False
@@ -337,14 +336,13 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
                 "confirmed_rejection"
             )
             assert (
-                embedding_artifact["reviewer_decision"]["claim_dispositions"][0][
-                    "outcome"
-                ]
-                == "allow"
+                embedding_artifact["reviewer_decision"]["decisions"][0]["kind"]
+                == "subject_add"
             )
             assert embedding_artifact["embedding_stage"] == {"stage": "absent"}
-            assert (
-                embedding_artifact["provider_request_counts"]["memory_embeddings"] == 1
+            assert any(
+                group["stage"] == "memory_embeddings" and group["attempted"] == 1
+                for group in embedding_artifact["provider_request_counts"]["groups"]
             )
         finally:
             await engine.dispose()

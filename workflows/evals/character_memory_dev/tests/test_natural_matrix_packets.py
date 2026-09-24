@@ -32,7 +32,7 @@ from workflows.evals.character_memory_dev.natural_memory_contract import (
 class PacketRouter:
     async def chat_completion(self, payload, *, timeout_seconds):
         content = (
-            json.dumps({"proposals": [], "claim_dispositions": []})
+            json.dumps({"decisions": []})
             if payload["model"] == "fake::reviewer"
             else "Okay."
         )
@@ -230,19 +230,15 @@ async def _execute_cell(cell: dict, variant: str, branch: dict, matrix: dict) ->
     )
     assert len(generation_requests) == len(reviewer_requests) == 1
     reviewer_packet = json.loads(reviewer_requests[0]["messages"][1]["content"])
-    source = [
-        {"id": row["id"], "role": row["role"], "content": row["content"]}
-        for row in built.source_messages
+    source = [row for row in built.source_messages if row["id"] != current["id"]]
+    assert [item["content"] for item in reviewer_packet["context"]] == [
+        item["content"] for item in source
     ]
-    assert reviewer_packet["source_messages"] == source
     assert generation_requests[0]["messages"] == built.context.messages
     assert built.context.estimated_input_tokens <= generation_budget.input_limit
     assert reviewer_preflight <= reviewer_limit
-    assert reviewer_packet["current_user_message"]["id"] == current["id"]
-    assert all(
-        target["status"] != "forgotten"
-        for target in reviewer_packet["current_memory_targets"]
-    )
+    assert reviewer_packet["current_user"]["content"] == current["content"]
+    assert all(target["status"] != "forgotten" for target in reviewer_packet["targets"])
     return {
         "cell_id": cell["id"],
         "variant": variant,
@@ -329,10 +325,8 @@ def test_every_frozen_cell_executes_paired_serialized_packets(tmp_path: Path) ->
                 assert str(UUID(int=9000)) not in receipt["selected_fact_ids"]
                 targets = json.loads(
                     receipt["reviewer_request"]["messages"][1]["content"]
-                )["current_memory_targets"]
-                assert str(UUID(int=9000)) not in {
-                    target["fact_id"] for target in targets
-                }
+                )["targets"]
+                assert all(target["status"] != "forgotten" for target in targets)
         if cell["id"] == "response-residence-visit":
             for receipt in variants.values():
                 assert str(UUID(int=9000)) in receipt["selected_fact_ids"]

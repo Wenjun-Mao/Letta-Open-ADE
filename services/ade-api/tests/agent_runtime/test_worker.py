@@ -51,7 +51,7 @@ class _Finalizer:
         self.succeeded = False
         self.failure: Exception | None = None
 
-    async def commit_success(self, _claim, _attempt_id, _result):
+    async def commit_success(self, _claim, _attempt_id, _result, *, trace=None):
         self.succeeded = True
 
     async def commit_failure(self, _claim, _attempt_id, exc, **_kwargs):
@@ -118,7 +118,7 @@ def test_artifact_retention_fault_cannot_undo_committed_success(
     class _EvidenceAttempts(_Attempts):
         async def execute_attempt(self, _claim, **kwargs):
             kwargs["trace"].natural_evidence = NaturalAttemptEvidence(
-                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v2-b"
+                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v3-b"
             )
             return SimpleNamespace()
 
@@ -148,13 +148,13 @@ def test_lost_commit_ack_rechecks_authoritative_success_before_evidence(
     class _EvidenceAttempts(_Attempts):
         async def execute_attempt(self, _claim, **kwargs):
             kwargs["trace"].natural_evidence = NaturalAttemptEvidence(
-                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v2-b"
+                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v3-b"
             )
             return SimpleNamespace()
 
     class _LostAckFinalizer(_Finalizer):
-        async def commit_success(self, claim, attempt_id, result):
-            await super().commit_success(claim, attempt_id, result)
+        async def commit_success(self, claim, attempt_id, result, *, trace=None):
+            await super().commit_success(claim, attempt_id, result, trace=trace)
             raise ConnectionError("synthetic acknowledgment loss")
 
         async def commit_failure(self, claim, attempt_id, exc, **kwargs):
@@ -186,7 +186,7 @@ def test_rejected_candidate_is_retained_after_worker_failure(
     class _RejectedAttempts(_Attempts):
         async def execute_attempt(self, _claim, **kwargs):
             evidence = NaturalAttemptEvidence(
-                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v2-b"
+                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v3-b"
             )
             evidence.capture_candidate("Okay, Toronto.", [])
             evidence.reviewer_decision = {

@@ -248,7 +248,8 @@ class AgentRuntimeWorker:
                     continue
                 try:
                     attempt_trace.natural_evidence.capture_provider_events(
-                        attempt_trace.normalized_events()
+                        attempt_trace.normalized_events(),
+                        observation_incomplete=attempt_trace.observation_incomplete,
                     )
                     await retain_attempt_evidence(
                         self.engine, attempt_trace.natural_evidence

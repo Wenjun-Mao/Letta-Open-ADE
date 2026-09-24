@@ -28,6 +28,7 @@ class AttemptTrace:
         self.attempt = attempt
         self._events: list[NormalizedTraceEvent] = []
         self._request_counts: dict[str, int] = defaultdict(int)
+        self.observation_incomplete = False
         self.natural_evidence: NaturalAttemptEvidence | None = None
 
     def transport(
@@ -249,7 +250,7 @@ class TracedRouterTransport:
         except Exception:
             # Observation is best effort. A missing start makes aggregate counts
             # incomplete, but cannot change the outbound request.
-            pass
+            self.trace.observation_incomplete = True
         try:
             response = await call()
         except asyncio.CancelledError:
@@ -263,7 +264,7 @@ class TracedRouterTransport:
                         started_at=started[2],
                     )
                 except Exception:
-                    pass
+                    self.trace.observation_incomplete = True
             raise
         except Exception as exc:
             if started is not None:
@@ -277,7 +278,7 @@ class TracedRouterTransport:
                         started_at=started[2],
                     )
                 except Exception:
-                    pass
+                    self.trace.observation_incomplete = True
             raise
         if started is not None:
             try:
@@ -290,7 +291,7 @@ class TracedRouterTransport:
                     started_at=started[2],
                 )
             except Exception:
-                pass
+                self.trace.observation_incomplete = True
         return response
 
 

@@ -13,11 +13,11 @@ from workflows.evals.character_memory_dev.natural_live_results import (
 from workflows.evals.character_memory_dev.natural_live_transport import RequestScope
 
 
-def test_capture_scope_requires_one_completed_file_per_reserved_request(
+def test_capture_scope_requires_one_completed_file_per_observed_request(
     tmp_path,
 ) -> None:
-    scope = RequestScope("cell-a", generation_limit=2, embedding_limit=1)
-    scope.reserve_local("generation")
+    scope = RequestScope("cell-a")
+    scope.observe("generation")
     path = tmp_path / "cell-a-generation-001.json"
     path.write_text(
         json.dumps(
@@ -31,7 +31,7 @@ def test_capture_scope_requires_one_completed_file_per_reserved_request(
     )
     assert len(capture_scope(tmp_path, scope)) == 1
 
-    scope.reserve_local("embedding")
+    scope.observe("embedding")
     with pytest.raises(RuntimeError, match="missing embedding"):
         capture_scope(tmp_path, scope)
     (tmp_path / "cell-a-embedding-001.json").write_text(
