@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "status": "frozen-offline-contract-not-live-approval",
+  "policy_variants": {
+    "A": "Complete active/inactive lifecycle snapshot before any prior dialogue or summary; withhold optional narrative if it cannot fit.",
+    "A0": "A with summary removed, same raw cutoff and nonsummary sections, summary allocation left unused; diagnostic only.",
+    "B": "Shared local suffix first; selective current lifecycle views and bounded exact-entity expansion; no summary or older raw windows."
+  },
+  "budgets": {
+    "generation": {"context_window": 4096, "output_reserve": 512, "input_limit": 3200, "mandatory_policy_persona": 1200, "current_message_max": 120, "shared_suffix_max": 640, "summary_max": 512, "selected_lifecycle_max": 1152, "retrieval_max": 384, "tool_schema": 128, "safety_margin": 256},
+    "reviewer": {"context_window": 8192, "output_reserve": 1024, "input_limit": 6848, "mandatory_instructions_schema": 1600, "full_lifecycle_max": 4096, "shared_suffix_max": 640, "candidate_reply_reserve": 512, "safety_margin": 320},
+    "record_sizes_tokens": {"short": 48, "long": 160},
+    "eligible_record_grid": [0, 12, 48, 128, 256],
+    "shared_prior_user_limit": 8,
+    "selective_fact_limit": 8,
+    "exact_entity_expansion_limit": 2,
+    "pressure": {"record_count": 48, "size_class": "short", "record_payload_tokens": 2304, "required_shared_suffix_tokens": 320, "generator_full_packet_min_tokens": 3944, "reviewer_full_packet_max_tokens": 5376, "b_selective_packet_max_tokens": 2664, "claim": "A withholds the answerable local antecedent while B and the full reviewer packet fit; serialized-request tests must confirm these estimates before live approval."}
+  },
+  "pairing": {
+    "A_A0": "Identical eligible pool, raw cutoff, summary-through boundary, lifecycle snapshot, nonsummary contents and order; A0 does not reallocate removed summary tokens.",
+    "A0_B": "Identical preselection local pool, lifecycle state, model limits and total budgets; final selected bundles intentionally differ.",
+    "A_B": "Same mandatory cases and usefulness bar; A0 cannot qualify A.",
+    "reuse": "A single attempt may support another cell only after serialized requests and processing/commit behavior are shown identical; it is not independent replication."
+  },
+  "live_request_schedule_proposed_not_authorized": {
+    "generation_limit": 96,
+    "embedding_limit": 160,
+    "turn_cells": 30,
+    "per_turn_generation_cap": {"conversation_and_one_continuation": 2, "reviewer": 1},
+    "actual_compaction_calls": 2,
+    "maximum_reserved_generation": 92,
+    "unallocated_generation_headroom": 4,
+    "embedding_allocation": {"scripted_setup_and_indexing": 40, "all_turns_query_write_and_tool": 120},
+    "timeout_seconds_per_turn": 180,
+    "application_retries": 0,
+    "reviewer_repairs": 0,
+    "outbound_provider_calls_at_checkpoint_1": 0
+  },
+  "cells": [
+    {"id": "mutation-preference-add", "kind": "required_mutation", "arc": "03-compatible-preferences", "branch": "scoped", "variants": ["native"], "cutoff": "u1", "expected": "morning coffee active", "forbidden": ["jasmine specificity"], "stop": "campaign_on_wrong_state"},
+    {"id": "mutation-scoped-addition", "kind": "required_mutation", "arc": "03-compatible-preferences", "branch": "scoped", "variants": ["native"], "cutoff": "u2", "expected": "morning coffee and evening flower tea active separately", "forbidden": ["coffee replaced"], "stop": "campaign_on_wrong_state"},
+    {"id": "mutation-natural-correction", "kind": "required_mutation", "arc": "02-error-versus-change", "branch": "correction", "variants": ["native"], "cutoff": "u2", "expected": "Roxy active, Rocky corrected erroneous", "forbidden": ["Rocky former real name"], "stop": "campaign_on_wrong_state"},
+    {"id": "mutation-end", "kind": "required_mutation", "arc": "07-breakup", "branch": "end", "variants": ["native"], "cutoff": "u2", "expected": "relationship inactive/ended", "forbidden": ["current partner Xiao Wang"], "stop": "campaign_on_wrong_state"},
+    {"id": "mutation-endorsement", "kind": "required_mutation", "arc": "17-clarification-spans", "branch": "endorsement", "variants": ["native"], "cutoff": "u1", "expected": "Roxy Husky active with user assent and assistant referent", "forbidden": ["assistant-only evidence"], "stop": "campaign_on_wrong_state"},
+    {"id": "mutation-no-save", "kind": "required_mutation", "arc": "10-removal-versus-nonmention", "branch": "same-turn-no-save", "variants": ["native"], "cutoff": "u1", "expected": "coffee forgotten; independent Toronto write eligible", "forbidden": ["same-turn coffee recreation"], "stop": "campaign_on_wrong_state"},
+    {"id": "mutation-explicit-removal", "kind": "required_mutation", "arc": "10-removal-versus-nonmention", "branch": "forget", "variants": ["native"], "cutoff": "u2", "expected": "milk-tea forgotten", "forbidden": ["all history erased"], "stop": "campaign_on_wrong_state"},
+    {"id": "mutation-fresh-restatement", "kind": "required_mutation", "arc": "15-invalidate-end-remove", "branch": "end-forget-reassert", "variants": ["native"], "cutoff": "u4", "expected": "fresh active relationship; old chain forgotten", "forbidden": ["old chain restored"], "stop": "campaign_on_wrong_state"},
+    {"id": "response-dog", "kind": "required_response", "arc": "17-clarification-spans", "branch": "clear-answer", "variants": ["A", "B"], "cutoff": "u2", "record_count": 0, "size_class": "short", "expected": "Resolve Husky to Roxy when complete user spans are admitted.", "forbidden": ["Rocky is Husky"], "stop": "candidate_on_quality_failure"},
+    {"id": "response-interview", "kind": "required_response", "arc": "06-interview-outcome", "branch": "short-follow-up", "variants": ["A", "B"], "cutoff": "u3", "record_count": 0, "size_class": "short", "expected": "Answer afternoon product-role interview from the local exchange.", "forbidden": ["morning operations role chosen", "interview accepted"], "stop": "candidate_on_quality_failure"},
+    {"id": "response-breakup", "kind": "required_response", "arc": "19-stale-summary", "branch": "breakup-after-summary", "variants": ["A", "B"], "cutoff": "u3", "record_count": 12, "size_class": "short", "expected": "Answer weekend without treating old partner narrative as current.", "forbidden": ["Xiao Wang is current partner"], "stop": "candidate_on_quality_failure"},
+    {"id": "response-residence-visit", "kind": "required_response", "arc": "22-residence-versus-visit", "branch": "temporary-paris", "variants": ["A", "B"], "cutoff": "u3", "record_count": 12, "size_class": "short", "expected": "Use Paris as current supplied visit, Toronto as home.", "forbidden": ["Paris is home", "live weather"], "stop": "candidate_on_quality_failure"},
+    {"id": "response-ended-recall", "kind": "required_response", "arc": "07-breakup", "branch": "end", "variants": ["A", "B"], "cutoff": "u3", "record_count": 12, "size_class": "short", "expected": "Do not revive ended relationship; relevant ended descriptor may be used.", "forbidden": ["current partner Xiao Wang"], "stop": "candidate_on_quality_failure"},
+    {"id": "response-irrelevant-repetition", "kind": "required_response", "arc": "12-recall-and-silence", "branch": "goodnight", "variants": ["A", "B"], "cutoff": "u2", "record_count": 12, "size_class": "short", "expected": "Warm goodnight without forced repeated callback or unrelated memory.", "forbidden": ["unrelated facts as relevant"], "stop": "candidate_on_quality_failure"},
+    {"id": "pressure-dog", "kind": "required_response", "arc": "17-clarification-spans", "branch": "clear-answer", "variants": ["A", "B"], "cutoff": "u2", "record_count": 48, "size_class": "short", "expected": "Answerable Roxy resolution from eligible local exchange; correct no-write under A withholding can still fail usefulness.", "forbidden": ["Rocky is Husky"], "stop": "candidate_on_quality_failure"},
+    {"id": "pressure-interview", "kind": "required_response", "arc": "06-interview-outcome", "branch": "short-follow-up", "variants": ["A", "B"], "cutoff": "u3", "record_count": 48, "size_class": "short", "expected": "Answer afternoon product-role from local exchange despite unrelated memory pressure; A withholding can fail usefulness.", "forbidden": ["morning operations role chosen", "interview accepted"], "stop": "candidate_on_quality_failure"},
+    {"id": "summary-after-change", "kind": "diagnostic_summary", "arc": "19-stale-summary", "branch": "breakup-after-summary", "variants": ["A", "A0", "B"], "cutoff": "u3", "summary_through": "a1", "eligible_local_turn_ids": ["u2"], "record_count": 12, "size_class": "short", "expected": "A actual summary must not revive old partner and must preserve afternoon product-role choice outside raw suffix; A0/B may abstain on historical choice.", "forbidden": ["Xiao Wang current partner", "morning operations role chosen"], "stop": "candidate_on_quality_failure"},
+    {"id": "summary-end-forget", "kind": "diagnostic_summary", "arc": "19-stale-summary", "branch": "end-then-forget", "variants": ["A", "A0", "B"], "cutoff": "u4", "summary_through": "u1", "eligible_local_turn_ids": ["u2", "u3"], "record_count": 12, "size_class": "short", "expected": "Old report remains attributed after forget; A/A0/B use the declared local pool without selecting a forgotten descriptor.", "forbidden": ["Xiao Wang current partner", "forgotten descriptor selected"], "stop": "candidate_on_quality_failure"}
+  ],
+  "positive_compaction_assertion": {"arc": "19-stale-summary", "branch": "breakup-after-summary", "source_turn": "u0", "probe_turn": "u3", "detail": "afternoon 2pm product-role opening chosen instead of morning operations role", "raw_suffix_excludes": ["u0"], "facts_exclude": ["interview opening choice"], "probe_excludes_answer": true, "required_for_A_acceptance": true},
+  "campaign_stop_reasons": ["isolation", "privacy", "provenance", "atomicity", "exact_attempt", "required_mutation_state", "lost_authorization", "invalid_infrastructure_or_evidence", "budget_exhaustion"],
+  "selection": "No winner with incomplete required coverage. A and B face the same positive usefulness bar; A0 is diagnostic only. Neither passing remains a valid outcome."
+}

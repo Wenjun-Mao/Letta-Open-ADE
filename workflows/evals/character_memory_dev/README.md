@@ -117,6 +117,41 @@ Tests use synthetic subprocesses and make no paid/subscription model calls.
 Live experiments are explicit commands. No Luna endpoint is registered in Model
 Router, and the native Chat Memory Eval remains unchanged.
 
+## Natural-Memory Offline Contract (Checkpoint 1)
+
+[`fixtures/natural_memory/cases.json`](fixtures/natural_memory/cases.json)
+contains isolated, chronological branches for all 22 worked design arcs. Each
+branch names source roles, state checkpoints, a useful reply criterion, forbidden
+claims, and unsupported scope. Operator-labelled turns in these synthetic
+branches are control actions, never fabricated user messages or citations.
+
+[`fixtures/natural_memory/matrix.json`](fixtures/natural_memory/matrix.json)
+freezes the proposed A/A0/B comparison cells, numerical generation and reviewer
+allocations, pressure grid, positive actual-compaction assertion, stop classes,
+and a proposed 96-generation/160-embedding ceiling. It is a checkpoint-1
+offline contract, **not** permission to call providers, not evidence that the
+serialized runtime packets fit, and not a selected product policy. The 48-record
+pressure point is arithmetically distinguishable at the frozen envelope; later
+checkpoint-4 tests must confirm the exact serialized requests, whole-record
+packing, and reviewer capacity before any live approval.
+
+The proposed schedule expands to 30 turn cells, each allowing at most one
+conversation continuation and one reviewer call, plus two actual-compaction
+calls: 92 reserved generation requests, with four unallocated under the ceiling.
+The embedding ceiling allocates 40 to scripted setup/indexing and 120 to all
+turn-level query, write, and tool paths. Conditional calls consume only actual
+pre-request reservations; unused allocation is not evidence of execution. If
+setup or continuation needs more than its allocation, the campaign is incomplete
+until a newly reviewed schedule is approved. No rerolls or reviewer repair are
+included. A0 is diagnostic only; neither A nor B may win on incomplete mandatory
+coverage or safe but unhelpful abstention.
+
+```sh
+uv run pytest -q workflows/evals/character_memory_dev/tests/test_natural_memory_contract.py
+```
+
+This test only validates fixtures and accounting; it makes zero outbound calls.
+
 ## M2 Comparison Contract
 
 [`fixtures/m2/comparison.json`](fixtures/m2/comparison.json) is the compact,

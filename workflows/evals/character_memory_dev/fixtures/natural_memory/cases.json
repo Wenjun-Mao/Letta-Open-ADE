@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "source": "docs/findings/natural-memory-consultation/design-scenarios.md revision 4",
+  "isolation": "Each branch starts with a fresh subject and sees only earlier turns in that branch. Different branches never share writes.",
+  "arcs": [
+    {
+      "id": "01-move-versus-intent", "section": 1,
+      "branches": [
+        {"id": "move", "turns": [["u1", "user", "我现在住在北京。"], ["u2", "user", "这周搬到多伦多了，终于收拾完了。"], ["u3", "user", "周末想在附近散散步。"]], "expected": [{"after": "u1", "state": "residence=Beijing active"}, {"after": "u2", "state": "residence=Toronto active; Beijing superseded"}], "allowed_sources": ["u1:user-assertion", "u2:user-assertion"], "useful_reply": "Ground nearby suggestions in Toronto without inventing live local data.", "forbidden_claims": ["Beijing is current", "live weather or opening hours"], "unsupported": []},
+        {"id": "tentative", "turns": [["u1", "user", "我现在住在北京。"], ["u2", "user", "可能年底搬去多伦多。"]], "expected": [{"after": "u2", "state": "residence=Beijing active; no Toronto residence write"}], "allowed_sources": ["u1:user-assertion", "u2:user-tentative"], "useful_reply": "Discuss a possible move as tentative.", "forbidden_claims": ["Toronto is current residence"], "unsupported": ["durable plan schema"]}
+      ]
+    },
+    {
+      "id": "02-error-versus-change", "section": 2,
+      "branches": [
+        {"id": "correction", "turns": [["u1", "user", "我家狗叫 Rocky。"], ["u2", "user", "刚才打错了，它叫 Roxy。"], ["u3", "user", "它以前叫什么？"]], "expected": [{"after": "u2", "state": "same pet name=Roxy active; Rocky corrected erroneous"}], "allowed_sources": ["u1:user-assertion", "u2:user-correction"], "useful_reply": "Do not call Rocky a former real name.", "forbidden_claims": ["dog was formerly named Rocky"], "unsupported": []},
+        {"id": "rename", "turns": [["u1", "user", "我家狗叫 Rocky。"], ["u2", "user", "我们给 Rocky 改名叫 Roxy 了。"], ["u3", "user", "它以前叫什么？"]], "expected": [{"after": "u2", "state": "same pet name=Roxy active; Rocky superseded once-true"}], "allowed_sources": ["u1:user-assertion", "u2:user-change"], "useful_reply": "Rocky was the earlier name when supplied history is visible.", "forbidden_claims": ["Rocky was a typo"], "unsupported": ["generic out-of-context history lookup"]}
+      ]
+    },
+    {
+      "id": "03-compatible-preferences", "section": 3,
+      "branches": [{"id": "scoped", "turns": [["u1", "user", "我早上喜欢喝咖啡。"], ["u2", "user", "晚上我一般更喜欢花茶。"], ["u3", "user", "晚饭后喝什么好？"]], "expected": [{"after": "u2", "state": "morning coffee active; evening flower tea active; distinct assertion IDs"}], "allowed_sources": ["u1:user-assertion", "u2:user-assertion"], "useful_reply": "Evening flower tea may inform advice.", "forbidden_claims": ["coffee was replaced", "jasmine is a remembered subtype"], "unsupported": []}]
+    },
+    {
+      "id": "04-favorite-versus-order", "section": 4,
+      "branches": [
+        {"id": "replacement", "turns": [["u1", "user", "我最喜欢喝咖啡。"], ["u2", "user", "现在最喜欢的是红茶，不是咖啡了。"]], "expected": [{"after": "u2", "state": "favorite drink=red tea active; coffee superseded"}], "allowed_sources": ["u1:user-assertion", "u2:user-change"], "useful_reply": "Acknowledge red tea as current favorite.", "forbidden_claims": ["user hates coffee", "coffee intolerance"], "unsupported": []},
+        {"id": "order", "turns": [["u1", "user", "我最喜欢喝咖啡。"], ["u2", "user", "我今天点了红茶。"]], "expected": [{"after": "u2", "state": "favorite drink=coffee active; no red-tea preference write"}], "allowed_sources": ["u1:user-assertion", "u2:user-order"], "useful_reply": "Treat the order as today's choice.", "forbidden_claims": ["red tea became favorite"], "unsupported": []}
+      ]
+    },
+    {
+      "id": "05-rocky-recovery", "section": 5,
+      "branches": [{"id": "procedure", "turns": [["u1", "user", "Rocky 明天要做手术，我有点担心。"], ["u2", "user", "手术做完了，但还得等检查结果。"], ["u3", "user", "结果没事，已经恢复了，我终于放心了。"], ["u4", "user", "今晚终于能睡个好觉。"]], "expected": [{"after": "u1", "state": "no durable concern row"}, {"after": "u3", "state": "no durable concern row; dialogue reports recovery and relief"}], "allowed_sources": ["u1:user-assertion", "u2:user-update", "u3:user-update"], "useful_reply": "Respond to relief if that dialogue is supplied.", "forbidden_claims": ["surgery still upcoming", "scheduled follow-up", "permanent diagnosis"], "unsupported": ["cross-conversation concern continuity"]}]
+    },
+    {
+      "id": "06-interview-outcome", "section": 6,
+      "branches": [
+        {"id": "unknown-result", "turns": [["u1", "user", "明天面试，我有点紧张。"], ["u2", "user", "面试结束了，下周才知道结果。"], ["u3", "user", "晚饭做什么？"]], "expected": [{"after": "u2", "state": "interview complete; result unknown; no event row"}], "allowed_sources": ["u1:user-assertion", "u2:user-update"], "useful_reply": "Answer the cooking question without dragging in the interview.", "forbidden_claims": ["accepted", "rejected", "worry certainly gone"], "unsupported": ["durable event lifecycle"]},
+        {"id": "short-follow-up", "turns": [["u1", "user", "明天有上午运营岗和下午产品岗两场面试，我还没决定。"], ["a1", "assistant", "你最后选了哪场？"], ["u2", "user", "下午产品岗。"], ["u3", "user", "我选了哪场面试来着？"]], "expected": [{"after": "u2", "state": "choice is afternoon product-role interview; no durable event row"}], "allowed_sources": ["u1:user-options", "a1:assistant-referent-only", "u2:user-choice"], "useful_reply": "Answer afternoon product-role from the complete local exchange.", "forbidden_claims": ["morning operations role chosen", "interview accepted"], "unsupported": ["cross-conversation event recall without evidence"]}
+      ]
+    },
+    {
+      "id": "07-breakup", "section": 7,
+      "branches": [{"id": "end", "turns": [["u1", "user", "我和小王在交往。"], ["u2", "user", "我们已经分手了。"], ["u3", "user", "周末怎么安排？"]], "expected": [{"after": "u2", "state": "partner relationship inactive/ended; former report retained"}], "allowed_sources": ["u1:user-assertion", "u2:user-ending"], "useful_reply": "Discuss weekend without assuming a present partner.", "forbidden_claims": ["Xiao Wang is current partner", "user hates Xiao Wang"], "unsupported": []}]
+    },
+    {
+      "id": "08-ambiguous-owner-roleplay", "section": 8,
+      "branches": [{"id": "boundaries", "turns": [["u1", "user", "我有 Rocky 和 Roxy 两只狗。"], ["u2", "user", "它最近不爱吃饭。"], ["u3", "user", "小说里我住在月球。"], ["u4", "user", "小王说他住北京。"], ["u5", "user", "我们假装一起去过海边。"]], "expected": [{"after": "u5", "state": "two pets remain; no assigned illness, lunar residence, user Beijing residence, or physical shared trip"}], "allowed_sources": ["u1:user-assertion", "u2:ambiguous-user-report", "u3:fiction", "u4:third-party", "u5:roleplay"], "useful_reply": "Ask which pet when identity matters; play along without converting fiction to biography.", "forbidden_claims": ["specific pet has permanent condition", "user lives on Moon", "assistant physically visited beach"], "unsupported": ["story-state persistence"]}]
+    },
+    {
+      "id": "09-transcript-versus-physical", "section": 9,
+      "branches": [{"id": "museum", "turns": [["u1", "user", "昨天我去博物馆，看到了那个展。"], ["a1", "assistant", "听起来很有意思。"], ["u2", "user", "上次聊的那个展还记得吗？"]], "expected": [{"after": "u2", "state": "no physical shared-experience assertion"}], "allowed_sources": ["u1:user-report", "a1:assistant-reference-only"], "useful_reply": "If source is supplied, say the user reported seeing the exhibition.", "forbidden_claims": ["we went to the museum together"], "unsupported": ["cross-conversation transcript lookup when no source is supplied"]}]
+    },
+    {
+      "id": "10-removal-versus-nonmention", "section": 10,
+      "branches": [
+        {"id": "forget", "turns": [["u1", "user", "我喜欢奶茶。"], ["u2", "user", "把保存的奶茶偏好删掉吧。"]], "expected": [{"after": "u2", "state": "milk-tea assertion forgotten; old messages retained"}], "allowed_sources": ["u1:user-assertion", "u2:user-removal"], "useful_reply": "Acknowledge pending review, not completed erasure.", "forbidden_claims": ["all history erased", "never recur"], "unsupported": ["global erasure"]},
+        {"id": "nonmention", "turns": [["u1", "user", "我喜欢奶茶。"], ["u2", "user", "今天别提奶茶了。"]], "expected": [{"after": "u2", "state": "milk-tea assertion still active"}], "allowed_sources": ["u1:user-assertion", "u2:reply-instruction"], "useful_reply": "Avoid milk tea in this reply.", "forbidden_claims": ["saved preference deleted"], "unsupported": ["durable suppression"]},
+        {"id": "same-turn-no-save", "turns": [["u0", "user", "我早上喜欢喝咖啡。"], ["u1", "user", "我确实还喜欢早上喝咖啡，但把保存的这条偏好删掉。另外我住多伦多。"]], "expected": [{"after": "u0", "state": "morning coffee active"}, {"after": "u1", "state": "coffee forgotten; Toronto residence eligible"}], "allowed_sources": ["u0:user-assertion", "u1:user-removal", "u1:user-independent-assertion"], "useful_reply": "Acknowledge scoped request without promising historical erasure.", "forbidden_claims": ["coffee recreated from same turn"], "unsupported": []}
+      ]
+    },
+    {
+      "id": "11-sharing-isolation", "section": 11,
+      "branches": [{"id": "subjects-roots", "turns": [["u1", "user", "我住多伦多，明天面试有点紧张。"], ["u2", "user", "新对话：周末做什么？"]], "expected": [{"after": "u2", "state": "subject A residence shareable across own roots; interview dialogue not automatically cross-root; subject B empty"}], "allowed_sources": ["u1:user-residence", "u1:user-concern-in-own-root"], "useful_reply": "Use Toronto only for same bound subject; do not invent interview recall across roots.", "forbidden_claims": ["subject B lives in Toronto", "other root knows private exchange"], "unsupported": ["cross-conversation concern continuity"]}]
+    },
+    {
+      "id": "12-recall-and-silence", "section": 12,
+      "branches": [{"id": "goodnight", "turns": [["u1", "user", "我最近早起上班。"], ["a1", "assistant", "最近早起辛苦啦。"], ["u2", "user", "晚安。"]], "expected": [{"after": "u2", "state": "no required new durable fact"}], "allowed_sources": ["u1:user-report", "a1:assistant-reference-only"], "useful_reply": "Plain warm goodnight or subtle context-sensitive reply.", "forbidden_claims": ["repeating early-rise callback is mandatory"], "unsupported": ["long-history recall outside eligible evidence"]}]
+    },
+    {
+      "id": "13-partial-preference", "section": 13,
+      "branches": [
+        {"id": "partial-forget", "turns": [["u1", "user", "早上喜欢咖啡，晚上喜欢花茶。"], ["u2", "user", "只移除保存的咖啡偏好，花茶那条保留。"]], "expected": [{"after": "u2", "state": "morning coffee forgotten; evening flower tea active"}], "allowed_sources": ["u1:user-assertions", "u2:user-removal"], "useful_reply": "Acknowledge only coffee removal as pending.", "forbidden_claims": ["evening tea removed"], "unsupported": []},
+        {"id": "mixed-reasons", "turns": [["u1", "user", "早上喜欢咖啡，晚上喜欢花茶。"], ["u2", "user", "早上现在更喜欢豆浆了；晚上那条以前说错了，我一直更喜欢红茶。"]], "expected": [{"after": "u2", "state": "morning soy milk active/supersede; evening red tea active/correct"}], "allowed_sources": ["u1:user-assertions", "u2:user-change-and-correction"], "useful_reply": "Recognize distinct reasons.", "forbidden_claims": ["morning coffee was always wrong", "evening flower tea was once true"], "unsupported": []},
+        {"id": "consumption-control", "turns": [["u1", "user", "早上喜欢咖啡，晚上喜欢花茶。"], ["u2", "user", "早上现在喝豆浆；晚上以前说错了，一直喝红茶。"]], "expected": [{"after": "u2", "state": "no required preference update from consumption alone"}], "allowed_sources": ["u1:user-preferences", "u2:user-consumption"], "useful_reply": "Acknowledge routine without inferring favorite.", "forbidden_claims": ["soy milk and red tea are durable favorites"], "unsupported": ["legacy composite partial decomposition"]}
+      ]
+    },
+    {
+      "id": "14-historical-relation-unknown", "section": 14,
+      "branches": [{"id": "actually", "turns": [["u1", "user", "我住北京。"], ["u2", "user", "Actually, I live in Toronto."], ["u3", "user", "Did I ever live in Beijing?"]], "expected": [{"after": "u2", "state": "Toronto current; Beijing predecessor relation unspecified"}], "allowed_sources": ["u1:user-report", "u2:user-current-assertion"], "useful_reply": "Do not infer whether Beijing was once true.", "forbidden_claims": ["user definitely lived in Beijing", "user definitely moved"], "unsupported": ["general historical verification"]}]
+    },
+    {
+      "id": "15-invalidate-end-remove", "section": 15,
+      "branches": [
+        {"id": "invalidated-residence", "turns": [["u1", "user", "我住北京。"], ["u2", "user", "北京那条是我说错了，我不想说实际住在哪里。"]], "expected": [{"after": "u2", "state": "residence inactive/invalidated; no current value"}], "allowed_sources": ["u1:user-report", "u2:user-invalidation"], "useful_reply": "Do not press for location.", "forbidden_claims": ["Beijing is current", "Beijing was once true"], "unsupported": []},
+        {"id": "end-forget-reassert", "turns": [["u1", "user", "我和小王在交往。"], ["u2", "user", "我们分手了。"], ["u3", "user", "把那条关系也从保存信息里移除。"], ["u4", "user", "我们又在交往了。"]], "expected": [{"after": "u2", "state": "relationship inactive/ended"}, {"after": "u3", "state": "relationship forgotten"}, {"after": "u4", "state": "fresh active relationship evidence; old chain remains forgotten"}], "allowed_sources": ["u1:user-report", "u2:user-ending", "u3:user-removal", "u4:user-restatement"], "useful_reply": "Distinguish historical receipt from present restatement.", "forbidden_claims": ["relationship continuous through gap", "old chain restored"], "unsupported": []},
+        {"id": "two-null-preferences", "turns": [["u1", "user", "早上喜欢咖啡，晚上喜欢花茶。"], ["u2", "user", "早上那条和晚上那条都说错了。"], ["u3", "user", "删掉早上咖啡那条，晚上那条保留。"]], "expected": [{"after": "u2", "state": "morning coffee inactive/invalidated; evening tea inactive/invalidated"}, {"after": "u3", "state": "morning coffee forgotten; evening tea inactive/invalidated"}], "allowed_sources": ["u1:user-assertions", "u2:user-invalidation", "u3:user-scoped-removal"], "useful_reply": "Target withdrawn descriptors without calling them current.", "forbidden_claims": ["evening tea forgotten", "either value current"], "unsupported": []}
+      ]
+    },
+    {
+      "id": "16-older-history-repair", "section": 16,
+      "branches": [{"id": "sister-city", "turns": [["u1", "user", "我住北京。"], ["u2", "user", "我现在住多伦多。"], ["u3", "user", "北京是我姐姐住的地方，我来多伦多之前住渥太华。"]], "expected": [{"after": "u3", "state": "Toronto remains current; no automatic historical revision repair"}], "allowed_sources": ["u1:user-report", "u2:user-current", "u3:user-clarification"], "useful_reply": "Understand clarification in present reply.", "forbidden_claims": ["Ottawa is current", "Beijing was verified as former residence"], "unsupported": ["durable retrospective repair"]}]
+    },
+    {
+      "id": "17-clarification-spans", "section": 17,
+      "branches": [
+        {"id": "clear-answer", "turns": [["u0", "user", "我有 Rocky 和 Roxy 两只狗。"], ["u1", "user", "我的两只狗里有一只是哈士奇。"], ["a1", "assistant", "是 Rocky 还是 Roxy？"], ["u2", "user", "Roxy。"]], "expected": [{"after": "u2", "state": "Roxy breed=Husky active; two user spans authoritative"}], "allowed_sources": ["u0:user-identity", "u1:user-assertion", "a1:assistant-referent", "u2:user-resolution"], "useful_reply": "Use Roxy as identified dog.", "forbidden_claims": ["assistant question is sole breed authority"], "unsupported": []},
+        {"id": "assistant-invention", "turns": [["a1", "assistant", "Roxy 是哈士奇吗？"], ["u1", "user", "Roxy。"]], "expected": [{"after": "u1", "state": "no breed write without clear endorsement"}], "allowed_sources": ["a1:assistant-referent-only", "u1:ambiguous-answer"], "useful_reply": "Clarify breed if needed.", "forbidden_claims": ["Husky was user-asserted"], "unsupported": []},
+        {"id": "endorsement", "turns": [["a1", "assistant", "Roxy 是哈士奇吗？"], ["u1", "user", "对，她是。"]], "expected": [{"after": "u1", "state": "Roxy breed=Husky active; user assent with assistant referent"}], "allowed_sources": ["a1:assistant-referent", "u1:user-endorsement"], "useful_reply": "Treat clear assent as authority for one proposition.", "forbidden_claims": ["user literally said 哈士奇"], "unsupported": []},
+        {"id": "independent-move", "turns": [["u1", "user", "我的两只狗里有一只是哈士奇。"], ["a1", "assistant", "Rocky 还是 Roxy？"], ["u2", "user", "Roxy。另外我们已经搬到多伦多了。"]], "expected": [{"after": "u2", "state": "Toronto move independently eligible; dog assignment depends on reply/claim disposition"}], "allowed_sources": ["u1:user-assertion", "a1:assistant-referent", "u2:user-resolution-and-move"], "useful_reply": "A dog clarification must not veto independent move.", "forbidden_claims": ["discard Toronto solely due to dog uncertainty"], "unsupported": []},
+        {"id": "partial-assent", "turns": [["a1", "assistant", "Roxy 是哈士奇吗？Rocky 是金毛吗？"], ["u1", "user", "第一个问题是，第二个不是。"]], "expected": [{"after": "u1", "state": "Roxy Husky eligible; Rocky golden retriever not eligible"}], "allowed_sources": ["a1:assistant-two-referents", "u1:user-proposition-level-assent-and-negation"], "useful_reply": "Respect separate answers to two propositions.", "forbidden_claims": ["Rocky golden retriever saved", "blanket rejection of both"], "unsupported": []},
+        {"id": "no-save-endorsement", "turns": [["a1", "assistant", "Roxy 是哈士奇吗？"], ["u1", "user", "对，她是，但这件事别保存。"]], "expected": [{"after": "u1", "state": "no new breed write; no existing breed deletion inferred"}], "allowed_sources": ["a1:assistant-referent", "u1:user-endorsement-and-no-save"], "useful_reply": "Understand the answer without claiming storage.", "forbidden_claims": ["Husky saved", "existing record automatically deleted"], "unsupported": []},
+        {"id": "negation-and-framing", "turns": [["u0", "user", "小说里那只叫 Roxy 的狗是哈士奇。"], ["a1", "assistant", "现实里 Roxy 也是哈士奇吗？"], ["u1", "user", "不是，我现实里的狗不是哈士奇。"]], "expected": [{"after": "u1", "state": "no real-world Husky write from fictional or negated spans"}], "allowed_sources": ["u0:fiction", "a1:assistant-referent", "u1:user-negation"], "useful_reply": "Separate story dog from real dog.", "forbidden_claims": ["real Roxy Husky"], "unsupported": ["out-of-window roleplay framing if u0 is absent"]},
+        {"id": "reply-write-contradiction", "turns": [["u1", "user", "我的两只狗里有一只是哈士奇。"], ["a1", "assistant", "Rocky 还是 Roxy？"], ["u2", "user", "Roxy。"]], "candidate_reply": "Rocky 是哈士奇。", "expected": [{"after": "u2", "state": "candidate reply conflicts with proposed Roxy breed; atomic attempt rejected with no assistant or memory commit"}], "allowed_sources": ["u1:user-assertion", "a1:assistant-referent", "u2:user-resolution"], "useful_reply": "A consistent retry requires a separately authorized new attempt; none is automatic.", "forbidden_claims": ["contradictory candidate committed", "silent prose repair"], "unsupported": []},
+        {"id": "question-is-not-veto", "turns": [["u1", "user", "Roxy 是哈士奇。"], ["a1", "assistant", "Roxy 是哈士奇。她多大了？"]], "candidate_reply": "Roxy 是哈士奇。她多大了？", "expected": [{"after": "a1", "state": "breed may be saved; age question does not make breed uncertain"}], "allowed_sources": ["u1:user-assertion", "a1:assistant-referent-only"], "useful_reply": "Do not falsely veto breed due to unrelated age question.", "forbidden_claims": ["age invented", "breed deferred solely due to age question"], "unsupported": []}
+      ]
+    },
+    {
+      "id": "18-packing-revisions-entities", "section": 18,
+      "branches": [{"id": "whole-records", "turns": [["u1", "user", "我现在住多伦多；我的狗叫 Rocky。"], ["u2", "user", "狗名刚才打错了，是 Roxy。"]], "expected": [{"after": "u2", "state": "Toronto current; Roxy canonical pet name; Rocky erroneous predecessor; only complete packed records count"}], "allowed_sources": ["u1:user-assertions", "u2:user-correction"], "useful_reply": "Use current revision and whole included evidence.", "forbidden_claims": ["stale Rocky canonical label", "orphan forgotten entity name exposed"], "unsupported": ["truncated fact as included evidence"]}]
+    },
+    {
+      "id": "19-stale-summary", "section": 19,
+      "branches": [
+        {"id": "breakup-after-summary", "turns": [["u0", "user", "明天面试，我决定选下午两点的产品岗，不选上午的运营岗。"], ["a0", "assistant", "下午两点的产品岗，希望顺利。"], ["u1", "user", "我和小王在交往。"], ["a1", "assistant", "听起来你们关系不错。"], ["u2", "user", "我们分手了。"], ["u3", "user", "周末怎么安排？我之前选的哪场面试来着？"]], "expected": [{"after": "u2", "state": "relationship inactive/ended; prior narrative remains attributed; interview choice remains dialogue-only"}], "allowed_sources": ["u0:user-choice", "a0:assistant-reference-only", "u1:user-old-report", "u2:user-ending", "a1:assistant-reference-only"], "useful_reply": "Current ending guards old summary; A's actual summary must retain the afternoon product-role choice for the downstream answer.", "forbidden_claims": ["Xiao Wang is current partner", "morning operations role chosen"], "unsupported": ["B historical recovery when u0 is outside its local pool"]},
+        {"id": "positive-compaction", "turns": [["u1", "user", "明天面试，我决定选下午两点的产品岗面试，不选上午的运营岗。"], ["a1", "assistant", "下午两点的产品岗，希望顺利。"], ["u2", "user", "面试结束了，结果下周才知道。"], ["u3", "user", "我选的哪场面试来着？"]], "expected": [{"after": "u3", "state": "interview complete, result unknown; chosen opening only in compacted dialogue, not saved facts or raw suffix"}], "allowed_sources": ["u1:user-choice", "u2:user-outcome", "a1:assistant-reference-only"], "useful_reply": "Actual summary must retain afternoon 2pm product-role choice and A must answer from that generated summary.", "forbidden_claims": ["morning operations role chosen", "interview accepted"], "unsupported": ["B historical recovery when no eligible source"]},
+        {"id": "end-then-forget", "turns": [["u1", "user", "我和小王在交往。"], ["u2", "user", "我们分手了。"], ["u3", "user", "把保存的关系删掉。"], ["u4", "user", "周末怎么安排？"]], "expected": [{"after": "u3", "state": "relationship forgotten; no terminal descriptor in model fact view; old report is only attributed narrative"}], "allowed_sources": ["u1:user-old-report", "u2:user-ending", "u3:user-removal"], "useful_reply": "Do not turn old report into present partnership.", "forbidden_claims": ["Xiao Wang is current partner", "absence of descriptor proves resumed relationship"], "unsupported": []},
+        {"id": "compaction-after-breakup", "turns": [["u1", "user", "我和小王在交往。"], ["u2", "user", "我们分手了。"], ["op1", "operator", "compact earlier relationship dialogue after the ending commits"], ["u3", "user", "周末怎么安排？"]], "expected": [{"after": "op1", "state": "new summary may contain old report, but ending remains an independent current guard"}], "allowed_sources": ["u1:user-old-report", "u2:user-ending", "op1:operator-compaction-trigger"], "useful_reply": "Do not treat newly generated summary date as certification of old relationship.", "forbidden_claims": ["Xiao Wang current partner", "summary generation supersedes lifecycle ending"], "unsupported": []}
+      ]
+    },
+    {
+      "id": "20-shared-versus-private", "section": 20,
+      "branches": [{"id": "other-root", "turns": [["u1", "user", "我住多伦多；今天和你聊了一个私事。"], ["u2", "user", "换个角色聊：我附近有什么？"]], "expected": [{"after": "u2", "state": "same subject residence shareable; private root dialogue excluded; other subject empty"}], "allowed_sources": ["u1:user-residence-only-for-other-root"], "useful_reply": "Use Toronto with compact fact source attribution.", "forbidden_claims": ["other root saw private detail", "other subject lives Toronto"], "unsupported": ["cross-root raw dialogue transfer"]}]
+    },
+    {
+      "id": "21-generation-and-action", "section": 21,
+      "branches": [
+        {"id": "aba", "turns": [["u1", "user", "我喜欢咖啡。"], ["op1", "operator", "remove assertion at generation G+1"], ["u2", "user", "我喜欢咖啡。"]], "expected": [{"after": "op1", "state": "old assertion forgotten; generation advanced; accepted stale run conflicts even if active pool empty"}, {"after": "u2", "state": "fresh explicit restatement may create new assertion"}], "allowed_sources": ["u1:user-assertion", "op1:operator-action", "u2:user-restatement"], "useful_reply": "Replay old receipt as historical outcome only.", "forbidden_claims": ["replay proves current absence", "stale run silently rebased"], "unsupported": []},
+        {"id": "multi-target-atomic", "turns": [["u1", "user", "我早上喜欢咖啡，晚上喜欢花茶。"], ["op1", "operator", "remove both exact IDs and versions"], ["op2", "operator", "replay same key and body"]], "expected": [{"after": "op1", "state": "both forgotten atomically or neither on conflict"}, {"after": "op2", "state": "same historical action receipt; no new generation"}], "allowed_sources": ["u1:user-assertions", "op1:operator-action"], "useful_reply": "Show receipt and current readback separately.", "forbidden_claims": ["partial removal", "operator quote disguised as user"], "unsupported": []},
+        {"id": "identity-race", "turns": [["u1", "user", "我的狗叫 Rocky。"], ["op1", "operator", "accept breed turn at generation G"], ["u2", "user", "刚才狗名写错了，是 Roxy。"], ["op2", "operator", "finalize earlier breed proposal against unchanged breed target version"], ["u3", "user", "晚安。"]], "expected": [{"after": "u2", "state": "name correction advances subject memory generation"}, {"after": "op2", "state": "stale breed proposal conflicts despite unchanged target version"}, {"after": "u3", "state": "new no-op acceptance can complete, but stale queued no-op must not secretly refresh G"}], "allowed_sources": ["u1:user-identity", "u2:user-correction", "op1:run-admission", "op2:run-finalization"], "useful_reply": "Expose terminal conflict and require deliberate fresh submission.", "forbidden_claims": ["automatic model retry", "target-version-only success"], "unsupported": []}
+      ]
+    },
+    {
+      "id": "22-residence-versus-visit", "section": 22,
+      "branches": [{"id": "temporary-paris", "turns": [["u1", "user", "我现在住多伦多。"], ["u2", "user", "这个周末在巴黎玩。"], ["u3", "user", "附近有什么适合散步的地方？"], ["u4", "user", "已经搬到巴黎，之后住这里了。"]], "expected": [{"after": "u2", "state": "Toronto residence active; Paris temporary visit only"}, {"after": "u4", "state": "Paris residence active; Toronto superseded"}], "allowed_sources": ["u1:user-residence", "u2:user-visit", "u4:user-move"], "useful_reply": "At u3 use supplied Paris visit for nearby; later Paris becomes home.", "forbidden_claims": ["Paris home before u4", "live weather or opening hours"], "unsupported": ["legacy current_location relabeling"]}]
+    }
+  ]
+}
