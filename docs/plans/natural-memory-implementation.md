@@ -139,6 +139,19 @@ uncertain tea deferred, and the habit-only review exhausted the 4,096-token
 output allowance with no decision. The remaining recall and subject-isolation
 probes were unrun. These are partial diagnostic observations, not reliability
 or policy-selection evidence.
+The [offline follow-up diagnosis](../findings/natural-memory-factual-followup-2026-09-24.md#offline-diagnosis-and-controlled-next-choice)
+separates the committed morning-scope omission from the later reviewer output
+exhaustion. The retained habit-turn request explicitly instructed JSON and
+preserved the 4,096-token cap, but returned `length` after 4,096 completion
+tokens and 20.7 seconds with empty visible content. The smallest next live
+diagnostic, only if selected under a new frozen binding, is a disposable replay
+of that exact reviewer packet with `reasoning_effort=low` as the sole variable;
+score completion and the complete habit delta, then consider a separately
+bound output-cap contrast only if needed. No additional model calls or
+product changes follow from this offline diagnosis. Across the separate
+infrastructure, five-turn and eight-turn bindings, the observational total is
+23 completed generation dispatches and 19 embedding attempts (18 completed,
+one failed); eight scheduled turns across the latter two remain unrun.
 
 Director offline reproduction confirmed that a bare current "Roxy" plus an
 assistant "Is Roxy a Husky?" can prepare a breed operation through the current
