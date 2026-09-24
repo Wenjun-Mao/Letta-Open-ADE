@@ -1,500 +1,336 @@
 # Natural Memory: Bounded Implementation Plan
 
-Status: checkpoints 1-5 completed; on 2026-09-24 the user authorized one
-checkpoint-6 live campaign under the frozen 96 DeepSeek generation and 160 Qwen
-embedding request ceilings. Policy selection, deployment and release remain gated.
-Plan revision: 3, incorporating the second plan review's completion criteria.
-Design authority for review: [revision 4](../architecture/natural-memory-design.md).
-Source baseline: `4905ce15dbda6466b12f2d1ed7908eb3d03995a0`; revision-3 packet:
-`c01f45a045eb0fdd0fc6b3e18add82f2dbb57024`. The handoff pins this plan's later commit.
-Rationale: [round-three assessment](../findings/natural-memory-consultation/pro-round3-assessment.md).
-Execution corrections: [plan-review assessment](../findings/natural-memory-consultation/pro-plan-review-assessment.md).
-Final checkpoint requirements: [second plan-review assessment](../findings/natural-memory-consultation/pro-plan-round2-assessment.md).
+Status: revision 4, proposed for Pro review on 2026-09-24. Planning only.
+This revision is not implementation, live-call, deployment, or release approval.
+It replaces the next-work instructions in revision 3, not its historical evidence.
+Source inspected: `aea2719c1e2310d0c5c1a10b9fe75c0d0e3c14e5`.
+[Previous plan and completed checkpoints](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/aea2719c1e2310d0c5c1a10b9fe75c0d0e3c14e5/docs/plans/natural-memory-implementation.md).
+[Reviewer-interface assessment](../findings/natural-memory-consultation/reviewer-interface-assessment.md)
+links the unchanged independent reports. This is the single active plan for this
+natural-memory scope; do not create a competing implementation plan.
 
-## Outcome And Scope
+## Outcome And Boundaries
 
-Make Lin Xiaotang understand ordinary durable factual updates and recall relevant
-current understanding without command-like user wording. Keep PostgreSQL, immutable
-messages, versioned facts, explicit subjects, curated tools, synchronous review,
-worker leases/cancellation, and ADE-owned retries. Implement the revised lifecycle,
-source authority, write consistency, and operator visibility. Select context policy
-only after a bounded comparison; implementation completion is not release approval.
+Make the native reviewer reliably express supported natural updates without asking
+it to reproduce persistence metadata. Keep ADE's PostgreSQL foundation, immutable
+messages, typed lifecycle, explicit subjects, snapshot/version fencing, exact
+provenance, curated tools, cancellation/leases, and synchronous atomic finalization.
 
-This is the single plan for the new natural-memory scope. The earlier
-[M3 UI plan](m3-agent-studio-continuity.md) records delivered work; its composer-only
-removal contract is intentionally amended here, not another implementation path.
-[Release preparation](m3-provider-neutral-release-preparation.md) still owns provider
-qualification/promotion after product acceptance and the separate tool-contract fix.
+The current sequence remains: generate candidate, obtain one review, bind and
+validate, atomically commit reply and effective memory mutations. A legitimate
+no-change/defer can deliver a checked candidate without a memory-generation advance.
+Invalid/incomplete review or a grounded contradiction delivers neither candidate
+nor memory. No automatic repair, fallback, background catch-up, or partial salvage.
 
-Excluded: new memory framework/service, general historical-revision search/repair,
-cross-conversation raw-transcript retrieval, continuity/event tables, background
-review, graphs, inferred biography, global nonuse/erasure, multi-user authentication,
-arbitrary tools, automatic provider fallback, and unrelated refactoring. Source-window
-research stays deferred; no requirement here silently assumes it is implemented.
+Replace monetary/request-budget enforcement with simple observational counts.
+Keep context/input/output limits, timeouts, cancellation, explicit retries, and
+finite tool-loop execution. These serve correctness rather than cost control.
 
-## Contract Decisions For The Implementation Handoff
+Out of scope: replacement memory service/framework, general schema compiler,
+graph/event memory, historical transcript search, two-reviewer stages, changed
+call ordering, degraded reply delivery, provider/model shopping, production
+cutover, policy winner, legacy importer, broad refactoring, and new billing UI.
 
-- Mixed natural proposals use add, revise with a closed reason, end, reassert,
-  and forget; no regex-selected whole-message mode. Separate independently mutable
-  preferences by application-owned assertion IDs, not category alone. Singleton
-  identity remains singleton. Matching uncertainty abstains, not destructive merging.
-- Same-turn no-save/removal takes precedence for the same assertion across all
-  proposal ordering and equivalent restatements. Unrelated additions remain eligible.
-  No-save does not automatically delete an existing fact without clear removal intent.
-- One derived lifecycle view serves targeting, selective recall, guards, and UI.
-  Inactive is not forgotten; descriptors identify the withdrawn assertion without
-  claiming it current/true. Forgotten chains never enter model fact selection.
-- Bind one coherent memory generation at accepted user input, before provider work.
-  All effective memory/identity writers advance it transactionally. Retain exact
-  target versions and scope checks. Generation conflict is terminal; same-key replay
-  returns that run, and fresh submission requires deliberate user action.
-- One complete-message clarification suffix, at most eight prior users, is selected
-  once for generation and review. Reserve candidate-reply capacity first. Source
-  authority distinguishes user assertion/endorsement from assistant referent; no
-  summary, tool output, or assistant claim alone becomes user write evidence.
-- Review sees the proposed reply as reference-only. Its claim-specific outcome may
-  permit a write, defer an unresolved dependent write, or detect an explicit reply/
-  write contradiction. Contradiction fails the atomic attempt; do not fix prose
-  silently or add a model call. Unrelated questions/writes remain independent.
-- Operator removal shares the mutation boundary but has genuine operator causation,
-  not fake runs/quotes. Multi-target removal and action outcome are atomic and
-  idempotent. The receipt is historical action success, not proof of current absence.
-- Prior narrative is attributed evidence, not certified current by a summary date
-  or generation. Full-snapshot admission is control A, not a settled production rule.
-  Recent-dialogue-first B must earn adoption through the comparison below.
+## What The Evidence Establishes
 
-Record these approved contracts in one concise ADR when implementation is authorized;
-do not label a new ADR Accepted during this review checkpoint. Amend references to
-ADRs 0021/0022/0026 explicitly; retain their original historical text.
+Revision-3 offline mechanics passed, but the original live comparison stopped
+after its first mutation. Three subsequent, separately versioned diagnostics
+showed scoped coffee/tea successes, one output truncation, invalid historical
+authority citation, and recurrence of invalid subject selection. They establish
+neither an A/B result nor a failure-rate estimate.
 
-## Affected Boundaries
+Director offline reproduction confirmed that a bare current "Roxy" plus an
+assistant "Is Roxy a Husky?" can prepare a breed operation through the current
+binder. It also confirmed that an empty object parses as no-change. No database
+write/provider call was needed for these reproductions. Fix these boundaries
+before another live diagnostic; stronger prompt wording alone is insufficient.
 
-All runtime paths below are relative to
-`services/ade-api/src/ade_api/features/agent_runtime/`.
+The 4,096-output diagnostic progressed beyond a 1,024-token truncation, but is
+not a production default or a proven universally sufficient output allowance.
 
-| Responsibility | Existing entrypoints and planned responsibility |
-| --- | --- |
-| Domain and review | `contracts.py`, `fact_registry.py`, `memory_review.py`, `memory_policy.py`, `reviewer.py`: lifecycle, scoped assertions, source roles, mixed proposals and consistency outcome |
-| Persistence | `persistence/metadata.py`, `persistence/memory.py`, `memory_commit.py`, `persistence/memory_source_read.py`: migration, coherent snapshots, current lifecycle views/indexes, provenance and atomic generation |
-| Turn ownership/evidence | `run_service.py`, `turn_execution.py`, `worker_finalization.py`, `retry.py`, `worker_events.py`, `provider_tracing.py`: acceptance fence, bounded work, terminal conflicts and failure-capable diagnostics |
-| Context/tools | `context.py`, `compaction.py`, `embeddings.py`, `tool_policy.py`: whole-record packing, shared bundle, lifecycle selection, avoid redundant calls |
-| Product API | `agent_studio_api.py`, `resource_service.py`, `presenters.py`, `service_protocol.py`: typed operator removal and lifecycle/source readback |
-| Operator UI | `apps/ade-web/src/features/agent-studio/`: lifecycle display, exact citations, explicit removal, conflicts and action replay wording |
-| Evaluation | `workflows/evals/character_memory_dev/`: add one native natural-memory diagnostic and colocated fixtures/tests/artifacts, reusing existing API evaluation sessions and request ledger |
+## Proposed Reviewer Contract
 
-Do not create parallel storage or a general strategy framework. Split touched
-oversized modules by cohesive responsibility before adding code, using the existing
-feature directory. In particular, inspect `contracts.py`, metadata, reviewer,
-turn execution, and the Agent Studio hook; avoid a new catch-all helper module.
+### Input And Snapshot Ownership
 
-## Ordered Checkpoints
+Build one immutable request-local binding map from the accepted run snapshot.
+Use separate sections, with bounded complete-message context:
 
-### 1. Freeze Testable Semantics Before Runtime Edits
+- Current user: the sole current write-authority message, with full text.
+- Context: admitted prior conversation messages; not freely citable authority.
+- Eligible support: local handles to earlier user assertions or assistant
+  propositions in the same admitted clarification suffix.
+- Targets: handles to active/inactive facts with truthful lifecycle descriptors.
+- Related identities: handles derived from eligible identity facts, not raw
+  entity labels. Subject identity is implicit and never an offered choice.
+- Candidate reply: reference-only text for the consistency decision.
 
-Convert the [22 worked arcs](../findings/natural-memory-consultation/design-scenarios.md)
-into chronological, isolated fixture branches with exact expected state, source
-authority, permissible reply claims, and unsupported labels. Add the round-three
-composition cases before implementing fixes. Retain original failed evidence.
-Establish current tests, then add failing focused tests for the new contracts.
-Reuse the HTTP client/artifact primitives in `workflows/evals/agent_runtime_acceptance/`
-where suitable; do not duplicate its runner, promotion machinery, or frozen scoring.
-Keep the new diagnostic separate from canonical qualification until explicitly adopted.
+Reuse the existing shared, complete-message suffix and current lifecycle view.
+No extra retrieval, larger historical window, hidden source, or summary/tool
+authority. Forgotten facts/identity descriptors never enter target/identity maps.
+Retained historical dialogue remains attributed history under the existing
+limited-removal contract; removing a saved fact does not erase prior messages.
 
-Keep deterministic assertions distinct from semantic judgments. Scripted proposals
-test storage, fake providers test mechanics, and fixed contexts test generation;
-none alone establishes natural extraction/retrieval quality. No provider use here.
-Exit: fixtures cover every rule and negative branch without future-turn leakage;
-tests fail for the intended missing contract, not unrelated setup failure.
-Offline harnesses deny outbound provider requests and use fake transports; loading
-the operator's normal environment must not turn a test into an unbudgeted live call.
+Handles such as F1, E1, U1, A1 are local to this exact request. They resolve only
+against its held map, not current database state fetched after review. Record the
+map with opt-in evidence so the decision remains explainable. The final write
+still checks accepted generation and original target versions transactionally.
+Unknown, wrong-kind, foreign, ambiguous, and stale references fail; no remapping.
 
-Freeze the checkpoint-4 paired recipes and checkpoint-6 matrix before generation:
-case IDs, eligible evidence/cutoffs, variant, lifecycle state, numeric input/output
-allocations, record sizes, expected useful answer and prohibited claims, required
-versus diagnostic cells, and stop classification. The same mandatory envelope applies
-to A and B; A0 is diagnostic-only. Include answerable dog/interview follow-ups under
-unrelated-memory pressure, not only low-load or intentionally unanswerable probes.
-Pressure fixtures must exercise A's history-withholding threshold while B's required
-bundle and both full reviewer requests fit. If no such region exists at the selected
-budgets, report that limitation before live approval, not an invented comparison.
-Freeze fixtures/thresholds before observing replies; do not reclassify failures as
-outside-envelope afterwards. No live winner is inferred from fake-model tests.
-Classify pressure cells explicitly: correct no-write after withheld antecedents can
-fail usefulness without being a corrupt mutation. Incorrect state in a designated
-required-mutation cell remains a campaign stop. Offline capacity disqualification
-does not prove B passes or count as a live attempt. Any reduced live schedule must
-preserve predeclared required coverage and be approved before calls, not after results.
+Do not use a model call to preselect support handles. The server supplies bounded
+eligible messages by known role/chronology; the reviewer chooses their semantic
+relationship. Merely including a handle does not certify an assertion or consent.
 
-### 2. Lifecycle, Provenance, And One Transaction Boundary
+### Output Shape
 
-Extend the existing schema through an additive Alembic migration after current
-revision `20260902_0006_run_runtime_mode.py`. Preserve IDs, immutable text/revisions,
-source links, current values, and embedding-space identity. Changes must cover:
+Require a top-level object with a required `decisions` array, maximum 20 items,
+and forbid unknown fields throughout. `{"decisions":[]}` is explicit no-change;
+`{}`, missing arrays, null, and truncated content are not.
 
-- Separate subject-memory generation and accepted-run generation, distinct from
-  subject display-name version. Initialize existing subjects at a documented
-  baseline; do not pretend the counter reconstructs historical mutation counts.
-- Active/inactive/forgotten projection status, closed terminal/change reasons,
-  and stable assertion identity. Existing preference records remain explicitly
-  legacy/category-based; no automatic decomposition or invented evidence.
-- Revision causation: exactly one conversation-run or typed operator-action origin,
-  with ownership constraints. Extend message-source relationships with validated
-  authority roles; assistant referents remain attributable but never sole authority.
-- One operator-action receipt with request hash, scope, expected generation and
-  target versions, terminal outcome and revision IDs. No independent mutable copy
-  of lifecycle descriptions; derive those from existing facts/revisions.
+Use one discriminated list, not parallel proposals/dispositions joined by IDs:
 
-Use a short coherent read transaction for the reviewer snapshot; no database lock
-spans a provider call. Under finalization locks compare accepted generation and all
-targets; commit assistant, revisions, indexes, events, and generation together.
-Operator command uses the same ownership/version/lifecycle validation and commit
-primitive, without conversation generation. Validate every target before any effect.
-Same-key/different-body conflicts; replay returns the recorded outcome. Transaction
-failure leaves no partial effects or claimed successful receipt.
-
-Keep historical legacy `correct` reasons unspecified. New location writes mean
-reported residence; do not relabel ambiguous old visits. Legacy composite partial
-removal needs user-restated retained assertions, not a semantic migration guess.
-Terminal descriptors need current-revision index text and embeddings; forgotten
-records lose read eligibility even while their audit rows remain. No stale active
-embedding may masquerade as an ended assertion. New index writes remain inside the
-existing embedding failure/atomicity contract; operator forgetting needs no embedding.
-
-Preserving vectors is not enough: current lookup also filters `retrieval_policy_version`.
-Document compatible index/read-policy versions separately from semantic embedding
-space. Preserve compatible legacy active-document reads, or require a separately
-budgeted reindex before comparison; never relabel incompatible vectors or call
-providers inside SQL migration. Populated tests must retrieve legacy active facts,
-new current terminal descriptors, and exclude forgotten chains under the new reader.
-All variants start from the same coherent populated state, not differently indexed copies.
-If multiple compatible index versions are read, choose one eligible representation
-per fact/current revision before the distinct-fact result limit. Test overlapping
-indexes for F1 alongside F2, terminal and forgotten records; deduplicating after
-LIMIT must not lose F2. Do not add multi-version reads unless compatibility needs them.
-
-Use one documented lock order across admission, finalization, operator and cleanup
-transactions, accounting for all run/lease/conversation/subject locks. The baseline
-admission locks conversation then subject, while finalization sometimes reverses
-them by ID order. Add a coordinated two-connection PostgreSQL regression for that
-ordering and overlapping admission/finalization. Never hide deadlock with model retries.
-
-Exit: fresh and populated isolated PostgreSQL migration tests; add/revise/end/
-reassert/forget, source-role constraints, rollback, cancellation/lease fencing,
-ABA and identity races, two subjects, operator replay and independent pool readback.
-No production volume changes. New tables/foreign keys also update evaluation cleanup
-and the existing explicit reset path, with purpose guards and absence verification.
-For this campaign, use an exclusively owned disposable database and dispose of it
-only after the entire campaign stops and artifacts are retained. If case cleanup is
-needed, delete a complete exclusively owned evaluation-subject closure atomically;
-do not infer ownership from `purpose=evaluation` alone. Refuse individual conversation
-purge when surviving records depend on its sources/revisions. Check active work across
-the whole deletion scope, including operator mutations. Test C1/R1 -> C2/R2 -> C1/R3,
-operator origins, surviving source/predecessor links and current pointers, not merely
-absence of foreign-key errors. No generic graph cleanup framework or product erasure.
-
-### 3. Reviewer And Turn Integration
-
-Replace intent-selected schemas with the mixed proposal contract. Validate exact
-source spans/roles, current anchor, bound subject/conversation, compatible scope,
-target state/version, one mutation per record, and same-turn no-save exclusions.
-Do not rely on new UUIDs to solve semantic duplicates. Stage all proposals before
-checking conflicting add/forget intents so order cannot bypass the rule.
-Apply permitted claim dispositions before finalizing the effective memory write set:
-retain only new entities justified by surviving operations, then generate and align
-embeddings for that set. An empty set produces no entities, facts, indexes or memory
-generation advance. Test mixed deferred-pet/valid-residence and all-deferred cases.
-Invalid proposals and contradictions remain failures, not silently discarded claims.
-
-Add a bounded, typed claim-consistency result from the same reviewer call with
-reason/source references. It must identify affected proposals/claims; free-form
-reviewer prose cannot mutate state. Detecting contradiction yields terminal failure,
-not a repair call; unresolved reference yields observable per-claim no-write.
-Test explicit partial assent, missing framing, quoted/fictional statements, and
-negative/no-save clauses. Broader semantic reliability remains an empirical gate.
-
-Enforce accepted generation at initial snapshot and finalization. Exclude generation
-and semantic-validation conflicts from retryable transport errors. Preserve accepted
-message and failure trace; never auto-create a replacement run or refresh its fence.
-Already-started no-op replies can retain the documented stale snapshot behavior.
-
-Exit: fake-provider API-to-worker tests for mixed operations, exact attempts/timeouts,
-claim consistency, shared evidence, provider/embedding failure, cancellation and
-lease loss. Current reviewer repair stays zero for the DeepSeek lane.
-
-Failed-attempt diagnostics are an explicit deliverable, not success-event reuse.
-For opt-in, server-bound synthetic evaluation runs in the isolated database, retain
-actual serialized input/bundle manifests, tool evidence, candidate visible reply,
-typed review proposals/claim dispositions, and terminal commit outcome even when
-finalization fails. Mark absent stages explicitly and rejected candidates as
-uncommitted/undelivered. Write only to the existing rooted evaluation artifact path,
-never transcript, fact storage or retrieval. Mark excluded authentication/private-
-reasoning fields explicitly rather than dumping raw wire bodies. Do not retain secrets
-or raw exception text, or enable production prompt logging. Normal events keep safe
-bounded reason codes/references. A fake false-veto test must prove evaluable evidence
-with zero assistant/memory commit and zero generation advance; cover later embedding/
-commit failures too. Failure to retain required evidence makes the cell unscorable,
-not successful; an unsafe capture boundary stops the campaign.
-Distinguish confirmed rejection, committed success and unconfirmed outcome using
-authoritative run/action readback, not a caught exception alone. Preserve the existing
-terminal-run protection in failure finalization. Inject faults before commit, after
-commit acknowledgment is lost, and during artifact retention. A committed result
-cannot become rejected because artifact writing failed; unresolved outcome/evidence
-is unscorable and follows infrastructure-stop rules. Recover with original IDs/keys,
-never automatic fresh submission or generation refresh. No database/file distributed
-transaction or new memory lifecycle status is required.
-
-### 4. Context Construction And The Bounded Comparison
-
-Implement one assembler with a workflow-controlled comparison input, not a public
-policy selector or permanent second runtime. Freeze the recipe before evaluation:
-
-| Variant | Prior dialogue and memory admission | Purpose |
+| Item | Model-owned fields | Server-owned fields omitted from output |
 | --- | --- | --- |
-| A | Whole active/inactive lifecycle snapshot required before prior dialogue/summary; otherwise explicit withholding | Selectable conservative control |
-| A0 | Same prerequisite as A, summary omitted under the paired controls below | Diagnostic-only supplied-summary ablation |
-| B | Reserve shared local suffix first; select current active/terminal views within remaining budget; no summary or older raw windows | Selectable recent-first admission package |
+| Subject add | Fact type, supported scoped value, registry qualifier, evidence | Subject/entity selector, IDs, versions, source roles |
+| Related add | Fact type, value, qualifier, offered entity handle or local new-entity reference, evidence | Persistent IDs, independent entity label |
+| Revise/end/reassert/forget | Target handle, operation and existing closed reason/value rules, evidence | Fact ID, expected version, entity identity |
+| Defer | Current exact quote, reason: unresolved/uncertain/nonasserted/no-save | Guessed entity, target, value, executable mutation |
+| Conflict | Grounded interpretation/evidence and exact candidate-reply quote | Mandatory executable write |
 
-Freeze preselection inputs, not identical final prompts:
-- A/A0: identical raw-message cutoff, eligible pool, lifecycle snapshot and nonsummary
-  section contents/order. Preserve the summary's `through_sequence` boundary even in
-  A0; removed summary allocation stays unused. No earlier raw messages or extra facts
-  fill the gap. Assert these invariants in serialized manifests. Hand-authored summaries
-  test interpretation only; generated-summary production behavior needs real compaction.
-- A0/B: identical eligible local pool (at most eight prior users with complete exchanges),
-  lifecycle state and total budgets; no older windows in either. Where A0 withholds
-  history, use the same selective retrieval/expansion recipe as B within its available
-  allocation. Final bundles may differ intentionally. This compares full-versus-selective
-  recent-first packages, including retrieval cost, not one isolated Boolean effect.
-- A/B product probes use that same local pool and state; A's summary input, if any, is
-  declared per cell. A0 results never automatically qualify A. Evidence reuse needs
-  identical serialized requests AND relevant processing/commit behavior demonstrated
-  per cell, not assumed from the shared prerequisite. Do not build an equivalence framework.
+Keep existing lifecycle meanings: correct versus supersede, inactive versus
+forgotten, and fresh add after forgetting. Reassert cannot revive a forgotten
+chain. No-save is not a new deletion operation.
 
-All variants share policy/persona, generation/reviewer models, source boundaries,
-full reviewer target visibility, output caps, and total provider-request limits.
-Bind the variant through the isolated development/evaluation composition and record
-its policy identity, never a model argument or public chat payload. Matching API/
-worker instances must use that binding; a release deployment cannot select an
-unqualified experimental variant. Do not add automatic A-to-B fallback.
-B starts with existing semantic retrieval extended to current lifecycle descriptors,
-plus bounded exact-entity expansion using eligible current identities from the
-current message/shared bundle. No new reranker, lexical service, graph, or additional
-model. Freeze limits/tie-breaking in the fixture config; count records actually
-supplied, not candidates. Ambiguous names cannot authorize a write or cross subjects.
+Related new entities use a local reference only where needed to join identity
+and dependent facts. An accepted identity assertion (for example pet.name)
+creates it; derive its label from that assertion. Unresolved/deferred identities
+cannot leave entities or embeddings behind. Same-name pets are not auto-merged.
+Subject-add variants have no entity field in the actual generated schema,
+including schema embedded in DeepSeek JSON-object instructions.
 
-Pack whole records/messages. Preserve required policy and current input. Reserve
-reviewer input for the maximum permitted user-visible candidate reply using its
-own tokenizer/estimator, not assumed equality with generation tokens. Also reserve
-reviewer output, schemas, and safety margin. Check actual serialized requests,
-including tool continuations. Overflow fails rather than clips evidence or swaps
-only the reviewer's bundle. If a shared suffix cannot fit, mark dependent claims
-ineligible. Record this as lost continuity, not a passed safety case.
+These are new wire shapes compiled deterministically to ADE-owned mutation
+records, not tolerant parsing of old proposals. Use existing typed domain objects
+where suitable. No dual live parser, generic adapter framework, or schema compiler.
+Keep semantic value/scope interpretation with the model; removing clerical fields
+cannot prove that it preserved morning/evening, frequency, condition, or negation.
 
-Determine optional narrative eligibility before compaction. A/A0 full-snapshot
-turns skip redundant automatic query embedding/search; genuine selective paths
-retain it. Optional `search_memory` returns current lifecycle views under the same
-scope/version policy. Explicit required-tool requests still execute a real declared
-tool contract, not fabricated events. The existing DeepSeek forced-tool mismatch is
-separate: do not change thinking mode or weaken its qualification case in this plan.
+### Evidence Modes
 
-Offline pressure grid: 0, 12, 48, 128, and 256 eligible records, short and long
-assertions, including inactive descriptors. Add exact whole-request boundary tests
-just below/above each allocation, not only record counts. Use the same serialized
-data and total budget for all variants; count selection/setup overhead. Reviewer
-overflow is measured separately and remains a failure for every variant.
+Every item requiring authority has one exact, nonempty current-message anchor.
+The model never emits a message UUID, source-role enum, offsets, hash, or duplicated
+evidence_quote. Derive them from the chosen mode and held map.
 
-Exit: all deterministic boundary tests and paired-control assertions pass;
-success and failure artifact manifests show exact sections,
-IDs/versions, source roles, bundle membership, omissions, token estimates/usage,
-provider counts, and commit outcome. A live winner is not inferred from fake models.
+| Mode | Additional selectable support | Meaning |
+| --- | --- | --- |
+| Direct | None | Current user's own assertion/correction/removal supplies the claim; a targeted prior fact identifies what changes, not new authority |
+| Resolve-user | Earlier-user handle and exact quote, plus any intervening clarification context handle needed to identify the question | Current answer completes an earlier user's assertion; earlier support is not independent write authority |
+| Endorse-assistant | Prior assistant proposition handle/quote | Explicit current assent endorses that particular proposition, not all assistant text |
 
-### 5. API And UI Completion
+Quotes must match one exact span in the selected message; ambiguous duplicates,
+missing quotes, out-of-bundle handles, and role/chronology mismatches fail.
+Do not implement fuzzy repair or choose an arbitrary duplicate occurrence.
 
-Keep `/api/v3` and existing turn/run/event/cancel routes. Extend subject-memory
-readback with `memory_generation`, lifecycle status/reason, identifying descriptors,
-and typed message/operator provenance. Existing fields/legacy operation values
-remain readable; new values are deliberate client schema extensions, not aliases
-that misrepresent history. No public model-supplied subject or operator origin.
+Direct mode cannot use assistant text as factual support. Resolve-user requires
+a real earlier user assertion and a current answer tied to that unresolved claim;
+it cannot extract unrelated historical facts. Endorse-assistant requires locally
+affirmative assent tied to the proposition and rejects negated/quoted/hypothetical
+assent and bare names. The model's mode label is not itself proof of endorsement.
 
-Propose one narrow command:
-`POST /api/v3/agent-studio/subjects/{subject_id}/memory-removals`.
-Input: idempotency key, expected memory generation, nonempty unique fact-ID/version
-targets. Bound workspace, purpose and operator authorization are server-validated;
-require active eligible product scope and reject another subject's targets. Receipt:
-action ID, committed outcome, revision IDs, resulting generation and replay flag.
-Use HTTP 409 for generation/target/idempotency conflicts, with structured reasons;
-no partial multi-target success. Do not add general manual fact CRUD.
-Reuse `require_operator` and existing local deployment/auth controls, including
-reader-denied tests; an action's origin field is never authorization.
+Required contrast: earlier user says "one dog is a Husky", assistant asks "Rocky
+or Roxy?", user says "Roxy": allow bounded user-antecedent resolution. Assistant
+alone asks "Is Roxy a Husky?", user says "Roxy": do not save breed. Explicit
+"Yes, Roxy is a Husky" can authorize it. Ambiguous multi-proposition "yes" defers.
 
-Agent Studio displays active versus inactive/forgotten audit state without confusing
-withdrawn values for current preferences. Removal confirms exact targets and limited
-Option A effect, then shows authoritative receipt plus current readback. A replay
-cannot claim new absence. Correction remains a natural reviewed turn; no direct
-operator correction endpoint. Show terminal conflict and offer deliberate fresh
-submission, not an automatic retry or silent composer send.
+Use the existing affirmative/uncertainty helpers where their semantics fit and
+add narrow negative tests, not a broad yes-word heuristic. Some interpretation
+remains semantic; exact citation matching is necessary, not sufficient for truth.
+If the implementation cannot enforce these distinctions without inventing a new
+semantic model stage, stop for review rather than claiming the mode tag solves it.
 
-Separate capabilities: continuation requires a compatible runnable conversation;
-direct removal requires active subject scope, operator authority and displayed
-generation/target versions, not a runnable selected conversation; reviewed correction
-requires an eligible conversation and deliberate turn. Test removal from an old-policy
-read-only conversation, including when no runnable conversation exists for that subject.
-Replace run-only correct/forget success matching with typed outcomes for run mutations,
-operator receipts, per-claim deferral and terminal conflict/capacity/provider failure.
-Show action receipt and fresh state separately: restatement racing readback is neither
-proof of current absence nor evidence that the historical removal failed.
-On ambiguous network/commit outcomes, show unconfirmed until authoritative readback
-or same-key recovery establishes the receipt; do not automatically replace the action.
+Persist current authority and supporting provenance distinctly. Propose adding
+`user_resolution` (current anchor) and `user_antecedent` (support-only) to the
+existing source-role contract. Keep `user_assertion`, `user_endorsement`, and
+`assistant_referent`. Update DB check constraints, readback verification, presenters,
+API schema and UI role display together; do not relabel old evidence. Assistant
+context in a resolution is not licensed to add assistant-origin facts.
 
-Render multiple exact user spans and assistant referents with their roles; operator
-actions render as actions, not fake messages. Keep archived source viewing read-only,
-root/subject boundaries, rapid-switch safety, and persona-version immutability.
-Exit: contract/API/hook tests, OpenAPI regeneration/drift, web tests/lint/build,
-and built-in-browser journeys on isolated real API/PostgreSQL. Label model stubs.
+### Dispositions And Atomicity
 
-### 6. Bounded Live Acceptance And Policy Selection
+Validate output shape and exact evidence bindings first. Defer/conflict do not
+pass through executable-mutation entity/value requirements. Complete writes do.
+Do not transform an invalid write into a defer, silently drop sources, or salvage
+valid siblings from malformed output.
 
-The user authorized the one frozen campaign on 2026-09-24 after static review.
-Before its first provider request, freeze and verify the selected routes, isolated
-DB, ledger location, source identity, exact request schedule, and evidence capture.
-The ceiling is 96 DeepSeek generation requests and 160 Qwen embedding requests,
-shared pre-request caps across API/worker/diagnostic.
-The [2026-09-24 live preflight](../findings/natural-memory-checkpoint-6-preflight-2026-09-24.md)
-found that the pinned DeepSeek deployment capacity differs from this frozen
-matrix. The user then approved a focused, isolated evaluation-only, role-specific
-capacity binding on the same actual route, with the existing matrix limits and
-native two-conversation/one-reviewer request cap. The frozen fixtures and
-production deployment manifest remain authoritative and unchanged.
-The evaluation-only runtime contract is [ADR 0031](../adr/0031-natural-memory-evaluation-capacity.md).
-This is a hard spend bound, not a guarantee that all cases fit. Include setup,
-indexing, continuations, compaction, and reviewer calls; no fallback/rerolls. Use
-180-second per-turn timeout, zero additional retries and zero reviewer repair.
-Before live approval, fake-transport tests must prove that every diagnostic/setup
-provider path reserves against that same durable ledger before sending; no standalone
-embedding client bypass. Exhaustion stops subsequent probes and preserves incomplete results.
+No-save applies at claim scope and dominates equivalent writes in either order.
+A no-save item carries its exact current scope, not a invented target. Retain
+the independent native no-save check on every proposed write; a defer declaration
+cannot hide a contradictory sibling. Clear removal of an existing fact requires
+an authorized forget operation; "do not save this" does not by itself delete it.
+Unrelated supported writes survive legitimate deferrals.
 
-First run eight native natural-update turns: preference add, scoped addition,
-natural correction, end/invalidate, clear endorsement, same-turn no-save, explicit
-removal, and fresh post-removal restatement. Use source-linked, isolated setup for
-cases needing another fact type; distinguish scripted setup from model extraction.
-Stop on a boundary violation or failed required state outcome; preserve the evidence.
+A grounded conflict can exist without a new write. Require the current claim/
+permitted support and a uniquely bound conflicting candidate span; an unrelated
+question is not conflict. A validated conflict vetoes the whole attempt. Semantic
+contradiction remains reviewer judgment subject to fixtures, not string matching.
 
-Then test both selectable A and B on six mandatory response probes: dog clarification,
-interview reply, cross-conversation breakup against old local dialogue, residence versus visit,
-selective ended-state recall, and irrelevant memory/repetition. Include the frozen
-low-load and pressured short-exchange cells from checkpoint 1. Replay identical
-synthetic setup per variant, not shared writable state. Add A0/B diagnostic cells
-and A/A0 supplied-summary pairs for old dialogue compacted after a change and
-end -> forget -> old history; use only manifest-proven equivalent cells to avoid
-duplicate calls. A0 is not a third product candidate. Before accepting A, run the
-actual compactor on both summary arcs and verify its output plus downstream reply/
-review outcomes; scripted summaries cannot substitute. Count every compaction call.
-Inside an existing compaction arc, require one source-supported useful detail (for
-example the chosen interview opening) to survive outside the admitted raw suffix,
-with its answer absent from facts, the probe and other inputs. Verify retained meaning,
-the exact generated summary in A's input, and an appropriate downstream answer.
-Harmless vague output is insufficient. This is A's component-specific acceptance
-gate: A0 may abstain and B gains no unsupported historical-retrieval requirement.
-Reused evidence is one attempt supporting equivalent cells, not independent replication.
-The frozen matrix must distinguish these cells and fit a reviewed request schedule
-under the same proposed caps; no automatic cap increase or assumed completion.
+After filtering genuine deferrals, derive the effective write set and dependent
+new entities/embeddings once. All-deferred/no-change must not create entities,
+write embeddings, or advance memory generation. Query embeddings for retrieval,
+if already used, are not mutation embeddings and must be reported separately.
 
-Selection gate: zero observed isolation, forgotten-fact-selection, provenance,
-atomicity, or exact-retry violations; every required lifecycle outcome must match
-its fixture and every predeclared forbidden reply claim must be absent. A bad
-control answer is not permission for the same error in B. Every selectable policy
-must meet the same predeclared useful-answer criteria on every mandatory case inside
-the common frozen envelope, including short exchanges under unrelated pressure,
-without skipping review. A relevant supported answer need not recite a fact or match
-an exact string. Correct abstention on an unanswerable case differs from withholding
-an answer the eligible evidence supports. Record missed writes, false vetoes,
-abstentions, withheld context, latency and cost. Report useful delivered answers over
-all scheduled required probes, plus executed coverage and failed/vetoed/unrun counts;
-never score only delivered replies or label unrun cells observed failures. Review
-claims against source, and use blinded human comparison with ties for warmth/relevance. A finite
-sample is bounded evidence, not a universal accuracy estimate or release gate pass.
+### Completion And Failure Classes
 
-Predeclare stop reasons: isolation/privacy/provenance/atomicity/exact-attempt violations,
-failed required mutation state, lost authorization, invalid infrastructure/evidence
-capture or budget exhaustion stop the campaign. Ordinary reply-quality failures,
-unnecessary clarification or false veto on response-only probes disqualify that
-candidate on the required cell but allow remaining authorized comparisons; they
-do not justify rerolls. Failure of a required mutation remains a campaign stop.
-Report stopped or unscorable cells explicitly. Incomplete required matrix coverage
-means no winner, even if the other candidate failed. Never transfer A0's results to A
-without the explicit equivalence proof above, or waive compaction because A ran first.
+Check provider completion status before parsing: `length` cannot be accepted even
+if partial JSON parses. Distinguish truncation, refusal/unsupported finish,
+malformed JSON/schema, invalid handle/source, semantic rejection/conflict,
+embedding failure, and finalization failure in existing typed run events/errors.
+No guessed success for an absent status; establish supported adapter fixtures.
 
-If neither policy passes, or results trade safety for continuity, pause at this
-material decision; do not quietly adopt B, expand scope, or consume another budget.
-If one or both pass, document each passing policy's tested envelope and reviewer-capacity limit,
-including this comparison's exclusion of older raw windows; do not qualify untested
-historical coverage through that result. Request product-policy acceptance with the
-measured quality/cost tradeoffs; no automatic tie-break adoption. Retain compact evaluators, not unused product
-strategy machinery. Only the accepted policy becomes the normal runtime binding.
+Preserve timeout/cancellation and exact retry behavior. Reviewer repair remains
+zero for this diagnostic. Retain candidate and decision evidence without secrets
+or private reasoning; report committed/rejected/unconfirmed separately. Do not
+allow a telemetry/capture failure to rewrite an authoritative commit outcome.
 
-## Verification, Migration, And Release Boundaries
+## Counter-Only Accounting
 
-Run focused tests first, then established commands (during implementation, not now):
+Delete `request_budget.py` cap/reservation/limit-binding functionality rather
+than leave dormant budget aliases. Remove associated settings/environment flags,
+worker-readiness budget identity, Compose wiring, per-scope spending allocations,
+CLI cap flags, `exhausted()` checks and budget-triggered scheduling branches from
+active workflows. Preserve other failure/stop conditions.
 
-```sh
-uv run python -m pytest services/ade-api/tests/agent_runtime workflows/evals/character_memory_dev/tests
-uv run python -m pytest
-uv run ruff check services packages workflows scripts tests
-uv run python scripts/check_python_format.py --base origin/main
-uv run python scripts/export_openapi.py --check
-npm --prefix apps/ade-web run test
-npm --prefix apps/ade-web run lint
-npm --prefix apps/ade-web run build
-ADE_ENV_FILE=.env.example docker compose --env-file .env.example config --quiet
-make check
-```
+Reuse `provider_tracing.py` request IDs and start/completion/failure events as
+the normal-run source of counts. Cover setup/indexing, query/write embeddings,
+generation, reviewer, compactor and tool continuations in workflow summaries.
+Count once at the shared outbound ADE-to-router dispatch boundary, not again in
+nested stage/capture wrappers. Catalog discovery is separate from model usage.
+Use stable request IDs to aggregate API/worker events without shared in-memory
+counters or a new accounting database/service.
 
-Set `ADE_REPOSITORY_ROOT` to the retained checkout where required. Run PostgreSQL
-tests on explicit disposable URLs, including a separate migration URL; list skipped
-tests and fill those gaps. Keep the known stale-policy gate visible and unwaived;
-report the full result, not a filtered suite as all-green. Do not rebind historical
-release receipts to make source changes appear qualified. No expected new failure
-may hide behind that known gate. OpenAPI and source-map checks cannot prove behavior.
+Report attempted, completed, failed, and unresolved counts by kind/model/stage
+and run/iteration. These are ADE outbound attempts, not provider billing or a
+guarantee of network receipt. Timeouts may have reached the provider; do not
+record them as zero. Surface expected versus observed counts as diagnostics,
+never a spending veto or a reason to silently omit remaining cases.
 
-Before any eventual populated deployment: verify backup/restore on a cloned volume,
-drain workers or explicitly terminate accepted runs with evidence, prevent mixed
-old/new writers, migrate, build matching API/worker/web, and run readback checks.
-Never truncate/reset production data. Legacy terminal runs retain provenance without
-fabricated accepted-memory generations; no in-flight old run crosses the write change.
+For workflow setup outside a run, use the same small event shape in its existing
+artifact writer. If process death/capture loss makes coverage incomplete, label
+counts incomplete/unknown; never manufacture zero or claim exact billing.
+Ordinary telemetry failure must not prevent a product request or alter its result.
+An evaluation may remain unscorable because evidence is missing, distinct from
+a monetary stop. Do not build durable pre-request reservations again.
 
-New behavior needs new immutable policy/definition bindings. Preserve old prompt/
-persona versions and conversations; do not silently rewrite them. The proposed
-cutover keeps old-policy conversations readable and requires a newly bound
-conversation for new semantics, retaining the subject when requested. Test and
-explain fresh-send rejection versus historical read/idempotent replay access.
-A new conversation shares eligible saved facts, not the old conversation's unsaved
-dialogue, summary or missing antecedent for a bare "yes". No silent transcript copy
-or promise of seamless continuation. Direct subject removal remains independently
-available under checkpoint 5. Do not let unsupported old
-workers write the extended store. The current deployed system stays untouched now.
+Keep existing historical ledgers/frozen files byte-for-byte. Active commands stop
+enforcing old monetary schedules; docs mark those schedules historical. Remove
+active imports/validation of old caps, while retained fixtures still specify their
+semantic cases. Current context/iteration/tool-call bounds remain explicit.
+Do not silently remove the 180-second timeout clamp formerly embedded in the
+budget wrapper: locate intended timeout ownership and preserve each documented
+runtime/diagnostic timeout at that layer, with regression tests.
 
-Rollback is a verified matching application/database backup restore or a specifically
-tested compatible forward fix, not a guessed destructive downgrade. New writes and
-operator receipts can make old binaries incompatible despite additive SQL. Deployment
-authorization must include its recovery point/data-loss window; none is assumed here.
+## Implementation Checkpoints After Approval
 
-After product acceptance, resolve the separate required-tool conformance contract,
-then follow fresh qualification and promotion from the release plan. Mark M3 complete
-only when its evidence requirements pass. Keep checkpoint commits on the current
-branch; merge/push main and remove the branch/worktree only after user-approved,
-fully verified delivery. Publishing this review checkpoint is not that cutover.
+Default serial work on the retained implementation branch, with reviewable commits.
+No concurrent writers or broad parallel rewrite.
 
-## Coverage And Stop Conditions
+### 1. Freeze New Contracts And Failing Regressions
 
-| Cases | Owning checkpoint and required distinction |
-| --- | --- |
-| Arcs 1-4, 7, 13-16, 22 | 1-3: natural change/error/unknown history, scoped preferences, legacy boundaries, residence versus visit; no inferred preference from consumption |
-| Arcs 8, 10-11, 17, 20-21 | 2-3/5: source roles, no-save, endorsement, subject/root isolation, operator causation, concurrency and replay |
-| Arcs 2, 5-6, 9, 12, 18-19 | 4/6: evidence availability, current lifecycle recall, context integrity, useful restraint, historical uncertainty; deferred source-search cases stay unsupported |
-| New composed cases | 1-6: explicit reply/write contradiction, partial yes/no, unrelated-question false veto, reply reserve, end/forget/old-history exposure, action replay after restatement |
+Amend the existing design and write one concise proposed ADR for this interface,
+source-role extension and counter-only direction; mark accepted only with actual
+implementation approval. Supersede relevant model-facing parts of ADRs 0029,
+0032 and 0034 explicitly; preserve their history. ADRs 0031/0033 describe prior
+capacity experiments, not proof for the new envelope.
 
-Stop for a semantic scope change, destructive recovery, missing provider authority,
-exhausted budget, failing hard boundary, or unresolved context-policy tradeoff.
-Do not demand routine confirmation between authorized static checkpoints. Test
-granularity/module names remain engineering choices; product semantics, rollout,
-live budgets, and acceptance gates do not.
+Freeze input/output examples and negative cases before code. Reproduce bare-name
+assistant support, missing-shape no-op, genuine unresolved deferral, subject UUID
+selection, stale/cross-subject handles and time-scoped correction. Separate
+mechanical checks from semantic accuracy claims. Exit: reviewers can trace each
+decision field to model work or server binding; no unresolved authority shortcut.
+
+### 2. Remove Spending Gates, Retain Observation
+
+Refactor the shared transport factory and active acceptance/development runners
+to event-based counts; delete cap-specific settings/readiness/tests. Retain
+transport, route validation, exact retries, timeouts and behavioral stops.
+Exit: fake transport tests cover failed sends, continuations, retries, setup and
+API/worker aggregation with no double counts; exceeding an expected count does
+not block a request. Missing telemetry is explicit and does not veto product work.
+
+### 3. Implement Compact Review And Provenance
+
+Implement discriminated decisions and request-local binding, safe identity views,
+three evidence modes, genuine no-write outcomes, strict completion handling and
+effective-set preparation. Thread exact output allowance through existing request
+construction/preflight without changing other generation behavior. Use cohesive
+modules, preferably below 400 lines; split responsibilities before adding to
+files over 500 lines. No general policy engine.
+
+Add a forward migration for provenance-role constraints only if needed by the
+final typed contract; update readers/UI/OpenAPI in the same checkpoint. Test
+fresh and existing disposable DB migrations non-destructively. Existing messages,
+facts/revisions and receipts must remain readable unchanged.
+
+Use a new immutable reviewer/policy binding for new semantics. Old conversations
+remain readable, with unsupported fresh sends rejected rather than silently
+switching their reviewer contract. Preserve idempotent terminal replay. Do not
+retain an old model-facing parser just to keep obsolete diagnostics executable;
+historical fixtures remain inspectable and active runners target the new contract.
+Exit: isolated PostgreSQL tests verify exact provenance, sibling deferral,
+no-save ordering, stale-snapshot rejection, effective writes and atomic outcomes.
+
+### 4. Integration And Offline Acceptance
+
+Run the smallest tests first, then full Python, Ruff, changed-file formatting,
+OpenAPI drift, web tests/lint/build and Compose rendering. Supply both disposable
+database URLs, explain skips, and keep the known release-policy freshness failure
+unwaived; no additional failure may hide behind it.
+
+Exercise real isolated API/worker/PostgreSQL and built-in browser with a fake
+provider: new session, scoped add/correction, user-antecedent clarification,
+endorsement rejection, removal, archived citation, old-policy read-only behavior,
+and displayed source roles/counts where already exposed. Do not add a new metrics
+page. Preserve cancellation, lease-loss, precommit/postcommit fault and lost-ack
+tests. Confirm byte-identical preservation of historical ledgers/fixtures.
+Exit: evidence demonstrates mechanisms, not live model reliability.
+
+### 5. Proposed Live Diagnostic, Separately Authorized
+
+Freeze one source/interface revision, the same DeepSeek route/high-thinking
+setting, Qwen embeddings and a named output envelope. Proposed reviewer output
+allowance: 4,096 tokens; exact admitted input bound and envelope must be recomputed
+from the new serialized request before approval. Do not truncate required evidence
+to retain obsolete numeric totals. Mark any pressure point adjustment explicitly;
+the old padded A/B results cannot be transferred to the new schema.
+
+Proposed fixed diagnostic: three subject-add trials with distinct predeclared
+contexts; chronological scoped tea and typo correction; related-entity creation;
+user-antecedent clarification; positive and bare-name negative endorsement;
+genuine unresolved deferral beside an independent update; same-turn no-save;
+explicit removal followed by fresh restatement. Publish exact case counts/order,
+source-linked setup, expected state and permitted reply claims before execution.
+
+No financial request caps or reservation ledgers. Use counters and a fixed finite
+case list, timeout and tool-loop bounds. Repetitions are scheduled observations,
+not retries to erase failures. Stop for isolation/provenance/atomicity breach,
+required state failure, invalid infrastructure/evidence, or lost authorization.
+Preserve semantic-equivalent wording for explicit source review rather than
+changing the scorer mid-run. No auto-repair or fourth patch loop.
+
+Report useful replies and correct committed outcomes over scheduled and attempted
+cases, plus rejected/unrun counts and exact evidence limits. Passing diagnostics
+permit proposing a newly frozen A/A0/B comparison, not policy adoption or release.
+If mechanical errors decline but semantic errors persist, bring the findings back
+for model/task-shape review rather than more metadata or permissive validation.
+
+## Release Boundary And Pro Review Questions
+
+No merge/push/deployment/promotion, source-fingerprint rebind, or production data
+change is part of writing or reviewing this plan. Publication is a separate
+review checkpoint. Eventual release still requires fresh evidence, approved
+policy/envelope, matched builds and non-destructive migration/recovery checks.
+
+Ask the Pros to scrutinize: whether three evidence modes truly separate authority
+from support; whether current/antecedent roles are sufficient without semantic
+loopholes; whether write/defer/conflict shapes preserve no-save and contradiction
+behavior; whether identity maps leak forgotten facts; whether counter aggregation
+is honest without recreating budget infrastructure; and whether the new diagnostic
+can falsify the intended improvement without weakening the original product goal.

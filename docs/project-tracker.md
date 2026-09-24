@@ -5,6 +5,19 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 
 ## Current Focus
 
+The next deliverable is **Pro review of revision 4 of the single
+[natural-memory implementation plan](plans/natural-memory-implementation.md)**.
+The prior live campaign and three development iterations are stopped, not A/B
+qualification. The [reviewer-interface assessment](findings/natural-memory-consultation/reviewer-interface-assessment.md)
+preserves both returned reports and records the offline endorsement counterexample.
+The proposed next implementation removes model-owned persistence bookkeeping,
+separates authority from antecedent support, makes genuine deferral representable,
+and replaces request-budget enforcement with observational counters. No new
+runtime work, live diagnostic, policy selection or release is authorized by this
+planning checkpoint. Earlier chronology below is historical, not a restart order.
+
+### Earlier Milestone History
+
 Natural conversational continuity is the current research focus. Two external
 reports are preserved unchanged with a separate
 [consultation review](findings/natural-memory-consultation/README.md).
