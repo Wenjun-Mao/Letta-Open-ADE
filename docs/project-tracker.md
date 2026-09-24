@@ -3,6 +3,16 @@
 Updated: 2026-09-24. Owner: this ADE task, using Relay for delegated reporting.
 Direction and milestone completion criteria live in the [roadmap](product-roadmap.md).
 
+## Standing Review Publication Authorization
+
+The user pre-approved publishing documentation-only review checkpoints on the
+review branch for GitHub-based Pro scrutiny (2026-09-24). Do not ask routinely
+before these pushes. Verify outgoing changes first; exclude credentials, private
+runtime data and raw captures, and provide an immutable review link. This does
+not authorize new implementation pushes, merging to main, deployment, release
+promotion, or disclosure of private artifacts. Stop if outgoing history exceeds
+the approved publication scope.
+
 ## Current Focus
 
 The next deliverable is **Pro review of revision 4 of the single
