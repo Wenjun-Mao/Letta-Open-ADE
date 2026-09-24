@@ -125,8 +125,31 @@ evidence of useful model recall. The A/A0/B binding IDs are development-only;
 under snapshot pressure A/A0 share the scoped current-memory fallback and
 withhold prior narrative, while B alone admits the shared local suffix. The
 A/A0 nonsummary equality assertion covers both full-snapshot and overflow cells.
-the default product binding has not been changed. No live comparison or policy
+The default product binding has not been changed. No live comparison or policy
 selection is implied by this offline workflow.
+
+The real-worker pressure test uses an exclusively idle disposable PostgreSQL
+database, source-linked synthetic setup in a separate conversation, and a fake
+router. It retains the actual A/A0/B generation and full reviewer requests,
+then asserts 48 matching lifecycle targets, A/A0's identical withheld packets,
+B's complete local exchanges, provider counts, token ceilings, and committed
+outcomes. It is one deterministic pressure cell, not full matrix coverage:
+
+```sh
+ADE_TEST_DATABASE_URL='postgresql+psycopg://ade_owner@127.0.0.1:32768/ade_m2_memory_test_<owned-id>' \
+  uv run --locked pytest -q services/ade-api/tests/agent_runtime/persistence/test_postgres_natural_packets.py
+```
+
+For the local Agent Studio journey, `offline_natural_router.py` supplies only
+scripted catalog, chat, review, and embedding responses on loopback. Run it
+with `uv run --locked python -m workflows.evals.character_memory_dev.offline_natural_router --port 8130`.
+`offline_natural_browser_setup.py` provisions a natural-policy fixture in an
+existing migrated, passwordless `ade_m2_memory_test_<owned-id>` database. Pass
+`--existing-subject-id` to provision an archived old-policy conversation bound
+to that same subject. It writes a private fixture receipt under `outputs/`.
+The API and worker must both point to that isolated database and the fake
+router base URL. Browser observations from this setup do not measure provider
+quality or authorize live calls.
 
 Opt-in natural-memory attempt evidence is available only when
 `ADE_NATURAL_MEMORY_CAPTURE=1` is set on a development worker connected to a
@@ -161,10 +184,9 @@ freezes the proposed A/A0/B comparison cells, numerical generation and reviewer
 allocations, pressure grid, positive actual-compaction assertion, stop classes,
 and a proposed 96-generation/160-embedding ceiling. It is a checkpoint-1
 offline contract, **not** permission to call providers, not evidence that the
-serialized runtime packets fit, and not a selected product policy. The 48-record
-pressure point is arithmetically distinguishable at the frozen envelope; later
-checkpoint-4 tests must confirm the exact serialized requests, whole-record
-packing, and reviewer capacity before any live approval.
+entire serialized runtime matrix fits, and not a selected product policy. The
+48-record dog pressure cell has one real-worker fake-router packet assertion;
+remaining cells still need their own serialized coverage before live approval.
 
 The proposed schedule expands to 30 turn cells, each allowing at most one
 conversation continuation and one reviewer call, plus two actual-compaction

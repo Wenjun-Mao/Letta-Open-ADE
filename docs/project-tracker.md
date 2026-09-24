@@ -46,14 +46,24 @@ implementation of checkpoints 1-5, now authorized by the user on 2026-09-24 with
 those completion criteria incorporated into plan revision 3. Checkpoint 1's frozen
 fixtures are committed; the additive lifecycle, mixed review, development-only
 A/A0/B bindings, direct operator removal, and UI path are implemented in an
-isolated worktree with offline and disposable-PostgreSQL tests. These do not yet
-complete checkpoints 3–5: opt-in failed-attempt artifact retention now has
-fake-provider service-to-worker PostgreSQL coverage for false veto, success,
-and post-review embedding failure, plus focused retention-fault and lost-commit-
-ack orchestration tests, but not the complete cancellation/lease fault matrix;
-full paired comparison manifests and the real
-API/browser journey remain open. Continue between static
-checkpoints without routine confirmation; pause for material scope/tradeoff decisions,
+isolated worktree with offline and disposable-PostgreSQL tests. Opt-in
+failed-attempt artifacts have fake-provider service-to-worker PostgreSQL
+coverage for false veto, success, post-review embedding failure, cancellation,
+lease loss, precommit fault, lost postcommit acknowledgment, and retention
+failure. The follow-up also adds exact serialized
+reviewer preflight before generation, complete-exchange pressure fixtures,
+real-PostgreSQL cancellation/lease/precommit/postcommit/retention fault tests,
+and one A/A0/B pressure packet through the service and worker with 48
+source-linked synthetic facts. The fake-router Agent Studio browser run
+observed a committed turn, exact citation, shared subject from an archived
+old-policy conversation, and forgotten-state readback. A native JavaScript
+confirmation stalled the in-app browser during the removal click; the UI now
+uses an inline exact-target confirmation with an interaction test, while the
+disposable fact's removal was committed through the isolated API route and
+the browser verified generation 3 and the removed audit count. A fresh
+end-to-end browser click through that new control and the remaining paired
+matrix cells are still required before marking checkpoints 4–5 complete.
+Continue between static checkpoints without routine confirmation; pause for material scope/tradeoff decisions,
 unsafe actions or genuine blockers. No runtime context policy has been selected;
 checkpoint 6 and live calls still need separate authority.
 Director review corrected two checkpoint regressions: A0's overflow path had
@@ -66,9 +76,12 @@ Review-fix verification: the full suite reports 709 passed, 14 skipped and
 exactly one failure at
 `test_selected_candidates_use_current_policy_without_rebinding_history`;
 the separate historical-evidence rejection test passes. The isolated
-PostgreSQL persistence suite reports 41 passed. The next focused assignment
-owns the cancellation/lease matrix, paired manifests, and browser journey on
-an isolated API/PostgreSQL stack; this review fix does not advance those gates.
+PostgreSQL persistence suite reports 41 passed. The follow-up verification
+reports 712 passed, 20 skipped and that same one policy freshness failure;
+the isolated persistence and fixture suite reports 53 passed, 2 skipped.
+OpenAPI drift, Ruff, web tests (77 passed), lint, and build pass. Remaining
+matrix coverage and a fresh in-app removal interaction need an isolated
+API/PostgreSQL stack; this review fix does not advance those gates.
 No live budget or production context-policy selection is implied.
 The user authorized publication of the review checkpoint, not adoption of the
 design or a merge/release. Resolve plan-review findings before implementation or

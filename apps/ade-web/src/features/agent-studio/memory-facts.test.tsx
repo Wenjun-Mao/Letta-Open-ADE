@@ -1,5 +1,8 @@
+// @vitest-environment jsdom
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { MemoryFacts } from "./memory-facts";
 import type { MemoryFact } from "./types";
@@ -25,5 +28,34 @@ describe("saved fact display", () => {
     expect(html).toContain("Open original message");
     expect(html.match(/Remove exact saved assertion/g)).toHaveLength(2);
     expect(html).toContain("Former assertion:");
+  });
+
+  it("requires an exact in-panel confirmation before removal", async () => {
+    (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+    const removeSaved = vi.fn(async () => {});
+    const container = document.createElement("div");
+    const root = createRoot(container);
+    try {
+      await act(async () => root.render(<MemoryFacts facts={[fact("active", "active")]}
+        t={(english) => english} openEvidence={async () => {}} prepareAction={() => {}}
+        removeSaved={removeSaved} canCorrect={false} canRemove />));
+      const click = async (label: string) => {
+        const button = [...container.querySelectorAll("button")].find((item) => item.textContent === label);
+        expect(button).toBeDefined();
+        await act(async () => button?.click());
+      };
+      await click("Remove exact saved assertion");
+      expect(removeSaved).not.toHaveBeenCalled();
+      expect(container.textContent).toContain("person.preference v2: tea");
+      expect(container.textContent).toContain("past messages, summaries, and audit revisions remain");
+      await click("Cancel removal");
+      expect(removeSaved).not.toHaveBeenCalled();
+      await click("Remove exact saved assertion");
+      await click("Confirm exact removal");
+      expect(removeSaved).toHaveBeenCalledOnce();
+      expect(removeSaved).toHaveBeenCalledWith("active", 2);
+    } finally {
+      await act(async () => root.unmount());
+    }
   });
 });

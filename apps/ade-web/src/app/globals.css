@@ -445,6 +445,19 @@
   white-space: pre-wrap;
 }
 
+.studio-removal-confirmation {
+  margin: 10px;
+  padding: 10px;
+  border: 1px solid #c88975;
+  border-radius: 8px;
+  background: #fff8f5;
+  font-size: 12px;
+}
+
+.studio-removal-confirmation p {
+  margin: 0 0 8px;
+}
+
 .studio-revisions {
   display: grid;
   gap: 6px;

@@ -94,8 +94,6 @@ export function useMemoryRemoval({
     const fact = selectedMemories?.facts.find((item) => item.id === factId && item.version === version);
     if (!subject || !fact || fact.status === "forgotten" || isArchived(subject)
       || !Number.isInteger(generation) || !generation || removal?.unconfirmed) return;
-    const accepted = window.confirm(`Remove exactly ${fact.fact_type} v${version}: ${fact.value || "former assertion"}?\n\nThis excludes this fact chain from model fact selection, not from past messages, summaries, or audit revisions.`);
-    if (!accepted) return;
     const request: PendingRemoval = {
       subjectId: subject.id, factId, version, generation,
       idempotencyKey: identityKey("memory-removal"), receipt: null,
