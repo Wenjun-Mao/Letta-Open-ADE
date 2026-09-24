@@ -33,9 +33,14 @@ historical fixtures and ledgers have no source diff. Checkpoint 4 offline
 integration passed in isolated PostgreSQL and the in-app browser with a scripted
 loopback router: scoped correction, no-save sibling deferral, Roxy resolution,
 atomic bare-name endorsement rejection, archived old-policy readback/citation,
-and exact removal. The [offline acceptance note](findings/natural-memory-r5-offline-acceptance.md)
-records the observed results and limits. The full Python run with both disposable database
-URLs reported 760 passed, one named-database test skipped, and only the existing
+and exact removal. Director review then exposed a mode-switch bypass for inherited
+no-save, uncertainty and withdrawal, plus a false conflict on a correct
+full-sentence answer. The shared authority check and named conflict guard now
+cover these cases; complete-delta and isolated PostgreSQL tests verify atomic
+rejection and independent sibling validity. The earlier browser replay predates
+these corrections. The [offline acceptance note](findings/natural-memory-r5-offline-acceptance.md)
+records both the observed results and limits. The latest full Python run with both disposable database
+URLs reported 778 passed, one named-database test skipped, and only the existing
 selected-candidate policy-fingerprint freshness failure; that test passed
 separately against its own named disposable database. Ruff, changed-file format,
 OpenAPI drift, web tests (78 passed), lint/build, Compose rendering and diff

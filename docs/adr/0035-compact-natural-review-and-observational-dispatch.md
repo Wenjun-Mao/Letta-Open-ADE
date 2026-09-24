@@ -49,7 +49,14 @@ spending caps, reservations, budget settings and scheduling gates.
 
 Structural binding limits provenance and stale-reference errors; semantic scope
 and entailment still need complete-delta fixtures and later live measurement.
-No-save and inherited uncertainty veto equivalent writes across item order while
-allowing unrelated writes. A grounded conflict vetoes the atomic attempt without
-inventing a write. Tests cover the named contrasts, PostgreSQL readback/migration,
-faults, and dispatch observation. Checkpoint 5 remains separately authorized.
+No-save, uncertainty and withdrawal restrictions apply to the identified claim
+across all write evidence modes; changing from user resolution to assistant
+endorsement or a direct value fragment cannot discard them. A fresh current
+assertion can replace uncertainty or withdrawal, while an inherited no-save
+restriction requires explicit, claim-bound permission in the cited current span.
+Unrelated writes remain valid. A grounded conflict cites a held fact or identity,
+the current query/context and an exact candidate span without inventing a write.
+An answer that plainly states the cited value is not a validated conflict; broader
+contradiction remains reviewer judgment. Tests cover the named contrasts,
+PostgreSQL readback/migration, faults and dispatch observation. Checkpoint 5
+remains separately authorized.

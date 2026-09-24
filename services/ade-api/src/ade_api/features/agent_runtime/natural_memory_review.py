@@ -103,11 +103,14 @@ class NaturalDefer(_Closed):
     reason: Literal["unresolved", "uncertain", "nonasserted", "no_save"]
 
 
+SnapshotReference: TypeAlias = Annotated[StrictStr, Field(pattern=r"^[FE][1-9][0-9]*$")]
+
+
 class NaturalConflict(_Closed):
     kind: Literal["conflict"]
     current_quote: StrictStr = Field(min_length=1, max_length=10_000)
     candidate_reply_quote: StrictStr = Field(min_length=1, max_length=10_000)
-    references: list[StrictStr] = Field(min_length=1, max_length=6)
+    references: list[SnapshotReference] = Field(min_length=1, max_length=6)
 
 
 NaturalWrite: TypeAlias = (

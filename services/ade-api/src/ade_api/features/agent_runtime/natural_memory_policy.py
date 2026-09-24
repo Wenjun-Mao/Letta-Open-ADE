@@ -10,20 +10,15 @@ from uuid import uuid4
 
 from .errors import RuntimeValidationError
 from .fact_registry import EntityKind, fact_key, fact_type_spec, normalize_qualifier
-from .memory_intent import is_explicit_forgetting_request
-from .memory_policy import (
-    NewEntity,
-    _claim_clause,
-    _claim_is_uncertain,
-    _normalize,
-    _value_supported,
+from .memory_policy import NewEntity, _normalize, _value_supported
+from .natural_memory_authority import (
+    has_no_save_restriction,
+    restricted_scope,
+    validate_write_authority,
 )
-from .memory_review import BoundEvidence
 from .natural_memory_binding import NaturalBindingMap, build_natural_binding_map
 from .natural_memory_review import (
     BoundNaturalSource,
-    DirectEvidence,
-    EndorseAssistantEvidence,
     NaturalConflict,
     NaturalDefer,
     NaturalEnd,
@@ -34,22 +29,9 @@ from .natural_memory_review import (
     NaturalRevise,
     NaturalSubjectAdd,
     NaturalWrite,
+    DirectEvidence,
     ResolveUserEvidence,
     bind_exact_quote,
-)
-
-_NO_SAVE = re.compile(
-    r"\b(?:do not|don't|never)\s+(?:save|remember|store)\b|(?:不要|别)(?:记住|保存|存储)",
-    re.I,
-)
-_WITHDRAWN = re.compile(
-    r"\b(?:withdraw|take that back|ignore that claim)\b|撤回|收回", re.I
-)
-_AFFIRMATIVE = re.compile(
-    r"^(?:yes|yeah|yep|correct|exactly|sure|是|对|没错)(?:[\s,，.!。]|$)", re.I
-)
-_NEGATED = re.compile(
-    r"\b(?:no|not|don't|never|maybe|might|if)\b|不是|不对|可能|如果", re.I
 )
 
 
@@ -110,11 +92,11 @@ def prepare_natural_memory_review(
                 binding.current, item.current_quote, "user_assertion"
             )
             if item.reason == "no_save":
-                if not _NO_SAVE.search(current_text):
+                if not has_no_save_restriction(current_text):
                     raise RuntimeValidationError(
                         "No-save deferral lacks current restriction"
                     )
-                no_save_scopes.append(_restricted_scope(current_text, source))
+                no_save_scopes.append(restricted_scope(current_text, source))
             deferrals.append({"quote": item.current_quote, "reason": item.reason})
             continue
         if isinstance(item, NaturalConflict):
@@ -138,13 +120,16 @@ def prepare_natural_memory_review(
                     detail_code="natural_review_binding",
                 )
             if any(
-                _normalize(str(value.get("value") or value.get("label") or ""))
-                == _normalize(item.candidate_reply_quote)
+                _candidate_agrees_with_reference(
+                    item.candidate_reply_quote,
+                    str(value.get("value") or value.get("label") or ""),
+                )
                 for value in grounding
                 if value is not None
             ):
                 raise RuntimeValidationError(
-                    "Candidate span agrees with cited snapshot"
+                    "Candidate span agrees with cited snapshot",
+                    detail_code="natural_review_semantic",
                 )
             raise RuntimeValidationError(
                 "Candidate reply conflicts with held memory",
@@ -209,7 +194,7 @@ def prepare_natural_memory_review(
                 if isinstance(item, NaturalRevise) and item.value is None
                 else item.reason
             )
-        _validate_semantics(item, binding, sources, anchor)
+        validate_write_authority(item, binding, sources, anchor, value=value)
         key = (
             str(existing["normalized_key"])
             if existing is not None
@@ -304,123 +289,20 @@ def _bind_evidence(
     return (anchor, source), anchor
 
 
-def _validate_semantics(
-    item: NaturalWrite,
-    binding: NaturalBindingMap,
-    sources: tuple[BoundNaturalSource, ...],
-    anchor: BoundNaturalSource,
-) -> None:
-    evidence = item.evidence
-    current = str(binding.current["content"])
-    current_bound = BoundEvidence(
-        anchor.message_id,
-        anchor.start_char,
-        anchor.end_char,
-        anchor.quote,
-        anchor.message_sha256,
-    )
-    if not isinstance(item, NaturalForget) and _claim_is_uncertain(
-        current, current_bound
-    ):
-        raise RuntimeValidationError("Uncertain current claim cannot become durable")
-    if not isinstance(item, NaturalForget) and _no_save_restricts(current, anchor):
-        raise RuntimeValidationError("No-save restriction blocks this write")
-    if isinstance(evidence, ResolveUserEvidence):
-        earlier = binding.messages[evidence.support_handle]
-        earlier_text = str(earlier["content"])
-        antecedent = sources[1]
-        earlier_bound = BoundEvidence(
-            antecedent.message_id,
-            antecedent.start_char,
-            antecedent.end_char,
-            antecedent.quote,
-            antecedent.message_sha256,
-        )
-        if (
-            _claim_is_uncertain(earlier_text, earlier_bound)
-            or _NO_SAVE.search(earlier_text)
-            or _WITHDRAWN.search(earlier_text)
-        ):
-            raise RuntimeValidationError(
-                "Restricted antecedent cannot become definite memory"
-            )
-        ordered = [value for _, value in binding.ordered_messages]
-        start = ordered.index(earlier)
-        if any(
-            _NO_SAVE.search(str(value["content"]))
-            or _WITHDRAWN.search(str(value["content"]))
-            for value in ordered[start + 1 :]
-            if value["role"] == "user"
-        ):
-            raise RuntimeValidationError("Intervening restriction withdraws antecedent")
-    if isinstance(evidence, EndorseAssistantEvidence):
-        if not _AFFIRMATIVE.match(evidence.current_quote.strip()) or _NEGATED.search(
-            evidence.current_quote
-        ):
-            raise RuntimeValidationError("Current text is not explicit assent")
-        proposition = evidence.support_quote
-        if proposition.count("?") + proposition.count("？") != 1 or re.search(
-            r"\bor\b|还是|或者", proposition, re.I
-        ):
-            raise RuntimeValidationError("Assistant assent has ambiguous proposition")
-    if isinstance(item, NaturalForget):
-        if isinstance(evidence, DirectEvidence):
-            permitted = is_explicit_forgetting_request(current)
-        elif isinstance(evidence, ResolveUserEvidence):
-            permitted = is_explicit_forgetting_request(
-                str(binding.messages[evidence.support_handle]["content"])
-            )
-        else:
-            permitted = is_explicit_forgetting_request(
-                evidence.support_quote.replace("Shall I ", "Please ")
-            ) or bool(
-                re.search(
-                    r"\b(?:remove|delete|forget|erase)\b|删除|忘掉",
-                    evidence.support_quote,
-                    re.I,
-                )
-            )
-        if not permitted:
-            raise RuntimeValidationError(
-                "Forget requires operation-specific removal assent"
-            )
-        return
-    value = getattr(item, "value", None)
-    if value is not None:
-        factual = anchor.quote
-        if isinstance(evidence, ResolveUserEvidence):
-            factual += " " + sources[1].quote
-        elif isinstance(evidence, EndorseAssistantEvidence):
-            factual += " " + sources[1].quote
-        if not _value_supported(value, factual):
-            raise RuntimeValidationError(
-                "Value is unsupported by permitted factual sources"
-            )
+def _candidate_agrees_with_reference(candidate: str, value: str) -> bool:
+    """Reject a claimed conflict when its answer states the cited value plainly."""
 
-
-def _no_save_restricts(content: str, anchor: BoundNaturalSource) -> bool:
-    if _NO_SAVE.search(_claim_clause(content, anchor.start_char, anchor.end_char)):
-        return True
-    # A following anaphoric restriction attaches to the preceding claim only.
-    after = content[anchor.end_char :]
-    next_sentence = re.match(r"\s*[.!?。！？;；]?\s*([^.!?。！？;；]*)", after)
-    return bool(
-        next_sentence
-        and _NO_SAVE.search(next_sentence.group(1))
-        and re.search(
-            r"\b(?:that|this|it)\b|这个|这件|这条|它", next_sentence.group(1), re.I
-        )
-    )
-
-
-def _restricted_scope(content: str, source: BoundNaturalSource) -> str:
-    before = content[: source.start_char]
-    prior = re.split(r"[.!?。！？;；]", before)[-1]
-    return (
-        f"{prior} {source.quote}"
-        if _NO_SAVE.search(source.quote)
-        else _claim_clause(content, source.start_char, source.end_char)
-    )
+    normalized_value = _normalize(value)
+    if not normalized_value:
+        return False
+    answer = _normalize(candidate)
+    pattern = r"(?<!\w)" + re.escape(normalized_value) + r"(?!\w)"
+    for match in re.finditer(pattern, answer):
+        if not re.search(
+            r"(?:\b(?:not|never|isn't|wasn't)\s+|不是)$", answer[: match.start()]
+        ):
+            return True
+    return False
 
 
 def _related_entity_id(
