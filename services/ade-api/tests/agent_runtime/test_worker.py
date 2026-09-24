@@ -118,7 +118,7 @@ def test_artifact_retention_fault_cannot_undo_committed_success(
     class _EvidenceAttempts(_Attempts):
         async def execute_attempt(self, _claim, **kwargs):
             kwargs["trace"].natural_evidence = NaturalAttemptEvidence(
-                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v3-b"
+                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v4-b"
             )
             return SimpleNamespace()
 
@@ -148,7 +148,7 @@ def test_lost_commit_ack_rechecks_authoritative_success_before_evidence(
     class _EvidenceAttempts(_Attempts):
         async def execute_attempt(self, _claim, **kwargs):
             kwargs["trace"].natural_evidence = NaturalAttemptEvidence(
-                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v3-b"
+                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v4-b"
             )
             return SimpleNamespace()
 
@@ -186,7 +186,7 @@ def test_rejected_candidate_is_retained_after_worker_failure(
     class _RejectedAttempts(_Attempts):
         async def execute_attempt(self, _claim, **kwargs):
             evidence = NaturalAttemptEvidence(
-                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v3-b"
+                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v4-b"
             )
             evidence.capture_candidate("Okay, Toronto.", [])
             evidence.reviewer_decision = {

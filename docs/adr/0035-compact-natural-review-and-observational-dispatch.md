@@ -5,6 +5,19 @@
   Those records remain historical. ADRs 0031 and 0033 describe earlier capacity
   experiments and do not qualify this envelope.
 
+## Current Contract Summary
+
+Natural-v4 and the default typed reviewer bind exact current quotes and apply
+closed shapes, subject isolation, target status/version, source integrity and
+atomic persistence. The reviewer owns factual interpretation, including whether
+a statement corrects an active fact or requests its removal. Neither path uses
+language regexes to establish uncertainty, entailment, assent, consent or
+removal intent. The typed reviewer uses one mixed-operation schema under
+`typed-user-facts-v2`; the old `typed-user-facts-v1` and natural-v3
+bindings are read-only for new sends and worker execution. Existing records
+remain readable and exact terminal idempotency replay remains available.
+Explicit operator fact removal remains a separate structural action.
+
 ## Problem
 
 The former reviewer makes the model select persistent IDs, versions, source roles,
@@ -13,7 +26,7 @@ text, allowing an assistant's question plus a bare user name to produce a new
 fact. An empty object also passes as no change. The request ledger blocks normal
 work by monetary caps and can make capture failure change a provider result.
 
-## Decision
+## Historical Checkpoint Decision (Superseded In Part)
 
 The reviewer returns one required `decisions` list of at most 20 discriminated
 items. Write items contain semantic type/value/scope, a local target or related
@@ -45,7 +58,7 @@ spending caps, reservations, budget settings and scheduling gates.
 - A second semantic judge adds a call without proving entailment.
 - Durable request reservations recreate a spending gate and cannot certify billing.
 
-## Consequences And Guardrails
+## Historical Checkpoint Guardrails (Superseded In Part)
 
 Structural binding limits provenance and stale-reference errors; semantic scope
 and entailment still need complete-delta fixtures and later live measurement.
@@ -85,3 +98,18 @@ complete-delta and recall cases before live qualification. Historical campaign
 fixtures and evidence remain unchanged. The current `person.preference` type
 cannot represent a morning drinking habit, so cross-conversation habit recall is
 a separate schema decision.
+
+The first implementation pass removed these rules from natural-v3 but left the
+reachable default typed reviewer using phrase-selected add/correct/forget
+schemas and semantic regex validators. The follow-up removed those validators,
+deleted `memory_intent.py`, and gave the typed reviewer one mixed schema. It
+introduced `typed-user-facts-v2` for new definitions and natural-v4 for new
+natural sessions. Older bindings reject new sends at admission and worker
+execution after checking for exact idempotent replay. This avoids silently
+changing the meaning of persisted v1 and v3 definitions. The curated tool
+selection policy is a separate invocation contract and does not authorize
+memory writes. Its free-form `search_memory` selection still uses phrase and
+negation rules. Natural context can also expand retrieved facts from an exact
+entity-label substring. Those recall-selection heuristics remain outside this
+write-authority amendment and require separate evaluation if the scope expands
+to all language-based retrieval routing.

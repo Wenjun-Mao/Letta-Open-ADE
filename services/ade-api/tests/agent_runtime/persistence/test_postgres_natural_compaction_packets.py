@@ -73,7 +73,7 @@ def test_paired_generated_summary_preserves_boundary_and_serialized_requests(
             async def prepare(self, request, *, purpose):
                 prepared = await base_definitions.prepare(request, purpose=purpose)
                 prepared["memory_policy_version"] = (
-                    "natural-user-assertions-v3-"
+                    "natural-user-assertions-v4-"
                     + request.definition_key.rsplit("_", 1)[-1]
                 )
                 prepared["tool_names"] = list(request.tool_names)

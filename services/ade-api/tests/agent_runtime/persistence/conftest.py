@@ -258,7 +258,7 @@ class _Definitions:
             "persona_sha256": "b" * 64,
             "persona_content": "Lin Xiaotang",
             "tool_names": [],
-            "memory_policy_version": "natural-user-assertions-v3-b",
+            "memory_policy_version": "natural-user-assertions-v4-b",
             "qualification_state": "unqualified",
             "deployment_snapshot": snapshots,
         }

@@ -182,23 +182,24 @@ def test_correction_requires_the_exact_optimistic_version() -> None:
         )
 
 
-def test_forget_requires_explicit_removal_language() -> None:
-    with pytest.raises(RuntimeValidationError, match="removal intent"):
-        prepare_memory_review(
-            decision=_decision(
-                {
-                    "operation": "forget",
-                    "value": None,
-                    "evidence_quote": "Rocky",
-                    "fact_id": FACT_ID,
-                    "expected_version": 1,
-                }
-            ),
-            subject_id=SUBJECT_ID,
-            current_user_message=MESSAGE,
-            active_facts=FACTS,
-            entities=ENTITIES,
-        )
+def test_forget_binds_exact_current_quote_and_target() -> None:
+    prepared = prepare_memory_review(
+        decision=_decision(
+            {
+                "operation": "forget",
+                "value": None,
+                "evidence_quote": "Rocky",
+                "fact_id": FACT_ID,
+                "expected_version": 1,
+            }
+        ),
+        subject_id=SUBJECT_ID,
+        current_user_message=MESSAGE,
+        active_facts=FACTS,
+        entities=ENTITIES,
+    )
+    assert prepared.operations[0].existing_fact["id"] == FACT_ID
+    assert prepared.operations[0].evidence.quote == "Rocky"
 
 
 def test_correction_derives_stored_fact_identity() -> None:
@@ -256,91 +257,21 @@ def test_forget_then_add_same_key_is_rejected_instead_of_becoming_correction() -
         )
 
 
-@pytest.mark.parametrize(
-    ("content", "evidence_quote", "value"),
-    [
-        (
-            "Maybe I will adopt a cat, but my favorite color is blue.",
-            "my favorite color is blue",
-            "blue",
-        ),
-        (
-            "我可能周末出门，但我喜欢茉莉花茶。",
-            "我喜欢茉莉花茶",
-            "茉莉花茶",
-        ),
-    ],
-)
-def test_definite_claim_beside_unrelated_uncertainty_is_allowed(
-    content: str, evidence_quote: str, value: str
-) -> None:
+def test_typed_review_binds_quote_without_phrase_entailment() -> None:
     prepared = prepare_memory_review(
         decision=_decision(
             {
                 "operation": "add",
                 "fact_type": "person.preference",
-                "qualifier": "color" if value == "blue" else "drink",
-                "value": value,
-                "evidence_quote": evidence_quote,
+                "qualifier": "drink",
+                "value": "prefers tea in the morning",
+                "evidence_quote": "现在早上更喜欢茶了",
             }
         ),
         subject_id=SUBJECT_ID,
-        current_user_message={**MESSAGE, "content": content},
-        active_facts=FACTS,
-        entities=ENTITIES,
-    )
-
-    assert prepared.operations[0].value == value
-
-
-def test_mighty_is_not_the_uncertain_word_might() -> None:
-    prepared = prepare_memory_review(
-        decision=_decision(
-            {
-                "operation": "add",
-                "fact_type": "pet.name",
-                "value": "Mighty",
-                "evidence_quote": "Mighty",
-                "entity_ref": "new:mighty",
-            }
-        ),
-        subject_id=SUBJECT_ID,
-        current_user_message={**MESSAGE, "content": "My dog's name is Mighty."},
+        current_user_message={**MESSAGE, "content": "现在早上更喜欢茶了"},
         active_facts=[],
         entities=[ENTITIES[0]],
     )
-
-    assert prepared.operations[0].value == "Mighty"
-
-
-@pytest.mark.parametrize(
-    ("content", "evidence_quote", "value", "qualifier"),
-    [
-        (
-            "Maybe my favorite color is blue.",
-            "Maybe my favorite color is blue",
-            "blue",
-            "color",
-        ),
-        ("我可能喜欢茉莉花茶。", "我可能喜欢茉莉花茶", "茉莉花茶", "drink"),
-    ],
-)
-def test_uncertain_evidence_claim_cannot_become_memory(
-    content: str, evidence_quote: str, value: str, qualifier: str
-) -> None:
-    with pytest.raises(RuntimeValidationError, match="Uncertain or hypothetical"):
-        prepare_memory_review(
-            decision=_decision(
-                {
-                    "operation": "add",
-                    "fact_type": "person.preference",
-                    "qualifier": qualifier,
-                    "value": value,
-                    "evidence_quote": evidence_quote,
-                }
-            ),
-            subject_id=SUBJECT_ID,
-            current_user_message={**MESSAGE, "content": content},
-            active_facts=FACTS,
-            entities=ENTITIES,
-        )
+    assert prepared.operations[0].value == "prefers tea in the morning"
+    assert prepared.operations[0].evidence.quote == "现在早上更喜欢茶了"

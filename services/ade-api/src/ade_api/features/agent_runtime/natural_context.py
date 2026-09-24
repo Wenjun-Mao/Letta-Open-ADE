@@ -18,9 +18,9 @@ from .errors import RuntimeValidationError
 
 NaturalVariant = Literal["A", "A0", "B"]
 NATURAL_POLICY_BINDINGS: dict[str, NaturalVariant] = {
-    "natural-user-assertions-v3-a": "A",
-    "natural-user-assertions-v3-a0": "A0",
-    "natural-user-assertions-v3-b": "B",
+    "natural-user-assertions-v4-a": "A",
+    "natural-user-assertions-v4-a0": "A0",
+    "natural-user-assertions-v4-b": "B",
 }
 
 

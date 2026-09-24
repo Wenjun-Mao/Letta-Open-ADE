@@ -57,10 +57,16 @@ prototype and scripted browser readback remain historical, not current
 acceptance evidence. The current registry cannot save a drinking habit as a
 preference; cross-conversation habit recall remains a separate schema gap.
 Offline implementation removed the natural-path authority rules and `no_save`
-wire value, while preserving structural binding and atomicity. The final Python
-run reported 758 passed, one named-database test skipped, and the same unwaived
-selected-candidate policy-fingerprint freshness failure. Ruff and diff whitespace
-checks passed. Model interpretation and cross-conversation recall remain unmeasured.
+wire value, while preserving structural binding and atomicity. A follow-up
+reachability audit found that the default typed reviewer still ran phrase-based
+schema selection and semantic validators. Those rules are now removed; new
+definitions use one mixed `typed-user-facts-v2` review, while natural sessions
+use v4. Older typed-v1 and natural-v3 bindings reject new sends and worker
+execution after the idempotent replay check. The
+latest Python run reported 734 passed, one named-database test skipped, and the
+same unwaived selected-candidate policy-fingerprint freshness failure. Ruff and
+diff whitespace checks passed. Model interpretation and cross-conversation recall
+remain unmeasured.
 
 Both final Pros return **GO for revision 5 of the single
 [natural-memory implementation plan](plans/natural-memory-implementation.md)**,

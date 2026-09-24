@@ -47,7 +47,6 @@ QualifierName: TypeAlias = Literal[
     "partner",
     "sibling",
 ]
-ReviewMode: TypeAlias = Literal["all", "add", "correct", "forget"]
 
 
 class _EvidenceProposalBase(BaseModel):
@@ -117,21 +116,6 @@ class ReviewDecision(BaseModel):
     proposals: list[ReviewProposal] = Field(default_factory=list, max_length=20)
 
 
-class AddReviewDecision(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    proposals: list[AddProposal] = Field(default_factory=list, max_length=20)
-
-
-class CorrectReviewDecision(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    proposals: list[CorrectProposal] = Field(default_factory=list, max_length=20)
-
-
-class ForgetReviewDecision(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    proposals: list[ForgetProposal] = Field(default_factory=list, max_length=20)
-
-
 @dataclass(frozen=True)
 class BoundEvidence:
     message_id: str
@@ -169,36 +153,12 @@ def bind_evidence(
     )
 
 
-def review_json_schema(*, mode: ReviewMode = "all") -> dict[str, Any]:
-    return _review_model(mode).model_json_schema()
+def review_json_schema() -> dict[str, Any]:
+    return ReviewDecision.model_json_schema()
 
 
-def parse_review_decision(
-    payload: object, *, mode: ReviewMode = "all"
-) -> ReviewDecision:
+def parse_review_decision(payload: object) -> ReviewDecision:
     try:
-        decision = _review_model(mode).model_validate(payload)
+        return ReviewDecision.model_validate(payload)
     except ValueError as exc:
         raise RuntimeValidationError(f"Invalid memory review output: {exc}") from exc
-    if isinstance(decision, ReviewDecision):
-        return decision
-    return ReviewDecision(proposals=list(decision.proposals))
-
-
-def _review_model(
-    mode: ReviewMode,
-) -> (
-    type[ReviewDecision]
-    | type[AddReviewDecision]
-    | type[CorrectReviewDecision]
-    | type[ForgetReviewDecision]
-):
-    if mode == "all":
-        return ReviewDecision
-    if mode == "add":
-        return AddReviewDecision
-    if mode == "correct":
-        return CorrectReviewDecision
-    if mode == "forget":
-        return ForgetReviewDecision
-    raise ValueError(f"Unknown memory review mode: {mode}")

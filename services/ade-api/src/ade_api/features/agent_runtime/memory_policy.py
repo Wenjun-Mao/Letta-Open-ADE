@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
@@ -8,7 +7,6 @@ from uuid import uuid4
 from .errors import RuntimeValidationError
 from .fact_registry import EntityKind, fact_key, fact_type_spec
 from .memory_entities import NewEntity
-from .memory_intent import is_explicit_forgetting_request
 from .memory_review import (
     AddProposal,
     BoundEvidence,
@@ -18,23 +16,6 @@ from .memory_review import (
     ReviewProposal,
     bind_evidence,
 )
-
-
-_UNCERTAIN_MARKERS = (
-    "也许",
-    "可能",
-    "大概",
-    "猜",
-)
-_ENGLISH_UNCERTAIN_MARKERS = re.compile(
-    r"\b(?:maybe|perhaps|might|possibly|guess)\b", re.IGNORECASE
-)
-_CLAUSE_BOUNDARY = re.compile(r"[.!?;。！？；\n]+")
-_CONTRAST_CLAUSE_BOUNDARY = re.compile(
-    r"[,，]\s*(?:but|however|yet|whereas|though|但|不过|可是|然而|反而|只是)\s*",
-    re.IGNORECASE,
-)
-_VALUE_STOPWORDS = {"a", "an", "and", "as", "is", "my", "the", "to"}
 
 
 @dataclass(frozen=True)
@@ -63,7 +44,6 @@ def prepare_memory_review(
     active_facts: list[dict[str, Any]],
     entities: list[dict[str, Any]],
 ) -> PreparedMemoryReview:
-    content = str(current_user_message.get("content", ""))
     facts_by_id = {str(fact["id"]): fact for fact in active_facts}
     entities_by_id = {str(entity["id"]): entity for entity in entities}
     if subject_id not in entities_by_id:
@@ -78,7 +58,6 @@ def prepare_memory_review(
 
     for index, proposal in enumerate(decision.proposals):
         evidence = bind_evidence(proposal, user_messages=[current_user_message])
-        _validate_claim_semantics(proposal, content, evidence, facts_by_id)
         existing_fact: dict[str, Any] | None = None
         if isinstance(proposal, (CorrectProposal, ForgetProposal)):
             existing_fact = facts_by_id.get(proposal.fact_id)
@@ -152,67 +131,6 @@ def prepare_memory_review(
         new_entities=tuple(new_by_ref.values()),
         operations=tuple(operations),
     )
-
-
-def _validate_claim_semantics(
-    proposal: ReviewProposal,
-    current_content: str,
-    evidence: BoundEvidence,
-    facts_by_id: dict[str, dict[str, Any]],
-) -> None:
-    if not isinstance(proposal, ForgetProposal) and _claim_is_uncertain(
-        current_content, evidence
-    ):
-        raise RuntimeValidationError(
-            "Uncertain or hypothetical claims cannot become durable memory"
-        )
-    if isinstance(proposal, ForgetProposal) and not is_explicit_forgetting_request(
-        proposal.evidence_quote
-    ):
-        raise RuntimeValidationError("forget requires explicit user removal intent")
-    if isinstance(proposal, ForgetProposal):
-        return
-    support = [proposal.evidence_quote]
-    if isinstance(proposal, CorrectProposal) and proposal.fact_id in facts_by_id:
-        support.append(str(facts_by_id[proposal.fact_id].get("value") or ""))
-    if not _value_supported(proposal.value, " ".join(support)):
-        raise RuntimeValidationError(
-            "Memory value is not supported by current evidence and referenced facts"
-        )
-
-
-def _claim_is_uncertain(content: str, evidence: BoundEvidence) -> bool:
-    """Check confidence in the evidence's claim clause, never the whole turn.
-
-    Evidence is already bound to one user-authored span. Restricting the check to
-    that span's clause preserves the no-hypothetical-memory rule without treating
-    a different thought in the same turn as uncertainty about this fact.
-    """
-
-    claim = _claim_clause(content, evidence.start_char, evidence.end_char)
-    normalized = _normalize(claim)
-    return bool(_ENGLISH_UNCERTAIN_MARKERS.search(normalized)) or any(
-        marker in normalized for marker in _UNCERTAIN_MARKERS
-    )
-
-
-def _claim_clause(content: str, start: int, end: int) -> str:
-    boundaries = [
-        (match.start(), match.end()) for match in _CLAUSE_BOUNDARY.finditer(content)
-    ]
-    boundaries.extend(
-        (match.start(), match.end())
-        for match in _CONTRAST_CLAUSE_BOUNDARY.finditer(content)
-    )
-    left = max(
-        (boundary_end for _, boundary_end in boundaries if boundary_end <= start),
-        default=0,
-    )
-    right = min(
-        (boundary_start for boundary_start, _ in boundaries if boundary_start >= end),
-        default=len(content),
-    )
-    return content[left:right]
 
 
 def _validate_existing_fact(
@@ -305,25 +223,3 @@ def _stage_identity_entities(
             label=proposal.new_entity_label.strip() or proposal.value.strip(),
         )
     return staged
-
-
-def _normalize(value: str) -> str:
-    return re.sub(r"\s+", " ", str(value or "")).strip().casefold()
-
-
-def _terms(value: str) -> set[str]:
-    normalized = _normalize(value).replace("_", " ")
-    latin = set(re.findall(r"[a-z0-9_]+", normalized)) - _VALUE_STOPWORDS
-    cjk = set(re.findall(r"[\u4e00-\u9fff]", normalized))
-    return latin | cjk
-
-
-def _value_supported(value: str, support: str) -> bool:
-    normalized_value = _normalize(value)
-    normalized_support = _normalize(support)
-    if not normalized_value:
-        return False
-    if normalized_value in normalized_support:
-        return True
-    terms = _terms(normalized_value)
-    return bool(terms) and terms.issubset(_terms(normalized_support))

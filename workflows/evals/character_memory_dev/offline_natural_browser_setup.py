@@ -88,7 +88,7 @@ async def provision(
                 policy_binding=(
                     "typed-user-facts-v1"
                     if old_readonly
-                    else "natural-user-assertions-v3-b"
+                    else "natural-user-assertions-v4-b"
                 )
             ),
             purpose="agent_studio",

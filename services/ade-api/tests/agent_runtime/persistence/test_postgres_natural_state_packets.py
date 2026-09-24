@@ -164,7 +164,7 @@ def test_lifecycle_and_narrative_packets_share_exact_reviewer_sources(
             async def prepare(self, request, *, purpose):
                 prepared = await base_definitions.prepare(request, purpose=purpose)
                 prepared["memory_policy_version"] = (
-                    "natural-user-assertions-v3-"
+                    "natural-user-assertions-v4-"
                     + request.definition_key.rsplit("_", 1)[-1]
                 )
                 return prepared

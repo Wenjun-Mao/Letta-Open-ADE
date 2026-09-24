@@ -77,7 +77,7 @@ def test_pressure_packets_are_real_worker_inputs(
             async def prepare(self, request, *, purpose):
                 prepared = await base_definitions.prepare(request, purpose=purpose)
                 prepared["memory_policy_version"] = (
-                    f"natural-user-assertions-v3-{request.definition_key.rsplit('_', 1)[-1]}"
+                    f"natural-user-assertions-v4-{request.definition_key.rsplit('_', 1)[-1]}"
                 )
                 prepared["prompt_content"] = "P" * 5310
                 return prepared

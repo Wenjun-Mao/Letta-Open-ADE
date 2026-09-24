@@ -28,6 +28,7 @@ from .errors import RuntimeValidationError
 from .evaluation_tools import evaluation_tool_registry
 from .executor import ConversationExecutor, curated_tools
 from .memory_policy import prepare_memory_review
+from .memory_policy_binding import require_executable_memory_policy
 from .natural_attempt_evidence import capture_context, start_natural_capture
 from .natural_evaluation_capacity import checked_checkpoint6_capacity
 from .natural_context import (
@@ -95,16 +96,7 @@ class TurnExecution:
         natural_variant = NATURAL_POLICY_BINDINGS.get(
             definition["memory_policy_version"]
         )
-        if (
-            str(definition["memory_policy_version"]).startswith(
-                "natural-user-assertions-"
-            )
-            and natural_variant is None
-        ):
-            raise RuntimeValidationError(
-                "Obsolete natural reviewer binding is read-only for fresh sends",
-                detail_code="obsolete_natural_reviewer_binding",
-            )
+        require_executable_memory_policy(str(definition["memory_policy_version"]))
         natural_mode = natural_variant is not None
         if natural_mode and self.settings.agent_runtime_mode != "development":
             raise RuntimeValidationError(

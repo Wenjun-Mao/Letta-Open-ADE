@@ -30,7 +30,7 @@ class _Transport:
         }
 
 
-def test_reviewer_repairs_subject_bound_semantic_validation_once() -> None:
+def test_reviewer_repairs_subject_bound_structural_validation_once() -> None:
     transport = _Transport(
         [
             {
@@ -121,11 +121,8 @@ def test_reviewer_repairs_subject_bound_semantic_validation_once() -> None:
     repair_message = transport.calls[1][0]["messages"][-1]["content"]
     assert "pet.breed requires existing:<id> or new:<local-ref>" in repair_message
     reviewer_packet = json.loads(transport.calls[0][0]["messages"][1]["content"])
-    assert reviewer_packet["review_mode"] == "add_only_no_active_facts"
-    assert set(reviewer_packet["operation_contracts"]) == {"add"}
-    assert reviewer_packet["operation_contracts"]["add"]["excludes"] == [
-        "explicit_forgetting"
-    ]
+    assert "review_mode" not in reviewer_packet
+    assert set(reviewer_packet["operation_contracts"]) == {"add", "correct", "forget"}
     assert (
         reviewer_packet["worked_examples"]["subject_name_then_pet_name"]["never"]
         == "correct person.name; Rocky names the pet, not the subject"
@@ -136,7 +133,6 @@ def test_reviewer_repairs_subject_bound_semantic_validation_once() -> None:
         ]["qualifier"]
         == "food"
     )
-    assert "explicit_forgetting" not in reviewer_packet["worked_examples"]
     preference_contract = next(
         item
         for item in reviewer_packet["allowed_fact_contracts"]
@@ -164,7 +160,7 @@ def test_reviewer_repairs_subject_bound_semantic_validation_once() -> None:
     assert pet_name_contract["defines_entity_identity"] is True
 
 
-def test_explicit_forgetting_uses_a_forget_only_schema_on_first_request() -> None:
+def test_factual_forgetting_uses_the_common_schema_on_first_request() -> None:
     fact_id = "00000000-0000-0000-0000-000000000003"
     message = {
         "id": "00000000-0000-0000-0000-000000000002",
@@ -231,28 +227,17 @@ def test_explicit_forgetting_uses_a_forget_only_schema_on_first_request() -> Non
     assert result.model_request_count == 1
     request = transport.calls[0][0]
     packet = json.loads(request["messages"][1]["content"])
-    assert packet["review_mode"] == "explicit_forgetting"
-    assert packet["operation_contracts"] == {
-        "forget": {
-            "when": "the current message explicitly asks to remove an active fact",
-            "value": None,
-            "uses_active_fact_id_and_version": True,
-        }
-    }
-    assert (
-        packet["worked_examples"]["explicit_forgetting"]["current_message"]
-        == "请忘掉我喜欢蓝色这件事。"
-    )
+    assert "review_mode" not in packet
+    assert set(packet["operation_contracts"]) == {"add", "correct", "forget"}
     assert packet["worked_examples"]["explicit_forgetting"]["operation"] == "forget"
     schema_text = str(request["response_format"]["json_schema"]["schema"])
-    assert "ForgetProposal" in schema_text
-    assert "AddProposal" not in schema_text
-    assert "CorrectProposal" not in schema_text
+    assert all(
+        name in schema_text
+        for name in ("ForgetProposal", "AddProposal", "CorrectProposal")
+    )
 
 
-def test_deepseek_reviewer_uses_json_object_with_local_typed_forget_validation() -> (
-    None
-):
+def test_deepseek_reviewer_uses_json_object_with_local_typed_validation() -> None:
     fact_id = "00000000-0000-0000-0000-000000000003"
     message = {"id": "message-1", "content": "Please forget that I like blue."}
     facts = [
@@ -316,7 +301,7 @@ def test_deepseek_reviewer_uses_json_object_with_local_typed_forget_validation()
     assert "JSON" in request["messages"][0]["content"]
 
 
-def test_ordinary_new_fact_uses_add_only_schema_when_other_facts_exist() -> None:
+def test_ordinary_new_fact_uses_common_schema_when_other_facts_exist() -> None:
     message = {
         "id": "00000000-0000-0000-0000-000000000002",
         "content": "My favorite food is 豆浆. Please remember it.",
@@ -384,15 +369,16 @@ def test_ordinary_new_fact_uses_add_only_schema_when_other_facts_exist() -> None
     assert result.model_request_count == 1
     request = transport.calls[0][0]
     packet = json.loads(request["messages"][1]["content"])
-    assert packet["review_mode"] == "add_only_no_explicit_correction"
-    assert set(packet["operation_contracts"]) == {"add"}
+    assert "review_mode" not in packet
+    assert set(packet["operation_contracts"]) == {"add", "correct", "forget"}
     schema_text = str(request["response_format"]["json_schema"]["schema"])
-    assert "AddProposal" in schema_text
-    assert "CorrectProposal" not in schema_text
-    assert "ForgetProposal" not in schema_text
+    assert all(
+        name in schema_text
+        for name in ("AddProposal", "CorrectProposal", "ForgetProposal")
+    )
 
 
-def test_explicit_correction_uses_correct_only_schema() -> None:
+def test_factual_correction_uses_common_schema() -> None:
     fact_id = "00000000-0000-0000-0000-000000000003"
     message = {
         "id": "00000000-0000-0000-0000-000000000002",
@@ -459,8 +445,8 @@ def test_explicit_correction_uses_correct_only_schema() -> None:
     assert result.model_request_count == 1
     request = transport.calls[0][0]
     packet = json.loads(request["messages"][1]["content"])
-    assert packet["review_mode"] == "explicit_correction"
-    assert set(packet["operation_contracts"]) == {"correct"}
+    assert "review_mode" not in packet
+    assert set(packet["operation_contracts"]) == {"add", "correct", "forget"}
     assert (
         packet["worked_examples"]["explicit_location_correction"]["proposal"][
             "operation"
@@ -468,12 +454,13 @@ def test_explicit_correction_uses_correct_only_schema() -> None:
         == "correct"
     )
     schema_text = str(request["response_format"]["json_schema"]["schema"])
-    assert "CorrectProposal" in schema_text
-    assert "AddProposal" not in schema_text
-    assert "ForgetProposal" not in schema_text
+    assert all(
+        name in schema_text
+        for name in ("CorrectProposal", "AddProposal", "ForgetProposal")
+    )
 
 
-def test_agent_studio_correction_draft_selects_correct_only_reviewer_mode() -> None:
+def test_agent_studio_correction_draft_uses_common_reviewer_contract() -> None:
     path = (
         Path(__file__).resolve().parents[4]
         / "config/agent-studio/memory-action-contract.json"
@@ -505,5 +492,5 @@ def test_agent_studio_correction_draft_selects_correct_only_reviewer_mode() -> N
         )
     )
     packet = json.loads(transport.calls[0][0]["messages"][1]["content"])
-    assert packet["review_mode"] == "explicit_correction"
-    assert set(packet["operation_contracts"]) == {"correct"}
+    assert "review_mode" not in packet
+    assert set(packet["operation_contracts"]) == {"add", "correct", "forget"}

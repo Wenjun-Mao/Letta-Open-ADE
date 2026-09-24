@@ -11,6 +11,7 @@ from ade_api.platform.settings import AdeApiSettings
 
 from .contracts import AcceptTurnRequest
 from .context import context_budget_from_deployment, validate_current_user_message
+from .memory_policy_binding import require_executable_memory_policy
 from .natural_context import NATURAL_POLICY_BINDINGS
 from .natural_evaluation_capacity import checked_checkpoint6_capacity
 from .database_boundary import (
@@ -86,6 +87,9 @@ class RunService:
                         runtime_mode=self.settings.agent_runtime_mode,
                     )
                     return turn_accepted_response(prior, replayed=True)
+                require_executable_memory_policy(
+                    str(definition["memory_policy_version"])
+                )
             catalog = await self.router_transport.catalog(
                 timeout_seconds=self.settings.model_discovery_timeout_seconds
             )
@@ -143,6 +147,9 @@ class RunService:
                         runtime_mode=self.settings.agent_runtime_mode,
                     )
                     return turn_accepted_response(prior, replayed=True)
+                require_executable_memory_policy(
+                    str(definition["memory_policy_version"])
+                )
                 if await runs.active_for_conversation(conversation_id) is not None:
                     raise ConversationBusy(
                         "conversation already has a pending or running turn"

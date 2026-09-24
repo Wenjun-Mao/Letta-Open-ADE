@@ -228,7 +228,8 @@ The frozen checkpoint-1 matrix and former checkpoint-6 campaign describe a
 historical reviewer contract. Its no-save cell and comparison schedule do not
 qualify the current reviewer/ADE boundary amended on 2026-09-24. Preserve the
 hash-bound inputs and prior evidence; design a new factual-continuity matrix
-before any future live campaign.
+before any future live campaign. The frozen natural-v3 binding is read-only;
+fresh offline natural sessions use natural-v4.
 
 [`fixtures/natural_memory/cases.json`](fixtures/natural_memory/cases.json)
 contains isolated, chronological branches for all 22 worked design arcs. Each

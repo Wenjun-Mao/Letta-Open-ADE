@@ -7,10 +7,6 @@ from typing import Any
 
 from .errors import RuntimeValidationError
 from .fact_registry import FACT_TYPE_REGISTRY
-from .memory_intent import (
-    is_explicit_correction_request,
-    is_explicit_forgetting_request,
-)
 from .memory_review import ReviewDecision, parse_review_decision, review_json_schema
 from .provider_tracing import safe_provider_request_id
 from .router_transport import RouterTransport
@@ -19,20 +15,19 @@ from .router_transport import RouterTransport
 REVIEWER_SYSTEM = """You are ADE's dedicated durable-memory reviewer.
 Return only the requested JSON object. Propose only durable facts explicitly stated
 or corrected in the CURRENT user message. evidence_quote must be an exact current
-message excerpt and value must preserve the user's wording. Prior user messages and
+message excerpt and value must preserve the supported meaning. Prior user messages and
 active facts may resolve references but are not evidence for a new write. Never use
 assistant prose, guesses, hypotheticals, or temporary plans. Questions about memory
 produce no proposal. Use add when no matching active fact exists. Use correct only
 when the current message explicitly corrects or replaces a listed active fact,
-copying its fact_id and version exactly. Ordinary new statements use add-only review;
-if they conflict with an existing slot, fail closed instead of guessing a correction.
+copying its fact_id and version exactly. Judge whether the current statement
+revises the active fact before choosing correct; a new independent fact uses add.
 Use forget only for an explicit request to remove retained information. Never output
 a subject ID or free-form key.
 A matching active fact means the same entity, exact fact_type, and exact canonical
 qualifier. Never correct one qualifier into another, one entity into another, or a
-subject fact into a pet/related-person fact. Words such as "called" or "叫" do not
-imply person.name: use the grammatical owner to distinguish the user's own name from
-a pet or related person's name.
+subject fact into a pet/related-person fact. Attribute the fact to the
+grammatical owner in the user's statement.
 Choose the operation before filling any proposal fields, following
 operation_contracts and worked_examples. An explicit request to forget or remove a
 matching active fact is never an add. It must use forget, copy that active fact's
@@ -161,24 +156,6 @@ WORKED_EXAMPLES = {
 }
 
 
-def _worked_examples(review_mode: str) -> dict[str, dict[str, Any]]:
-    if review_mode == "forget":
-        return {"explicit_forgetting": WORKED_EXAMPLES["explicit_forgetting"]}
-    if review_mode == "add":
-        return {
-            key: value
-            for key, value in WORKED_EXAMPLES.items()
-            if key not in {"explicit_forgetting", "explicit_location_correction"}
-        }
-    if review_mode == "correct":
-        return {
-            "explicit_location_correction": WORKED_EXAMPLES[
-                "explicit_location_correction"
-            ]
-        }
-    return WORKED_EXAMPLES
-
-
 @dataclass(frozen=True)
 class ReviewerResult:
     decision: ReviewDecision
@@ -210,14 +187,6 @@ class MemoryReviewer:
         if max_model_requests not in {1, 2}:
             raise ValueError("reviewer max_model_requests must be 1 or 2")
         entity_kinds = {str(item.get("id")): item.get("kind") for item in entities}
-        current_content = str(current_user_message.get("content") or "")
-        review_mode = (
-            "forget"
-            if is_explicit_forgetting_request(current_content)
-            else "correct"
-            if active_facts and is_explicit_correction_request(current_content)
-            else "add"
-        )
         packet = {
             "current_user_message": {
                 "id": current_user_message.get("id"),
@@ -251,23 +220,8 @@ class MemoryReviewer:
                 for item in entities
                 if item.get("kind") != "subject"
             ],
-            "review_mode": (
-                "explicit_forgetting"
-                if review_mode == "forget"
-                else "explicit_correction"
-                if review_mode == "correct"
-                else "add_only_no_active_facts"
-                if review_mode == "add" and not active_facts
-                else "add_only_no_explicit_correction"
-                if review_mode == "add"
-                else "general"
-            ),
-            "operation_contracts": (
-                {review_mode: OPERATION_CONTRACTS[review_mode]}
-                if review_mode in {"add", "correct", "forget"}
-                else OPERATION_CONTRACTS
-            ),
-            "worked_examples": _worked_examples(review_mode),
+            "operation_contracts": OPERATION_CONTRACTS,
+            "worked_examples": WORKED_EXAMPLES,
             "allowed_fact_contracts": [
                 {
                     "fact_type": spec.name,
@@ -284,7 +238,7 @@ class MemoryReviewer:
             {"role": "system", "content": REVIEWER_SYSTEM},
             {"role": "user", "content": json.dumps(packet, ensure_ascii=False)},
         ]
-        response_schema = review_json_schema(mode=review_mode)
+        response_schema = review_json_schema()
         if self.provider_adapter == "deepseek_openai":
             messages[0]["content"] += (
                 "\nReturn JSON matching this exact schema: "
@@ -329,7 +283,7 @@ class MemoryReviewer:
             responses.append(response)
             try:
                 content = _response_content(response)
-                decision = parse_review_decision(json.loads(content), mode=review_mode)
+                decision = parse_review_decision(json.loads(content))
                 validate_decision(decision)
             except (RuntimeValidationError, json.JSONDecodeError, ValueError) as exc:
                 if request_number == max_model_requests:

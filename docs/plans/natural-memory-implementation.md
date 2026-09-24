@@ -38,10 +38,14 @@ the natural review wire shape and preparation, semantic equivalence vetoes in
 conflict handling, and privacy/consent commands in the reviewer prompt. Retain
 the structural binders, schema and entity checks, factual lifecycle status
 checks, source and version revalidation, and atomic commit. Syntactic handle
-regexes remain. The older typed policy and `memory_intent.py` have separate
-legacy callers and are outside this active natural-v3 removal; they must not be
-reintroduced into the natural path. Frozen historical campaign data is not
-rewritten. The fact registry remains unchanged: `person.preference` means a
+regexes remain. New natural sessions use the v4 binding; v3 definitions remain
+readable but cannot execute new turns. The reachable default typed reviewer
+also uses one mixed
+operation schema and structural preparation. Its former phrase-selected schemas
+and `memory_intent.py` rules are removed; new definitions bind
+`typed-user-facts-v2`, while v1 remains readable and replayable but cannot run
+new turns. Frozen historical campaign data is not rewritten. The fact registry
+remains unchanged: `person.preference` means a
 preference, not a report of drinking behavior. Durable habit recall requires a
 separate typed-schema decision.
 

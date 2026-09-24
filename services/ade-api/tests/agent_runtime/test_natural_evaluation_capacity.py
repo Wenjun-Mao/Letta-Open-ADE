@@ -34,7 +34,7 @@ def _prepared() -> dict:
         "reviewer_repair_count": 0,
     }
     return {
-        "memory_policy_version": "natural-user-assertions-v3-b",
+        "memory_policy_version": "natural-user-assertions-v4-b",
         "deployment_snapshot": [
             {
                 "role": role,

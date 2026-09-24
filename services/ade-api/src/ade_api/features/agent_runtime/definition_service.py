@@ -18,6 +18,7 @@ from .database_boundary import (
 )
 from .deployments import ResolvedDeployment, resolve_deployment
 from .errors import RuntimeValidationError
+from .memory_policy_binding import TYPED_MEMORY_POLICY_VERSION
 from .persistence.definitions import DefinitionVersionRepository
 from .presenters import definition_response
 from .release_policy import (
@@ -29,7 +30,7 @@ from .release_policy import (
 from .router_transport import RouterTransport
 
 
-MEMORY_POLICY_VERSION = "typed-user-facts-v1"
+MEMORY_POLICY_VERSION = TYPED_MEMORY_POLICY_VERSION
 _ROUTER_SOURCE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
 
