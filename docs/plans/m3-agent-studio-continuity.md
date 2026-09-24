@@ -2,6 +2,10 @@
 
 Status: In progress under accepted [ADR 0022](../adr/0022-incumbent-memory-first-product-slice.md).
 
+The proposed [natural-memory plan](natural-memory-implementation.md) owns the new
+semantic/lifecycle scope and explicit operator-removal amendment. It awaits review
+and does not relabel the implementation or acceptance evidence below as complete.
+
 ## Native/UI Checkpoint (2026-09-23)
 
 The separately authorized synthetic [native and real-UI acceptance run](../findings/m3-native-acceptance-2026-09-23.md)

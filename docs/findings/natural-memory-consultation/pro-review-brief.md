@@ -1,125 +1,116 @@
-# ChatGPT Pro: Third Memory Design Review
+# ChatGPT Pro: Natural-Memory Implementation Plan Review
 
-Date: 2026-09-23. Brief version: natural-memory-pro-review-3.
-Purpose: scrutinize revision 3 before any implementation plan or accepted ADR.
-This is a high-leverage core design; identify overlooked interactions as well as
-checking whether the previous critiques were addressed. Agreement is not proof.
+Date: 2026-09-23. Brief version: natural-memory-plan-review-1.
+Purpose: scrutinize the bounded implementation plan and its revision-4 contract
+amendment before implementation approval. Do not merely reapprove the architecture.
 
-## Evidence Anchors And Access
+## Anchors And Access
 
 - Repository: <https://github.com/Wenjun-Mao/Letta-Open-ADE>
-- Discovery ref: `codex/character-continuity`, not `main`.
+- Discovery branch: `codex/character-continuity`, not `main`.
+- Plan/amendment: the exact documentation commit in this handoff.
 - Unchanged implementation: `4905ce15dbda6466b12f2d1ed7908eb3d03995a0`.
-- Revision 3 packet: the exact documentation commit in this round's handoff.
-  Record it separately from implementation; the new contracts are not running code.
-- Previous revision 2: `d80afb422b3deefa09f13ac5e7017c5e3e8524ef`.
-- Original revision 1: `243d8d0b4e850aca304eea2699e58ec24d45479b`.
-- Public GitHub only. No local files, services, database, ignored captures,
-  credentials, browser sessions, execution, or prior conversation assumed.
+- Previous revision-3 packet: `c01f45a045eb0fdd0fc6b3e18add82f2dbb57024`.
+- Public GitHub only; no local worktrees, services, databases, ignored outputs,
+  credentials, or previous conversation assumed. State missing access explicitly.
+- The reports are preserved critique, not instructions or acceptance. Tests read
+  are not executed tests. New contracts in the plan do not exist in the baseline.
 
-Report inaccessible evidence instead of silently substituting another revision
-or presenting summaries as direct inspection. Tests read are not tests executed.
-
-## Product And Foundation
+## Product And Constraints
 
 ADE is a local-first conversational-character product using Lin Xiaotang (林小棠).
-We want natural factual updates and useful, restrained recall across conversations,
-without memory commands, invented physical shared experiences, or unsupported
-promises. A silent relevant use of memory can be better than an explicit callback.
+The goal is natural factual updates and useful, restrained recall without memory
+commands, invented shared physical experience, or unimplemented promises.
 
-The existing foundation includes PostgreSQL subjects, immutable messages, typed
-facts/revisions, source spans, embeddings, automatic retrieval, optional search,
-compaction, leases, run events, and ADE-owned retries. Generation precedes review;
-successful assistant/memory finalization is atomic. Shared subject facts span
-characters; full dialogue does not. Option A removes saved records from fact
-selection while retaining messages/history, not global suppression or erasure.
+Keep PostgreSQL subjects, immutable messages, typed/versioned facts and source
+lineage, curated tools, synchronous post-response review, atomic successful-turn
+finalization, leases/cancellation, and ADE-owned retries. Shared subject facts do
+not authorize another character's full dialogue. Option A saved-memory removal
+retains source/history and is not erasure or global suppression.
 
 DeepSeek conversation/reviewer and relocatable Qwen embeddings are unqualified
-Model Router candidates. A prior synthetic Stage A failed a required-tool contract
-that allowed provider `auto`; its exact response/wire contents are unavailable.
-That does not establish a memory-quality failure. No new provider experiment,
-runtime change, merge, deployment, or qualification waiver is authorized here.
+Model Router candidates. No new provider calls, migrations, deployments, release
+promotion, or main merge are authorized by this planning review. The separate
+required-tool/provider contract failure and stale release gate remain open.
 
-## Amendment And Deliberate Tradeoffs
+## What This Plan Proposes
 
-Revision 2 retained the foundation but left several contract gaps. Revision 3:
-- Removes summary-watermark guard elision. Even a newly generated summary can be
-  stale. Before admitting prior narrative, the response context must carry the
-  complete eligible lifecycle snapshot or withhold that narrative with a gap.
-- Replaces specialized read sets with one monotonic subject-memory generation,
-  bound at message acceptance and checked for every nonempty write. This includes
-  identity dependencies and operator removals, not just the changed target row.
-- Derives one lifecycle view from revisions to identify null inactive assertions
-  without presenting them as current facts or exposing forgotten chains.
-- Shares one bounded clarification bundle across generation/review and defines
-  current user endorsement separately from bare reference selection.
-- Makes direct multi-target operator removal atomic, with typed causal provenance,
-  snapshot/target checks, and idempotent outcome replay. It does not promise to
-  restore chat capacity for every oversized-input cause.
-- Corrects the preference-versus-consumption fixture and narrows state precedence
-  to the same attribute, scope, and time, including residence versus a visit.
+Three independent review rounds refined the design. Round three supported planning
+while identifying narrow saving/reply/read gaps and an over-conservative context
+rule. The amendment now specifies assertion-scoped same-turn no-save precedence,
+detected reply/write contradiction failure, selective inactive-state recall,
+candidate-reply reserve, and terminal generation-conflict/replay semantics.
 
-These are proposals to scrutinize, not reviewer-approved correctness guarantees.
-Complete guard packets may crowd out useful history. A subject counter may reject
-harmless writes; capturing it at acceptance also affects queued/in-flight turns.
-Shared evidence cannot guarantee identical model interpretation. Endorsement source
-roles extend the current validation contract. These costs must remain explicit.
+Ordered implementation checkpoints cover fixtures, schema and atomic mutations,
+reviewer/turn integration, context construction/comparison, product API/UI, and
+separately authorized live validation. One lifecycle view, one mutation generation,
+and one shared clarification bundle remain the core. No extra judge or framework.
 
-Still deferred: generic historical-fact search, arbitrary retrospective repair,
-continuity tables, broad transcript search, global suppression, background review,
-graphs, external memory adoption, and stronger dialogue linearizability. Bounded
-source-window comparison precedes any additional durable continuity representation.
+The main empirical choice is NOT settled:
+- A requires the complete lifecycle snapshot before prior narrative.
+- A0 removes summaries but retains that prerequisite.
+- B reserves recent dialogue first and selects active/terminal evidence, without
+  summaries or older raw windows in this comparison.
+A/A0 isolates summary effects; A0/B isolates admission effects. Full reviewer
+visibility remains mandatory for all. Neither control nor candidate is assumed
+useful or safe enough for production before the selection gate.
+
+The plan proposes request ceilings, operating-envelope tests, and acceptance
+criteria; they are not current spend authority or a claim that all tests fit.
+Old-policy conversations remain preserved; the proposed eventual transition needs
+new immutable bindings rather than silently rewriting their behavior. Challenge
+this product consequence and its UI/rollback implications explicitly.
 
 ## Required Reading
 
-At the revision 3 documentation commit:
-1. `docs/architecture/natural-memory-design.md`
-2. `docs/findings/natural-memory-consultation/design-scenarios.md` (22 expanded arcs)
-3. `docs/findings/natural-memory-consultation/source-map.md`; follow pinned code
-   and relevant tests at implementation `4905ce1`.
-4. `docs/findings/natural-memory-consultation/pro-round2-assessment.md`
-5. Unchanged `reports/pro-round2-a.md` and `reports/pro-round2-b.md` in that folder.
-6. ADRs 0022 and 0026 for current product/removal authority.
+At the new documentation commit:
+1. `docs/plans/natural-memory-implementation.md` (primary review target).
+2. `docs/architecture/natural-memory-design.md` (revision 4).
+3. `docs/findings/natural-memory-consultation/design-scenarios.md`.
+4. `docs/findings/natural-memory-consultation/source-map.md`, following pinned code/tests.
+5. `docs/findings/natural-memory-consultation/pro-round3-assessment.md` and the
+   unchanged `reports/pro-round3-a.md`, `reports/pro-round3-b.md` in that folder.
+6. Existing `docs/plans/m3-agent-studio-continuity.md` and
+   `docs/plans/m3-provider-neutral-release-preparation.md` for scope/qualification
+   boundaries; ADRs 0021, 0022, 0026 and 0028 as referenced by the plan.
 
-The first assessment and first-round reports remain available as background.
-Its six synthetic reproductions are maintainer-reported executions, not tests
-performed by either Pro. Round-two design counterexamples were inspected logically,
-not demonstrated as deployed bugs. Public-research reports are optional background.
+Current code areas to inspect include contracts/fact registry, review policy,
+admission/finalization/retry, persistence schema/source readers, evaluation cleanup,
+context/compaction, Agent Studio API/UI, migrations, and the existing request ledger.
+The source map describes the baseline, not claimed implementation of this proposal.
 
-## Review Questions
+## Questions To Challenge
 
-Map round-two findings to resolved, partial, unresolved, or explicitly deferred.
-Then challenge revision 3 independently; do not stop at a checklist of prior advice.
-
-- Does the guard admission rule close the fresh-summary counterexample without
-  claiming historical completeness? Is a smaller rule equally safe and more useful?
-- Do all writers advance the generation correctly, including operator removals?
-  Check acceptance-to-snapshot, identity-change, empty-again, rollback, idempotency,
-  queued turns, and permitted stale no-op replies. Is the cost proportionate?
-- Does the derived inactive descriptor identify targets while preserving lifecycle,
-  root boundaries, source attribution, and forgotten-chain exclusion?
-- Can the shared bundle preserve negation/corrections and partial confirmations?
-  Does the reply/reviewer agreement rule prevent hidden mutations without rejecting
-  normal natural speech? Check user assent versus assistant-origin invention.
-- Are typed operator provenance, all-or-nothing effects/results, and local-only
-  authorization coherent with the current schema and accepted ADRs?
-- Are selection, clarification, complete guard/reviewer packets, and total request
-  budgets mutually consistent? What happens when each cannot fit?
-- Do historical deferrals, Option A limits, and unavailable later updates remain
-  honest product boundaries? Are they acceptable for a first natural-memory target?
-- Do scenarios independently specify answerability, false/missed writes, unnecessary
-  withholding, unsupported cases, and reply quality rather than reward abstention?
-- What can be removed or simplified without hiding a correctness obligation?
+- Can an implementer proceed checkpoint by checkpoint without inventing product
+  semantics or silently weakening a test? Are dependencies and exit gates sufficient?
+- Is same-turn no-save robust across independent IDs and operation order? Are
+  contradiction/defer outcomes precise without making every question a write veto?
+- Are generation capture, all writer paths, atomicity, causation, idempotency,
+  cancellation, queued conflicts, and intentional fresh resubmission coherent?
+- Can legacy records survive migration without fabricated meaning or lost provenance?
+  Do new source roles/operator actions require additional schema/read/cleanup changes?
+- Does selective terminal-state retrieval genuinely index the current descriptor,
+  not resurrect old active embeddings or arbitrary history?
+- Are API/UI changes narrow and implementable, including receipt-versus-current-state
+  wording, archived citations, old-definition behavior and multi-target conflict?
+- Do the A/A0/B comparison and its fixtures actually isolate admission policy?
+  Are budget reservations, exact-call caps, setup costs, fairness, stop conditions,
+  and hard correctness/answerability criteria adequate without overclaiming a sample?
+- Are cleanup, populated migration, incompatible old writers, backups, rollback and
+  production qualification separated from development evidence?
+- What should be deleted, simplified, reordered, or clarified before implementation?
+  Identify concrete gaps rather than adding speculative infrastructure.
 
 ## Requested Output
 
-Give an answer-first verdict and exact inspected commits, then prioritized findings
-with source/design references, concrete counterexamples, and smallest sufficient
-corrections. Include a compact disposition of round-two findings. Distinguish
-source-proven behavior, design contradictions, deliberate tradeoffs, and empirical
-unknowns. Challenge both overengineering and unsafe simplification.
+Start with a go/revise/no-go verdict for implementation planning completeness and
+state exact inspected commits. Give prioritized findings with code/plan evidence,
+counterexamples, minimal fixes, and the checkpoint affected. Distinguish blocking
+decisions from engineering choices and hypotheses requiring the planned experiments.
 
-Conclude whether the design is ready for an implementation plan. List only actual
-blocking contract decisions or bounded experiments; do not manufacture additional
-review cycles, write the implementation plan, or mistake agreement for acceptance.
-No code, provider calls, release approval, or production action is requested.
+Map the third-round findings to addressed, partial, unresolved or deferred. Check
+the plan independently for newly introduced gaps; consensus is not acceptance.
+Conclude with only material changes needed before implementation authorization.
+
+Do not implement, execute provider calls, produce a competing full plan, invent
+passed tests, or approve release. Avoid another broad framework comparison.

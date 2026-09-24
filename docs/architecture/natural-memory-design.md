@@ -1,14 +1,14 @@
 # Natural Conversational Memory: Proposed Design
 
-Revision 3, 2026-09-23. **Proposed for a third independent review, not accepted.**
+Revision 4, 2026-09-23. **Amended proposal accompanying an implementation plan for review.**
 This is a design, not an implementation plan or authorization to change runtime,
 schema, providers, budgets, deployment, or release evidence. Accepted ADRs still
 govern the running product. No replacement memory framework is proposed.
 
 Implementation anchor: `4905ce15dbda6466b12f2d1ed7908eb3d03995a0` (unchanged).
-Revision 2 remains at documentation commit
-`d80afb422b3deefa09f13ac5e7017c5e3e8524ef`. See the
-[second-round assessment](../findings/natural-memory-consultation/pro-round2-assessment.md),
+Revision 3 remains at documentation commit
+`c01f45a045eb0fdd0fc6b3e18add82f2dbb57024`. See the
+[third-round assessment](../findings/natural-memory-consultation/pro-round3-assessment.md),
 [source map](../findings/natural-memory-consultation/source-map.md), and
 [worked conversations](../findings/natural-memory-consultation/design-scenarios.md).
 
@@ -26,12 +26,12 @@ and revisions explain it. Recent dialogue and summaries supply working context,
 not another source of factual authority. Model proposals remain fallible; ADE
 owns identities, scope, lifecycle, evidence binding, and transaction outcomes.
 
-This amendment removes two proposed optimizations: summary-watermark guard elision
-and specialized mutation read sets. Use independent current-state guards and one
-subject-memory generation instead. Add a shared lifecycle view and clarification
-bundle, including explicit user endorsement. Keep separate preferences, bounded
-history, and atomic post-response review. No continuity table, history engine,
-background reviewer, or new model call is introduced.
+This amendment closes same-turn no-save, reply/write agreement, selective lifecycle
+recall, and budget/recovery contracts. Full-snapshot admission becomes an experimental
+control, not a chosen production requirement. Keep one lifecycle view, one mutation
+generation, one shared clarification bundle, and atomic post-response review.
+The [bounded plan](../plans/natural-memory-implementation.md) awaits Pro/user review;
+no continuity table, background reviewer, or additional normal-turn model call is added.
 
 ## 2. Current Foundation And Required Contract Changes
 
@@ -127,18 +127,29 @@ reactivated. A fresh explicit restatement may create a new record under Option A
 with new evidence, not revival of the excluded chain. Ended records use reassertion
 only when identity is clear; otherwise abstain on matching.
 
+Explicit same-turn removal or no-save intent excludes saving that same assertion,
+regardless of operation order, restatement, or endorsement: do not forget one ID
+and recreate equivalent information under another. Unrelated assertions remain
+eligible. No-save alone need not delete an existing record unless removal intent
+is clear. This is current-turn eligibility, not lasting suppression or automatic
+forget-only mode. A later fresh assertion remains eligible under Option A.
+
 Target discovery must include eligible inactive records, not just active profile
 facts. The same scope/version validation applies to both. Intent classification
 must not silently turn "forget it" or "don't discuss this now" into removal.
 
 Use one **derived lifecycle view** for reviewer targeting, context guards, and
-operator display: ID/version, type/entity/category, identifying assertion and scope,
+operator display and selective recall: ID/version, type/entity/category, identifying assertion and scope,
 status/reason, and source/revision references. For a null inactive projection,
 derive its last identifying assertion from the revision chain: "withdrawn report:
 prefers morning coffee; invalidated, not a current preference." This distinguishes
 it from withdrawn evening tea without asserting either as true. Do not maintain
 another mutable description or expose arbitrary prior revisions. Forgotten chains
 are excluded from model-facing views; operator audit access remains separate.
+Selective search may return an ended/invalidated current descriptor, not just active
+facts: "latest report: this relationship ended," not "has no partner." Bind the
+index and result to the current revision, subject, and embedding space. Null terminal
+values require the descriptor representation, not reuse of an old active embedding.
 
 **Historical boundary:** correcting an arbitrary earlier revision while preserving
 today's value is not included in this first target. It needs a separately specified
@@ -157,18 +168,23 @@ current spans. Select one local clarification bundle before generation: current
 user message and a contiguous suffix containing at most eight preceding user
 messages and intervening committed assistant messages in this conversation.
 Use complete messages/exchanges, not excerpts that can hide negation or correction.
-Choose the longest suffix that fits both generation and review allocations,
-including section 8's guards. Eight messages is a ceiling, not a fit guarantee.
+Choose the longest suffix that fits both stages after reserving reviewer input for
+the permitted candidate reply and all instructions/schemas/output/tool allowances.
+Use section 8's selected experimental admission policy. Eight messages is a ceiling,
+not a fit guarantee; never shrink only the reviewer's bundle after generation.
 
 Supply the identical selected bundle to both stages and record its IDs in both
 manifests. The reviewer may not independently reach back further. Omitted messages
 are an explicit gap. A mutation needing a missing antecedent is ineligible; ask
 naturally for restatement instead. Current self-contained assertions remain eligible.
-If no guarded antecedent fits, use current-only input; never drop the current
+If no antecedent fits the chosen admission policy, use current-only dialogue; never drop the current
 message or policy. If those cannot fit, fail explicitly. Supply the candidate reply
 to review as reference-only, never new user evidence. Defer a dependent mutation
-when that reply asks to clarify the same unresolved claim. Shared input does not
-itself guarantee that both models interpret it alike.
+when that reply asks to clarify the same unresolved claim. A detected explicit
+contradiction between reply and write interpretation fails the atomic attempt;
+do not silently rewrite the reply or add a judge/call. Unrelated questions are not
+vetoes. Deferral means no dependent write this turn, not a pending catch-up job.
+Shared input does not guarantee agreement; score missed contradictions and false vetoes.
 
 "One of my dogs is a Husky" / "Rocky or Roxy?" / "Roxy" binds two user spans;
 the assistant question identifies the referent, not the breed's truth. If only
@@ -177,6 +193,9 @@ the assistant introduced Husky, a bare name does not endorse it. By contrast,
 unambiguous proposition. Current assent supplies authority; the question supplies
 its meaning. A generic acknowledgment cannot endorse several unrelated claims,
 upgrade "might be," or turn a hypothetical, quotation, or story into biography.
+Explicit "yes to the first, no to the second" can resolve separate propositions.
+Missing discourse framing remains a limitation; ordinary direct assertions do not
+need a new confirmation ritual merely because endorsement is supported.
 
 Proposals distinguish direct assertion, reference resolution, and endorsement.
 Validate message IDs, exact offsets/hashes, roles, chronology, ownership, and target
@@ -225,6 +244,8 @@ is all-or-nothing, with action outcome and tombstones in the same transaction.
 Persist action ID, request hash, targets/versions, generation, origin, and outcome.
 Same-key/same-request replay returns the recorded outcome without reapplying it;
 different content conflicts. Failure records cannot coexist with partial effects.
+That receipt describes the earlier action, not current absence after a later fresh
+restatement. Show a separate current-state readback instead of overclaiming replay.
 Typed operator action is a distinct causal origin, not a dummy run or message quote:
 current required run/message provenance needs an explicit alternative. This amends
 ADR 0022's composer/reviewer route, not a hidden optimization. Removal can reduce
@@ -249,6 +270,10 @@ span provider calls. Empty/no-op replies may reflect older snapshots, so dialogu
 is not linearizable. Fresh reads see commits; a post-removal explicit restatement
 can add a new fact, but an in-flight pre-removal proposal cannot resurrect it.
 Names are not unique entity keys. The counter is not a summary truth certificate.
+Generation conflicts are terminal for that accepted run, including before packet
+construction when it might otherwise have been a no-op. Same-key replay returns
+the original outcome; do not spend retries on a stale generation or automatically
+clone the request. Reconsideration requires a deliberate new user submission.
 
 ## 7. Context Integrity Before Selection Quality
 
@@ -285,6 +310,10 @@ retrieval with bounded exact-entity expansion and relevance-based selection at
 equal total budgets. Entity-name hits can bring eligible breed/name facts together;
 do not assume embedding the word Husky alone solves a query about Rocky.
 Do not pin current location universally or claim substring matching is Chinese BM25.
+When a complete bound lifecycle snapshot is supplied, skip redundant automatic
+embedding/search of that same set. Retain selective retrieval and explicit-tool
+conformance. Determine narrative admission before optional compaction solely for
+that response, avoiding a provider dependency on a summary that will be withheld.
 
 Natural recall succeeds when the reply has appropriate evidence, whether automatic
 retrieval or optional `search_memory` supplied it. Ordinary wording must not create
@@ -300,7 +329,7 @@ breakup; A is first compacted afterwards from old dialogue. Its brand-new summar
 can still be stale. Supply current replacements/endings/invalidations independently
 of summaries. **No delta-watermark optimization or summary-dependency graph.**
 
-Concrete conservative baseline for response generation: before admitting prior narrative
+**Control A, full snapshot (provisional):** before admitting prior narrative
 (clarification bundle, older raw dialogue, summary, or experimental source window),
 include a complete snapshot of the subject's eligible active and inactive lifecycle
 views from section 4. Reuse those records across sections without duplicating them;
@@ -312,11 +341,25 @@ No old values from superseded revisions need be replayed to assert the current o
 If the complete snapshot cannot fit, omit optional prior narrative and record the
 capacity cause/evidence gap. Dependent clarifications then become ineligible under
 section 5; the reviewer cannot privately keep their antecedents. Never omit the
-current message or mandatory policy. Without prior narrative, budgeted active-fact
-selection may still support a current answer. Normal review still requires its
+current message or mandatory policy. Without prior narrative, budgeted current
+lifecycle selection, including terminal descriptors, may support an answer. Review still requires its
 full lifecycle packet; if that fails, the turn fails rather than skipping review.
 This intentionally relaxes fail-on-unsummarized-omission only for optional history,
 not policy, current input, write evidence, or truthful claims about recall.
+
+**Candidate B, recent-dialogue first (not yet selected):** reserve the shared local
+exchange before optional memory, then select relevant current active/terminal views
+within the remaining allocation. No summary or older/cross-conversation raw window
+in this first comparison. It drops A's global prerequisite for immediate dialogue,
+not subject/root boundaries, evidence authority, or full reviewer target visibility.
+Missing relevant terminal state may make B worse on stale-state cases; do not call
+it equally safe in advance. Neither candidate changes the write contract.
+
+Compare A with and without summaries (A0) to isolate summary effects; compare A0/B
+to isolate admission effects at equal total budgets. Predeclare the small-memory
+operating envelope and whole-record overflow behavior. More saved records, including
+inactive ones, must not silently turn a quality failure into a passed abstention.
+Adopt neither as universal policy before the plan's evidence/selection gate.
 
 Precedence compares the **same subject, attribute, scope, and relevant time**:
 current explicit user updates guide this turn, and committed current state/terminal
@@ -330,9 +373,11 @@ can escape the ledger. Dialogue establishes what was reported, not completeness
 or verified history. Qualify claims or abstain when the supplied sequence cannot
 support them; never widen root/archive boundaries to resolve uncertainty. Option A
 still permits forgotten information in raw messages/summaries, not fact guards or
-entity labels. It is not global suppression. Score unnecessary withholding and
-missed answerability, including unrelated-memory pressure, against a no-summary
-baseline; safe abstention alone is not successful continuity.
+entity labels. End -> forget -> resume old dialogue removes the saved ending guard;
+absence does not prove the relationship resumed. Shrinking memory can also readmit
+old narrative containing removed information. These Option A limits need explicit
+tests and honest copy. Score unnecessary withholding and missed answerability,
+including unrelated-memory pressure; safe abstention alone is not continuity.
 
 **Source-window comparison, not production rollout:** first supply fixed eligible
 windows to test representation adequacy, then test their retrieval under equal
@@ -374,7 +419,7 @@ without pretending they are remembered preferences.
 ## 10. Review Criteria, Compatibility, And Open Tradeoffs
 
 This revision supplies design boundaries, not implementation steps or live budgets.
-Review the expanded chronological arcs before an implementation plan. Separate
+Review the expanded chronological arcs alongside the proposed plan. Separate
 proposal accuracy, committed state, actually supplied evidence, and reply quality.
 Score missed updates and unjustified abstention as well as false writes. Preserve
 old fixtures as historical evidence; do not import their unsupported promises as
@@ -394,7 +439,7 @@ and subject-memory generation are proposed additions, not pre-existing capabilit
 Preserve old rows, source links, ambiguous legacy semantics, and embedding-space identity.
 No historical extraction replay or immutable-definition mutation. New behavior
 requires a new policy binding and qualification; additive SQL alone does not prove
-rollback compatibility. Fresh/populated migration tests belong in the later plan.
+rollback compatibility. Fresh/populated migration tests are specified in the plan.
 
 Normal turns retain one conversation path and one reviewer; compaction/tool work
 and requested retries are separately visible. Larger packets, evidence guards,
@@ -409,6 +454,6 @@ fact-history correction. These are explicit proposed choices, not hidden tasks.
 Continuity tables, generic history search, stronger subject-wide ordering, graphs,
 background review, and external memory services must earn their added complexity.
 
-Only after the third critique and user review should accepted decisions become
-an ADR and implementation plan. No M3 completion, Stage B/C unblock, release-gate
-waiver, main merge, or promotion follows from this document.
+The implementation plan now accompanies this amendment for Pro/user review. Record
+an accepted ADR only after approval; no implementation authority, M3 completion,
+Stage B/C unblock, release-gate waiver, main merge, or promotion follows from it.

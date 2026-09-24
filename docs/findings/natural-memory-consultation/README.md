@@ -1,20 +1,28 @@
 # Natural Memory Consultation Review
 
+Third-round reports are preserved as [Round 3 A](reports/pro-round3-a.md) and
+[Round 3 B](reports/pro-round3-b.md). The [third-round assessment](pro-round3-assessment.md)
+is now incorporated into the [revision-4 amendment](../../architecture/natural-memory-design.md)
+and [bounded implementation plan](../../plans/natural-memory-implementation.md).
+The [plan-review brief](pro-review-brief.md) requests Pro scrutiny before implementation.
+Full-snapshot admission is a provisional control, not an accepted production rule.
+No runtime changes or provider experiments accompanied this documentation checkpoint.
+
 Second-round feedback is preserved as [Round 2 A](reports/pro-round2-a.md) and
 [Round 2 B](reports/pro-round2-b.md). The [second-round assessment](pro-round2-assessment.md)
-records the reasoning behind the [revision-3 proposal](../../architecture/natural-memory-design.md):
+records the reasoning behind revision 3 (preserved at `c01f45a`):
 independent narrative guards, one mutation-generation check, shared lifecycle and
 clarification views, explicit endorsement, and atomic operator removal. The
-[third-review brief](pro-review-brief.md) requests another independent scrutiny
-before planning. All contracts remain proposed, not accepted or implemented.
+third review is preserved at `c01f45a`; the brief at the current path now reviews
+the implementation plan. All contracts remain proposed, not implemented.
 
 Follow-up: two independent repository critiques are preserved as
 [Pro A](reports/pro-a.md) and [Pro B](reports/pro-b.md). The separate
 [assessment](pro-review-assessment.md) records verified counterexamples and
 recommended design revisions, without changing the original reports or accepting
 a new runtime contract. Revision 1 remains pinned at `243d8d0` and revision 2 at
-`d80afb4`; the current document paths now hold revision 3. No implementation plan
-has been written and no runtime changes have been made for these design revisions.
+`d80afb4`, and revision 3 at `c01f45a`. Current paths hold revision 4 and its first
+implementation plan, both awaiting review. No runtime changes were made for them.
 
 Date: 2026-09-23. Status: research synthesis for discussion, not an accepted
 architecture, implementation plan, or release qualification.

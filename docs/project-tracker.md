@@ -22,11 +22,17 @@ narrative guards rather than summary freshness, one subject-memory generation fo
 nonempty writes, shared inactive-record/clarification views, explicit endorsement,
 and atomic operator removal. The 22 worked arcs now include the sequential stale
 summary, identity-change/empty-again races, shared-budget gaps, and consumption
-control. Next: a third independent Pro review using the
-[updated brief](findings/natural-memory-consultation/pro-review-brief.md), followed
-by user review before any implementation plan. No runtime capability is implied.
+control. The third Pro reports are back; the
+[assessment](findings/natural-memory-consultation/pro-round3-assessment.md) recommends
+narrow same-turn no-save, reply/write consistency, selective lifecycle recall,
+budget/recovery clarifications, and a genuine comparison of context-admission
+policies. The user authorized the [revision-4 amendment](architecture/natural-memory-design.md)
+and [bounded implementation plan](plans/natural-memory-implementation.md), now drafted
+for Pro scrutiny through the [plan-review brief](findings/natural-memory-consultation/pro-review-brief.md).
+Next: resolve material plan-review findings, then obtain implementation approval.
+No runtime capability, live budget, or production context-policy selection is implied.
 The user authorized publication of the review checkpoint, not adoption of the
-design or a merge/release. Resolve the critique before an implementation plan or
+design or a merge/release. Resolve plan-review findings before implementation or
 new provider experiments. Stronger forgetting/erasure semantics remain a product
 decision. No new provider budget, runtime change, or release acceptance is implied;
 Stage B/C remain blocked by the failed Stage A result below.
@@ -152,7 +158,7 @@ implementation and verification choices do not need repeated confirmation.
 | M0 | complete | None | Maintain verified foundation | [Native release ledger](../config/agent-studio/release-evidence.json), [ADR 0019](adr/0019-ade-steady-state-runtime.md), [Luna workflow](../workflows/evals/character_memory_dev/README.md), commits `f8de9d7` and `7799439`. |
 | M1 | complete | M0 | Director review and M2 comparison definition | [Findings](findings/m1-character-continuity-baseline.md), policy tests, and ten serial Luna records. Implementation baseline is complete; native persistence/provider qualification remains pending. |
 | M2 | deferred | M1 | Reopen at the mandatory end-of-M3 capability review if a measured service comparison is justified and authorized | [Interim findings](findings/m2-memory-approach-comparison.md) and [Luna evidence](findings/m2-luna-development-evidence.md) preserve the original evidence. The original ADE/Hindsight quality, latency and maintenance comparison was not executed. |
-| M3 | in progress | [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md) | Critique proposed natural-memory design against the code; reconcile product/tool/eval contracts before further qualification | [M3 finding](findings/m3-native-acceptance-2026-09-23.md), [continuity plan](plans/m3-agent-studio-continuity.md), and [release-preparation plan](plans/m3-provider-neutral-release-preparation.md). Real UI/native reviewer and persistence covered typed fact/correction/removal, subject isolation, and archived old-page citation. Two original reply failures remain recorded; two distinct post-fix cases passed. DeepSeek/Qwen are unqualified candidates. Positive semantic retrieval, long-session reliability, character-private relationship continuity, and governed release qualification are not established. Persona-version UI/API evidence is inherited. |
+| M3 | in progress | [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md) | Pro/user review of the [natural-memory implementation plan](plans/natural-memory-implementation.md) before coding; reconcile the separate tool/eval contract before qualification | [M3 finding](findings/m3-native-acceptance-2026-09-23.md), [continuity plan](plans/m3-agent-studio-continuity.md), and [release-preparation plan](plans/m3-provider-neutral-release-preparation.md). Real UI/native reviewer and persistence covered typed fact/correction/removal, subject isolation, and archived old-page citation. Two original reply failures remain recorded; two distinct post-fix cases passed. DeepSeek/Qwen are unqualified candidates. Positive semantic retrieval, long-session reliability, character-private relationship continuity, and governed release qualification are not established. Persona-version UI/API evidence is inherited. |
 | M4 | planned | M3 | Define deployment-provider and real-use acceptance cases | Requires longer-session results, deployment-model qualification, and actual operator review. |
 
 ## Original M2 Work Checklist (Deferred)

@@ -1,6 +1,6 @@
 # Proposed Memory Design: Worked Conversations
 
-Revision 3: review specification, not executed evidence or accepted golden answers.
+Revision 4: review specification, not executed evidence or accepted golden answers.
 These fictional inputs contain no real user's personal data. They illustrate
 the [proposal](../../architecture/natural-memory-design.md); all new semantics
 remain proposed. Replies below illustrate claims and tone, not exact-match strings.
@@ -106,6 +106,12 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 - Separate branch: "今天别提奶茶了。" Do not delete the saved fact. Avoid it in
   the present reply; durable suppression is not implemented or promised.
 - Separate branch: "算了。" No deletion based on this ambiguous expression alone.
+- "我确实还喜欢早上喝咖啡，但把保存的这条偏好删掉。" Forget that assertion;
+  do not recreate it under a different ID from the confirming clause, in either
+  proposal order. An unrelated supported fact in the same message can still be added.
+- "对，Roxy 是哈士奇，但这件事别保存。" Do not add breed from the endorsement.
+  If no-save intent does not clearly request removal of a pre-existing record,
+  do not silently infer a deletion. No lasting suppression policy is introduced.
 
 ## 11. Sharing And Isolation
 
@@ -192,13 +198,21 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
   assistant-question reference; never pretend the user authored "哈士奇" verbatim.
 - Controls: a generic "嗯" after several questions, "可能是", or assent to a
   fictional/quoted proposition cannot authorize that same factual write.
-- Force the antecedent/guards beyond the shared budget: both generation and review
+- Force the antecedent/required allocations beyond the shared budget: generation and review
   lose that antecedent, dependent write is ineligible, and the reply asks naturally.
   A self-contained new statement may still be saved. No reviewer-only hidden history.
   Include a removal clarification and an intervening negation/correction; do not
   cut the latter out to make an otherwise convenient excerpt fit.
 - Even with identical inputs, if the proposed reply asks which dog the user meant,
   the reviewer must not silently commit that unresolved breed assignment.
+- Candidate reply says "Rocky 是哈士奇" while the proposal saves Roxy's breed:
+  detected contradiction fails the atomic attempt, without a repair call. Conversely,
+  "Roxy 是哈士奇。她多大了？" is not breed uncertainty. Record false vetoes.
+- "Roxy。另外我们已经搬到多伦多了。" An unresolved dog reference cannot veto
+  the independent completed-move assertion. Defer is no-write, not a queued job.
+- "第一个问题是，第二个不是。" Assess proposition-level endorsement, not a blanket
+  multi-question rejection. Also test missing earlier roleplay framing; a complete
+  bounded message suffix does not prove complete discourse context.
 
 ## 18. Packing, Revisions, And Entity Names
 
@@ -214,12 +228,15 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
   the unversioned label. Reject unsupported new_entity_label content as evidence.
 - Orphan entities remain in storage but are absent from model input unless required
   by an eligible record or the shared local exchange; no forgotten-name backdoor.
+- Bundle selection reserves room for the permitted candidate reply before generation.
+  Test short/maximum replies and tool continuation growth; no reviewer-only trimming
+  or omission of a contradictory reply clause on overflow.
 
 ## 19. Stale Summary And Raw Narrative
 
 - Conversation A's summary says X is the current partner. In B, explicitly end
   that relationship. Return to A with a weekend question.
-- Context must supply the complete eligible lifecycle snapshot or withhold optional narrative;
+- Control A/A0 must supply the complete eligible lifecycle snapshot or withhold narrative;
   don't rely on absence from the active profile. Do not infer the user has no partner.
 - Decisive sequential variant: A has never been summarized. B's breakup commits
   first; A's old partner dialogue is then compacted. The fresh summary still needs
@@ -232,7 +249,21 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
   proves an old report, not the user's true history. No counter detects all such edits.
 - Over-withholding control: short complete interview dialogue plus unrelated fact
   pressure. Annotate answerability independently; count lost useful context, even
-  if the reply safely abstains. Compare with the same-budget no-summary baseline.
+  if the reply safely abstains. Compare A/A0 for summary effects and A0/B for
+  admission effects; removing a summary alone cannot isolate the global prerequisite.
+- End the relationship, then forget its saved record, then return to the old partner
+  dialogue. The ending descriptor is now excluded. Its absence does not prove
+  resumed partnership; the old statement remains an attributed report. No hidden guard.
+- Start with withheld history; remove enough unrelated/saved records for A's packet
+  to fit. Old narrative may be readmitted and contain removed information under
+  Option A. Do not promise that removing records reduces every historical exposure.
+- With no summary and a tiny recent interview/clarification exchange, add unrelated
+  memory pressure. B reserves the shared exchange and selects current lifecycle
+  evidence; still test whether relevant cross-conversation endings are missed.
+  Neither safety through blanket abstention nor useful but stale answers pass.
+- Ask "我后来是不是说过和小王分手了？" with the ended descriptor outside the
+  active profile. Selective recall can return the latest terminal report, not all
+  earlier revisions or a claim of shared experience from another character's source.
 
 ## 20. Shared Knowledge Beside Private Dialogue
 
@@ -268,6 +299,11 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 - Also change memory between acceptance and packet construction: do not silently
   rebase. Verify generation/effects roll back together on failed finalization;
   no-op and replay do not advance the counter. It is not subject-name metadata version.
+- Two conversations accept at G; after one's change, the other's queued "晚安"
+  can fail before review despite likely being no-op. The conflict is terminal;
+  retries/same-key replay cannot refresh G, and the UI cannot auto-clone the input.
+- Remove F with action A, explicitly restate later to create F2, then replay A.
+  Show A's original receipt, not a new claim that the information is absent now.
 - Two genuinely different pets with the same name must not be merged by a name rule.
 - A concurrent no-op reply based on the old snapshot remains possible under the
   deliberately weaker contract; record it, don't call it a prevented lost update.
@@ -295,5 +331,6 @@ shared-bundle membership, returned tool results, commit outcome, and safe
 request metadata for diagnosis. Private provider reasoning is not needed.
 
 No numerical success threshold or provider budget is authorized here. First review
-the expected semantics; then freeze a bounded test plan. Unsupported requirements
+the [proposed bounded plan](../../plans/natural-memory-implementation.md), whose
+ceilings and selection gates remain proposals, not permission to call providers. Unsupported requirements
 remain visible instead of rewriting the fixture to make the current code pass.
