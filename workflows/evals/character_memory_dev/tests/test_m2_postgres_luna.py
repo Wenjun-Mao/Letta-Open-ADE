@@ -168,13 +168,19 @@ def test_database_url_guard_accepts_the_named_passwordless_loopback_db() -> None
     )
 
 
-@pytest.mark.skipif(
-    not os.getenv("ADE_TEST_DATABASE_URL"),
-    reason="ADE_TEST_DATABASE_URL must point at the named disposable M2 database",
-)
 def test_postgres_case_commits_readbacks_and_probes_with_fake_dialogue(
     tmp_path: Path,
 ) -> None:
+    database_url = os.getenv("ADE_TEST_DATABASE_URL")
+    if not database_url:
+        pytest.skip(
+            "ADE_TEST_DATABASE_URL must point at the named disposable M2 database"
+        )
+    try:
+        validate_test_database_url(database_url)
+    except ValueError:
+        pytest.skip("M2 Luna case uses its separately named disposable database")
+
     async def run() -> None:
         calls = []
 
@@ -183,7 +189,7 @@ def test_postgres_case_commits_readbacks_and_probes_with_fake_dialogue(
             return {"reply": "伪造的测试回复"}
 
         case = await execute_database_case(
-            os.environ["ADE_TEST_DATABASE_URL"],
+            database_url,
             tmp_path / "unique-m2-postgres-luna-case",
             dialogue_override=fake_dialogue,
         )

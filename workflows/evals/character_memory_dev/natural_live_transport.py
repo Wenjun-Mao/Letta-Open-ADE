@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import asyncio
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -67,6 +68,7 @@ class NaturalLiveTransport:
         self.embedding_model = embedding_model
         self._scope: RequestScope | None = None
         self._events: list[dict[str, Any]] = []
+        self._observation_incomplete = False
 
     @contextmanager
     def scope(self, scope: RequestScope) -> Iterator[RequestScope]:
@@ -81,7 +83,19 @@ class NaturalLiveTransport:
             self._scope = None
 
     def counts(self) -> dict[str, Any]:
-        return dispatch_counts(self._events)
+        try:
+            result = dispatch_counts(self._events)
+        except Exception:
+            return {"complete": False, "groups": []}
+        if self._observation_incomplete:
+            result["complete"] = False
+        return result
+
+    def _record_event(self, event_type: str, payload: dict[str, Any]) -> None:
+        try:
+            self._events.append({"event_type": event_type, "payload": payload})
+        except Exception:
+            self._observation_incomplete = True
 
     async def catalog(self, *, timeout_seconds: float = 10.0) -> dict[str, Any]:
         return await self.inner.catalog(timeout_seconds=timeout_seconds)
@@ -116,7 +130,7 @@ class NaturalLiveTransport:
             "stage": scope.name,
             "model_key": expected_model,
         }
-        self._events.append({"event_type": "model.request.started", "payload": common})
+        self._record_event("model.request.started", common)
         record = {
             "scope": scope.name,
             "kind": kind,
@@ -144,21 +158,16 @@ class NaturalLiveTransport:
         except BaseException as exc:
             record["outcome"] = "failed"
             record["error_type"] = type(exc).__name__
-            self._events.append(
-                {
-                    "event_type": "model.request.failed",
-                    "payload": common,
-                }
+            self._record_event(
+                "model.request.cancelled"
+                if isinstance(exc, asyncio.CancelledError)
+                else "model.request.failed",
+                common,
             )
             raise
         else:
             record["outcome"] = "completed"
-            self._events.append(
-                {
-                    "event_type": "model.response.completed",
-                    "payload": common,
-                }
-            )
+            self._record_event("model.response.completed", common)
             try:
                 record["response"] = _redact(response)
             except Exception:

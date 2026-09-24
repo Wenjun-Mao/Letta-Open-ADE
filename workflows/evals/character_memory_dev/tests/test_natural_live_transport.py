@@ -114,3 +114,35 @@ def test_capture_failure_preserves_success_and_original_exception(
     groups = transport.counts()["groups"]
     assert sum(group["completed"] for group in groups) == 1
     assert sum(group["failed"] for group in groups) == 1
+
+
+def test_event_capture_failure_never_changes_provider_outcome(tmp_path: Path) -> None:
+    transport, router = _transport(tmp_path)
+
+    class BrokenEvents:
+        def append(self, _event):
+            raise OSError("observation is unavailable")
+
+        def __iter__(self):
+            return iter(())
+
+    transport._events = BrokenEvents()
+
+    async def scenario() -> None:
+        with transport.scope(RequestScope("cell")):
+            assert await transport.chat_completion(
+                {"model": "deepseek::deepseek-flash"}, timeout_seconds=30
+            )
+
+        async def failure(payload, *, timeout_seconds):
+            raise TimeoutError("original provider failure")
+
+        router.chat_completion = failure
+        with transport.scope(RequestScope("cell")):
+            with pytest.raises(TimeoutError, match="original provider failure"):
+                await transport.chat_completion(
+                    {"model": "deepseek::deepseek-flash"}, timeout_seconds=30
+                )
+
+    asyncio.run(scenario())
+    assert transport.counts() == {"complete": False, "groups": []}

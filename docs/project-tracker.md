@@ -19,16 +19,29 @@ The user authorized offline implementation of revision-5 checkpoints 1–4 on
 2026-09-24 after both final Pro GO reviews. Work is assigned to the retained
 `codex/character-continuity` worktree, beginning at `6915cee`; checkpoint 5
 live diagnostic, push, merge, deployment and release remain unauthorized. The
-checkpoint status below will be updated as implementation and verification land.
 Checkpoint 1 contract freeze is recorded in [ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md)
 and the [complete-delta cases](findings/natural-memory-consultation/revision5-offline-contract-cases.md).
-The first focused wire tests are intentionally red against the old parser (3
-failures). Checkpoint 2 removed active spending caps, reservations, runtime
+The initial wire tests failed against the old parser and now pass. Checkpoint 2
+removed active spending caps, reservations, runtime
 settings, Compose wiring and acceptance scheduling gates. Outbound attempts now
-have local trace IDs and a copy-deduplicated count helper; optional transport
-capture cannot replace provider results or errors. Its focused tests pass (43).
-Checkpoint 3 compact review/provenance and checkpoint 4 integration remain
-outstanding; the wire tests are still red pending checkpoint 3.
+have local trace IDs and a copy-deduplicated count helper; a missing observation
+marks counts incomplete and cannot replace provider results, errors, or cancellation.
+Checkpoint 3 binds compact decisions once under request-local handles, persists
+current resolution and earlier-user support distinctly, and rejects stale targets
+transactionally. The forward migration preserves populated earlier records;
+historical fixtures and ledgers have no source diff. Checkpoint 4 offline
+integration passed in isolated PostgreSQL and the in-app browser with a scripted
+loopback router: scoped correction, no-save sibling deferral, Roxy resolution,
+atomic bare-name endorsement rejection, archived old-policy readback/citation,
+and exact removal. The [offline acceptance note](findings/natural-memory-r5-offline-acceptance.md)
+records the observed results and limits. The full Python run with both disposable database
+URLs reported 760 passed, one named-database test skipped, and only the existing
+selected-candidate policy-fingerprint freshness failure; that test passed
+separately against its own named disposable database. Ruff, changed-file format,
+OpenAPI drift, web tests (78 passed), lint/build, Compose rendering and diff
+whitespace checks passed. The candidate fingerprint remains historical and
+unwaived. These checks establish offline mechanics, not live reviewer quality,
+policy selection, or release readiness. Checkpoint 5 remains unauthorized.
 
 Both final Pros return **GO for revision 5 of the single
 [natural-memory implementation plan](plans/natural-memory-implementation.md)**,

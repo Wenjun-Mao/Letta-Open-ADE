@@ -193,6 +193,14 @@ composer, inline removal cancel, exact confirmation, forgotten audit lineage,
 and memory generation 2 to 3. Its sibling `manifest.json` hashes the fixture
 receipts and observed action/readback note.
 
+The revision-5 offline replay is retained in
+`outputs/natural-browser-20260924-v3/browser-evidence.json`. The scripted fake
+router covers scoped addition/correction, unresolved deferral, user-antecedent
+resolution with distinct source roles, and atomic rejection of bare-name
+endorsement. The same isolated UI and database show archived old-policy
+readback, source citation, exact removal, and historical revision retention.
+These observations establish integration mechanics only.
+
 Opt-in natural-memory attempt evidence is available only when
 `ADE_NATURAL_MEMORY_CAPTURE=1` is set on a development worker connected to a
 loopback database named `ade_*_test_*` and the conversation purpose is

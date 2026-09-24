@@ -46,6 +46,146 @@ def _catalog() -> dict:
     return {"items": items}
 
 
+def _scripted_reply(payload: dict) -> str:
+    current = next(
+        (
+            message["content"]
+            for message in reversed(payload.get("messages", []))
+            if message.get("role") == "user"
+        ),
+        "",
+    )
+    if current == "Ask whether Roxy is a Husky.":
+        return "Is Roxy a Husky?"
+    if current == "I prefer coffee in the morning.":
+        return "I heard your morning coffee preference."
+    if current == "Actually, I prefer tea in the morning.":
+        return "I heard your correction to morning tea."
+    if current == "One of my dogs is a Husky.":
+        return "Which dog do you mean?"
+    if current == "Roxy":
+        return "Thanks for clarifying Roxy."
+    return "I hear you live in Toronto."
+
+
+def _scripted_review(packet: dict) -> dict:
+    current = packet["current_user"]["content"]
+    direct = lambda quote: {"mode": "direct", "current_quote": quote}
+    if current == "I live in Toronto.":
+        return {
+            "decisions": [
+                {
+                    "kind": "subject_add",
+                    "fact_type": "person.current_location",
+                    "value": "Toronto",
+                    "evidence": direct("I live in Toronto"),
+                }
+            ]
+        }
+    if current == "I prefer coffee in the morning.":
+        return {
+            "decisions": [
+                {
+                    "kind": "subject_add",
+                    "fact_type": "person.preference",
+                    "qualifier": "drink",
+                    "value": "coffee in the morning",
+                    "evidence": direct("I prefer coffee in the morning"),
+                }
+            ]
+        }
+    if current == "Actually, I prefer tea in the morning.":
+        target = next(
+            row["handle"]
+            for row in packet["targets"]
+            if row["fact_type"] == "person.preference"
+            and row["value"] == "coffee in the morning"
+        )
+        return {
+            "decisions": [
+                {
+                    "kind": "revise",
+                    "target": target,
+                    "reason": "correct",
+                    "value": "tea in the morning",
+                    "evidence": direct("I prefer tea in the morning"),
+                }
+            ]
+        }
+    if current == "One of my dogs is a Husky.":
+        return {
+            "decisions": [
+                {
+                    "kind": "defer",
+                    "current_quote": "One of my dogs is a Husky",
+                    "reason": "unresolved",
+                }
+            ]
+        }
+    if current == "Roxy":
+        earlier = next(
+            (
+                row
+                for row in packet["context"]
+                if row["role"] == "user"
+                and "One of my dogs is a Husky" in row["content"]
+            ),
+            None,
+        )
+        assistant = next(
+            (
+                row
+                for row in packet["context"]
+                if row["role"] == "assistant" and row["content"] == "Is Roxy a Husky?"
+            ),
+            None,
+        )
+        identity = {
+            "kind": "related_add",
+            "fact_type": "pet.name",
+            "value": "Roxy",
+            "entity_ref": "new:roxy",
+            "evidence": direct("Roxy"),
+        }
+        if earlier is not None:
+            return {
+                "decisions": [
+                    identity,
+                    {
+                        "kind": "related_add",
+                        "fact_type": "pet.breed",
+                        "value": "Husky",
+                        "entity_ref": "new:roxy",
+                        "evidence": {
+                            "mode": "resolve_user",
+                            "current_quote": "Roxy",
+                            "support_handle": earlier["handle"],
+                            "support_quote": "One of my dogs is a Husky",
+                        },
+                    },
+                ]
+            }
+        if assistant is not None:
+            return {
+                "decisions": [
+                    identity,
+                    {
+                        "kind": "related_add",
+                        "fact_type": "pet.breed",
+                        "value": "Husky",
+                        "entity_ref": "new:roxy",
+                        "evidence": {
+                            "mode": "endorse_assistant",
+                            "current_quote": "Roxy",
+                            "support_handle": assistant["handle"],
+                            "support_quote": "Is Roxy a Husky?",
+                        },
+                    },
+                ]
+            }
+    return {"decisions": []}
+
+
 class FakeRouterHandler(BaseHTTPRequestHandler):
     request_ids = count(1)
 
@@ -87,39 +227,10 @@ class FakeRouterHandler(BaseHTTPRequestHandler):
             self._send({"error": "unknown fake route"}, status=404)
             return
         if payload.get("model") == "fake::conversation":
-            content = "I hear you live in Toronto."
+            content = _scripted_reply(payload)
         elif payload.get("model") == "fake::reviewer":
             packet = json.loads(payload["messages"][1]["content"])
-            current = packet["current_user_message"]
-            if "I live in Toronto" in current["content"]:
-                decision = {
-                    "proposals": [
-                        {
-                            "claim_id": "browser-residence",
-                            "operation": "add",
-                            "fact_type": "person.current_location",
-                            "value": "Toronto",
-                            "evidence_quote": "I live in Toronto",
-                            "sources": [
-                                {
-                                    "message_id": current["id"],
-                                    "quote": "I live in Toronto",
-                                    "role": "user_assertion",
-                                }
-                            ],
-                        }
-                    ],
-                    "claim_dispositions": [
-                        {
-                            "claim_id": "browser-residence",
-                            "outcome": "allow",
-                            "reason": "supported",
-                        }
-                    ],
-                }
-            else:
-                decision = {"proposals": [], "claim_dispositions": []}
-            content = json.dumps(decision, ensure_ascii=False)
+            content = json.dumps(_scripted_review(packet), ensure_ascii=False)
         else:
             self._send({"error": "unknown fake model"}, status=400)
             return
