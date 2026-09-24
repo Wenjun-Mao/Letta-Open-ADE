@@ -1,5 +1,14 @@
 # Natural Memory Consultation Review
 
+Follow-up: two independent repository critiques are preserved as
+[Pro A](reports/pro-a.md) and [Pro B](reports/pro-b.md). The separate
+[assessment](pro-review-assessment.md) records verified counterexamples and
+recommended design revisions, without changing the original reports or accepting
+a new runtime contract. The [revision-2 design](../../architecture/natural-memory-design.md)
+and [second-review brief](pro-review-brief.md) incorporate that assessment for
+another review. The original design remains pinned at `243d8d0`; no implementation
+plan has been written and no runtime changes have been made for either revision.
+
 Date: 2026-09-23. Status: research synthesis for discussion, not an accepted
 architecture, implementation plan, or release qualification.
 

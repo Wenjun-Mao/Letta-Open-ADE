@@ -8,11 +8,18 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 Natural conversational continuity is the current research focus. Two external
 reports are preserved unchanged with a separate
 [consultation review](findings/natural-memory-consultation/README.md).
-The next step is an independent, repository-grounded critique of the
+Two independent, repository-grounded critiques of the
 [proposed memory design](architecture/natural-memory-design.md), its
 [worked conversations](findings/natural-memory-consultation/design-scenarios.md),
-and [source map](findings/natural-memory-consultation/source-map.md), using the
-[Pro review brief](findings/natural-memory-consultation/pro-review-brief.md).
+and [source map](findings/natural-memory-consultation/source-map.md) are now back.
+The [assessment](findings/natural-memory-consultation/pro-review-assessment.md)
+reproduces six synthetic context/policy counterexamples and recommends revising
+preference identity, lifecycle/evidence rules, and context integrity before coding;
+continuity tables should follow a bounded history comparison, not precede it.
+Revision 2 of the design now incorporates those findings and expands the worked
+conversations to 22 arcs. Next: a second external review before any implementation
+plan. Summary watermarks, capacity recovery, and bounded clarification are proposed
+contracts to scrutinize, not accepted or implemented capabilities.
 The user authorized publication of the review checkpoint, not adoption of the
 design or a merge/release. Resolve the critique before an implementation plan or
 new provider experiments. Stronger forgetting/erasure semantics remain a product

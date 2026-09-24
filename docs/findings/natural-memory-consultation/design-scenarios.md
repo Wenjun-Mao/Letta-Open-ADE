@@ -1,6 +1,6 @@
 # Proposed Memory Design: Worked Conversations
 
-Status: review specification, not executed evidence or accepted golden answers.
+Revision 2: review specification, not executed evidence or accepted golden answers.
 These fictional inputs contain no real user's personal data. They illustrate
 the [proposal](../../architecture/natural-memory-design.md); all new semantics
 remain proposed. Replies below illustrate claims and tone, not exact-match strings.
@@ -17,7 +17,7 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 - Probe: "周末想在附近散散步。" Use Toronto as relevant grounding, without
   automatically announcing the whole memory history or inventing local weather.
 - Negative branch from Beijing: "可能年底搬去多伦多。" Do not change residence.
-  A future continuity entry may record a tentative plan, never completed movement.
+  The dialogue can discuss that tentative plan without a new durable plan schema.
 
 ## 2. Error Versus Change
 
@@ -31,7 +31,7 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 ## 3. Compatible Preferences
 
 - "我早上喜欢喝咖啡。" Then "晚上我一般更喜欢花茶。"
-- Retain both scoped clauses in the drink value. Do not globally replace coffee,
+- Save separate independently addressable scoped preferences. Do not replace coffee,
   and do not rewrite broad flower tea as a jasmine preference.
 - "早饭喝什么好？" may use morning coffee. "晚饭后喝什么好？" may use tea.
 - A jasmine recommendation is not a failure unless falsely attributed as a known
@@ -47,19 +47,23 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 
 ## 5. Rocky's Recovery
 
-- "Rocky 明天要做手术，我有点担心。" A proposed concern/plan refers to the same
-  pet, not a new permanent pet-breed fact or diagnosis about the user.
+- "Rocky 明天要做手术，我有点担心。" Retain the ordinary dialogue; do not invent
+  a permanent pet-breed fact, user diagnosis, or a currently unsupported concern row.
 - Later: "手术做完了，但还得等检查结果。" The procedure is complete, but concern
   is not proven resolved. Preserve that distinction.
-- Later: "结果没事，已经恢复了，我终于放心了。" Resolve the linked concern.
+- Later: "结果没事，已经恢复了，我终于放心了。" The supplied dialogue now supports
+  recovery and relief. No durable continuity-entry lifecycle is assumed.
 - Probe: "今晚终于能睡个好觉。" An empathetic response may draw on relief without
   asking again whether surgery is still upcoming. No promised scheduled follow-up.
+- Across conversations this is a source-window experiment, not a claim of implemented
+  recall. Supply original statements and later updates in the fixed-evidence variant.
 
 ## 6. Interview And Unresolved Outcome
 
 - "明天面试，我有点紧张。" Then "面试结束了，下周才知道结果。"
-- Record completed interview as appropriate; do not infer acceptance, rejection,
-  or that all worry disappeared. A separate explicit "我不担心了" resolves worry.
+- The dialogue supports a completed interview, not acceptance, rejection, or the
+  disappearance of all worry. "我不担心了" supplies relief evidence. No event table
+  is assumed; compare a bounded source window before a durable entry representation.
 - Negative probe: unrelated cooking question. Do not drag the interview into it.
 - This probes the report examples too: user text, not consultant interpretation,
   decides the annotated permissible state.
@@ -105,7 +109,8 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 
 - Subject A tells character root Lin about Toronto and interview anxiety.
 - A new conversation for A/Lin, even at a new persona version, may use the saved
-  profile and proposed continuity entry after their commit.
+  profile after commit. Anxiety recall across conversations requires eligible
+  dialogue evidence in the proposed source-window experiment, not an assumed entry.
 - A/different character may share Toronto under existing subject semantics, but
   not Lin's conversational continuity. Subject B gets neither.
 - No mutation/search argument may override these bindings. Include simultaneous
@@ -121,6 +126,108 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 - Long-history variant: relevant fact falls outside recent turns/profile; inspect
   actual selected evidence before judging the reply. A tool call by itself is
   neither retrieval success nor naturalness evidence.
+
+## 13. Partial Preference Removal And Mixed Revisions
+
+- Save morning coffee and evening flower tea as separate preference records.
+- "只移除保存的咖啡偏好，花茶那条保留。" Forget only coffee's record/chain.
+- Separate branch: "早上现在喝豆浆；晚上以前说错了，一直喝红茶。"
+  Supersede the first preference and correct the second in the same review, with
+  different reasons and source spans. Neither operation touches another category.
+- Legacy composite branch: no inferred decomposition. Ask for retained assertions
+  before a supported forget-old/add-restated replacement, or offer whole removal.
+
+## 14. Current Known, Earlier Relationship Unknown
+
+- Earlier current residence: Beijing. Then "Actually, I live in Toronto."
+- Set Toronto current with historical relationship unspecified unless more context
+  explicitly establishes change or error. Do not keep a stale present to avoid
+  admitting uncertainty about the past; do not invent a move.
+- "Did I ever live in Beijing?" Prior reporting alone is not enough to assert yes.
+
+## 15. Invalidate Without Replacement, End Then Remove
+
+- "北京那条是我说错了，我不想说实际住在哪里。" Invalidate the current residence
+  without a replacement; do not mark Beijing once-true or infer a deletion request.
+- Separate relationship branch: save partner X, end it after an explicit breakup,
+  then explicitly remove the saved relationship. The inactive record is eligible.
+- Repeating the same exact targeted removal is idempotent. A later explicit
+  restatement after forgetting creates fresh evidence, not a restored old chain.
+- Reassertion after ending makes a new active revision without pretending the
+  relationship was continuous through the gap.
+
+## 16. Correcting Older History Without Replacing The Present
+
+- Prior reports: Beijing, then Toronto. Current user: "北京是我姐姐住的地方，
+  我来多伦多之前住渥太华。"
+- Do not change current residence from Toronto to Ottawa. General retrospective
+  revision correction is deferred in this design. The current reply can understand
+  the clarification, but no durable historical repair is claimed.
+- Operator history still shows original evidence; model-facing historical fact-chain
+  lookup is not added. Mark historical-answer cases requiring that feature unsupported
+  rather than converting old revisions into supposedly verified truth.
+
+## 17. Clarification Across User Spans
+
+- Two known dogs: Rocky and Roxy. User: "我的两只狗里有一只是哈士奇。"
+  Assistant: "是 Rocky 还是 Roxy？" User: "Roxy。"
+- Add Roxy's breed using both user spans. The assistant question is reference
+  context, not breed evidence. Preserve name/breed entity identity.
+- Negative branch: only the assistant invented Husky. A bare name answer is not
+  evidence that the breed claim is true. Negative/quoted/roleplay variants must not
+  import an assertion. An out-of-window claim needs clarification, not wider replay.
+
+## 18. Packing, Revisions, And Entity Names
+
+- Long persona: either full mandatory policy is included or construction fails;
+  it is never silently removed.
+- Oversized first profile record plus relevant Toronto record: the location can be
+  packed through retrieval if omitted from profile. Manifest lists only actual
+  complete evidence. Partial strings never count as included facts.
+- Profile v1 versus retrieved v2: resolve which current revision is used; never
+  deduplicate v2 solely because the same fact ID appeared as v1.
+- Correct Rocky to Roxy, then inspect reviewer/entity context. Old unqualified Rocky
+  labels must not remain canonical. After name removal use neutral identity, not
+  the unversioned label. Reject unsupported new_entity_label content as evidence.
+
+## 19. Stale Summary And Raw Narrative
+
+- Conversation A's summary says X is the current partner. In B, explicitly end
+  that relationship. Return to A with a weekend question.
+- Context must supply the relevant ending guard or withhold stale optional narrative;
+  don't rely on absence from the active profile. Do not infer the user has no partner.
+- Repeat using recent raw evidence instead of a summary, a legacy summary with no
+  watermark, an intervening correction, and a guard set that cannot fit.
+- A concurrent subject change cannot be stamped into an older summary as though
+  it had seen that change. Withholding history is an explicit evidence gap.
+
+## 20. Shared Knowledge Beside Private Dialogue
+
+- A source message to Lin contains Toronto plus a private conversation detail.
+- Another root can receive the shared residence with compact source attribution,
+  not the full message or a claim "you told me when we discussed that detail."
+- Archived source conversations are excluded from the experimental model source
+  pool; operator citations and already committed facts have separate eligibility.
+- Same subject/other root is not the same as other subject. Assert both boundaries.
+
+## 21. Capacity And Concurrent Absence Assumptions
+
+- Full reviewer packet cannot fit: normal extraction fails explicitly, without
+  sending costly generation first where this can be preflighted.
+- Exact-target operator removal still works without model/embedding calls. It
+  checks scope/version, persists action provenance, and does not invent a user quote.
+- Concurrent conversations both add the same apparent pet or scoped preference:
+  stale absence-dependent plans conflict rather than silently duplicate or merge.
+- Two genuinely different pets with the same name must not be merged by a name rule.
+- A concurrent no-op reply based on the old snapshot remains possible under the
+  deliberately weaker contract; record it, don't call it a prevented lost update.
+
+## 22. Residence And Temporary Whereabouts
+
+- Current residence Toronto; "这个周末在巴黎玩。" Do not change residence to Paris.
+- "已经搬到巴黎，之后住这里了。" Supersede residence with Paris.
+- Legacy current_location value with ambiguous source remains meaning-unspecified,
+  not automatically reclassified. No location pin may silently equate it with home.
 
 ## Scoring Before Any Live Experiment
 

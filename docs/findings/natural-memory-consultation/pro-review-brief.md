@@ -1,105 +1,123 @@
-# ChatGPT Pro: Repository-Grounded Memory Design Critique
+# ChatGPT Pro: Second Memory Design Review
 
-Date: 2026-09-23. Brief version: natural-memory-pro-review-1.
-Purpose: challenge a proposed design before implementation, not approve a release.
-Publication authorization covers this review branch and both supplied reports;
-it does not authorize operating the user's ChatGPT account or a deployment.
+Date: 2026-09-23. Brief version: natural-memory-pro-review-2.
+Purpose: scrutinize the revised design before any implementation plan.
+The first-round brief and design remain in Git at documentation commit
+`243d8d0b4e850aca304eea2699e58ec24d45479b`.
 
-## Evidence Anchors
+## Evidence Anchors And Access
 
 - Repository: <https://github.com/Wenjun-Mao/Letta-Open-ADE>
 - Discovery ref: `codex/character-continuity`, not `main`.
-- Implementation baseline: `4905ce15dbda6466b12f2d1ed7908eb3d03995a0`.
-- Design/packet: this documentation checkpoint. The handoff must supply its
-  full commit SHA and an immutable link after publication; record the actual
-  documentation revision inspected, separately from the implementation anchor.
-- Access: public GitHub only. No local files, database, services, ignored captures,
-  credentials, browser state, previous conversations, or execution assumed.
+- Unchanged implementation baseline: `4905ce15dbda6466b12f2d1ed7908eb3d03995a0`.
+- Revised design/packet: the documentation commit in this round's handoff.
+  Record that exact revision separately from implementation; do not review the
+  old design as though it were revision 2.
+- Public GitHub only: no local files, services, database, ignored captures,
+  credentials, browser sessions, execution, or previous conversations assumed.
 
-If a required source or document cannot be read, report that limitation. Do not
-silently substitute main, infer ignored artifacts, or call a summary a code audit.
+If required evidence is inaccessible, report the limitation rather than silently
+substituting another branch or treating a summary as a direct code audit.
 
-## Self-Contained Assignment
+## Product And Existing Foundation
 
-ADE is a local-first conversational-character product. The initial character is
-Lin Xiaotang (林小棠). We want natural factual updates and useful, restrained recall
-across conversations, not a profile editor that requires "search memory" commands.
-Users should feel listened to without false physical co-presence, invented facts,
-automatic psychologizing, constant callbacks, or unsupported future promises.
+ADE is a local-first conversational-character product using Lin Xiaotang (林小棠).
+We want natural factual updates and useful, restrained recall across conversations,
+without requiring memory commands, inventing physical shared experiences, or
+promising unimplemented memory/control behavior.
 
-The native runtime already owns PostgreSQL subjects, immutable messages, typed
-facts, revisions/source spans, pgvector retrieval, a model reviewer, compaction,
-run events, leases, and ADE-owned retries. The conversation model is followed by
-the reviewer; assistant/memory success commit atomically. Subjects intentionally
-share facts across characters. Current removal only excludes saved active facts;
-history remains (accepted Option A), not all-context suppression or erasure.
+ADE already has PostgreSQL subjects, immutable messages, typed/versioned facts,
+source spans, embeddings, automatic fact retrieval, optional search, compaction,
+leases, run events, and ADE-owned retry semantics. Conversation generation precedes
+the reviewer; successful assistant/memory finalization is atomic. Shared subject
+facts span characters. Option A removal excludes saved records from active memory
+but retains history; it is not erasure or global suppression.
 
-Current shortcomings include regex-selected add-only versus correction modes,
-one preference slot per category, no durable concerns/events, recency-first
-profile selection, and fact-only deeper search. A failed synthetic run mixed
-mandatory tool validation with provider auto choice and conditional user wording.
-Its exact failed reply/wire request is unavailable; it is not proof the provider
-cannot recall. Qualification remains blocked and historical evidence unpromoted.
+DeepSeek conversation/reviewer and relocatable Qwen embeddings are unqualified
+candidates behind Model Router. A previous synthetic Stage A failed a mismatched
+required-tool contract. Exact response/wire contents are unavailable; that result
+does not establish a memory quality failure. No calls, rollout, or release waiver
+are authorized by this consultation.
 
-Selected unqualified provider candidate: DeepSeek conversation/reviewer with
-Qwen embeddings behind a relocatable Model Router route. This is not a request
-to research provider pricing, make calls, deploy, or resume qualification.
+## What Changed After Round One
 
-Our proposed direction keeps the current architecture. It adds natural fact
-reconciliation with change-versus-error semantics, initially retains composed
-scoped preference text, improves automatic context selection, and proposes small
-character-scoped continuity entries in a later increment. Transcript retrieval
-is an experiment, not an assumed production feature. Background extraction,
-graphs, generic temporal engines, autonomous outreach, and framework replacement
-are deferred. The design explicitly preserves the limitations of Option A.
+Two independent source reviews challenged the initial design. The maintainer
+reproduced six synthetic in-process counterexamples involving context truncation,
+deduplication, telemetry, current-only clarification evidence, and entity labels.
+No live provider behavior was reproduced.
 
-Read in order, in the documentation revision supplied in the handoff:
+The revised proposal:
+- Keeps one fact system, not a new memory framework or continuity schema.
+- Gives independently mutable preferences separate application-owned IDs.
+- Defines lifecycle for uncertain history, invalidation without replacement,
+  inactive removal, and reassertion; no inferred legacy decomposition.
+- Permits bounded earlier user spans only with a current clarification anchor;
+  assistant exchanges provide reference context, not factual authority.
+- Protects mandatory policy, packs whole records, handles revision conflicts,
+  carries provenance, and accounts for final provider requests.
+- Proposes current-identity derivation and conservative stale-narrative guards.
+- Keeps synchronous post-response review and its explicit availability/snapshot
+  tradeoffs; adds a proposed exact-target operator removal escape at capacity.
+- Defers generic historical-fact search, arbitrary retrospective history repair,
+  continuity tables, and broad transcript search. Source-window comparison comes
+  before introducing another durable memory lifecycle.
 
+The changed design includes new decisions that deserve independent challenge:
+summary watermarks/guard-or-withhold behavior; absence-dependent add read sets;
+typed operator-action provenance; reported-residence semantics; and the bounded
+clarification window. Do not accept these simply because they respond to reviewers.
+
+## Required Reading
+
+At the revised documentation commit, read:
 1. `docs/architecture/natural-memory-design.md`
-2. `docs/findings/natural-memory-consultation/design-scenarios.md`
-3. `docs/findings/natural-memory-consultation/source-map.md`, following its pinned
-   implementation links and inspecting relevant tests directly.
-4. `docs/adr/0022-incumbent-memory-first-product-slice.md` and
-   `docs/adr/0026-memory-removal-reply-boundary.md`.
-5. The consultation `README.md` and original `reports/` for context, not authority.
+2. `docs/findings/natural-memory-consultation/design-scenarios.md` (22 arcs)
+3. `docs/findings/natural-memory-consultation/source-map.md`; follow the pinned
+   implementation links and relevant tests.
+4. `docs/findings/natural-memory-consultation/pro-review-assessment.md`
+5. Original round-one `reports/pro-a.md` and `reports/pro-b.md`.
+6. ADRs 0022 and 0026 for current scope/removal authority.
 
-The two earlier reports did not inspect this repo. Their exported citation tokens
-may not resolve; the separate assessment gives verified links and qualifications.
-Challenge their assumptions and our synthesis as freely as the design itself.
+The source map remains anchored to unchanged code. The assessment distinguishes
+source inspection, executed synthetic probes, logical counterexamples, and
+unmeasured behavior. Original public-research reports are optional background;
+their agreement and exported citation tokens are not independent validation.
 
-## Questions That Matter
+## Review Questions
 
-- Does the proposal actually support natural change and recall without new forms
-  of stale memory, over-personalization, or inferred biography?
-- What current capability did we miss or duplicate? Which code contracts must
-  change? Cite paths/functions at the implementation anchor.
-- Are composite preference values a fragile shortcut? Can scope and deletion
-  remain correct without a generic assertion model? Offer the smallest counterexample.
-- Do continuity entries earn three new tables, or can a smaller fact-plus-source
-  approach satisfy the same cases? Account for temporal state and read costs.
-- Does definition-root scope appropriately separate shared user facts from
-  character-private continuity across persona versions?
-- Is post-response atomic review acceptable? Inspect failure, cancellation,
-  concurrency, stale reads, and no-write-on-failed-turn consequences.
-- Can summaries/raw history undermine current-state accuracy or the limited
-  removal promise? Distinguish bugs from deliberately unsupported stronger promises.
-- Are source attribution, ambiguity, entity matching, and prompt-injection
-  boundaries specified honestly, without treating exact quotes as entailment proof?
-- Which selection/budget choices should be measured rather than baked in? Are
-  the proposed test expectations fair and separate write/retrieval/reply quality?
-- What should be removed, deferred, or implemented first to reduce cognitive load?
+Has revision 2 fixed each material design issue, explicitly bounded it, or merely
+renamed it? Map first-round findings to resolved, partial, unresolved, or deferred
+with consequences. A legitimate deferral is not implementation of the capability.
 
-## Requested Report
+Specifically challenge:
+- Are fact identity and transition rules closed over the worked cases? Are legacy
+  records, removal/reassertion, and unknown history treated without fabrication?
+- Can clarification evidence preserve ownership, negation, scope, and source
+  lineage without enabling unrelated historical extraction?
+- Does guard-or-withhold actually cover stale summaries AND raw dialogue? Is its
+  watermark/concurrency design worth the complexity, or is a smaller policy enough?
+- Does exact-target operator removal create a coherent product contract and
+  provenance path, rather than a hidden bypass or imaginary authentication?
+- Are source eligibility, archived conversations, shared facts versus private
+  dialogue, and Option A limits internally consistent?
+- Are absence-read checks narrowly justified? Distinguish stale mutations, duplicate
+  adds, and intentionally allowed stale no-op replies.
+- Do the historical-repair and source-search deferrals leave an acceptable first
+  product target, with honest limitations rather than silently weakened tests?
+- What should still be deleted or simplified before implementation planning?
 
-Start with a verdict: workable as proposed, needs targeted revision, or rethink.
-State exact source/document commits and what you actually inspected. Present
-findings ordered by consequence, with code/design evidence, a concrete failure
-scenario, and the smallest sufficient correction. Distinguish demonstrated
-contradictions, design tradeoffs, hypotheses, and missing evidence.
+## Requested Output
 
-Then provide a simplified recommended design, a keep/change/defer table, and a
-short sequence of falsifiable tests before implementation. Include a case where
-the proposed approach loses to a simpler alternative. Do not invent benchmark
-results, turn subjective warmth into substring tests, or propose a larger platform
-without showing why a smaller solution fails. Consultant agreement is not product
-acceptance, provider qualification, or authorization to change release evidence.
+Start with a verdict and exact inspected commits. Give prioritized remaining
+findings with code/design evidence, concrete counterexamples, and smallest
+sufficient corrections. Include a compact disposition of the first-round findings.
+Distinguish proved source behavior, logical design contradictions, product tradeoffs,
+and hypotheses. Tests read are not tests executed.
+
+Recommend a simpler alternative wherever it meets the same requirements with fewer
+independent correctness obligations. Do not optimize merely for table or line count.
+Conclude whether this design is ready to become an implementation plan and list
+only the blocking design decisions or missing bounded experiments.
+
+Do not produce the implementation plan, write code, make provider calls, or approve
+a release. Consultant agreement is not acceptance or authorization.
