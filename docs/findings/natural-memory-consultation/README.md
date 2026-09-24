@@ -1,5 +1,18 @@
 # Natural Memory Consultation Review
 
+The implementation-plan reviews are back, preserved unchanged as
+[Plan A](reports/pro-plan-a.md) and [Plan B](reports/pro-plan-b.md).
+The [plan-review assessment](pro-plan-review-assessment.md) checks their findings
+against the source and recommends precise comparison/acceptance contracts,
+failed-attempt evidence, legacy-index compatibility, cleanup scope and UI outcomes.
+The user authorized incorporating those corrections into
+[plan revision 2](../../plans/natural-memory-implementation.md), with a matching
+[review brief](pro-review-brief.md). A0 is diagnostic-only; selectable A/B require
+symmetric usefulness, complete required coverage and actual compaction for A.
+The design's comparison paragraph now points to that precise execution contract.
+The assessment remains a record of the preceding review, not implementation
+authorization or evidence that either context policy has passed.
+
 Third-round reports are preserved as [Round 3 A](reports/pro-round3-a.md) and
 [Round 3 B](reports/pro-round3-b.md). The [third-round assessment](pro-round3-assessment.md)
 is now incorporated into the [revision-4 amendment](../../architecture/natural-memory-design.md)
@@ -22,7 +35,8 @@ Follow-up: two independent repository critiques are preserved as
 recommended design revisions, without changing the original reports or accepting
 a new runtime contract. Revision 1 remains pinned at `243d8d0` and revision 2 at
 `d80afb4`, and revision 3 at `c01f45a`. Current paths hold revision 4 and its first
-implementation plan, both awaiting review. No runtime changes were made for them.
+implementation plan, now revised as described above for another Pro review. No runtime
+changes were made for them.
 
 Date: 2026-09-23. Status: research synthesis for discussion, not an accepted
 architecture, implementation plan, or release qualification.

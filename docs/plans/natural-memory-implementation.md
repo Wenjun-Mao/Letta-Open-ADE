@@ -1,10 +1,12 @@
 # Natural Memory: Bounded Implementation Plan
 
 Status: proposed for Pro/user review, not authorized implementation or live calls.
+Plan revision: 2, incorporating the first implementation-plan reviews.
 Design authority for review: [revision 4](../architecture/natural-memory-design.md).
 Source baseline: `4905ce15dbda6466b12f2d1ed7908eb3d03995a0`; revision-3 packet:
 `c01f45a045eb0fdd0fc6b3e18add82f2dbb57024`. The handoff pins this plan's later commit.
 Rationale: [round-three assessment](../findings/natural-memory-consultation/pro-round3-assessment.md).
+Execution corrections: [plan-review assessment](../findings/natural-memory-consultation/pro-plan-review-assessment.md).
 
 ## Outcome And Scope
 
@@ -71,7 +73,7 @@ All runtime paths below are relative to
 | --- | --- |
 | Domain and review | `contracts.py`, `fact_registry.py`, `memory_review.py`, `memory_policy.py`, `reviewer.py`: lifecycle, scoped assertions, source roles, mixed proposals and consistency outcome |
 | Persistence | `persistence/metadata.py`, `persistence/memory.py`, `memory_commit.py`, `persistence/memory_source_read.py`: migration, coherent snapshots, current lifecycle views/indexes, provenance and atomic generation |
-| Turn ownership | `run_service.py`, `turn_execution.py`, `worker_finalization.py`, `retry.py`, `events.py`: acceptance fence, bounded work, terminal conflicts and traceable commit |
+| Turn ownership/evidence | `run_service.py`, `turn_execution.py`, `worker_finalization.py`, `retry.py`, `worker_events.py`, `provider_tracing.py`: acceptance fence, bounded work, terminal conflicts and failure-capable diagnostics |
 | Context/tools | `context.py`, `compaction.py`, `embeddings.py`, `tool_policy.py`: whole-record packing, shared bundle, lifecycle selection, avoid redundant calls |
 | Product API | `agent_studio_api.py`, `resource_service.py`, `presenters.py`, `service_protocol.py`: typed operator removal and lifecycle/source readback |
 | Operator UI | `apps/ade-web/src/features/agent-studio/`: lifecycle display, exact citations, explicit removal, conflicts and action replay wording |
@@ -102,6 +104,18 @@ Exit: fixtures cover every rule and negative branch without future-turn leakage;
 tests fail for the intended missing contract, not unrelated setup failure.
 Offline harnesses deny outbound provider requests and use fake transports; loading
 the operator's normal environment must not turn a test into an unbudgeted live call.
+
+Freeze the checkpoint-4 paired recipes and checkpoint-6 matrix before generation:
+case IDs, eligible evidence/cutoffs, variant, lifecycle state, numeric input/output
+allocations, record sizes, expected useful answer and prohibited claims, required
+versus diagnostic cells, and stop classification. The same mandatory envelope applies
+to A and B; A0 is diagnostic-only. Include answerable dog/interview follow-ups under
+unrelated-memory pressure, not only low-load or intentionally unanswerable probes.
+Pressure fixtures must exercise A's history-withholding threshold while B's required
+bundle and both full reviewer requests fit. If no such region exists at the selected
+budgets, report that limitation before live approval, not an invented comparison.
+Freeze fixtures/thresholds before observing replies; do not reclassify failures as
+outside-envelope afterwards. No live winner is inferred from fake-model tests.
 
 ### 2. Lifecycle, Provenance, And One Transaction Boundary
 
@@ -138,14 +152,27 @@ records lose read eligibility even while their audit rows remain. No stale activ
 embedding may masquerade as an ended assertion. New index writes remain inside the
 existing embedding failure/atomicity contract; operator forgetting needs no embedding.
 
+Preserving vectors is not enough: current lookup also filters `retrieval_policy_version`.
+Document compatible index/read-policy versions separately from semantic embedding
+space. Preserve compatible legacy active-document reads, or require a separately
+budgeted reindex before comparison; never relabel incompatible vectors or call
+providers inside SQL migration. Populated tests must retrieve legacy active facts,
+new current terminal descriptors, and exclude forgotten chains under the new reader.
+All variants start from the same coherent populated state, not differently indexed copies.
+
 Exit: fresh and populated isolated PostgreSQL migration tests; add/revise/end/
 reassert/forget, source-role constraints, rollback, cancellation/lease fencing,
 ABA and identity races, two subjects, operator replay and independent pool readback.
 No production volume changes. New tables/foreign keys also update evaluation cleanup
 and the existing explicit reset path, with purpose guards and absence verification.
-For multi-conversation fixtures, cleanup waits until the entire case finishes;
-never purge source evidence still needed by a surviving shared revision. Test this
-dependency explicitly rather than treating foreign-key deletion order as sufficient.
+For this campaign, use an exclusively owned disposable database and dispose of it
+only after the entire campaign stops and artifacts are retained. If case cleanup is
+needed, delete a complete exclusively owned evaluation-subject closure atomically;
+do not infer ownership from `purpose=evaluation` alone. Refuse individual conversation
+purge when surviving records depend on its sources/revisions. Check active work across
+the whole deletion scope, including operator mutations. Test C1/R1 -> C2/R2 -> C1/R3,
+operator origins, surviving source/predecessor links and current pointers, not merely
+absence of foreign-key errors. No generic graph cleanup framework or product erasure.
 
 ### 3. Reviewer And Turn Integration
 
@@ -171,6 +198,20 @@ Exit: fake-provider API-to-worker tests for mixed operations, exact attempts/tim
 claim consistency, shared evidence, provider/embedding failure, cancellation and
 lease loss. Current reviewer repair stays zero for the DeepSeek lane.
 
+Failed-attempt diagnostics are an explicit deliverable, not success-event reuse.
+For opt-in, server-bound synthetic evaluation runs in the isolated database, retain
+actual serialized input/bundle manifests, tool evidence, candidate visible reply,
+typed review proposals/claim dispositions, and terminal commit outcome even when
+finalization fails. Mark absent stages explicitly and rejected candidates as
+uncommitted/undelivered. Write only to the existing rooted evaluation artifact path,
+never transcript, fact storage or retrieval. Mark excluded authentication/private-
+reasoning fields explicitly rather than dumping raw wire bodies. Do not retain secrets
+or raw exception text, or enable production prompt logging. Normal events keep safe
+bounded reason codes/references. A fake false-veto test must prove evaluable evidence
+with zero assistant/memory commit and zero generation advance; cover later embedding/
+commit failures too. Failure to retain required evidence makes the cell unscorable,
+not successful; an unsafe capture boundary stops the campaign.
+
 ### 4. Context Construction And The Bounded Comparison
 
 Implement one assembler with a workflow-controlled comparison input, not a public
@@ -178,9 +219,25 @@ policy selector or permanent second runtime. Freeze the recipe before evaluation
 
 | Variant | Prior dialogue and memory admission | Purpose |
 | --- | --- | --- |
-| A | Whole active/inactive lifecycle snapshot required before prior dialogue/summary; otherwise explicit withholding | Conservative control from revision 3 |
-| A0 | Same prerequisite and budget as A, but no summary | Isolate the effect of summarization |
-| B | Reserve shared local suffix first; select current active/terminal views within remaining budget; no summary or older raw windows | Isolate removal of the global prerequisite for local dialogue |
+| A | Whole active/inactive lifecycle snapshot required before prior dialogue/summary; otherwise explicit withholding | Selectable conservative control |
+| A0 | Same prerequisite as A, summary omitted under the paired controls below | Diagnostic-only supplied-summary ablation |
+| B | Reserve shared local suffix first; select current active/terminal views within remaining budget; no summary or older raw windows | Selectable recent-first admission package |
+
+Freeze preselection inputs, not identical final prompts:
+- A/A0: identical raw-message cutoff, eligible pool, lifecycle snapshot and nonsummary
+  section contents/order. Preserve the summary's `through_sequence` boundary even in
+  A0; removed summary allocation stays unused. No earlier raw messages or extra facts
+  fill the gap. Assert these invariants in serialized manifests. Hand-authored summaries
+  test interpretation only; generated-summary production behavior needs real compaction.
+- A0/B: identical eligible local pool (at most eight prior users with complete exchanges),
+  lifecycle state and total budgets; no older windows in either. Where A0 withholds
+  history, use the same selective retrieval/expansion recipe as B within its available
+  allocation. Final bundles may differ intentionally. This compares full-versus-selective
+  recent-first packages, including retrieval cost, not one isolated Boolean effect.
+- A/B product probes use that same local pool and state; A's summary input, if any, is
+  declared per cell. A0 results never automatically qualify A. Evidence reuse needs
+  identical serialized requests AND relevant processing/commit behavior demonstrated
+  per cell, not assumed from the shared prerequisite. Do not build an equivalence framework.
 
 All variants share policy/persona, generation/reviewer models, source boundaries,
 full reviewer target visibility, output caps, and total provider-request limits.
@@ -215,7 +272,8 @@ just below/above each allocation, not only record counts. Use the same serialize
 data and total budget for all variants; count selection/setup overhead. Reviewer
 overflow is measured separately and remains a failure for every variant.
 
-Exit: all deterministic boundary tests pass; artifact manifests show exact sections,
+Exit: all deterministic boundary tests and paired-control assertions pass;
+success and failure artifact manifests show exact sections,
 IDs/versions, source roles, bundle membership, omissions, token estimates/usage,
 provider counts, and commit outcome. A live winner is not inferred from fake models.
 
@@ -245,6 +303,16 @@ cannot claim new absence. Correction remains a natural reviewed turn; no direct
 operator correction endpoint. Show terminal conflict and offer deliberate fresh
 submission, not an automatic retry or silent composer send.
 
+Separate capabilities: continuation requires a compatible runnable conversation;
+direct removal requires active subject scope, operator authority and displayed
+generation/target versions, not a runnable selected conversation; reviewed correction
+requires an eligible conversation and deliberate turn. Test removal from an old-policy
+read-only conversation, including when no runnable conversation exists for that subject.
+Replace run-only correct/forget success matching with typed outcomes for run mutations,
+operator receipts, per-claim deferral and terminal conflict/capacity/provider failure.
+Show action receipt and fresh state separately: restatement racing readback is neither
+proof of current absence nor evidence that the historical removal failed.
+
 Render multiple exact user spans and assistant referents with their roles; operator
 actions render as actions, not fake messages. Keep archived source viewing read-only,
 root/subject boundaries, rapid-switch safety, and persona-version immutability.
@@ -270,28 +338,50 @@ removal, and fresh post-removal restatement. Use source-linked, isolated setup f
 cases needing another fact type; distinguish scripted setup from model extraction.
 Stop on a boundary violation or failed required state outcome; preserve the evidence.
 
-Then compare A0/B on six paired response probes: dog clarification, interview reply,
-cross-conversation breakup against old local dialogue, residence versus visit,
-selective ended-state recall, and irrelevant memory/repetition. Replay identical
-synthetic setup per variant, not shared writable state. Add A versus A0 summary
-probes for old dialogue compacted after a change and end -> forget -> old history.
-Scripted summaries test interpretation, not summarizer quality; label them. Actual
-compaction calls, if included, consume the same cap. Budget exhaustion means incomplete.
+Then test both selectable A and B on six mandatory response probes: dog clarification,
+interview reply, cross-conversation breakup against old local dialogue, residence versus visit,
+selective ended-state recall, and irrelevant memory/repetition. Include the frozen
+low-load and pressured short-exchange cells from checkpoint 1. Replay identical
+synthetic setup per variant, not shared writable state. Add A0/B diagnostic cells
+and A/A0 supplied-summary pairs for old dialogue compacted after a change and
+end -> forget -> old history; use only manifest-proven equivalent cells to avoid
+duplicate calls. A0 is not a third product candidate. Before accepting A, run the
+actual compactor on both summary arcs and verify its output plus downstream reply/
+review outcomes; scripted summaries cannot substitute. Count every compaction call.
+The frozen matrix must distinguish these cells and fit a reviewed request schedule
+under the same proposed caps; no automatic cap increase or assumed completion.
 
 Selection gate: zero observed isolation, forgotten-fact-selection, provenance,
 atomicity, or exact-retry violations; every required lifecycle outcome must match
 its fixture and every predeclared forbidden reply claim must be absent. A bad
-control answer is not permission for the same error in B. In paired probes B must
-preserve answerability on the defined short exchanges under unrelated
-pressure, and not achieve its gain by skipping review. Record every missed write,
-false veto, abstention, withheld context, latency and cost. Review claims against
-source, and use blinded human comparison with ties for warmth/relevance. A finite
+control answer is not permission for the same error in B. Every selectable policy
+must meet the same predeclared useful-answer criteria on every mandatory case inside
+the common frozen envelope, including short exchanges under unrelated pressure,
+without skipping review. A relevant supported answer need not recite a fact or match
+an exact string. Correct abstention on an unanswerable case differs from withholding
+an answer the eligible evidence supports. Record missed writes, false vetoes,
+abstentions, withheld context, latency and cost. Report useful delivered answers over
+all scheduled required probes, plus executed coverage and failed/vetoed/unrun counts;
+never score only delivered replies or label unrun cells observed failures. Review
+claims against source, and use blinded human comparison with ties for warmth/relevance. A finite
 sample is bounded evidence, not a universal accuracy estimate or release gate pass.
+
+Predeclare stop reasons: isolation/privacy/provenance/atomicity/exact-attempt violations,
+failed required mutation state, lost authorization, invalid infrastructure/evidence
+capture or budget exhaustion stop the campaign. Ordinary reply-quality failures,
+unnecessary clarification or false veto on response-only probes disqualify that
+candidate on the required cell but allow remaining authorized comparisons; they
+do not justify rerolls. Failure of a required mutation remains a campaign stop.
+Report stopped or unscorable cells explicitly. Incomplete required matrix coverage
+means no winner, even if the other candidate failed. Never transfer A0's results to A
+without the explicit equivalence proof above, or waive compaction because A ran first.
 
 If neither policy passes, or results trade safety for continuity, pause at this
 material decision; do not quietly adopt B, expand scope, or consume another budget.
-If one passes, document its tested token/record envelope and reviewer-capacity limit
-and request product-policy acceptance. Retain compact evaluators, not unused product
+If one or both pass, document each passing policy's tested envelope and reviewer-capacity limit,
+including this comparison's exclusion of older raw windows; do not qualify untested
+historical coverage through that result. Request product-policy acceptance with the
+measured quality/cost tradeoffs; no automatic tie-break adoption. Retain compact evaluators, not unused product
 strategy machinery. Only the accepted policy becomes the normal runtime binding.
 
 ## Verification, Migration, And Release Boundaries
@@ -328,7 +418,11 @@ New behavior needs new immutable policy/definition bindings. Preserve old prompt
 persona versions and conversations; do not silently rewrite them. The proposed
 cutover keeps old-policy conversations readable and requires a newly bound
 conversation for new semantics, retaining the subject when requested. Test and
-explain that transition explicitly before deployment; do not let unsupported old
+explain fresh-send rejection versus historical read/idempotent replay access.
+A new conversation shares eligible saved facts, not the old conversation's unsaved
+dialogue, summary or missing antecedent for a bare "yes". No silent transcript copy
+or promise of seamless continuation. Direct subject removal remains independently
+available under checkpoint 5. Do not let unsupported old
 workers write the extended store. The current deployed system stays untouched now.
 
 Rollback is a verified matching application/database backup restore or a specifically

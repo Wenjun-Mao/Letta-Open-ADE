@@ -355,8 +355,11 @@ not subject/root boundaries, evidence authority, or full reviewer target visibil
 Missing relevant terminal state may make B worse on stale-state cases; do not call
 it equally safe in advance. Neither candidate changes the write contract.
 
-Compare A with and without summaries (A0) to isolate summary effects; compare A0/B
-to isolate admission effects at equal total budgets. Predeclare the small-memory
+Compare A with and without supplied summaries (diagnostic-only A0) using fixed
+nonsummary evidence; compare A0/B as full-versus-selective recent-first admission
+packages, not a one-variable causal claim. The [implementation plan](../plans/natural-memory-implementation.md)
+defines paired input controls, symmetric usefulness gates for selectable A/B, and
+actual-compaction evidence before summary-enabled acceptance. Predeclare the common
 operating envelope and whole-record overflow behavior. More saved records, including
 inactive ones, must not silently turn a quality failure into a passed abstention.
 Adopt neither as universal policy before the plan's evidence/selection gate.

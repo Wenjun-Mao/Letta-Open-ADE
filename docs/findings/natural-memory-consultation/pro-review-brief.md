@@ -1,14 +1,16 @@
 # ChatGPT Pro: Natural-Memory Implementation Plan Review
 
-Date: 2026-09-23. Brief version: natural-memory-plan-review-1.
-Purpose: scrutinize the bounded implementation plan and its revision-4 contract
-amendment before implementation approval. Do not merely reapprove the architecture.
+Date: 2026-09-24. Brief version: natural-memory-plan-review-2.
+Purpose: scrutinize revision 2 of the bounded implementation plan, especially closure
+of its first Pro reviews, before implementation approval. Do not merely reapprove
+the architecture or infer implementation from a more precise plan.
 
 ## Anchors And Access
 
 - Repository: <https://github.com/Wenjun-Mao/Letta-Open-ADE>
 - Discovery branch: `codex/character-continuity`, not `main`.
 - Plan/amendment: the exact documentation commit in this handoff.
+- Previous plan/review target: `1a3181c133b7404d6159dbb55468c0a53bb857bd`.
 - Unchanged implementation: `4905ce15dbda6466b12f2d1ed7908eb3d03995a0`.
 - Previous revision-3 packet: `c01f45a045eb0fdd0fc6b3e18add82f2dbb57024`.
 - Public GitHub only; no local worktrees, services, databases, ignored outputs,
@@ -46,14 +48,23 @@ reviewer/turn integration, context construction/comparison, product API/UI, and
 separately authorized live validation. One lifecycle view, one mutation generation,
 and one shared clarification bundle remain the core. No extra judge or framework.
 
-The main empirical choice is NOT settled:
-- A requires the complete lifecycle snapshot before prior narrative.
-- A0 removes summaries but retains that prerequisite.
+The main empirical choice is NOT settled. A and B are selectable; A0 is diagnostic:
+- A requires the complete lifecycle snapshot before prior narrative/summary.
+- A0 omits the supplied summary while freezing A's other evidence and raw cutoff;
+  freed summary space stays unused for the paired presence probe.
 - B reserves recent dialogue first and selects active/terminal evidence, without
-  summaries or older raw windows in this comparison.
-A/A0 isolates summary effects; A0/B isolates admission effects. Full reviewer
-visibility remains mandatory for all. Neither control nor candidate is assumed
-useful or safe enough for production before the selection gate.
+  summaries or older raw windows. A0/B shares the eligible local pool and compares
+  admission packages, including selection/retrieval costs, not one isolated switch.
+Full reviewer visibility remains mandatory for all. Every selectable configuration
+needs the same useful-answer criteria, explicit required coverage and tested envelope.
+A0 cannot qualify A by implication; accepting generated summaries needs actual
+compaction evidence. Unrun or unscorable cells cannot produce a winner.
+
+Other closures: failed synthetic attempts retain visible candidate/reviewer/input
+evidence without transcript/memory commit or private reasoning; legacy index-policy
+compatibility is tested separately from embedding-space identity; cleanup owns the
+whole disposable scope; UI continuation, correction and direct subject removal have
+separate capabilities and typed outcomes. Check whether these closures actually work.
 
 The plan proposes request ceilings, operating-envelope tests, and acceptance
 criteria; they are not current spend authority or a claim that all tests fit.
@@ -68,8 +79,9 @@ At the new documentation commit:
 2. `docs/architecture/natural-memory-design.md` (revision 4).
 3. `docs/findings/natural-memory-consultation/design-scenarios.md`.
 4. `docs/findings/natural-memory-consultation/source-map.md`, following pinned code/tests.
-5. `docs/findings/natural-memory-consultation/pro-round3-assessment.md` and the
-   unchanged `reports/pro-round3-a.md`, `reports/pro-round3-b.md` in that folder.
+5. `docs/findings/natural-memory-consultation/pro-plan-review-assessment.md` and the
+   unchanged `reports/pro-plan-a.md`, `reports/pro-plan-b.md` in that folder. These
+   assess the previous plan at `1a3181c`, not implementation of this revision.
 6. Existing `docs/plans/m3-agent-studio-continuity.md` and
    `docs/plans/m3-provider-neutral-release-preparation.md` for scope/qualification
    boundaries; ADRs 0021, 0022, 0026 and 0028 as referenced by the plan.
@@ -89,13 +101,18 @@ The source map describes the baseline, not claimed implementation of this propos
   cancellation, queued conflicts, and intentional fresh resubmission coherent?
 - Can legacy records survive migration without fabricated meaning or lost provenance?
   Do new source roles/operator actions require additional schema/read/cleanup changes?
-- Does selective terminal-state retrieval genuinely index the current descriptor,
-  not resurrect old active embeddings or arbitrary history?
+- Does selective terminal-state retrieval index current descriptors while preserving
+  compatible legacy active reads, without silent vector relabeling or migration calls?
 - Are API/UI changes narrow and implementable, including receipt-versus-current-state
   wording, archived citations, old-definition behavior and multi-target conflict?
-- Do the A/A0/B comparison and its fixtures actually isolate admission policy?
-  Are budget reservations, exact-call caps, setup costs, fairness, stop conditions,
-  and hard correctness/answerability criteria adequate without overclaiming a sample?
+- Are paired evidence pools, raw cutoffs, unused summary allocation and intended
+  selection differences explicit? Can A and B both fail for safe but useless replies?
+  Is evidence reuse narrow enough, and actual compaction tested before accepting A?
+- Can failed/vetoed turns be scored without committing rejected text, recording private
+  reasoning or weakening production redaction? Are incomplete coverage and campaign
+  stops distinct from ordinary candidate failure, under the unchanged proposed caps?
+- Can old-policy read-only conversations still expose authorized subject removal?
+  Do typed receipts avoid confusing newer restatement with a failed historical action?
 - Are cleanup, populated migration, incompatible old writers, backups, rollback and
   production qualification separated from development evidence?
 - What should be deleted, simplified, reordered, or clarified before implementation?
@@ -108,7 +125,7 @@ state exact inspected commits. Give prioritized findings with code/plan evidence
 counterexamples, minimal fixes, and the checkpoint affected. Distinguish blocking
 decisions from engineering choices and hypotheses requiring the planned experiments.
 
-Map the third-round findings to addressed, partial, unresolved or deferred. Check
+Map the first plan-review findings to addressed, partial, unresolved or deferred. Check
 the plan independently for newly introduced gaps; consensus is not acceptance.
 Conclude with only material changes needed before implementation authorization.
 

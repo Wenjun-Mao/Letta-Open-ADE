@@ -1,6 +1,6 @@
 # ADE Project Tracker
 
-Updated: 2026-09-23. Owner: this ADE task, using Relay for delegated reporting.
+Updated: 2026-09-24. Owner: this ADE task, using Relay for delegated reporting.
 Direction and milestone completion criteria live in the [roadmap](product-roadmap.md).
 
 ## Current Focus
@@ -29,7 +29,16 @@ budget/recovery clarifications, and a genuine comparison of context-admission
 policies. The user authorized the [revision-4 amendment](architecture/natural-memory-design.md)
 and [bounded implementation plan](plans/natural-memory-implementation.md), now drafted
 for Pro scrutiny through the [plan-review brief](findings/natural-memory-consultation/pro-review-brief.md).
-Next: resolve material plan-review findings, then obtain implementation approval.
+The two implementation-plan reviews are now preserved with a source-checked
+[assessment](findings/natural-memory-consultation/pro-plan-review-assessment.md).
+They support targeted correction, not approval unchanged: freeze paired evidence
+and symmetric usefulness gates, retain failed-attempt diagnostic evidence, and
+specify legacy-index compatibility, dependency-safe cleanup and separate UI
+capabilities. The user authorized revision of the existing plan: revision 2 now
+incorporates those corrections and the review brief targets their closure. A0 is
+diagnostic-only in the proposal; A/B share usefulness/coverage requirements, with
+real compaction required before accepting summary-enabled A. Next: another Pro
+review, then bounded implementation approval. No runtime policy has been adopted.
 No runtime capability, live budget, or production context-policy selection is implied.
 The user authorized publication of the review checkpoint, not adoption of the
 design or a merge/release. Resolve plan-review findings before implementation or
