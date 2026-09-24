@@ -7,10 +7,13 @@ import asyncio
 import hashlib
 import json
 import os
+import socket
 import subprocess
 import sys
 from pathlib import Path
 from uuid import uuid4
+
+from dotenv import dotenv_values
 
 import uvicorn
 from sqlalchemy import text as sql_text
@@ -69,6 +72,36 @@ FIXTURE = (
     / "workflows/evals/character_memory_dev/fixtures/natural_memory/factual_live_diagnostic.json"
 )
 POLICY = "natural-user-assertions-v4-b"
+
+
+def pinned_router_settings(env_file: Path):
+    """Resolve Docker's pinned Spark alias on this Mac without changing route identity."""
+
+    configured = router_settings(env_file, include_spark=True)
+    host = str(dotenv_values(env_file).get("DGX_SPARK_HOST") or "").strip()
+    if (
+        not host
+        or not all(part.isdigit() and 0 <= int(part) <= 255 for part in host.split("."))
+        or len(host.split(".")) != 4
+    ):
+        raise RuntimeError("Spark host must be a configured IPv4 address")
+    original_getaddrinfo = socket.getaddrinfo
+
+    def resolve_pinned_alias(name, *args, **kwargs):
+        return original_getaddrinfo(
+            host if name == "dgx-spark" else name, *args, **kwargs
+        )
+
+    socket.getaddrinfo = resolve_pinned_alias
+    sources = [
+        source.model_copy(
+            update={"base_url": "http://dgx-spark:8001/v1", "base_url_env": ""}
+        )
+        if source.id == "dgx_embedding_sidecar"
+        else source
+        for source in configured.sources
+    ]
+    return configured.model_copy(update={"sources": sources})
 
 
 def source_identity() -> tuple[str, str]:
@@ -134,7 +167,7 @@ async def run(args: argparse.Namespace) -> None:
             ADE_SOURCE_DIRTY="false",
             ADE_NATURAL_MEMORY_CAPTURE="1",
         )
-        configured_router = router_settings(args.env_file, include_spark=True)
+        configured_router = pinned_router_settings(args.env_file)
         router_app.get_settings = lambda: configured_router
         router_app.catalog_service = RouterCatalogService(
             settings_factory=lambda: configured_router

@@ -264,6 +264,14 @@ fingerprint rebind, deployment and production data. The output requires an
 independent semantic review of every committed delta and reply before findings
 are reported; an empty or rejected first-cell write is not a successful setup.
 
+The first preflight created its private output and stopped with zero provider
+dispatches because the local Spark IP changed the router catalog's base URL,
+so it no longer matched the deployment's pinned `dgx-spark` URL. The runner
+now resolves that exact alias to the configured IPv4 address inside its own
+process while retaining the pinned URL in the catalog and outbound request.
+This local DNS bridge matches Compose's `extra_hosts` mapping; it does not
+change the provider route, deployment fingerprint, or model fallback policy.
+
 The frozen checkpoint-1 matrix and former checkpoint-6 campaign describe a
 historical reviewer contract. Its no-save cell and comparison schedule do not
 qualify the current reviewer/ADE boundary amended on 2026-09-24. Preserve the
