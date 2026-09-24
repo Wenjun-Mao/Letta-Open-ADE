@@ -119,6 +119,14 @@ showed scoped coffee/tea successes, one output truncation, invalid historical
 authority citation, and recurrence of invalid subject selection. They establish
 neither an A/B result nor a failure-rate estimate.
 
+The later [bounded factual-continuity diagnostic](../findings/natural-memory-factual-live-diagnostic-2026-09-24.md)
+on the amended reviewer reached five of eleven turns after an infrastructure
+stop: four commits included one correct same-subject cross-conversation recall;
+the fifth rejected an attempted `reassert` of an active morning fact and left
+the evening addition uncommitted. Six turns, including the habit/preference
+contrast and subject-isolation probe, were unrun. Keep this as partial live
+evidence, not a policy choice or release qualification.
+
 Director offline reproduction confirmed that a bare current "Roxy" plus an
 assistant "Is Roxy a Husky?" can prepare a breed operation through the current
 binder. It also confirmed that an empty object parses as no-change. No database
