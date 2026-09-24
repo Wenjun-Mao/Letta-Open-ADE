@@ -46,6 +46,12 @@ requires the whole current lifecycle snapshot before optional narrative; A0
 removes A's summary without reallocating evidence; B reserves local dialogue
 first, then selectively admits current lifecycle views. A and B face the same
 positive usefulness and safety bar; A0 is diagnostic only. The frozen offline
+comparison treats A0's full-snapshot overflow as a selective B-style path:
+the A/A0 nonsummary equality applies when the full snapshot fits, while the
+pressure fallback deliberately diverges and must be compared on the same
+eligible local pool and retrieval recipe. Full-snapshot A/A0 turns skip the
+redundant automatic retrieval call; selective A0/B turns pay for it.
+The frozen offline
 matrix and request schedule precede any live calls. No variant becomes the
 production binding merely because its implementation or fake-model tests pass.
 The development-only binding IDs are `natural-user-assertions-v2-a`,

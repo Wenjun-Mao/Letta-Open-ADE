@@ -143,3 +143,62 @@ def test_reviewer_required_capacity_is_checked_before_generation() -> None:
             candidate_reply_reserve=256,
         )
     assert error.value.detail_code == "natural_reviewer_capacity"
+
+
+def test_typed_rejection_is_observed_before_terminal_validation() -> None:
+    transport = _Transport(
+        {
+            "proposals": [
+                {
+                    "claim_id": "residence",
+                    "operation": "add",
+                    "fact_type": "person.current_location",
+                    "value": "Toronto",
+                    "evidence_quote": "I live in Toronto",
+                    "sources": [
+                        {
+                            "message_id": USER,
+                            "quote": "I live in Toronto",
+                            "role": "user_assertion",
+                        }
+                    ],
+                }
+            ],
+            "claim_dispositions": [
+                {
+                    "claim_id": "residence",
+                    "outcome": "contradiction",
+                    "reason": "reply_conflict",
+                    "candidate_reply_quote": "Toronto",
+                }
+            ],
+        }
+    )
+    observed: list[dict] = []
+    current = {"id": USER, "role": "user", "content": "I live in Toronto."}
+
+    def reject(_decision) -> None:
+        raise RuntimeValidationError(
+            "false synthetic veto", detail_code="natural_memory_reply_conflict"
+        )
+
+    with pytest.raises(RuntimeValidationError) as error:
+        asyncio.run(
+            NaturalMemoryReviewer(transport, provider_adapter="deepseek_openai").review(
+                model_key="source::reviewer",
+                current_user_message=current,
+                source_messages=[current],
+                facts=[],
+                entities=[{"id": SUBJECT, "kind": "subject", "label": ""}],
+                candidate_reply="Okay, Toronto.",
+                timeout_seconds=10,
+                validate_decision=reject,
+                input_token_limit=100_000,
+                observe_decision=lambda decision: observed.append(
+                    decision.model_dump(mode="json")
+                ),
+            )
+        )
+    assert error.value.detail_code == "natural_memory_reply_conflict"
+    assert observed[0]["claim_dispositions"][0]["outcome"] == "contradiction"
+    assert len(transport.calls) == 1

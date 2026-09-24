@@ -81,6 +81,7 @@ class ExecutorResult:
     usage: dict[str, int]
     model_request_count: int
     tool_events: list[dict[str, Any]]
+    tool_evidence: list[dict[str, Any]]
     finish_reason: str
     provider_request_ids: list[str | None]
     tool_requirement: ToolRequirement | None = None
@@ -131,6 +132,7 @@ class ConversationExecutor:
         tool_requirement: ToolRequirement | None = None,
         max_model_requests: int = 6,
         input_token_limit: int | None = None,
+        observe_request: Callable[[dict[str, Any]], None] | None = None,
     ) -> ExecutorResult:
         enabled_tools = dict(tools or {})
         _validate_registry(enabled_tools)
@@ -142,6 +144,7 @@ class ConversationExecutor:
         )
         total_usage: dict[str, int] = {}
         tool_events: list[dict[str, Any]] = []
+        tool_evidence: list[dict[str, Any]] = []
         request_ids: list[str | None] = []
         requirement_satisfied = False
         for request_number in range(1, max_model_requests + 1):
@@ -180,6 +183,8 @@ class ConversationExecutor:
                     "Serialized conversation request exceeds its input limit",
                     detail_code="natural_context_serialized_overflow",
                 )
+            if observe_request is not None:
+                observe_request(payload)
             response = await self.transport.chat_completion(
                 payload, timeout_seconds=timeout_seconds
             )
@@ -220,6 +225,17 @@ class ConversationExecutor:
                             "error_type": result.error_type,
                         }
                     )
+                    tool_evidence.append(
+                        {
+                            "request_number": request_number,
+                            "call_id": call_id,
+                            "name": name,
+                            "arguments": result.arguments,
+                            "content": result.content,
+                            "succeeded": result.succeeded,
+                            "error_type": result.error_type,
+                        }
+                    )
                     if (
                         tool_requirement is not None
                         and name == tool_requirement.tool_name
@@ -252,6 +268,7 @@ class ConversationExecutor:
                 usage=total_usage,
                 model_request_count=request_number,
                 tool_events=tool_events,
+                tool_evidence=tool_evidence,
                 finish_reason=finish_reason,
                 provider_request_ids=request_ids,
                 tool_requirement=tool_requirement,

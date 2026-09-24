@@ -32,6 +32,40 @@ class NaturalContextBundle:
     lifecycle_withheld: bool
 
 
+def full_lifecycle_snapshot_fits(
+    *,
+    system_prompt: str,
+    persona: str,
+    current_user_content: str,
+    lifecycle_facts: list[dict[str, Any]],
+    history_metadata: ConversationHistoryMetadata,
+    input_limit: int,
+) -> bool:
+    """Use the assembler's exact prerequisite before deciding retrieval cost."""
+
+    mandatory = (
+        f"{system_prompt}\n\nPersona:\n{persona}\n\n{MEMORY_CONTROL_INSTRUCTIONS}"
+    )
+    metadata = (
+        "Conversation history metadata (authoritative):\n"
+        f"- Completed rounds before current: {history_metadata.completed_user_turns}\n"
+        f"- Summary through sequence: {history_metadata.summary_through_sequence}\n"
+        "- This excludes the current request and unfinished runs."
+    )
+    facts = sorted(
+        (fact for fact in lifecycle_facts if fact["status"] in {"active", "inactive"}),
+        key=lambda item: (str(item["normalized_key"]), str(item["id"])),
+    )
+    return (
+        _request_tokens(
+            [mandatory, metadata, _section("Current lifecycle snapshot", facts)],
+            [],
+            current_user_content,
+        )
+        <= input_limit
+    )
+
+
 def build_natural_context(
     *,
     variant: NaturalVariant,
@@ -83,16 +117,33 @@ def build_natural_context(
     summary = ""
 
     if variant in {"A", "A0"}:
-        if (
-            _request_tokens([*base_sections, full_snapshot], [], current_content)
-            > budget.input_limit
+        if not full_lifecycle_snapshot_fits(
+            system_prompt=system_prompt,
+            persona=persona,
+            current_user_content=current_content,
+            lifecycle_facts=facts,
+            history_metadata=history_metadata,
+            input_limit=budget.input_limit,
         ):
             lifecycle_withheld = True
-            fact_section = (
-                "Current lifecycle snapshot WITHHELD: complete snapshot exceeds "
-                "the input limit. Do not infer omitted memory or prior dialogue."
-            )
-            suffix = []
+            if variant == "A":
+                fact_section = (
+                    "Current lifecycle snapshot WITHHELD: complete snapshot exceeds "
+                    "the input limit. Do not infer omitted memory or prior dialogue."
+                )
+                suffix = []
+            else:
+                suffix, selected_facts, fact_section = _selective_section(
+                    base_sections=base_sections,
+                    suffix=suffix,
+                    current_content=current_content,
+                    input_limit=budget.input_limit,
+                    facts=facts,
+                    retrieved_facts=retrieved_facts,
+                    entities=entities,
+                    selective_fact_limit=selective_fact_limit,
+                    exact_entity_expansion_limit=exact_entity_expansion_limit,
+                )
         else:
             selected_facts = facts
             fact_section = full_snapshot
@@ -117,38 +168,17 @@ def build_natural_context(
                 ):
                     summary = proposed_summary
     else:
-        suffix = _fit_suffix(suffix, base_sections, current_content, budget.input_limit)
-        selected_facts = _select_relevant_facts(
-            facts=facts,
-            retrieved=retrieved_facts,
-            entities=entities,
-            current_content=current_content,
+        suffix, selected_facts, fact_section = _selective_section(
+            base_sections=base_sections,
             suffix=suffix,
-            limit=selective_fact_limit,
-            expansion_limit=exact_entity_expansion_limit,
+            current_content=current_content,
+            input_limit=budget.input_limit,
+            facts=facts,
+            retrieved_facts=retrieved_facts,
+            entities=entities,
+            selective_fact_limit=selective_fact_limit,
+            exact_entity_expansion_limit=exact_entity_expansion_limit,
         )
-        while (
-            selected_facts
-            and _request_tokens(
-                [
-                    *base_sections,
-                    _section("Selected current lifecycle views", selected_facts),
-                ],
-                suffix,
-                current_content,
-            )
-            > budget.input_limit
-        ):
-            selected_facts.pop()
-        fact_section = _section("Selected current lifecycle views", selected_facts)
-        if (
-            _request_tokens([*base_sections, fact_section], suffix, current_content)
-            > budget.input_limit
-        ):
-            raise RuntimeValidationError(
-                "Natural context cannot fit its shared suffix",
-                detail_code="natural_context_suffix_overflow",
-            )
 
     sections = [*base_sections, fact_section]
     if summary:
@@ -195,6 +225,53 @@ def build_natural_context(
         variant=variant,
         lifecycle_withheld=lifecycle_withheld,
     )
+
+
+def _selective_section(
+    *,
+    base_sections: list[str],
+    suffix: list[dict[str, Any]],
+    current_content: str,
+    input_limit: int,
+    facts: list[dict[str, Any]],
+    retrieved_facts: list[dict[str, Any]],
+    entities: list[dict[str, Any]],
+    selective_fact_limit: int,
+    exact_entity_expansion_limit: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
+    suffix = _fit_suffix(suffix, base_sections, current_content, input_limit)
+    selected_facts = _select_relevant_facts(
+        facts=facts,
+        retrieved=retrieved_facts,
+        entities=entities,
+        current_content=current_content,
+        suffix=suffix,
+        limit=selective_fact_limit,
+        expansion_limit=exact_entity_expansion_limit,
+    )
+    while (
+        selected_facts
+        and _request_tokens(
+            [
+                *base_sections,
+                _section("Selected current lifecycle views", selected_facts),
+            ],
+            suffix,
+            current_content,
+        )
+        > input_limit
+    ):
+        selected_facts.pop()
+    fact_section = _section("Selected current lifecycle views", selected_facts)
+    if (
+        _request_tokens([*base_sections, fact_section], suffix, current_content)
+        > input_limit
+    ):
+        raise RuntimeValidationError(
+            "Natural context cannot fit its shared suffix",
+            detail_code="natural_context_suffix_overflow",
+        )
+    return suffix, selected_facts, fact_section
 
 
 def _complete_exchange_suffix(

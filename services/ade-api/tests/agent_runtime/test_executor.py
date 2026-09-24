@@ -19,6 +19,9 @@ from ade_api.features.agent_runtime.evaluation_tools import (
     evaluation_tool_registry,
 )
 from ade_api.features.agent_runtime.provider_tracing import AttemptTrace
+from ade_api.features.agent_runtime.natural_attempt_evidence import (
+    NaturalAttemptEvidence,
+)
 from ade_api.features.agent_runtime.turn_execution import TurnExecution
 from ade_api.features.agent_runtime.tool_policy import (
     TOOL_USE_POLICY,
@@ -145,6 +148,9 @@ def test_deepseek_required_search_uses_auto_and_replays_reasoning_with_tool_resu
         assert (query, limit) == ("oolong", 8)
         return [{"id": "fact-1", "value": "oolong"}]
 
+    evidence = NaturalAttemptEvidence(
+        run_id="synthetic-run", attempt=1, policy_binding="natural-user-assertions-v2-b"
+    )
     result = asyncio.run(
         ConversationExecutor(transport, provider_adapter="deepseek_openai").execute(
             model_key="deepseek::deepseek-flash",
@@ -155,6 +161,7 @@ def test_deepseek_required_search_uses_auto_and_replays_reasoning_with_tool_resu
             ),
             timeout_seconds=30,
             max_output_tokens=100,
+            observe_request=evidence.capture_generation_request,
         )
     )
     assert result.tool_requirement_satisfied is True
@@ -164,6 +171,10 @@ def test_deepseek_required_search_uses_auto_and_replays_reasoning_with_tool_resu
     assert replay[-2]["reasoning_content"] == "private synthetic reasoning"
     assert replay[-1]["role"] == "tool"
     assert "private synthetic reasoning" not in result.assistant_text
+    assert len(evidence.generation_requests) == 2
+    assert evidence.generation_requests[1]["messages"][-1]["role"] == "tool"
+    assert "private synthetic reasoning" not in str(evidence.generation_requests)
+    assert result.tool_evidence[0]["content"]["facts"][0]["value"] == "oolong"
 
 
 def test_reviewer_repair_budget_is_explicit_in_deployment_and_defaults_for_existing_models() -> (

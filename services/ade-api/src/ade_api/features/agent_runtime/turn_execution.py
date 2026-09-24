@@ -28,10 +28,14 @@ from .errors import RuntimeValidationError
 from .evaluation_tools import evaluation_tool_registry
 from .executor import ConversationExecutor, curated_tools
 from .memory_policy import prepare_memory_review
-from .natural_context import NATURAL_POLICY_BINDINGS, build_natural_context
-from .natural_memory_policy import prepare_natural_memory_review
+from .natural_attempt_evidence import capture_context, start_natural_capture
+from .natural_context import (
+    NATURAL_POLICY_BINDINGS,
+    build_natural_context,
+    full_lifecycle_snapshot_fits,
+)
 from .natural_memory_reviewer import (
-    NaturalMemoryReviewer,
+    execute_natural_review,
     reviewer_suffix_limit,
 )
 from .provider_tracing import AttemptTrace
@@ -93,6 +97,15 @@ class TurnExecution:
         if natural_mode and self.settings.agent_runtime_mode != "development":
             raise RuntimeValidationError(
                 "Experimental natural-memory bindings cannot run in release mode"
+            )
+        if natural_mode:
+            trace.natural_evidence = start_natural_capture(
+                database_url=self.settings.database_url,
+                runtime_mode=self.settings.agent_runtime_mode,
+                purpose=str(conversation.get("purpose") or ""),
+                run_id=str(run["id"]),
+                attempt=trace.attempt,
+                policy_binding=str(definition["memory_policy_version"]),
             )
         catalog = await trace.transport(self.transport, stage="catalog").catalog(
             timeout_seconds=min(
@@ -198,9 +211,35 @@ class TurnExecution:
             else None
         )
 
+        summary_boundary = int(summary["through_sequence"]) if summary else 0
+        summary_content = str(summary["content"]) if summary else ""
+        if compaction is not None:
+            summary_boundary = compaction.plan.through_sequence
+            summary_content = compaction.content
+        recent_messages = [
+            message
+            for message in state["messages"]
+            if int(message["sequence"]) > summary_boundary
+            and int(message["sequence"]) < current_sequence
+        ]
+        history = conversation_history_metadata(
+            messages=state["messages"],
+            current_sequence=current_sequence,
+            summary_through_sequence=summary_boundary,
+        )
+        selective_retrieval = natural_variant not in {"A", "A0"}
+        if natural_variant == "A0":
+            selective_retrieval = not full_lifecycle_snapshot_fits(
+                system_prompt=str(definition["prompt_content"]),
+                persona=str(definition["persona_content"]),
+                current_user_content=str(current_user["content"]),
+                lifecycle_facts=state["facts"],
+                history_metadata=history,
+                input_limit=budget.input_limit,
+            )
         expected_dimensions = _embedding_dimensions(retriever_deployment)
         retrieved: list[dict[str, Any]] = []
-        if natural_variant not in {"A", "A0"}:
+        if selective_retrieval:
             query_vector = (
                 await retrieval_embeddings.embed(
                     model_key=str(retriever_deployment["route_alias"]),
@@ -226,22 +265,6 @@ class TurnExecution:
             state["active_facts"],
             key=lambda item: (item["updated_at"], str(item["id"])),
             reverse=True,
-        )
-        summary_boundary = int(summary["through_sequence"]) if summary else 0
-        summary_content = str(summary["content"]) if summary else ""
-        if compaction is not None:
-            summary_boundary = compaction.plan.through_sequence
-            summary_content = compaction.content
-        recent_messages = [
-            message
-            for message in state["messages"]
-            if int(message["sequence"]) > summary_boundary
-            and int(message["sequence"]) < current_sequence
-        ]
-        history = conversation_history_metadata(
-            messages=state["messages"],
-            current_sequence=current_sequence,
-            summary_through_sequence=summary_boundary,
         )
         natural_source_messages: tuple[dict[str, Any], ...] = ()
         reviewer_input_limit = 0
@@ -296,6 +319,12 @@ class TurnExecution:
             raise RuntimeValidationError(
                 "Context construction omitted unsummarized conversation history"
             )
+        capture_context(
+            trace.natural_evidence,
+            context=built_context,
+            source_messages=natural_source_messages,
+            input_limit=budget.input_limit,
+        )
 
         async def search_memory(query: str, limit: int) -> list[dict[str, Any]]:
             vector = (
@@ -335,6 +364,11 @@ class TurnExecution:
                 max_output_tokens=budget.max_output_tokens,
                 max_model_requests=_max_model_requests(conversation_deployment),
                 input_token_limit=budget.input_limit if natural_mode else None,
+                observe_request=(
+                    trace.natural_evidence.capture_generation_request
+                    if trace.natural_evidence is not None
+                    else None
+                ),
                 tools=curated_tools(
                     enabled_tool_names,
                     search_memory=search_memory,
@@ -368,6 +402,10 @@ class TurnExecution:
                     detail_code="conversation_required_tool_missing",
                 )
             trace.record_tool_requirement_satisfied(tool_requirement)
+        if trace.natural_evidence is not None:
+            trace.natural_evidence.capture_candidate(
+                executor_result.assistant_text, executor_result.tool_evidence
+            )
         recent_users = [
             message
             for message in state["messages"]
@@ -379,16 +417,12 @@ class TurnExecution:
             natural_source_message_ids = tuple(
                 str(message["id"]) for message in source_messages
             )
-            natural_reviewer = NaturalMemoryReviewer(
-                trace.transport(
-                    self.transport,
-                    stage="reviewer",
-                    model_fingerprint=str(reviewer_deployment["fingerprint"]),
-                ),
+            reviewer_result, prepared = await execute_natural_review(
+                trace=trace,
+                transport=self.transport,
+                reviewer_deployment=reviewer_deployment,
                 provider_adapter=reviewer_adapter,
-            )
-            reviewer_result = await natural_reviewer.review(
-                model_key=str(reviewer_deployment["route_alias"]),
+                subject_id=subject_id,
                 current_user_message=current_user,
                 source_messages=source_messages,
                 facts=state["facts"],
@@ -396,24 +430,6 @@ class TurnExecution:
                 candidate_reply=executor_result.assistant_text,
                 timeout_seconds=_remaining(deadline),
                 input_token_limit=reviewer_input_limit,
-                validate_decision=lambda decision: prepare_natural_memory_review(
-                    decision=decision,
-                    subject_id=subject_id,
-                    current_user_message=current_user,
-                    available_messages=source_messages,
-                    facts=state["facts"],
-                    entities=state["entities"],
-                    candidate_reply=executor_result.assistant_text,
-                ),
-            )
-            prepared = prepare_natural_memory_review(
-                decision=reviewer_result.decision,
-                subject_id=subject_id,
-                current_user_message=current_user,
-                available_messages=source_messages,
-                facts=state["facts"],
-                entities=state["entities"],
-                candidate_reply=executor_result.assistant_text,
             )
         else:
             reviewer_result = await reviewer.review(
@@ -459,6 +475,8 @@ class TurnExecution:
             raise RuntimeValidationError(
                 "Embedding dimensions do not match the deployment fingerprint"
             )
+        if trace.natural_evidence is not None:
+            trace.natural_evidence.capture_embeddings(len(vectors), dimensions)
         return AttemptResult(
             assistant_text=executor_result.assistant_text,
             context=built_context,
@@ -479,6 +497,7 @@ class TurnExecution:
 
     async def _load_state(self, run: dict[str, Any]) -> dict[str, Any]:
         return await load_turn_state(self.engine, run)
+
 
 def _remaining(deadline: float) -> float:
     remaining = deadline - time.monotonic()

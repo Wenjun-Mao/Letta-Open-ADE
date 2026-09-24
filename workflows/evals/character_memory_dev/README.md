@@ -122,8 +122,22 @@ The context tests use synthetic records at 0, 12, 48, 128 and 256 records,
 short and long values, and check the first whole-request boundary at which
 the full lifecycle snapshot fits. These are capacity and contract checks, not
 evidence of useful model recall. The A/A0/B binding IDs are development-only;
+under snapshot pressure A0 uses B's selective recipe and shared local suffix,
+while the A/A0 nonsummary equality assertion covers full-snapshot cells.
 the default product binding has not been changed. No live comparison or policy
 selection is implied by this offline workflow.
+
+Opt-in natural-memory attempt evidence is available only when
+`ADE_NATURAL_MEMORY_CAPTURE=1` is set on a development worker connected to a
+loopback database named `ade_*_test_*` and the conversation purpose is
+`evaluation`. It writes one private JSON artifact per run attempt under the
+ignored `outputs/natural-memory-attempts/` directory. The artifact retains
+visible generation requests (including tool continuations), source bundle,
+candidate reply, typed reviewer decision, absent stages and authoritative
+run/attempt readback. Authentication, provider wire bodies, private reasoning
+and raw exception text are excluded. A missing or `unconfirmed` artifact is
+unscorable and must stop the synthetic campaign; artifact failure does not
+rewrite an already committed run. This switch does not authorize provider calls.
 
 ```sh
 uv run pytest -q workflows/evals/character_memory_dev/tests

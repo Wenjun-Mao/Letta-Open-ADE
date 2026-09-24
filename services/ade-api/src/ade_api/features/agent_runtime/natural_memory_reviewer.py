@@ -14,7 +14,8 @@ from .natural_memory_review import (
     natural_review_json_schema,
     parse_natural_review_decision,
 )
-from .provider_tracing import safe_provider_request_id
+from .natural_memory_policy import PreparedNaturalReview, prepare_natural_memory_review
+from .provider_tracing import AttemptTrace, safe_provider_request_id
 from .reviewer import _combined_usage, _response_content
 from .router_transport import RouterTransport
 
@@ -70,6 +71,8 @@ class NaturalMemoryReviewer:
         timeout_seconds: float,
         validate_decision: Callable[[NaturalReviewDecision], None],
         input_token_limit: int,
+        observe_packet: Callable[[dict[str, Any], str], None] | None = None,
+        observe_decision: Callable[[NaturalReviewDecision], None] | None = None,
     ) -> NaturalReviewerResult:
         schema = natural_review_json_schema()
         packet = {
@@ -165,6 +168,8 @@ class NaturalMemoryReviewer:
                 "Full natural reviewer request exceeds its input limit",
                 detail_code="natural_reviewer_capacity",
             )
+        if observe_packet is not None:
+            observe_packet(packet, system)
         response = await self.transport.chat_completion(
             payload, timeout_seconds=timeout_seconds
         )
@@ -172,6 +177,8 @@ class NaturalMemoryReviewer:
             decision = parse_natural_review_decision(
                 json.loads(_response_content(response))
             )
+            if observe_decision is not None:
+                observe_decision(decision)
             validate_decision(decision)
         except RuntimeValidationError as exc:
             if exc.detail_code == "natural_memory_reply_conflict":
@@ -234,3 +241,56 @@ def reviewer_suffix_limit(
             detail_code="natural_reviewer_capacity",
         )
     return remaining
+
+
+async def execute_natural_review(
+    *,
+    trace: AttemptTrace,
+    transport: RouterTransport,
+    reviewer_deployment: dict[str, Any],
+    provider_adapter: str,
+    subject_id: str,
+    current_user_message: dict[str, Any],
+    source_messages: list[dict[str, Any]],
+    facts: list[dict[str, Any]],
+    entities: list[dict[str, Any]],
+    candidate_reply: str,
+    timeout_seconds: float,
+    input_token_limit: int,
+) -> tuple[NaturalReviewerResult, PreparedNaturalReview]:
+    """Bind one visible candidate and source bundle to one validated decision."""
+
+    def prepare(decision: NaturalReviewDecision) -> PreparedNaturalReview:
+        return prepare_natural_memory_review(
+            decision=decision,
+            subject_id=subject_id,
+            current_user_message=current_user_message,
+            available_messages=source_messages,
+            facts=facts,
+            entities=entities,
+            candidate_reply=candidate_reply,
+        )
+
+    reviewer = NaturalMemoryReviewer(
+        trace.transport(
+            transport,
+            stage="reviewer",
+            model_fingerprint=str(reviewer_deployment["fingerprint"]),
+        ),
+        provider_adapter=provider_adapter,
+    )
+    evidence = trace.natural_evidence
+    result = await reviewer.review(
+        model_key=str(reviewer_deployment["route_alias"]),
+        current_user_message=current_user_message,
+        source_messages=source_messages,
+        facts=facts,
+        entities=entities,
+        candidate_reply=candidate_reply,
+        timeout_seconds=timeout_seconds,
+        input_token_limit=input_token_limit,
+        observe_packet=evidence.capture_reviewer_request if evidence else None,
+        observe_decision=evidence.capture_reviewer_decision if evidence else None,
+        validate_decision=prepare,
+    )
+    return result, prepare(result.decision)

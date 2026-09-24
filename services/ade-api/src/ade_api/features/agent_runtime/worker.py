@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import signal
 
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -12,6 +13,7 @@ from .flags import ensure_agent_runtime_enabled
 from .persistence.database import create_persistence_engine
 from .persistence.validation import validate_database_at_head
 from .provider_tracing import AttemptTrace
+from .natural_attempt_evidence import retain_attempt_evidence
 from .retry import execute_with_retries
 from .router_transport import RouterTransport
 from .request_budget import build_runtime_router_transport
@@ -25,6 +27,9 @@ from .worker_control import (
 )
 from .worker_finalization import RunFinalizer
 from .worker_health import WorkerPresence
+
+
+logger = logging.getLogger(__name__)
 
 
 class AgentRuntimeWorker:
@@ -141,6 +146,7 @@ class AgentRuntimeWorker:
         last_attempt_id: str | None = None
         last_attempt_started_event_id: str | None = None
         last_attempt_trace: AttemptTrace | None = None
+        attempt_traces: list[AttemptTrace] = []
         last_failure_event_id: str | None = None
 
         async def operation(local_attempt: int) -> AttemptResult:
@@ -152,6 +158,7 @@ class AgentRuntimeWorker:
                 raise WorkerDraining("worker is draining before the next attempt")
             attempt = prior_attempt_count + local_attempt
             last_attempt_trace = AttemptTrace(attempt=attempt)
+            attempt_traces.append(last_attempt_trace)
             started = await self.attempts.start_attempt(claim, attempt)
             last_attempt_id = started.attempt_id
             last_attempt_started_event_id = started.started_event_id
@@ -234,6 +241,24 @@ class AgentRuntimeWorker:
             for monitor in monitors:
                 monitor.cancel()
             await asyncio.gather(*monitors, return_exceptions=True)
+            for attempt_trace in attempt_traces:
+                if attempt_trace.natural_evidence is None:
+                    continue
+                try:
+                    attempt_trace.natural_evidence.capture_provider_events(
+                        attempt_trace.normalized_events()
+                    )
+                    await retain_attempt_evidence(
+                        self.engine, attempt_trace.natural_evidence
+                    )
+                except Exception:
+                    # Artifact failure cannot rewrite an authoritative run outcome.
+                    # The missing cell is unscorable and stops the evaluation runner.
+                    logger.error(
+                        "natural-memory evidence retention failed for run %s attempt %s",
+                        run_id,
+                        attempt_trace.attempt,
+                    )
 
 
 def build_worker() -> AgentRuntimeWorker:

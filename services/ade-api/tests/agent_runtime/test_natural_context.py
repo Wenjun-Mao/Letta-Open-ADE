@@ -87,6 +87,7 @@ def _build(variant: str, *, facts: list[dict], retrieved: list[dict] | None = No
 def test_pressure_a_withholds_optional_narrative_b_keeps_shared_suffix() -> None:
     facts = [_fact(index, size=240) for index in range(48)]
     a = _build("A", facts=facts, retrieved=[facts[0]])
+    a0 = _build("A0", facts=facts, retrieved=[facts[0]])
     b = _build("B", facts=facts, retrieved=[facts[0]])
     assert a.lifecycle_withheld is True
     assert [message["id"] for message in a.source_messages] == ["u3"]
@@ -101,6 +102,10 @@ def test_pressure_a_withholds_optional_narrative_b_keeps_shared_suffix() -> None
     ]
     assert b.context.retrieved_fact_ids == ["fact-0"]
     assert "INACTIVE" in b.context.messages[0]["content"]
+    assert a0.lifecycle_withheld is True
+    assert a0.context.messages == b.context.messages
+    assert a0.source_messages == b.source_messages
+    assert a0.context.retrieved_fact_ids == b.context.retrieved_fact_ids
 
 
 def test_a0_preserves_a_raw_cutoff_and_nonsummary_sections() -> None:
@@ -145,9 +150,9 @@ def test_b_admits_only_whole_records() -> None:
 def test_full_snapshot_whole_request_boundary(count: int, size: int) -> None:
     facts = [_fact(index, size=size) for index in range(count)]
 
-    def assemble(context_window: int):
+    def assemble(context_window: int, variant: str = "A0"):
         return build_natural_context(
-            variant="A0",
+            variant=variant,
             system_prompt="Policy",
             persona="Companion",
             current_user={
@@ -188,16 +193,42 @@ def test_full_snapshot_whole_request_boundary(count: int, size: int) -> None:
     try:
         below = assemble(high - 1)
     except RuntimeValidationError as error:
-        # At zero records the explicit withholding marker can itself exceed
+        # At zero records the selective-view marker can itself exceed
         # the limit immediately below the tiny empty-snapshot boundary.
         assert count == 0
-        assert error.detail_code == "natural_context_serialized_overflow"
+        assert error.detail_code == "natural_context_suffix_overflow"
         below = None
     at_boundary = assemble(high)
+    control_a = assemble(high, "A")
+    try:
+        recent_first = assemble(high, "B")
+    except RuntimeValidationError as error:
+        # The empty selective-view marker is larger than the empty snapshot.
+        assert count == 0
+        assert error.detail_code == "natural_context_suffix_overflow"
+        recent_first = None
     if below is not None:
         assert below.lifecycle_withheld is True
     assert at_boundary.lifecycle_withheld is False
+    assert control_a.lifecycle_withheld is False
+    assert [item["id"] for item in control_a.source_messages] == [
+        item["id"] for item in at_boundary.source_messages
+    ]
+    assert (
+        control_a.context.retrieved_fact_ids == at_boundary.context.retrieved_fact_ids
+    )
     assert len(at_boundary.context.retrieved_fact_ids) == count
+    if recent_first is not None:
+        assert recent_first.lifecycle_withheld is False
+        assert len(recent_first.context.retrieved_fact_ids) <= 8
+        assert (
+            recent_first.context.estimated_input_tokens
+            <= ContextBudget(
+                context_window=high,
+                max_output_tokens=512,
+                tool_schema_tokens=128,
+            ).input_limit
+        )
     assert (
         at_boundary.context.estimated_input_tokens
         <= ContextBudget(

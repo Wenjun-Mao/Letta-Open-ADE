@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from .router_transport import RouterRequestError
 from .tool_policy import ToolRequirement
+from .natural_attempt_evidence import NaturalAttemptEvidence
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,7 @@ class AttemptTrace:
         self.attempt = attempt
         self._events: list[NormalizedTraceEvent] = []
         self._request_counts: dict[str, int] = defaultdict(int)
+        self.natural_evidence: NaturalAttemptEvidence | None = None
 
     def transport(
         self,

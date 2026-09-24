@@ -6,7 +6,12 @@ from types import SimpleNamespace
 
 import pytest
 
+from ade_api.features.agent_runtime.errors import RuntimeValidationError
 from ade_api.features.agent_runtime.worker import AgentRuntimeWorker
+import ade_api.features.agent_runtime.worker as worker_module
+from ade_api.features.agent_runtime.natural_attempt_evidence import (
+    NaturalAttemptEvidence,
+)
 import ade_api.features.agent_runtime.worker_claims as worker_claims_module
 from ade_api.features.agent_runtime.worker_claims import ClaimedRun
 from ade_api.features.agent_runtime.worker_claims import RunClaimer
@@ -105,6 +110,81 @@ def test_drain_before_attempt_fails_claim_without_starting_provider_work() -> No
 
     assert attempts.start_count == 0
     assert isinstance(finalizer.failure, WorkerDraining)
+
+
+def test_artifact_retention_fault_cannot_undo_committed_success(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _EvidenceAttempts(_Attempts):
+        async def execute_attempt(self, _claim, **kwargs):
+            kwargs["trace"].natural_evidence = NaturalAttemptEvidence(
+                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v2-b"
+            )
+            return SimpleNamespace()
+
+    async def fail_retention(_engine, _evidence):
+        raise OSError("synthetic disk fault")
+
+    monkeypatch.setattr(worker_module, "retain_attempt_evidence", fail_retention)
+
+    async def scenario() -> _Finalizer:
+        attempts = _EvidenceAttempts()
+        finalizer = _Finalizer()
+        worker = _worker(attempts, finalizer)
+        worker.engine = object()
+        await worker._process_claim(_claim(), asyncio.Event())
+        return finalizer
+
+    finalizer = asyncio.run(scenario())
+    assert finalizer.succeeded is True
+    assert finalizer.failure is None
+
+
+def test_rejected_candidate_is_retained_after_worker_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed: list[NaturalAttemptEvidence] = []
+
+    class _RejectedAttempts(_Attempts):
+        async def execute_attempt(self, _claim, **kwargs):
+            evidence = NaturalAttemptEvidence(
+                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v2-b"
+            )
+            evidence.capture_candidate("Okay, Toronto.", [])
+            evidence.reviewer_decision = {
+                "claim_dispositions": [
+                    {"claim_id": "residence", "outcome": "contradiction"}
+                ]
+            }
+            kwargs["trace"].natural_evidence = evidence
+            raise RuntimeValidationError(
+                "synthetic false veto", detail_code="natural_memory_reply_conflict"
+            )
+
+        async def finish_attempt_failure(self, *_args, **_kwargs):
+            return "failed-event"
+
+    async def retain(_engine, evidence):
+        observed.append(evidence)
+
+    monkeypatch.setattr(worker_module, "retain_attempt_evidence", retain)
+
+    async def scenario() -> _Finalizer:
+        attempts = _RejectedAttempts()
+        finalizer = _Finalizer()
+        worker = _worker(attempts, finalizer)
+        worker.engine = object()
+        await worker._process_claim(_claim(), asyncio.Event())
+        return finalizer
+
+    finalizer = asyncio.run(scenario())
+    assert finalizer.succeeded is False
+    assert isinstance(finalizer.failure, RuntimeValidationError)
+    assert observed[0].candidate_visible_reply == "Okay, Toronto."
+    assert (
+        observed[0].reviewer_decision["claim_dispositions"][0]["outcome"]
+        == "contradiction"
+    )
 
 
 def test_run_claimer_only_claims_work_accepted_in_its_runtime_mode(
