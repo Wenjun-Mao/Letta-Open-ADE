@@ -15,8 +15,12 @@ the approved publication scope.
 
 ## Current Focus
 
-The next deliverable is **Pro review of revision 5 of the single
-[natural-memory implementation plan](plans/natural-memory-implementation.md)**.
+Both final Pros return **GO for revision 5 of the single
+[natural-memory implementation plan](plans/natural-memory-implementation.md)**,
+with no further mandatory planning amendment. The [final review assessment](findings/natural-memory-consultation/compact-plan-r5-go-assessment.md)
+preserves their reports and lists the implementation gates. Await implementation
+authorization; the next useful review is code and checkpoint evidence, not another
+prose-review cycle.
 The prior live campaign and three development iterations are stopped, not A/B
 qualification. The [reviewer-interface assessment](findings/natural-memory-consultation/reviewer-interface-assessment.md)
 preserves both returned reports and records the offline endorsement counterexample.
