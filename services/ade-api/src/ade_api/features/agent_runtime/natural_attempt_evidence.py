@@ -158,8 +158,16 @@ class NaturalAttemptEvidence:
         )
         self.generation_requests.append(retained)
 
-    def capture_reviewer_request(self, packet: dict[str, Any], system: str) -> None:
-        self.reviewer_request = {"system": system, "packet": packet}
+    def capture_reviewer_request(self, payload: dict[str, Any]) -> None:
+        self.reviewer_request = {
+            "model": payload["model"],
+            "messages": payload["messages"],
+            "max_tokens": payload["max_tokens"],
+            "response_format": payload.get("response_format"),
+            "serialized_visible_token_estimate": estimate_tokens(
+                json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+            ),
+        }
 
     def capture_reviewer_decision(self, decision: Any) -> None:
         self.reviewer_decision = decision.model_dump(mode="json")

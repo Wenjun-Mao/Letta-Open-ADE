@@ -71,7 +71,7 @@ class NaturalMemoryReviewer:
         timeout_seconds: float,
         validate_decision: Callable[[NaturalReviewDecision], None],
         input_token_limit: int,
-        observe_packet: Callable[[dict[str, Any], str], None] | None = None,
+        observe_request: Callable[[dict[str, Any]], None] | None = None,
         observe_decision: Callable[[NaturalReviewDecision], None] | None = None,
     ) -> NaturalReviewerResult:
         schema = natural_review_json_schema()
@@ -168,8 +168,8 @@ class NaturalMemoryReviewer:
                 "Full natural reviewer request exceeds its input limit",
                 detail_code="natural_reviewer_capacity",
             )
-        if observe_packet is not None:
-            observe_packet(packet, system)
+        if observe_request is not None:
+            observe_request(payload)
         response = await self.transport.chat_completion(
             payload, timeout_seconds=timeout_seconds
         )
@@ -289,7 +289,7 @@ async def execute_natural_review(
         candidate_reply=candidate_reply,
         timeout_seconds=timeout_seconds,
         input_token_limit=input_token_limit,
-        observe_packet=evidence.capture_reviewer_request if evidence else None,
+        observe_request=evidence.capture_reviewer_request if evidence else None,
         observe_decision=evidence.capture_reviewer_decision if evidence else None,
         validate_decision=prepare,
     )

@@ -228,6 +228,17 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
             settings=settings,
             transport=transport,  # type: ignore[arg-type]
         )
+
+        async def process_target(run_id: str) -> dict:
+            # A shared disposable suite database can contain earlier completed
+            # or recoverable claims; the worker chooses its own claim order.
+            for _ in range(8):
+                await worker.process_once()
+                result = await run_service.get_run(run_id)
+                if result["status"] in {"succeeded", "failed", "cancelled"}:
+                    return result
+            raise AssertionError("synthetic target run did not reach a terminal state")
+
         token = uuid4().hex[:12]
         try:
             session = await sessions.create(
@@ -258,8 +269,7 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
                     retry_count=0,
                 ),
             )
-            assert await worker.process_once() is True
-            run = await run_service.get_run(accepted["run_id"])
+            run = await process_target(accepted["run_id"])
             assert run["status"] == "failed"
             assert run["error_code"] == "runtime_validation_error"
             async with engine.connect() as connection:
@@ -334,13 +344,18 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
                 artifact["reviewer_decision"]["claim_dispositions"][0]["outcome"]
                 == "contradiction"
             )
+            assert artifact["reviewer_request"]["messages"][0]["role"] == "system"
+            assert (
+                "I live in Toronto."
+                in artifact["reviewer_request"]["messages"][1]["content"]
+            )
+            assert artifact["reviewer_request"]["serialized_visible_token_estimate"] > 0
             assert (
                 artifact["generation_requests"][0]["messages"][-1]["content"]
                 == "I live in Toronto."
             )
             assert artifact["provider_request_counts"]["conversation"] == 1
             assert artifact["provider_request_counts"]["reviewer"] == 1
-            assert len([call for call in transport.calls if call[0] == "chat"]) == 2
 
             transport.veto = False
             successful = await sessions.create(
@@ -370,8 +385,7 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
                     retry_count=0,
                 ),
             )
-            assert await worker.process_once() is True
-            assert (await run_service.get_run(success_run["run_id"]))[
+            assert (await process_target(success_run["run_id"]))[
                 "status"
             ] == "succeeded"
             async with engine.connect() as connection:
@@ -426,10 +440,7 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
                     retry_count=0,
                 ),
             )
-            assert await worker.process_once() is True
-            assert (await run_service.get_run(embedding_run["run_id"]))[
-                "status"
-            ] == "failed"
+            assert (await process_target(embedding_run["run_id"]))["status"] == "failed"
             async with engine.connect() as connection:
                 embedding_subject = await MemoryRepository(connection).get_subject(
                     embedding_subject_id

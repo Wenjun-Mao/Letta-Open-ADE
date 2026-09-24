@@ -121,6 +121,19 @@ def test_evidence_has_explicit_absent_stages_without_raw_wire_fields() -> None:
             "tools": [],
         }
     )
+    evidence.capture_reviewer_request(
+        {
+            "model": "synthetic::reviewer",
+            "messages": [
+                {"role": "system", "content": "Review visible claims."},
+                {"role": "user", "content": '{"candidate_visible_reply":"Okay."}'},
+            ],
+            "max_tokens": 1024,
+            "response_format": {"type": "json_object"},
+            "thinking": {"type": "enabled"},
+            "reasoning_content": "private chain must not be retained",
+        }
+    )
     evidence.capture_provider_events(
         (
             SimpleNamespace(
@@ -133,6 +146,10 @@ def test_evidence_has_explicit_absent_stages_without_raw_wire_fields() -> None:
     assert evidence.generation["source_messages"][0]["id"] == "user-1"
     assert evidence.reviewer_decision is None
     assert evidence.generation_requests[0]["messages"][1]["role"] == "tool"
+    assert evidence.reviewer_request is not None
+    assert evidence.reviewer_request["messages"][1]["role"] == "user"
+    assert "thinking" not in evidence.reviewer_request
+    assert "reasoning_content" not in evidence.reviewer_request
     assert evidence.provider_events[0]["payload"]["stage"] == "conversation"
     assert "private chain" not in str(evidence.generation_requests)
     assert "private_reasoning" in evidence.excluded_fields
