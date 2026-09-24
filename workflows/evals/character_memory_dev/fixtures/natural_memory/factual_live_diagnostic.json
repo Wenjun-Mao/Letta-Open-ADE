@@ -1,0 +1,40 @@
+{
+  "id": "natural-factual-continuity-20260924-v1",
+  "policy": "natural-user-assertions-v4-b",
+  "routes": ["deepseek::deepseek-flash", "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B"],
+  "reviewer_output_tokens": 4096,
+  "retry_count": 0,
+  "cases": [
+    {
+      "id": "changed_morning_preference",
+      "turns": [
+        {"conversation": 1, "user": "我早上更喜欢喝咖啡，尤其是刚起床的时候。", "expect": "add one active morning-coffee person.preference v1; generation +1; no other fact"},
+        {"conversation": 1, "user": "最近口味变了，现在早上更喜欢喝茶。", "expect": "revise that fact to active morning-tea v2, supersede; generation +1; keep v1 history; no all-day preference"},
+        {"conversation": 2, "user": "我现在早上更喜欢喝什么？", "expect": "no fact/entity/revision delta or generation advance; answer morning tea from active fact"}
+      ]
+    },
+    {
+      "id": "distinct_evening_preference",
+      "turns": [
+        {"conversation": 1, "user": "我早上更喜欢喝咖啡。", "expect": "add one active morning-coffee person.preference v1; generation +1"},
+        {"conversation": 1, "user": "晚上我更喜欢喝茶，早上还是咖啡。", "expect": "keep morning coffee; add one active evening-tea person.preference v1; generation +1; no all-day tea"},
+        {"conversation": 2, "user": "我早上和晚上分别更喜欢喝什么？", "expect": "no delta; answer morning coffee and evening tea, preserving scopes"}
+      ]
+    },
+    {
+      "id": "uncertainty_and_habit",
+      "turns": [
+        {"conversation": 1, "user": "我早上更喜欢喝咖啡。", "expect": "add one active morning-coffee person.preference v1; generation +1"},
+        {"conversation": 1, "user": "可能以后早上会更喜欢茶吧，我还没想好。", "expect": "no delta; do not make a definite tea preference"},
+        {"conversation": 1, "user": "这周早上我一直在喝茶，因为咖啡让我睡不好。", "expect": "no preference delta; a drinking habit is not liking tea; conversation reply may acknowledge habit"},
+        {"conversation": 2, "user": "说到我偏好的饮料，你记得我早上更喜欢喝什么吗？", "expect": "no delta; answer supported morning coffee, without claiming a definite tea preference"}
+      ]
+    },
+    {
+      "id": "other_subject_probe",
+      "turns": [
+        {"conversation": 1, "user": "你记得我早上更喜欢喝什么吗？", "expect": "no delta; do not transfer any other subject's coffee or tea preference"}
+      ]
+    }
+  ]
+}

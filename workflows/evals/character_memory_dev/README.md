@@ -234,6 +234,36 @@ Router, and the native Chat Memory Eval remains unchanged.
 
 ## Natural-Memory Offline Contract (Checkpoint 1)
 
+### Authorized factual-continuity diagnostic (2026-09-24)
+
+The user authorized a new, bounded live diagnostic after the revision-5
+responsibility cleanup. Its immutable eleven-turn, four-subject schedule is
+[`fixtures/natural_memory/factual_live_diagnostic.json`](fixtures/natural_memory/factual_live_diagnostic.json).
+Three independent subjects establish morning coffee through natural dialogue,
+then test a morning-tea correction and cross-conversation recall, a distinct
+evening-tea addition and recall, or uncertainty followed by drinking behavior
+and recall. A fourth subject probes non-transfer. Each row declares its full
+fact/revision/generation delta and answer boundary before provider calls.
+The same natural-v4 B context, DeepSeek Flash high-thinking profile, Qwen
+embedding route and 4,096-token reviewer output envelope are held throughout.
+This is one declared context variant, not an A/B policy selection.
+
+`natural_factual_live.py` requires a clean source commit and a fresh, migrated,
+passwordless disposable loopback PostgreSQL database with zero runs. It starts
+an isolated loopback router using the approved official DeepSeek and Spark
+routes, performs one native attempt per scheduled turn with zero application
+retries, records dispatch observations and private captures, and stops on a
+rejected review or structural/evidence failure. It never resumes an output
+directory. Private attempts, full subject readback, conversation state and
+per-turn captures live under the ignored output path. Semantic misses in
+committed turns remain evidence; no scorer or prompt changes occur during the
+run. The known release-policy fingerprint freshness gate remains unwaived.
+
+This authorization excludes the older 30-cell comparison, release promotion,
+fingerprint rebind, deployment and production data. The output requires an
+independent semantic review of every committed delta and reply before findings
+are reported; an empty or rejected first-cell write is not a successful setup.
+
 The frozen checkpoint-1 matrix and former checkpoint-6 campaign describe a
 historical reviewer contract. Its no-save cell and comparison schedule do not
 qualify the current reviewer/ADE boundary amended on 2026-09-24. Preserve the
