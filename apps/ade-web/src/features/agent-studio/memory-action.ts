@@ -18,13 +18,16 @@ export function memoryActionDraft(fact: MemoryFact, operation: "correct" | "forg
 
 export function memoryActionOutcome(action: PendingMemoryAction, run: Run, events: RunEvent[], memories: SubjectMemories | null): string {
   if (action.runId !== run.id) return action.outcome;
-  if (run.status !== "succeeded") return `Run ${run.status}; saved information was not confirmed changed.`;
+  if (run.status !== "succeeded") return `Run ${run.status}${run.error_code ? ` (${run.error_code})` : ""}; saved information was not confirmed changed. A fresh submission must be deliberate.`;
+  const matchingOperation = (operation: string) => operation === action.operation || (action.operation === "correct" && operation === "revise");
   const committed = events.some((event) => event.type === "memory.committed"
     && event.payload.fact_id === action.factId
-    && event.payload.operation === action.operation
+    && typeof event.payload.operation === "string" && matchingOperation(event.payload.operation)
     && event.payload.fact_version === action.version + 1);
   const revision = memories?.facts.find((fact) => fact.id === action.factId)?.revisions
-    .find((item) => item.run_id === run.id && item.operation === action.operation && item.fact_version === action.version + 1);
+    .find((item) => item.run_id === run.id && matchingOperation(item.operation) && item.fact_version === action.version + 1);
+  const deferred = events.find((event) => event.type === "memory.deferred");
+  if (deferred && !committed && !revision) return `Reviewer deferred a claim (${String(deferred.payload.reason || "unresolved")}); no matching write was confirmed.`;
   return committed && revision
     ? "Matching memory revision committed. Check the refreshed fact history below."
     : "No matching committed revision was verified. Saved information was not confirmed changed.";

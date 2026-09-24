@@ -1,6 +1,6 @@
 export type QualificationState = "qualified" | "unqualified";
 export type RunStatus = "pending" | "running" | "succeeded" | "failed" | "cancelled";
-export type MemoryOperation = "add" | "correct" | "forget";
+export type MemoryOperation = "add" | "correct" | "forget" | "revise" | "end" | "reassert";
 
 export type DeploymentSnapshot = {
   deployment_id: string;
@@ -35,6 +35,7 @@ export type MemorySubject = {
   external_key: string;
   display_name: string;
   version: number;
+  memory_generation?: number;
   archived_at: string | null;
   created_at: string;
   updated_at: string | null;
@@ -55,6 +56,7 @@ export type Run = {
   id: string;
   conversation_id: string;
   status: RunStatus;
+  accepted_memory_generation?: number;
   qualification_state: QualificationState;
   attempt_count: number;
   timeout_seconds: number;
@@ -143,6 +145,7 @@ export type MemoryEvidence = {
   end_char: number;
   quote: string;
   message_sha256: string;
+  authority_role?: "user_assertion" | "user_endorsement" | "assistant_referent";
 };
 
 export type MemoryRevision = {
@@ -150,7 +153,9 @@ export type MemoryRevision = {
   operation: MemoryOperation;
   fact_version: number;
   value: string | null;
-  run_id: string;
+  run_id: string | null;
+  action_id?: string | null;
+  reason?: "enrich" | "supersede" | "correct" | "unspecified" | "ended" | "invalidated" | "reasserted" | "forgotten" | null;
   predecessor_revision_ids: string[];
   evidence: MemoryEvidence[];
   created_at: string;
@@ -165,13 +170,23 @@ export type MemoryFact = {
   entity_label: string;
   qualifier: string | null;
   value: string | null;
-  status: "active" | "superseded" | "forgotten";
+  status: "active" | "inactive" | "forgotten";
+  assertion_schema_version?: number;
   version: number;
   revisions: MemoryRevision[];
   updated_at: string;
 };
 
-export type SubjectMemories = { subject_id: string; facts: MemoryFact[] };
+export type SubjectMemories = { subject_id: string; memory_generation?: number; facts: MemoryFact[] };
+
+export type MemoryRemovalReceipt = {
+  action_id: string;
+  outcome: "committed";
+  revision_ids: string[];
+  resulting_memory_generation: number;
+  idempotent_replay: boolean;
+  committed_at: string;
+};
 
 export type RunEvent = {
   id: string;

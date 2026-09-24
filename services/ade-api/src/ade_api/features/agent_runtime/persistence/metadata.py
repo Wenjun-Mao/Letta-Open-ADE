@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     Column,
@@ -160,6 +161,7 @@ memory_subjects = Table(
     Column("display_name", String(200), nullable=False, server_default=text("''")),
     Column("purpose", String(32), nullable=False, server_default=text("'development'")),
     Column("version", Integer, nullable=False, server_default=text("1")),
+    Column("memory_generation", BigInteger, nullable=False, server_default=text("1")),
     Column("archived_at", TIMESTAMP, nullable=True),
     Column("created_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
     Column("updated_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
@@ -178,6 +180,9 @@ memory_subjects = Table(
         name="ck_memory_subjects_purpose",
     ),
     CheckConstraint("version > 0", name="ck_memory_subjects_positive_version"),
+    CheckConstraint(
+        "memory_generation > 0", name="ck_memory_subjects_positive_memory_generation"
+    ),
 )
 Index(
     "ix_memory_subjects_workspace_purpose_updated",
@@ -281,6 +286,41 @@ agent_studio_reset_receipts = Table(
     ),
 )
 
+memory_actions = Table(
+    "memory_actions",
+    METADATA,
+    Column("id", UUID_ID, nullable=False),
+    Column("workspace_id", UUID_ID, nullable=False),
+    Column("subject_id", UUID_ID, nullable=False),
+    Column("idempotency_key", String(200), nullable=False),
+    Column("request_sha256", String(64), nullable=False),
+    Column("expected_memory_generation", BigInteger, nullable=False),
+    Column("resulting_memory_generation", BigInteger, nullable=False),
+    Column("targets", JSONB, nullable=False),
+    Column("revision_ids", JSONB, nullable=False),
+    Column("outcome", String(32), nullable=False),
+    Column("actor_label", String(200), nullable=False),
+    Column("created_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
+    PrimaryKeyConstraint("id", name="pk_memory_actions"),
+    ForeignKeyConstraint(
+        ["subject_id", "workspace_id"],
+        [
+            f"{SCHEMA_NAME}.memory_subjects.id",
+            f"{SCHEMA_NAME}.memory_subjects.workspace_id",
+        ],
+        name="fk_memory_actions_subject_workspace",
+    ),
+    UniqueConstraint(
+        "subject_id", "idempotency_key", name="uq_memory_actions_subject_key"
+    ),
+    CheckConstraint("char_length(request_sha256) = 64", name="ck_memory_actions_hash"),
+    CheckConstraint(
+        "expected_memory_generation > 0 AND resulting_memory_generation > expected_memory_generation",
+        name="ck_memory_actions_generations",
+    ),
+    CheckConstraint("outcome IN ('committed')", name="ck_memory_actions_outcome"),
+)
+
 runs = Table(
     "runs",
     METADATA,
@@ -300,6 +340,12 @@ runs = Table(
     Column("timeout_seconds", Numeric(8, 3), nullable=False),
     Column("retry_count", Integer, nullable=False),
     Column("accepted_conversation_version", Integer, nullable=False),
+    Column(
+        "accepted_memory_generation",
+        BigInteger,
+        nullable=False,
+        server_default=text("1"),
+    ),
     Column("attempt_count", Integer, nullable=False, server_default=text("0")),
     Column("cancellation_requested_at", TIMESTAMP, nullable=True),
     Column("error_code", String(128), nullable=True),
@@ -329,6 +375,9 @@ runs = Table(
     CheckConstraint(
         "accepted_conversation_version > 0",
         name="ck_runs_positive_conversation_version",
+    ),
+    CheckConstraint(
+        "accepted_memory_generation > 0", name="ck_runs_positive_memory_generation"
     ),
 )
 Index(
@@ -443,6 +492,9 @@ memory_facts = Table(
     Column("qualifier", String(200), nullable=True),
     Column("value", JSONB, nullable=True),
     Column("status", String(32), nullable=False),
+    Column(
+        "assertion_schema_version", Integer, nullable=False, server_default=text("1")
+    ),
     Column("version", Integer, nullable=False),
     Column("current_revision_id", UUID_ID, nullable=True),
     Column("created_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
@@ -472,6 +524,14 @@ memory_facts = Table(
     ),
     UniqueConstraint("id", "workspace_id", name="uq_memory_facts_id_workspace"),
     CheckConstraint("version > 0", name="ck_memory_facts_positive_version"),
+    CheckConstraint(
+        "assertion_schema_version IN (1, 2)",
+        name="ck_memory_facts_assertion_schema_version",
+    ),
+    CheckConstraint(
+        "status IN ('active', 'inactive', 'forgotten')",
+        name="ck_memory_facts_lifecycle_status",
+    ),
 )
 Index(
     "uq_memory_facts_active_subject_key",
@@ -491,7 +551,9 @@ memory_revisions = Table(
     Column("operation", String(32), nullable=False),
     Column("fact_version", Integer, nullable=False),
     Column("value", JSONB, nullable=True),
-    Column("run_id", UUID_ID, nullable=False),
+    Column("run_id", UUID_ID, nullable=True),
+    Column("action_id", UUID_ID, nullable=True),
+    Column("reason", String(32), nullable=True),
     Column("created_at", TIMESTAMP, nullable=False, server_default=CREATED_AT),
     PrimaryKeyConstraint("id", name="pk_memory_revisions"),
     ForeignKeyConstraint(
@@ -510,10 +572,23 @@ memory_revisions = Table(
     ForeignKeyConstraint(
         ["run_id"], [f"{SCHEMA_NAME}.runs.id"], name="fk_memory_revisions_run"
     ),
+    ForeignKeyConstraint(
+        ["action_id"],
+        [f"{SCHEMA_NAME}.memory_actions.id"],
+        name="fk_memory_revisions_action",
+    ),
     UniqueConstraint(
         "fact_id", "fact_version", name="uq_memory_revisions_fact_version"
     ),
     CheckConstraint("fact_version > 0", name="ck_memory_revisions_positive_version"),
+    CheckConstraint(
+        "(run_id IS NOT NULL) <> (action_id IS NOT NULL)",
+        name="ck_memory_revisions_one_origin",
+    ),
+    CheckConstraint(
+        "reason IS NULL OR reason IN ('enrich', 'supersede', 'correct', 'unspecified', 'ended', 'invalidated', 'reasserted', 'forgotten')",
+        name="ck_memory_revisions_reason",
+    ),
 )
 
 memory_revision_predecessors = Table(
@@ -546,6 +621,12 @@ memory_revision_sources = Table(
     Column("end_char", Integer, nullable=False),
     Column("quote", Text, nullable=False),
     Column("message_sha256", String(64), nullable=False),
+    Column(
+        "authority_role",
+        String(32),
+        nullable=False,
+        server_default=text("'user_assertion'"),
+    ),
     PrimaryKeyConstraint("id", name="pk_memory_revision_sources"),
     ForeignKeyConstraint(
         ["revision_id"],
@@ -566,6 +647,10 @@ memory_revision_sources = Table(
     ),
     CheckConstraint("start_char >= 0", name="ck_revision_sources_nonnegative_start"),
     CheckConstraint("end_char > start_char", name="ck_revision_sources_positive_span"),
+    CheckConstraint(
+        "authority_role IN ('user_assertion', 'user_endorsement', 'assistant_referent')",
+        name="ck_memory_revision_sources_authority_role",
+    ),
 )
 
 memory_embeddings = Table(

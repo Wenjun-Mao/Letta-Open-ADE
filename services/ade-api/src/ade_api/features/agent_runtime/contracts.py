@@ -3,8 +3,18 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
-
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from .memory_contracts import (
+    MemoryEvidenceResponse as MemoryEvidenceResponse,
+    MemoryFactResponse as MemoryFactResponse,
+    MemoryOperation as MemoryOperation,
+    MemoryRemovalRequest as MemoryRemovalRequest,
+    MemoryRemovalResponse as MemoryRemovalResponse,
+    MemoryRemovalTarget as MemoryRemovalTarget,
+    MemoryRevisionResponse as MemoryRevisionResponse,
+    SubjectMemoriesResponse as SubjectMemoriesResponse,
+)
 
 
 class RuntimeMode(StrEnum):
@@ -23,12 +33,6 @@ class RunStatus(StrEnum):
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     CANCELLED = "cancelled"
-
-
-class MemoryOperation(StrEnum):
-    ADD = "add"
-    CORRECT = "correct"
-    FORGET = "forget"
 
 
 class RuntimeResourcePurpose(StrEnum):
@@ -131,6 +135,7 @@ class MemorySubjectResponse(BaseModel):
     external_key: str
     display_name: str
     version: int = 1
+    memory_generation: int = Field(default=1, ge=1)
     archived_at: datetime | None = None
     created_at: datetime
     updated_at: datetime | None = None
@@ -386,6 +391,7 @@ class RunResponse(BaseModel):
     attempt_count: int
     timeout_seconds: float
     retry_count: int
+    accepted_memory_generation: int = Field(default=1, ge=1)
     cancellation_requested_at: datetime | None = None
     error_code: str | None = None
     error_message: str | None = None
@@ -463,44 +469,3 @@ class RunEventResponse(BaseModel):
 class RunEventListResponse(BaseModel):
     total: int
     items: list[RunEventResponse]
-
-
-class MemoryEvidenceResponse(BaseModel):
-    message_id: str
-    conversation_id: str
-    message_sequence: int
-    start_char: int
-    end_char: int
-    quote: str
-    message_sha256: str
-
-
-class MemoryRevisionResponse(BaseModel):
-    id: str
-    operation: MemoryOperation
-    fact_version: int
-    value: str | None
-    run_id: str
-    predecessor_revision_ids: list[str] = Field(default_factory=list)
-    evidence: list[MemoryEvidenceResponse]
-    created_at: datetime
-
-
-class MemoryFactResponse(BaseModel):
-    id: str
-    key: str
-    fact_type: str
-    entity_id: str
-    entity_kind: str
-    entity_label: str
-    qualifier: str | None = None
-    value: str | None
-    status: Literal["active", "superseded", "forgotten"]
-    version: int
-    revisions: list[MemoryRevisionResponse]
-    updated_at: datetime
-
-
-class SubjectMemoriesResponse(BaseModel):
-    subject_id: str
-    facts: list[MemoryFactResponse]

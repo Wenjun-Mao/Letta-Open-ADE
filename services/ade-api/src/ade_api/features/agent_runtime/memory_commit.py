@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from .contracts import MemoryOperation
 from .memory_policy import PreparedMemoryOperation, PreparedMemoryReview
 from .persistence.memory import MemoryRepository
+from .persistence.base import OptimisticLockError
 
 
 async def commit_memory_review(
@@ -22,11 +23,24 @@ async def commit_memory_review(
     embedding_fingerprint: str,
     embedding_dimensions: int,
     retrieval_policy_version: str,
+    expected_memory_generation: int | None = None,
 ) -> list[dict[str, Any]]:
     if len(review.operations) != len(operation_embeddings):
         raise ValueError("memory operations and embeddings must stay aligned")
     repository = MemoryRepository(connection)
+    if not review.operations:
+        return []
+    subject = await repository.lock_subject(subject_id)
+    current_generation = int(subject["memory_generation"])
+    if (
+        expected_memory_generation is not None
+        and current_generation != expected_memory_generation
+    ):
+        raise OptimisticLockError("subject memory generation changed before commit")
+    used_entity_ids = {operation.entity_id for operation in review.operations}
     for entity in review.new_entities:
+        if entity.id not in used_entity_ids:
+            continue
         await repository.create_entity(
             {
                 "id": entity.id,
@@ -88,6 +102,9 @@ async def commit_memory_review(
                 "source_message_ids": [operation.evidence.message_id],
             }
         )
+    await repository.advance_memory_generation(
+        subject_id, expected_generation=current_generation
+    )
     return committed
 
 
@@ -189,4 +206,5 @@ def _evidence_payload(operation: PreparedMemoryOperation) -> dict[str, Any]:
         "end_char": evidence.end_char,
         "quote": evidence.quote,
         "message_sha256": evidence.message_sha256,
+        "authority_role": "user_assertion",
     }

@@ -5,9 +5,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
   acceptTurn,
-  archiveAgentStudioDefinition,
-  archiveAgentStudioSession,
-  archiveAgentStudioSubject,
   cancelRun,
   createAgentStudioSession,
   getAgentStudioOptions,
@@ -20,15 +17,13 @@ import {
   listAgentStudioSessions,
   listAgentStudioSubjects,
   listConversationRuns,
-  restoreAgentStudioDefinition,
-  restoreAgentStudioSession,
-  restoreAgentStudioSubject,
-  updateAgentStudioSubject,
 } from "./api";
 import { openRunEventStream, TERMINAL_RUN_EVENT_TYPES } from "./event-stream";
 import { memoryActionDraft, memoryActionOutcome, type PendingMemoryAction } from "./memory-action";
 import { sessionDraftPayload } from "./session-draft";
+import { useResourceActions } from "./resource-actions";
 import { useDefinitionVersion } from "./use-definition-version";
+import { useMemoryRemoval, type PendingRemoval } from "./use-memory-removal";
 import {
   identityKey,
   isArchived,
@@ -68,6 +63,7 @@ export function useAgentStudio() {
   const terminalRunRef = useRef("");
   const selectedIdRef = useRef(conversationId);
   const selectionEpochRef = useRef(0);
+  const subjectInspectEpochRef = useRef(0);
   const readEpochRef = useRef(0);
   const bindingSelectionRef = useRef<string | null>(null);
   const olderPageRef = useRef<{ conversationId: string; cursor: number } | null>(null);
@@ -79,6 +75,8 @@ export function useAgentStudio() {
   const [definitions, setDefinitions] = useState<AgentDefinition[]>([]);
   const [subjects, setSubjects] = useState<MemorySubject[]>([]);
   const [session, setSession] = useState<AgentStudioSession | null>(null);
+  const [inspectedSubject, setInspectedSubject] = useState<MemorySubject | null>(null);
+  const [inspectedMemories, setInspectedMemories] = useState<SubjectMemories | null>(null);
   const [conversation, setConversation] = useState<ConversationState | null>(null);
   const [memories, setMemories] = useState<SubjectMemories | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
@@ -103,6 +101,7 @@ export function useAgentStudio() {
   const [evidenceMessageId, setEvidenceMessageId] = useState("");
   const [evidenceError, setEvidenceError] = useState("");
   const [memoryAction, setMemoryAction] = useState<PendingMemoryAction | null>(null);
+  const [removal, setRemoval] = useState<PendingRemoval | null>(null);
 
   const stopMonitoring = useCallback(() => {
     activeMonitorRunRef.current = null;
@@ -118,11 +117,14 @@ export function useAgentStudio() {
     if (nextConversationId === selectedIdRef.current) return;
     selectedIdRef.current = nextConversationId;
     selectionEpochRef.current += 1;
+    subjectInspectEpochRef.current += 1;
     readEpochRef.current += 1;
     bindingSelectionRef.current = null;
     olderPageRef.current = null;
     stopMonitoring();
     setSession(null);
+    setInspectedSubject(null);
+    setInspectedMemories(null);
     setConversation(null);
     setMemories(null);
     setRuns([]);
@@ -131,6 +133,7 @@ export function useAgentStudio() {
     setEvidenceMessageId("");
     setEvidenceError("");
     setMemoryAction(null);
+    setRemoval(null);
     if (!evidenceTargetRef.current || evidenceTargetRef.current.conversation_id !== nextConversationId) evidenceTargetRef.current = null;
     const params = new URLSearchParams(searchParams.toString());
     if (nextConversationId) params.set("conversation", nextConversationId);
@@ -138,6 +141,25 @@ export function useAgentStudio() {
     const query = params.toString();
     router.replace(query ? `${pathname}?${query}` : pathname);
   }, [pathname, router, searchParams, stopMonitoring]);
+
+  async function inspectSubject(subjectId: string) {
+    const subject = subjects.find((item) => item.id === subjectId);
+    if (!subject) return;
+    selectConversation(null);
+    const epoch = ++subjectInspectEpochRef.current;
+    setRemoval(null);
+    setError("");
+    setInspectedSubject(subject);
+    setInspectedMemories(null);
+    try {
+      const nextMemories = await getSubjectMemories(subjectId);
+      if (subjectInspectEpochRef.current === epoch && selectedIdRef.current === null) {
+        setInspectedMemories(nextMemories);
+      }
+    } catch (exc) {
+      if (subjectInspectEpochRef.current === epoch && selectedIdRef.current === null) setError(messageFrom(exc));
+    }
+  }
 
   const refreshWorkspace = useCallback(async () => {
     setLoading(true);
@@ -152,6 +174,9 @@ export function useAgentStudio() {
       setSessions(nextSessions.items);
       setDefinitions(nextDefinitions.items);
       setSubjects(nextSubjects.items);
+      setInspectedSubject((current) => current
+        ? nextSubjects.items.find((item) => item.id === current.id) || current
+        : null);
       setTimeoutSeconds((current) => current || nextOptions.default_timeout_seconds);
       setRetryCount((current) => current || nextOptions.default_retry_count);
       setError("");
@@ -213,6 +238,15 @@ export function useAgentStudio() {
       return null;
     }
   }, []);
+
+  const { removeSavedFact, retryRemoval } = useMemoryRemoval({
+    session, inspectedSubject, memories, inspectedMemories, removal, setRemoval,
+    selectedIdRef, selectionEpochRef, subjectInspectEpochRef,
+    refreshSelected, setInspectedMemories, setBusy, setError,
+  });
+  const { setSessionArchived, setDefinitionArchived, setSubjectArchived, renameSubject } = useResourceActions({
+    session, subjectRename, refreshWorkspace, refreshSelected, setBusy, setError,
+  });
 
   const finishRun = useCallback(async (runId: string, monitoredConversationId: string, monitoredEpoch: number) => {
     const isCurrent = () => activeMonitorRunRef.current === runId
@@ -281,6 +315,11 @@ export function useAgentStudio() {
   useEffect(() => {
     selectedIdRef.current = conversationId;
     selectionEpochRef.current += 1;
+    if (conversationId) {
+      subjectInspectEpochRef.current += 1;
+      setInspectedSubject(null);
+      setInspectedMemories(null);
+    }
     readEpochRef.current += 1;
     bindingSelectionRef.current = null;
     olderPageRef.current = null;
@@ -371,69 +410,6 @@ export function useAgentStudio() {
   }
 
 
-  async function setSessionArchived(archived: boolean) {
-    if (!session) return;
-    setBusy(true);
-    setError("");
-    try {
-      if (archived) await archiveAgentStudioSession(session.conversation.id);
-      else await restoreAgentStudioSession(session.conversation.id);
-      await Promise.all([refreshWorkspace(), refreshSelected(session.conversation.id)]);
-    } catch (exc) {
-      setError(messageFrom(exc));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function setDefinitionArchived(archived: boolean) {
-    const rootId = session?.agent_definition.agent_definition_id;
-    if (!rootId) return;
-    setBusy(true);
-    setError("");
-    try {
-      if (archived) await archiveAgentStudioDefinition(rootId);
-      else await restoreAgentStudioDefinition(rootId);
-      await Promise.all([refreshWorkspace(), refreshSelected(session!.conversation.id)]);
-    } catch (exc) {
-      setError(messageFrom(exc));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function setSubjectArchived(archived: boolean) {
-    if (!session) return;
-    setBusy(true);
-    setError("");
-    try {
-      if (archived) await archiveAgentStudioSubject(session.memory_subject.id);
-      else await restoreAgentStudioSubject(session.memory_subject.id);
-      await Promise.all([refreshWorkspace(), refreshSelected(session.conversation.id)]);
-    } catch (exc) {
-      setError(messageFrom(exc));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function renameSubject() {
-    if (!session || !subjectRename.trim() || subjectRename.trim() === session.memory_subject.display_name) return;
-    setBusy(true);
-    setError("");
-    try {
-      await updateAgentStudioSubject(session.memory_subject.id, {
-        display_name: subjectRename.trim(),
-        expected_version: session.memory_subject.version,
-      });
-      await Promise.all([refreshWorkspace(), refreshSelected(session.conversation.id)]);
-    } catch (exc) {
-      setError(messageFrom(exc));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function sendMessage() {
     const content = message.trim();
     const selected = session;
@@ -493,15 +469,16 @@ export function useAgentStudio() {
   }
 
   return {
-    options, sessions, definitions, subjects, session, conversation, memories, runs, run, events,
+    options, sessions, definitions, subjects, session, inspectedSubject, inspectedMemories, conversation, memories, runs, run, events,
     loading, busy, error, streamWarning, includeArchived, message, timeoutSeconds, retryCount,
     title, definitionChoice, definitionName, definitionKey, subjectChoice, subjectName, subjectKey, subjectRename,
-    evidenceMessageId, evidenceError, memoryAction, ...definitionVersion,
+    evidenceMessageId, evidenceError, memoryAction, removal, ...definitionVersion,
     activeRun: Boolean(run && !TERMINAL_RUN_STATUSES.has(run.status)),
     setIncludeArchived, setMessage, setTimeoutSeconds: (value: number) => setTimeoutSeconds(clampNumber(value, 5, 600)),
     setRetryCount: (value: number) => setRetryCount(clampNumber(value, 0, options?.max_retry_count || 5)),
     setTitle, setDefinitionChoice, setDefinitionName, setDefinitionKey, setSubjectChoice, setSubjectName, setSubjectKey, setSubjectRename,
-    selectConversation, refreshWorkspace, createSession, setSessionArchived, setDefinitionArchived, setSubjectArchived,
+    selectConversation, inspectSubject, refreshWorkspace, createSession, setSessionArchived, setDefinitionArchived, setSubjectArchived,
     renameSubject, sendMessage, cancelActiveRun, loadOlderMessages, openEvidence, returnToLatestMessages, prepareMemoryAction,
+    removeSavedFact, retryRemoval,
   };
 }

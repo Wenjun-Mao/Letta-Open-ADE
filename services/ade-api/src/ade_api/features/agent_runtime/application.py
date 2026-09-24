@@ -20,6 +20,7 @@ from .contracts import (
     CreateAgentStudioSessionRequest,
     CreateEvaluationSessionRequest,
     CreateMemorySubjectRequest,
+    MemoryRemovalRequest,
     UpdateMemorySubjectRequest,
 )
 from .agent_studio_reset import AgentStudioResetService
@@ -30,6 +31,7 @@ from .evaluation_sessions import EvaluationSessionService
 from .errors import RuntimeNotReady
 from .persistence.database import create_persistence_engine
 from .resource_service import ResourceService
+from .memory_removals import MemoryRemovalService
 from .router_transport import RouterTransport
 from .request_budget import build_runtime_router_transport
 from .run_service import RunService
@@ -57,6 +59,7 @@ class AgentRuntimeApplication:
             router_transport=router_transport,
         )
         self.resources = ResourceService(self.database)
+        self.memory_removals = MemoryRemovalService(self.database)
         self.agent_studio = AgentStudioSessionService(
             database=self.database,
             definitions=self.definitions,
@@ -164,6 +167,14 @@ class AgentRuntimeApplication:
         self._ensure_agent_studio_release_ready()
         return await self.resources.get_subject_memories(
             subject_id, required_purpose=AGENT_STUDIO_PURPOSE
+        )
+
+    async def remove_agent_studio_memories(
+        self, subject_id: str, request: MemoryRemovalRequest, *, actor_label: str
+    ) -> dict[str, Any]:
+        self._ensure_agent_studio_release_ready()
+        return await self.memory_removals.remove(
+            subject_id, request, actor_label=actor_label
         )
 
     async def get_agent_studio_conversation_state(

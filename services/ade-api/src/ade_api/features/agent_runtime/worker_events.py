@@ -105,9 +105,10 @@ async def append_success_events(
                 run_id=run_id,
                 event_type="memory.proposed",
                 payload={
-                    "operation": operation.proposal.operation.value,
+                    "operation": str(operation.proposal.operation),
                     "fact_type": operation.fact_type,
                     "fact_id": getattr(operation.proposal, "fact_id", None),
+                    "claim_id": getattr(operation.proposal, "claim_id", None),
                     "target_fact_ids": getattr(
                         operation.proposal, "target_fact_ids", []
                     ),
@@ -115,6 +116,15 @@ async def append_success_events(
                 attempt=attempt,
                 causation_id=reviewer_event_id,
             )
+        )
+    for deferred in getattr(result.review, "deferred_claims", ()):
+        await append_run_event(
+            runs,
+            run_id=run_id,
+            event_type="memory.deferred",
+            payload=deferred,
+            attempt=attempt,
+            causation_id=reviewer_event_id,
         )
     for index, memory in enumerate(committed):
         causation_id = (

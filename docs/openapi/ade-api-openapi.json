@@ -3301,6 +3301,16 @@
       },
       "MemoryEvidenceResponse": {
         "properties": {
+          "authority_role": {
+            "default": "user_assertion",
+            "enum": [
+              "user_assertion",
+              "user_endorsement",
+              "assistant_referent"
+            ],
+            "title": "Authority Role",
+            "type": "string"
+          },
           "conversation_id": {
             "title": "Conversation Id",
             "type": "string"
@@ -3344,6 +3354,12 @@
       },
       "MemoryFactResponse": {
         "properties": {
+          "assertion_schema_version": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Assertion Schema Version",
+            "type": "integer"
+          },
           "entity_id": {
             "title": "Entity Id",
             "type": "string"
@@ -3389,6 +3405,7 @@
           "status": {
             "enum": [
               "active",
+              "inactive",
               "superseded",
               "forgotten"
             ],
@@ -3436,13 +3453,124 @@
         "enum": [
           "add",
           "correct",
-          "forget"
+          "forget",
+          "revise",
+          "end",
+          "reassert"
         ],
         "title": "MemoryOperation",
         "type": "string"
       },
+      "MemoryRemovalRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_memory_generation": {
+            "minimum": 1.0,
+            "title": "Expected Memory Generation",
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryRemovalTarget"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Targets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "idempotency_key",
+          "expected_memory_generation",
+          "targets"
+        ],
+        "title": "MemoryRemovalRequest",
+        "type": "object"
+      },
+      "MemoryRemovalResponse": {
+        "properties": {
+          "action_id": {
+            "title": "Action Id",
+            "type": "string"
+          },
+          "committed_at": {
+            "format": "date-time",
+            "title": "Committed At",
+            "type": "string"
+          },
+          "idempotent_replay": {
+            "default": false,
+            "title": "Idempotent Replay",
+            "type": "boolean"
+          },
+          "outcome": {
+            "const": "committed",
+            "title": "Outcome",
+            "type": "string"
+          },
+          "resulting_memory_generation": {
+            "minimum": 2.0,
+            "title": "Resulting Memory Generation",
+            "type": "integer"
+          },
+          "revision_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Revision Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "action_id",
+          "outcome",
+          "revision_ids",
+          "resulting_memory_generation",
+          "committed_at"
+        ],
+        "title": "MemoryRemovalResponse",
+        "type": "object"
+      },
+      "MemoryRemovalTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "fact_id": {
+            "format": "uuid",
+            "title": "Fact Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fact_id",
+          "expected_version"
+        ],
+        "title": "MemoryRemovalTarget",
+        "type": "object"
+      },
       "MemoryRevisionResponse": {
         "properties": {
+          "action_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Id"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -3473,9 +3601,27 @@
             "title": "Predecessor Revision Ids",
             "type": "array"
           },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
           "run_id": {
-            "title": "Run Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
           },
           "value": {
             "anyOf": [
@@ -3494,7 +3640,6 @@
           "operation",
           "fact_version",
           "value",
-          "run_id",
           "evidence",
           "created_at"
         ],
@@ -3552,6 +3697,12 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "memory_generation": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Memory Generation",
+            "type": "integer"
           },
           "updated_at": {
             "anyOf": [
@@ -4194,6 +4345,12 @@
       },
       "RunResponse": {
         "properties": {
+          "accepted_memory_generation": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Accepted Memory Generation",
+            "type": "integer"
+          },
           "attempt_count": {
             "title": "Attempt Count",
             "type": "integer"
@@ -4417,6 +4574,12 @@
             },
             "title": "Facts",
             "type": "array"
+          },
+          "memory_generation": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Memory Generation",
+            "type": "integer"
           },
           "subject_id": {
             "title": "Subject Id",
@@ -7607,6 +7770,63 @@
           }
         ],
         "summary": "Inspect typed Agent Studio memory lineage",
+        "tags": [
+          "Agent Runtime"
+        ]
+      }
+    },
+    "/api/v3/agent-studio/subjects/{subject_id}/memory-removals": {
+      "post": {
+        "operationId": "remove_subject_memories_api_v3_agent_studio_subjects__subject_id__memory_removals_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "Subject Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryRemovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryRemovalResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Remove exact saved assertions through an operator action",
         "tags": [
           "Agent Runtime"
         ]

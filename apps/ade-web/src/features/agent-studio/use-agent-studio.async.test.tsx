@@ -19,6 +19,7 @@ const api = vi.hoisted(() => ({
   archiveAgentStudioSession: vi.fn(), archiveAgentStudioSubject: vi.fn(), cancelRun: vi.fn(),
   restoreAgentStudioDefinition: vi.fn(), restoreAgentStudioSession: vi.fn(),
   restoreAgentStudioSubject: vi.fn(), updateAgentStudioSubject: vi.fn(),
+  removeSavedMemory: vi.fn(),
 }));
 const streams = vi.hoisted(() => ({ calls: [] as Array<{ runId: string; handlers: {
   onEvent: (event: RunEvent) => void; onTerminal: (event: RunEvent) => void; onError: () => void;
@@ -53,7 +54,7 @@ const run = (status: Run["status"]): Run => ({ id: "run-A", conversation_id: "A"
 const terminalEvent: RunEvent = { id: "event-1", schema_version: 1, run_id: "run-A", sequence: 1,
   attempt: 1, type: "run.completed", occurred_at: "2026-09-22T00:00:00Z", correlation_id: "run-A",
   causation_id: null, visibility: "operator", payload: {} };
-const memory = (version: number): SubjectMemories => ({ subject_id: "subject-A", facts: [{
+const memory = (version: number): SubjectMemories => ({ subject_id: "subject-A", memory_generation: version, facts: [{
   id: "fact-1", key: "tea", fact_type: "person.preference", entity_id: "subject-A", entity_kind: "subject",
   entity_label: "User", qualifier: null, value: "tea", status: "active", version,
   revisions: [], updated_at: "2026-09-22T00:00:00Z",
@@ -117,6 +118,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   container.remove();
+  vi.unstubAllGlobals();
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = false;
 });
 
@@ -216,5 +218,49 @@ describe("Agent Studio async ownership", () => {
     expect(api.getConversationState.mock.calls.filter((args) => args[1] === 100)).toHaveLength(1);
     await act(async () => { older.resolve({ ...state("A"), messages: [{ id: "message-1", sequence: 1, role: "user", content: "old", run_id: null, created_at: "2026-09-22T00:00:00Z" }], message_total: 100, messages_truncated: false, next_before_sequence: null }); });
     expect(controller.conversation?.messages.map((item) => item.id)).toEqual(["message-1", "message-100"]);
+  });
+
+  it("removes from a subject without selecting or restoring a conversation", async () => {
+    navigation.state.query = new URLSearchParams();
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    api.removeSavedMemory.mockResolvedValue({ action_id: "action-1", outcome: "committed",
+      revision_ids: ["revision-1"], resulting_memory_generation: 2, idempotent_replay: false,
+      committed_at: "2026-09-24T00:00:00Z" });
+    api.getSubjectMemories.mockResolvedValueOnce(memory(1)).mockResolvedValueOnce({
+      subject_id: "subject-A", memory_generation: 2, facts: [{ ...memory(1).facts[0],
+        status: "forgotten", value: null, version: 2,
+        revisions: [{ id: "revision-1", operation: "forget", fact_version: 2, value: null,
+          run_id: null, action_id: "action-1", predecessor_revision_ids: [], evidence: [],
+          created_at: "2026-09-24T00:00:00Z" }] }],
+    });
+    await render();
+    await act(async () => { await controller.inspectSubject("subject-A"); });
+    expect(controller.session).toBeNull();
+    await act(async () => { await controller.removeSavedFact("fact-1", 1); });
+    expect(api.removeSavedMemory).toHaveBeenCalledWith("subject-A", expect.objectContaining({
+      expected_memory_generation: 1, targets: [{ fact_id: "fact-1", expected_version: 1 }],
+    }));
+    expect(controller.removal?.receipt?.action_id).toBe("action-1");
+    expect(controller.inspectedMemories?.facts[0].status).toBe("forgotten");
+    expect(api.acceptTurn).not.toHaveBeenCalled();
+    expect(api.restoreAgentStudioSession).not.toHaveBeenCalled();
+  });
+
+  it("recovers an ambiguous removal with the original action key", async () => {
+    navigation.state.query = new URLSearchParams();
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    api.removeSavedMemory.mockRejectedValueOnce(new Error("network lost"))
+      .mockResolvedValueOnce({ action_id: "action-1", outcome: "committed", revision_ids: ["revision-1"],
+        resulting_memory_generation: 2, idempotent_replay: true, committed_at: "2026-09-24T00:00:00Z" });
+    api.getSubjectMemories.mockResolvedValue(memory(1));
+    await render();
+    await act(async () => { await controller.inspectSubject("subject-A"); });
+    await act(async () => { await controller.removeSavedFact("fact-1", 1); });
+    expect(controller.removal?.unconfirmed).toBe(true);
+    await act(async () => { await controller.retryRemoval(); });
+    expect(api.removeSavedMemory).toHaveBeenCalledTimes(2);
+    expect(api.removeSavedMemory.mock.calls[0][1].idempotency_key)
+      .toBe(api.removeSavedMemory.mock.calls[1][1].idempotency_key);
+    expect(controller.removal?.receipt?.idempotent_replay).toBe(true);
   });
 });

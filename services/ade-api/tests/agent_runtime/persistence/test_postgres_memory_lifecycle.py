@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from ade_api.features.agent_runtime.contracts import MemoryOperation
 from ade_api.features.agent_runtime.memory_commit import commit_memory_review
+from ade_api.features.agent_runtime.memory_policy import PreparedMemoryReview
 from ade_api.features.agent_runtime.memory_review import (
     AddProposal,
     CorrectProposal,
@@ -22,6 +23,7 @@ from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
 )
 from ade_api.features.agent_runtime.persistence.memory import MemoryRepository
+from ade_api.features.agent_runtime.persistence.base import OptimisticLockError
 
 
 DATABASE_URL = os.getenv("ADE_TEST_DATABASE_URL")
@@ -148,6 +150,9 @@ def test_postgres_memory_lifecycle_lineage_and_subject_isolation(
                 assert first_source["message_id"] == add_turn["id"]
                 assert first_source["conversation_id"] == ids["conversation_one"]
                 assert first_source["message_sequence"] == 1
+                assert (await repository.get_subject(ids["subject_one"]))[
+                    "memory_generation"
+                ] == 2
 
             async with engine.begin() as connection:
                 correction_turn = await record_m2_memory_turn(
@@ -213,6 +218,9 @@ def test_postgres_memory_lifecycle_lineage_and_subject_isolation(
                 )
                 assert correction_sources[0]["message_sequence"] == 1
                 assert correction_sources[0]["quote"] == "绿茶"
+                assert (await repository.get_subject(ids["subject_one"]))[
+                    "memory_generation"
+                ] == 3
                 current_hits = await _search_active_facts(
                     connection, ids["subject_one"], [0.0, 1.0, 0.0]
                 )
@@ -365,6 +373,43 @@ def test_postgres_memory_lifecycle_lineage_and_subject_isolation(
                 assert forgotten["id"] == fact_id
                 assert forgotten["status"] == "forgotten"
                 assert forgotten["current_revision_id"] == third_revision_id
+                assert (await repository.get_subject(ids["subject_one"]))[
+                    "memory_generation"
+                ] == 4
+
+            async with engine.begin() as connection:
+                no_op = await commit_memory_review(
+                    connection,
+                    workspace_id=ids["workspace"],
+                    subject_id=ids["subject_one"],
+                    run_id=forget_turn["run_id"],
+                    review=PreparedMemoryReview(new_entities=(), operations=()),
+                    operation_embeddings=(),
+                    embedding_fingerprint="synthetic-vector-v1",
+                    embedding_dimensions=3,
+                    retrieval_policy_version="storage-test-v1",
+                    expected_memory_generation=4,
+                )
+                assert no_op == []
+                with pytest.raises(OptimisticLockError, match="generation changed"):
+                    await commit_memory_review(
+                        connection,
+                        workspace_id=ids["workspace"],
+                        subject_id=ids["subject_one"],
+                        run_id=add_turn["run_id"],
+                        review=add_review,
+                        operation_embeddings=([1.0, 0.0, 0.0],),
+                        embedding_fingerprint="synthetic-vector-v1",
+                        embedding_dimensions=3,
+                        retrieval_policy_version="storage-test-v1",
+                        expected_memory_generation=1,
+                    )
+            async with read_engine.connect() as connection:
+                repository = MemoryRepository(connection)
+                assert (await repository.get_subject(ids["subject_one"]))[
+                    "memory_generation"
+                ] == 4
+                assert len(await repository.list_revisions(fact_id)) == 3
         finally:
             await read_engine.dispose()
             await engine.dispose()

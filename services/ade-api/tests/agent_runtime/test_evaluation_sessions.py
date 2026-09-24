@@ -208,6 +208,84 @@ def test_evaluation_purge_rejects_an_active_run(
         asyncio.run(service.purge("evaluation-conversation-1"))
 
 
+def test_evaluation_purge_refuses_a_shared_subject_closure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    conversation = {
+        "id": "evaluation-conversation-1",
+        "purpose": "evaluation",
+        "agent_definition_version_id": "definition-1",
+        "memory_subject_id": "subject-1",
+    }
+
+    class _Connection:
+        async def scalar(self, _statement):
+            return 1
+
+    class _Database:
+        class _Engine:
+            @asynccontextmanager
+            async def begin(self):
+                yield _Connection()
+
+        engine = _Engine()
+
+        async def ensure_ready(self):
+            return None
+
+        @asynccontextmanager
+        async def translated_errors(self):
+            yield
+
+    class _Conversations:
+        def __init__(self, _connection):
+            pass
+
+        async def find(self, _conversation_id):
+            return conversation
+
+        async def get_for_update(self, _conversation_id):
+            return conversation
+
+    class _Runs:
+        def __init__(self, _connection):
+            pass
+
+        async def active_for_conversation(self, _conversation_id):
+            return None
+
+    class _Definition:
+        def __init__(self, _connection):
+            pass
+
+        async def get(self, _definition_id):
+            return {"agent_definition_id": "root-1", "purpose": "evaluation"}
+
+        async def get_for_update(self, _root_id):
+            return {"purpose": "evaluation"}
+
+    class _Memory:
+        def __init__(self, _connection):
+            pass
+
+        async def lock_subject(self, _subject_id):
+            return {"id": "subject-1", "purpose": "evaluation"}
+
+    monkeypatch.setattr(evaluation_sessions, "ConversationRepository", _Conversations)
+    monkeypatch.setattr(evaluation_sessions, "RunRepository", _Runs)
+    monkeypatch.setattr(evaluation_sessions, "DefinitionVersionRepository", _Definition)
+    monkeypatch.setattr(evaluation_sessions, "AgentDefinitionRepository", _Definition)
+    monkeypatch.setattr(evaluation_sessions, "MemoryRepository", _Memory)
+    service = EvaluationSessionService(
+        database=_Database(),  # type: ignore[arg-type]
+        definitions=None,
+        resources=None,  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(RuntimeConflict, match="shared subject closure"):
+        asyncio.run(service.purge("evaluation-conversation-1"))
+
+
 def test_evaluation_purge_removes_run_owned_provenance_before_its_parents() -> None:
     class _Result:
         rowcount = 0

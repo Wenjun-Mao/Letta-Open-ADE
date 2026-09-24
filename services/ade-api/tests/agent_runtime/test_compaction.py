@@ -131,9 +131,10 @@ def test_deepseek_compaction_uses_json_object_and_hashes_the_actual_prompt() -> 
     assert "temperature" not in payload
     assert "chat_template_kwargs" not in payload
     assert "JSON" in payload["messages"][0]["content"]
-    assert result.prompt_sha256 == hashlib.sha256(
-        payload["messages"][0]["content"].encode("utf-8")
-    ).hexdigest()
+    assert (
+        result.prompt_sha256
+        == hashlib.sha256(payload["messages"][0]["content"].encode("utf-8")).hexdigest()
+    )
 
 
 def test_compaction_extends_the_prior_summary_with_only_the_contiguous_delta() -> None:

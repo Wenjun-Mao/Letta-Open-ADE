@@ -8,6 +8,7 @@ from .router_transport import RouterTransport
 
 
 RETRIEVAL_POLICY_VERSION = "qwen3-semantic-facts-v1"
+NATURAL_RETRIEVAL_POLICY_VERSION = "qwen3-lifecycle-facts-v2"
 AUTOMATIC_MAXIMUM_COSINE_DISTANCE = 1.0 - 0.6311
 # This opaque legacy ID is already present on stored Qwen fact vectors. Keeping
 # it as the semantic-space key avoids rewriting vectors when only the endpoint

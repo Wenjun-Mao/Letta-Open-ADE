@@ -32,6 +32,7 @@ from .persistence.metadata import (
     conversation_summaries,
     conversations,
     memory_embeddings,
+    memory_actions,
     memory_entities,
     memory_facts,
     memory_revision_predecessors,
@@ -160,6 +161,21 @@ class EvaluationSessionService:
                 _require_evaluation(definition, "agent definition version")
                 _require_evaluation(root, "agent definition")
                 _require_evaluation(subject, "memory subject")
+                other_conversations = int(
+                    await connection.scalar(
+                        select(func.count())
+                        .select_from(conversations)
+                        .where(
+                            conversations.c.memory_subject_id == subject["id"],
+                            conversations.c.id != conversation_id,
+                        )
+                    )
+                    or 0
+                )
+                if other_conversations:
+                    raise RuntimeConflict(
+                        "individual evaluation purge would break a shared subject closure"
+                    )
 
                 counts = await _delete_conversation_graph(connection, conversation_id)
                 await _delete_subject_if_orphan(connection, str(subject["id"]), counts)
@@ -329,6 +345,10 @@ async def _delete_subject_if_orphan(
     await remove(
         "memory_revisions",
         delete(memory_revisions).where(memory_revisions.c.id.in_(revision_ids)),
+    )
+    await remove(
+        "memory_actions",
+        delete(memory_actions).where(memory_actions.c.subject_id.in_(subject_ids)),
     )
     await remove(
         "memory_facts", delete(memory_facts).where(memory_facts.c.id.in_(fact_ids))

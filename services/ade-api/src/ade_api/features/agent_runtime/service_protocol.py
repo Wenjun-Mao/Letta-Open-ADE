@@ -10,6 +10,7 @@ from .contracts import (
     CreateAgentStudioSessionRequest,
     CreateEvaluationSessionRequest,
     CreateMemorySubjectRequest,
+    MemoryRemovalRequest,
     UpdateMemorySubjectRequest,
 )
 
@@ -63,6 +64,10 @@ class AgentRuntimeService(Protocol):
 
     async def get_agent_studio_subject_memories(
         self, subject_id: str
+    ) -> dict[str, Any]: ...
+
+    async def remove_agent_studio_memories(
+        self, subject_id: str, request: MemoryRemovalRequest, *, actor_label: str
     ) -> dict[str, Any]: ...
 
     async def get_agent_studio_conversation_state(

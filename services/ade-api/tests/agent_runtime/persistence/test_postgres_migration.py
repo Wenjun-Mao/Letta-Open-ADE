@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 from alembic import command
-from sqlalchemy import create_engine, delete, inspect, text
+from sqlalchemy import create_engine, delete, inspect, insert, select, text, update
 
 from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
@@ -15,7 +15,21 @@ from ade_api.features.agent_runtime.persistence.validation import (
     alembic_config,
     validate_database_at_head,
 )
-from ade_api.features.agent_runtime.persistence.metadata import worker_instances
+from ade_api.features.agent_runtime.persistence.metadata import (
+    agent_definition_versions,
+    agent_definitions,
+    conversations,
+    memory_embeddings,
+    memory_entities,
+    memory_facts,
+    memory_revision_sources,
+    memory_revisions,
+    memory_subjects,
+    messages,
+    runs,
+    worker_instances,
+    workspaces,
+)
 from ade_api.features.agent_runtime.persistence.workers import (
     WorkerInstanceRepository,
 )
@@ -306,6 +320,235 @@ def test_0001_to_0002_preserves_legacy_summary_with_explicit_provenance() -> Non
                 )
                 == 1
             )
+    finally:
+        command.upgrade(config, "head")
+        engine.dispose()
+
+
+@pytest.mark.skipif(
+    not MIGRATION_URL,
+    reason="ADE_DATABASE_MIGRATION_URL is required for populated transition tests",
+)
+def test_0006_to_0007_preserves_populated_fact_vector_and_source() -> None:
+    assert MIGRATION_URL is not None
+    config = alembic_config(MIGRATION_URL)
+    command.downgrade(config, "20260902_0006")
+    keys = (
+        "workspace",
+        "root",
+        "definition",
+        "subject",
+        "conversation",
+        "run",
+        "message",
+        "entity",
+        "fact",
+        "revision",
+        "source",
+        "embedding",
+    )
+    ids = {key: str(uuid4()) for key in keys}
+    engine = create_engine(_sync_database_url(MIGRATION_URL))
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                insert(workspaces).values(
+                    id=ids["workspace"],
+                    workspace_key=f"natural-migration-{ids['workspace']}",
+                    name="Natural migration preservation",
+                )
+            )
+            connection.execute(
+                insert(agent_definitions).values(
+                    id=ids["root"],
+                    workspace_id=ids["workspace"],
+                    definition_key=f"migration-{ids['root'][:8]}",
+                    name="Migration",
+                )
+            )
+            connection.execute(
+                insert(agent_definition_versions).values(
+                    id=ids["definition"],
+                    workspace_id=ids["workspace"],
+                    agent_definition_id=ids["root"],
+                    definition_key=f"migration-{ids['root'][:8]}",
+                    version=1,
+                    name="Migration",
+                    model_key="chat",
+                    reviewer_model_key="reviewer",
+                    embedding_model_key="embedding",
+                    prompt_key="prompt",
+                    prompt_sha256="0" * 64,
+                    prompt_content="",
+                    persona_key="persona",
+                    persona_sha256="1" * 64,
+                    persona_content="",
+                    tool_names=[],
+                    memory_policy_version="typed-user-facts-v1",
+                    qualification_state="unqualified",
+                    deployment_snapshot=[],
+                )
+            )
+            connection.execute(
+                insert(memory_subjects).values(
+                    id=ids["subject"],
+                    workspace_id=ids["workspace"],
+                    external_key=f"migration-{ids['subject']}",
+                    display_name="Legacy user",
+                )
+            )
+            connection.execute(
+                insert(memory_entities).values(
+                    id=ids["entity"],
+                    workspace_id=ids["workspace"],
+                    subject_id=ids["subject"],
+                    kind="subject",
+                    label="Legacy user",
+                )
+            )
+            connection.execute(
+                insert(conversations).values(
+                    id=ids["conversation"],
+                    workspace_id=ids["workspace"],
+                    agent_definition_version_id=ids["definition"],
+                    memory_subject_id=ids["subject"],
+                    title="Migration",
+                )
+            )
+            connection.execute(
+                insert(runs).values(
+                    id=ids["run"],
+                    workspace_id=ids["workspace"],
+                    conversation_id=ids["conversation"],
+                    idempotency_key=f"run-{ids['run']}",
+                    request_hash="2" * 64,
+                    status="succeeded",
+                    qualification_state="unqualified",
+                    accepted_runtime_mode="development",
+                    timeout_seconds=180,
+                    retry_count=0,
+                    accepted_conversation_version=1,
+                    attempt_count=1,
+                )
+            )
+            connection.execute(
+                insert(messages).values(
+                    id=ids["message"],
+                    workspace_id=ids["workspace"],
+                    conversation_id=ids["conversation"],
+                    sequence=1,
+                    role="user",
+                    content="I live in Toronto.",
+                    content_sha256="3" * 64,
+                    run_id=ids["run"],
+                )
+            )
+            connection.execute(
+                insert(memory_facts).values(
+                    id=ids["fact"],
+                    workspace_id=ids["workspace"],
+                    subject_id=ids["subject"],
+                    entity_id=ids["entity"],
+                    normalized_key=f"person.current_location|{ids['entity']}",
+                    fact_type="person.current_location",
+                    value="Toronto",
+                    status="active",
+                    version=1,
+                )
+            )
+            connection.execute(
+                insert(memory_revisions).values(
+                    id=ids["revision"],
+                    fact_id=ids["fact"],
+                    workspace_id=ids["workspace"],
+                    subject_id=ids["subject"],
+                    operation="add",
+                    fact_version=1,
+                    value="Toronto",
+                    run_id=ids["run"],
+                )
+            )
+            connection.execute(
+                update(memory_facts)
+                .where(memory_facts.c.id == ids["fact"])
+                .values(current_revision_id=ids["revision"])
+            )
+            connection.execute(
+                insert(memory_revision_sources).values(
+                    id=ids["source"],
+                    revision_id=ids["revision"],
+                    message_id=ids["message"],
+                    start_char=10,
+                    end_char=17,
+                    quote="Toronto",
+                    message_sha256="3" * 64,
+                )
+            )
+            connection.execute(
+                insert(memory_embeddings).values(
+                    id=ids["embedding"],
+                    workspace_id=ids["workspace"],
+                    subject_id=ids["subject"],
+                    fact_id=ids["fact"],
+                    revision_id=ids["revision"],
+                    model_fingerprint="legacy-test-space",
+                    dimensions=3,
+                    normalized=True,
+                    retrieval_policy_version="qwen3-semantic-facts-v1",
+                    embedding=[1.0, 0.0, 0.0],
+                )
+            )
+        command.upgrade(config, "head")
+        with engine.connect() as connection:
+            subject = (
+                connection.execute(
+                    select(memory_subjects).where(
+                        memory_subjects.c.id == ids["subject"]
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            fact = (
+                connection.execute(
+                    select(memory_facts).where(memory_facts.c.id == ids["fact"])
+                )
+                .mappings()
+                .one()
+            )
+            revision = (
+                connection.execute(
+                    select(memory_revisions).where(
+                        memory_revisions.c.id == ids["revision"]
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            source = (
+                connection.execute(
+                    select(memory_revision_sources).where(
+                        memory_revision_sources.c.id == ids["source"]
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            vector = (
+                connection.execute(
+                    select(memory_embeddings).where(
+                        memory_embeddings.c.id == ids["embedding"]
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            assert subject["memory_generation"] == 1
+            assert fact["assertion_schema_version"] == 1
+            assert fact["current_revision_id"] == ids["revision"]
+            assert revision["run_id"] == ids["run"] and revision["action_id"] is None
+            assert source["authority_role"] == "user_assertion"
+            assert list(vector["embedding"]) == [1.0, 0.0, 0.0]
     finally:
         command.upgrade(config, "head")
         engine.dispose()

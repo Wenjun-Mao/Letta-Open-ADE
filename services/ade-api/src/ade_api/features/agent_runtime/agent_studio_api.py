@@ -6,7 +6,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from ade_api.platform.auth import require_admin, require_operator, require_reader
+from ade_api.platform.auth import (
+    AdePrincipal,
+    require_admin,
+    require_operator,
+    require_reader,
+)
 
 from .api_boundary import call_runtime
 from .contracts import (
@@ -23,6 +28,8 @@ from .contracts import (
     CreateMemorySubjectRequest,
     MemorySubjectListResponse,
     MemorySubjectResponse,
+    MemoryRemovalRequest,
+    MemoryRemovalResponse,
     SubjectMemoriesResponse,
     UpdateMemorySubjectRequest,
 )
@@ -276,6 +283,28 @@ async def restore_subject(subject_id: str, service: AgentRuntimeServiceDependenc
 )
 async def get_subject_memories(subject_id: str, service: AgentRuntimeServiceDependency):
     return await call_runtime(service.get_agent_studio_subject_memories(subject_id))
+
+
+@router.post(
+    "/subjects/{subject_id}/memory-removals",
+    response_model=MemoryRemovalResponse,
+    summary="Remove exact saved assertions through an operator action",
+)
+async def remove_subject_memories(
+    subject_id: str,
+    request: MemoryRemovalRequest,
+    response: Response,
+    service: AgentRuntimeServiceDependency,
+    principal: Annotated[AdePrincipal, Depends(require_operator)],
+):
+    result = await call_runtime(
+        service.remove_agent_studio_memories(
+            subject_id, request, actor_label=principal.key_name
+        )
+    )
+    if result["idempotent_replay"]:
+        response.headers["Idempotent-Replay"] = "true"
+    return result
 
 
 @router.post(

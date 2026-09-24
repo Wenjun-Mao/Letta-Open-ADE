@@ -84,7 +84,11 @@ class ResourceService:
                     )
                     for fact in await repository.list_facts_with_entities(subject_id)
                 ]
-        return {"subject_id": subject_id, "facts": facts}
+        return {
+            "subject_id": subject_id,
+            "memory_generation": int(subject["memory_generation"]),
+            "facts": facts,
+        }
 
     async def create_conversation(
         self, request: CreateConversationRequest
@@ -205,6 +209,7 @@ async def _memory_fact_response(
                         "end_char": source["end_char"],
                         "quote": source["quote"],
                         "message_sha256": source["message_sha256"],
+                        "authority_role": source["authority_role"],
                     }
                     for source in sources
                 ],

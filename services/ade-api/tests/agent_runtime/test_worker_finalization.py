@@ -29,6 +29,37 @@ class _Engine:
         return _Transaction()
 
 
+def test_finalization_locks_conversation_before_subject_even_when_ids_sort_otherwise() -> (
+    None
+):
+    acquired: list[str] = []
+
+    class Conversations:
+        async def get_for_update(self, conversation_id: str):
+            acquired.append(f"conversation:{conversation_id}")
+            return {"id": conversation_id}
+
+    class Memory:
+        async def lock_subject(self, subject_id: str):
+            acquired.append(f"subject:{subject_id}")
+            return {"id": subject_id}
+
+    conversation_id = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+    subject_id = "00000000-0000-0000-0000-000000000001"
+    asyncio.run(
+        worker_finalization._lock_conversation_and_subject(
+            Conversations(),  # type: ignore[arg-type]
+            Memory(),  # type: ignore[arg-type]
+            conversation_id,
+            subject_id,
+        )
+    )
+    assert acquired == [
+        f"conversation:{conversation_id}",
+        f"subject:{subject_id}",
+    ]
+
+
 class _Runs:
     def __init__(self) -> None:
         self.finished = False

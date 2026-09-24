@@ -43,11 +43,17 @@ now recommend GO for bounded implementation; the
 checks lock ordering, dependent staged effects, uncertain commit outcomes,
 distinct-fact retrieval limits and positive compaction retention. Next: obtain
 implementation of checkpoints 1-5, now authorized by the user on 2026-09-24 with
-those completion criteria incorporated into plan revision 3. Continue between static
+those completion criteria incorporated into plan revision 3. Checkpoint 1's frozen
+fixtures are committed; the additive lifecycle, mixed review, development-only
+A/A0/B bindings, direct operator removal, and UI path are implemented in an
+isolated worktree with offline and disposable-PostgreSQL tests. These do not yet
+complete checkpoints 3–5: failed-attempt artifact retention and outcome recovery,
+fake API-to-worker fault paths, full paired comparison manifests, and the real
+API/browser journey remain open. Continue between static
 checkpoints without routine confirmation; pause for material scope/tradeoff decisions,
 unsafe actions or genuine blockers. No runtime context policy has been selected;
 checkpoint 6 and live calls still need separate authority.
-No runtime capability, live budget, or production context-policy selection is implied.
+No live budget or production context-policy selection is implied.
 The user authorized publication of the review checkpoint, not adoption of the
 design or a merge/release. Resolve plan-review findings before implementation or
 new provider experiments. Stronger forgetting/erasure semantics remain a product

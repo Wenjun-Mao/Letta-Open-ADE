@@ -39,6 +39,18 @@ class ConversationBusy(RuntimeConflict):
     code = "conversation_busy"
 
 
+class MemoryGenerationConflict(RuntimeConflict):
+    code = "memory_generation_conflict"
+
+
+class MemoryTargetConflict(RuntimeConflict):
+    code = "memory_target_conflict"
+
+
+class MemoryActionIdempotencyConflict(IdempotencyConflict):
+    code = "memory_action_idempotency_conflict"
+
+
 class UnqualifiedDeployment(AgentRuntimeError):
     code = "unqualified_deployment"
     status_code = 422

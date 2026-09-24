@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createAgentStudioSession, getConversationState, listAgents } from "./api";
+import { createAgentStudioSession, getConversationState, listAgents, removeSavedMemory } from "./api";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -46,6 +46,24 @@ describe("Agent Studio v3 browser client", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/v3/agent-studio/definitions?limit=200&offset=0",
       expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("sends exact fact versions and one memory-generation fence for direct removal", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
+      action_id: "action-1", outcome: "committed", revision_ids: ["revision-1"],
+      resulting_memory_generation: 6, idempotent_replay: false, committed_at: "2026-09-24T00:00:00Z",
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const payload = {
+      idempotency_key: "remove-1", expected_memory_generation: 5,
+      targets: [{ fact_id: "fact-1", expected_version: 2 }],
+    };
+    const receipt = await removeSavedMemory("subject/1", payload);
+    expect(receipt.action_id).toBe("action-1");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v3/agent-studio/subjects/subject%2F1/memory-removals",
+      expect.objectContaining({ method: "POST", body: JSON.stringify(payload) }),
     );
   });
 });

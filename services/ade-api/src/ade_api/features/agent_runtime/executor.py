@@ -17,6 +17,7 @@ from .compaction import (
     compaction_prompt_sha256,
     parse_compaction_response,
 )
+from .context import estimate_tokens
 from .errors import RuntimeValidationError
 from .provider_tracing import safe_provider_request_id
 from .router_transport import RouterTransport
@@ -129,6 +130,7 @@ class ConversationExecutor:
         tools: Mapping[str, CuratedTool] | None = None,
         tool_requirement: ToolRequirement | None = None,
         max_model_requests: int = 6,
+        input_token_limit: int | None = None,
     ) -> ExecutorResult:
         enabled_tools = dict(tools or {})
         _validate_registry(enabled_tools)
@@ -164,6 +166,19 @@ class ConversationExecutor:
                             else required_choice
                         ),
                     }
+                )
+            if (
+                input_token_limit is not None
+                and estimate_tokens(
+                    json.dumps(
+                        payload, ensure_ascii=False, separators=(",", ":"), default=str
+                    )
+                )
+                > input_token_limit
+            ):
+                raise RuntimeValidationError(
+                    "Serialized conversation request exceeds its input limit",
+                    detail_code="natural_context_serialized_overflow",
                 )
             response = await self.transport.chat_completion(
                 payload, timeout_seconds=timeout_seconds

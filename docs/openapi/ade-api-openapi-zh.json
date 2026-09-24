@@ -3301,6 +3301,16 @@
       },
       "MemoryEvidenceResponse": {
         "properties": {
+          "authority_role": {
+            "default": "user_assertion",
+            "enum": [
+              "user_assertion",
+              "user_endorsement",
+              "assistant_referent"
+            ],
+            "title": "权威来源 角色",
+            "type": "string"
+          },
           "conversation_id": {
             "title": "会话 ID",
             "type": "string"
@@ -3344,6 +3354,12 @@
       },
       "MemoryFactResponse": {
         "properties": {
+          "assertion_schema_version": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "陈述 Schema 版本",
+            "type": "integer"
+          },
           "entity_id": {
             "title": "实体 ID",
             "type": "string"
@@ -3389,6 +3405,7 @@
           "status": {
             "enum": [
               "active",
+              "inactive",
               "superseded",
               "forgotten"
             ],
@@ -3436,13 +3453,124 @@
         "enum": [
           "add",
           "correct",
-          "forget"
+          "forget",
+          "revise",
+          "end",
+          "reassert"
         ],
         "title": "记忆 操作",
         "type": "string"
       },
+      "MemoryRemovalRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_memory_generation": {
+            "minimum": 1.0,
+            "title": "期望 记忆 代次",
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "幂等性 键",
+            "type": "string"
+          },
+          "targets": {
+            "items": {
+              "$ref": "#/components/schemas/MemoryRemovalTarget"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "目标列表",
+            "type": "array"
+          }
+        },
+        "required": [
+          "idempotency_key",
+          "expected_memory_generation",
+          "targets"
+        ],
+        "title": "记忆 移除 请求",
+        "type": "object"
+      },
+      "MemoryRemovalResponse": {
+        "properties": {
+          "action_id": {
+            "title": "动作 ID",
+            "type": "string"
+          },
+          "committed_at": {
+            "format": "date-time",
+            "title": "已提交 时间",
+            "type": "string"
+          },
+          "idempotent_replay": {
+            "default": false,
+            "title": "幂等重放",
+            "type": "boolean"
+          },
+          "outcome": {
+            "const": "committed",
+            "title": "结果",
+            "type": "string"
+          },
+          "resulting_memory_generation": {
+            "minimum": 2.0,
+            "title": "变更后 记忆 代次",
+            "type": "integer"
+          },
+          "revision_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "修订 ID",
+            "type": "array"
+          }
+        },
+        "required": [
+          "action_id",
+          "outcome",
+          "revision_ids",
+          "resulting_memory_generation",
+          "committed_at"
+        ],
+        "title": "记忆 移除 响应",
+        "type": "object"
+      },
+      "MemoryRemovalTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_version": {
+            "minimum": 1.0,
+            "title": "期望 版本",
+            "type": "integer"
+          },
+          "fact_id": {
+            "format": "uuid",
+            "title": "事实 ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fact_id",
+          "expected_version"
+        ],
+        "title": "记忆 移除 目标",
+        "type": "object"
+      },
       "MemoryRevisionResponse": {
         "properties": {
+          "action_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "动作 ID"
+          },
           "created_at": {
             "format": "date-time",
             "title": "创建时间",
@@ -3473,9 +3601,27 @@
             "title": "前驱 修订 ID",
             "type": "array"
           },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原因"
+          },
           "run_id": {
-            "title": "运行 ID",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "运行 ID"
           },
           "value": {
             "anyOf": [
@@ -3494,7 +3640,6 @@
           "operation",
           "fact_version",
           "value",
-          "run_id",
           "evidence",
           "created_at"
         ],
@@ -3552,6 +3697,12 @@
           "id": {
             "title": "ID",
             "type": "string"
+          },
+          "memory_generation": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "记忆 代次",
+            "type": "integer"
           },
           "updated_at": {
             "anyOf": [
@@ -4194,6 +4345,12 @@
       },
       "RunResponse": {
         "properties": {
+          "accepted_memory_generation": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "已接受 记忆 代次",
+            "type": "integer"
+          },
           "attempt_count": {
             "title": "尝试 计数",
             "type": "integer"
@@ -4417,6 +4574,12 @@
             },
             "title": "事实",
             "type": "array"
+          },
+          "memory_generation": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "记忆 代次",
+            "type": "integer"
           },
           "subject_id": {
             "title": "主体 ID",
@@ -7607,6 +7770,63 @@
           }
         ],
         "summary": "检查类型化 Agent Studio 记忆谱系",
+        "tags": [
+          "智能体运行时"
+        ]
+      }
+    },
+    "/api/v3/agent-studio/subjects/{subject_id}/memory-removals": {
+      "post": {
+        "operationId": "remove_subject_memories_api_v3_agent_studio_subjects__subject_id__memory_removals_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "title": "主体 ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryRemovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoryRemovalResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "通过操作员动作移除指定版本的已保存陈述",
         "tags": [
           "智能体运行时"
         ]

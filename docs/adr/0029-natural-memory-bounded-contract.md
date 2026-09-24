@@ -37,7 +37,9 @@ Generation and review share one bounded, complete-message clarification suffix.
 The same reviewer sees the proposed reply as reference-only and gives typed
 per-claim allow/defer/contradiction outcomes. Permitted deferral removes dependent
 fact, staged entity, and index effects; contradiction rejects the whole attempt.
-Failed opt-in synthetic attempts retain safe, bounded, outcome-verified evidence.
+Failed opt-in synthetic attempts must retain safe, bounded, outcome-verified
+evidence before their cells can be scored. Successful database behavior alone
+does not satisfy that evidence gate.
 
 Keep three workflow-bound context variants only for isolated comparison: A
 requires the whole current lifecycle snapshot before optional narrative; A0
@@ -46,6 +48,12 @@ first, then selectively admits current lifecycle views. A and B face the same
 positive usefulness and safety bar; A0 is diagnostic only. The frozen offline
 matrix and request schedule precede any live calls. No variant becomes the
 production binding merely because its implementation or fake-model tests pass.
+The development-only binding IDs are `natural-user-assertions-v2-a`,
+`natural-user-assertions-v2-a0`, and `natural-user-assertions-v2-b`; they are
+immutable definition versions, not a turn payload selector. The natural
+retrieval-policy version distinguishes lifecycle descriptors from legacy
+active-only indexes while preserving the same embedding-space identity. The
+reader deduplicates current revisions before applying its result limit.
 
 ## Rejected Alternatives and Consequences
 
@@ -67,4 +75,7 @@ in [ADR 0026](0026-memory-removal-reply-boundary.md), while retaining
 [ADR 0021](0021-evidence-scoped-memory-and-affirmative-tools.md)'s source-bound
 authority. None of those earlier decisions is rewritten as if it had covered
 these new semantics. Provider qualification, checkpoint 6, policy selection, and
-release remain separately gated.
+release remain separately gated. Governed runtime sources intentionally change
+the current production policy hashes; existing candidate fingerprints and
+release evidence remain historical and must fail the current-policy match
+until a separate qualification and promotion rebinds them.

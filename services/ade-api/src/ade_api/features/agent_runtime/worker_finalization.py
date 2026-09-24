@@ -10,6 +10,8 @@ from .database_boundary import DEFAULT_WORKSPACE_ID
 from .events import append_run_event
 from .memory_commit import commit_memory_review
 from .memory_policy import prepare_memory_review
+from .natural_memory_commit import commit_natural_memory_review
+from .natural_memory_policy import PreparedNaturalReview, prepare_natural_memory_review
 from .persistence.base import OptimisticLockError
 from .persistence.conversations import ConversationRepository
 from .persistence.leases import ConversationLeaseRepository
@@ -50,9 +52,14 @@ class RunFinalizer:
                 raise LeaseLost("conversation lease was lost before final commit")
             conversation = await conversations.get(conversation_id)
             subject_id = str(conversation["memory_subject_id"])
-            conversation, _ = await _lock_conversation_and_subject(
+            conversation, subject = await _lock_conversation_and_subject(
                 conversations, memory, conversation_id, subject_id
             )
+            accepted_generation = int(run.get("accepted_memory_generation", 1))
+            if int(subject["memory_generation"]) != accepted_generation:
+                raise OptimisticLockError(
+                    "subject memory changed after turn acceptance"
+                )
             if int(conversation["version"]) != int(
                 run["accepted_conversation_version"]
             ):
@@ -61,24 +68,64 @@ class RunFinalizer:
                 )
             messages = await conversations.list_messages(conversation_id)
             current_user = _current_user_message(messages, run_id)
-            prepared = prepare_memory_review(
-                decision=result.reviewer.decision,
-                subject_id=subject_id,
-                current_user_message=current_user,
-                active_facts=await memory.list_active_facts(subject_id),
-                entities=await memory.list_entities(subject_id),
-            )
-            committed = await commit_memory_review(
-                connection,
-                workspace_id=DEFAULT_WORKSPACE_ID,
-                subject_id=subject_id,
-                run_id=run_id,
-                review=prepared,
-                operation_embeddings=result.operation_embeddings,
-                embedding_fingerprint=result.embedding_fingerprint,
-                embedding_dimensions=result.embedding_dimensions,
-                retrieval_policy_version=result.retrieval_policy_version,
-            )
+            if isinstance(result.review, PreparedNaturalReview):
+                source_by_id = {str(message["id"]): message for message in messages}
+                try:
+                    source_messages = [
+                        source_by_id[source_id]
+                        for source_id in result.natural_source_message_ids
+                    ]
+                except KeyError as exc:
+                    raise OptimisticLockError(
+                        "review source bundle changed before finalization"
+                    ) from exc
+                prepared = prepare_natural_memory_review(
+                    decision=result.reviewer.decision,
+                    subject_id=subject_id,
+                    current_user_message=current_user,
+                    available_messages=source_messages,
+                    facts=await memory.list_facts(subject_id),
+                    entities=await memory.list_entities(subject_id),
+                    candidate_reply=result.assistant_text,
+                )
+                if [item.proposal for item in prepared.operations] != [
+                    item.proposal for item in result.review.operations
+                ]:
+                    raise OptimisticLockError(
+                        "natural memory write set changed before finalization"
+                    )
+                committed = await commit_natural_memory_review(
+                    connection,
+                    workspace_id=DEFAULT_WORKSPACE_ID,
+                    subject_id=subject_id,
+                    run_id=run_id,
+                    review=prepared,
+                    operation_embeddings=result.operation_embeddings,
+                    embedding_fingerprint=result.embedding_fingerprint,
+                    embedding_dimensions=result.embedding_dimensions,
+                    retrieval_policy_version=result.retrieval_policy_version,
+                    expected_memory_generation=accepted_generation,
+                )
+            else:
+                prepared = prepare_memory_review(
+                    decision=result.reviewer.decision,
+                    subject_id=subject_id,
+                    current_user_message=current_user,
+                    active_facts=await memory.list_active_facts(subject_id),
+                    entities=await memory.list_entities(subject_id),
+                )
+                committed = await commit_memory_review(
+                    connection,
+                    workspace_id=DEFAULT_WORKSPACE_ID,
+                    subject_id=subject_id,
+                    run_id=run_id,
+                    review=prepared,
+                    operation_embeddings=result.operation_embeddings,
+                    embedding_fingerprint=result.embedding_fingerprint,
+                    embedding_dimensions=result.embedding_dimensions,
+                    retrieval_policy_version=result.retrieval_policy_version,
+                    expected_memory_generation=accepted_generation,
+                )
             assistant = await conversations.append_message(
                 {
                     "id": str(uuid4()),
@@ -299,12 +346,11 @@ async def _lock_conversation_and_subject(
     conversation_id: str,
     subject_id: str,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    if conversation_id <= subject_id:
-        conversation = await conversations.get_for_update(conversation_id)
-        subject = await memory.lock_subject(subject_id)
-    else:
-        subject = await memory.lock_subject(subject_id)
-        conversation = await conversations.get_for_update(conversation_id)
+    # Turn admission always locks conversation before subject. Preserve that
+    # order here regardless of UUID sorting, or concurrent admission/finalization
+    # can each hold one row and wait for the other.
+    conversation = await conversations.get_for_update(conversation_id)
+    subject = await memory.lock_subject(subject_id)
     return conversation, subject
 
 

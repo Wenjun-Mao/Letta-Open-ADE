@@ -39,7 +39,11 @@ class _Database:
 
 class _MemoryRepository:
     async def get_subject(self, subject_id: str) -> dict[str, Any]:
-        return {"id": subject_id, "workspace_id": DEFAULT_WORKSPACE_ID}
+        return {
+            "id": subject_id,
+            "workspace_id": DEFAULT_WORKSPACE_ID,
+            "memory_generation": 3,
+        }
 
     async def list_facts_with_entities(self, subject_id: str) -> list[dict[str, Any]]:
         assert subject_id == "subject-1"
@@ -97,6 +101,7 @@ class _MemoryRepository:
                 "end_char": 15,
                 "quote": "Rocky",
                 "message_sha256": "a" * 64,
+                "authority_role": "user_assertion",
             }
         ]
 
@@ -172,12 +177,14 @@ def test_subject_memory_read_model_exposes_entity_metadata_and_revision_lineage(
     )
 
     fact = response["facts"][0]
+    assert response["memory_generation"] == 3
     assert fact["entity_kind"] == "pet"
     assert fact["entity_label"] == "Rocky"
     assert fact["revisions"][0]["predecessor_revision_ids"] == ["revision-1"]
     assert fact["revisions"][0]["evidence"][0]["message_id"] == "message-2"
     assert fact["revisions"][0]["evidence"][0]["conversation_id"] == "conversation-2"
     assert fact["revisions"][0]["evidence"][0]["message_sequence"] == 42
+    assert fact["revisions"][0]["evidence"][0]["authority_role"] == "user_assertion"
 
 
 def test_conversation_state_exposes_latest_summary_with_boundary_and_provenance(

@@ -149,6 +149,7 @@ class RunService:
                         "timeout_seconds": request.timeout_seconds,
                         "retry_count": request.retry_count,
                         "accepted_conversation_version": conversation["version"],
+                        "accepted_memory_generation": subject["memory_generation"],
                     }
                 )
                 if replayed:
@@ -183,6 +184,7 @@ class RunService:
                         "retry_count": request.retry_count,
                         "qualification_state": definition["qualification_state"],
                         "accepted_runtime_mode": self.settings.agent_runtime_mode,
+                        "accepted_memory_generation": int(subject["memory_generation"]),
                     },
                 )
                 await append_run_event(

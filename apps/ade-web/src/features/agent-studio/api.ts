@@ -8,6 +8,7 @@ import type {
   CreateDefinition,
   CreateSession,
   MemorySubject,
+  MemoryRemovalReceipt,
   Run,
   RunEvent,
   SubjectMemories,
@@ -92,6 +93,20 @@ export function restoreAgentStudioSubject(subjectId: string): Promise<MemorySubj
 
 export function getSubjectMemories(subjectId: string): Promise<SubjectMemories> {
   return requestJson(`/api/v3/agent-studio/subjects/${encodeURIComponent(subjectId)}/memories`);
+}
+
+export function removeSavedMemory(
+  subjectId: string,
+  payload: {
+    idempotency_key: string;
+    expected_memory_generation: number;
+    targets: Array<{ fact_id: string; expected_version: number }>;
+  },
+): Promise<MemoryRemovalReceipt> {
+  return requestJson(`/api/v3/agent-studio/subjects/${encodeURIComponent(subjectId)}/memory-removals`, {
+    method: "POST",
+    body: payload,
+  });
 }
 
 export function acceptTurn(

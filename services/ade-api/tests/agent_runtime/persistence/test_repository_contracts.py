@@ -109,6 +109,26 @@ class _RowsConnection:
         return _RowsResult(self.rows)
 
 
+class _SourceRowsConnection(_RowsConnection):
+    async def execute(self, statement: Any) -> _RowsResult:
+        self.statements.append(statement)
+        if len(self.statements) == 1:
+            return _RowsResult(
+                [
+                    {
+                        "run_id": "run-1",
+                        "action_id": None,
+                        "workspace_id": "workspace-1",
+                        "subject_id": "subject-1",
+                        "fact_workspace_id": "workspace-1",
+                        "fact_subject_id": "subject-1",
+                        "subject_purpose": "agent_studio",
+                    }
+                ]
+            )
+        return _RowsResult(self.rows)
+
+
 def test_run_accept_uses_database_idempotency_and_replays_the_same_hash() -> None:
     connection = _RecordingConnection(
         [None, {"id": "existing-run", "request_hash": "request-hash"}]
@@ -277,6 +297,8 @@ def _source_row(**overrides: str) -> dict[str, Any]:
         "end_char": 4,
         "quote": "Rocky",
         "message_sha256": "a" * 64,
+        "authority_role": "user_assertion",
+        "message_role": "user",
         "conversation_id": "conversation-1",
         "message_sequence": 151,
         "source_workspace_id": "workspace-1",
@@ -293,7 +315,7 @@ def _source_row(**overrides: str) -> dict[str, Any]:
 
 
 def test_memory_sources_join_authoritative_conversation_and_message_position() -> None:
-    connection = _RowsConnection([_source_row()])
+    connection = _SourceRowsConnection([_source_row()])
     repository = MemoryRepository(cast(AsyncConnection, connection))
 
     sources = asyncio.run(
@@ -305,7 +327,7 @@ def test_memory_sources_join_authoritative_conversation_and_message_position() -
         )
     )
 
-    statement = str(connection.statements[0].compile(dialect=dialect()))
+    statement = str(connection.statements[1].compile(dialect=dialect()))
     assert sources[0]["conversation_id"] == "conversation-1"
     assert sources[0]["message_sequence"] == 151
     assert "JOIN ade.messages" in statement
@@ -326,7 +348,7 @@ def test_memory_sources_join_authoritative_conversation_and_message_position() -
 def test_memory_source_cross_boundary_reference_is_rejected(
     overrides: dict[str, str],
 ) -> None:
-    connection = _RowsConnection([_source_row(**overrides)])
+    connection = _SourceRowsConnection([_source_row(**overrides)])
     repository = MemoryRepository(cast(AsyncConnection, connection))
 
     with pytest.raises(RuntimeValidationError, match="memory source boundary"):

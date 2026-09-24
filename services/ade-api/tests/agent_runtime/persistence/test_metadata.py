@@ -26,6 +26,7 @@ EXPECTED_TABLES = {
     "memory_embeddings",
     "memory_entities",
     "memory_facts",
+    "memory_actions",
     "memory_revision_predecessors",
     "memory_revision_sources",
     "memory_revisions",

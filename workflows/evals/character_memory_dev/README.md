@@ -109,6 +109,22 @@ disk until the operator removes them.
 
 ## Verification
 
+The bounded natural-memory implementation has a separate offline contract
+matrix in `fixtures/natural_memory/` and
+`tests/test_natural_memory_contract.py`. Run it without a provider account:
+
+```sh
+uv run pytest -q workflows/evals/character_memory_dev/tests/test_natural_memory_contract.py
+uv run pytest -q services/ade-api/tests/agent_runtime/test_natural_context.py
+```
+
+The context tests use synthetic records at 0, 12, 48, 128 and 256 records,
+short and long values, and check the first whole-request boundary at which
+the full lifecycle snapshot fits. These are capacity and contract checks, not
+evidence of useful model recall. The A/A0/B binding IDs are development-only;
+the default product binding has not been changed. No live comparison or policy
+selection is implied by this offline workflow.
+
 ```sh
 uv run pytest -q workflows/evals/character_memory_dev/tests
 ```

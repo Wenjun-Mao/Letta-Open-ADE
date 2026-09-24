@@ -123,6 +123,20 @@ class _FakeService:
             "reset_at": NOW,
         }
 
+    async def remove_agent_studio_memories(self, subject_id, request, *, actor_label):
+        assert subject_id == "00000000-0000-0000-0000-000000000013"
+        assert actor_label == "test"
+        assert request.expected_memory_generation == 2
+        assert len(request.targets) == 1
+        return {
+            "action_id": "00000000-0000-0000-0000-000000000016",
+            "outcome": "committed",
+            "revision_ids": ["00000000-0000-0000-0000-000000000017"],
+            "resulting_memory_generation": 3,
+            "idempotent_replay": False,
+            "committed_at": NOW,
+        }
+
     async def accept_turn(self, conversation_id, request):
         assert request.timeout_seconds == 180
         assert request.retry_count == 0
@@ -251,6 +265,38 @@ def test_turn_acceptance_is_async_and_uses_backend_defaults() -> None:
     assert response.json()["idempotent_replay"] is False
 
 
+def test_operator_removal_route_checks_role_and_returns_typed_receipt() -> None:
+    path = (
+        "/api/v3/agent-studio/subjects/"
+        "00000000-0000-0000-0000-000000000013/memory-removals"
+    )
+    payload = {
+        "idempotency_key": "remove-1",
+        "expected_memory_generation": 2,
+        "targets": [
+            {
+                "fact_id": "00000000-0000-0000-0000-000000000018",
+                "expected_version": 1,
+            }
+        ],
+    }
+    app.dependency_overrides[get_agent_runtime_service] = lambda: _FakeService()
+    try:
+        app.dependency_overrides[authenticate_ade_request] = lambda: AdePrincipal(
+            role=AdeRole.READER, key_name="reader"
+        )
+        denied = TestClient(app).post(path, json=payload)
+        app.dependency_overrides[authenticate_ade_request] = _principal
+        accepted = TestClient(app).post(path, json=payload)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert denied.status_code == 403
+    assert accepted.status_code == 200
+    assert accepted.json()["outcome"] == "committed"
+    assert accepted.json()["resulting_memory_generation"] == 3
+
+
 def test_router_catalog_transport_failure_returns_stable_not_ready_error() -> None:
     class _UnavailableService(_FakeService):
         async def accept_turn(self, conversation_id, request):
@@ -327,6 +373,7 @@ def test_evaluation_session_api_owns_provisioning_state_and_purge() -> None:
     assert state.status_code == 200
     assert state.json()["memories"] == {
         "subject_id": "00000000-0000-0000-0000-000000000023",
+        "memory_generation": 1,
         "facts": [],
     }
     assert purged.status_code == 200

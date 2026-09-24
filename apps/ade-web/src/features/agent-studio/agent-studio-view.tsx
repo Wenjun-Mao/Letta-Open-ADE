@@ -72,6 +72,15 @@ function Library({ controller, t }: { controller: Controller; t: Translate }) {
           )) : <p className="muted">{t("No conversations yet. Create one above.", "尚无对话。请在上方创建一个。")}</p>}
         </div>
       </section>
+      <section className="card studio-session-library">
+        <div className="kicker">{t("Subjects without a runnable conversation", "无可运行对话的主体")}</div>
+        <p className="muted">{t("Inspect saved facts and use direct removal without starting or restoring a conversation.", "无需启动或恢复对话，即可查看已保存事实并执行直接移除。")}</p>
+        <div className="studio-session-list">{controller.subjects.map((subject) => <button
+          key={subject.id}
+          className={controller.inspectedSubject?.id === subject.id ? "studio-session studio-session-active" : "studio-session"}
+          onClick={() => void controller.inspectSubject(subject.id)}
+        >{defaultSubjectLabel(subject)} · {subject.external_key}</button>)}</div>
+      </section>
     </aside>
   );
 }
@@ -121,10 +130,17 @@ function DefinitionEvidence({ controller, t }: { controller: Controller; t: Tran
 }
 
 function SubjectEvidence({ controller, t }: { controller: Controller; t: Translate }) {
-  const subject = controller.session?.memory_subject;
+  const subject = controller.inspectedSubject || controller.session?.memory_subject;
   if (!subject) return null;
   const archived = isArchived(subject);
-  return <section className="card studio-evidence-card"><div className="studio-card-heading"><div><div className="kicker">{t("Memory subject", "记忆主体")}</div><h2>{defaultSubjectLabel(subject)}</h2></div><span className={archived ? statusClass("forgotten") : statusClass("active")}>{archived ? t("archived", "已归档") : t("active", "活跃")}</span></div><p className="muted"><code>{subject.external_key}</code> · {t("version", "版本")} {subject.version}</p><div className="studio-inline-form"><label className="field"><span>{t("Display name", "显示名称")}</span><input className="input" value={controller.subjectRename} disabled={controller.busy || archived} onChange={(event) => controller.setSubjectRename(event.target.value)} /></label><button className="button muted" disabled={controller.busy || archived || !controller.subjectRename.trim()} onClick={() => void controller.renameSubject()}>{t("Rename", "重命名")}</button></div><button className="button muted" disabled={controller.busy} onClick={() => void controller.setSubjectArchived(!archived)}>{archived ? t("Restore subject", "恢复主体") : t("Archive subject", "归档主体")}</button><MemoryFacts facts={controller.memories?.facts || []} t={t} openEvidence={controller.openEvidence} prepareAction={controller.prepareMemoryAction} canAct={!archived && !controller.activeRun} /></section>;
+  const factState = controller.inspectedSubject ? controller.inspectedMemories : controller.memories;
+  return <section className="card studio-evidence-card">
+    <div className="studio-card-heading"><div><div className="kicker">{t("Memory subject", "记忆主体")}</div><h2>{defaultSubjectLabel(subject)}</h2></div><span className={archived ? statusClass("forgotten") : statusClass("active")}>{archived ? t("archived", "已归档") : t("active", "活跃")}</span></div>
+    <p className="muted"><code>{subject.external_key}</code> · {t("version", "版本")} {subject.version} · {t("memory generation", "记忆代次")} {factState?.memory_generation ?? "-"}</p>
+    {controller.session && !controller.inspectedSubject ? <><div className="studio-inline-form"><label className="field"><span>{t("Display name", "显示名称")}</span><input className="input" value={controller.subjectRename} disabled={controller.busy || archived} onChange={(event) => controller.setSubjectRename(event.target.value)} /></label><button className="button muted" disabled={controller.busy || archived || !controller.subjectRename.trim()} onClick={() => void controller.renameSubject()}>{t("Rename", "重命名")}</button></div><button className="button muted" disabled={controller.busy} onClick={() => void controller.setSubjectArchived(!archived)}>{archived ? t("Restore subject", "恢复主体") : t("Archive subject", "归档主体")}</button></> : null}
+    {controller.removal ? <p className="studio-boundary-warning" role="status">{controller.removal.outcome}{controller.removal.unconfirmed && !controller.removal.receipt ? <button className="button muted" disabled={controller.busy} onClick={() => void controller.retryRemoval()}>{t("Recover same action key", "使用同一动作键恢复")}</button> : null}</p> : null}
+    <MemoryFacts facts={factState?.facts || []} t={t} openEvidence={controller.openEvidence} prepareAction={controller.prepareMemoryAction} removeSaved={controller.removeSavedFact} canCorrect={!archived && !controller.activeRun && Boolean(controller.session && !isArchived(controller.session.conversation))} canRemove={!archived && !controller.busy && Boolean(factState?.memory_generation) && !controller.removal?.unconfirmed} />
+  </section>;
 }
 
 

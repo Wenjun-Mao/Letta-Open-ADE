@@ -67,6 +67,7 @@ SUMMARY_TRANSLATIONS = {
     "Read test run artifact content": "读取测试运行产物内容",
     "Rename an Agent Studio memory subject": "重命名 Agent Studio 记忆主体",
     "Reset only fresh-start Agent Studio state": "仅重置全新启动的 Agent Studio 状态",
+    "Remove exact saved assertions through an operator action": "通过操作员动作移除指定版本的已保存陈述",
     "Restore an Agent Studio conversation": "恢复 Agent Studio 会话",
     "Restore an Agent Studio definition": "恢复 Agent Studio 定义",
     "Restore an Agent Studio memory subject": "恢复 Agent Studio 记忆主体",
@@ -196,6 +197,8 @@ TITLE_TRANSLATIONS = {
     "Lifecycle": "生命周期",
     "Qualifier": "限定符",
     "Quote": "原文摘录",
+    "Reason": "原因",
+    "Targets": "目标列表",
     "Route Alias": "路由别名",
     "Version": "版本",
     "Agent Id": "智能体 ID",
@@ -345,6 +348,14 @@ TITLE_TRANSLATIONS = {
 }
 
 TITLE_TOKEN_TRANSLATIONS = {
+    "action": "动作",
+    "assertion": "陈述",
+    "authority": "权威来源",
+    "committed": "已提交",
+    "generation": "代次",
+    "removal": "移除",
+    "resulting": "变更后",
+    "target": "目标",
     "accept": "接受",
     "accepted": "已接受",
     "after": "变更后",

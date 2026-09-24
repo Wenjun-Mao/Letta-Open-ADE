@@ -103,10 +103,7 @@ def validate_current_user_message(
     content: str,
     budget: ContextBudget,
 ) -> None:
-    prompt = truncate_to_tokens(
-        f"{system_prompt}\n\nPersona:\n{persona}\n\n{MEMORY_CONTROL_INSTRUCTIONS}",
-        budget.prompt_tokens,
-    )
+    prompt = _mandatory_prompt(system_prompt, persona)
     if estimate_tokens(prompt) + estimate_tokens(content) > budget.input_limit:
         raise ValueError("Current message plus mandatory prompt exceeds context window")
 
@@ -166,10 +163,7 @@ def build_context(
 ) -> BuiltContext:
     if budget.input_limit <= 0:
         raise ValueError("Context budget leaves no model input capacity")
-    prompt = truncate_to_tokens(
-        f"{system_prompt}\n\nPersona:\n{persona}\n\n{MEMORY_CONTROL_INSTRUCTIONS}",
-        budget.prompt_tokens,
-    )
+    prompt = _mandatory_prompt(system_prompt, persona)
     profile_lines = [
         f"- [{fact['id']} v{fact['version']}] {fact['key']}: {fact['value']}"
         for fact in active_facts
@@ -205,13 +199,7 @@ def build_context(
     retrieved = [fact for fact in retrieved_facts if str(fact["id"]) not in active_ids]
     retrieval = truncate_to_tokens(
         "Retrieved older facts about the current user (bound memory subject):\n"
-        + (
-            "\n".join(
-                f"- [{fact['id']} v{fact['version']}] {fact['key']}: {fact['value']}"
-                for fact in retrieved
-            )
-            or "- None"
-        ),
+        + ("\n".join(_memory_line(fact) for fact in retrieved) or "- None"),
         budget.retrieval_tokens,
     )
     selected: list[dict[str, Any]] = []
@@ -268,3 +256,18 @@ def build_context(
         retrieved_fact_ids=[str(fact["id"]) for fact in retrieved],
         estimated_input_tokens=total,
     )
+
+
+def _mandatory_prompt(system_prompt: str, persona: str) -> str:
+    """Mandatory policy is an all-or-nothing admission cost, never optional text."""
+
+    return f"{system_prompt}\n\nPersona:\n{persona}\n\n{MEMORY_CONTROL_INSTRUCTIONS}"
+
+
+def _memory_line(fact: dict[str, Any]) -> str:
+    if fact.get("status") == "inactive":
+        return (
+            f"- [{fact['id']} v{fact['version']}] INACTIVE former assertion "
+            f"{fact['key']}: {fact['value']} (not current)"
+        )
+    return f"- [{fact['id']} v{fact['version']}] {fact['key']}: {fact['value']}"

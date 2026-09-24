@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import and_, func, insert, select, update
+from sqlalchemy import and_, case, func, insert, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from .base import OptimisticLockError, fetch_one, values
@@ -109,6 +109,8 @@ class MemoryRepository:
             .values(
                 display_name=display_name,
                 version=expected_version + 1,
+                memory_generation=memory_subjects.c.memory_generation
+                + case((memory_subjects.c.display_name != display_name, 1), else_=0),
                 updated_at=func.now(),
             )
             .returning(*memory_subjects.c)
@@ -135,6 +137,16 @@ class MemoryRepository:
             .where(memory_subjects.c.id == subject_id)
             .values(
                 archived_at=func.now() if archived else None,
+                memory_generation=memory_subjects.c.memory_generation
+                + case(
+                    (
+                        memory_subjects.c.archived_at.is_(None)
+                        if archived
+                        else memory_subjects.c.archived_at.is_not(None),
+                        1,
+                    ),
+                    else_=0,
+                ),
                 updated_at=func.now(),
             )
             .returning(*memory_subjects.c),
@@ -149,6 +161,23 @@ class MemoryRepository:
             .with_for_update(),
             "memory subject does not exist",
         )
+
+    async def advance_memory_generation(
+        self, subject_id: str, *, expected_generation: int
+    ) -> int:
+        result = await self._connection.execute(
+            update(memory_subjects)
+            .where(
+                memory_subjects.c.id == subject_id,
+                memory_subjects.c.memory_generation == expected_generation,
+            )
+            .values(memory_generation=expected_generation + 1, updated_at=func.now())
+            .returning(memory_subjects.c.memory_generation)
+        )
+        generation = result.scalar_one_or_none()
+        if generation is None:
+            raise OptimisticLockError("subject memory generation changed")
+        return int(generation)
 
     async def create_entity(self, payload: Mapping[str, Any]) -> dict[str, Any]:
         return await fetch_one(
@@ -178,6 +207,13 @@ class MemoryRepository:
         return await fetch_one(
             self._connection,
             select(memory_facts).where(memory_facts.c.id == fact_id),
+            "memory fact does not exist",
+        )
+
+    async def lock_fact(self, fact_id: str) -> dict[str, Any]:
+        return await fetch_one(
+            self._connection,
+            select(memory_facts).where(memory_facts.c.id == fact_id).with_for_update(),
             "memory fact does not exist",
         )
 
@@ -421,5 +457,71 @@ class MemoryRepository:
         )
         if maximum_distance is not None:
             statement = statement.where(distance <= maximum_distance)
+        result = await self._connection.execute(statement)
+        return [dict(row) for row in result.mappings()]
+
+    async def search_current_lifecycle_facts(
+        self,
+        *,
+        subject_id: str,
+        query_embedding: Sequence[float],
+        model_fingerprint: str,
+        legacy_policy_version: str,
+        lifecycle_policy_version: str,
+        limit: int,
+        maximum_distance: float | None = None,
+    ) -> list[dict[str, Any]]:
+        """Rank one eligible current index per fact before the result limit.
+
+        Legacy current active indexes remain readable. Natural lifecycle indexes
+        may represent active or inactive descriptors. Forgotten current revisions
+        are excluded even when older embeddings remain in the audit chain.
+        """
+
+        distance = memory_embeddings.c.embedding.cosine_distance(list(query_embedding))
+        ranked = (
+            select(
+                memory_facts,
+                distance.label("distance"),
+                func.row_number()
+                .over(
+                    partition_by=memory_facts.c.id,
+                    order_by=(distance, memory_embeddings.c.id),
+                )
+                .label("representation_rank"),
+            )
+            .join(
+                memory_embeddings,
+                and_(
+                    memory_embeddings.c.fact_id == memory_facts.c.id,
+                    memory_embeddings.c.revision_id
+                    == memory_facts.c.current_revision_id,
+                ),
+            )
+            .where(
+                memory_facts.c.subject_id == subject_id,
+                memory_facts.c.status.in_(("active", "inactive")),
+                memory_embeddings.c.subject_id == subject_id,
+                memory_embeddings.c.model_fingerprint == model_fingerprint,
+                or_(
+                    and_(
+                        memory_embeddings.c.retrieval_policy_version
+                        == legacy_policy_version,
+                        memory_facts.c.status == "active",
+                    ),
+                    memory_embeddings.c.retrieval_policy_version
+                    == lifecycle_policy_version,
+                ),
+            )
+            .subquery("ranked_current_memory")
+        )
+        statement = (
+            select(ranked)
+            .where(ranked.c.representation_rank == 1)
+            .order_by(ranked.c.distance, ranked.c.id)
+            .limit(max(1, min(20, int(limit))))
+        )
+        if maximum_distance is not None:
+            statement = statement.where(ranked.c.distance <= maximum_distance)
         result = await self._connection.execute(statement)
         return [dict(row) for row in result.mappings()]
