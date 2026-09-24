@@ -65,7 +65,6 @@ class ConversationLeaseRepository:
         conversation_id: str,
         run_id: str,
         lease_token: str,
-        expires_at: datetime,
     ) -> dict[str, object]:
         result = await self._connection.execute(
             insert(conversation_leases)
@@ -75,7 +74,10 @@ class ConversationLeaseRepository:
                 run_id=run_id,
                 lease_token=lease_token,
                 holder_id="pending",
-                expires_at=expires_at,
+                # Admission reserves the conversation while its run is pending.
+                # Expire at the database clock so an immediate worker claim can
+                # atomically replace this placeholder without cross-process skew.
+                expires_at=func.now(),
             )
             .returning(*conversation_leases.c)
         )

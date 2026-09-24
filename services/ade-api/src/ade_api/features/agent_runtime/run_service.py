@@ -4,7 +4,6 @@ import asyncio
 import hashlib
 import json
 from collections.abc import AsyncIterator
-from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -170,7 +169,6 @@ class RunService:
                     conversation_id=conversation_id,
                     run_id=run_id,
                     lease_token=str(uuid4()),
-                    expires_at=datetime.now(UTC),
                 )
                 accepted = await append_run_event(
                     runs,

@@ -44,6 +44,11 @@ fact, staged entity, and index effects; contradiction rejects the whole attempt.
 Failed opt-in synthetic attempts must retain safe, bounded, outcome-verified
 evidence before their cells can be scored. Successful database behavior alone
 does not satisfy that evidence gate.
+For opted-in isolated evaluation attempts, retain the actual visible compaction
+request, generated summary, contiguous source IDs and boundary alongside
+generation, reviewer, tool continuation and terminal readback. This records
+what the worker consumed without treating scripted summaries as proof of
+real-model semantic retention.
 
 Keep three workflow-bound context variants only for isolated comparison: A
 requires the whole current lifecycle snapshot before optional narrative; A0

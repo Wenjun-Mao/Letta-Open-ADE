@@ -288,6 +288,7 @@ class ConversationExecutor:
         timeout_seconds: float,
         max_output_tokens: int,
         summary_token_budget: int,
+        observe_request: Callable[[dict[str, Any]], None] | None = None,
     ) -> ModelCompaction:
         compaction_system = COMPACTION_SYSTEM
         if self.provider_adapter == "deepseek_openai":
@@ -334,6 +335,8 @@ class ConversationExecutor:
                     "chat_template_kwargs": {"enable_thinking": False},
                 }
             )
+        if observe_request is not None:
+            observe_request(payload)
         response = await self.transport.chat_completion(
             payload, timeout_seconds=timeout_seconds
         )

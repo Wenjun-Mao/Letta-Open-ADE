@@ -225,10 +225,18 @@ class TurnExecution:
                 timeout_seconds=_remaining(deadline),
                 max_output_tokens=budget.max_output_tokens,
                 summary_token_budget=budget.summary_tokens,
+                observe_request=(
+                    trace.natural_evidence.capture_compaction_request
+                    if trace.natural_evidence is not None
+                    else None
+                ),
             )
             if compaction_plan is not None
             else None
         )
+
+        if compaction is not None and trace.natural_evidence is not None:
+            trace.natural_evidence.capture_compaction_result(compaction)
 
         summary_content = str(summary["content"]) if summary else ""
         if compaction is not None:

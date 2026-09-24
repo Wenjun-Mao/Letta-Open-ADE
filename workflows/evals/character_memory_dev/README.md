@@ -133,12 +133,25 @@ database, source-linked synthetic setup in a separate conversation, and a fake
 router. It retains the actual A/A0/B generation and full reviewer requests,
 then asserts 48 matching lifecycle targets, A/A0's identical withheld packets,
 B's complete local exchanges, provider counts, token ceilings, and committed
-outcomes. It is one deterministic pressure cell, not full matrix coverage:
+outcomes. A second real-worker test generates a fake-model compaction from 68
+source messages, checks the prefix boundary and A/A0 serialized nonsummary
+equality, and checks a `search_memory` continuation against the second complete
+request. These are deterministic packet cases, not full matrix coverage or
+evidence of real-model summary quality:
 
 ```sh
 ADE_TEST_DATABASE_URL='postgresql+psycopg://ade_owner@127.0.0.1:32768/ade_m2_memory_test_<owned-id>' \
-  uv run --locked pytest -q services/ade-api/tests/agent_runtime/persistence/test_postgres_natural_packets.py
+  uv run --locked pytest -q services/ade-api/tests/agent_runtime/persistence/test_postgres_natural_packets.py services/ade-api/tests/agent_runtime/persistence/test_postgres_natural_compaction_packets.py
 ```
+
+The private `outputs/natural-packets-20260924/manifest.json` indexes seven
+retained, SHA-256-bound attempt packets from one fresh run: A/A0/B pressure,
+A/A0/B long history, and B tool continuation. Each packet includes exact
+serialized sections, source IDs and roles, selected lifecycle views, omissions,
+token estimates, provider counts, and terminal readback. The separate
+`outputs/natural-failure-20260924/manifest.json` indexes committed and
+confirmed-rejection attempt packets. Both manifests are synthetic evidence;
+they do not qualify a live comparison.
 
 For the local Agent Studio journey, `offline_natural_router.py` supplies only
 scripted catalog, chat, review, and embedding responses on loopback. Run it
@@ -149,14 +162,20 @@ existing migrated, passwordless `ade_m2_memory_test_<owned-id>` database. Pass
 to that same subject. It writes a private fixture receipt under `outputs/`.
 The API and worker must both point to that isolated database and the fake
 router base URL. Browser observations from this setup do not measure provider
-quality or authorize live calls.
+quality or authorize live calls. The 2026-09-24 in-app browser replay and
+PostgreSQL readback are retained privately in
+`outputs/natural-browser-20260924-round2/browser-evidence.json`: fresh turn,
+shared subject readback in an archived old-policy conversation, disabled old
+composer, inline removal cancel, exact confirmation, forgotten audit lineage,
+and memory generation 2 to 3.
 
 Opt-in natural-memory attempt evidence is available only when
 `ADE_NATURAL_MEMORY_CAPTURE=1` is set on a development worker connected to a
 loopback database named `ade_*_test_*` and the conversation purpose is
 `evaluation`. It writes one private JSON artifact per run attempt under the
 ignored `outputs/natural-memory-attempts/` directory. The artifact retains
-visible generation requests (including tool continuations), source bundle,
+visible generation requests (including tool continuations), optional compaction
+request/result and source boundary, source bundle,
 candidate reply, typed reviewer decision, absent stages and authoritative
 run/attempt readback. Authentication, provider wire bodies, private reasoning
 and raw exception text are excluded. A missing or `unconfirmed` artifact is
@@ -185,8 +204,9 @@ allocations, pressure grid, positive actual-compaction assertion, stop classes,
 and a proposed 96-generation/160-embedding ceiling. It is a checkpoint-1
 offline contract, **not** permission to call providers, not evidence that the
 entire serialized runtime matrix fits, and not a selected product policy. The
-48-record dog pressure cell has one real-worker fake-router packet assertion;
-remaining cells still need their own serialized coverage before live approval.
+48-record pressure and 68-message compaction/tool cells have real-worker
+fake-router packet assertions; remaining matrix cells still need their own
+serialized coverage before live approval.
 
 The proposed schedule expands to 30 turn cells, each allowing at most one
 conversation continuation and one reviewer call, plus two actual-compaction

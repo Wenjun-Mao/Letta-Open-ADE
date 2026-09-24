@@ -82,6 +82,8 @@ class NaturalAttemptEvidence:
     policy_binding: str
     generation: dict[str, Any] | None = None
     generation_requests: list[dict[str, Any]] = field(default_factory=list)
+    compaction_request: dict[str, Any] | None = None
+    compaction_result: dict[str, Any] | None = None
     tools: list[dict[str, Any]] | None = None
     candidate_visible_reply: str | None = None
     reviewer_request: dict[str, Any] | None = None
@@ -157,6 +159,27 @@ class NaturalAttemptEvidence:
             json.dumps(retained, ensure_ascii=False, separators=(",", ":"))
         )
         self.generation_requests.append(retained)
+
+    def capture_compaction_request(self, payload: dict[str, Any]) -> None:
+        retained = {
+            "model": payload.get("model"),
+            "messages": payload.get("messages"),
+            "max_tokens": payload.get("max_tokens"),
+            "response_format": payload.get("response_format"),
+        }
+        retained["serialized_visible_token_estimate"] = estimate_tokens(
+            json.dumps(retained, ensure_ascii=False, separators=(",", ":"))
+        )
+        self.compaction_request = retained
+
+    def capture_compaction_result(self, result: Any) -> None:
+        self.compaction_result = {
+            "summary_content": result.content,
+            "summary_through_sequence": result.plan.through_sequence,
+            "source_message_ids": list(result.plan.source_message_ids),
+            "provider_request_id": result.provider_request_id,
+            "usage": result.usage,
+        }
 
     def capture_reviewer_request(self, payload: dict[str, Any]) -> None:
         self.reviewer_request = {
@@ -308,6 +331,8 @@ async def retain_attempt_evidence(
             if evidence.generation_requests
             else {"stage": "absent"}
         ),
+        "compaction_request": evidence.compaction_request or {"stage": "absent"},
+        "compaction_result": evidence.compaction_result or {"stage": "absent"},
         "tools": evidence.tools if evidence.tools is not None else {"stage": "absent"},
         "candidate_visible_reply": (
             evidence.candidate_visible_reply
