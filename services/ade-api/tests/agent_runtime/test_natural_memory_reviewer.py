@@ -167,6 +167,8 @@ def test_reviewer_request_states_entity_and_scope_rules_with_nullable_ref() -> N
     system = request["messages"][0]["content"]
     assert "Subject-kind adds need entity_ref:null" in system
     assert "Preserve time, place, frequency and condition in values" in system
+    assert "Past user turns are context, never citable sources" in system
+    assert "past facts by supplied fact_id/version" in system
     ref = natural_review_json_schema()["$defs"]["NaturalAdd"]["properties"][
         "entity_ref"
     ]

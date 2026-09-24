@@ -189,6 +189,82 @@ def test_assistant_referent_requires_current_user_endorsement() -> None:
         )
 
 
+def test_prior_user_correction_context_cannot_be_cited_as_write_authority() -> None:
+    prior = {
+        "id": "00000000-0000-0000-0000-000000000005",
+        "role": "user",
+        "content": "我家狗叫 Rocky。",
+    }
+    current = {"id": USER, "role": "user", "content": "刚才打错了，它叫 Roxy。"}
+    fact = {
+        "id": FACT,
+        "subject_id": SUBJECT,
+        "entity_id": "00000000-0000-0000-0000-000000000006",
+        "fact_type": "pet.name",
+        "qualifier": None,
+        "normalized_key": "pet.name|subject|case-0",
+        "value": "Rocky",
+        "status": "active",
+        "version": 1,
+    }
+    captured_shape = {
+        "proposals": [
+            {
+                "claim_id": "correction",
+                "operation": "revise",
+                "reason": "correct",
+                "fact_id": FACT,
+                "expected_version": 1,
+                "value": "Roxy",
+                "evidence_quote": current["content"],
+                "sources": [
+                    _source(current["content"]),
+                    _source(prior["content"], message_id=prior["id"]),
+                ],
+            }
+        ],
+        "claim_dispositions": [_disposition("correction", "allow", "supported")],
+    }
+
+    def prepare(payload: dict):
+        return prepare_natural_memory_review(
+            decision=NaturalReviewDecision.model_validate(payload),
+            subject_id=SUBJECT,
+            current_user_message=current,
+            available_messages=[prior, current],
+            facts=[fact],
+            entities=[
+                {"id": SUBJECT, "subject_id": SUBJECT, "kind": "subject"},
+                {
+                    "id": fact["entity_id"],
+                    "subject_id": SUBJECT,
+                    "kind": "pet",
+                    "label": "Rocky",
+                },
+            ],
+            candidate_reply="好，是 Roxy。",
+        )
+
+    with pytest.raises(
+        RuntimeValidationError, match="Write authority must cite the current user"
+    ):
+        prepare(captured_shape)
+    current_only = {
+        **captured_shape,
+        "proposals": [
+            {
+                **captured_shape["proposals"][0],
+                "sources": [_source(current["content"])],
+            }
+        ],
+    }
+    prepared = prepare(current_only)
+    assert len(prepared.operations) == 1
+    assert prepared.operations[0].value == "Roxy"
+    assert prepared.operations[0].revision_reason == "correct"
+    assert [source.message_id for source in prepared.operations[0].sources] == [USER]
+
+
 def test_correction_can_invalidate_without_inventing_new_value() -> None:
     fact = {
         "id": FACT,
