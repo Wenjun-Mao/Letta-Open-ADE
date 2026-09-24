@@ -70,7 +70,9 @@ class _Target(_Write):
 
 
 class NaturalRevise(_Target):
-    kind: Literal["revise"]
+    kind: Literal["revise"] = Field(
+        description="Change or correct an active target fact only."
+    )
     reason: Literal["enrich", "supersede", "correct", "unspecified"]
     value: StrictStr | None = Field(max_length=10_000)
 
@@ -84,17 +86,21 @@ class NaturalRevise(_Target):
 
 
 class NaturalEnd(_Target):
-    kind: Literal["end"]
+    kind: Literal["end"] = Field(description="End an active target fact only.")
     reason: Literal["ended", "invalidated"]
 
 
 class NaturalReassert(_Target):
-    kind: Literal["reassert"]
+    kind: Literal["reassert"] = Field(
+        description="Make an inactive target fact active again; never use for an already active fact."
+    )
     value: StrictStr = Field(min_length=1, max_length=10_000)
 
 
 class NaturalForget(_Target):
-    kind: Literal["forget"]
+    kind: Literal["forget"] = Field(
+        description="Forget an active or inactive target fact on an explicit removal request."
+    )
 
 
 class NaturalDefer(_Closed):
@@ -135,7 +141,10 @@ NaturalDecision: TypeAlias = Annotated[
 
 
 class NaturalReviewDecision(_Closed):
-    decisions: list[NaturalDecision] = Field(max_length=20)
+    decisions: list[NaturalDecision] = Field(
+        max_length=20,
+        description="Include only needed writes, deferrals or conflicts; omit unchanged active facts. An empty list is checked no-change.",
+    )
 
 
 @dataclass(frozen=True)

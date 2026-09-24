@@ -123,6 +123,84 @@ def test_preflight_and_execution_serialize_the_same_bundle() -> None:
     ) >= serialized_review_tokens(request)
 
 
+def test_serialized_request_states_lifecycle_preconditions() -> None:
+    current = {
+        **CURRENT,
+        "content": "I prefer tea in the evening; I still prefer coffee in the morning.",
+    }
+    fact = {
+        "id": "00000000-0000-0000-0000-000000000003",
+        "subject_id": SUBJECT,
+        "entity_id": SUBJECT,
+        "fact_type": "person.preference",
+        "qualifier": "drink",
+        "value": "coffee in the morning",
+        "status": "active",
+        "reason": None,
+    }
+    request = natural_review_request(
+        model_key="source::reviewer",
+        provider_adapter="deepseek_openai",
+        current_user_message=current,
+        source_messages=[current],
+        facts=[fact],
+        entities=ENTITIES,
+        candidate_reply="Morning coffee and evening tea.",
+    )
+    system = request["messages"][0]["content"]
+    packet = json.loads(request["messages"][1]["content"])
+    assert packet["targets"] == [
+        {
+            "handle": "F1",
+            "fact_type": "person.preference",
+            "qualifier": "drink",
+            "value": "coffee in the morning",
+            "status": "active",
+            "reason": None,
+        }
+    ]
+    for requirement in (
+        "revise only an active fact",
+        "end only an active fact",
+        "reassert only an inactive fact",
+        "forget only an active or inactive fact",
+        "confirmation of an unchanged active fact needs",
+        "include only that change",
+    ):
+        assert requirement in " ".join(system.split())
+    schema = json.loads(
+        system.split("Return JSON matching this exact schema: ", 1)[1].split(
+            "\nExample JSON:", 1
+        )[0]
+    )
+    for kind, description in (
+        ("NaturalRevise", "active target fact"),
+        ("NaturalEnd", "active target fact"),
+        ("NaturalReassert", "inactive target fact"),
+        ("NaturalForget", "active or inactive target fact"),
+    ):
+        assert description in schema["$defs"][kind]["properties"]["kind"]["description"]
+    assert (
+        "omit unchanged active facts"
+        in schema["properties"]["decisions"]["description"]
+    )
+    generic = natural_review_request(
+        model_key="source::reviewer",
+        provider_adapter="generic_openai",
+        current_user_message=current,
+        source_messages=[current],
+        facts=[fact],
+        entities=ENTITIES,
+        candidate_reply="Morning coffee and evening tea.",
+    )
+    assert (
+        generic["response_format"]["json_schema"]["schema"]["$defs"]["NaturalReassert"][
+            "properties"
+        ]["kind"]["description"]
+        == schema["$defs"]["NaturalReassert"]["properties"]["kind"]["description"]
+    )
+
+
 @pytest.mark.parametrize(
     "finish,code",
     [

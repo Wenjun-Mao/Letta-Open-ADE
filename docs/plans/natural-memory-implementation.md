@@ -126,6 +126,12 @@ the fifth rejected an attempted `reassert` of an active morning fact and left
 the evening addition uncommitted. Six turns, including the habit/preference
 contrast and subject-isolation probe, were unrun. Keep this as partial live
 evidence, not a policy choice or release qualification.
+Inspection of the failed reviewer wire request found that ADE exposed F1 as
+active but did not explain the inactive-only `reassert` operation or omission
+of unchanged active facts. The offline contract clarification in
+[ADR 0035](../adr/0035-compact-natural-review-and-observational-dispatch.md)
+addresses that disclosure gap without changing lifecycle validation; no
+additional live result follows from it.
 
 Director offline reproduction confirmed that a bare current "Roxy" plus an
 assistant "Is Roxy a Husky?" can prepare a breed operation through the current

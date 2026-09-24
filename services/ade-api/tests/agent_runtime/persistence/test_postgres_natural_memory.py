@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 
+from ade_api.features.agent_runtime.errors import RuntimeValidationError
 from ade_api.features.agent_runtime.natural_memory_commit import (
     commit_natural_memory_review,
 )
@@ -143,6 +144,114 @@ def test_postgres_natural_lifecycle_and_source_roles(
                     )
                 assert len(await memory.list_revisions(fact_id)) == 4
                 assert await memory.list_active_facts(subject) == []
+        finally:
+            await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_active_reassert_with_valid_evening_add_rejects_every_sibling(
+    seed_m2_memory_resources, record_m2_memory_turn
+) -> None:
+    assert DATABASE_URL is not None
+
+    async def scenario() -> None:
+        engine = create_persistence_engine(DATABASE_URL)
+        try:
+            async with engine.begin() as connection:
+                ids = await seed_m2_memory_resources(connection)
+                subject = ids["subject_one"]
+                entity = {"id": subject, "subject_id": subject, "kind": "subject"}
+                memory = MemoryRepository(connection)
+                first = await record_m2_memory_turn(
+                    connection,
+                    ids["workspace"],
+                    ids["conversation_one"],
+                    "I prefer coffee in the morning.",
+                    sequence=1,
+                )
+                first["role"] = "user"
+                baseline = prepare_natural_memory_review(
+                    decision=NaturalReviewDecision.model_validate(
+                        {
+                            "decisions": [
+                                {
+                                    "kind": "subject_add",
+                                    "fact_type": "person.preference",
+                                    "qualifier": "drink",
+                                    "value": "coffee in the morning",
+                                    "evidence": {
+                                        "mode": "direct",
+                                        "current_quote": "I prefer coffee in the morning",
+                                    },
+                                }
+                            ]
+                        }
+                    ),
+                    subject_id=subject,
+                    current_user_message=first,
+                    available_messages=[first],
+                    facts=[],
+                    entities=[entity],
+                    candidate_reply="Okay.",
+                )
+                await commit_natural_memory_review(
+                    connection,
+                    workspace_id=ids["workspace"],
+                    subject_id=subject,
+                    run_id=first["run_id"],
+                    review=baseline,
+                    operation_embeddings=(None,),
+                    embedding_fingerprint="none",
+                    embedding_dimensions=0,
+                    retrieval_policy_version="natural-test-v1",
+                    expected_memory_generation=1,
+                )
+                before = await memory.list_facts(subject)
+                current = await record_m2_memory_turn(
+                    connection,
+                    ids["workspace"],
+                    ids["conversation_one"],
+                    "I prefer tea in the evening; still coffee in the morning.",
+                    sequence=2,
+                )
+                current["role"] = "user"
+                evidence = {
+                    "mode": "direct",
+                    "current_quote": current["content"],
+                }
+                evening = {
+                    "kind": "subject_add",
+                    "fact_type": "person.preference",
+                    "qualifier": "drink",
+                    "value": "tea in the evening",
+                    "evidence": evidence,
+                }
+                invalid = {
+                    "kind": "reassert",
+                    "target": "F1",
+                    "value": "coffee in the morning",
+                    "evidence": evidence,
+                }
+                for decisions in ([evening, invalid], [invalid, evening]):
+                    with pytest.raises(
+                        RuntimeValidationError,
+                        match="Reassert requires an inactive target",
+                    ):
+                        prepare_natural_memory_review(
+                            decision=NaturalReviewDecision.model_validate(
+                                {"decisions": decisions}
+                            ),
+                            subject_id=subject,
+                            current_user_message=current,
+                            available_messages=[current],
+                            facts=before,
+                            entities=[entity],
+                            candidate_reply="Morning coffee and evening tea.",
+                        )
+                    assert await memory.list_facts(subject) == before
+                    assert (await memory.get_subject(subject))["memory_generation"] == 2
+                    assert len(await memory.list_revisions(before[0]["id"])) == 1
         finally:
             await engine.dispose()
 

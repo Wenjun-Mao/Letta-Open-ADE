@@ -282,6 +282,11 @@ conversation, and the fifth rejected atomically when the reviewer tried to
 reassert an active fact. Six scheduled turns stayed unrun. The linked finding
 records the exact deltas, dispatches and private evidence identities; it is
 partial development evidence, not a policy or release qualification.
+An offline wire review then found that the request exposed F1 as active but
+did not describe `reassert` as inactive-only or say to omit unchanged active
+facts. The existing prompt/schema now state those lifecycle rules, with
+serialized-request and atomic-rejection tests. No further live turns were
+sent under this clarification.
 
 The frozen checkpoint-1 matrix and former checkpoint-6 campaign describe a
 historical reviewer contract. Its no-save cell and comparison schedule do not

@@ -94,7 +94,7 @@ attempts (8 completed, 1 failed)**, reported as two separate bindings.
 | Changed morning preference 1 | Add one morning-coffee preference v1; generation +1 | One active `person.preference` drink fact, `咖啡（早上，尤其是刚起床的时候）`, v1; generation 1→2. Exact current-user citation. Reply engaged the coffee topic. |
 | Changed morning preference 2 | Revise that fact to morning tea v2; generation +1; retain v1 | Same fact revised to `茶（早上）`, v2, reason `supersede`; generation 2→3. v1 retained with predecessor link and exact current-user citation. Reply acknowledged the change. |
 | Changed morning preference 3, new conversation | No delta; answer morning tea | No fact/revision/entity change; generation stayed 3. Visible reply: `你早上更喜欢喝茶呀。` This is a successful same-subject cross-conversation recall observation. |
-| Distinct evening preference 1, independent subject | Add morning-coffee preference v1; generation +1 | One active `person.preference` drink fact, value `早上喝咖啡`, v1; generation 1→2. Its type and user source support preference, though the stored value's wording alone could also describe a habit. |
+| Distinct evening preference 1, independent subject | Add morning-coffee preference v1; generation +1 | One active `person.preference` drink fact, value `早上喝咖啡`, v1; generation 1→2. The source explicitly says `更喜欢`, so the abbreviated value under the preference type is not evidence that the reviewer confused a habit with a preference. |
 | Distinct evening preference 2 | Keep morning fact; add evening-tea preference v1; generation +1 | **Rejected atomically.** Generation stayed 2, morning fact stayed v1, and no evening fact, revision, assistant message or write embedding was committed. |
 
 The fifth candidate reply said `早上一杯咖啡，晚上一盏茶` and would have answered
@@ -103,10 +103,10 @@ the dialogue, but it was **not delivered**. The reviewer emitted two decisions:
 `早上喝咖啡`. F1 was already active, so the existing lifecycle contract
 `Reassert requires an inactive target` rejected the entire review with
 `natural_review_semantic`. The current user's `早上还是咖啡` required no change
-to F1. The reviewer overmutated that stable fact and used habit-like wording
-for the new preference; neither issue justifies relabeling a habit as a
-preference or relaxing ADE's guard. This is a model decision failure at the
-reviewer contract boundary, while ADE's atomic rejection worked as designed.
+to F1. The reviewer overmutated that stable fact. The source also explicitly
+says `晚上我更喜欢喝茶`; its proposed value `晚上喝茶` is abbreviated wording under
+`person.preference`, not proof of a habit-to-preference inference. ADE's
+atomic rejection worked as designed.
 
 Independent PostgreSQL readback found subject generations **3** and **2**;
 five user messages, four assistant messages, two active facts, three revisions
@@ -132,9 +132,42 @@ shown through that UI; direct API/resource and database readback supplied the
 evidence above. Those isolated services were stopped, and dev-server-generated
 working-tree files were removed.
 
-Next move: review the invalid active-target reassertion and the habit-like
-preference value as model/task-shape evidence. Keep the frozen cases and ADE
-lifecycle/atomic guards intact. Any further live diagnostic needs a newly
-bounded decision; do not resume the six unrun cells or reroll the rejected
-turn as though this binding completed. The 30-cell campaign and release gate
-remain separate.
+## Offline root-cause review and contract clarification
+
+The director's follow-up checked the **actual failed reviewer request**, not
+only the source prompt. Its user packet offered F1 with `status: active` and
+value `早上喝咖啡`. The DeepSeek system text included the full generated JSON
+schema, but neither it nor the operation fields said that `reassert` requires
+an inactive target. The system text also omitted the rule that an unchanged
+active fact receives no decision when another fact changes. The existing ADE
+validator did enforce `Reassert requires an inactive target`. Therefore the
+precise failure is an **incomplete model-facing lifecycle contract** at this
+prompt/schema layer, followed by a reviewer decision that violated ADE's
+held target-state rule. The evidence does not show the model ignoring a
+clearly communicated lifecycle precondition. It does not justify weakening
+the validator, dropping the invalid sibling, or relabeling preference facts.
+
+The offline correction adds general lifecycle descriptions to the existing
+reviewer instructions and `kind` schema fields: revise/end require active,
+reassert requires inactive, forget allows active/inactive on explicit removal,
+and a confirmation of an unchanged active fact emits no mutation. No output
+shape, fact ontology, binder, validator or persistence semantics changed.
+The historical live request and captures above remain immutable. On the exact
+failed case's retained user packet, substituting only the clarified system
+text raises the visible serialized request estimate from **3,564 to 3,802**
+tokens, below its **6,759** input limit; no provider call was made. Focused
+request tests assert the preconditions appear in the real serialized DeepSeek
+system/schema. A separate fake-decision PostgreSQL test confirms that an
+evening add paired with active F1 reassertion still leaves the baseline fact,
+revision count and generation unchanged in both decision orders.
+
+Smallest proposed follow-up, **not run**: use a new source/config binding and
+fresh disposable subjects for eight turns covering the seven failed or unrun
+checks plus required independent setup—
+morning-coffee setup, evening-tea addition and cross-conversation recall;
+another setup, uncertain tea, drinking-habit-only statement and recall; then
+one other-subject no-transfer query. Use the already frozen texts and complete
+delta expectations, one native attempt per turn, and the same early-stop
+rule. The four committed turns above need no reroll. A further live diagnostic
+requires a new bounded decision. The 30-cell campaign and release gate remain
+separate.

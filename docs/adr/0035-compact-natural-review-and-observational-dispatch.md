@@ -112,3 +112,29 @@ memory writes. [ADR 0036](0036-discretionary-curated-tools-and-structured-requir
 subsequently removed its free-form phrase and negation rules. Natural context
 retains a bounded entity-label match for candidate expansion. It is a relevance
 heuristic, not semantic proof or write authority.
+
+## 2026-09-24 Clarification: Expose Existing Lifecycle Preconditions
+
+A bounded live diagnostic showed the reviewer `reassert` an already active
+morning preference alongside a valid proposed evening addition. ADE rejected
+both atomically, as intended. Inspection of the exact model-facing request
+found the target marked active but no operation description saying that
+`reassert` requires inactive status or that confirmation of an unchanged
+active fact is a no-op. The failure therefore exposed a prompt/schema contract
+gap; it did not show the model disregarding an explicit precondition.
+
+The existing mixed schema and reviewer prompt now describe the validator's
+unchanged lifecycle rules: revise and end target active facts; reassert
+targets inactive facts becoming active; forget targets active/inactive facts
+on explicit removal; unchanged active confirmations emit no decision even
+when a separate fact changes. This is a general operation explanation, not
+a phrase-specific rule or a new semantic validator. Rejected alternatives
+were silently dropping the reassert sibling, coercing it to a no-op,
+relaxing target status, or adding a special case for the coffee/tea wording.
+
+The wire description and its hash change under a new source revision, while
+the operation shape, natural-v4 policy meaning, database lifecycle contract,
+and retained live evidence do not. Tests inspect the actual serialized
+DeepSeek request and retain PostgreSQL atomic rejection for the invalid
+active reassert in either decision order. Further live measurement requires
+a separately bound run; this record authorizes none.
