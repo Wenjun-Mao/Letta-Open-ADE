@@ -226,11 +226,13 @@ branches are control actions, never fabricated user messages or citations.
 freezes the proposed A/A0/B comparison cells, numerical generation and reviewer
 allocations, pressure grid, positive actual-compaction assertion, stop classes,
 and a proposed 96-generation/160-embedding ceiling. It is a checkpoint-1
-offline contract, **not** permission to call providers, not evidence that the
+offline contract, not evidence that the
 entire 30-cell campaign has passed database writes or live semantic quality,
 and not a selected product policy. All 30 cells now have executed serializer
 packets; the representative high-risk states have separate real-worker packets.
-Provider-backed scoring and release qualification remain unrun.
+The user authorized one bounded live checkpoint-6 campaign on 2026-09-24,
+subject to the plan's pre-request route, ledger, source, database, and evidence
+guards. Provider-backed scoring and release qualification remain unrun.
 
 The proposed schedule expands to 30 turn cells, each allowing at most one
 conversation continuation and one reviewer call, plus two actual-compaction

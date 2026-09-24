@@ -1,7 +1,8 @@
 # Natural Memory: Bounded Implementation Plan
 
-Status: checkpoints 1-5 authorized by the user on 2026-09-24; checkpoint 6,
-live calls, policy selection, deployment and release remain separately gated.
+Status: checkpoints 1-5 completed; on 2026-09-24 the user authorized one
+checkpoint-6 live campaign under the frozen 96 DeepSeek generation and 160 Qwen
+embedding request ceilings. Policy selection, deployment and release remain gated.
 Plan revision: 3, incorporating the second plan review's completion criteria.
 Design authority for review: [revision 4](../architecture/natural-memory-design.md).
 Source baseline: `4905ce15dbda6466b12f2d1ed7908eb3d03995a0`; revision-3 packet:
@@ -353,10 +354,14 @@ and built-in-browser journeys on isolated real API/PostgreSQL. Label model stubs
 
 ### 6. Bounded Live Acceptance And Policy Selection
 
-Not authorized by approval to write this plan. After static readiness, submit the
-frozen case list, selected routes, isolated DB, ledger location, and exact ceilings
-for user approval. Proposed initial ceiling: 96 DeepSeek generation requests and
-160 Qwen embedding requests, shared pre-request caps across API/worker/diagnostic.
+The user authorized the one frozen campaign on 2026-09-24 after static review.
+Before its first provider request, freeze and verify the selected routes, isolated
+DB, ledger location, source identity, exact request schedule, and evidence capture.
+The ceiling is 96 DeepSeek generation requests and 160 Qwen embedding requests,
+shared pre-request caps across API/worker/diagnostic.
+The [2026-09-24 live preflight](../findings/natural-memory-checkpoint-6-preflight-2026-09-24.md)
+found that the pinned DeepSeek deployment capacity differs from this frozen
+matrix. Live calls are held for an explicit evaluation-binding decision.
 This is a hard spend bound, not a guarantee that all cases fit. Include setup,
 indexing, continuations, compaction, and reviewer calls; no fallback/rerolls. Use
 180-second per-turn timeout, zero additional retries and zero reviewer repair.
