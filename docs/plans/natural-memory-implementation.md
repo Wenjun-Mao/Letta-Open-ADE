@@ -132,6 +132,13 @@ of unchanged active facts. The offline contract clarification in
 [ADR 0035](../adr/0035-compact-natural-review-and-observational-dispatch.md)
 addresses that disclosure gap without changing lifecycle validation; no
 additional live result follows from it.
+The subsequent [eight-turn follow-up](../findings/natural-memory-factual-followup-2026-09-24.md)
+reached six turns: evening-tea addition and scoped recall succeeded, an
+independent morning-coffee setup lost its morning scope in the stored value,
+uncertain tea deferred, and the habit-only review exhausted the 4,096-token
+output allowance with no decision. The remaining recall and subject-isolation
+probes were unrun. These are partial diagnostic observations, not reliability
+or policy-selection evidence.
 
 Director offline reproduction confirmed that a bare current "Roxy" plus an
 assistant "Is Roxy a Husky?" can prepare a breed operation through the current

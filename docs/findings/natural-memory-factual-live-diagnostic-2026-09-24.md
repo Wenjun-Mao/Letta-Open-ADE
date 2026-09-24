@@ -186,3 +186,8 @@ remain untouched. It repeats only the case-2 morning-coffee setup on a new
 independent subject because the failed addition depends on it; the other
 three prior commits are not replayed. The 30-cell campaign, release and
 deployment remain outside this scope.
+
+The [eight-turn follow-up result](natural-memory-factual-followup-2026-09-24.md)
+is retained separately. It stopped on its sixth turn after an output-truncated
+habit review; it also found a morning-scope loss in the independent setup.
+The original five-turn binding and this finding's evidence hashes are unchanged.

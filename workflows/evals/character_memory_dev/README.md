@@ -299,6 +299,11 @@ the v4 B context, DeepSeek Flash high-thinking and Spark Qwen routes,
 It requires a new clean source commit, fresh migrated disposable database and
 new output path. This is not permission to reroll any earlier committed turn,
 modify the scorer midrun, or run the original 30-cell comparison.
+The [follow-up finding](../../../docs/findings/natural-memory-factual-followup-2026-09-24.md)
+records five commits and one stopped turn: the evening addition and recall
+worked, a separate setup lost morning scope, uncertain tea deferred, and the
+habit reviewer truncated at 4,096 output tokens. Two scheduled probes were
+unrun. No midrun repair or reroll was made.
 
 The frozen checkpoint-1 matrix and former checkpoint-6 campaign describe a
 historical reviewer contract. Its no-save cell and comparison schedule do not
