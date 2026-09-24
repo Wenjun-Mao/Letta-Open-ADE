@@ -243,3 +243,145 @@ async def seed_pressure_state(engine, session: dict, *, token: str) -> None:
             .where(memory_subjects.c.id == subject_id)
             .values(memory_generation=2)
         )
+
+
+class SummaryTransport(PacketTransport):
+    async def chat_completion(self, payload, *, timeout_seconds):
+        if payload.get("tools") and not any(
+            message["role"] == "tool" for message in payload["messages"]
+        ):
+            self.calls.append("tool_call")
+            return {
+                "id": f"tool-request-{uuid4()}",
+                "choices": [
+                    {
+                        "finish_reason": "tool_calls",
+                        "message": {
+                            "role": "assistant",
+                            "content": "",
+                            "tool_calls": [
+                                {
+                                    "id": "synthetic-search-1",
+                                    "type": "function",
+                                    "function": {
+                                        "name": "search_memory",
+                                        "arguments": json.dumps(
+                                            {"query": "Roxy", "limit": 3}
+                                        ),
+                                    },
+                                }
+                            ],
+                        },
+                    }
+                ],
+            }
+        if (payload.get("response_format") or {}).get("json_schema", {}).get(
+            "name"
+        ) == "ade_conversation_compaction":
+            self.calls.append("compaction")
+            return {
+                "id": f"summary-{uuid4()}",
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {
+                            "role": "assistant",
+                            "content": json.dumps(
+                                {
+                                    "summary": (
+                                        "The user chose the afternoon 2pm product-role "
+                                        "opening instead of the morning operations role."
+                                    )
+                                }
+                            ),
+                        },
+                    }
+                ],
+                "usage": {"prompt_tokens": 100, "completion_tokens": 12},
+            }
+        if payload["model"] == "fake::conversation" and not payload.get("tools"):
+            visible = json.dumps(payload["messages"], ensure_ascii=False)
+            answer = (
+                "You chose the afternoon 2pm product-role opening."
+                if "afternoon 2pm product-role opening" in visible
+                else "I don't have that choice in the supplied context."
+            )
+            self.calls.append("conversation")
+            return {
+                "id": f"dialogue-{uuid4()}",
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {"role": "assistant", "content": answer},
+                    }
+                ],
+            }
+        return await super().chat_completion(payload, timeout_seconds=timeout_seconds)
+
+
+async def seed_complete_history(engine, session: dict, *, token: str) -> list[str]:
+    conversation = session["conversation"]
+    message_ids = []
+    async with engine.begin() as connection:
+        workspace_id = (
+            await connection.execute(
+                select(memory_subjects.c.workspace_id).where(
+                    memory_subjects.c.id == session["memory_subject"]["id"]
+                )
+            )
+        ).scalar_one()
+        for turn in range(34):
+            run_id = str(uuid4())
+            await connection.execute(
+                insert(runs).values(
+                    id=run_id,
+                    workspace_id=workspace_id,
+                    conversation_id=conversation["id"],
+                    idempotency_key=f"history-{token}-{turn}",
+                    request_hash=hashlib.sha256(
+                        f"history-{token}-{turn}".encode()
+                    ).hexdigest(),
+                    status="succeeded",
+                    qualification_state="unqualified",
+                    accepted_runtime_mode="development",
+                    timeout_seconds=30,
+                    retry_count=0,
+                    accepted_conversation_version=turn + 1,
+                    accepted_memory_generation=1,
+                    attempt_count=1,
+                )
+            )
+            for offset, (role, content) in enumerate(
+                (
+                    (
+                        "user",
+                        (
+                            "I chose the afternoon 2pm product-role opening "
+                            "instead of the morning operations role."
+                        )
+                        if turn == 0
+                        else f"Topic {turn}?",
+                    ),
+                    (
+                        "assistant",
+                        "The afternoon 2pm product role is your choice."
+                        if turn == 0
+                        else f"Topic {turn}.",
+                    ),
+                )
+            ):
+                message_id = str(uuid4())
+                message_ids.append(message_id)
+                await connection.execute(
+                    insert(messages).values(
+                        id=message_id,
+                        workspace_id=workspace_id,
+                        conversation_id=conversation["id"],
+                        sequence=2 * turn + offset + 1,
+                        role=role,
+                        content=content,
+                        content_sha256=hashlib.sha256(content.encode()).hexdigest(),
+                        run_id=run_id,
+                    )
+                )
+    return message_ids

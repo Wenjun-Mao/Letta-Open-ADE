@@ -134,24 +134,47 @@ router. It retains the actual A/A0/B generation and full reviewer requests,
 then asserts 48 matching lifecycle targets, A/A0's identical withheld packets,
 B's complete local exchanges, provider counts, token ceilings, and committed
 outcomes. A second real-worker test generates a fake-model compaction from 68
-source messages, checks the prefix boundary and A/A0 serialized nonsummary
-equality, and checks a `search_memory` continuation against the second complete
-request. These are deterministic packet cases, not full matrix coverage or
-evidence of real-model summary quality:
+source messages and verifies that an early afternoon interview detail reaches A
+only through the generated summary; A0/B lack that detail in their final packets.
+It checks the prefix boundary, A/A0 serialized nonsummary equality, and a
+`search_memory` continuation against the second complete request. A third
+real-worker test covers active Toronto residence during a Paris visit, ended
+and invalidated assertions, and a forgotten relationship alongside attributed
+old summary text. These are synthetic transport and state checks, not evidence
+of real-model summary quality:
 
 ```sh
 ADE_TEST_DATABASE_URL='postgresql+psycopg://ade_owner@127.0.0.1:32768/ade_m2_memory_test_<owned-id>' \
-  uv run --locked pytest -q services/ade-api/tests/agent_runtime/persistence/test_postgres_natural_packets.py services/ade-api/tests/agent_runtime/persistence/test_postgres_natural_compaction_packets.py
+  uv run --locked pytest -q services/ade-api/tests/agent_runtime/persistence/test_postgres_natural_packets.py services/ade-api/tests/agent_runtime/persistence/test_postgres_natural_compaction_packets.py services/ade-api/tests/agent_runtime/persistence/test_postgres_natural_state_packets.py
 ```
 
-The private `outputs/natural-packets-20260924/manifest.json` indexes seven
-retained, SHA-256-bound attempt packets from one fresh run: A/A0/B pressure,
-A/A0/B long history, and B tool continuation. Each packet includes exact
+The private `outputs/natural-worker-cases-20260924/manifest.json` indexes 19
+retained, SHA-256-bound real-worker attempts: A/A0/B pressure and long history,
+B tool continuation, and four A/A0/B lifecycle/narrative states. Each packet includes exact
 serialized sections, source IDs and roles, selected lifecycle views, omissions,
 token estimates, provider counts, and terminal readback. The separate
 `outputs/natural-failure-20260924/manifest.json` indexes committed and
 confirmed-rejection attempt packets. Both manifests are synthetic evidence;
 they do not qualify a live comparison.
+
+`test_natural_matrix_packets.py` executes all 30 expanded frozen cells through
+the same generation and reviewer serializers with a scripted router, asserting
+exact source-bundle parity and paired A/A0 and A0/B controls. Mutation cells
+there are packet-only receipts; they do not claim a database write or a correct
+model proposal. `test_natural_packet_grid.py` retains 30 additional serialized
+0/12/48/128/256 short/long A/A0/B packets and measures full reviewer overflow
+separately without clipping targets. The private
+`outputs/natural-matrix-packets-20260924/manifest.json` maps every cell and
+grid input to its exact request artifact and hash. The ten
+`test_full_snapshot_whole_request_boundary` cases independently locate the
+first whole-generation-request fit and assert both sides for each count and
+size. Existing focused lifecycle policy and PostgreSQL tests check the write
+contracts; fake replies do not
+establish usefulness. Run the packet layer with:
+
+```sh
+uv run --locked pytest -q workflows/evals/character_memory_dev/tests/test_natural_matrix_packets.py workflows/evals/character_memory_dev/tests/test_natural_packet_grid.py
+```
 
 For the local Agent Studio journey, `offline_natural_router.py` supplies only
 scripted catalog, chat, review, and embedding responses on loopback. Run it
@@ -167,7 +190,8 @@ PostgreSQL readback are retained privately in
 `outputs/natural-browser-20260924-round2/browser-evidence.json`: fresh turn,
 shared subject readback in an archived old-policy conversation, disabled old
 composer, inline removal cancel, exact confirmation, forgotten audit lineage,
-and memory generation 2 to 3.
+and memory generation 2 to 3. Its sibling `manifest.json` hashes the fixture
+receipts and observed action/readback note.
 
 Opt-in natural-memory attempt evidence is available only when
 `ADE_NATURAL_MEMORY_CAPTURE=1` is set on a development worker connected to a
@@ -203,10 +227,10 @@ freezes the proposed A/A0/B comparison cells, numerical generation and reviewer
 allocations, pressure grid, positive actual-compaction assertion, stop classes,
 and a proposed 96-generation/160-embedding ceiling. It is a checkpoint-1
 offline contract, **not** permission to call providers, not evidence that the
-entire serialized runtime matrix fits, and not a selected product policy. The
-48-record pressure and 68-message compaction/tool cells have real-worker
-fake-router packet assertions; remaining matrix cells still need their own
-serialized coverage before live approval.
+entire 30-cell campaign has passed database writes or live semantic quality,
+and not a selected product policy. All 30 cells now have executed serializer
+packets; the representative high-risk states have separate real-worker packets.
+Provider-backed scoring and release qualification remain unrun.
 
 The proposed schedule expands to 30 turn cells, each allowing at most one
 conversation continuation and one reviewer call, plus two actual-compaction

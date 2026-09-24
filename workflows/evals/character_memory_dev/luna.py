@@ -134,7 +134,9 @@ def generate(
         "status": "reserved",
         "requested_model": MODEL,
         "runtime_qualification": (
-            RUNTIME_QUALIFICATION if output_schema is not None else "configured_unqualified"
+            RUNTIME_QUALIFICATION
+            if output_schema is not None
+            else "configured_unqualified"
         ),
         "reasoning_effort": "medium",
         "service_tier": "default",

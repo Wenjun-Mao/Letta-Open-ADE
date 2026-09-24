@@ -231,6 +231,19 @@ def test_pressure_packets_are_real_worker_inputs(
                 == item["generation"]["messages"]
                 for item in artifacts.values()
             )
+            for item in artifacts.values():
+                reviewer_packet = json.loads(
+                    item["reviewer_request"]["messages"][1]["content"]
+                )
+                assert (
+                    reviewer_packet["source_messages"]
+                    == item["generation"]["source_messages"]
+                )
+                assert all(
+                    request["serialized_visible_token_estimate"]
+                    <= item["generation"]["input_limit"]
+                    for request in item["generation_requests"]
+                )
             assert all(
                 item["provider_request_counts"]["conversation"] == 1
                 and item["provider_request_counts"]["reviewer"] == 1

@@ -103,9 +103,7 @@ def disabled_mcp_server_names(stdout: bytes) -> list[str]:
     ):
         raise SpikeProtocolError("MCP inventory had an unexpected shape")
     names = [server["name"] for server in inventory]
-    if len(names) != len(set(names)) or any(
-        server["enabled"] for server in inventory
-    ):
+    if len(names) != len(set(names)) or any(server["enabled"] for server in inventory):
         raise SpikeProtocolError("MCP inventory still exposes a server")
     return names
 
@@ -348,7 +346,9 @@ async def stop_process_group(process: asyncio.subprocess.Process) -> None:
     await process.wait()
 
 
-async def inspect_mcp_inventory(binary: str, env: dict[str, str], cwd: str) -> list[str]:
+async def inspect_mcp_inventory(
+    binary: str, env: dict[str, str], cwd: str
+) -> list[str]:
     """Fail closed if this exact invocation still exposes an MCP server."""
     process = await asyncio.create_subprocess_exec(
         *mcp_inventory_command(binary),

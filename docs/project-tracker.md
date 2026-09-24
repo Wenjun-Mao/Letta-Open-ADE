@@ -54,15 +54,21 @@ failure. The follow-up also adds exact serialized
 reviewer preflight before generation, complete-exchange pressure fixtures,
 real-PostgreSQL cancellation/lease/precommit/postcommit/retention fault tests,
 and one A/A0/B pressure packet through the service and worker with 48
-source-linked synthetic facts. The fake-router Agent Studio browser run
-observed a committed turn, exact citation, shared subject from an archived
-old-policy conversation, and forgotten-state readback. A native JavaScript
-confirmation stalled the in-app browser during the removal click; the UI now
-uses an inline exact-target confirmation with an interaction test, while the
-disposable fact's removal was committed through the isolated API route and
-the browser verified generation 3 and the removed audit count. A fresh
-end-to-end browser click through that new control and the remaining paired
-matrix cells are still required before marking checkpoints 4–5 complete.
+source-linked synthetic facts. The fresh in-app browser replay then exercised
+the inline exact-target removal control itself: it showed the target and
+historical-data limit, cancelled once with active v1/generation 2 unchanged,
+then confirmed through the UI. The UI showed the operator receipt, forgotten
+v2 lineage and generation 3; PostgreSQL readback matched. The same session
+showed an archived old-policy conversation reading the shared subject while
+its fresh composer was disabled. Private browser evidence under
+`workflows/evals/character_memory_dev/outputs/natural-browser-20260924-round2/`
+records observed UI strings, action sequence and terminal IDs. The offline
+matrix now has 30 executed generation/reviewer serializer packets plus 30
+short/long pressure-grid packets; 19 real-worker fake-router attempts cover
+pressure, actual compaction mechanics, tool continuation, residence/visit,
+ended, invalidated and forgotten/old-summary views. The
+[workflow README](../workflows/evals/character_memory_dev/README.md) separates
+those packet/commit claims from unrun live model usefulness and qualification.
 Continue between static checkpoints without routine confirmation; pause for material scope/tradeoff decisions,
 unsafe actions or genuine blockers. No runtime context policy has been selected;
 checkpoint 6 and live calls still need separate authority.
@@ -76,12 +82,14 @@ Review-fix verification: the full suite reports 709 passed, 14 skipped and
 exactly one failure at
 `test_selected_candidates_use_current_policy_without_rebinding_history`;
 the separate historical-evidence rejection test passes. The isolated
-PostgreSQL persistence suite reports 41 passed. The follow-up verification
-reports 712 passed, 20 skipped and that same one policy freshness failure;
-the isolated persistence and fixture suite reports 53 passed, 2 skipped.
-OpenAPI drift, Ruff, web tests (77 passed), lint, and build pass. Remaining
-matrix coverage and a fresh in-app removal interaction need an isolated
-API/PostgreSQL stack; this review fix does not advance those gates.
+PostgreSQL persistence suite reports 41 passed. The latest full offline suite
+used both disposable PostgreSQL URLs, including the exact M2 workflow database
+name: 736 passed, zero skipped, and the same positive policy-freshness failure.
+The known candidate fingerprints remain historical; no waiver or rebind was
+made. OpenAPI drift, Ruff, web tests (77 passed), lint, and build pass. The
+matrix and browser evidence close the bounded offline packet/UI checks for
+checkpoints 4–5; fake providers do not establish response usefulness, a
+context-policy winner, or release readiness.
 No live budget or production context-policy selection is implied.
 The earlier review-checkpoint publication did not authorize a merge or release.
 The later approval covers offline checkpoints 1-5 only. Stronger

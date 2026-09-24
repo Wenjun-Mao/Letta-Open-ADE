@@ -129,9 +129,7 @@ def test_mcp_inventory_accepts_only_disabled_servers() -> None:
 
 
 def test_app_server_mcp_config_fails_closed() -> None:
-    verify_app_server_mcp_config(
-        {"mcp_servers": {"node_repl": {"enabled": False}}}
-    )
+    verify_app_server_mcp_config({"mcp_servers": {"node_repl": {"enabled": False}}})
     for config in (
         {},
         {"mcp_servers": {"node_repl": {"enabled": True}}},
