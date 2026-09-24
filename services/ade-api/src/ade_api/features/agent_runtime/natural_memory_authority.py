@@ -96,7 +96,9 @@ def validate_write_authority(
         return
     if value is not None:
         inherited = _inherited_restrictions(value, binding)
-        if "no_save" in inherited and not _explicit_save_change(value, anchor):
+        if "no_save" in inherited and not _explicit_save_change(
+            value, anchor, evidence, sources
+        ):
             raise RuntimeValidationError("Inherited no-save blocks this write")
         if inherited & {"uncertain", "withdrawn"} and not _fresh_current_assertion(
             value, anchor
@@ -160,11 +162,34 @@ def _fresh_current_assertion(value: str, anchor: BoundNaturalSource) -> bool:
     return True
 
 
-def _explicit_save_change(value: str, anchor: BoundNaturalSource) -> bool:
+def _explicit_save_change(
+    value: str,
+    anchor: BoundNaturalSource,
+    evidence: DirectEvidence | ResolveUserEvidence | EndorseAssistantEvidence,
+    sources: tuple[BoundNaturalSource, ...],
+) -> bool:
     # Permission must be in the cited current span and identify this claim.
     for match in _SAVE_PERMISSION.finditer(anchor.quote):
         scope = _claim_clause(anchor.quote, match.start(), match.end())
-        if _ANAPHOR.search(scope) or _value_supported(value, scope):
+        if _value_supported(value, scope):
+            return True
+        if not _ANAPHOR.search(scope):
+            continue
+        preceding = [
+            clause.strip()
+            for clause in _CLAUSE.findall(anchor.quote[: match.start()])
+            if clause.strip()
+        ]
+        if not preceding:
+            continue
+        nearest = preceding[-1]
+        if _value_supported(value, nearest):
+            return True
+        if (
+            isinstance(evidence, EndorseAssistantEvidence)
+            and _AFFIRMATIVE.match(nearest)
+            and _value_supported(value, sources[1].quote)
+        ):
             return True
     return False
 

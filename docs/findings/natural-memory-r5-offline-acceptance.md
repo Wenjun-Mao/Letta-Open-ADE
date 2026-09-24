@@ -44,6 +44,9 @@ authority module evaluates it for every non-removal write before the complete
 review is accepted. Fresh self-contained current assertions can replace earlier
 uncertainty or withdrawal; inherited no-save requires explicit, claim-bound
 permission inside the cited current span. Unrelated Toronto writes remain valid.
+An anaphoric save permission must attach to the nearest cited claim or to a
+current assent for the selected assistant proposition; an intervening tea claim
+cannot authorize saving coffee.
 An explicitly named restriction such as `Do not save that tea claim` does not
 attach to a preceding coffee claim merely because it contains `that`.
 The regression is covered by complete-delta tests and an isolated PostgreSQL

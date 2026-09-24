@@ -143,6 +143,12 @@ def test_fresh_assertion_and_explicit_save_intent_are_distinct() -> None:
             prior="I like coffee. Do not save that.",
             current="Yes. You can save tea now.",
         )
+    with pytest.raises(RuntimeValidationError, match="Inherited no-save"):
+        _prepare(
+            [_coffee("endorse_assistant", "Yes. I like tea. You can save that now.")],
+            prior="I like coffee. Do not save that.",
+            current="Yes. I like tea. You can save that now.",
+        )
 
 
 def test_intervening_user_restriction_binds_earlier_claim() -> None:
