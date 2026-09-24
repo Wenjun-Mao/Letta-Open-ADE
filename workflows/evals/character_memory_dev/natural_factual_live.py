@@ -74,6 +74,19 @@ FIXTURE = (
 POLICY = "natural-user-assertions-v4-b"
 
 
+def install_spark_alias(host: str) -> None:
+    """Keep the pinned Docker hostname when this runner executes on macOS."""
+
+    original_getaddrinfo = socket.getaddrinfo
+
+    def resolve_pinned_alias(name, *args, **kwargs):
+        return original_getaddrinfo(
+            host if name in {"dgx-spark", b"dgx-spark"} else name, *args, **kwargs
+        )
+
+    socket.getaddrinfo = resolve_pinned_alias
+
+
 def pinned_router_settings(env_file: Path):
     """Resolve Docker's pinned Spark alias on this Mac without changing route identity."""
 
@@ -85,14 +98,7 @@ def pinned_router_settings(env_file: Path):
         or len(host.split(".")) != 4
     ):
         raise RuntimeError("Spark host must be a configured IPv4 address")
-    original_getaddrinfo = socket.getaddrinfo
-
-    def resolve_pinned_alias(name, *args, **kwargs):
-        return original_getaddrinfo(
-            host if name == "dgx-spark" else name, *args, **kwargs
-        )
-
-    socket.getaddrinfo = resolve_pinned_alias
+    install_spark_alias(host)
     sources = [
         source.model_copy(
             update={"base_url": "http://dgx-spark:8001/v1", "base_url_env": ""}

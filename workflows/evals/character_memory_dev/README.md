@@ -271,6 +271,11 @@ now resolves that exact alias to the configured IPv4 address inside its own
 process while retaining the pinned URL in the catalog and outbound request.
 This local DNS bridge matches Compose's `extra_hosts` mapping; it does not
 change the provider route, deployment fingerprint, or model fallback policy.
+The first native turn then stopped after one failed embedding dispatch because
+async HTTPX passed the pinned alias as bytes. The bridge now handles both
+string and byte forms, with a focused regression test and a read-only async
+catalog check. The turn was not retried. See the
+[stopped factual diagnostic](../../../docs/findings/natural-memory-factual-live-diagnostic-2026-09-24.md).
 
 The frozen checkpoint-1 matrix and former checkpoint-6 campaign describe a
 historical reviewer contract. Its no-save cell and comparison schedule do not
