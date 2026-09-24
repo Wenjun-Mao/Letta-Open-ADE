@@ -1,10 +1,24 @@
 # Checkpoint 6 live diagnostic: external consultation packet
 
-Status: prepared for maintainer review; not dispatched. The evidence is in a
-local, unpushed worktree. A consultant with GitHub-only access cannot inspect
-these revisions or mode-restricted provider captures until the maintainer
-chooses an authorized sharing route. Do not paste raw captures containing
-conversation data or provider metadata into an external service by default.
+Status: maintainer authorized publication of the review branch on 2026-09-24;
+not dispatched to a consultant. This is review publication, not release acceptance.
+
+## Evidence access
+
+Repository: https://github.com/Wenjun-Mao/Letta-Open-ADE
+Discovery branch: `codex/character-continuity` (not `main`).
+Inspect source commit `92809c4c1cdae7d7aa3dd5f09e42b2b3bf310e75`:
+[immutable source tree](https://github.com/Wenjun-Mao/Letta-Open-ADE/tree/92809c4c1cdae7d7aa3dd5f09e42b2b3bf310e75).
+This publication amendment changes only the brief's access instructions.
+
+Use GitHub-only access; state the commit actually inspected. If unavailable,
+report that limitation rather than silently substituting main. The source,
+fixtures, ADRs, and sanitized findings are shared. Raw provider captures,
+local databases, credentials, and runtime ledgers are not shared; observations
+below are maintainer-reported summaries, not independently inspectable raw
+evidence. Do not infer unavailable contents from hashes or local paths.
+The per-campaign source revisions below distinguish the historical experiments
+from the final source tree. Do not paste raw captures into external services.
 
 ## Decision requested
 
