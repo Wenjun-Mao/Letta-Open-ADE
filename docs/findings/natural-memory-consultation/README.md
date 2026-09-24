@@ -1,13 +1,20 @@
 # Natural Memory Consultation Review
 
+Second-round feedback is preserved as [Round 2 A](reports/pro-round2-a.md) and
+[Round 2 B](reports/pro-round2-b.md). The [second-round assessment](pro-round2-assessment.md)
+records the reasoning behind the [revision-3 proposal](../../architecture/natural-memory-design.md):
+independent narrative guards, one mutation-generation check, shared lifecycle and
+clarification views, explicit endorsement, and atomic operator removal. The
+[third-review brief](pro-review-brief.md) requests another independent scrutiny
+before planning. All contracts remain proposed, not accepted or implemented.
+
 Follow-up: two independent repository critiques are preserved as
 [Pro A](reports/pro-a.md) and [Pro B](reports/pro-b.md). The separate
 [assessment](pro-review-assessment.md) records verified counterexamples and
 recommended design revisions, without changing the original reports or accepting
-a new runtime contract. The [revision-2 design](../../architecture/natural-memory-design.md)
-and [second-review brief](pro-review-brief.md) incorporate that assessment for
-another review. The original design remains pinned at `243d8d0`; no implementation
-plan has been written and no runtime changes have been made for either revision.
+a new runtime contract. Revision 1 remains pinned at `243d8d0` and revision 2 at
+`d80afb4`; the current document paths now hold revision 3. No implementation plan
+has been written and no runtime changes have been made for these design revisions.
 
 Date: 2026-09-23. Status: research synthesis for discussion, not an accepted
 architecture, implementation plan, or release qualification.

@@ -1,6 +1,6 @@
 # Proposed Memory Design: Worked Conversations
 
-Revision 2: review specification, not executed evidence or accepted golden answers.
+Revision 3: review specification, not executed evidence or accepted golden answers.
 These fictional inputs contain no real user's personal data. They illustrate
 the [proposal](../../architecture/natural-memory-design.md); all new semantics
 remain proposed. Replies below illustrate claims and tone, not exact-match strings.
@@ -27,6 +27,8 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 - Alternative later: "我们给 Rocky 改名叫 Roxy 了。" Supersede instead.
 - Probe: "它以前叫什么？" Responses must distinguish those two histories.
   If chronology is ambiguous, preserve the uncertainty rather than invent history.
+  This is answerable when the distinguishing exchange is supplied. If it has left
+  context, do not silently require the deferred generic historical-fact tool.
 
 ## 3. Compatible Preferences
 
@@ -131,9 +133,12 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 
 - Save morning coffee and evening flower tea as separate preference records.
 - "只移除保存的咖啡偏好，花茶那条保留。" Forget only coffee's record/chain.
-- Separate branch: "早上现在喝豆浆；晚上以前说错了，一直喝红茶。"
+- Separate branch: "早上现在更喜欢豆浆了；晚上那条以前说错了，我一直更喜欢红茶。"
   Supersede the first preference and correct the second in the same review, with
   different reasons and source spans. Neither operation touches another category.
+- Consumption-only control: "早上现在喝豆浆；晚上以前说错了，一直喝红茶。"
+  Does not require preference writes. Acknowledge the routine without inferring
+  new favorites; do not weaken this control because an earlier reviewer suggested it.
 - Legacy composite branch: no inferred decomposition. Ask for retained assertions
   before a supported forget-old/add-restated replacement, or offer whole removal.
 
@@ -155,6 +160,12 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
   restatement after forgetting creates fresh evidence, not a restored old chain.
 - Reassertion after ending makes a new active revision without pretending the
   relationship was continuous through the gap.
+- Two invalidated preferences: morning coffee and evening tea, both null-valued
+  and in the same category. "删掉早上咖啡那条，晚上那条保留。" Select only the
+  coffee record using the derived withdrawn-assertion descriptors. Do not present
+  either as active. After removal, coffee's descriptor is excluded from model input.
+  Separate branch: explicit renewed morning-coffee preference reasserts that
+  clearly identified inactive record; ambiguous identity must not guess.
 
 ## 16. Correcting Older History Without Replacing The Present
 
@@ -176,6 +187,18 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 - Negative branch: only the assistant invented Husky. A bare name answer is not
   evidence that the breed claim is true. Negative/quoted/roleplay variants must not
   import an assertion. An out-of-window claim needs clarification, not wider replay.
+- Positive endorsement: assistant asks "Roxy 是哈士奇吗？" User: "对，她是。"
+  The user confirms one clear proposition. Store user assent plus the role-labeled
+  assistant-question reference; never pretend the user authored "哈士奇" verbatim.
+- Controls: a generic "嗯" after several questions, "可能是", or assent to a
+  fictional/quoted proposition cannot authorize that same factual write.
+- Force the antecedent/guards beyond the shared budget: both generation and review
+  lose that antecedent, dependent write is ineligible, and the reply asks naturally.
+  A self-contained new statement may still be saved. No reviewer-only hidden history.
+  Include a removal clarification and an intervening negation/correction; do not
+  cut the latter out to make an otherwise convenient excerpt fit.
+- Even with identical inputs, if the proposed reply asks which dog the user meant,
+  the reviewer must not silently commit that unresolved breed assignment.
 
 ## 18. Packing, Revisions, And Entity Names
 
@@ -189,17 +212,27 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 - Correct Rocky to Roxy, then inspect reviewer/entity context. Old unqualified Rocky
   labels must not remain canonical. After name removal use neutral identity, not
   the unversioned label. Reject unsupported new_entity_label content as evidence.
+- Orphan entities remain in storage but are absent from model input unless required
+  by an eligible record or the shared local exchange; no forgotten-name backdoor.
 
 ## 19. Stale Summary And Raw Narrative
 
 - Conversation A's summary says X is the current partner. In B, explicitly end
   that relationship. Return to A with a weekend question.
-- Context must supply the relevant ending guard or withhold stale optional narrative;
+- Context must supply the complete eligible lifecycle snapshot or withhold optional narrative;
   don't rely on absence from the active profile. Do not infer the user has no partner.
-- Repeat using recent raw evidence instead of a summary, a legacy summary with no
-  watermark, an intervening correction, and a guard set that cannot fit.
-- A concurrent subject change cannot be stamped into an older summary as though
-  it had seen that change. Withholding history is an explicit evidence gap.
+- Decisive sequential variant: A has never been summarized. B's breakup commits
+  first; A's old partner dialogue is then compacted. The fresh summary still needs
+  the independent ending guard. Recompaction cannot retire it either.
+- Repeat with recent raw evidence, legacy summaries, an intervening correction,
+  and a complete guard set that cannot fit. No summary creation time/generation
+  certifies reconciliation. Withholding is an explicit evidence gap, not recall.
+- Historical correction without a fact mutation: A reports past Beijing; B says
+  that was a sister's city. If B is absent from allowed context, A's narrative only
+  proves an old report, not the user's true history. No counter detects all such edits.
+- Over-withholding control: short complete interview dialogue plus unrelated fact
+  pressure. Annotate answerability independently; count lost useful context, even
+  if the reply safely abstains. Compare with the same-budget no-summary baseline.
 
 ## 20. Shared Knowledge Beside Private Dialogue
 
@@ -210,14 +243,31 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
   pool; operator citations and already committed facts have separate eligibility.
 - Same subject/other root is not the same as other subject. Assert both boundaries.
 
-## 21. Capacity And Concurrent Absence Assumptions
+## 21. Capacity And One Mutation Snapshot
 
 - Full reviewer packet cannot fit: normal extraction fails explicitly, without
   sending costly generation first where this can be preflighted.
 - Exact-target operator removal still works without model/embedding calls. It
   checks scope/version, persists action provenance, and does not invent a user quote.
+- Select two targets; change one before execution. Neither may be removed. Successful
+  action result and both tombstones commit together; same-request idempotent replay
+  returns the original result without changing newer state. Another subject's target
+  is rejected. An origin label alone is never authorization.
+- A large current message or persona may still block chat after successful removal.
+  Record the actual capacity cause, not a universal "memory full" diagnosis.
 - Concurrent conversations both add the same apparent pet or scoped preference:
-  stale absence-dependent plans conflict rather than silently duplicate or merge.
+  accept both at generation G; commit one and advance G. The other's nonempty
+  proposal conflicts, without a hidden rerun or partial assistant/memory commit.
+- Supporting identity race: A selects a pet by name for a breed revision. B corrects
+  name-to-entity assignments while the breed version remains unchanged. Reject A's
+  stale proposal via the changed generation, not just target-version checks.
+- Empty-again race: A is accepted with no preference; B adds it; an operator forgets
+  it. A must conflict even though eligible records are empty again. Capturing a new
+  generation only after model work would incorrectly allow this pre-removal turn.
+  A genuinely new explicit restatement accepted afterwards can create a new record.
+- Also change memory between acceptance and packet construction: do not silently
+  rebase. Verify generation/effects roll back together on failed finalization;
+  no-op and replay do not advance the counter. It is not subject-name metadata version.
 - Two genuinely different pets with the same name must not be merged by a name rule.
 - A concurrent no-op reply based on the old snapshot remains possible under the
   deliberately weaker contract; record it, don't call it a prevented lost update.
@@ -225,6 +275,9 @@ before an earlier probe. Distinguish stored truth from user-reported understandi
 ## 22. Residence And Temporary Whereabouts
 
 - Current residence Toronto; "这个周末在巴黎玩。" Do not change residence to Paris.
+- Next: "附近有什么适合散步的地方？" Use the supplied Paris visit for current
+  surroundings while keeping Toronto as home. Do not invent live opening/weather
+  data. If the visit's time is no longer clear, clarify rather than assume it persists.
 - "已经搬到巴黎，之后住这里了。" Supersede residence with Paris.
 - Legacy current_location value with ambiguous source remains meaning-unspecified,
   not automatically reclassified. No location pin may silently equate it with home.
@@ -235,7 +288,10 @@ For each checkpoint record expected current and historical state, exact allowed
 sources, prohibited claims, scope, and admissible abstention. Store/retrieval tests
 use deterministic assertions; response claims need semantic review. Naturalness
 uses blinded human preference with ties and reasons, not an LLM judge as truth.
-Preserve the actual context, returned tool results, commit outcome, and safe
+Annotate required evidence/answerability independently of what the assembler keeps.
+Distinguish necessary withholding, avoidable evidence loss, and unjustified abstention;
+an always-abstaining system does not pass continuity. Preserve the actual context,
+shared-bundle membership, returned tool results, commit outcome, and safe
 request metadata for diagnosis. Private provider reasoning is not needed.
 
 No numerical success threshold or provider budget is authorized here. First review

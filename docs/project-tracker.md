@@ -16,10 +16,15 @@ The [assessment](findings/natural-memory-consultation/pro-review-assessment.md)
 reproduces six synthetic context/policy counterexamples and recommends revising
 preference identity, lifecycle/evidence rules, and context integrity before coding;
 continuity tables should follow a bounded history comparison, not precede it.
-Revision 2 of the design now incorporates those findings and expands the worked
-conversations to 22 arcs. Next: a second external review before any implementation
-plan. Summary watermarks, capacity recovery, and bounded clarification are proposed
-contracts to scrutinize, not accepted or implemented capabilities.
+Revision 3 incorporates the second external review's
+[assessment](findings/natural-memory-consultation/pro-round2-assessment.md): independent
+narrative guards rather than summary freshness, one subject-memory generation for
+nonempty writes, shared inactive-record/clarification views, explicit endorsement,
+and atomic operator removal. The 22 worked arcs now include the sequential stale
+summary, identity-change/empty-again races, shared-budget gaps, and consumption
+control. Next: a third independent Pro review using the
+[updated brief](findings/natural-memory-consultation/pro-review-brief.md), followed
+by user review before any implementation plan. No runtime capability is implied.
 The user authorized publication of the review checkpoint, not adoption of the
 design or a merge/release. Resolve the critique before an implementation plan or
 new provider experiments. Stronger forgetting/erasure semantics remain a product

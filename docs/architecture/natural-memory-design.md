@@ -1,14 +1,14 @@
 # Natural Conversational Memory: Proposed Design
 
-Revision 2, 2026-09-23. **Proposed for a second independent review, not accepted.**
+Revision 3, 2026-09-23. **Proposed for a third independent review, not accepted.**
 This is a design, not an implementation plan or authorization to change runtime,
 schema, providers, budgets, deployment, or release evidence. Accepted ADRs still
 govern the running product. No replacement memory framework is proposed.
 
 Implementation anchor: `4905ce15dbda6466b12f2d1ed7908eb3d03995a0` (unchanged).
-Revision 1 remains at documentation commit
-`243d8d0b4e850aca304eea2699e58ec24d45479b`. See the
-[review assessment](../findings/natural-memory-consultation/pro-review-assessment.md),
+Revision 2 remains at documentation commit
+`d80afb422b3deefa09f13ac5e7017c5e3e8524ef`. See the
+[second-round assessment](../findings/natural-memory-consultation/pro-round2-assessment.md),
 [source map](../findings/natural-memory-consultation/source-map.md), and
 [worked conversations](../findings/natural-memory-consultation/design-scenarios.md).
 
@@ -26,16 +26,12 @@ and revisions explain it. Recent dialogue and summaries supply working context,
 not another source of factual authority. Model proposals remain fallible; ADE
 owns identities, scope, lifecycle, evidence binding, and transaction outcomes.
 
-Changes from revision 1:
-
-- Independently mutable preferences get separate records, not composed values.
-- Lifecycle distinguishes unknown historical meaning, error without replacement,
-  ending, removal of inactive information, and reassertion.
-- A current user clarification may bind narrowly to earlier user evidence.
-- Correct context packing, provenance, and lifecycle-safe derivatives come before
-  ranking experiments. Name/location pinning is not a chosen default.
-- Continuity tables and generic historical-fact search are deferred. Compare
-  bounded source windows before adopting another durable semantic lifecycle.
+This amendment removes two proposed optimizations: summary-watermark guard elision
+and specialized mutation read sets. Use independent current-state guards and one
+subject-memory generation instead. Add a shared lifecycle view and clarification
+bundle, including explicit user endorsement. Keep separate preferences, bounded
+history, and atomic post-response review. No continuity table, history engine,
+background reviewer, or new model call is introduced.
 
 ## 2. Current Foundation And Required Contract Changes
 
@@ -44,10 +40,10 @@ Changes from revision 1:
 | Facts | Subject-owned typed records, revisions, source spans, embeddings | Reuse; change only required identity/lifecycle contracts |
 | Preferences | One record per category | Multiple independently editable preferences within a category |
 | Reviewer | Regex selects add-only/correct-only/forget-only schema | Mixed evidence-bound operations from natural speech |
-| Evidence | Exact current user span; recent users reference-only | Current anchor plus bounded supporting user spans |
+| Evidence | Exact current user span; recent users reference-only | Shared bounded exchange; user assertions/endorsements with role-labeled references |
 | Context | String truncation, candidate-ID dedup, limited provenance | Complete records, actual supplied-evidence manifest, protected policy |
 | Derivatives | Independent entity labels and narrative summaries | Eligible current identity and explicit lifecycle guards |
-| Commit | Post-generation reviewer, atomic assistant/memory success | Retain, with explicit capacity/recovery and concurrency limits |
+| Commit | Post-generation reviewer, atomic assistant/memory success | Retain; memory-generation conflict check and explicit operator-action provenance |
 | Continuity | No concern/event schema or transcript-search tool | Existing history first; bounded source experiment before new tables |
 
 Root cause is a mismatch between the unit of meaning, mutation, evidence, and
@@ -135,6 +131,15 @@ Target discovery must include eligible inactive records, not just active profile
 facts. The same scope/version validation applies to both. Intent classification
 must not silently turn "forget it" or "don't discuss this now" into removal.
 
+Use one **derived lifecycle view** for reviewer targeting, context guards, and
+operator display: ID/version, type/entity/category, identifying assertion and scope,
+status/reason, and source/revision references. For a null inactive projection,
+derive its last identifying assertion from the revision chain: "withdrawn report:
+prefers morning coffee; invalidated, not a current preference." This distinguishes
+it from withdrawn evening tea without asserting either as true. Do not maintain
+another mutable description or expose arbitrary prior revisions. Forgotten chains
+are excluded from model-facing views; operator audit access remains separate.
+
 **Historical boundary:** correcting an arbitrary earlier revision while preserving
 today's value is not included in this first target. It needs a separately specified
 append-only historical-dispute contract. Do not implement that as revision of the
@@ -147,33 +152,45 @@ Legacy `correct` revisions are not retroactively classified as supersession/erro
 
 ## 5. Evidence For Natural Reconciliation
 
-Every model proposal requires a **current user anchor**. Direct assertions use current
-spans. A clarification may also cite exact spans from up to the preceding eight
-user messages in the same conversation, plus the intervening assistant exchanges
-for reference resolution. ADE supplies this bounded window; the model cannot fetch
-arbitrary past messages or choose another subject/conversation as write evidence.
+Every model proposal requires a **current user anchor**. Direct assertions use
+current spans. Select one local clarification bundle before generation: current
+user message and a contiguous suffix containing at most eight preceding user
+messages and intervening committed assistant messages in this conversation.
+Use complete messages/exchanges, not excerpts that can hide negation or correction.
+Choose the longest suffix that fits both generation and review allocations,
+including section 8's guards. Eight messages is a ceiling, not a fit guarantee.
 
-Example: "One of my dogs is a Husky" / "Rocky or Roxy?" / "Roxy."
-The breed revision cites both user spans. The assistant question identifies the
-reference, but is not evidence for Husky. If only the assistant introduced Husky,
-the same short answer does not authorize importing that unsupported proposition.
-This is current clarification, not catch-up extraction of unrelated earlier facts.
+Supply the identical selected bundle to both stages and record its IDs in both
+manifests. The reviewer may not independently reach back further. Omitted messages
+are an explicit gap. A mutation needing a missing antecedent is ineligible; ask
+naturally for restatement instead. Current self-contained assertions remain eligible.
+If no guarded antecedent fits, use current-only input; never drop the current
+message or policy. If those cannot fit, fail explicitly. Supply the candidate reply
+to review as reference-only, never new user evidence. Defer a dependent mutation
+when that reply asks to clarify the same unresolved claim. Shared input does not
+itself guarantee that both models interpret it alike.
 
-The proposal identifies the source-span set and current anchor; ADE resolves
-message IDs, exact offsets/hashes, roles, chronology, ownership, and target versions.
-Persist all directly relied-on user spans in the existing multi-source revision
-relationship. Retained content from an existing assertion carries predecessor
-source lineage; it is not silently reattributed to the latest short reply.
+"One of my dogs is a Husky" / "Rocky or Roxy?" / "Roxy" binds two user spans;
+the assistant question identifies the referent, not the breed's truth. If only
+the assistant introduced Husky, a bare name does not endorse it. By contrast,
+"Is Roxy a Husky?" / "Yes, she is" may be a new user endorsement of that one
+unambiguous proposition. Current assent supplies authority; the question supplies
+its meaning. A generic acknowledgment cannot endorse several unrelated claims,
+upgrade "might be," or turn a hypothetical, quotation, or story into biography.
 
-Former failed/cancelled-turn text is not automatically replayed. It is eligible
-as supporting user evidence only if this current turn explicitly resolves that
-specific earlier claim within the window; it never proves a completed exchange.
-Quotes, hypotheticals, negation, and uncertain identity must remain uncertainty.
-Outside the bounded window, ask naturally rather than invent evidence or widen it.
+Proposals distinguish direct assertion, reference resolution, and endorsement.
+Validate message IDs, exact offsets/hashes, roles, chronology, ownership, and target
+versions. Persist the current user anchor, relied-on earlier user spans, and any
+assistant referent as **role-labeled source links**, not fake user quotations.
+Assistant links alone never authorize a write. This is an explicit extension of
+the current user-only validation contract, reusing message/source identities.
+Retained assertion content keeps predecessor lineage, not attribution to a short yes.
 
-Exact spans and lexical overlap establish mechanical support, not entailment.
-Model meaning can still be wrong. Keep adversarial evidence tests and separate
-false writes from missed writes; adding another judge does not prove truth.
+Failed/cancelled-turn user text may support only a current explicit resolution
+within this same supplied bundle; label its outcome and never imply a completed
+exchange. No unrelated catch-up extraction or arbitrary historical fetch is allowed.
+Exact spans prove binding, not entailment; semantic tests must count false writes,
+missed writes, and unjustified clarification separately. No extra judge proves truth.
 
 ## 6. Turn Processing, Failure, And Capacity
 
@@ -190,35 +207,48 @@ leases, idempotency, ADE-owned retry count/deadlines, and request accounting.
 Reviewer repair is separately budgeted and remains zero for the selected DeepSeek
 lane. No background queue, hidden catch-up, or new normal-turn generation call.
 
-Preflight the review packet budget before expensive conversation generation where
-possible. Initially include all active and inactive nonforgotten subject records
-within a checked budget; no unmeasured candidate selector silently hides possible
-targets. Ambiguous matching abstains. Packet overflow is an explicit capacity
-failure, not truncation of potential conflicts. No claim of unlimited memory scale.
+Preflight review capacity before conversation generation where possible. Include
+all active and inactive nonforgotten lifecycle views; do not hide possible targets
+with an unmeasured selector. Include only entities required by these records or
+the selected exchange, not orphan historical metadata or forgotten identity labels.
+Record whether failure is fact/descriptor, dialogue, persona/policy, tool-result,
+or total-request capacity. No silent target truncation or unlimited-scale claim.
 
-**Capacity recovery:** the operator can select exact fact IDs and versions for
-removal, including inactive records. A separately declared, explicitly confirmed
-saved-memory removal command validates bound scope and versions and writes the same
-tombstone/source audit transaction without model generation, embeddings, or the
-full reviewer packet. Its source is a typed operator action, never a fabricated
-user-message quote. This is a proposed product control, not a privileged test bypass;
-it requires a durable action record linked to the revision, authorized under the
-existing local-only access boundary, not a claim of multi-user authentication. Bind
-workspace/subject on the server and record action ID, targets/versions, request hash,
-local-operator origin, and result. Idempotent replay cannot remove a newer version.
-Natural-language removal continues through the reviewer. No broad purge/erasure is added.
-Targeted correction at capacity is deferred; removal provides the recovery path.
+**Operator removal remains available when ordinary review is unavailable.** An
+explicitly confirmed command selects exact fact IDs/versions and the displayed
+memory generation, including inactive targets. Server-bind workspace/subject;
+enforce the existing local-only access boundary, not invented multi-user auth.
+Use the same mutation validation, tombstone, and concurrency boundary as review,
+without generation, embeddings, or the full packet. Model proposals cannot select
+operator authority. All targets validate before any changes: multi-target removal
+is all-or-nothing, with action outcome and tombstones in the same transaction.
+Persist action ID, request hash, targets/versions, generation, origin, and outcome.
+Same-key/same-request replay returns the recorded outcome without reapplying it;
+different content conflicts. Failure records cannot coexist with partial effects.
+Typed operator action is a distinct causal origin, not a dummy run or message quote:
+current required run/message provenance needs an explicit alternative. This amends
+ADR 0022's composer/reviewer route, not a hidden optimization. Removal can reduce
+fact pressure, not cure every capacity cause. Direct correction/purge stays deferred.
 
-Conversation leases serialize a conversation. Cross-conversation provider work can
-overlap; finalization locks and revalidates targeted changes. This protects stale
-mutations, not every read dependency: a no-op reply may use an older snapshot.
-Reads begun after a successful commit see the new state; already-running replies
-are not promised linearizability. Do not add hidden reruns on a conflict.
-New-entity and preference-add proposals depend on absence assumptions. Bind their
-relevant entity/identity-revision or preference-category ID/version read sets; reject
-stale add plans when those sets change before commit. This can reject harmless
-concurrency but avoids silently creating duplicates from stale matching input.
-Do not merge same-named pets automatically. No database locks during model calls.
+**One monotonic subject-memory generation protects every nonempty write decision.**
+Capture it at user-message acceptance, before provider work. Build the fact/entity/
+lifecycle input in one coherent database snapshot with that same generation;
+if it has advanced, conflict rather than silently rebasing the accepted turn.
+Review uses this snapshot too. A changed generation at finalization rejects the
+entire nonempty proposal, even when target versions or final eligible sets match.
+Retain ownership and exact target-version checks. Every effective fact lifecycle
+or identity mutation, including operator removal, advances generation once in the
+same locked transaction as its effects; all mutation entrypoints share this rule.
+It is not the existing subject-name metadata version. No-op and idempotent replay
+do not advance it. Operator actions bind their selected snapshot in the same way.
+
+This catches changed identity dependencies and add-then-forget (empty-again) races,
+at the cost of rejecting some harmless concurrency. No automatic model rerun or
+reinterpretation against newer tool results. Conversation leases remain; no locks
+span provider calls. Empty/no-op replies may reflect older snapshots, so dialogue
+is not linearizable. Fresh reads see commits; a post-removal explicit restatement
+can add a new fact, but an in-flight pre-removal proposal cannot resurrect it.
+Names are not unique entity keys. The counter is not a summary truth certificate.
 
 ## 7. Context Integrity Before Selection Quality
 
@@ -228,10 +258,12 @@ is clearly marked untrusted data, not concatenated as new normative instructions
 delimiters do not constitute a proof against prompt injection.
 
 Pack **whole records**, never partial fact strings. Resolve candidate conflicts
-by current revision before packing; refresh a disputed version or fail context
-assembly rather than suppressing a newer retrieved revision with an older profile
-copy. Deduplicate against records actually included, not all profile candidates.
-Do not require a globally atomic read snapshot across provider work.
+against the bound coherent snapshot before packing; refresh stale candidates to
+that version or fail. A newer generation requires failure, not a silent initial
+snapshot rebase. Never suppress a newer retrieved revision merely because its ID
+appeared in profile candidates. Deduplicate against records actually included.
+Do not require a globally atomic read snapshot across provider work. Tool results
+carry their own versions; newer results do not silently rebase the write snapshot.
 
 Each included record carries fact/revision ID, version, user attribution,
 observation time, lifecycle meaning, and shared-profile versus this-character
@@ -262,37 +294,45 @@ is selected by this design; the existing conformance blocker still needs resolut
 
 ## 8. Stale Narrative And Bounded Conversation Evidence
 
-A dated summary is still capable of supplying stale current facts. Relevant endings
-and invalidations must reach the context as derived lifecycle guards, not disappear
-with the active record. Current user updates and committed state/guards outrank an
-older narrative for present-state claims. Guards state the specific change, not a
-broader inferred negative (ended relationship with X does not mean no partner).
+A summary is historical narrative, never certified current by its creation time,
+memory generation, or recompaction. Example: A describes partner X; B commits a
+breakup; A is first compacted afterwards from old dialogue. Its brand-new summary
+can still be stale. Supply current replacements/endings/invalidations independently
+of summaries. **No delta-watermark optimization or summary-dependency graph.**
 
-Proposed conservative baseline: attach a subject-memory watermark when committing
-a summary. When the summary predates memory changes, include the intervening
-nonforgotten current-state changes/endings/invalidations as bounded guards. A legacy
-summary with no watermark is treated as stale. If its dependencies cannot be
-covered within budget, omit that summary from generation and mark the evidence gap;
-do not silently summarize over it or present it as current. Raw recent messages
-remain attributed historical dialogue, not a replacement source of current truth.
-An omitted summary does not imply known prior context or successful deep recall.
-Apply the guard-or-withhold rule to selected older raw evidence too, not just
-summaries. If relevance of a terminal state is unclear, conservatively supply it or
-withhold the optional older narrative. Never drop the current user message or
-mandatory policy. Expose withheld-history gaps instead of claiming complete context.
-This deliberately changes the current fail-on-unsummarized-omission behavior for
-optional history only: the reply must acknowledge insufficient evidence when its
-answer depends on the withheld material. It cannot masquerade as complete recall.
+Concrete conservative baseline for response generation: before admitting prior narrative
+(clarification bundle, older raw dialogue, summary, or experimental source window),
+include a complete snapshot of the subject's eligible active and inactive lifecycle
+views from section 4. Reuse those records across sections without duplicating them;
+do not select a supposedly sufficient guard subset by semantic relevance. Active
+records state current reports; inactive descriptors identify withdrawn assertions,
+not current preferences or verified past truth. Forgotten chains are absent.
+No old values from superseded revisions need be replayed to assert the current one.
 
-This conservative policy may over-invalidate summaries. It is preferable to guessing
-which free-text clauses changed, but needs scrutiny against a simpler no-summary
-baseline. The watermark describes the summary's memory snapshot, not all possible
-changes to world truth. It must be captured/rechecked with the source snapshot;
-do not stamp a concurrent newer commit onto an older generated summary.
+If the complete snapshot cannot fit, omit optional prior narrative and record the
+capacity cause/evidence gap. Dependent clarifications then become ineligible under
+section 5; the reviewer cannot privately keep their antecedents. Never omit the
+current message or mandatory policy. Without prior narrative, budgeted active-fact
+selection may still support a current answer. Normal review still requires its
+full lifecycle packet; if that fails, the turn fails rather than skipping review.
+This intentionally relaxes fail-on-unsummarized-omission only for optional history,
+not policy, current input, write evidence, or truthful claims about recall.
 
-Forgotten values are not emitted as lifecycle guards. Option A still permits old
-messages/summary text to contain removed information; this is not global suppression.
-Do not use a stale operational identity label as an excuse to bypass removal.
+Precedence compares the **same subject, attribute, scope, and relevant time**:
+current explicit user updates guide this turn, and committed current state/terminal
+guards constrain older narrative. Toronto residence and a Paris weekend visit do
+not conflict; Paris can ground "nearby" without replacing residence. Ending the
+relationship with X does not imply no partner. Persistence is not universal authority.
+
+This baseline is intentionally over-conservative, not proof of semantic freshness.
+Historical corrections without a fact mutation, and unavailable later updates,
+can escape the ledger. Dialogue establishes what was reported, not completeness
+or verified history. Qualify claims or abstain when the supplied sequence cannot
+support them; never widen root/archive boundaries to resolve uncertainty. Option A
+still permits forgotten information in raw messages/summaries, not fact guards or
+entity labels. It is not global suppression. Score unnecessary withholding and
+missed answerability, including unrelated-memory pressure, against a no-summary
+baseline; safe abstention alone is not successful continuity.
 
 **Source-window comparison, not production rollout:** first supply fixed eligible
 windows to test representation adequacy, then test their retrieval under equal
@@ -349,9 +389,9 @@ are separate. Human review scores warmth/relevance/restraint with ties and multi
 valid phrasings. A zero-failure finite suite is not universal reliability proof.
 
 Reuse fact/revision/source/embedding storage, extending identity and lifecycle only
-where required. Operator-action provenance and summary watermarks are proposed
-additions with explicit ownership, not pre-existing capabilities. Preserve old
-rows, source links, ambiguous legacy semantics, and embedding-space identity.
+where required. Operator-action provenance, role-labeled endorsement references,
+and subject-memory generation are proposed additions, not pre-existing capabilities.
+Preserve old rows, source links, ambiguous legacy semantics, and embedding-space identity.
 No historical extraction replay or immutable-definition mutation. New behavior
 requires a new policy binding and qualification; additive SQL alone does not prove
 rollback compatibility. Fresh/populated migration tests belong in the later plan.
@@ -363,12 +403,12 @@ per successful turn, including reviewer-induced chat failures and capacity rejec
 No new calls or source-index construction are authorized by this revision.
 
 Still challengeable: atomic post-response availability; natural-scope matching for
-preferences; conservative summary invalidation; the limited multi-turn evidence
-window; operator removal's typed-action provenance; and deferring retrospective
+preferences; complete-guard capacity and unnecessary withholding; the shared
+clarification window; harmless mutation conflicts; and deferring retrospective
 fact-history correction. These are explicit proposed choices, not hidden tasks.
 Continuity tables, generic history search, stronger subject-wide ordering, graphs,
 background review, and external memory services must earn their added complexity.
 
-Only after the second critique and user review should accepted decisions become
+Only after the third critique and user review should accepted decisions become
 an ADR and implementation plan. No M3 completion, Stage B/C unblock, release-gate
 waiver, main merge, or promotion follows from this document.

@@ -22,9 +22,10 @@ description of already implemented behavior. Links below pin the inspected sourc
 | What reaches the conversation? | [context.py](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/4905ce15dbda6466b12f2d1ed7908eb3d03995a0/services/ade-api/src/ade_api/features/agent_runtime/context.py#L155) | System/persona, active profile, count metadata, lossy summary, retrieved facts, recent turns, current user. Current memory data is inserted in the system message. Untrusted data separation deserves scrutiny. |
 | How are context records selected? | [turn_execution.py](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/4905ce15dbda6466b12f2d1ed7908eb3d03995a0/services/ade-api/src/ade_api/features/agent_runtime/turn_execution.py) | Top 12 most recently updated facts for profile. Automatic query embeds current user; up to eight results with a distance cutoff. Retrieval is deduplicated from profile. No general old-message search. |
 | What does deep search do? | [MemoryRepository.search_active_facts](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/4905ce15dbda6466b12f2d1ed7908eb3d03995a0/services/ade-api/src/ade_api/features/agent_runtime/persistence/memory.py#L386) | Subject on facts and embeddings, active status, current revision, embedding-space and retrieval-policy checks. Explicit tool query uses the same store without the automatic distance cutoff. |
-| What is the schema authority? | [metadata.py](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/4905ce15dbda6466b12f2d1ed7908eb3d03995a0/services/ade-api/src/ade_api/features/agent_runtime/persistence/metadata.py#L434) | Existing relational fact/revision/source/embedding tables; definition roots and versions already exist. Proposed continuity tables and inactive state do not. |
+| What is the schema authority? | [metadata.py](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/4905ce15dbda6466b12f2d1ed7908eb3d03995a0/services/ade-api/src/ade_api/features/agent_runtime/persistence/metadata.py#L434) | Existing relational fact/revision/source/embedding tables; definition roots and versions already exist. Proposed inactive state is absent; continuity tables are deferred. |
+| Is subject version a memory generation? | [subject metadata](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/4905ce15dbda6466b12f2d1ed7908eb3d03995a0/services/ade-api/src/ade_api/features/agent_runtime/persistence/metadata.py#L154) and [memory_commit.py](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/4905ce15dbda6466b12f2d1ed7908eb3d03995a0/services/ade-api/src/ade_api/features/agent_runtime/memory_commit.py) | Subject metadata version is not advanced for every fact mutation. Revision 3's monotonic memory generation is a proposed new contract, not this field renamed. |
 | Where is tool policy? | [tool_policy.py](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/4905ce15dbda6466b12f2d1ed7908eb3d03995a0/services/ade-api/src/ade_api/features/agent_runtime/tool_policy.py#L165) and [executor.py](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/4905ce15dbda6466b12f2d1ed7908eb3d03995a0/services/ade-api/src/ade_api/features/agent_runtime/executor.py#L115) | Free-form action matching can require a tool. DeepSeek uses auto choice; missing required tool fails the turn. This is not a measurement of memory usefulness. |
-| What is compressed? | [compaction.py](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/4905ce15dbda6466b12f2d1ed7908eb3d03995a0/services/ade-api/src/ade_api/features/agent_runtime/compaction.py#L53) | Versioned conversation derivative, not deletion of raw history or a subject memory authority. |
+| What is compressed? | [compaction_model_input](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/4905ce15dbda6466b12f2d1ed7908eb3d03995a0/services/ade-api/src/ade_api/features/agent_runtime/compaction.py#L132) | Previous summary plus incremental messages, not reconciled current subject state. A newly generated derivative is not proof of freshness; raw history remains. |
 
 ## Existing Contracts To Preserve Or Explicitly Amend
 
@@ -86,7 +87,8 @@ slots, reviewer after generation, all-active-fact input, profile recency selecti
 fact-only deep search, and atomic successful-turn finalization. The proposed design
 calls these out rather than attributing new behavior to existing code.
 
-Still hypotheses: continuity entries' usefulness, composite preference reliability,
-the new selection policy's advantage, acceptable latency, and sufficient natural
-dialogue quality. No local source review proves those. Ask Pro to identify any
+Still hypotheses: natural-scope matching reliability, complete-guard packet cost,
+unnecessary withholding, endorsement accuracy, harmless conflict rates, and useful
+natural dialogue. Continuity entries remain deferred. No local source review proves
+these outcomes. Ask Pro to identify any
 additional mismatch and cite exact paths/functions at the stated source anchor.
