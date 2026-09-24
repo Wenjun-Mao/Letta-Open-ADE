@@ -36,6 +36,7 @@ from .natural_context import (
 )
 from .natural_memory_reviewer import (
     execute_natural_review,
+    preflight_reviewer_bundle,
     reviewer_suffix_limit,
 )
 from .provider_tracing import AttemptTrace
@@ -308,6 +309,8 @@ class TurnExecution:
                 history_metadata=history,
                 budget=budget,
                 reviewer_suffix_limit=reviewer_suffix_limit(
+                    model_key=str(reviewer_deployment["route_alias"]),
+                    provider_adapter=reviewer_adapter,
                     current_user_message=current_user,
                     facts=state["facts"],
                     entities=state["entities"],
@@ -317,6 +320,16 @@ class TurnExecution:
             )
             built_context = natural_bundle.context
             natural_source_messages = natural_bundle.source_messages
+            preflight_reviewer_bundle(
+                model_key=str(reviewer_deployment["route_alias"]),
+                provider_adapter=reviewer_adapter,
+                current_user_message=current_user,
+                source_messages=list(natural_source_messages),
+                facts=state["facts"],
+                entities=state["entities"],
+                candidate_reply_reserve=budget.max_output_tokens,
+                input_token_limit=reviewer_input_limit,
+            )
         else:
             try:
                 built_context = build_context(

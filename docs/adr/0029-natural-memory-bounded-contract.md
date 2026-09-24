@@ -34,6 +34,10 @@ idempotent, exact-target action and historical receipt, not a fake conversation
 turn or proof that a later restatement is absent.
 
 Generation and review share one bounded, complete-message clarification suffix.
+Reserve reviewer capacity against its actual serialized provider request,
+including full targets, schema, and a maximum visible candidate reply, before
+generation. A selected bundle that fails this preflight stops the attempt; it
+cannot be clipped only for review after the reply exists.
 The same reviewer sees the proposed reply as reference-only and gives typed
 per-claim allow/defer/contradiction outcomes. Permitted deferral removes dependent
 fact, staged entity, and index effects; contradiction rejects the whole attempt.

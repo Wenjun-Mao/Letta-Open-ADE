@@ -7,14 +7,14 @@
     "B": "Shared local suffix first; selective current lifecycle views and bounded exact-entity expansion; no summary or older raw windows."
   },
   "budgets": {
-    "generation": {"context_window": 4096, "output_reserve": 512, "input_limit": 3200, "mandatory_policy_persona": 1200, "current_message_max": 120, "shared_suffix_max": 640, "summary_max": 512, "selected_lifecycle_max": 1152, "retrieval_max": 384, "tool_schema": 128, "safety_margin": 256},
-    "reviewer": {"context_window": 8192, "output_reserve": 1024, "input_limit": 6848, "mandatory_instructions_schema": 1600, "full_lifecycle_max": 4096, "shared_suffix_max": 640, "candidate_reply_reserve": 512, "safety_margin": 320},
-    "record_sizes_tokens": {"short": 48, "long": 160},
+    "generation": {"context_window": 4096, "output_reserve": 512, "input_limit": 3072, "mandatory_policy_persona": 1673, "current_message_max": 120, "shared_suffix_max": 640, "summary_max": 512, "selected_lifecycle_max": 1152, "retrieval_max": 384, "tool_schema": 256, "safety_margin": 256},
+    "reviewer": {"context_window": 8192, "output_reserve": 1024, "input_limit": 6759, "mandatory_instructions_schema": 1600, "full_lifecycle_max": 4096, "shared_suffix_max": 640, "candidate_reply_reserve": 512, "safety_margin": 409},
+    "record_sizes_tokens": {"short": 27, "long": 160},
     "eligible_record_grid": [0, 12, 48, 128, 256],
     "shared_prior_user_limit": 8,
     "selective_fact_limit": 8,
     "exact_entity_expansion_limit": 2,
-    "pressure": {"record_count": 48, "size_class": "short", "record_payload_tokens": 2304, "required_shared_suffix_tokens": 320, "generator_full_packet_min_tokens": 3944, "reviewer_full_packet_max_tokens": 5376, "b_selective_packet_max_tokens": 2664, "claim": "A withholds the answerable local antecedent while B and the full reviewer packet fit; serialized-request tests must confirm these estimates before live approval."}
+    "pressure": {"record_count": 48, "size_class": "short", "record_payload_tokens": 1296, "required_shared_suffix_tokens": 320, "generator_full_packet_min_tokens": 3074, "reviewer_full_packet_max_tokens": 6720, "b_selective_packet_max_tokens": 1862, "synthetic_prompt_repeat_bytes": 5310, "synthetic_value_repetitions": 15, "claim": "For the checked synthetic short-record construction, A/A0 withhold both answerable antecedents while B and the full projected DeepSeek reviewer request fit. This is a deterministic capacity point, not a live or persona-quality result."}
   },
   "pairing": {
     "A_A0": "Identical eligible pool, raw cutoff, summary-through boundary and nonsummary contents and order both when the full snapshot fits and under overflow; A0 does not reallocate removed summary tokens.",

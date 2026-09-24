@@ -11,7 +11,10 @@ from ade_api.features.agent_runtime.natural_memory_policy import (
 )
 from ade_api.features.agent_runtime.natural_memory_reviewer import (
     NaturalMemoryReviewer,
+    natural_review_request,
+    preflight_reviewer_bundle,
     reviewer_suffix_limit,
+    serialized_review_tokens,
 )
 
 
@@ -127,12 +130,19 @@ def test_natural_reviewer_rejects_false_veto_without_retry() -> None:
 def test_reviewer_required_capacity_is_checked_before_generation() -> None:
     with pytest.raises(RuntimeValidationError) as error:
         reviewer_suffix_limit(
-            current_user_message={"content": "What about Roxy?"},
+            model_key="source::reviewer",
+            provider_adapter="deepseek_openai",
+            current_user_message={
+                "id": USER,
+                "role": "user",
+                "content": "What about Roxy?",
+            },
             facts=[
                 {
                     "id": "fact-1",
                     "fact_type": "pet.identity",
                     "qualifier": None,
+                    "entity_id": SUBJECT,
                     "value": "Roxy is a Husky" * 100,
                     "status": "active",
                     "version": 1,
@@ -141,6 +151,61 @@ def test_reviewer_required_capacity_is_checked_before_generation() -> None:
             entities=[{"id": SUBJECT, "kind": "subject", "label": ""}],
             input_token_limit=512,
             candidate_reply_reserve=256,
+        )
+    assert error.value.detail_code == "natural_reviewer_capacity"
+
+
+def test_reviewer_preflight_uses_the_exact_provider_packet() -> None:
+    current = {"id": USER, "role": "user", "content": "What about Roxy?"}
+    facts = [
+        {
+            "id": "fact-1",
+            "fact_type": "pet.identity",
+            "qualifier": None,
+            "entity_id": SUBJECT,
+            "value": "Roxy is a Husky",
+            "status": "active",
+            "version": 1,
+        }
+    ]
+    entities = [{"id": SUBJECT, "kind": "subject", "label": ""}]
+    source = [
+        {"id": "prior", "role": "assistant", "content": "Roxy is a Husky."},
+        current,
+    ]
+    projected = natural_review_request(
+        model_key="source::reviewer",
+        provider_adapter="deepseek_openai",
+        current_user_message=current,
+        source_messages=source,
+        facts=facts,
+        entities=entities,
+        candidate_reply="x" * 1024,
+    )
+    exact = serialized_review_tokens(projected)
+    assert (
+        preflight_reviewer_bundle(
+            model_key="source::reviewer",
+            provider_adapter="deepseek_openai",
+            current_user_message=current,
+            source_messages=source,
+            facts=facts,
+            entities=entities,
+            candidate_reply_reserve=256,
+            input_token_limit=exact,
+        )
+        == exact
+    )
+    with pytest.raises(RuntimeValidationError) as error:
+        preflight_reviewer_bundle(
+            model_key="source::reviewer",
+            provider_adapter="deepseek_openai",
+            current_user_message=current,
+            source_messages=source,
+            facts=facts,
+            entities=entities,
+            candidate_reply_reserve=256,
+            input_token_limit=exact - 1,
         )
     assert error.value.detail_code == "natural_reviewer_capacity"
 
