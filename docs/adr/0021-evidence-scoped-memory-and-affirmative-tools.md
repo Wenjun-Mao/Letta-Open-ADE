@@ -2,6 +2,8 @@
 
 - Status: Accepted
 - Date: 2026-09-22
+- Amendment: [ADR 0036](0036-discretionary-curated-tools-and-structured-requirements.md)
+  supersedes the affirmative phrase-based tool requirement rule below.
 
 ## Context
 

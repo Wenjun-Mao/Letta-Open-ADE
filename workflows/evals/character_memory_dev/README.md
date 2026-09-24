@@ -182,7 +182,9 @@ with `uv run --locked python -m workflows.evals.character_memory_dev.offline_nat
 `offline_natural_browser_setup.py` provisions a natural-policy fixture in an
 existing migrated, passwordless `ade_m2_memory_test_<owned-id>` database. Pass
 `--existing-subject-id` to provision an archived old-policy conversation bound
-to that same subject. It writes a private fixture receipt under `outputs/`.
+to that same subject. Pass `--enable-search-memory` to expose the subject-bound
+tool for a discretionary invocation regression. It writes a private fixture
+receipt under `outputs/`.
 The API and worker must both point to that isolated database and the fake
 router base URL. Browser observations from this setup do not measure provider
 quality or authorize live calls. The 2026-09-24 in-app browser replay and
@@ -200,6 +202,14 @@ resolution with distinct source roles, and atomic rejection of bare-name
 endorsement. The same isolated UI and database show archived old-policy
 readback, source citation, exact removal, and historical revision retention.
 These observations establish integration mechanics only.
+
+The tool-policy-v2 browser replay is retained privately in
+`outputs/natural-browser-20260924-tool-v2/browser-evidence.json`. With
+`search_memory` enabled, a free-form request to search completed without a
+forced requirement or a scripted tool call. The same v4 conversation then
+committed a Toronto location fact with its source citation. This checks current
+dispatch and persistence wiring; the fake router does not measure whether a
+real model chooses a useful tool call.
 
 Opt-in natural-memory attempt evidence is available only when
 `ADE_NATURAL_MEMORY_CAPTURE=1` is set on a development worker connected to a

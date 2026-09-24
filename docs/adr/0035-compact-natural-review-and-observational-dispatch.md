@@ -108,8 +108,7 @@ natural sessions. Older bindings reject new sends at admission and worker
 execution after checking for exact idempotent replay. This avoids silently
 changing the meaning of persisted v1 and v3 definitions. The curated tool
 selection policy is a separate invocation contract and does not authorize
-memory writes. Its free-form `search_memory` selection still uses phrase and
-negation rules. Natural context can also expand retrieved facts from an exact
-entity-label substring. Those recall-selection heuristics remain outside this
-write-authority amendment and require separate evaluation if the scope expands
-to all language-based retrieval routing.
+memory writes. [ADR 0036](0036-discretionary-curated-tools-and-structured-requirements.md)
+subsequently removed its free-form phrase and negation rules. Natural context
+retains a bounded entity-label match for candidate expansion. It is a relevance
+heuristic, not semantic proof or write authority.

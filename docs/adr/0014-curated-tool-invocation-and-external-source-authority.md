@@ -2,6 +2,9 @@
 
 - Status: Accepted for implementation; deployment exposure requires qualification
 - Date: 2026-09-02
+- Amendment: [ADR 0036](0036-discretionary-curated-tools-and-structured-requirements.md)
+  supersedes free-form requirement inference. Structured caller-supplied
+  requirements and tool-result evidence remain active.
 - Related: [ADR 0009](0009-ade-owned-agent-runtime.md),
   [ADR 0010](0010-production-path-runtime-qualification.md), and
   [ADR 0013](0013-narrow-native-runtime-product-pilot.md), with provider protocol

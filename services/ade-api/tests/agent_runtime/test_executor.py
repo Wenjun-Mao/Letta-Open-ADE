@@ -366,7 +366,7 @@ def test_weather_tool_schema_declares_its_finite_fixture_domain() -> None:
     }
 
 
-def test_enabled_tools_add_an_evidence_bound_usage_policy() -> None:
+def test_enabled_tool_remains_discretionary_for_a_free_form_lookup_request() -> None:
     transport = _Transport(
         [
             {
@@ -380,12 +380,12 @@ def test_enabled_tools_add_an_evidence_bound_usage_policy() -> None:
         ]
     )
 
-    asyncio.run(
+    result = asyncio.run(
         ConversationExecutor(transport).execute(
             model_key="source::model",
             messages=[
                 {"role": "system", "content": "persona"},
-                {"role": "user", "content": "ordinary dialogue"},
+                {"role": "user", "content": "Please check Toronto weather."},
             ],
             tools=curated_tools(
                 ("get_weather",), additional_tools=evaluation_tool_registry()
@@ -397,9 +397,12 @@ def test_enabled_tools_add_an_evidence_bound_usage_policy() -> None:
 
     payload = transport.calls[0][0]
     assert payload["tool_choice"] == "auto"
+    assert result.assistant_text == "Hello."
+    assert result.tool_events == []
+    assert result.tool_requirement is None
     assert payload["messages"] == [
         {"role": "system", "content": f"persona\n\n{TOOL_USE_POLICY}"},
-        {"role": "user", "content": "ordinary dialogue"},
+        {"role": "user", "content": "Please check Toronto weather."},
     ]
 
 

@@ -49,6 +49,12 @@ remains unchanged: `person.preference` means a
 preference, not a report of drinking behavior. Durable habit recall requires a
 separate typed-schema decision.
 
+[ADR 0036](../adr/0036-discretionary-curated-tools-and-structured-requirements.md)
+also removes phrase-based mandatory tool selection from the turn dispatcher.
+Enabled curated tools remain discretionary with result and argument checks;
+direct callers can still supply a structured requirement. Existing evaluation
+cases continue to fail when an expected discretionary tool call is absent.
+
 ### Factual Evaluation Deltas
 
 Start with one active `person.preference` drink fact F1, `prefers coffee in the

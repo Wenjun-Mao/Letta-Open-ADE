@@ -27,9 +27,12 @@ from .offline_natural_router import _catalog
 
 
 class FakeDefinitions:
-    def __init__(self, *, policy_binding: str) -> None:
+    def __init__(
+        self, *, policy_binding: str, tool_names: tuple[str, ...] = ()
+    ) -> None:
         self.catalog = _catalog()
         self.policy_binding = policy_binding
+        self.tool_names = tool_names
 
     async def prepare(self, request, *, purpose):
         if purpose != "agent_studio":
@@ -59,7 +62,7 @@ class FakeDefinitions:
             "persona_key": request.persona_key,
             "persona_sha256": "b" * 64,
             "persona_content": "Lin Xiaotang",
-            "tool_names": [],
+            "tool_names": list(self.tool_names),
             "memory_policy_version": self.policy_binding,
             "qualification_state": "unqualified",
             "deployment_snapshot": snapshots,
@@ -67,7 +70,10 @@ class FakeDefinitions:
 
 
 async def provision(
-    database_url: str, *, existing_subject_id: str | None = None
+    database_url: str,
+    *,
+    existing_subject_id: str | None = None,
+    enable_search_memory: bool = False,
 ) -> dict:
     url = make_url(database_url)
     if (
@@ -89,7 +95,8 @@ async def provision(
                     "typed-user-facts-v1"
                     if old_readonly
                     else "natural-user-assertions-v4-b"
-                )
+                ),
+                tool_names=("search_memory",) if enable_search_memory else (),
             ),
             purpose="agent_studio",
             session_namespace=(
@@ -116,7 +123,7 @@ async def provision(
                     model_key="fake::conversation",
                     reviewer_model_key="fake::reviewer",
                     embedding_model_key="fake::retriever",
-                    tool_names=[],
+                    tool_names=["search_memory"] if enable_search_memory else [],
                 ),
                 memory_subject_id=existing_subject_id,
                 new_subject=(
@@ -135,6 +142,7 @@ async def provision(
             "fixture": "scripted fake router; no provider or embedding model calls",
             "database": url.database,
             "old_policy_readonly": old_readonly,
+            "enabled_tools": ["search_memory"] if enable_search_memory else [],
             "conversation_id": result["conversation"]["id"],
             "subject_id": result["memory_subject"]["id"],
             "definition_version_id": result["agent_definition"]["id"],
@@ -148,11 +156,16 @@ def main() -> None:
     parser.add_argument("--database-url", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--existing-subject-id")
+    parser.add_argument("--enable-search-memory", action="store_true")
     args = parser.parse_args()
     if args.output.exists():
         raise ValueError("browser fixture output already exists")
     result = asyncio.run(
-        provision(args.database_url, existing_subject_id=args.existing_subject_id)
+        provision(
+            args.database_url,
+            existing_subject_id=args.existing_subject_id,
+            enable_search_memory=args.enable_search_memory,
+        )
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")

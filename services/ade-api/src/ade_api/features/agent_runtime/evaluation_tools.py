@@ -31,8 +31,8 @@ WEATHER_TOOL = {
         "name": "get_weather",
         "description": (
             "Return deterministic fixture weather for one supported city identifier. "
-            "Call this for every explicit weather lookup and copy one exact identifier "
-            "from the schema; do not abbreviate a city or invent a result."
+            "When calling it, copy one exact identifier from the schema; do not "
+            "abbreviate a city or invent a result."
         ),
         "parameters": {
             "type": "object",

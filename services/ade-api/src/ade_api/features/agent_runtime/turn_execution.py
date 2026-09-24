@@ -48,7 +48,6 @@ from .release_policy import (
 )
 from .reviewer import MemoryReviewer
 from .router_transport import RouterTransport
-from .tool_policy import resolve_tool_requirement
 from .turn_deployment import (
     deployment_adapter as _deployment_adapter,
     embedding_dimensions as _embedding_dimensions,
@@ -414,61 +413,32 @@ class TurnExecution:
             return [_tool_fact(item) for item in rows]
 
         enabled_tool_names = tuple(str(name) for name in definition["tool_names"])
-        tool_requirement = resolve_tool_requirement(
-            str(current_user["content"]), enabled_tool_names
-        )
-        if tool_requirement is not None:
-            trace.record_tool_requirement_resolved(tool_requirement)
-        try:
-            executor_result = await conversation_executor.execute(
-                model_key=str(conversation_deployment["route_alias"]),
-                messages=built_context.messages,
-                timeout_seconds=_remaining(deadline),
-                max_output_tokens=budget.max_output_tokens,
-                max_model_requests=(
-                    evaluation_capacity.conversation_requests
-                    if evaluation_capacity is not None
-                    else _max_model_requests(conversation_deployment)
-                ),
-                input_token_limit=budget.input_limit if natural_mode else None,
-                observe_request=(
-                    trace.natural_evidence.capture_generation_request
-                    if trace.natural_evidence is not None
+        executor_result = await conversation_executor.execute(
+            model_key=str(conversation_deployment["route_alias"]),
+            messages=built_context.messages,
+            timeout_seconds=_remaining(deadline),
+            max_output_tokens=budget.max_output_tokens,
+            max_model_requests=(
+                evaluation_capacity.conversation_requests
+                if evaluation_capacity is not None
+                else _max_model_requests(conversation_deployment)
+            ),
+            input_token_limit=budget.input_limit if natural_mode else None,
+            observe_request=(
+                trace.natural_evidence.capture_generation_request
+                if trace.natural_evidence is not None
+                else None
+            ),
+            tools=curated_tools(
+                enabled_tool_names,
+                search_memory=search_memory,
+                additional_tools=(
+                    evaluation_tool_registry()
+                    if conversation.get("purpose") == "evaluation"
                     else None
                 ),
-                tools=curated_tools(
-                    enabled_tool_names,
-                    search_memory=search_memory,
-                    additional_tools=(
-                        evaluation_tool_registry()
-                        if conversation.get("purpose") == "evaluation"
-                        else None
-                    ),
-                ),
-                tool_requirement=tool_requirement,
-            )
-        except RuntimeValidationError as exc:
-            if tool_requirement is not None and exc.detail_code in {
-                "conversation_required_tool_missing",
-                "conversation_required_tool_mismatch",
-                "conversation_tool_call_malformed",
-                "conversation_tool_not_enabled",
-                "conversation_tool_arguments_invalid_json",
-                "conversation_tool_arguments_not_object",
-                "curated_tool_arguments_invalid",
-                "curated_tool_requirement_invalid",
-            }:
-                trace.record_tool_requirement_unmet(
-                    tool_requirement, detail_code=exc.detail_code
-                )
-            raise
-        if tool_requirement is not None:
-            if not executor_result.tool_requirement_satisfied:
-                raise RuntimeValidationError(
-                    "Conversation executor lost its required tool outcome",
-                    detail_code="conversation_required_tool_missing",
-                )
-            trace.record_tool_requirement_satisfied(tool_requirement)
+            ),
+        )
         if trace.natural_evidence is not None:
             trace.natural_evidence.capture_candidate(
                 executor_result.assistant_text, executor_result.tool_evidence

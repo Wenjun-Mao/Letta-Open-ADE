@@ -214,6 +214,38 @@ def test_score_case_uses_normalized_observations_without_runtime_dependencies() 
     }
 
 
+def test_expected_tool_observation_fails_when_discretionary_call_is_absent() -> None:
+    case = select_cases(load_cases(study_cases_path()), ("weather_tool_failure",))[0]
+
+    score = score_case(
+        case=case,
+        facts_by_subject={
+            "primary": (FactObservation(key="location", value="Toronto"),),
+        },
+        results_by_conversation={
+            "primary": (
+                TurnObservation(
+                    status="succeeded",
+                    assistant_text="I could not retrieve the weather right now.",
+                    candidate_assistant_text="I could not retrieve the weather right now.",
+                    events=(
+                        EventObservation(type="model.request"),
+                        EventObservation(type="model.response"),
+                        EventObservation(type="memory.review.request"),
+                    ),
+                    tools=(),
+                ),
+            ),
+        },
+    )
+
+    assert score["pass"] is False
+    assert {check["kind"] for check in score["failed_checks"]} == {
+        "expected_tool_observation",
+        "failed_tool_was_observed",
+    }
+
+
 def test_long_history_score_accepts_an_arabic_round_count() -> None:
     case = select_cases(load_cases(study_cases_path()), ("long_history_compaction",))[0]
     assistant_text = "是的，我们之前一共聊了40轮普通历史对话。"

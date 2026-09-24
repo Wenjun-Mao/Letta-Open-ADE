@@ -110,8 +110,8 @@ def test_success_events_pair_model_and_tool_boundaries() -> None:
         "mode": "explicit_action_required",
         "tool_name": "search_memory",
         "capability": "memory.deep_search",
-        "source": "free_form_explicit_request",
-        "policy_version": "curated_tool_invocation_v1",
+        "source": "structured_requirement",
+        "policy_version": "curated_tool_invocation_v2",
     }
     first_tool_completed = next(
         event

@@ -4,146 +4,51 @@ import pytest
 
 from ade_api.features.agent_runtime.tool_policy import (
     TOOL_POLICY_VERSION,
-    resolve_tool_requirement,
+    TOOL_USE_POLICY,
+    ToolRequirement,
 )
 
 
-@pytest.mark.parametrize(
-    ("content", "enabled", "expected_name", "expected_capability"),
-    [
-        (
-            "Please check the weather in Toronto.",
-            ("get_weather",),
-            "get_weather",
-            "weather.current_lookup",
-        ),
-        (
-            "Weather in Toronto?",
-            ("get_weather",),
-            "get_weather",
-            "weather.current_lookup",
-        ),
-        (
-            "请查询多伦多现在的天气。",
-            ("get_weather",),
-            "get_weather",
-            "weather.current_lookup",
-        ),
-        (
-            "Please search your memory for the museum I mentioned.",
-            ("search_memory",),
-            "search_memory",
-            "memory.deep_search",
-        ),
-        (
-            "如果当前资料没有，请搜索记忆。",
-            ("search_memory",),
-            "search_memory",
-            "memory.deep_search",
-        ),
-    ],
-)
-def test_explicit_external_actions_resolve_to_one_typed_requirement(
-    content: str,
-    enabled: tuple[str, ...],
-    expected_name: str,
-    expected_capability: str,
-) -> None:
-    requirement = resolve_tool_requirement(content, enabled)
+def test_caller_supplied_requirement_has_a_safe_structured_contract() -> None:
+    requirement = ToolRequirement(
+        tool_name="search_memory", capability="memory.deep_search"
+    )
 
-    assert requirement is not None
-    assert requirement.tool_name == expected_name
-    assert requirement.capability == expected_capability
-    assert requirement.policy_version == TOOL_POLICY_VERSION
+    assert requirement.tool_choice() == {
+        "type": "function",
+        "function": {"name": "search_memory"},
+    }
     assert requirement.safe_payload() == {
         "mode": "explicit_action_required",
-        "tool_name": expected_name,
-        "capability": expected_capability,
-        "source": "free_form_explicit_request",
+        "tool_name": "search_memory",
+        "capability": "memory.deep_search",
+        "source": "structured_requirement",
         "policy_version": TOOL_POLICY_VERSION,
     }
 
 
 @pytest.mark.parametrize(
-    "content",
+    ("field", "value"),
     [
-        "I like talking about weather.",
-        "Do you like weather conversations?",
-        "我喜欢下雨天的天气。",
-        "That memory makes me smile.",
-        "这段记忆很温暖。",
+        ("tool_name", "get_weather\nprivate text"),
+        ("capability", "weather current lookup"),
+        ("source", ""),
+        ("policy_version", "v2/override"),
     ],
 )
-def test_benign_capability_mentions_remain_discretionary(content: str) -> None:
-    assert resolve_tool_requirement(content, ("get_weather", "search_memory")) is None
+def test_requirement_trace_identifiers_are_bounded(field: str, value: str) -> None:
+    values = {
+        "tool_name": "get_weather",
+        "capability": "weather.current_lookup",
+        "source": "structured_requirement",
+        "policy_version": TOOL_POLICY_VERSION,
+    }
+    values[field] = value
+
+    with pytest.raises(ValueError, match=f"{field} must be a bounded identifier"):
+        ToolRequirement(**values)
 
 
-def test_disabled_or_ambiguous_actions_are_not_forced() -> None:
-    assert resolve_tool_requirement("Please check the weather.", ()) is None
-    assert (
-        resolve_tool_requirement(
-            "Please check Toronto weather and search memory for my old address.",
-            ("get_weather", "search_memory"),
-        )
-        is None
-    )
-
-
-@pytest.mark.parametrize(
-    "content",
-    [
-        "Please do not search memory for that.",
-        "Don't search your memory.",
-        "请不要搜索记忆。",
-        "不用查记忆。",
-    ],
-)
-def test_negated_memory_search_is_not_forced(content: str) -> None:
-    assert resolve_tool_requirement(content, ("search_memory",)) is None
-
-
-@pytest.mark.parametrize(
-    "content",
-    [
-        "Do not search my memory. Find a rhyme for cat.",
-        "Do not search my memory, find a rhyme for cat.",
-        "Don't search memory but find a rhyme for cat.",
-        "Memory is personal. Find a rhyme for cat.",
-        "不要搜索记忆。搜索这个词的意思。",
-        "不要搜索记忆，查找这个词的意思。",
-    ],
-)
-def test_unrelated_action_cannot_force_memory_search(content: str) -> None:
-    assert resolve_tool_requirement(content, ("search_memory",)) is None
-
-
-def test_affirmative_action_is_selected_when_another_tool_is_negated() -> None:
-    requirement = resolve_tool_requirement(
-        "Please search memory, but do not check the weather.",
-        ("get_weather", "search_memory"),
-    )
-
-    assert requirement is not None
-    assert requirement.tool_name == "search_memory"
-
-
-def test_affirmative_weather_is_selected_after_negated_memory_search() -> None:
-    requirement = resolve_tool_requirement(
-        "Do not search memory; please check Toronto weather.",
-        ("get_weather", "search_memory"),
-    )
-
-    assert requirement is not None
-    assert requirement.tool_name == "get_weather"
-
-
-def test_fault_fixture_values_do_not_drive_policy_resolution() -> None:
-    ordinary = resolve_tool_requirement(
-        "Please check Toronto weather.", ("get_weather",)
-    )
-    failure = resolve_tool_requirement(
-        "Please check FAIL_CITY weather.", ("get_weather",)
-    )
-
-    assert ordinary is not None and failure is not None
-    assert ordinary.safe_payload() == failure.safe_payload()
+def test_tool_instructions_leave_calls_to_model_discretion() -> None:
+    assert "Choose whether to call one from context" in TOOL_USE_POLICY
+    assert "Never claim that a tool was called or succeeded" in TOOL_USE_POLICY

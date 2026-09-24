@@ -65,6 +65,8 @@ def _scripted_reply(payload: dict) -> str:
         return "Which dog do you mean?"
     if current == "Roxy":
         return "Thanks for clarifying Roxy."
+    if current == "Please search your memory for the museum I mentioned.":
+        return "I do not have a museum detail in this conversation."
     return "I hear you live in Toronto."
 
 

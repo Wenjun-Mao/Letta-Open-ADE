@@ -68,6 +68,20 @@ same unwaived selected-candidate policy-fingerprint freshness failure. Ruff and
 diff whitespace checks passed. Model interpretation and cross-conversation recall
 remain unmeasured.
 
+The subsequent offline tool-policy revision removes the weather and memory
+action/negation phrase table from turn dispatch. Enabled curated tools are
+model-discretionary, while direct structured requirements and observed-tool
+scoring remain intact. [ADR 0036](adr/0036-discretionary-curated-tools-and-structured-requirements.md)
+records the contract and the bounded entity-label retrieval heuristic. Focused
+tool/eval tests passed (37). The full Python suite passed 717 tests with one
+skipped; only the existing selected-candidate policy-fingerprint freshness
+check failed, and the historical candidate was not rebound. The current-code
+Playwright replay with an enabled `search_memory` tool completed a free-form
+search request without a forced call, then committed a Toronto fact with source
+citation under natural v4. Its private receipt is linked from the
+[offline browser workflow](../workflows/evals/character_memory_dev/README.md).
+No live model behavior or release qualification was measured.
+
 Both final Pros return **GO for revision 5 of the single
 [natural-memory implementation plan](plans/natural-memory-implementation.md)**,
 with no further mandatory planning amendment. The [final review assessment](findings/natural-memory-consultation/compact-plan-r5-go-assessment.md)

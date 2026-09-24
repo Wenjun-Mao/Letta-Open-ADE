@@ -31,8 +31,7 @@ SEARCH_MEMORY_TOOL = {
         "description": (
             "Search older committed facts about the current user or account bound "
             "to this conversation. Returned facts never describe the assistant "
-            "persona. Call this for every explicit deep-memory search request; do "
-            "not invent results."
+            "persona. Use the returned facts as evidence; do not invent results."
         ),
         "parameters": {
             "type": "object",
