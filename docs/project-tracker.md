@@ -41,8 +41,8 @@ real compaction required before accepting summary-enabled A. The second plan rev
 now recommend GO for bounded implementation; the
 [assessment](findings/natural-memory-consultation/pro-plan-round2-assessment.md)
 checks lock ordering, dependent staged effects, uncertain commit outcomes,
-distinct-fact retrieval limits and positive compaction retention. Next: obtain
-implementation of checkpoints 1-5, now authorized by the user on 2026-09-24 with
+distinct-fact retrieval limits and positive compaction retention. Implementation
+of checkpoints 1-5 was authorized by the user on 2026-09-24 with
 those completion criteria incorporated into plan revision 3. Checkpoint 1's frozen
 fixtures are committed; the additive lifecycle, mixed review, development-only
 A/A0/B bindings, direct operator removal, and UI path are implemented in an
@@ -83,10 +83,10 @@ OpenAPI drift, Ruff, web tests (77 passed), lint, and build pass. Remaining
 matrix coverage and a fresh in-app removal interaction need an isolated
 API/PostgreSQL stack; this review fix does not advance those gates.
 No live budget or production context-policy selection is implied.
-The user authorized publication of the review checkpoint, not adoption of the
-design or a merge/release. Resolve plan-review findings before implementation or
-new provider experiments. Stronger forgetting/erasure semantics remain a product
-decision. No new provider budget, runtime change, or release acceptance is implied;
+The earlier review-checkpoint publication did not authorize a merge or release.
+The later approval covers offline checkpoints 1-5 only. Stronger
+forgetting/erasure semantics remain a product decision. No new provider budget,
+runtime policy selection, or release acceptance is implied;
 Stage B/C remain blocked by the failed Stage A result below.
 
 [ADR 0025](adr/0025-deepseek-development-lane.md) replaces Luna as the
