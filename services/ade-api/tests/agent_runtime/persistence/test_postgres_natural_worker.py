@@ -19,7 +19,6 @@ from ade_api.features.agent_runtime.contracts import (
     CreateMemorySubjectRequest,
 )
 from ade_api.features.agent_runtime.database_boundary import RuntimeDatabase
-from ade_api.features.agent_runtime.deployments import resolve_deployment
 from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
 )
@@ -29,6 +28,7 @@ from ade_api.features.agent_runtime.persistence.metadata import (
     messages,
     run_attempts,
     run_events,
+    runs,
 )
 from ade_api.features.agent_runtime.run_service import RunService
 from ade_api.features.agent_runtime.worker import AgentRuntimeWorker
@@ -41,157 +41,8 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def _catalog() -> dict:
-    items = []
-    for index, (role, alias) in enumerate(
-        (
-            ("conversation", "fake::conversation"),
-            ("reviewer", "fake::reviewer"),
-            ("retriever", "fake::retriever"),
-        ),
-        start=1,
-    ):
-        items.append(
-            {
-                "model_key": alias,
-                "source_adapter": "synthetic",
-                "deployment": {
-                    "deployment_id": f"synthetic-{role}",
-                    "roles": [role],
-                    "lifecycle": "candidate",
-                    "fingerprint": {
-                        "sha256": str(index) * 64,
-                        "context_settings": {
-                            "total_tokens": 8192,
-                            "max_output_tokens": 512,
-                            "reviewer_repair_count": 0,
-                        },
-                        "sampling_settings": {"dimensions": 3},
-                    },
-                    "qualification": {"role_results": []},
-                },
-            }
-        )
-    return {"items": items}
-
-
-class _Definitions:
-    def __init__(self, catalog: dict) -> None:
-        self.catalog = catalog
-
-    async def prepare(self, request, *, purpose):
-        assert purpose == "evaluation"
-        snapshots = [
-            resolve_deployment(
-                self.catalog,
-                route_alias=alias,
-                role=role,
-                mode="development",
-            ).as_snapshot()
-            for role, alias in (
-                ("conversation", request.model_key),
-                ("reviewer", request.reviewer_model_key),
-                ("retriever", request.embedding_model_key),
-            )
-        ]
-        return {
-            "definition_key": request.definition_key,
-            "name": request.name,
-            "model_key": request.model_key,
-            "reviewer_model_key": request.reviewer_model_key,
-            "embedding_model_key": request.embedding_model_key,
-            "prompt_key": request.prompt_key,
-            "prompt_sha256": "a" * 64,
-            "prompt_content": "You are a careful companion.",
-            "persona_key": request.persona_key,
-            "persona_sha256": "b" * 64,
-            "persona_content": "Lin Xiaotang",
-            "tool_names": [],
-            "memory_policy_version": "natural-user-assertions-v2-b",
-            "qualification_state": "unqualified",
-            "deployment_snapshot": snapshots,
-        }
-
-
-class _ReadyWorker:
-    async def get_health(self):
-        return {"worker_ready": True}
-
-
-class _SyntheticNaturalTransport:
-    def __init__(self, catalog: dict) -> None:
-        self._catalog = catalog
-        self.calls: list[tuple[str, str]] = []
-        self.veto = True
-        self.fail_after_review = False
-        self.reviewed = False
-
-    async def catalog(self, *, timeout_seconds):
-        self.calls.append(("catalog", ""))
-        return self._catalog
-
-    async def embeddings(self, payload, *, timeout_seconds):
-        self.calls.append(("embeddings", payload["model"]))
-        if self.fail_after_review and self.reviewed:
-            raise OSError("synthetic embedding transport failure")
-        return {
-            "data": [
-                {"index": index, "embedding": [1.0, 0.0, 0.0]}
-                for index, _ in enumerate(payload["input"])
-            ]
-        }
-
-    async def chat_completion(self, payload, *, timeout_seconds):
-        self.calls.append(("chat", payload["model"]))
-        if payload["model"] == "fake::conversation":
-            return {
-                "id": "fake-conversation",
-                "choices": [
-                    {
-                        "finish_reason": "stop",
-                        "message": {"role": "assistant", "content": "Okay, Toronto."},
-                    }
-                ],
-            }
-        packet = json.loads(payload["messages"][1]["content"])
-        self.reviewed = True
-        current = packet["current_user_message"]
-        decision = {
-            "proposals": [
-                {
-                    "claim_id": "residence",
-                    "operation": "add",
-                    "fact_type": "person.current_location",
-                    "value": "Toronto",
-                    "evidence_quote": "I live in Toronto",
-                    "sources": [
-                        {
-                            "message_id": current["id"],
-                            "quote": "I live in Toronto",
-                            "role": "user_assertion",
-                        }
-                    ],
-                }
-            ],
-            "claim_dispositions": [
-                {
-                    "claim_id": "residence",
-                    "outcome": "contradiction" if self.veto else "allow",
-                    "reason": "reply_conflict" if self.veto else "supported",
-                    **({"candidate_reply_quote": "Toronto"} if self.veto else {}),
-                }
-            ],
-        }
-        return {
-            "id": "fake-reviewer",
-            "choices": [
-                {"finish_reason": "stop", "message": {"content": json.dumps(decision)}}
-            ],
-        }
-
-
 def test_false_veto_and_success_have_distinct_authoritative_artifacts(
-    tmp_path, monkeypatch
+    tmp_path, monkeypatch, natural_worker_support
 ) -> None:
     assert DATABASE_URL is not None
     monkeypatch.setenv("ADE_NATURAL_MEMORY_CAPTURE", "1")
@@ -209,11 +60,11 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
             database_url=DATABASE_URL,
             agent_runtime_worker_id="natural-fake-test",
         )
-        catalog = _catalog()
-        transport = _SyntheticNaturalTransport(catalog)
+        catalog = natural_worker_support.catalog()
+        transport = natural_worker_support.transport(catalog)
         sessions = PurposeSessionService(
             database=database,
-            definitions=_Definitions(catalog),  # type: ignore[arg-type]
+            definitions=natural_worker_support.definitions(catalog),
             purpose="evaluation",
             session_namespace="natural-fake-test",
         )
@@ -221,7 +72,7 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
             database=database,
             settings=settings,
             router_transport=transport,  # type: ignore[arg-type]
-            worker_health=_ReadyWorker(),  # type: ignore[arg-type]
+            worker_health=natural_worker_support.ready_worker(),
         )
         worker = AgentRuntimeWorker(
             engine=engine,
@@ -229,15 +80,28 @@ def test_false_veto_and_success_have_distinct_authoritative_artifacts(
             transport=transport,  # type: ignore[arg-type]
         )
 
+        async with engine.connect() as connection:
+            foreign_active = list(
+                (
+                    await connection.execute(
+                        select(runs.c.id).where(
+                            runs.c.status.in_(("pending", "running"))
+                        )
+                    )
+                ).scalars()
+            )
+        assert not foreign_active, (
+            "natural worker integration requires an exclusively owned disposable "
+            "database with no pending or running foreign work"
+        )
+
         async def process_target(run_id: str) -> dict:
-            # A shared disposable suite database can contain earlier completed
-            # or recoverable claims; the worker chooses its own claim order.
-            for _ in range(8):
-                await worker.process_once()
-                result = await run_service.get_run(run_id)
-                if result["status"] in {"succeeded", "failed", "cancelled"}:
-                    return result
-            raise AssertionError("synthetic target run did not reach a terminal state")
+            assert await worker.process_once()
+            result = await run_service.get_run(run_id)
+            assert result["status"] in {"succeeded", "failed", "cancelled"}, (
+                "worker did not terminally process its sole eligible run"
+            )
+            return result
 
         token = uuid4().hex[:12]
         try:

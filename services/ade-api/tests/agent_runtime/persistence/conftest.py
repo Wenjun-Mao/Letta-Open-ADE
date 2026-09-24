@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from typing import Any
 from uuid import uuid4
 
@@ -9,6 +10,7 @@ from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from ade_api.features.agent_runtime.memory_policy import prepare_memory_review
+from ade_api.features.agent_runtime.deployments import resolve_deployment
 from ade_api.features.agent_runtime.memory_review import ReviewDecision
 from ade_api.features.agent_runtime.persistence.metadata import (
     agent_definition_versions,
@@ -187,4 +189,165 @@ def prepare_review(
         current_user_message=message,
         active_facts=active_facts or [],
         entities=entities,
+    )
+
+
+def _catalog() -> dict:
+    items = []
+    for index, (role, alias) in enumerate(
+        (
+            ("conversation", "fake::conversation"),
+            ("reviewer", "fake::reviewer"),
+            ("retriever", "fake::retriever"),
+        ),
+        start=1,
+    ):
+        items.append(
+            {
+                "model_key": alias,
+                "source_adapter": "synthetic",
+                "deployment": {
+                    "deployment_id": f"synthetic-{role}",
+                    "roles": [role],
+                    "lifecycle": "candidate",
+                    "fingerprint": {
+                        "sha256": str(index) * 64,
+                        "context_settings": {
+                            "total_tokens": 8192,
+                            "max_output_tokens": 512,
+                            "reviewer_repair_count": 0,
+                        },
+                        "sampling_settings": {"dimensions": 3},
+                    },
+                    "qualification": {"role_results": []},
+                },
+            }
+        )
+    return {"items": items}
+
+
+class _Definitions:
+    def __init__(self, catalog: dict) -> None:
+        self.catalog = catalog
+
+    async def prepare(self, request, *, purpose):
+        assert purpose == "evaluation"
+        snapshots = [
+            resolve_deployment(
+                self.catalog,
+                route_alias=alias,
+                role=role,
+                mode="development",
+            ).as_snapshot()
+            for role, alias in (
+                ("conversation", request.model_key),
+                ("reviewer", request.reviewer_model_key),
+                ("retriever", request.embedding_model_key),
+            )
+        ]
+        return {
+            "definition_key": request.definition_key,
+            "name": request.name,
+            "model_key": request.model_key,
+            "reviewer_model_key": request.reviewer_model_key,
+            "embedding_model_key": request.embedding_model_key,
+            "prompt_key": request.prompt_key,
+            "prompt_sha256": "a" * 64,
+            "prompt_content": "You are a careful companion.",
+            "persona_key": request.persona_key,
+            "persona_sha256": "b" * 64,
+            "persona_content": "Lin Xiaotang",
+            "tool_names": [],
+            "memory_policy_version": "natural-user-assertions-v2-b",
+            "qualification_state": "unqualified",
+            "deployment_snapshot": snapshots,
+        }
+
+
+class _ReadyWorker:
+    async def get_health(self):
+        return {"worker_ready": True}
+
+
+class _SyntheticNaturalTransport:
+    def __init__(self, catalog: dict) -> None:
+        self._catalog = catalog
+        self.calls: list[tuple[str, str]] = []
+        self.veto = True
+        self.fail_after_review = False
+        self.reviewed = False
+
+    async def catalog(self, *, timeout_seconds):
+        self.calls.append(("catalog", ""))
+        return self._catalog
+
+    async def embeddings(self, payload, *, timeout_seconds):
+        self.calls.append(("embeddings", payload["model"]))
+        if self.fail_after_review and self.reviewed:
+            raise OSError("synthetic embedding transport failure")
+        return {
+            "data": [
+                {"index": index, "embedding": [1.0, 0.0, 0.0]}
+                for index, _ in enumerate(payload["input"])
+            ]
+        }
+
+    async def chat_completion(self, payload, *, timeout_seconds):
+        self.calls.append(("chat", payload["model"]))
+        if payload["model"] == "fake::conversation":
+            return {
+                "id": "fake-conversation",
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {"role": "assistant", "content": "Okay, Toronto."},
+                    }
+                ],
+            }
+        packet = json.loads(payload["messages"][1]["content"])
+        self.reviewed = True
+        current = packet["current_user_message"]
+        decision = {
+            "proposals": [
+                {
+                    "claim_id": "residence",
+                    "operation": "add",
+                    "fact_type": "person.current_location",
+                    "value": "Toronto",
+                    "evidence_quote": "I live in Toronto",
+                    "sources": [
+                        {
+                            "message_id": current["id"],
+                            "quote": "I live in Toronto",
+                            "role": "user_assertion",
+                        }
+                    ],
+                }
+            ],
+            "claim_dispositions": [
+                {
+                    "claim_id": "residence",
+                    "outcome": "contradiction" if self.veto else "allow",
+                    "reason": "reply_conflict" if self.veto else "supported",
+                    **({"candidate_reply_quote": "Toronto"} if self.veto else {}),
+                }
+            ],
+        }
+        return {
+            "id": "fake-reviewer",
+            "choices": [
+                {"finish_reason": "stop", "message": {"content": json.dumps(decision)}}
+            ],
+        }
+
+
+@pytest.fixture
+def natural_worker_support():
+    from types import SimpleNamespace
+
+    return SimpleNamespace(
+        catalog=_catalog,
+        definitions=_Definitions,
+        ready_worker=_ReadyWorker,
+        transport=_SyntheticNaturalTransport,
     )
