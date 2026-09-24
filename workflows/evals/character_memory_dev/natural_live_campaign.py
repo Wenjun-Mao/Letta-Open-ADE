@@ -30,6 +30,12 @@ from ade_api.features.agent_runtime.natural_evaluation_capacity import (
     DEEPSEEK_ROUTE,
     bind_checkpoint6_capacity,
 )
+from ade_api.features.agent_runtime.natural_memory_review import (
+    natural_review_json_schema,
+)
+from ade_api.features.agent_runtime.natural_memory_reviewer import (
+    NATURAL_REVIEWER_SYSTEM,
+)
 from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
 )
@@ -72,7 +78,27 @@ from .natural_live_transport import NaturalLiveTransport, RequestScope
 async def _run(args: argparse.Namespace) -> None:
     checked_url, database_name = isolated_database_url(args.database_url)
     revision, fingerprint = _source_identity()
-    cases, matrix, cells = _frozen_inputs()
+    cases, matrix, frozen_cells = _frozen_inputs()
+    if args.diagnostic_first_three:
+        if args.iteration_id not in {"c6-iter1", "c6-iter2", "c6-iter3"}:
+            raise RuntimeError(
+                "diagnostic first-three probe requires a versioned iteration ID"
+            )
+        cells = frozen_cells[:3]
+        if [cell["id"] for _, cell, _ in cells] != [
+            "mutation-preference-add",
+            "mutation-scoped-addition",
+            "mutation-natural-correction",
+        ]:
+            raise RuntimeError("diagnostic first-three mutation schedule drifted")
+        diagnostic_tail = [name for name, _, _ in frozen_cells[3:]]
+    else:
+        if args.iteration_id:
+            raise RuntimeError(
+                "iteration ID applies only to diagnostic first-three probes"
+            )
+        cells = frozen_cells
+        diagnostic_tail = []
     if args.output.exists() or args.ledger.exists():
         raise RuntimeError("campaign output and ledger must both be new")
     if not args.ledger.resolve().is_relative_to((ROOT / "data/runtime").resolve()):
@@ -117,7 +143,11 @@ async def _run(args: argparse.Namespace) -> None:
         model_discovery_timeout_seconds=10,
         agent_runtime_worker_id=f"natural-c6-{uuid4().hex[:8]}",
         agent_runtime_budget_ledger_path=str(args.ledger),
-        agent_runtime_budget_stage="natural-memory-checkpoint6-once",
+        agent_runtime_budget_stage=(
+            f"natural-memory-{args.iteration_id}-once"
+            if args.diagnostic_first_three
+            else "natural-memory-checkpoint6-once"
+        ),
         agent_runtime_budget_generation_limit=96,
         agent_runtime_budget_embedding_limit=160,
     )
@@ -141,8 +171,22 @@ async def _run(args: argparse.Namespace) -> None:
     manifest = {
         "schema_version": 1,
         "status": "running",
+        "campaign_kind": "development_diagnostic_first_three"
+        if args.diagnostic_first_three
+        else "frozen_comparison",
+        "iteration_id": args.iteration_id,
         "source_revision": revision,
         "source_fingerprint": fingerprint,
+        "reviewer_contract_sha256": {
+            "instructions": hashlib.sha256(
+                NATURAL_REVIEWER_SYSTEM.encode()
+            ).hexdigest(),
+            "schema": hashlib.sha256(
+                json.dumps(
+                    natural_review_json_schema(), ensure_ascii=False, sort_keys=True
+                ).encode()
+            ).hexdigest(),
+        },
         "database": database_name,
         "ledger": str(args.ledger),
         "router_url": args.router_url,
@@ -233,7 +277,11 @@ async def _run(args: argparse.Namespace) -> None:
                 database=database,
                 definitions=BoundDefinitions(),
                 purpose="evaluation",
-                session_namespace="natural-checkpoint6",
+                session_namespace=(
+                    f"natural-checkpoint6-{args.iteration_id}"
+                    if args.diagnostic_first_three
+                    else "natural-checkpoint6"
+                ),
             )
             try:
                 session = await sessions.create(
@@ -258,6 +306,8 @@ async def _run(args: argparse.Namespace) -> None:
                     "conversation_id": session["conversation"]["id"],
                     "subject_id": session["memory_subject"]["id"],
                     "definition_id": session["agent_definition"]["id"],
+                    "prompt_sha256": session["agent_definition"]["prompt_sha256"],
+                    "persona_sha256": session["agent_definition"]["persona_sha256"],
                     "deployment_snapshots": session["agent_definition"]["deployments"],
                 }
                 supplied = (
@@ -404,13 +454,19 @@ async def _run(args: argparse.Namespace) -> None:
             if stop_reason:
                 break
         manifest["status"] = (
-            "stopped" if stop_reason else "completed_pending_human_review"
+            "stopped"
+            if stop_reason
+            else "completed_diagnostic"
+            if args.diagnostic_first_three
+            else "completed_pending_human_review"
         )
+        manifest["unrun"].extend(diagnostic_tail)
         manifest["stop_reason"] = stop_reason
         manifest["ledger_final"] = ledger.counts()
         manifest["coverage"] = {
             "executed": len(manifest["cells"]),
-            "scheduled": len(cells),
+            "diagnostic_target": len(cells),
+            "frozen_schedule": len(frozen_cells),
         }
         write_json(args.output / "manifest.json", manifest)
     finally:
@@ -426,6 +482,8 @@ def main() -> None:
     parser.add_argument("--router-url", required=True)
     parser.add_argument("--ledger", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--diagnostic-first-three", action="store_true")
+    parser.add_argument("--iteration-id")
     args = parser.parse_args()
     asyncio.run(_run(args))
 

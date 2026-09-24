@@ -9,6 +9,10 @@ from ade_api.features.agent_runtime.errors import RuntimeValidationError
 from ade_api.features.agent_runtime.natural_memory_policy import (
     prepare_natural_memory_review,
 )
+from ade_api.features.agent_runtime.natural_memory_review import (
+    natural_review_json_schema,
+    parse_natural_review_decision,
+)
 from ade_api.features.agent_runtime.natural_memory_reviewer import (
     NaturalMemoryReviewer,
     natural_review_request,
@@ -106,6 +110,108 @@ def test_natural_reviewer_sends_mixed_schema_and_one_call() -> None:
     assert packet["candidate_visible_reply"] == "Okay."
     assert packet["source_messages"][0]["id"] == USER
     assert "NaturalRevise" in request["messages"][0]["content"]
+
+
+def test_captured_subject_reference_is_rejected_without_remapping() -> None:
+    user = {"id": USER, "role": "user", "content": "我早上喜欢喝咖啡。"}
+    proposal = {
+        "claim_id": "p1",
+        "operation": "add",
+        "fact_type": "person.preference",
+        "qualifier": "drink",
+        "value": "咖啡",
+        "entity_ref": SUBJECT,
+        "evidence_quote": user["content"],
+        "sources": [
+            {"message_id": USER, "quote": user["content"], "role": "user_assertion"}
+        ],
+    }
+    payload = {
+        "proposals": [proposal],
+        "claim_dispositions": [
+            {"claim_id": "p1", "outcome": "allow", "reason": "supported"}
+        ],
+    }
+    with pytest.raises(
+        RuntimeValidationError, match="subject-kind add cannot select an entity"
+    ):
+        parse_natural_review_decision(payload)
+    valid = {**proposal, "entity_ref": None, "value": "早上喜欢喝咖啡"}
+    decision = parse_natural_review_decision({**payload, "proposals": [valid]})
+    prepared = prepare_natural_memory_review(
+        decision=decision,
+        subject_id=SUBJECT,
+        current_user_message=user,
+        available_messages=[user],
+        facts=[],
+        entities=[
+            {"id": SUBJECT, "subject_id": SUBJECT, "kind": "subject", "label": ""}
+        ],
+        candidate_reply="好的。",
+    )
+    assert prepared.operations[0].entity_id == SUBJECT
+    assert prepared.operations[0].value == "早上喜欢喝咖啡"
+
+
+def test_reviewer_request_states_entity_and_scope_rules_with_nullable_ref() -> None:
+    current = {"id": USER, "role": "user", "content": "我早上喜欢喝咖啡。"}
+    request = natural_review_request(
+        model_key="deepseek::deepseek-flash",
+        provider_adapter="deepseek_openai",
+        current_user_message=current,
+        source_messages=[current],
+        facts=[],
+        entities=[{"id": SUBJECT, "kind": "subject", "label": ""}],
+        candidate_reply="好的。",
+    )
+    system = request["messages"][0]["content"]
+    assert "Subject-kind adds need entity_ref:null" in system
+    assert "Preserve time, place, frequency and condition in values" in system
+    ref = natural_review_json_schema()["$defs"]["NaturalAdd"]["properties"][
+        "entity_ref"
+    ]
+    assert ref["default"] is None
+    assert {option["type"] for option in ref["anyOf"]} == {"string", "null"}
+
+
+def test_related_identity_reference_remains_valid() -> None:
+    user = {"id": USER, "role": "user", "content": "我的狗叫 Roxy。"}
+    payload = {
+        "proposals": [
+            {
+                "claim_id": "pet",
+                "operation": "add",
+                "fact_type": "pet.name",
+                "value": "Roxy",
+                "entity_ref": "new:pet",
+                "evidence_quote": user["content"],
+                "sources": [
+                    {
+                        "message_id": USER,
+                        "quote": user["content"],
+                        "role": "user_assertion",
+                    }
+                ],
+            }
+        ],
+        "claim_dispositions": [
+            {"claim_id": "pet", "outcome": "allow", "reason": "supported"}
+        ],
+    }
+    decision = parse_natural_review_decision(payload)
+    prepared = prepare_natural_memory_review(
+        decision=decision,
+        subject_id=SUBJECT,
+        current_user_message=user,
+        available_messages=[user],
+        facts=[],
+        entities=[
+            {"id": SUBJECT, "subject_id": SUBJECT, "kind": "subject", "label": ""}
+        ],
+        candidate_reply="好的。",
+    )
+    assert len(prepared.new_entities) == 1
+    assert prepared.operations[0].entity_id == prepared.new_entities[0].id
 
 
 def test_natural_reviewer_rejects_false_veto_without_retry() -> None:

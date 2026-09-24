@@ -21,13 +21,13 @@ from .router_transport import RouterTransport
 
 
 NATURAL_REVIEWER_SYSTEM = """You are ADE's durable-memory reviewer.
-Return one JSON object matching the supplied schema. Review all supported claims
-in the current user turn together: add, revise, end, reassert or forget, including
-mixed turns. Give each proposal one unique claim_id and one typed disposition.
+Return JSON object matching the schema. Review all current-user claims
+together: add, revise, end, reassert or forget. Give each proposal one unique
+claim_id and typed disposition.
 An allow disposition requires exact current-user authority. A prior assistant
 message can resolve a referent only when the current user explicitly endorses it;
 assistant words alone never authorize storage. Cite each exact source span by
-message_id, quote and source role. The source must be in the supplied bundle.
+message_id, quote and source role. Use only supplied messages.
 Never infer or store fictional, quoted, hypothetical, uncertain, unconsented or
 no-save details. Use defer for unresolved reference or scoped no-save claims.
 If the visible candidate reply contradicts a proposed claim, cite one exact
@@ -39,7 +39,8 @@ unspecified only when the source cannot distinguish the reason.
 End makes a former/invalidated assertion inactive; reassert activates only an
 inactive assertion. Forget requires an explicit user request. Never target a
 forgotten assertion or invent IDs. A new related entity requires a surviving
-identity proposal. No proposal is valid merely because the assistant said it.
+identity proposal. Subject-kind adds need entity_ref:null; related adds need
+existing:/new: refs. Preserve time, place, frequency and condition in values.
 """
 
 

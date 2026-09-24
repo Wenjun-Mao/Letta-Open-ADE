@@ -16,7 +16,12 @@ from pydantic import (
     model_validator,
 )
 
-from .fact_registry import FactRegistryError, fact_type_spec, normalize_qualifier
+from .fact_registry import (
+    EntityKind,
+    FactRegistryError,
+    fact_type_spec,
+    normalize_qualifier,
+)
 from .errors import RuntimeValidationError
 from .memory_review import FactTypeName, QualifierName
 
@@ -65,6 +70,8 @@ class NaturalAdd(_NaturalProposalBase):
             self.qualifier = normalize_qualifier(spec, self.qualifier)
         except FactRegistryError as exc:
             raise ValueError(str(exc)) from exc
+        if spec.entity_kind is EntityKind.SUBJECT and self.entity_ref:
+            raise ValueError("subject-kind add cannot select an entity")
         if not self.value.strip():
             raise ValueError("add value must not be blank")
         return self
