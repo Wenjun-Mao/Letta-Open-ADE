@@ -49,8 +49,8 @@ A/A0/B bindings, direct operator removal, and UI path are implemented in an
 isolated worktree with offline and disposable-PostgreSQL tests. These do not yet
 complete checkpoints 3–5: opt-in failed-attempt artifact retention now has
 fake-provider service-to-worker PostgreSQL coverage for false veto, success,
-and post-review embedding failure, plus focused retention-fault tests, but not
-the complete cancellation/lease/commit-ack fault matrix;
+and post-review embedding failure, plus focused retention-fault and lost-commit-
+ack orchestration tests, but not the complete cancellation/lease fault matrix;
 full paired comparison manifests and the real
 API/browser journey remain open. Continue between static
 checkpoints without routine confirmation; pause for material scope/tradeoff decisions,

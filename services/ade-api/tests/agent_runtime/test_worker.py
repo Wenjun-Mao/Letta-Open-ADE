@@ -140,6 +140,44 @@ def test_artifact_retention_fault_cannot_undo_committed_success(
     assert finalizer.failure is None
 
 
+def test_lost_commit_ack_rechecks_authoritative_success_before_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    observed: list[NaturalAttemptEvidence] = []
+
+    class _EvidenceAttempts(_Attempts):
+        async def execute_attempt(self, _claim, **kwargs):
+            kwargs["trace"].natural_evidence = NaturalAttemptEvidence(
+                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v2-b"
+            )
+            return SimpleNamespace()
+
+    class _LostAckFinalizer(_Finalizer):
+        async def commit_success(self, claim, attempt_id, result):
+            await super().commit_success(claim, attempt_id, result)
+            raise ConnectionError("synthetic acknowledgment loss")
+
+        async def commit_failure(self, claim, attempt_id, exc, **kwargs):
+            # The real finalizer observes a terminal run and leaves it committed.
+            assert self.succeeded is True
+
+    async def retain(_engine, evidence):
+        observed.append(evidence)
+
+    monkeypatch.setattr(worker_module, "retain_attempt_evidence", retain)
+
+    async def scenario() -> _LostAckFinalizer:
+        worker = _worker(_EvidenceAttempts(), _LostAckFinalizer())
+        worker.engine = object()
+        await worker._process_claim(_claim(), asyncio.Event())
+        return worker.finalizer
+
+    finalizer = asyncio.run(scenario())
+    assert finalizer.succeeded is True
+    assert finalizer.failure is None
+    assert len(observed) == 1
+
+
 def test_rejected_candidate_is_retained_after_worker_failure(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

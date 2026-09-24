@@ -3,7 +3,7 @@
   "status": "frozen-offline-contract-not-live-approval",
   "policy_variants": {
     "A": "Complete active/inactive lifecycle snapshot before any prior dialogue or summary; withhold optional narrative if it cannot fit.",
-    "A0": "A with summary removed, same raw cutoff and nonsummary sections, summary allocation left unused; diagnostic only.",
+    "A0": "A with summary removed and its allocation unused when the full snapshot fits; under snapshot overflow, use B's selective recipe and eligible local suffix; diagnostic only.",
     "B": "Shared local suffix first; selective current lifecycle views and bounded exact-entity expansion; no summary or older raw windows."
   },
   "budgets": {
@@ -17,8 +17,8 @@
     "pressure": {"record_count": 48, "size_class": "short", "record_payload_tokens": 2304, "required_shared_suffix_tokens": 320, "generator_full_packet_min_tokens": 3944, "reviewer_full_packet_max_tokens": 5376, "b_selective_packet_max_tokens": 2664, "claim": "A withholds the answerable local antecedent while B and the full reviewer packet fit; serialized-request tests must confirm these estimates before live approval."}
   },
   "pairing": {
-    "A_A0": "Identical eligible pool, raw cutoff, summary-through boundary, lifecycle snapshot, nonsummary contents and order; A0 does not reallocate removed summary tokens.",
-    "A0_B": "Identical preselection local pool, lifecycle state, model limits and total budgets; final selected bundles intentionally differ.",
+    "A_A0": "When the full snapshot fits, identical eligible pool, raw cutoff, summary-through boundary, lifecycle snapshot, nonsummary contents and order; A0 does not reallocate removed summary tokens. Overflow is the explicit selective-fallback exception.",
+    "A0_B": "Identical preselection local pool, lifecycle state, model limits and total budgets; under full-snapshot overflow use the same selective retrieval and expansion recipe; other final bundles may differ intentionally.",
     "A_B": "Same mandatory cases and usefulness bar; A0 cannot qualify A.",
     "reuse": "A single attempt may support another cell only after serialized requests and processing/commit behavior are shown identical; it is not independent replication."
   },
