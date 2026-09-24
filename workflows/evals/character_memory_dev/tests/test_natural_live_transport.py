@@ -91,12 +91,27 @@ def test_all_outbound_paths_reserve_before_send_and_capture_redacted_raw_respons
             await transport.chat_completion(
                 {"model": "deepseek::deepseek-flash"}, timeout_seconds=180
             )
+        with transport.scope(RequestScope("later", 0, 1)):
+            with pytest.raises(
+                RuntimeError, match="embedding provider budget exhausted"
+            ):
+                await transport.embeddings(
+                    {
+                        "model": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+                        "input": ["synthetic"],
+                    },
+                    timeout_seconds=180,
+                )
 
     asyncio.run(scenario())
     assert router.sent == ["embedding", "generation", "generation"]
     assert ledger.counts() == {"generation": 2, "embedding": 1}
     captures = list((tmp_path / "captures").glob("*.json"))
-    assert len(captures) == 3
+    assert len(captures) == 4
+    blocked = json.loads(
+        (tmp_path / "captures" / "later-embedding-001.json").read_text()
+    )
+    assert blocked["outcome"] == "failed"
     generation = json.loads(
         (tmp_path / "captures" / "setup-generation-001.json").read_text()
     )

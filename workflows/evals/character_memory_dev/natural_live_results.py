@@ -60,17 +60,41 @@ def capture_scope(
     return captures
 
 
-def mutation_state_matches(cell_id: str, facts: list[dict[str, Any]]) -> bool:
+def mutation_state_matches(
+    cell_id: str,
+    facts: list[dict[str, Any]],
+    *,
+    run_id: str,
+    terminal: dict[str, Any],
+) -> bool:
+    """Require the frozen result and its new, terminal-confirmed revision."""
+
+    if terminal.get("outcome") != "committed":
+        return False
+    committed_ids = set(map(str, terminal.get("revision_ids", [])))
+    if not committed_ids:
+        return False
+
+    def has_terms(value: Any, *terms: str) -> bool:
+        text = str(value or "").casefold()
+        return any(term.casefold() in text for term in terms)
+
     def matching(fact_type: str, status: str, *terms: str) -> list[dict[str, Any]]:
         return [
             fact
             for fact in facts
             if fact["fact_type"] == fact_type
             and fact["status"] == status
-            and any(
-                term.casefold() in str(fact.get("value") or "").casefold()
-                for term in terms
-            )
+            and has_terms(fact.get("value"), *terms)
+        ]
+
+    def new_revisions(fact: dict[str, Any], *operations: str) -> list[dict[str, Any]]:
+        return [
+            revision
+            for revision in fact.get("revisions", [])
+            if str(revision.get("run_id")) == run_id
+            and str(revision.get("id")) in committed_ids
+            and (not operations or revision.get("operation") in operations)
         ]
 
     coffee_active = matching("person.preference", "active", "咖啡", "coffee")
@@ -81,60 +105,139 @@ def mutation_state_matches(cell_id: str, facts: list[dict[str, Any]]) -> bool:
     relation_forgotten = matching(
         "relationship.person", "forgotten", "小王", "Xiao Wang"
     )
+    milk_active = matching("person.preference", "active", "奶茶", "milk tea")
+
     match cell_id:
         case "mutation-preference-add":
-            return bool(coffee_active) and not matching(
-                "person.preference", "active", "茉莉", "jasmine"
-            )
+            return any(
+                has_terms(fact["value"], "早上", "morning")
+                and new_revisions(fact, "add")
+                for fact in coffee_active
+            ) and not matching("person.preference", "active", "茉莉", "jasmine")
         case "mutation-scoped-addition":
-            return (
-                bool(coffee_active and flower_active)
-                and coffee_active[0]["id"] != flower_active[0]["id"]
+            return any(
+                has_terms(coffee["value"], "早上", "morning")
+                and has_terms(flower["value"], "晚上", "evening")
+                and coffee["id"] != flower["id"]
+                and not new_revisions(coffee)
+                and new_revisions(flower, "add")
+                for coffee in coffee_active
+                for flower in flower_active
             )
         case "mutation-natural-correction":
-            roxy = matching("pet.name", "active", "Roxy")
-            return (
-                bool(roxy)
-                and not matching("pet.name", "active", "Rocky")
-                and any(
-                    any(
-                        str(revision.get("reason") or "") == "correct"
-                        for revision in fact.get("revisions", [])
-                    )
-                    for fact in roxy
-                )
-            )
+            for roxy in matching("pet.name", "active", "Roxy"):
+                revisions = roxy.get("revisions", [])
+                by_id = {str(revision["id"]): revision for revision in revisions}
+                for current in new_revisions(roxy, "revise"):
+                    if current.get("reason") != "correct":
+                        continue
+                    predecessors = [
+                        by_id.get(str(predecessor))
+                        for predecessor in current.get("predecessor_revision_ids", [])
+                    ]
+                    if any(
+                        prior is not None
+                        and has_terms(prior.get("value"), "Rocky")
+                        and prior.get("operation") == "add"
+                        for prior in predecessors
+                    ) and any(
+                        source.get("authority_role") == "user_assertion"
+                        and has_terms(source.get("quote"), "打错", "typo", "wrong")
+                        for source in current.get("evidence", [])
+                    ):
+                        return not matching("pet.name", "active", "Rocky")
+            return False
         case "mutation-end":
-            return bool(relation_inactive) and not relation_active
+            return not relation_active and any(
+                new_revisions(fact, "end") for fact in relation_inactive
+            )
         case "mutation-endorsement":
-            husky = matching("pet.breed", "active", "哈士奇", "Husky")
+            roxy_entities = {
+                str(fact["entity_id"])
+                for fact in matching("pet.name", "active", "Roxy")
+                if new_revisions(fact, "add")
+            }
             return any(
-                {"user_endorsement", "assistant_referent"}
-                <= {
-                    source["authority_role"]
-                    for revision in fact.get("revisions", [])
-                    for source in revision.get("evidence", [])
-                }
-                for fact in husky
+                str(fact["entity_id"]) in roxy_entities
+                and any(
+                    {"user_endorsement", "assistant_referent"}
+                    <= {
+                        source.get("authority_role")
+                        for source in revision.get("evidence", [])
+                    }
+                    for revision in new_revisions(fact, "add")
+                )
+                for fact in matching("pet.breed", "active", "哈士奇", "Husky")
             )
         case "mutation-no-save":
             return (
-                bool(coffee_forgotten)
-                and not coffee_active
-                and bool(
-                    matching("person.current_location", "active", "多伦多", "Toronto")
+                not coffee_active
+                and any(new_revisions(fact, "forget") for fact in coffee_forgotten)
+                and any(
+                    new_revisions(fact, "add")
+                    for fact in matching(
+                        "person.current_location", "active", "多伦多", "Toronto"
+                    )
                 )
             )
         case "mutation-explicit-removal":
-            return bool(matching("person.preference", "forgotten", "奶茶", "milk tea"))
+            return not milk_active and any(
+                new_revisions(fact, "forget")
+                for fact in matching(
+                    "person.preference", "forgotten", "奶茶", "milk tea"
+                )
+            )
         case "mutation-fresh-restatement":
-            return bool(relation_active and relation_forgotten) and all(
-                current["id"] != old["id"]
+            return bool(relation_forgotten) and any(
+                new_revisions(current, "add")
+                and all(current["id"] != old["id"] for old in relation_forgotten)
                 for current in relation_active
-                for old in relation_forgotten
             )
         case _:
             raise ValueError(f"Unknown required mutation: {cell_id}")
+
+
+def require_mutation_state(
+    cell_id: str,
+    *,
+    facts: list[dict[str, Any]],
+    run_id: str,
+    terminal: dict[str, Any],
+) -> None:
+    if not mutation_state_matches(cell_id, facts, run_id=run_id, terminal=terminal):
+        raise RuntimeError("required mutation state did not match committed fixture")
+
+
+def verify_allocation_counts(*, setup_used: int, turn_used: int, total: int) -> None:
+    if setup_used > 40 or turn_used > 120 or total > 160:
+        raise RuntimeError("campaign embedding allocation exhausted")
+    if total != setup_used + turn_used:
+        raise RuntimeError("campaign embedding allocation accounting differs")
+
+
+def remaining_turn_embedding_limit(turn_used: int) -> int:
+    verify_allocation_counts(setup_used=0, turn_used=turn_used, total=turn_used)
+    return min(4, 120 - turn_used)
+
+
+def unrun_after_stop(cells: list[tuple[str, dict, str]], index: int) -> list[str]:
+    return [item[0] for item in cells[index + 1 :]]
+
+
+def stop_campaign_at(
+    manifest: dict[str, Any],
+    cells: list[tuple[str, dict, str]],
+    index: int,
+    error: Exception,
+) -> str:
+    """Record the failed cell and preserve the untouched suffix of the schedule."""
+
+    result = manifest["cells"][-1]
+    reason = f"{result['cell']}: {type(error).__name__}: {error}"
+    result["status"] = "campaign_stopped"
+    result["stop_reason"] = reason
+    manifest["unrun"] = unrun_after_stop(cells, index)
+    return reason
 
 
 def verify_attempt_safety(
