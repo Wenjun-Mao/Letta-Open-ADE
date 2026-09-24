@@ -304,6 +304,7 @@ class TurnExecution:
         )
         natural_source_messages: tuple[dict[str, Any], ...] = ()
         reviewer_input_limit = 0
+        reviewer_request_max_tokens = 1024
         if natural_variant is not None:
             reviewer_budget = (
                 evaluation_capacity.reviewer
@@ -317,6 +318,10 @@ class TurnExecution:
                 )
             )
             reviewer_input_limit = reviewer_budget.input_limit
+            if evaluation_capacity is not None:
+                reviewer_request_max_tokens = (
+                    evaluation_capacity.reviewer_request_max_tokens
+                )
             natural_bundle = build_natural_context(
                 variant=natural_variant,
                 system_prompt=str(definition["prompt_content"]),
@@ -354,6 +359,7 @@ class TurnExecution:
                 entities=state["entities"],
                 candidate_reply_reserve=budget.max_output_tokens,
                 input_token_limit=reviewer_input_limit,
+                max_output_tokens=reviewer_request_max_tokens,
             )
         else:
             try:
@@ -489,6 +495,7 @@ class TurnExecution:
                 candidate_reply=executor_result.assistant_text,
                 timeout_seconds=_remaining(deadline),
                 input_token_limit=reviewer_input_limit,
+                max_output_tokens=reviewer_request_max_tokens,
             )
         else:
             reviewer_result = await reviewer.review(

@@ -16,6 +16,7 @@ from .errors import RuntimeValidationError
 
 
 CONTRACT_ID = "natural-memory-checkpoint6-v1"
+OUTPUT_DIAGNOSTIC_CONTRACT_ID = "natural-memory-checkpoint6-reviewer-output-4096-v1"
 DEEPSEEK_ROUTE = "deepseek::deepseek-flash"
 _LIMITS = {
     "conversation": {
@@ -37,9 +38,12 @@ class NaturalEvaluationCapacity:
     reviewer: ContextBudget
     conversation_requests: int
     reviewer_shared_suffix_tokens: int
+    reviewer_request_max_tokens: int
 
 
-def bind_checkpoint6_capacity(prepared: dict[str, Any]) -> dict[str, Any]:
+def bind_checkpoint6_capacity(
+    prepared: dict[str, Any], *, diagnostic_reviewer_output: bool = False
+) -> dict[str, Any]:
     """Add the exact approved limits after real catalog deployment resolution."""
 
     bound = deepcopy(prepared)
@@ -58,9 +62,18 @@ def bind_checkpoint6_capacity(prepared: dict[str, Any]) -> dict[str, Any]:
         if snapshot.get("route_alias") != DEEPSEEK_ROUTE:
             raise RuntimeValidationError("Natural evaluation DeepSeek route differs")
         snapshot["natural_evaluation_capacity"] = {
-            "contract": CONTRACT_ID,
+            "contract": (
+                OUTPUT_DIAGNOSTIC_CONTRACT_ID
+                if diagnostic_reviewer_output
+                else CONTRACT_ID
+            ),
             "deployment_fingerprint": snapshot["fingerprint"],
             **_LIMITS[role],
+            **(
+                {"reviewer_request_max_tokens": 4096}
+                if diagnostic_reviewer_output and role == "reviewer"
+                else {}
+            ),
         }
     return bound
 
@@ -86,13 +99,26 @@ def checked_checkpoint6_capacity(
         or set(roles) != {"conversation", "reviewer", "retriever"}
     ):
         raise RuntimeValidationError("Natural evaluation capacity is outside its scope")
+    diagnostic = (
+        roles["conversation"]["natural_evaluation_capacity"].get("contract")
+        == OUTPUT_DIAGNOSTIC_CONTRACT_ID
+    )
+    if diagnostic and natural_variant != "B":
+        raise RuntimeValidationError(
+            "Reviewer output diagnostic requires native B policy"
+        )
     for role in ("conversation", "reviewer"):
         snapshot = roles[role]
         profile = snapshot["natural_evaluation_capacity"]
         expected = {
-            "contract": CONTRACT_ID,
+            "contract": OUTPUT_DIAGNOSTIC_CONTRACT_ID if diagnostic else CONTRACT_ID,
             "deployment_fingerprint": snapshot.get("fingerprint"),
             **_LIMITS[role],
+            **(
+                {"reviewer_request_max_tokens": 4096}
+                if diagnostic and role == "reviewer"
+                else {}
+            ),
         }
         if profile != expected or snapshot.get("route_alias") != DEEPSEEK_ROUTE:
             raise RuntimeValidationError("Natural evaluation capacity binding differs")
@@ -110,6 +136,13 @@ def checked_checkpoint6_capacity(
         ):
             raise RuntimeValidationError("Natural evaluation exceeds provider capacity")
     reviewer_context = roles["reviewer"]["fingerprint_payload"]["context_settings"]
+    if diagnostic and (
+        int(reviewer_context.get("max_output_tokens") or 0) < 4096
+        or int(reviewer_context.get("total_tokens") or 0) < 6759 + 4096
+    ):
+        raise RuntimeValidationError(
+            "Reviewer output diagnostic exceeds pinned provider capacity"
+        )
     if reviewer_context.get("reviewer_repair_count") != 0:
         raise RuntimeValidationError("Natural evaluation requires zero reviewer repair")
     conversation = ContextBudget(
@@ -125,4 +158,5 @@ def checked_checkpoint6_capacity(
         reviewer=reviewer,
         conversation_requests=2,
         reviewer_shared_suffix_tokens=640,
+        reviewer_request_max_tokens=4096 if diagnostic else 1024,
     )

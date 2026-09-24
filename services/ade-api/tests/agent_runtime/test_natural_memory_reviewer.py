@@ -174,6 +174,24 @@ def test_reviewer_request_states_entity_and_scope_rules_with_nullable_ref() -> N
     assert {option["type"] for option in ref["anyOf"]} == {"string", "null"}
 
 
+def test_diagnostic_output_envelope_preserves_reviewer_input_and_sampling() -> None:
+    current = {"id": USER, "role": "user", "content": "晚上我一般更喜欢花茶。"}
+    common = {
+        "model_key": "deepseek::deepseek-flash",
+        "provider_adapter": "deepseek_openai",
+        "current_user_message": current,
+        "source_messages": [current],
+        "facts": [],
+        "entities": [{"id": SUBJECT, "kind": "subject", "label": ""}],
+        "candidate_reply": "听起来很舒服。",
+    }
+    baseline = natural_review_request(**common)
+    diagnostic = natural_review_request(**common, max_output_tokens=4096)
+    assert baseline["max_tokens"] == 1024
+    assert diagnostic == {**baseline, "max_tokens": 4096}
+    assert serialized_review_tokens(diagnostic) == serialized_review_tokens(baseline)
+
+
 def test_related_identity_reference_remains_valid() -> None:
     user = {"id": USER, "role": "user", "content": "我的狗叫 Roxy。"}
     payload = {

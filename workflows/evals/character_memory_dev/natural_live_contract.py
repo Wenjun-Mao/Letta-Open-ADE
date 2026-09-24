@@ -65,6 +65,33 @@ def _frozen_inputs() -> tuple[dict, dict, list]:
     return cases, matrix, expanded_cells(matrix)
 
 
+def selected_cells(
+    frozen_cells: list[tuple[str, dict, str]],
+    *,
+    diagnostic_first_three: bool,
+    iteration_id: str | None,
+    diagnostic_reviewer_output_4096: bool,
+) -> tuple[list[tuple[str, dict, str]], list[str]]:
+    if not diagnostic_first_three:
+        if iteration_id or diagnostic_reviewer_output_4096:
+            raise RuntimeError("diagnostic options require first-three probe mode")
+        return frozen_cells, []
+    if iteration_id not in {"c6-iter1", "c6-iter2", "c6-iter3"}:
+        raise RuntimeError(
+            "diagnostic first-three probe requires a versioned iteration ID"
+        )
+    if diagnostic_reviewer_output_4096 and iteration_id not in {"c6-iter2", "c6-iter3"}:
+        raise RuntimeError("reviewer output diagnostic requires iteration two or three")
+    cells = frozen_cells[:3]
+    if [cell["id"] for _, cell, _ in cells] != [
+        "mutation-preference-add",
+        "mutation-scoped-addition",
+        "mutation-natural-correction",
+    ]:
+        raise RuntimeError("diagnostic first-three mutation schedule drifted")
+    return cells, [name for name, _, _ in frozen_cells[3:]]
+
+
 def _branch(cases: dict, cell: dict) -> dict:
     return next(
         branch

@@ -101,8 +101,15 @@ def _catalog(natural_worker_support) -> dict:
     return {"items": [deepseek, retriever]}
 
 
+@pytest.mark.parametrize(
+    "diagnostic_reviewer_output, expected_output", [(False, 1024), (True, 4096)]
+)
 def test_worker_uses_role_limits_and_one_shared_pre_request_ledger(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, natural_worker_support
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    natural_worker_support,
+    diagnostic_reviewer_output: bool,
+    expected_output: int,
 ) -> None:
     assert DATABASE_URL is not None
     monkeypatch.setenv("ADE_NATURAL_MEMORY_CAPTURE", "1")
@@ -135,7 +142,9 @@ def test_worker_uses_role_limits_and_one_shared_pre_request_ledger(
         class BoundDefinitions:
             async def prepare(self, request, *, purpose):
                 prepared = await base_definitions.prepare(request, purpose=purpose)
-                return bind_checkpoint6_capacity(prepared)
+                return bind_checkpoint6_capacity(
+                    prepared, diagnostic_reviewer_output=diagnostic_reviewer_output
+                )
 
         sessions = PurposeSessionService(
             database=RuntimeDatabase(engine),
@@ -214,7 +223,7 @@ def test_worker_uses_role_limits_and_one_shared_pre_request_ledger(
             )
             assert evidence["generation"]["input_limit"] == 3072
             assert evidence["generation_requests"][0]["max_tokens"] == 512
-            assert evidence["reviewer_request"]["max_tokens"] == 1024
+            assert evidence["reviewer_request"]["max_tokens"] == expected_output
             assert (
                 evidence["reviewer_request"]["serialized_visible_token_estimate"]
                 <= 6759

@@ -67,6 +67,7 @@ from .natural_live_contract import (
     EXPECTED_CASES_SHA256,
     EXPECTED_MATRIX_SHA256,
     _source_identity,
+    selected_cells,
     _frozen_inputs,
     _branch,
     _current_text,
@@ -79,26 +80,12 @@ async def _run(args: argparse.Namespace) -> None:
     checked_url, database_name = isolated_database_url(args.database_url)
     revision, fingerprint = _source_identity()
     cases, matrix, frozen_cells = _frozen_inputs()
-    if args.diagnostic_first_three:
-        if args.iteration_id not in {"c6-iter1", "c6-iter2", "c6-iter3"}:
-            raise RuntimeError(
-                "diagnostic first-three probe requires a versioned iteration ID"
-            )
-        cells = frozen_cells[:3]
-        if [cell["id"] for _, cell, _ in cells] != [
-            "mutation-preference-add",
-            "mutation-scoped-addition",
-            "mutation-natural-correction",
-        ]:
-            raise RuntimeError("diagnostic first-three mutation schedule drifted")
-        diagnostic_tail = [name for name, _, _ in frozen_cells[3:]]
-    else:
-        if args.iteration_id:
-            raise RuntimeError(
-                "iteration ID applies only to diagnostic first-three probes"
-            )
-        cells = frozen_cells
-        diagnostic_tail = []
+    cells, diagnostic_tail = selected_cells(
+        frozen_cells,
+        diagnostic_first_three=args.diagnostic_first_three,
+        iteration_id=args.iteration_id,
+        diagnostic_reviewer_output_4096=args.diagnostic_reviewer_output_4096,
+    )
     if args.output.exists() or args.ledger.exists():
         raise RuntimeError("campaign output and ledger must both be new")
     if not args.ledger.resolve().is_relative_to((ROOT / "data/runtime").resolve()):
@@ -171,10 +158,18 @@ async def _run(args: argparse.Namespace) -> None:
     manifest = {
         "schema_version": 1,
         "status": "running",
-        "campaign_kind": "development_diagnostic_first_three"
-        if args.diagnostic_first_three
-        else "frozen_comparison",
+        "campaign_kind": (
+            "development_diagnostic_reviewer_output_4096"
+            if args.diagnostic_reviewer_output_4096
+            else "development_diagnostic_first_three"
+            if args.diagnostic_first_three
+            else "frozen_comparison"
+        ),
         "iteration_id": args.iteration_id,
+        "reviewer_envelope": {
+            "input_limit": 6759,
+            "max_output_tokens": 4096 if args.diagnostic_reviewer_output_4096 else 1024,
+        },
         "source_revision": revision,
         "source_fingerprint": fingerprint,
         "reviewer_contract_sha256": {
@@ -271,7 +266,10 @@ async def _run(args: argparse.Namespace) -> None:
                         prepared["prompt_sha256"] = hashlib.sha256(
                             prepared["prompt_content"].encode()
                         ).hexdigest()
-                    return bind_checkpoint6_capacity(prepared)
+                    return bind_checkpoint6_capacity(
+                        prepared,
+                        diagnostic_reviewer_output=args.diagnostic_reviewer_output_4096,
+                    )
 
             sessions = PurposeSessionService(
                 database=database,
@@ -483,6 +481,7 @@ def main() -> None:
     parser.add_argument("--ledger", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--diagnostic-first-three", action="store_true")
+    parser.add_argument("--diagnostic-reviewer-output-4096", action="store_true")
     parser.add_argument("--iteration-id")
     args = parser.parse_args()
     asyncio.run(_run(args))

@@ -72,6 +72,7 @@ class NaturalMemoryReviewer:
         timeout_seconds: float,
         validate_decision: Callable[[NaturalReviewDecision], None],
         input_token_limit: int,
+        max_output_tokens: int = 1024,
         observe_request: Callable[[dict[str, Any]], None] | None = None,
         observe_decision: Callable[[NaturalReviewDecision], None] | None = None,
     ) -> NaturalReviewerResult:
@@ -83,6 +84,7 @@ class NaturalMemoryReviewer:
             facts=facts,
             entities=entities,
             candidate_reply=candidate_reply,
+            max_output_tokens=max_output_tokens,
         )
         request_tokens = serialized_review_tokens(payload)
         if request_tokens > input_token_limit:
@@ -132,6 +134,7 @@ def natural_review_request(
     facts: list[dict[str, Any]],
     entities: list[dict[str, Any]],
     candidate_reply: str,
+    max_output_tokens: int = 1024,
 ) -> dict[str, Any]:
     """Build the sole reviewer wire shape used by preflight and execution."""
 
@@ -195,7 +198,7 @@ def natural_review_request(
             {"role": "system", "content": system},
             {"role": "user", "content": json.dumps(packet, ensure_ascii=False)},
         ],
-        "max_tokens": 1024,
+        "max_tokens": max_output_tokens,
         "stream": False,
     }
     if provider_adapter == "deepseek_openai":
@@ -270,6 +273,7 @@ def preflight_reviewer_bundle(
     entities: list[dict[str, Any]],
     candidate_reply_reserve: int,
     input_token_limit: int,
+    max_output_tokens: int = 1024,
 ) -> int:
     """Fail before generation if the selected shared bundle cannot be reviewed."""
 
@@ -281,6 +285,7 @@ def preflight_reviewer_bundle(
         facts=facts,
         entities=entities,
         candidate_reply="x" * (4 * candidate_reply_reserve),
+        max_output_tokens=max_output_tokens,
     )
     tokens = serialized_review_tokens(projected)
     if tokens > input_token_limit:
@@ -305,6 +310,7 @@ async def execute_natural_review(
     candidate_reply: str,
     timeout_seconds: float,
     input_token_limit: int,
+    max_output_tokens: int = 1024,
 ) -> tuple[NaturalReviewerResult, PreparedNaturalReview]:
     """Bind one visible candidate and source bundle to one validated decision."""
 
@@ -337,6 +343,7 @@ async def execute_natural_review(
         candidate_reply=candidate_reply,
         timeout_seconds=timeout_seconds,
         input_token_limit=input_token_limit,
+        max_output_tokens=max_output_tokens,
         observe_request=evidence.capture_reviewer_request if evidence else None,
         observe_decision=evidence.capture_reviewer_decision if evidence else None,
         validate_decision=prepare,

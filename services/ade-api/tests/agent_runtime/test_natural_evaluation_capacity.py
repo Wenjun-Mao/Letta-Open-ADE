@@ -87,10 +87,47 @@ def test_role_limits_match_frozen_matrix_and_do_not_rewrite_provider_identity() 
     )
     assert limits.reviewer.input_limit == matrix["budgets"]["reviewer"]["input_limit"]
     assert limits.conversation_requests == 2
+    assert limits.reviewer_request_max_tokens == 1024
     assert (
         limits.reviewer_shared_suffix_tokens
         == matrix["budgets"]["reviewer"]["shared_suffix_max"]
     )
+
+
+def test_diagnostic_review_output_changes_only_named_request_envelope() -> None:
+    prepared = _prepared()
+    normal = checked_checkpoint6_capacity(
+        bind_checkpoint6_capacity(prepared), purpose="evaluation", natural_variant="B"
+    )
+    diagnostic_bound = bind_checkpoint6_capacity(
+        prepared, diagnostic_reviewer_output=True
+    )
+    diagnostic = checked_checkpoint6_capacity(
+        diagnostic_bound, purpose="evaluation", natural_variant="B"
+    )
+    assert normal is not None and diagnostic is not None
+    assert diagnostic.conversation == normal.conversation
+    assert diagnostic.reviewer == normal.reviewer
+    assert diagnostic.reviewer.input_limit == 6759
+    assert diagnostic.reviewer_request_max_tokens == 4096
+    assert (
+        diagnostic_bound["deployment_snapshot"][1]["fingerprint"]
+        == prepared["deployment_snapshot"][1]["fingerprint"]
+    )
+    with pytest.raises(RuntimeValidationError, match="native B policy"):
+        checked_checkpoint6_capacity(
+            diagnostic_bound, purpose="evaluation", natural_variant="A"
+        )
+    smaller = deepcopy(prepared)
+    smaller["deployment_snapshot"][1]["fingerprint_payload"]["context_settings"][
+        "max_output_tokens"
+    ] = 2048
+    with pytest.raises(RuntimeValidationError, match="exceeds pinned provider"):
+        checked_checkpoint6_capacity(
+            bind_checkpoint6_capacity(smaller, diagnostic_reviewer_output=True),
+            purpose="evaluation",
+            natural_variant="B",
+        )
     assert (
         checked_checkpoint6_capacity(
             prepared, purpose="evaluation", natural_variant="B"
