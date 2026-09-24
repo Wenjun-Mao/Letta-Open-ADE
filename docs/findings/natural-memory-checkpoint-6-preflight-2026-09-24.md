@@ -1,8 +1,9 @@
 # Natural-memory checkpoint 6: live preflight hold
 
 Status: one campaign authorized on 2026-09-24; zero generation and zero embedding
-requests sent. Live execution is held for a product decision on the evaluation
-capacity binding. The frozen `cases.json` and `matrix.json` are unchanged.
+requests sent at this preflight. The user subsequently approved the focused
+evaluation capacity correction described below. The frozen `cases.json` and
+`matrix.json` are unchanged.
 
 ## Evidence and root cause
 
@@ -43,15 +44,15 @@ That schema was created only in this disposable DB, then migration passed.
 
 ## Smallest decision and implementation surface
 
-The director recommends an isolated evaluation-only, role-specific capacity
-binding on the same actual DeepSeek route. A reviewed implementation would pin
+The user approved an isolated evaluation-only, role-specific capacity binding
+on the same actual DeepSeek route. The implementation must pin
 the actual deployment identity while adding immutable generation/reviewer
 evaluation limits checked to be within it; apply those limits in context packing,
 reviewer preflight, request `max_tokens`, and native continuation count; and
 cover exact fingerprint validation and pressure behavior with fake transport and
 real-worker tests. The Qwen route, frozen matrix, production manifest, and
-normal product binding would remain unchanged. This is a new evaluation runtime
-contract, so it awaits explicit user choice before implementation or live calls.
+normal product binding remain unchanged. This evaluation contract is authorized
+only for the one checkpoint-6 campaign, with no release or product adoption.
 
 The 512-token conversation reserve and 1,024-token reviewer reserve are both
 lower than the selected route's 4,096-token reserve. They can be deliberate
@@ -60,8 +61,35 @@ and therefore must be named in the comparison. The separate 4,096/8,192
 role-specific contexts cannot be represented by the current single shared
 deployment fingerprint without an evaluation-only override contract.
 
-The scoped transport in `natural_live_transport.py` is offline-tested glue: it
-requires a named request scope, exact route keys, local call caps, shared SQLite
-pre-request reservation, and redacted raw capture. It has not been attached to a
-live runner or used for a provider request. The campaign, response scoring,
-human comparison, and policy selection are unrun.
+The scoped transport in `natural_live_transport.py` requires a named request
+scope, exact route keys, local call caps, shared SQLite pre-request reservation,
+and redacted raw capture. It is wired into the one-shot campaign runner but has
+not been used for a provider request. The campaign, response scoring, human
+comparison, and policy selection are unrun.
+
+## Offline pressure and infrastructure corrections before the run
+
+The product prompt and persona alone made the 48-record full snapshot fit, so
+the live pressure setup appends the matrix's exact 5,310 `P` bytes to that
+prompt in both A and B definitions. This is artificial capacity stress, not a
+representative persona-quality prompt. The offline serialized packets then
+show A withholding the answerable earlier exchange and B admitting it below
+the 3,072-token generation limit. The 48 unrelated values use the same short
+`M{index}` construction as the frozen pressure test.
+
+The normal reviewer suffix heuristic reserves another 320 tokens before
+selection. With 48 facts, that conservative admission check rejects the base
+packet even though the complete reviewer request fits. The checkpoint-6
+evaluation binding selects the frozen 640-token shared suffix and still runs
+the native exact 6,759-token full-request preflight and execution checks. This
+is scoped to the approved one-shot evaluation; normal reviewer admission is
+unchanged. [ADR 0031](../adr/0031-natural-memory-evaluation-capacity.md)
+records the contract.
+
+The first disposable PostgreSQL migration installed `vector` into `ade`, while
+the runtime uses an `extensions` schema on the connection search path. The two
+disposable evaluation databases were corrected to that established bootstrap
+shape; no other database was modified. The scoped router will use Docker's
+existing `dgx-spark` host mapping with the approved IP so the actual Qwen
+route URL retains the manifest's pinned hostname. These steps make no paid
+generation or embedding request.

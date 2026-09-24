@@ -11,6 +11,8 @@ from ade_api.platform.settings import AdeApiSettings
 
 from .contracts import AcceptTurnRequest
 from .context import context_budget_from_deployment, validate_current_user_message
+from .natural_context import NATURAL_POLICY_BINDINGS
+from .natural_evaluation_capacity import checked_checkpoint6_capacity
 from .database_boundary import (
     DEFAULT_WORKSPACE_ID,
     RuntimeDatabase,
@@ -94,12 +96,23 @@ class RunService:
                 **release_validation_kwargs(self.settings.agent_runtime_mode),
             )
             conversation_deployment = definition_deployment(definition, "conversation")
+            evaluation_capacity = checked_checkpoint6_capacity(
+                definition,
+                purpose=str(conversation.get("purpose") or ""),
+                natural_variant=NATURAL_POLICY_BINDINGS.get(
+                    str(definition["memory_policy_version"])
+                ),
+            )
             try:
                 validate_current_user_message(
                     system_prompt=str(definition["prompt_content"]),
                     persona=str(definition["persona_content"]),
                     content=request.content,
-                    budget=context_budget_from_deployment(conversation_deployment),
+                    budget=(
+                        evaluation_capacity.conversation
+                        if evaluation_capacity is not None
+                        else context_budget_from_deployment(conversation_deployment)
+                    ),
                 )
             except ValueError as exc:
                 raise RuntimeValidationError(str(exc)) from exc

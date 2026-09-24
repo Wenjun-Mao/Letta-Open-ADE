@@ -29,6 +29,7 @@ from .evaluation_tools import evaluation_tool_registry
 from .executor import ConversationExecutor, curated_tools
 from .memory_policy import prepare_memory_review
 from .natural_attempt_evidence import capture_context, start_natural_capture
+from .natural_evaluation_capacity import checked_checkpoint6_capacity
 from .natural_context import (
     NATURAL_POLICY_BINDINGS,
     build_natural_context,
@@ -120,6 +121,11 @@ class TurnExecution:
             mode=self.settings.agent_runtime_mode,
             **release_validation_kwargs(self.settings.agent_runtime_mode),
         )
+        evaluation_capacity = checked_checkpoint6_capacity(
+            definition,
+            purpose=str(conversation.get("purpose") or ""),
+            natural_variant=natural_variant,
+        )
         subject_id = str(conversation["memory_subject_id"])
         deployments = {
             str(item["role"]): item for item in definition["deployment_snapshot"]
@@ -178,7 +184,11 @@ class TurnExecution:
         current_user = _current_user_message(state["messages"], str(run["id"]))
         current_sequence = int(current_user["sequence"])
         summary = state["summary"]
-        budget = context_budget_from_deployment(conversation_deployment)
+        budget = (
+            evaluation_capacity.conversation
+            if evaluation_capacity is not None
+            else context_budget_from_deployment(conversation_deployment)
+        )
         try:
             validate_current_user_message(
                 system_prompt=str(definition["prompt_content"]),
@@ -295,13 +305,16 @@ class TurnExecution:
         natural_source_messages: tuple[dict[str, Any], ...] = ()
         reviewer_input_limit = 0
         if natural_variant is not None:
-            reviewer_deployment_budget = context_budget_from_deployment(
-                reviewer_deployment
-            )
-            reviewer_budget = ContextBudget(
-                context_window=reviewer_deployment_budget.context_window,
-                max_output_tokens=1024,
-                tool_schema_tokens=0,
+            reviewer_budget = (
+                evaluation_capacity.reviewer
+                if evaluation_capacity is not None
+                else ContextBudget(
+                    context_window=context_budget_from_deployment(
+                        reviewer_deployment
+                    ).context_window,
+                    max_output_tokens=1024,
+                    tool_schema_tokens=0,
+                )
             )
             reviewer_input_limit = reviewer_budget.input_limit
             natural_bundle = build_natural_context(
@@ -316,14 +329,18 @@ class TurnExecution:
                 summary_content=summary_content,
                 history_metadata=history,
                 budget=budget,
-                reviewer_suffix_limit=reviewer_suffix_limit(
-                    model_key=str(reviewer_deployment["route_alias"]),
-                    provider_adapter=reviewer_adapter,
-                    current_user_message=current_user,
-                    facts=state["facts"],
-                    entities=state["entities"],
-                    input_token_limit=reviewer_input_limit,
-                    candidate_reply_reserve=budget.max_output_tokens,
+                reviewer_suffix_limit=(
+                    evaluation_capacity.reviewer_shared_suffix_tokens
+                    if evaluation_capacity is not None
+                    else reviewer_suffix_limit(
+                        model_key=str(reviewer_deployment["route_alias"]),
+                        provider_adapter=reviewer_adapter,
+                        current_user_message=current_user,
+                        facts=state["facts"],
+                        entities=state["entities"],
+                        input_token_limit=reviewer_input_limit,
+                        candidate_reply_reserve=budget.max_output_tokens,
+                    )
                 ),
             )
             built_context = natural_bundle.context
@@ -400,7 +417,11 @@ class TurnExecution:
                 messages=built_context.messages,
                 timeout_seconds=_remaining(deadline),
                 max_output_tokens=budget.max_output_tokens,
-                max_model_requests=_max_model_requests(conversation_deployment),
+                max_model_requests=(
+                    evaluation_capacity.conversation_requests
+                    if evaluation_capacity is not None
+                    else _max_model_requests(conversation_deployment)
+                ),
                 input_token_limit=budget.input_limit if natural_mode else None,
                 observe_request=(
                     trace.natural_evidence.capture_generation_request

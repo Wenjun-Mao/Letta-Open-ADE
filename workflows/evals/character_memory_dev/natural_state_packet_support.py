@@ -42,6 +42,9 @@ async def seed_state_packet(
     history: list[tuple[str, str]],
     facts: list[dict],
     summary_content: str = "",
+    summary_through_sequence: int = 2,
+    summary_model_key: str = "fake::conversation",
+    summary_model_fingerprint: str = "1" * 64,
 ) -> dict:
     """Insert completed exchanges, lifecycle revision chains and optional summary."""
 
@@ -117,15 +120,23 @@ async def seed_state_packet(
             fact_id = str(uuid4())
             fact_ids.append(fact_id)
             fact_entity_id = entity_id
-            if fact["fact_type"] == "relationship.person":
+            if fact["fact_type"] in {"relationship.person", "pet.name"}:
                 fact_entity_id = str(uuid4())
                 await connection.execute(
                     insert(memory_entities).values(
                         id=fact_entity_id,
                         workspace_id=workspace_id,
                         subject_id=subject_id,
-                        kind="related_person",
-                        label="Xiao Wang",
+                        kind=(
+                            "related_person"
+                            if fact["fact_type"] == "relationship.person"
+                            else "pet"
+                        ),
+                        label=(
+                            "Xiao Wang"
+                            if fact["fact_type"] == "relationship.person"
+                            else str(fact["value"])
+                        ),
                     )
                 )
             transitions = [("add", None, fact["assertion"])] + [
@@ -253,34 +264,44 @@ async def seed_state_packet(
                     )
                 )
         if summary_content:
-            assert history_run_ids and len(message_ids) >= 2
+            assert (
+                history_run_ids
+                and 2 <= summary_through_sequence <= len(message_ids)
+                and summary_through_sequence % 2 == 0
+            )
             summary_id = str(uuid4())
-            # This supplied-summary fixture is deliberately hand-authored. Its
-            # metadata still hashes the exact synthetic source packet rather
-            # than carrying arbitrary placeholder digests.
-            first_user, first_assistant = history[0]
+            # Supplied controls bind the exact synthetic source packet and are
+            # marked separately from summaries generated in this conversation.
+            flat_history = [
+                {"sequence": sequence, "role": role, "content": content}
+                for sequence, (role, content) in enumerate(
+                    (
+                        item
+                        for pair in history
+                        for item in (("user", pair[0]), ("assistant", pair[1]))
+                    ),
+                    1,
+                )
+            ]
             summary_plan = CompactionPlan(
                 previous_summary_id=None,
                 expected_summary_version=0,
                 previous_summary_content="",
-                through_sequence=2,
-                source_message_ids=tuple(message_ids[:2]),
-                incremental_messages=(
-                    {"sequence": 1, "role": "user", "content": first_user},
-                    {"sequence": 2, "role": "assistant", "content": first_assistant},
-                ),
+                through_sequence=summary_through_sequence,
+                source_message_ids=tuple(message_ids[:summary_through_sequence]),
+                incremental_messages=tuple(flat_history[:summary_through_sequence]),
             )
             await connection.execute(
                 insert(conversation_summaries).values(
                     id=summary_id,
                     conversation_id=conversation_id,
                     version=1,
-                    through_sequence=2,
+                    through_sequence=summary_through_sequence,
                     content=summary_content,
-                    run_id=history_run_ids[0],
-                    model_key="fake::conversation",
-                    model_fingerprint="1" * 64,
-                    provider_request_id=f"scripted-summary-{token}",
+                    run_id=history_run_ids[summary_through_sequence // 2 - 1],
+                    model_key=summary_model_key,
+                    model_fingerprint=summary_model_fingerprint,
+                    provider_request_id=f"supplied-control-summary-{token}",
                     content_sha256=_digest(summary_content),
                     prompt_sha256=compaction_prompt_sha256(),
                     input_sha256=compaction_input_sha256(summary_plan),
@@ -291,7 +312,7 @@ async def seed_state_packet(
                 insert(summary_sources),
                 [
                     {"summary_id": summary_id, "message_id": message_id}
-                    for message_id in message_ids[:2]
+                    for message_id in message_ids[:summary_through_sequence]
                 ],
             )
         await connection.execute(

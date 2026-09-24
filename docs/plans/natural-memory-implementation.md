@@ -361,7 +361,11 @@ The ceiling is 96 DeepSeek generation requests and 160 Qwen embedding requests,
 shared pre-request caps across API/worker/diagnostic.
 The [2026-09-24 live preflight](../findings/natural-memory-checkpoint-6-preflight-2026-09-24.md)
 found that the pinned DeepSeek deployment capacity differs from this frozen
-matrix. Live calls are held for an explicit evaluation-binding decision.
+matrix. The user then approved a focused, isolated evaluation-only, role-specific
+capacity binding on the same actual route, with the existing matrix limits and
+native two-conversation/one-reviewer request cap. The frozen fixtures and
+production deployment manifest remain authoritative and unchanged.
+The evaluation-only runtime contract is [ADR 0031](../adr/0031-natural-memory-evaluation-capacity.md).
 This is a hard spend bound, not a guarantee that all cases fit. Include setup,
 indexing, continuations, compaction, and reviewer calls; no fallback/rerolls. Use
 180-second per-turn timeout, zero additional retries and zero reviewer repair.
