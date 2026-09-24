@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import os
-from uuid import uuid4
 
 import pytest
 from sqlalchemy import update
@@ -203,7 +201,7 @@ def test_resolution_roles_and_stale_target(
     asyncio.run(scenario())
 
 
-def test_no_save_deferral_commits_only_independent_sibling(
+def test_invalid_sibling_is_atomic_in_either_order(
     seed_m2_memory_resources, record_m2_memory_turn
 ) -> None:
     assert DATABASE_URL is not None
@@ -214,22 +212,17 @@ def test_no_save_deferral_commits_only_independent_sibling(
             async with engine.begin() as connection:
                 ids = await seed_m2_memory_resources(connection)
                 subject = ids["subject_one"]
-                await record_m2_memory_turn(
+                turn = await record_m2_memory_turn(
                     connection,
                     ids["workspace"],
                     ids["conversation_one"],
-                    "I prefer coffee in the morning. Don't save that. I now live in Toronto.",
+                    "I now live in Toronto.",
                 )
                 messages = await ConversationRepository(connection).list_messages(
                     ids["conversation_one"]
                 )
                 current = messages[-1]
                 entities = [{"id": subject, "subject_id": subject, "kind": "subject"}]
-                defer = {
-                    "kind": "defer",
-                    "current_quote": "Don't save that",
-                    "reason": "no_save",
-                }
                 residence = {
                     "kind": "subject_add",
                     "fact_type": "person.current_location",
@@ -239,140 +232,22 @@ def test_no_save_deferral_commits_only_independent_sibling(
                         "current_quote": "I now live in Toronto",
                     },
                 }
-                review = prepare_natural_memory_review(
-                    decision=NaturalReviewDecision.model_validate(
-                        {"decisions": [defer, residence]}
-                    ),
-                    subject_id=subject,
-                    current_user_message=current,
-                    available_messages=messages,
-                    facts=[],
-                    entities=entities,
-                    candidate_reply="Okay.",
-                )
-                assert len(review.operations) == 1
-                assert review.deferred_claims[0]["reason"] == "no_save"
-                committed = await commit_natural_memory_review(
-                    connection,
-                    workspace_id=ids["workspace"],
-                    subject_id=subject,
-                    run_id=current["run_id"],
-                    review=review,
-                    operation_embeddings=(None,),
-                    embedding_fingerprint="none",
-                    embedding_dimensions=0,
-                    retrieval_policy_version="natural-v3",
-                    expected_memory_generation=1,
-                )
-                assert len(committed) == 1
-                memory = MemoryRepository(connection)
-                assert [
-                    (item["fact_type"], item["value"])
-                    for item in await memory.list_facts(subject)
-                ] == [("person.current_location", "Toronto")]
-                assert (await memory.get_subject(subject))["memory_generation"] == 2
-                prohibited = {
+                invalid = {
                     "kind": "subject_add",
                     "fact_type": "person.preference",
                     "qualifier": "drink",
-                    "value": "coffee in the morning",
-                    "evidence": {
-                        "mode": "direct",
-                        "current_quote": "I prefer coffee in the morning",
-                    },
+                    "value": "tea",
+                    "evidence": {"mode": "direct", "current_quote": "I prefer tea"},
                 }
-                for decisions in ([defer, prohibited], [prohibited, defer]):
-                    with pytest.raises(RuntimeValidationError, match="No-save"):
+                memory = MemoryRepository(connection)
+                for decisions in ([invalid, residence], [residence, invalid]):
+                    with pytest.raises(RuntimeValidationError):
                         prepare_natural_memory_review(
                             decision=NaturalReviewDecision.model_validate(
                                 {"decisions": decisions}
                             ),
                             subject_id=subject,
                             current_user_message=current,
-                            available_messages=messages,
-                            facts=await memory.list_facts(subject),
-                            entities=entities,
-                            candidate_reply="Okay.",
-                        )
-                assert len(await memory.list_facts(subject)) == 1
-        finally:
-            await engine.dispose()
-
-    asyncio.run(scenario())
-
-
-def test_inherited_no_save_rejects_whole_attempt_before_independent_commit(
-    seed_m2_memory_resources, record_m2_memory_turn
-) -> None:
-    assert DATABASE_URL is not None
-
-    async def scenario() -> None:
-        engine = create_persistence_engine(DATABASE_URL)
-        try:
-            async with engine.begin() as connection:
-                ids = await seed_m2_memory_resources(connection)
-                subject = ids["subject_one"]
-                prior = await record_m2_memory_turn(
-                    connection,
-                    ids["workspace"],
-                    ids["conversation_one"],
-                    "I like coffee. Do not save that.",
-                    sequence=1,
-                )
-                conversations = ConversationRepository(connection)
-                question = "Do you like coffee?"
-                await conversations.append_message(
-                    {
-                        "id": str(uuid4()),
-                        "workspace_id": ids["workspace"],
-                        "conversation_id": ids["conversation_one"],
-                        "role": "assistant",
-                        "content": question,
-                        "content_sha256": hashlib.sha256(question.encode()).hexdigest(),
-                        "run_id": prior["run_id"],
-                    }
-                )
-                current = await record_m2_memory_turn(
-                    connection,
-                    ids["workspace"],
-                    ids["conversation_one"],
-                    "Yes. I now live in Toronto.",
-                    sequence=3,
-                )
-                messages = await conversations.list_messages(ids["conversation_one"])
-                entities = [{"id": subject, "subject_id": subject, "kind": "subject"}]
-                coffee = {
-                    "kind": "subject_add",
-                    "fact_type": "person.preference",
-                    "qualifier": "drink",
-                    "value": "coffee",
-                    "evidence": {
-                        "mode": "endorse_assistant",
-                        "current_quote": "Yes",
-                        "support_handle": "A1",
-                        "support_quote": question,
-                    },
-                }
-                residence = {
-                    "kind": "subject_add",
-                    "fact_type": "person.current_location",
-                    "value": "Toronto",
-                    "evidence": {
-                        "mode": "direct",
-                        "current_quote": "I now live in Toronto",
-                    },
-                }
-                memory = MemoryRepository(connection)
-                for decisions in ([coffee, residence], [residence, coffee]):
-                    with pytest.raises(
-                        RuntimeValidationError, match="Inherited no-save"
-                    ):
-                        prepare_natural_memory_review(
-                            decision=NaturalReviewDecision.model_validate(
-                                {"decisions": decisions}
-                            ),
-                            subject_id=subject,
-                            current_user_message=messages[-1],
                             available_messages=messages,
                             facts=[],
                             entities=entities,
@@ -385,7 +260,7 @@ def test_inherited_no_save_rejects_whole_attempt_before_independent_commit(
                         {"decisions": [residence]}
                     ),
                     subject_id=subject,
-                    current_user_message=messages[-1],
+                    current_user_message=current,
                     available_messages=messages,
                     facts=[],
                     entities=entities,
@@ -394,16 +269,16 @@ def test_inherited_no_save_rejects_whole_attempt_before_independent_commit(
                 revalidate_bound_natural_review(
                     review,
                     subject_id=subject,
-                    run_id=current["run_id"],
+                    run_id=turn["run_id"],
                     messages=messages,
                     facts=[],
                     entities=entities,
                 )
-                await commit_natural_memory_review(
+                committed = await commit_natural_memory_review(
                     connection,
                     workspace_id=ids["workspace"],
                     subject_id=subject,
-                    run_id=current["run_id"],
+                    run_id=turn["run_id"],
                     review=review,
                     operation_embeddings=(None,),
                     embedding_fingerprint="none",
@@ -411,9 +286,10 @@ def test_inherited_no_save_rejects_whole_attempt_before_independent_commit(
                     retrieval_policy_version="natural-v3",
                     expected_memory_generation=1,
                 )
+                assert len(committed) == 1
                 assert [
-                    (fact["fact_type"], fact["value"])
-                    for fact in await memory.list_facts(subject)
+                    (item["fact_type"], item["value"])
+                    for item in await memory.list_facts(subject)
                 ] == [("person.current_location", "Toronto")]
                 assert (await memory.get_subject(subject))["memory_generation"] == 2
         finally:

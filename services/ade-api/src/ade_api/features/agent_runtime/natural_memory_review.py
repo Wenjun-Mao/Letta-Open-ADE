@@ -100,7 +100,7 @@ class NaturalForget(_Target):
 class NaturalDefer(_Closed):
     kind: Literal["defer"]
     current_quote: StrictStr = Field(min_length=1, max_length=10_000)
-    reason: Literal["unresolved", "uncertain", "nonasserted", "no_save"]
+    reason: Literal["unresolved", "uncertain", "nonasserted"]
 
 
 SnapshotReference: TypeAlias = Annotated[StrictStr, Field(pattern=r"^[FE][1-9][0-9]*$")]

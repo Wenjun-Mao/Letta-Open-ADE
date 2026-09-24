@@ -1,7 +1,7 @@
 # Natural Memory: Bounded Implementation Plan
 
-Status: revision 5, proposed for Pro review on 2026-09-24. Planning only.
-This revision is not implementation, live-call, deployment, or release approval.
+Status: revision 5 plan with an offline reviewer/ADE amendment implemented on
+2026-09-24. This document grants no live-call, deployment, or release approval.
 It replaces the next-work instructions in revision 3, not its historical evidence.
 Source inspected: `aea2719c1e2310d0c5c1a10b9fe75c0d0e3c14e5`.
 [Previous plan and completed checkpoints](https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/aea2719c1e2310d0c5c1a10b9fe75c0d0e3c14e5/docs/plans/natural-memory-implementation.md).
@@ -11,6 +11,73 @@ natural-memory scope; do not create a competing implementation plan.
 Revision 5 incorporates the [compact-plan review assessment](../findings/natural-memory-consultation/compact-plan-review-assessment.md):
 inherited restrictions, operation-specific assent, read-only conflict grounding,
 canonical non-vetoing request observations, and complete-delta acceptance.
+The amendment below supersedes its semantic restriction and assent clauses.
+
+## Reviewer/ADE Responsibility Amendment (2026-09-24)
+
+The user directed removal of conversational privacy-policy features and
+phrase-specific semantic regex fixes from the active natural-memory path. This
+supersedes the privacy and semantic-authority clauses of revision 5 and ADR 0035.
+The provisional Mandarin omitted-object prototype is discarded. Historical
+fixtures and observations remain evidence of the earlier contract, not current
+acceptance tests. This amendment authorizes offline implementation only.
+
+ADE guarantees the closed wire shape, exact current/support quote binding,
+role and chronology eligibility, held subject/target/identity handles, source
+integrity, target version and generation fencing, and all-or-nothing persistence.
+The single reviewer judges factual assertion, negation, temporal scope,
+correction, requested factual lifecycle operation and reply contradiction.
+Exact provenance proves where words came from; it does not prove entailment.
+Explicit operator fact removal remains available. There is no conversational
+privacy/no-save/consent subsystem or phrase-matching permission gate.
+
+### Implementation Boundary
+
+Remove `natural_memory_authority.py` and its natural-path call, `no_save` from
+the natural review wire shape and preparation, semantic equivalence vetoes in
+conflict handling, and privacy/consent commands in the reviewer prompt. Retain
+the structural binders, schema and entity checks, factual lifecycle status
+checks, source and version revalidation, and atomic commit. Syntactic handle
+regexes remain. The older typed policy and `memory_intent.py` have separate
+legacy callers and are outside this active natural-v3 removal; they must not be
+reintroduced into the natural path. Frozen historical campaign data is not
+rewritten. The fact registry remains unchanged: `person.preference` means a
+preference, not a report of drinking behavior. Durable habit recall requires a
+separate typed-schema decision.
+
+### Factual Evaluation Deltas
+
+Start with one active `person.preference` drink fact F1, `prefers coffee in the
+morning`, version 1 and subject generation G. `∅` means zero
+fact/entity/revision/write-embedding changes and no generation advance.
+A valid nonempty atomic review advances generation once; a rejected review
+commits neither candidate reply nor mutation. These rows are reviewer
+evaluation expectations, not deterministic semantic guarantees.
+
+| Preceding sequence and current turn | Complete delta and reply boundary | Forbidden extra delta |
+| --- | --- | --- |
+| F1; `最近喝咖啡总睡不着，早上也改喝茶了` | ∅ under the current registry. Reply may use the current drinking habit; same-conversation follow-up may use dialogue. Cross-conversation habit recall is not guaranteed. | Revise F1 to liking tea; invent all-day dislike |
+| F1; `现在早上更喜欢茶了` | Revise F1 to active v2 `prefers tea in the morning`, reason supersede; G→G+1, one revision. | All-day tea, extra preference, lost v1 history |
+| After that revision, new conversation asks `我早上现在更喜欢喝什么？` | ∅; answer morning tea from active preference; generation stays G+1. | Rewrite memory or claim all-day preference |
+| F1; `早上还是更喜欢咖啡，晚上更喜欢茶了` | Keep F1; add one evening-tea preference v1, G→G+1. | Change morning coffee or add all-day tea |
+| F1; `可能早上更喜欢茶吧` | ∅; reply may discuss uncertainty. | Definite tea revision |
+| F1; `早上不喜欢咖啡了` | End F1 inactive v2, reason ended, G→G+1. | Forget history or invent tea |
+| F1 active v2 morning tea; `不对，我说的是晚上更喜欢茶，早上仍喜欢咖啡` | Revise still-active F1 to morning coffee v3, reason correct; add evening tea v1; G+1→G+2 atomically. | Revive ended/forgotten F1 or erase v1/v2 |
+
+The correction row applies only to the still-active target. An ended target needs
+its own factual lifecycle decision; a forgotten chain cannot be reasserted.
+Do not convert `喝茶` into `喜欢茶` to make a fixture pass.
+
+### Verification Gate
+
+Use paired semantic evaluation cases for wrong scope, unsupported value,
+negation, correction and false conflict; these measure the reviewer and must
+not be relabeled as ADE guarantees. Unit and isolated PostgreSQL tests verify
+shape, provenance, versions, held handles and atomic deltas, including invalid
+siblings in both orders. Scripted browser/router tests verify integration only.
+Later authorized live diagnostics must measure natural meaning, answer
+usefulness and recall; fake choices cannot qualify that behavior. Keep the
+known policy-fingerprint freshness failure unwaived.
 
 ## Outcome And Boundaries
 

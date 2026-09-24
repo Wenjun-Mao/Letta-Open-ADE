@@ -1,6 +1,6 @@
 # ADR 0035: Compact Natural Review And Observational Dispatch
 
-- Status: Accepted for offline checkpoints 1–4 on 2026-09-24; no live or release authority
+- Status: Accepted for offline checkpoints 1–4; natural reviewer boundary amended 2026-09-24; no live or release authority
 - Supersedes model-facing and accounting portions of ADRs 0029, 0032 and 0034.
   Those records remain historical. ADRs 0031 and 0033 describe earlier capacity
   experiments and do not qualify this envelope.
@@ -60,3 +60,28 @@ An answer that plainly states the cited value is not a validated conflict; broad
 contradiction remains reviewer judgment. Tests cover the named contrasts,
 PostgreSQL readback/migration, faults and dispatch observation. Checkpoint 5
 remains separately authorized.
+
+## 2026-09-24 Amendment: Natural Meaning Belongs To The Reviewer
+
+The user directed removal of conversational privacy-policy features and
+phrase-specific semantic regex fixes from the active natural-memory path. This
+supersedes the no-save, uncertainty, withdrawal, assent and answer-agreement
+validator clauses above. Those clauses remain as historical checkpoint
+description, not current authority. ADE retains structural provenance, closed
+wire shape, allowed source roles, chronology, subject isolation, held handles,
+target status/version, generation fencing and atomic commit. It does not
+interpret natural-language entailment or consent through regexes. The one
+reviewer decides factual scope, correction, requested lifecycle operation and
+reply contradiction. Explicit operator fact removal remains available; the
+natural reviewer retains factual end and forget operations without a
+phrase-matching permission gate.
+
+We rejected expanding language-specific patterns because examples cannot
+establish semantic completeness and substring checks caused both false accepts
+and false vetoes. We also rejected a second judge and a dormant compatibility
+privacy implementation. Consequences: structurally valid but semantically wrong
+reviewer output may pass ADE; factual quality must be measured with paired
+complete-delta and recall cases before live qualification. Historical campaign
+fixtures and evidence remain unchanged. The current `person.preference` type
+cannot represent a morning drinking habit, so cross-conversation habit recall is
+a separate schema decision.

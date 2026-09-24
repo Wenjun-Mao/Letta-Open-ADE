@@ -29,17 +29,17 @@ E handle or new:local identity reference. Targets use F handles only. ADE owns a
 persistent IDs, versions, roles and source offsets. Preserve scope, time,
 frequency, condition and negation in supported values.
 Every write has one exact current-user quote and one evidence mode:
-direct (current assertion), resolve_user (earlier U assertion/request completed by
-current answer), endorse_assistant (current explicit assent to one A proposition
-or action). Earlier text is support, never independent current authority. Bare
-names do not endorse assistant-introduced properties. Uncertainty, hypothetical,
-quotation, withdrawal and no-save restrictions inherited from antecedents remain
-binding. Forget needs explicit removal assent; a factual ending is not forgetting.
-Use defer for unresolved/uncertain/nonasserted/no-save claims without executable
-fields. No-save on a claim blocks an equivalent write in either order; unrelated
-supported writes survive. Use conflict with exact candidate quote and read-only
-F/E grounding when the visible reply contradicts held memory, even with no write.
-A conflict rejects the whole attempt. Never invent an assertion to ground it.
+direct (current assertion), resolve_user (earlier U assertion clarified by the
+current answer), endorse_assistant (current answer resolves one A proposition
+or action). Earlier text is support, never an independent current fact.
+Judge whether the current turn actually supports the proposed factual meaning,
+including temporal correction and requested end or forget operation. A factual
+ending is distinct from forgetting a record. Do not invent a preference from
+a report of a drinking habit.
+Use defer for unresolved, uncertain or nonasserted factual claims.
+Use conflict with exact candidate quote and read-only F/E grounding when the
+visible reply contradicts held memory, even with no write. A conflict rejects
+the whole attempt. Never invent an assertion to ground it.
 Do not repair malformed output or silently omit a contradictory sibling.
 """
 

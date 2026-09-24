@@ -86,11 +86,10 @@ def _prepare(
     )
 
 
-def test_deferral_is_no_write_and_unrelated_residence_survives() -> None:
-    text = "I prefer coffee in the morning. Don't save that. I now live in Toronto."
+def test_deferral_binds_current_quote_and_unrelated_write_survives() -> None:
     result = _prepare(
         [
-            {"kind": "defer", "current_quote": "Don't save that", "reason": "no_save"},
+            {"kind": "defer", "current_quote": "Maybe tea", "reason": "uncertain"},
             {
                 "kind": "subject_add",
                 "fact_type": "person.current_location",
@@ -101,71 +100,58 @@ def test_deferral_is_no_write_and_unrelated_residence_survives() -> None:
                 },
             },
         ],
-        current=text,
+        current="Maybe tea. I now live in Toronto.",
     )
     assert [item.value for item in result.operations] == ["Toronto"]
-    assert result.new_entities == ()
-    assert result.deferred_claims == (
-        {"quote": "Don't save that", "reason": "no_save"},
-    )
-    with pytest.raises(RuntimeValidationError, match="No-save"):
-        _prepare(
-            [
-                _subject_add("coffee in the morning", "I prefer coffee in the morning"),
-                {
-                    "kind": "subject_add",
-                    "fact_type": "person.current_location",
-                    "value": "Toronto",
-                    "evidence": {
-                        "mode": "direct",
-                        "current_quote": "I now live in Toronto",
-                    },
-                },
-            ],
-            current=text,
-        )
-
-
-def test_chinese_no_save_is_claim_scoped() -> None:
-    result = _prepare(
-        [
-            {"kind": "defer", "current_quote": "别保存这个", "reason": "no_save"},
-            {
-                "kind": "subject_add",
-                "fact_type": "person.current_location",
-                "value": "多伦多",
-                "evidence": {"mode": "direct", "current_quote": "我现在住多伦多"},
-            },
-        ],
-        current="早上我喜欢咖啡。别保存这个。我现在住多伦多。",
-    )
-    assert len(result.operations) == 1
-    assert result.operations[0].value == "多伦多"
-
-
-@pytest.mark.parametrize("mode", ["direct", "resolve_user", "endorse_assistant"])
-def test_assistant_only_bare_name_cannot_write_breed_by_mode(mode: str) -> None:
-    evidence = {"mode": mode, "current_quote": "Roxy"}
-    if mode != "direct":
-        evidence.update(
-            support_handle="A1" if mode == "endorse_assistant" else "U1",
-            support_quote="Is Roxy a Husky?",
-        )
-    prior = [_prior("assistant", "Is Roxy a Husky?")]
+    assert result.deferred_claims == ({"quote": "Maybe tea", "reason": "uncertain"},)
     with pytest.raises(RuntimeValidationError):
         _prepare(
-            [
-                {
-                    "kind": "related_add",
-                    "fact_type": "pet.breed",
-                    "value": "Husky",
-                    "entity_ref": "new:roxy",
-                    "evidence": evidence,
-                }
-            ],
-            current="Roxy",
-            prior=prior,
+            [{"kind": "defer", "current_quote": "unquoted", "reason": "uncertain"}],
+            current="Maybe tea.",
         )
+
+
+def test_natural_meaning_is_reviewer_owned_after_exact_quote_binding() -> None:
+    result = _prepare(
+        [_subject_add("prefers tea in the morning", "现在早上更喜欢茶了")],
+        current="现在早上更喜欢茶了",
+    )
+    assert result.operations[0].value == "prefers tea in the morning"
+    assert result.operations[0].current_anchor.quote == "现在早上更喜欢茶了"
+
+
+def test_removed_no_save_reason_is_not_in_the_review_schema() -> None:
+    with pytest.raises(RuntimeValidationError) as error:
+        parse_natural_review_decision(
+            {
+                "decisions": [
+                    {"kind": "defer", "current_quote": "anything", "reason": "no_save"}
+                ]
+            }
+        )
+    assert error.value.detail_code == "natural_review_schema"
+
+
+def test_assistant_support_requires_actual_assistant_role() -> None:
+    decision = {
+        "kind": "related_add",
+        "fact_type": "pet.breed",
+        "value": "Husky",
+        "entity_ref": "new:roxy",
+        "evidence": {
+            "mode": "endorse_assistant",
+            "current_quote": "Roxy",
+            "support_handle": "U1",
+            "support_quote": "Is Roxy a Husky?",
+        },
+    }
+    with pytest.raises(RuntimeValidationError) as error:
+        _prepare(
+            [decision],
+            current="Roxy",
+            prior=[_prior("user", "Is Roxy a Husky?")],
+        )
+    assert error.value.detail_code == "natural_review_schema"
 
 
 def test_user_antecedent_resolution_keeps_distinct_current_authority() -> None:
@@ -275,36 +261,6 @@ def test_new_related_identity_can_follow_its_dependent_fact() -> None:
     assert {item.entity_id for item in result.operations} == {result.new_entities[0].id}
 
 
-@pytest.mark.parametrize(
-    "antecedent",
-    [
-        "One of my dogs might be a Husky",
-        "Don't save that one dog is a Husky",
-        "I withdraw that one dog is a Husky",
-    ],
-)
-def test_resolution_inherits_restrictions(antecedent: str) -> None:
-    with pytest.raises(RuntimeValidationError):
-        _prepare(
-            [
-                {
-                    "kind": "related_add",
-                    "fact_type": "pet.breed",
-                    "value": "Husky",
-                    "entity_ref": "new:roxy",
-                    "evidence": {
-                        "mode": "resolve_user",
-                        "current_quote": "Roxy",
-                        "support_handle": "U1",
-                        "support_quote": antecedent,
-                    },
-                }
-            ],
-            current="Roxy",
-            prior=[_prior("user", antecedent)],
-        )
-
-
 def test_short_assent_to_one_assistant_proposition_can_authorize_fact() -> None:
     # Existing identity is offered as E1, derived from a current pet.name fact.
     pet_id = "00000000-0000-0000-0000-000000000007"
@@ -352,39 +308,22 @@ def test_short_assent_to_one_assistant_proposition_can_authorize_fact() -> None:
     ]
 
 
-def test_operation_specific_removal_and_factual_end_are_distinct() -> None:
-    removal = {
-        "kind": "forget",
-        "target": "F1",
-        "evidence": {
-            "mode": "endorse_assistant",
-            "current_quote": "Yes, please",
-            "support_handle": "A1",
-            "support_quote": "Shall I remove saved morning coffee?",
-        },
-    }
-    result = _prepare(
-        [removal],
-        current="Yes, please",
-        prior=[_prior("assistant", "Shall I remove saved morning coffee?")],
+def test_factual_end_and_forget_have_distinct_structural_effects() -> None:
+    forgot = _prepare(
+        [
+            {
+                "kind": "forget",
+                "target": "F1",
+                "evidence": {
+                    "mode": "direct",
+                    "current_quote": "Remove the morning coffee fact",
+                },
+            }
+        ],
+        current="Remove the morning coffee fact",
         facts=[_fact()],
     )
-    assert result.operations[0].next_status == "forgotten"
-    with pytest.raises(RuntimeValidationError, match="Forget requires"):
-        _prepare(
-            [
-                {
-                    **removal,
-                    "evidence": {
-                        **removal["evidence"],
-                        "support_quote": "Is morning coffee no longer your preference?",
-                    },
-                }
-            ],
-            current="Yes, please",
-            prior=[_prior("assistant", "Is morning coffee no longer your preference?")],
-            facts=[_fact()],
-        )
+    assert forgot.operations[0].next_status == "forgotten"
     ended = _prepare(
         [
             {
@@ -392,15 +331,12 @@ def test_operation_specific_removal_and_factual_end_are_distinct() -> None:
                 "target": "F1",
                 "reason": "ended",
                 "evidence": {
-                    "mode": "endorse_assistant",
-                    "current_quote": "Yes",
-                    "support_handle": "A1",
-                    "support_quote": "Is morning coffee no longer your preference?",
+                    "mode": "direct",
+                    "current_quote": "I no longer prefer coffee in the morning",
                 },
             }
         ],
-        current="Yes",
-        prior=[_prior("assistant", "Is morning coffee no longer your preference?")],
+        current="I no longer prefer coffee in the morning",
         facts=[_fact()],
     )
     assert ended.operations[0].next_status == "inactive"
@@ -422,13 +358,14 @@ def test_read_only_conflict_needs_no_fabricated_write() -> None:
             candidate="tea",
         )
     assert error.value.detail_code == "natural_memory_reply_conflict"
-    with pytest.raises(RuntimeValidationError, match="agrees"):
+    # The exact candidate span and held F reference are structural checks.
+    with pytest.raises(RuntimeValidationError, match="exact candidate span"):
         _prepare(
             [
                 {
                     "kind": "conflict",
                     "current_quote": "What do I prefer?",
-                    "candidate_reply_quote": "morning coffee",
+                    "candidate_reply_quote": "missing",
                     "references": ["F1"],
                 }
             ],
@@ -452,4 +389,63 @@ def test_target_handles_are_local_and_version_is_server_owned() -> None:
     with pytest.raises(RuntimeValidationError):
         parse_natural_review_decision(
             {"decisions": [{**decision, "expected_version": 99}]}
+        )
+
+
+def test_factual_continuity_fixture_separates_habit_from_preference() -> None:
+    # Injected decisions exercise complete deltas; they do not prove model judgment.
+    habit = _prepare(
+        [],
+        current="最近喝咖啡总睡不着，早上也改喝茶了",
+        facts=[_fact("prefers coffee in the morning")],
+    )
+    assert habit.operations == ()
+    preference = _prepare(
+        [
+            {
+                "kind": "revise",
+                "target": "F1",
+                "reason": "supersede",
+                "value": "prefers tea in the morning",
+                "evidence": {"mode": "direct", "current_quote": "现在早上更喜欢茶了"},
+            }
+        ],
+        current="现在早上更喜欢茶了",
+        facts=[_fact("prefers coffee in the morning")],
+    )
+    assert len(preference.operations) == 1
+    assert (
+        preference.operations[0].existing_fact["value"]
+        == "prefers coffee in the morning"
+    )
+    assert preference.operations[0].value == "prefers tea in the morning"
+    assert preference.operations[0].revision_reason == "supersede"
+
+
+def test_scoped_correction_changes_only_active_morning_chain() -> None:
+    current = "不对，我说的是晚上更喜欢茶，早上仍喜欢咖啡"
+    decisions = [
+        {
+            "kind": "revise",
+            "target": "F1",
+            "reason": "correct",
+            "value": "prefers coffee in the morning",
+            "evidence": {"mode": "direct", "current_quote": "早上仍喜欢咖啡"},
+        },
+        _subject_add("prefers tea in the evening", "晚上更喜欢茶"),
+    ]
+    result = _prepare(
+        decisions, current=current, facts=[_fact("prefers tea in the morning")]
+    )
+    assert [
+        (item.fact_type, item.value, item.next_status) for item in result.operations
+    ] == [
+        ("person.preference", "prefers coffee in the morning", "active"),
+        ("person.preference", "prefers tea in the evening", "active"),
+    ]
+    with pytest.raises(RuntimeValidationError, match="active target"):
+        _prepare(
+            decisions,
+            current=current,
+            facts=[_fact("prefers tea in the morning", status="inactive")],
         )

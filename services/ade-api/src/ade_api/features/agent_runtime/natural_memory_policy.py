@@ -10,12 +10,7 @@ from uuid import uuid4
 
 from .errors import RuntimeValidationError
 from .fact_registry import EntityKind, fact_key, fact_type_spec, normalize_qualifier
-from .memory_policy import NewEntity, _normalize, _value_supported
-from .natural_memory_authority import (
-    has_no_save_restriction,
-    restricted_scope,
-    validate_write_authority,
-)
+from .memory_entities import NewEntity
 from .natural_memory_binding import NaturalBindingMap, build_natural_binding_map
 from .natural_memory_review import (
     BoundNaturalSource,
@@ -84,19 +79,9 @@ def prepare_natural_memory_review(
     touched: set[str] = set()
     add_keys: set[str] = set()
     deferrals: list[dict[str, str]] = []
-    no_save_scopes: list[str] = []
-    current_text = str(binding.current["content"])
     for item in decision.decisions:
         if isinstance(item, NaturalDefer):
-            source = bind_exact_quote(
-                binding.current, item.current_quote, "user_assertion"
-            )
-            if item.reason == "no_save":
-                if not has_no_save_restriction(current_text):
-                    raise RuntimeValidationError(
-                        "No-save deferral lacks current restriction"
-                    )
-                no_save_scopes.append(restricted_scope(current_text, source))
+            bind_exact_quote(binding.current, item.current_quote, "user_assertion")
             deferrals.append({"quote": item.current_quote, "reason": item.reason})
             continue
         if isinstance(item, NaturalConflict):
@@ -118,18 +103,6 @@ def prepare_natural_memory_review(
                 raise RuntimeValidationError(
                     "Conflict reference is outside held snapshot",
                     detail_code="natural_review_binding",
-                )
-            if any(
-                _candidate_agrees_with_reference(
-                    item.candidate_reply_quote,
-                    str(value.get("value") or value.get("label") or ""),
-                )
-                for value in grounding
-                if value is not None
-            ):
-                raise RuntimeValidationError(
-                    "Candidate span agrees with cited snapshot",
-                    detail_code="natural_review_semantic",
                 )
             raise RuntimeValidationError(
                 "Candidate reply conflicts with held memory",
@@ -194,7 +167,6 @@ def prepare_natural_memory_review(
                 if isinstance(item, NaturalRevise) and item.value is None
                 else item.reason
             )
-        validate_write_authority(item, binding, sources, anchor, value=value)
         key = (
             str(existing["normalized_key"])
             if existing is not None
@@ -229,14 +201,6 @@ def prepare_natural_memory_review(
                 revision_reason=reason,
             )
         )
-    for operation in operations:
-        if operation.next_status == "forgotten":
-            continue
-        if any(
-            _value_supported(str(operation.value or ""), scope)
-            for scope in no_save_scopes
-        ):
-            raise RuntimeValidationError("No-save deferral conflicts with a write")
     used = {operation.entity_id for operation in operations}
     identity_ids = {
         operation.entity_id
@@ -287,22 +251,6 @@ def _bind_evidence(
     )
     source = bind_exact_quote(support, evidence.support_quote, support_role)
     return (anchor, source), anchor
-
-
-def _candidate_agrees_with_reference(candidate: str, value: str) -> bool:
-    """Reject a claimed conflict when its answer states the cited value plainly."""
-
-    normalized_value = _normalize(value)
-    if not normalized_value:
-        return False
-    answer = _normalize(candidate)
-    pattern = r"(?<!\w)" + re.escape(normalized_value) + r"(?!\w)"
-    for match in re.finditer(pattern, answer):
-        if not re.search(
-            r"(?:\b(?:not|never|isn't|wasn't)\s+|不是)$", answer[: match.start()]
-        ):
-            return True
-    return False
 
 
 def _related_entity_id(

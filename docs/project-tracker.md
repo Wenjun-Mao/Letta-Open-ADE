@@ -48,14 +48,19 @@ whitespace checks passed. The candidate fingerprint remains historical and
 unwaived. These checks establish offline mechanics, not live reviewer quality,
 policy selection, or release readiness. Checkpoint 5 remains unauthorized.
 
-Director review is now assessing the responsibility boundary between the
-reviewer's natural-language interpretation and ADE's deterministic provenance,
-version and atomicity checks. The user prioritized scoped factual updates and
-recall over expanding phrase-specific no-save rules. A Mandarin omitted-object
-prototype and fresh scripted browser readback remain provisional in this
-worktree; the [responsibility assessment](findings/natural-memory-r5-responsibility-assessment.md)
-records the code risks, proposed evaluation contrasts and next decision. No
-semantic architecture change or privacy waiver has been promoted.
+The user directed removal of conversational privacy-policy features and
+phrase-specific semantic regex fixes from active natural memory. The
+[reviewer/ADE amendment](plans/natural-memory-implementation.md) and
+[ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md)
+record the structural boundary and factual evaluation deltas. The Mandarin
+prototype and scripted browser readback remain historical, not current
+acceptance evidence. The current registry cannot save a drinking habit as a
+preference; cross-conversation habit recall remains a separate schema gap.
+Offline implementation removed the natural-path authority rules and `no_save`
+wire value, while preserving structural binding and atomicity. The final Python
+run reported 758 passed, one named-database test skipped, and the same unwaived
+selected-candidate policy-fingerprint freshness failure. Ruff and diff whitespace
+checks passed. Model interpretation and cross-conversation recall remain unmeasured.
 
 Both final Pros return **GO for revision 5 of the single
 [natural-memory implementation plan](plans/natural-memory-implementation.md)**,

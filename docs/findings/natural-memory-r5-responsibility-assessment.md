@@ -1,9 +1,10 @@
 # Natural Memory Reviewer Responsibility Assessment
 
-Date: 2026-09-24. Status: director review requested; no implementation decision
-promoted. Revision `845b08b` is the committed baseline. A later, uncommitted
-Mandarin omitted-object guard, focused tests and fake-router script remain in the
-worktree as provisional evidence. No provider calls, push or release occurred.
+Date: 2026-09-24. Status: historical assessment; superseded by the 2026-09-24
+reviewer/ADE amendment. Revision `845b08b` was the committed baseline. A later
+Mandarin omitted-object guard, focused tests and fake-router script were
+provisional evidence and have since been removed from the active path. No
+provider calls, push or release occurred.
 
 ## Responsibility Boundary
 
@@ -16,15 +17,16 @@ user's factual update, its scope and temporal meaning, and whether a candidate
 reply contradicts known memory. The current single-reviewer contract and the
 complete-delta fixtures remain the starting point; no second judge is proposed.
 
-No-save and withdrawal instructions remain safety requirements. ADE should keep
-unambiguous, claim-bound protections and fail closed on invalid evidence. Their
+At the time of this assessment, no-save and withdrawal were assumed to
+remain requirements. The proposed approach was to keep unambiguous,
+claim-bound protections and fail closed on invalid evidence. Their
 semantics should be a secondary guardrail, not the organizing task or a growing
 phrase catalogue. Deciding which earlier claim an omitted object refers to,
 whether a short answer renews consent, or whether two paraphrases assert the
 same preference is interpretation. The pending `别保存` prototype shows that a
 rule can close one gap while still leaving that boundary unresolved.
 
-## Current Semantic Heuristics And Risks
+## Heuristics Inventoried At Assessment
 
 | Validator | Interpretation it currently attempts | Material risk |
 | --- | --- | --- |
@@ -85,3 +87,16 @@ acceptance. Any simplification needs paired false-accept and false-reject tests
 and a named contract amendment before code changes. The provisional Mandarin
 patch and private browser readback are retained for that review, not accepted as
 proof of a general language rule.
+
+## Subsequent Decision
+
+The user subsequently directed removal of conversational privacy-policy
+features and phrase-specific semantic regex fixes from active natural memory.
+[ADR 0035](../adr/0035-compact-natural-review-and-observational-dispatch.md)
+and the [active plan](../plans/natural-memory-implementation.md) record the
+current contract. The Mandarin browser prototype above remains historical
+scripted evidence only and is not a qualifying acceptance case. Also, the
+original tea row above overclaimed the current schema: drinking tea in the
+morning does not establish a preference for tea. Under `person.preference`,
+that sentence makes no durable preference mutation; an explicit preference
+statement can revise the active morning preference.

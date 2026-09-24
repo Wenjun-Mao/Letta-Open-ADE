@@ -7,6 +7,7 @@ from uuid import uuid4
 
 from .errors import RuntimeValidationError
 from .fact_registry import EntityKind, fact_key, fact_type_spec
+from .memory_entities import NewEntity
 from .memory_intent import is_explicit_forgetting_request
 from .memory_review import (
     AddProposal,
@@ -34,13 +35,6 @@ _CONTRAST_CLAUSE_BOUNDARY = re.compile(
     re.IGNORECASE,
 )
 _VALUE_STOPWORDS = {"a", "an", "and", "as", "is", "my", "the", "to"}
-
-
-@dataclass(frozen=True)
-class NewEntity:
-    id: str
-    kind: str
-    label: str
 
 
 @dataclass(frozen=True)
