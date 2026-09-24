@@ -237,42 +237,60 @@ class TracedRouterTransport:
         timeout_seconds: float,
         call,
     ) -> dict[str, Any]:
-        request_id, request_number, started_at = self.trace._start(
-            operation=operation,
-            stage=self.stage,
-            model_key=model_key,
-            model_fingerprint=self.model_fingerprint,
-            timeout_seconds=timeout_seconds,
-        )
+        started: tuple[str, int, float] | None = None
+        try:
+            started = self.trace._start(
+                operation=operation,
+                stage=self.stage,
+                model_key=model_key,
+                model_fingerprint=self.model_fingerprint,
+                timeout_seconds=timeout_seconds,
+            )
+        except Exception:
+            # Observation is best effort. A missing start makes aggregate counts
+            # incomplete, but cannot change the outbound request.
+            pass
         try:
             response = await call()
         except asyncio.CancelledError:
-            self.trace._cancel(
-                request_id=request_id,
-                operation=operation,
-                stage=self.stage,
-                request_number=request_number,
-                started_at=started_at,
-            )
+            if started is not None:
+                try:
+                    self.trace._cancel(
+                        request_id=started[0],
+                        operation=operation,
+                        stage=self.stage,
+                        request_number=started[1],
+                        started_at=started[2],
+                    )
+                except Exception:
+                    pass
             raise
         except Exception as exc:
-            self.trace._fail(
-                request_id=request_id,
-                operation=operation,
-                stage=self.stage,
-                request_number=request_number,
-                exc=exc,
-                started_at=started_at,
-            )
+            if started is not None:
+                try:
+                    self.trace._fail(
+                        request_id=started[0],
+                        operation=operation,
+                        stage=self.stage,
+                        request_number=started[1],
+                        exc=exc,
+                        started_at=started[2],
+                    )
+                except Exception:
+                    pass
             raise
-        self.trace._complete(
-            request_id=request_id,
-            operation=operation,
-            stage=self.stage,
-            request_number=request_number,
-            response=response,
-            started_at=started_at,
-        )
+        if started is not None:
+            try:
+                self.trace._complete(
+                    request_id=started[0],
+                    operation=operation,
+                    stage=self.stage,
+                    request_number=started[1],
+                    response=response,
+                    started_at=started[2],
+                )
+            except Exception:
+                pass
         return response
 
 

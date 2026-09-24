@@ -13,6 +13,47 @@ from ade_api.features.agent_runtime.provider_tracing import (
 from ade_api.features.agent_runtime.router_transport import RouterRequestError
 
 
+def test_failed_observation_before_send_cannot_veto_provider_result(
+    monkeypatch,
+) -> None:
+    sent = 0
+
+    async def succeed() -> dict[str, Any]:
+        nonlocal sent
+        sent += 1
+        return {"id": "provider-ok"}
+
+    trace, transport = _traced_transport(_StubTransport(succeed))
+    monkeypatch.setattr(
+        trace, "_start", lambda **_kwargs: (_ for _ in ()).throw(OSError("capture"))
+    )
+    response = asyncio.run(
+        transport.chat_completion({"model": "source::model"}, timeout_seconds=10)
+    )
+    assert response == {"id": "provider-ok"}
+    assert sent == 1
+    assert trace.normalized_events() == ()
+
+
+def test_failed_terminal_observation_preserves_original_provider_error(
+    monkeypatch,
+) -> None:
+    async def fail() -> dict[str, Any]:
+        raise TimeoutError("original timeout")
+
+    trace, transport = _traced_transport(_StubTransport(fail))
+    monkeypatch.setattr(
+        trace, "_fail", lambda **_kwargs: (_ for _ in ()).throw(OSError("capture"))
+    )
+    with pytest.raises(TimeoutError, match="original timeout"):
+        asyncio.run(
+            transport.embeddings({"model": "source::model"}, timeout_seconds=10)
+        )
+    assert [event.event_type for event in trace.normalized_events()] == [
+        "model.request.started"
+    ]
+
+
 class _StubTransport:
     def __init__(
         self,

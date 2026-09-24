@@ -451,39 +451,3 @@ def test_failed_case_stops_before_later_case_and_marks_matrix_incomplete() -> No
         assert scopes == []
 
     asyncio.run(scenario())
-
-
-def test_budget_exhaustion_stops_scheduling_later_cases() -> None:
-    class _UnavailableClient(_FakeClient):
-        async def create_evaluation_session(self, **_payload: Any) -> dict[str, Any]:
-            raise ConnectionError("synthetic cap")
-
-    checks = 0
-
-    def exhausted() -> bool:
-        nonlocal checks
-        checks += 1
-        return checks >= 2
-
-    async def scenario() -> None:
-        rounds = await run_primary_rounds(
-            client=_UnavailableClient(),
-            cases=(_case("case-a"), _case("case-b")),
-            canonical_case_keys=("case-a", "case-b"),
-            namespace="acceptance-budget",
-            rounds=3,
-            conversation_model_key="chat",
-            reviewer_model_key="reviewer",
-            embedding_model_key="embedding",
-            prompt_key="chat_prompt",
-            persona_key="chat_persona",
-            timeout_seconds=180,
-            retry_count=0,
-            budget_exhausted=exhausted,
-        )
-        assert len(rounds) == 1
-        assert rounds[0].case_keys == ("case-a",)
-        assert rounds[0].complete_matrix is False
-        assert rounds[0].passed is False
-
-    asyncio.run(scenario())

@@ -25,10 +25,6 @@ from ade_api.features.agent_runtime.natural_evaluation_capacity import (
 from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
 )
-from ade_api.features.agent_runtime.request_budget import (
-    BudgetedTransport,
-    RequestLedger,
-)
 from ade_api.features.agent_runtime.run_service import RunService
 from ade_api.features.agent_runtime.worker import AgentRuntimeWorker
 from ade_api.platform.settings import AdeApiSettings
@@ -128,11 +124,8 @@ def test_worker_uses_role_limits_and_one_shared_pre_request_ledger(
         )
         catalog = _catalog(natural_worker_support)
         fake = FakeProvider(catalog)
-        ledger = RequestLedger(
-            tmp_path / "ledger.sqlite3", generation_limit=3, embedding_limit=4
-        )
         transport = NaturalLiveTransport(
-            BudgetedTransport(fake, ledger),
+            fake,
             capture_dir=tmp_path / "raw",
             generation_model="deepseek::deepseek-flash",
             embedding_model="dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
@@ -192,7 +185,7 @@ def test_worker_uses_role_limits_and_one_shared_pre_request_ledger(
                 for row in arc["branches"]
                 if row["id"] == cell["branch"]
             )
-            with transport.scope(RequestScope("setup", 0, 40)):
+            with transport.scope(RequestScope("setup")):
                 seeded = await seed_live_cell(
                     engine,
                     session,
@@ -212,7 +205,7 @@ def test_worker_uses_role_limits_and_one_shared_pre_request_ledger(
                     retry_count=0,
                 ),
             )
-            with transport.scope(RequestScope("cell", 3, 4)):
+            with transport.scope(RequestScope("cell")):
                 assert await worker.process_once()
             run = await service.get_run(accepted["run_id"])
             assert run["status"] == "succeeded", run

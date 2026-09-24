@@ -1,6 +1,6 @@
 """Execute the one approved natural-memory checkpoint-6 campaign, serially.
 
-This is a single-use diagnostic. It rejects an existing output or ledger and
+This is a single-use diagnostic. It rejects an existing output and
 never resumes or rerolls an incomplete cell.
 """
 
@@ -38,10 +38,6 @@ from ade_api.features.agent_runtime.natural_memory_reviewer import (
 )
 from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
-)
-from ade_api.features.agent_runtime.request_budget import (
-    BudgetedTransport,
-    budget_ledger,
 )
 from ade_api.features.agent_runtime.resource_service import ResourceService
 from ade_api.features.agent_runtime.router_transport import RouterTransport
@@ -86,10 +82,8 @@ async def _run(args: argparse.Namespace) -> None:
         iteration_id=args.iteration_id,
         diagnostic_reviewer_output_4096=args.diagnostic_reviewer_output_4096,
     )
-    if args.output.exists() or args.ledger.exists():
-        raise RuntimeError("campaign output and ledger must both be new")
-    if not args.ledger.resolve().is_relative_to((ROOT / "data/runtime").resolve()):
-        raise RuntimeError("campaign ledger must live in retained runtime data")
+    if args.output.exists():
+        raise RuntimeError("campaign output must be new")
     engine = create_persistence_engine(checked_url)
     try:
         async with engine.connect() as connection:
@@ -129,20 +123,9 @@ async def _run(args: argparse.Namespace) -> None:
         database_url=checked_url,
         model_discovery_timeout_seconds=10,
         agent_runtime_worker_id=f"natural-c6-{uuid4().hex[:8]}",
-        agent_runtime_budget_ledger_path=str(args.ledger),
-        agent_runtime_budget_stage=(
-            f"natural-memory-{args.iteration_id}-once"
-            if args.diagnostic_first_three
-            else "natural-memory-checkpoint6-once"
-        ),
-        agent_runtime_budget_generation_limit=96,
-        agent_runtime_budget_embedding_limit=160,
     )
-    ledger = budget_ledger(settings)
-    if ledger is None or ledger.counts() != {"generation": 0, "embedding": 0}:
-        raise RuntimeError("new shared budget ledger was not initialized")
     transport = NaturalLiveTransport(
-        BudgetedTransport(RouterTransport(args.router_url), ledger),
+        RouterTransport(args.router_url),
         capture_dir=args.output / "raw",
         generation_model=DEEPSEEK_ROUTE,
         embedding_model=EMBEDDING_ROUTE,
@@ -183,7 +166,7 @@ async def _run(args: argparse.Namespace) -> None:
             ).hexdigest(),
         },
         "database": database_name,
-        "ledger": str(args.ledger),
+        "dispatch_observation": "local request IDs; incomplete capture is reported",
         "router_url": args.router_url,
         "routes": {
             route: by_key[route]["deployment"]["fingerprint"]["sha256"]
@@ -227,7 +210,7 @@ async def _run(args: argparse.Namespace) -> None:
     heartbeat_stop = asyncio.Event()
     await worker.presence.register()
     heartbeat = asyncio.create_task(worker.presence.heartbeat_forever(heartbeat_stop))
-    setup_scope = RequestScope("scripted-setup-indexing", 0, 40)
+    setup_scope = RequestScope("scripted-setup-indexing")
     generated_summaries: dict[str, tuple[str, int]] = {}
     stop_reason: str | None = None
     try:
@@ -244,7 +227,7 @@ async def _run(args: argparse.Namespace) -> None:
                 "expected": cell["expected"],
                 "forbidden": cell["forbidden"],
                 "status": "started",
-                "ledger_before": ledger.counts(),
+                "dispatch_before": transport.counts(),
             }
             manifest["cells"].append(result)
             write_json(args.output / "manifest.json", manifest)
@@ -355,11 +338,7 @@ async def _run(args: argparse.Namespace) -> None:
                 extra_compaction = (
                     cell["kind"] == "diagnostic_summary" and fixture_variant == "A"
                 )
-                cell_scope = RequestScope(
-                    name=name.replace("::", "-"),
-                    generation_limit=4 if extra_compaction else 3,
-                    embedding_limit=4,
-                )
+                cell_scope = RequestScope(name=name.replace("::", "-"))
                 with transport.scope(cell_scope):
                     processed = await worker.process_once()
                 if not processed:
@@ -367,20 +346,7 @@ async def _run(args: argparse.Namespace) -> None:
                 result["provider_captures"] = capture_scope(
                     transport.capture_dir, cell_scope
                 )
-                after = ledger.counts()
-                before = result["ledger_before"]
-                if any(
-                    after[kind] - before[kind]
-                    != sum(item["kind"] == kind for item in result["provider_captures"])
-                    + sum(
-                        item["kind"] == kind
-                        for item in result["scripted_setup"]["provider_captures"]
-                    )
-                    for kind in ("generation", "embedding")
-                ):
-                    raise RuntimeError(
-                        "shared ledger and provider capture counts differ"
-                    )
+                result["dispatch_after"] = transport.counts()
                 run = await service.get_run(accepted["run_id"])
                 memory = await resources.get_subject_memories(
                     session["memory_subject"]["id"], required_purpose="evaluation"
@@ -403,7 +369,7 @@ async def _run(args: argparse.Namespace) -> None:
                     conversation=conversation,
                     attempt_artifact=str(attempt_path),
                     attempt_sha256=sha256_file(attempt_path),
-                    ledger_after=ledger.counts(),
+                    ledger_after=transport.counts(),
                     safety=safety_reason,
                 )
                 if not safe:
@@ -436,12 +402,10 @@ async def _run(args: argparse.Namespace) -> None:
                         compacted["summary_content"],
                         int(compacted["summary_through_sequence"]),
                     )
-                if ledger.exhausted():
-                    raise RuntimeError("shared provider budget exhausted")
             except Exception as exc:
                 stop_reason = stop_campaign_at(manifest, cells, index, exc)
             finally:
-                result["ledger_after"] = ledger.counts()
+                result["dispatch_after"] = transport.counts()
                 result["artifact_sha256"] = write_json(
                     args.output
                     / "cells"
@@ -460,7 +424,7 @@ async def _run(args: argparse.Namespace) -> None:
         )
         manifest["unrun"].extend(diagnostic_tail)
         manifest["stop_reason"] = stop_reason
-        manifest["ledger_final"] = ledger.counts()
+        manifest["dispatch_final"] = transport.counts()
         manifest["coverage"] = {
             "executed": len(manifest["cells"]),
             "diagnostic_target": len(cells),
@@ -478,7 +442,6 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--database-url", required=True)
     parser.add_argument("--router-url", required=True)
-    parser.add_argument("--ledger", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--diagnostic-first-three", action="store_true")
     parser.add_argument("--diagnostic-reviewer-output-4096", action="store_true")

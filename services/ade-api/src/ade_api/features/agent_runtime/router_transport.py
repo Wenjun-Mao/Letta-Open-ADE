@@ -72,6 +72,9 @@ class RouterTransport:
         method: str = "POST",
     ) -> dict[str, Any]:
         url = f"{self.base_url.rstrip('/')}{path}"
+        # Preserve the former diagnostic per-dispatch ceiling without giving
+        # each stage a new attempt-wide window.
+        timeout_seconds = min(timeout_seconds, 180.0)
         try:
             async with httpx.AsyncClient(timeout=timeout_seconds) as client:
                 if method == "GET":
@@ -116,6 +119,13 @@ class RouterTransport:
                 error_code="invalid_response_shape",
             )
         return value
+
+
+def build_runtime_router_transport(settings: Any) -> RouterTransport:
+    return RouterTransport(
+        base_url=settings.model_router_v1_base_url(),
+        api_key=settings.resolve_model_router_api_key(),
+    )
 
 
 def _normalize_error_code(value: object) -> str:

@@ -1,30 +1,9 @@
-"""Source, worker, and provider-budget gates before native qualification."""
+"""Source and worker gates before native qualification."""
 
 from __future__ import annotations
 
 import re
 from typing import Any
-
-from ade_api.features.agent_runtime.request_budget import budget_identity
-from ade_api.features.agent_runtime.worker_health import (
-    worker_compatibility_fingerprint,
-)
-from ade_api.platform.settings import get_settings
-
-
-def budget_preflight_passed(
-    health: dict[str, Any], *, diagnostic: bool, retry_count: int
-) -> bool:
-    settings = get_settings()
-    budget = budget_identity(settings)
-    if budget is None:
-        return diagnostic
-    if not diagnostic and (budget["stage"] != "qualification" or retry_count != 0):
-        return False
-    return health.get("compatibility_fingerprint") == worker_compatibility_fingerprint(
-        runtime_mode=settings.agent_runtime_mode,
-        budget=budget,
-    )
 
 
 def worker_preflight_passed(

@@ -130,7 +130,6 @@ def test_database_failure_returns_typed_not_ready_health(monkeypatch) -> None:
         engine=SimpleNamespace(),  # type: ignore[arg-type]
         settings=SimpleNamespace(  # type: ignore[arg-type]
             agent_runtime_mode="development",
-            agent_runtime_budget_ledger_path="",
             agent_runtime_worker_stale_seconds=15.0,
         ),
     )
@@ -160,27 +159,5 @@ def test_worker_presence_rejects_unknown_or_truncated_source_identity(
             engine=SimpleNamespace(),  # type: ignore[arg-type]
             settings=SimpleNamespace(  # type: ignore[arg-type]
                 agent_runtime_mode="development",
-                agent_runtime_budget_ledger_path="",
             ),
         )
-
-
-def test_budgeted_worker_does_not_satisfy_unbudgeted_api_health() -> None:
-    budgeted = worker_compatibility_fingerprint(
-        runtime_mode="development",
-        migration_heads=("20260830_0004",),
-        budget={"stage": "qualification", "generation_limit": 32},
-    )
-    unbudgeted = worker_compatibility_fingerprint(
-        runtime_mode="development", migration_heads=("20260830_0004",)
-    )
-    worker = _worker(heartbeat_age_seconds=1)
-    worker["compatibility_fingerprint"] = budgeted
-
-    result = project_runtime_health(
-        [worker],
-        checked_at=NOW,
-        freshness_seconds=45,
-        compatibility_fingerprint=unbudgeted,
-    )
-    assert result["worker_ready"] is False

@@ -36,7 +36,11 @@ class RunFinalizer:
         self.engine = engine
 
     async def commit_success(
-        self, claim: ClaimedRun, attempt_id: str, result: AttemptResult
+        self,
+        claim: ClaimedRun,
+        attempt_id: str,
+        result: AttemptResult,
+        trace: AttemptTrace | None = None,
     ) -> None:
         run_id = str(claim.run["id"])
         conversation_id = str(claim.run["conversation_id"])
@@ -191,8 +195,21 @@ class RunFinalizer:
                 committed=committed,
                 assistant_message_id=str(assistant["id"]),
                 summary=summary,
+                trace=trace,
             )
             await leases.release(claim.lease_token)
+        if trace is not None:
+            try:
+                async with self.engine.begin() as observation_connection:
+                    await append_attempt_trace(
+                        RunRepository(observation_connection),
+                        run_id=run_id,
+                        attempt=trace.attempt,
+                        trace=trace,
+                        causation_id=None,
+                    )
+            except Exception:
+                pass
 
     async def commit_cancellation(
         self,

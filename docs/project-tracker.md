@@ -23,7 +23,12 @@ checkpoint status below will be updated as implementation and verification land.
 Checkpoint 1 contract freeze is recorded in [ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md)
 and the [complete-delta cases](findings/natural-memory-consultation/revision5-offline-contract-cases.md).
 The first focused wire tests are intentionally red against the old parser (3
-failures); checkpoints 2–4 and the green acceptance run remain outstanding.
+failures). Checkpoint 2 removed active spending caps, reservations, runtime
+settings, Compose wiring and acceptance scheduling gates. Outbound attempts now
+have local trace IDs and a copy-deduplicated count helper; optional transport
+capture cannot replace provider results or errors. Its focused tests pass (43).
+Checkpoint 3 compact review/provenance and checkpoint 4 integration remain
+outstanding; the wire tests are still red pending checkpoint 3.
 
 Both final Pros return **GO for revision 5 of the single
 [natural-memory implementation plan](plans/natural-memory-implementation.md)**,

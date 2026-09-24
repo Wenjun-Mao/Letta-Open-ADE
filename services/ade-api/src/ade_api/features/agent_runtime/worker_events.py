@@ -5,6 +5,7 @@ from typing import Any
 from .events import append_run_event
 from .persistence.runs import RunRepository
 from .provider_tracing import AttemptTrace
+from .request_counts import dispatch_counts
 from .tool_policy import ToolRequirement
 from .turn_execution import AttemptResult
 
@@ -20,16 +21,29 @@ async def append_attempt_trace(
     """Persist the safe partial provider trace inside attempt finalization."""
 
     last_event_id = causation_id
-    for trace_event in trace.normalized_events():
-        event = await append_run_event(
-            runs,
-            run_id=run_id,
-            event_type=trace_event.event_type,
-            payload=trace_event.payload,
-            attempt=attempt,
-            causation_id=last_event_id,
-        )
-        last_event_id = str(event["id"])
+
+    async def persist() -> None:
+        nonlocal last_event_id
+        for trace_event in trace.normalized_events():
+            event = await append_run_event(
+                runs,
+                run_id=run_id,
+                event_type=trace_event.event_type,
+                payload=trace_event.payload,
+                attempt=attempt,
+                causation_id=last_event_id,
+            )
+            last_event_id = str(event["id"])
+
+    try:
+        connection = getattr(runs, "_connection", None)
+        if connection is None:
+            await persist()
+        else:
+            async with connection.begin_nested():
+                await persist()
+    except Exception:
+        return causation_id
     return last_event_id
 
 
@@ -41,19 +55,10 @@ async def append_success_events(
     result: AttemptResult,
     committed: list[dict[str, Any]],
     assistant_message_id: str,
+    trace: AttemptTrace | None = None,
     summary: dict[str, Any] | None = None,
 ) -> None:
     compaction = getattr(result, "compaction", None)
-    compaction_event_id: str | None = None
-    if compaction is not None:
-        compaction_event_id = await _append_model_rounds(
-            runs,
-            run_id=run_id,
-            attempt=attempt,
-            role="compaction",
-            request_count=1,
-            provider_request_ids=[compaction.provider_request_id],
-        )
     context_event = await append_run_event(
         runs,
         run_id=run_id,
@@ -65,28 +70,18 @@ async def append_success_events(
             "retrieved_fact_ids": result.context.retrieved_fact_ids,
         },
         attempt=attempt,
-        causation_id=compaction_event_id,
+        causation_id=None,
     )
     conversation_event_id = await _append_conversation_trace(
         runs,
         run_id=run_id,
         attempt=attempt,
-        request_count=result.executor.model_request_count,
-        provider_request_ids=result.executor.provider_request_ids,
         tool_events=result.executor.tool_events,
         tool_requirement=result.executor.tool_requirement,
         tool_requirement_satisfied=result.executor.tool_requirement_satisfied,
         causation_id=str(context_event["id"]),
     )
-    reviewer_event_id = await _append_model_rounds(
-        runs,
-        run_id=run_id,
-        attempt=attempt,
-        role="reviewer",
-        request_count=result.reviewer.model_request_count,
-        provider_request_ids=result.reviewer.provider_request_ids,
-        causation_id=conversation_event_id,
-    )
+    reviewer_event_id = conversation_event_id
     if result.reviewer.protocol_repaired:
         repaired = await append_run_event(
             runs,
@@ -168,7 +163,7 @@ async def append_success_events(
                 "source_message_ids": list(compaction.plan.source_message_ids),
             },
             attempt=attempt,
-            causation_id=compaction_event_id,
+            causation_id=terminal_causation_id,
         )
         terminal_causation_id = str(summary_event["id"])
     conversation_requests = result.executor.model_request_count
@@ -196,51 +191,16 @@ async def append_success_events(
             "memory_revision_count": len(committed),
             "usage": _combined_usage(usage_by_role.values()),
             "usage_by_role": usage_by_role,
+            "dispatch_counts": dispatch_counts(
+                {"event_type": event.event_type, "payload": event.payload}
+                for event in trace.normalized_events()
+            )
+            if trace is not None
+            else {"complete": False, "groups": []},
         },
         attempt=attempt,
         causation_id=terminal_causation_id,
     )
-
-
-async def _append_model_rounds(
-    runs: RunRepository,
-    *,
-    run_id: str,
-    attempt: int,
-    role: str,
-    request_count: int,
-    provider_request_ids: list[str | None],
-    causation_id: str | None = None,
-) -> str | None:
-    last_event_id = causation_id
-    for index in range(1, request_count + 1):
-        requested = await append_run_event(
-            runs,
-            run_id=run_id,
-            event_type="model.request.started",
-            payload={"role": role, "request_number": index},
-            attempt=attempt,
-            causation_id=last_event_id,
-        )
-        provider_request_id = (
-            provider_request_ids[index - 1]
-            if index <= len(provider_request_ids)
-            else None
-        )
-        completed = await append_run_event(
-            runs,
-            run_id=run_id,
-            event_type="model.response.completed",
-            payload={
-                "role": role,
-                "request_number": index,
-                "provider_request_id": provider_request_id,
-            },
-            attempt=attempt,
-            causation_id=str(requested["id"]),
-        )
-        last_event_id = str(completed["id"])
-    return last_event_id
 
 
 async def _append_conversation_trace(
@@ -248,8 +208,6 @@ async def _append_conversation_trace(
     *,
     run_id: str,
     attempt: int,
-    request_count: int,
-    provider_request_ids: list[str | None],
     tool_events: list[dict[str, Any]],
     tool_requirement: ToolRequirement | None,
     tool_requirement_satisfied: bool,
@@ -267,60 +225,29 @@ async def _append_conversation_trace(
             causation_id=last_event_id,
         )
         last_event_id = str(resolved["id"])
-    for request_number in range(1, request_count + 1):
-        requested = await append_run_event(
+    for tool in tool_events:
+        last_event_id = await _append_tool_call(
             runs,
             run_id=run_id,
-            event_type="model.request.started",
-            payload={"role": "conversation", "request_number": request_number},
             attempt=attempt,
-            causation_id=last_event_id,
+            tool=tool,
+            causation_id=str(last_event_id),
         )
-        provider_request_id = (
-            provider_request_ids[request_number - 1]
-            if request_number <= len(provider_request_ids)
-            else None
-        )
-        response = await append_run_event(
-            runs,
-            run_id=run_id,
-            event_type="model.response.completed",
-            payload={
-                "role": "conversation",
-                "request_number": request_number,
-                "provider_request_id": provider_request_id,
-            },
-            attempt=attempt,
-            causation_id=str(requested["id"]),
-        )
-        last_event_id = str(response["id"])
-        for tool in (
-            item
-            for item in tool_events
-            if int(item["request_number"]) == request_number
+        if (
+            tool_requirement is not None
+            and not requirement_event_written
+            and str(tool["name"]) == tool_requirement.tool_name
         ):
-            last_event_id = await _append_tool_call(
+            satisfied = await append_run_event(
                 runs,
                 run_id=run_id,
+                event_type="tool.requirement.satisfied",
+                payload=tool_requirement.safe_payload(),
                 attempt=attempt,
-                tool=tool,
-                causation_id=str(response["id"]),
+                causation_id=last_event_id,
             )
-            if (
-                tool_requirement is not None
-                and not requirement_event_written
-                and str(tool["name"]) == tool_requirement.tool_name
-            ):
-                satisfied = await append_run_event(
-                    runs,
-                    run_id=run_id,
-                    event_type="tool.requirement.satisfied",
-                    payload=tool_requirement.safe_payload(),
-                    attempt=attempt,
-                    causation_id=last_event_id,
-                )
-                last_event_id = str(satisfied["id"])
-                requirement_event_written = True
+            last_event_id = str(satisfied["id"])
+            requirement_event_written = True
     if tool_requirement is not None and (
         not tool_requirement_satisfied or not requirement_event_written
     ):

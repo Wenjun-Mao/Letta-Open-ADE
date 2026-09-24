@@ -16,7 +16,7 @@ from .provider_tracing import AttemptTrace
 from .natural_attempt_evidence import retain_attempt_evidence
 from .retry import execute_with_retries
 from .router_transport import RouterTransport
-from .request_budget import build_runtime_router_transport
+from .router_transport import build_runtime_router_transport
 from .turn_execution import AttemptResult, TurnExecution
 from .worker_claims import ClaimedRun, RunClaimer
 from .worker_control import (
@@ -215,7 +215,9 @@ class AgentRuntimeWorker:
             )
             if last_attempt_id is None:
                 raise RuntimeError("runtime produced no attempt")
-            await self.finalizer.commit_success(claim, last_attempt_id, result)
+            await self.finalizer.commit_success(
+                claim, last_attempt_id, result, trace=last_attempt_trace
+            )
         except RunCancelled:
             await self.finalizer.commit_cancellation(
                 claim,

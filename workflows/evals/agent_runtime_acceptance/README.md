@@ -79,7 +79,7 @@ produce a promotion proposal. Do not reuse one stage's ledger as a reroll.
 No-generation verification from the repository root:
 
 ```bash
-uv run pytest -q services/ade-api/tests/agent_runtime/test_request_budget.py \
+uv run pytest -q services/ade-api/tests/agent_runtime/test_request_counts.py \
   workflows/evals/deepseek_dev_smoke/test_m3_host.py \
   workflows/evals/agent_runtime_acceptance/tests/test_run.py \
   workflows/evals/agent_runtime_acceptance/tests/test_rounds.py

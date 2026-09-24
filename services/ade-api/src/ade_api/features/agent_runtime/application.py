@@ -33,7 +33,7 @@ from .persistence.database import create_persistence_engine
 from .resource_service import ResourceService
 from .memory_removals import MemoryRemovalService
 from .router_transport import RouterTransport
-from .request_budget import build_runtime_router_transport
+from .router_transport import build_runtime_router_transport
 from .run_service import RunService
 from .release_policy import ensure_agent_studio_release_ready
 from .worker_health import RuntimeWorkerHealthService

@@ -5,7 +5,6 @@ from types import SimpleNamespace
 
 from workflows.evals.agent_runtime_acceptance.runner import (
     execute_case,
-    run_llama_compatibility_round,
     run_primary_rounds,
 )
 from workflows.evals.agent_runtime_acceptance.tests.test_rounds import (
@@ -45,7 +44,7 @@ def test_failed_terminal_turn_preserves_evidence_without_sending_later_turn() ->
     asyncio.run(scenario())
 
 
-def test_failed_case_below_budget_does_not_start_later_case() -> None:
+def test_failed_case_does_not_start_later_case() -> None:
     async def scenario() -> None:
         client = _FakeClient(status="failed")
         rounds = await run_primary_rounds(
@@ -61,7 +60,6 @@ def test_failed_case_below_budget_does_not_start_later_case() -> None:
             persona_key="chat_persona",
             timeout_seconds=180,
             retry_count=0,
-            budget_exhausted=lambda: False,
         )
         assert client.accepted == ["hello"]
         assert len(client.session_payloads) == 1
@@ -72,7 +70,7 @@ def test_failed_case_below_budget_does_not_start_later_case() -> None:
     asyncio.run(scenario())
 
 
-def test_failed_assertion_stops_before_next_case_with_budget_remaining() -> None:
+def test_failed_assertion_stops_before_next_case() -> None:
     async def scenario() -> None:
         client = _FakeClient()
         failed_case = _Case(
@@ -98,67 +96,10 @@ def test_failed_assertion_stops_before_next_case_with_budget_remaining() -> None
             persona_key="chat_persona",
             timeout_seconds=180,
             retry_count=0,
-            budget_exhausted=lambda: False,
         )
         assert client.accepted == ["first"]
         assert rounds[0].case_keys == ("failed-assertion",)
         assert rounds[0].cases[0].score["pass"] is False
         assert rounds[0].passed is False
-
-    asyncio.run(scenario())
-
-
-def test_exhausted_cap_after_successful_turn_stops_remaining_turns() -> None:
-    async def scenario() -> None:
-        client = _FakeClient()
-        case = _Case(
-            key="spent-mid-case",
-            conversations={"primary": ("primary", "primary")},
-            turns=(_Turn("primary", "first"), _Turn("primary", "second")),
-        )
-        rounds = await run_primary_rounds(
-            client=client,
-            cases=(case, _case("later")),
-            canonical_case_keys=("spent-mid-case", "later"),
-            namespace="acceptance-spent-mid-case",
-            rounds=3,
-            conversation_model_key="chat",
-            reviewer_model_key="reviewer",
-            embedding_model_key="embedding",
-            prompt_key="chat_prompt",
-            persona_key="chat_persona",
-            timeout_seconds=180,
-            retry_count=0,
-            budget_exhausted=lambda: len(client.accepted) >= 1,
-        )
-        assert client.accepted == ["first"]
-        assert len(rounds) == 1
-        assert rounds[0].case_keys == ("spent-mid-case",)
-        assert rounds[0].complete_matrix is False
-        assert len(rounds[0].cases[0].turns) == 1
-        assert rounds[0].passed is False
-
-    asyncio.run(scenario())
-
-
-def test_compatibility_round_is_failed_when_cap_prevents_remaining_case() -> None:
-    async def scenario() -> None:
-        client = _FakeClient()
-        result = await run_llama_compatibility_round(
-            client=client,
-            cases=(_case("first"), _case("second")),
-            namespace="acceptance-compatibility-cap",
-            conversation_model_key="chat",
-            reviewer_model_key="reviewer",
-            embedding_model_key="embedding",
-            prompt_key="chat_prompt",
-            persona_key="chat_persona",
-            timeout_seconds=180,
-            retry_count=0,
-            budget_exhausted=lambda: len(client.accepted) >= 1,
-        )
-        assert client.accepted == ["hello"]
-        assert result.case_keys == ("first",)
-        assert result.passed is False
 
     asyncio.run(scenario())

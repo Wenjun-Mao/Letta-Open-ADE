@@ -1,4 +1,4 @@
-"""Isolated M3 HTTP API, worker, and router with one durable provider budget."""
+"""Isolated M3 HTTP API, worker, and router."""
 
 from __future__ import annotations
 
@@ -29,10 +29,6 @@ from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
 )
 from ade_api.features.agent_runtime.router_transport import RouterTransport
-from ade_api.features.agent_runtime.request_budget import (
-    BudgetedTransport,
-    RequestLedger,
-)
 from ade_api.features.agent_runtime.worker import AgentRuntimeWorker
 from ade_api.features.prompt_center import build_prompt_template_reader
 from ade_api.platform.auth import AdePrincipal, AdeRole, authenticate_ade_request
@@ -50,9 +46,6 @@ async def _serve(
     *,
     env_file: Path,
     database_url: str,
-    ledger_path: Path,
-    generation_limit: int,
-    embedding_limit: int,
     api_port: int,
     router_port: int,
 ) -> None:
@@ -94,14 +87,7 @@ async def _serve(
             settings_factory=lambda: configured_router
         )
         forwarding.get_settings = lambda: configured_router
-        ledger = RequestLedger(
-            ledger_path,
-            generation_limit=generation_limit,
-            embedding_limit=embedding_limit,
-        )
-        transport = BudgetedTransport(
-            RouterTransport(base_url=f"http://127.0.0.1:{router_port}/v1"), ledger
-        )
+        transport = RouterTransport(base_url=f"http://127.0.0.1:{router_port}/v1")
         settings = AdeApiSettings(
             agent_runtime_enabled=True,
             agent_runtime_mode="development",
@@ -175,8 +161,6 @@ async def _serve(
                             "database": database_name,
                             "api_url": f"http://127.0.0.1:{api_port}",
                             "router_url": f"http://127.0.0.1:{router_port}/v1",
-                            "ledger": str(ledger_path),
-                            "counts": ledger.counts(),
                         }
                     ),
                     flush=True,
@@ -200,9 +184,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--env-file", type=Path, required=True)
     parser.add_argument("--database-url", required=True)
-    parser.add_argument("--ledger", type=Path, required=True)
-    parser.add_argument("--generation-limit", type=int, default=24)
-    parser.add_argument("--embedding-limit", type=int, default=24)
     parser.add_argument("--api-port", type=int, default=8130)
     parser.add_argument("--router-port", type=int, default=8131)
     arguments = parser.parse_args()
@@ -210,9 +191,6 @@ if __name__ == "__main__":
         _serve(
             env_file=arguments.env_file,
             database_url=arguments.database_url,
-            ledger_path=arguments.ledger,
-            generation_limit=arguments.generation_limit,
-            embedding_limit=arguments.embedding_limit,
             api_port=arguments.api_port,
             router_port=arguments.router_port,
         )

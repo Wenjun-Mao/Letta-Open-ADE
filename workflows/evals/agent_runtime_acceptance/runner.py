@@ -66,7 +66,6 @@ async def execute_case(
     retry_count: int,
     session_scope_sink: list[EvaluationSessionScope] | None = None,
     auxiliary_turn_sink: list[dict[str, Any]] | None = None,
-    budget_exhausted: Callable[[], bool] | None = None,
 ) -> CaseExecution:
     definitions: dict[str, str] = {}
     subjects: dict[str, str] = {}
@@ -138,7 +137,6 @@ async def execute_case(
         subject_key = str(getattr(fact, "subject_key", "primary"))
         initial_facts_by_subject.setdefault(subject_key, []).append(fact)
     for subject_key, subject_facts in initial_facts_by_subject.items():
-        _require_budget_available(budget_exhausted)
         setup_session = await _create_session(
             client=client,
             idempotency_key=_resource_key(
@@ -166,7 +164,6 @@ async def execute_case(
             deployment_snapshots=deployment_snapshots,
         )
         content = _natural_fact_setup_batch(subject_facts)
-        _require_budget_available(budget_exhausted)
         setup_run, setup_events = await _complete_setup_turn(
             client,
             setup_conversation_id,
@@ -197,7 +194,6 @@ async def execute_case(
     for prelude in tuple(getattr(case, "prelude_messages", ())):
         conversation_key = str(getattr(prelude, "conversation_key"))
         for number in range(1, int(getattr(prelude, "count", 0)) + 1):
-            _require_budget_available(budget_exhausted)
             template = str(getattr(prelude, "user_template"))
             setup_run, setup_events = await _complete_setup_turn(
                 client,
@@ -219,10 +215,6 @@ async def execute_case(
 
     completed_turns: list[dict[str, Any]] = []
     for index, turn in enumerate(tuple(getattr(case, "turns")), start=1):
-        if budget_exhausted is not None and budget_exhausted():
-            if completed_turns:
-                break
-            raise CaseStageError("request_budget_exhausted")
         conversation_key = str(getattr(turn, "conversation_key"))
         conversation_id = conversations[conversation_key]
         accepted = await _run_stage(
@@ -322,11 +314,6 @@ async def _run_stage(stage: str, operation: Any) -> Any:
         raise
     except Exception as exc:
         raise CaseStageError(stage) from exc
-
-
-def _require_budget_available(budget_exhausted: Callable[[], bool] | None) -> None:
-    if budget_exhausted is not None and budget_exhausted():
-        raise CaseStageError("request_budget_exhausted")
 
 
 async def _create_session(
@@ -551,12 +538,9 @@ async def run_primary_rounds(
     diagnostic: bool = False,
     session_scope_sink: list[EvaluationSessionScope] | None = None,
     on_round_complete: Callable[[QualificationRound], QualificationRound] | None = None,
-    budget_exhausted: Callable[[], bool] | None = None,
 ) -> tuple[QualificationRound, ...]:
     results: list[QualificationRound] = []
     for index in range(1, rounds + 1):
-        if budget_exhausted is not None and budget_exhausted():
-            break
         executions: list[CaseExecution] = []
         for case in cases:
             case_scopes: list[EvaluationSessionScope] = []
@@ -575,7 +559,6 @@ async def run_primary_rounds(
                     retry_count=retry_count,
                     session_scope_sink=case_scopes,
                     auxiliary_turn_sink=auxiliary_turns,
-                    budget_exhausted=budget_exhausted,
                 )
             except Exception as exc:
                 execution = _failed_case_execution(
@@ -585,9 +568,7 @@ async def run_primary_rounds(
                 if session_scope_sink is not None:
                     session_scope_sink.extend(case_scopes)
             executions.append(execution)
-            if not execution.score.get("pass") or (
-                budget_exhausted is not None and budget_exhausted()
-            ):
+            if not execution.score.get("pass"):
                 break
         materialized_executions = tuple(executions)
         fingerprints = _combined_fingerprints(materialized_executions)
@@ -625,12 +606,9 @@ async def run_llama_compatibility_round(
     retry_count: int,
     session_scope_sink: list[EvaluationSessionScope] | None = None,
     on_round_complete: Callable[[QualificationRound], QualificationRound] | None = None,
-    budget_exhausted: Callable[[], bool] | None = None,
 ) -> QualificationRound:
     executions: list[CaseExecution] = []
     for case in cases:
-        if budget_exhausted is not None and budget_exhausted():
-            break
         case_scopes: list[EvaluationSessionScope] = []
         auxiliary_turns: list[dict[str, Any]] = []
         try:
@@ -647,7 +625,6 @@ async def run_llama_compatibility_round(
                 retry_count=retry_count,
                 session_scope_sink=case_scopes,
                 auxiliary_turn_sink=auxiliary_turns,
-                budget_exhausted=budget_exhausted,
             )
         except Exception as exc:
             execution = _failed_case_execution(case, exc, case_scopes, auxiliary_turns)

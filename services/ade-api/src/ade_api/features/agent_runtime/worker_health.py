@@ -20,7 +20,6 @@ from .errors import AgentRuntimeError, RuntimeNotReady
 from .persistence.database import create_persistence_engine
 from .persistence.validation import migration_heads
 from .persistence.workers import WorkerInstanceRepository
-from .request_budget import budget_identity
 
 
 WORKER_CONTRACT_VERSION = "agent-runtime-worker-v1"
@@ -31,7 +30,6 @@ LOGGER = logging.getLogger(__name__)
 def worker_compatibility_fingerprint(
     *,
     runtime_mode: str,
-    budget: dict[str, object] | None = None,
     contract_version: str = WORKER_CONTRACT_VERSION,
     migration_heads: tuple[str, ...] | None = None,
 ) -> str:
@@ -42,8 +40,6 @@ def worker_compatibility_fingerprint(
         ),
         "runtime_mode": str(runtime_mode),
     }
-    if budget is not None:
-        payload["budget"] = budget
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
@@ -282,7 +278,6 @@ def build_runtime_worker_health_service(
 def _settings_fingerprint(settings: AdeApiSettings) -> str:
     return worker_compatibility_fingerprint(
         runtime_mode=settings.agent_runtime_mode,
-        budget=budget_identity(settings),
     )
 
 

@@ -17,8 +17,6 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import agent_runtime_eval_contracts  # noqa: E402
-from ade_api.features.agent_runtime.request_budget import budget_ledger  # noqa: E402
-from ade_api.platform.settings import get_settings  # noqa: E402
 from agent_runtime_eval_contracts import (  # noqa: E402
     FixtureError,
     load_cases,
@@ -46,7 +44,6 @@ from workflows.evals.agent_runtime_acceptance.policy import (  # noqa: E402
     production_policy_hashes,
 )
 from workflows.evals.agent_runtime_acceptance.preflight import (  # noqa: E402
-    budget_preflight_passed,
     worker_preflight_passed,
 )
 from workflows.evals.agent_runtime_acceptance.runner import (  # noqa: E402
@@ -132,18 +129,12 @@ async def run_acceptance(
     session_scopes: list[EvaluationSessionScope] = []
     try:
         health = await client.get_worker_health()
-        budget_verified = budget_preflight_passed(
-            health, diagnostic=diagnostic, retry_count=config.retry_count
-        )
-        preflight_passed = (
-            worker_preflight_passed(
-                health,
-                source_revision=source_revision,
-                source_dirty=source_dirty,
-                source_fingerprint=source_fingerprint,
-                diagnostic=diagnostic,
-            )
-            and budget_verified
+        preflight_passed = worker_preflight_passed(
+            health,
+            source_revision=source_revision,
+            source_dirty=source_dirty,
+            source_fingerprint=source_fingerprint,
+            diagnostic=diagnostic,
         )
         preflight = writer.write_preflight(
             {
@@ -157,7 +148,6 @@ async def run_acceptance(
                     "fingerprint": source_fingerprint,
                 },
                 "health": health,
-                "budget_verified": budget_verified,
             }
         )
         if not preflight_passed:
@@ -172,8 +162,6 @@ async def run_acceptance(
                 "eligible": False,
                 "passed": False,
             }
-        ledger = budget_ledger(get_settings())
-        budget_exhausted = ledger.exhausted if ledger is not None else None
         primary = await run_primary_rounds(
             client=client,
             cases=cases,
@@ -190,7 +178,6 @@ async def run_acceptance(
             session_scope_sink=session_scopes,
             on_round_complete=lambda result: _write_rounds(writer, (result,))[0],
             diagnostic=diagnostic,
-            budget_exhausted=budget_exhausted,
         )
         materialized_primary = primary
         compatibility = None
@@ -199,7 +186,6 @@ async def run_acceptance(
             and not diagnostic
             and len(primary) == config.rounds
             and all(round_result.passed for round_result in primary)
-            and (budget_exhausted is None or not budget_exhausted())
         ):
             try:
                 compatibility = await run_llama_compatibility_round(
@@ -217,7 +203,6 @@ async def run_acceptance(
                     on_round_complete=lambda result: _write_rounds(writer, (result,))[
                         0
                     ],
-                    budget_exhausted=budget_exhausted,
                 )
             except Exception as exc:
                 compatibility = {
