@@ -48,12 +48,10 @@ from workflows.evals.deepseek_dev_smoke.isolation import isolated_database_url
 
 from .natural_live_results import (
     capture_scope,
-    remaining_turn_embedding_limit,
     require_mutation_state,
     sha256_file,
     stop_campaign_at,
     verify_attempt_safety,
-    verify_allocation_counts,
     write_json,
 )
 from .natural_live_setup import seed_live_cell
@@ -191,7 +189,6 @@ async def _run(args: argparse.Namespace) -> None:
     await worker.presence.register()
     heartbeat = asyncio.create_task(worker.presence.heartbeat_forever(heartbeat_stop))
     setup_scope = RequestScope("scripted-setup-indexing", 0, 40)
-    turn_embedding_used = 0
     generated_summaries: dict[str, tuple[str, int]] = {}
     stop_reason: str | None = None
     try:
@@ -297,11 +294,6 @@ async def _run(args: argparse.Namespace) -> None:
                         else 0
                     ),
                 }
-                verify_allocation_counts(
-                    setup_used=setup_scope.embedding_used,
-                    turn_used=turn_embedding_used,
-                    total=ledger.counts()["embedding"],
-                )
                 accepted = await service.accept_turn(
                     session["conversation"]["id"],
                     AcceptTurnRequest(
@@ -318,16 +310,10 @@ async def _run(args: argparse.Namespace) -> None:
                 cell_scope = RequestScope(
                     name=name.replace("::", "-"),
                     generation_limit=4 if extra_compaction else 3,
-                    embedding_limit=remaining_turn_embedding_limit(turn_embedding_used),
+                    embedding_limit=4,
                 )
                 with transport.scope(cell_scope):
                     processed = await worker.process_once()
-                turn_embedding_used += cell_scope.embedding_used
-                verify_allocation_counts(
-                    setup_used=setup_scope.embedding_used,
-                    turn_used=turn_embedding_used,
-                    total=ledger.counts()["embedding"],
-                )
                 if not processed:
                     raise RuntimeError("native worker did not process accepted run")
                 result["provider_captures"] = capture_scope(

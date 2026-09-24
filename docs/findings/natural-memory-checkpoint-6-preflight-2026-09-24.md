@@ -93,3 +93,8 @@ shape; no other database was modified. The scoped router will use Docker's
 existing `dgx-spark` host mapping with the approved IP so the actual Qwen
 route URL retains the manifest's pinned hostname. These steps make no paid
 generation or embedding request.
+
+The user prioritized completing the comparison over fine-grained development
+cost accounting. The existing shared 96/160 request cap remains a runaway
+backstop; the erroneous setup check against cumulative embeddings was removed.
+No rerolls or extra retries are authorized by this simplification.

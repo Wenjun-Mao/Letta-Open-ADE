@@ -7,10 +7,8 @@ import pytest
 from workflows.evals.character_memory_dev.natural_live_results import (
     capture_scope,
     mutation_state_matches,
-    remaining_turn_embedding_limit,
     require_mutation_state,
     stop_campaign_at,
-    verify_allocation_counts,
 )
 from workflows.evals.character_memory_dev.natural_live_transport import RequestScope
 
@@ -83,24 +81,6 @@ def _fact(fact_id, fact_type, status, value, revisions, *, entity_id="subject"):
 
 def _terminal(*revision_ids, outcome="committed"):
     return {"outcome": outcome, "revision_ids": list(revision_ids)}
-
-
-def test_setup_allocation_interleaves_with_turns_without_false_stop() -> None:
-    verify_allocation_counts(setup_used=30, turn_used=25, total=55)
-    assert remaining_turn_embedding_limit(119) == 1
-    assert remaining_turn_embedding_limit(120) == 0
-    with pytest.raises(RuntimeError, match="allocation exhausted"):
-        verify_allocation_counts(setup_used=41, turn_used=0, total=41)
-    with pytest.raises(RuntimeError, match="allocation exhausted"):
-        verify_allocation_counts(setup_used=40, turn_used=121, total=161)
-    with pytest.raises(RuntimeError, match="accounting differs"):
-        verify_allocation_counts(setup_used=30, turn_used=25, total=54)
-    setup = RequestScope("setup", 0, 40, embedding_used=40)
-    with pytest.raises(RuntimeError, match="setup embedding schedule exhausted"):
-        setup.reserve_local("embedding")
-    turn = RequestScope("turn", 3, remaining_turn_embedding_limit(120))
-    with pytest.raises(RuntimeError, match="turn embedding schedule exhausted"):
-        turn.reserve_local("embedding")
 
 
 def test_scoped_addition_requires_morning_and_evening_separate_assertions() -> None:

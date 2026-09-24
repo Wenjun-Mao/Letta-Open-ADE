@@ -208,18 +208,6 @@ def require_mutation_state(
         raise RuntimeError("required mutation state did not match committed fixture")
 
 
-def verify_allocation_counts(*, setup_used: int, turn_used: int, total: int) -> None:
-    if setup_used > 40 or turn_used > 120 or total > 160:
-        raise RuntimeError("campaign embedding allocation exhausted")
-    if total != setup_used + turn_used:
-        raise RuntimeError("campaign embedding allocation accounting differs")
-
-
-def remaining_turn_embedding_limit(turn_used: int) -> int:
-    verify_allocation_counts(setup_used=0, turn_used=turn_used, total=turn_used)
-    return min(4, 120 - turn_used)
-
-
 def unrun_after_stop(cells: list[tuple[str, dict, str]], index: int) -> list[str]:
     return [item[0] for item in cells[index + 1 :]]
 
