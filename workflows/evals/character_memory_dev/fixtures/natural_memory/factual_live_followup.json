@@ -1,0 +1,11 @@
+{
+  "id": "natural-factual-continuity-followup-20260924-v1",
+  "source_fixture_sha256": "db71c625fa9d3ba7047fcb5faf9a3e803df591afa6fe4d405d12b4c900b1ec3a",
+  "case_ids": [
+    "distinct_evening_preference",
+    "uncertainty_and_habit",
+    "other_subject_probe"
+  ],
+  "turn_count": 8,
+  "note": "Existing frozen texts and complete-delta expectations; two independent setup turns are required. One native attempt per turn, no rerolls."
+}

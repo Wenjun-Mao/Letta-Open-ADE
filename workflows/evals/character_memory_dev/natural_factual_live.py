@@ -71,7 +71,30 @@ FIXTURE = (
     ROOT
     / "workflows/evals/character_memory_dev/fixtures/natural_memory/factual_live_diagnostic.json"
 )
+FOLLOWUP = FIXTURE.with_name("factual_live_followup.json")
 POLICY = "natural-user-assertions-v4-b"
+
+
+def selected_cases(fixture: dict, *, follow_up_eight: bool) -> tuple[str, str, list]:
+    if not follow_up_eight:
+        return fixture["id"], sha256_file(FIXTURE), fixture["cases"]
+    selection = json.loads(FOLLOWUP.read_text())
+    if (
+        selection["source_fixture_sha256"] != sha256_file(FIXTURE)
+        or selection["case_ids"]
+        != [
+            "distinct_evening_preference",
+            "uncertainty_and_habit",
+            "other_subject_probe",
+        ]
+        or selection["turn_count"] != 8
+    ):
+        raise RuntimeError("factual follow-up selection drifted")
+    by_id = {case["id"]: case for case in fixture["cases"]}
+    cases = [by_id[case_id] for case_id in selection["case_ids"]]
+    if sum(len(case["turns"]) for case in cases) != selection["turn_count"]:
+        raise RuntimeError("factual follow-up turn count drifted")
+    return selection["id"], sha256_file(FOLLOWUP), cases
 
 
 def install_spark_alias(host: str) -> None:
@@ -141,6 +164,9 @@ async def run(args: argparse.Namespace) -> None:
         or sum(len(case["turns"]) for case in fixture["cases"]) != 11
     ):
         raise RuntimeError("factual diagnostic schedule drifted")
+    schedule_id, schedule_sha256, cases = selected_cases(
+        fixture, follow_up_eight=args.follow_up_eight
+    )
     if args.output.exists():
         raise RuntimeError("diagnostic output must be new")
     engine = create_persistence_engine(database_url)
@@ -210,11 +236,13 @@ async def run(args: argparse.Namespace) -> None:
                 if not models.get(route, {}).get("deployment"):
                     raise RuntimeError(f"pinned route unavailable: {route}")
             manifest = {
-                "id": fixture["id"],
+                "id": schedule_id,
                 "status": "running",
                 "source_revision": revision,
                 "source_fingerprint": fingerprint,
                 "fixture_sha256": sha256_file(FIXTURE),
+                "schedule_sha256": schedule_sha256,
+                "scheduled_case_ids": [case["id"] for case in cases],
                 "database": database_name,
                 "policy": POLICY,
                 "reviewer_envelope": {"input_limit": 6759, "max_output_tokens": 4096},
@@ -264,7 +292,7 @@ async def run(args: argparse.Namespace) -> None:
                 database=database,
                 definitions=BoundDefinitions(),
                 purpose="evaluation",
-                session_namespace=fixture["id"],
+                session_namespace=schedule_id,
             )
             service = RunService(
                 database=database,
@@ -284,7 +312,7 @@ async def run(args: argparse.Namespace) -> None:
                 worker.presence.heartbeat_forever(heartbeat_stop)
             )
             try:
-                for case_index, case in enumerate(fixture["cases"]):
+                for case_index, case in enumerate(cases):
                     case_result = {"id": case["id"], "turns": []}
                     manifest["cases"].append(case_result)
                     subject_id = None
@@ -435,6 +463,7 @@ def main() -> None:
     parser.add_argument("--env-file", type=Path, required=True)
     parser.add_argument("--router-port", type=int, default=8137)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--follow-up-eight", action="store_true")
     asyncio.run(run(parser.parse_args()))
 
 

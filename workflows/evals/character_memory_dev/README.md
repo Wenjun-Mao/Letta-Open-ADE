@@ -287,6 +287,18 @@ did not describe `reassert` as inactive-only or say to omit unchanged active
 facts. The existing prompt/schema now state those lifecycle rules, with
 serialized-request and atomic-rejection tests. No further live turns were
 sent under this clarification.
+The director then selected one bounded eight-turn follow-up under the user's
+existing `go`, recorded in
+[`fixtures/natural_memory/factual_live_followup.json`](fixtures/natural_memory/factual_live_followup.json).
+`natural_factual_live.py --follow-up-eight` selects only the three frozen
+case branches named there. The two first turns are independent subject setup;
+the remaining six were unrun or rejected in the previous binding. The
+selection keeps their exact source texts and complete-delta expectations,
+the v4 B context, DeepSeek Flash high-thinking and Spark Qwen routes,
+4,096-token reviewer output, one attempt per turn, and early structural stop.
+It requires a new clean source commit, fresh migrated disposable database and
+new output path. This is not permission to reroll any earlier committed turn,
+modify the scorer midrun, or run the original 30-cell comparison.
 
 The frozen checkpoint-1 matrix and former checkpoint-6 campaign describe a
 historical reviewer contract. Its no-save cell and comparison schedule do not

@@ -171,3 +171,18 @@ delta expectations, one native attempt per turn, and the same early-stop
 rule. The four committed turns above need no reroll. A further live diagnostic
 requires a new bounded decision. The 30-cell campaign and release gate remain
 separate.
+
+The director subsequently chose that exact eight-turn follow-up under the
+user's existing `go`, without a new explicit user approval or permission for
+rerolls. The selection is frozen in
+`workflows/evals/character_memory_dev/fixtures/natural_memory/factual_live_followup.json`:
+the three existing case branches, eight turns total, with the two independent
+setups required to interpret later deltas. The runner binds a clean source
+revision, the unchanged source fixture hash, selection hash, v4 B policy,
+DeepSeek Flash high-thinking and Spark Qwen fingerprints, 6,759/4,096
+reviewer envelope, zero application retries and a fresh disposable database
+before dispatch. The prior five-turn output and failed embedding attempt
+remain untouched. It repeats only the case-2 morning-coffee setup on a new
+independent subject because the failed addition depends on it; the other
+three prior commits are not replayed. The 30-cell campaign, release and
+deployment remain outside this scope.
