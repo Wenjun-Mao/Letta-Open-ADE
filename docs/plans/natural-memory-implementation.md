@@ -1,6 +1,6 @@
 # Natural Memory: Bounded Implementation Plan
 
-Status: revision 4, proposed for Pro review on 2026-09-24. Planning only.
+Status: revision 5, proposed for Pro review on 2026-09-24. Planning only.
 This revision is not implementation, live-call, deployment, or release approval.
 It replaces the next-work instructions in revision 3, not its historical evidence.
 Source inspected: `aea2719c1e2310d0c5c1a10b9fe75c0d0e3c14e5`.
@@ -8,6 +8,9 @@ Source inspected: `aea2719c1e2310d0c5c1a10b9fe75c0d0e3c14e5`.
 [Reviewer-interface assessment](../findings/natural-memory-consultation/reviewer-interface-assessment.md)
 links the unchanged independent reports. This is the single active plan for this
 natural-memory scope; do not create a competing implementation plan.
+Revision 5 incorporates the [compact-plan review assessment](../findings/natural-memory-consultation/compact-plan-review-assessment.md):
+inherited restrictions, operation-specific assent, read-only conflict grounding,
+canonical non-vetoing request observations, and complete-delta acceptance.
 
 ## Outcome And Boundaries
 
@@ -57,8 +60,8 @@ Use separate sections, with bounded complete-message context:
 
 - Current user: the sole current write-authority message, with full text.
 - Context: admitted prior conversation messages; not freely citable authority.
-- Eligible support: local handles to earlier user assertions or assistant
-  propositions in the same admitted clarification suffix.
+- Eligible support: local handles to earlier user assertions/requests or assistant
+  propositions/action requests in the same admitted clarification suffix.
 - Targets: handles to active/inactive facts with truthful lifecycle descriptors.
 - Related identities: handles derived from eligible identity facts, not raw
   entity labels. Subject identity is implicit and never an offered choice.
@@ -79,6 +82,8 @@ Unknown, wrong-kind, foreign, ambiguous, and stale references fail; no remapping
 Do not use a model call to preselect support handles. The server supplies bounded
 eligible messages by known role/chronology; the reviewer chooses their semantic
 relationship. Merely including a handle does not certify an assertion or consent.
+Serialize each complete message once; context/support sections reference that
+message by handle and role eligibility rather than duplicate its full text.
 
 ### Output Shape
 
@@ -94,7 +99,7 @@ Use one discriminated list, not parallel proposals/dispositions joined by IDs:
 | Related add | Fact type, value, qualifier, offered entity handle or local new-entity reference, evidence | Persistent IDs, independent entity label |
 | Revise/end/reassert/forget | Target handle, operation and existing closed reason/value rules, evidence | Fact ID, expected version, entity identity |
 | Defer | Current exact quote, reason: unresolved/uncertain/nonasserted/no-save | Guessed entity, target, value, executable mutation |
-| Conflict | Grounded interpretation/evidence and exact candidate-reply quote | Mandatory executable write |
+| Conflict | Current claim or query/context, permitted support or read-only snapshot handles, exact candidate-reply quote | Mandatory executable write or invented assertion |
 
 Keep existing lifecycle meanings: correct versus supersede, inactive versus
 forgotten, and fresh add after forgetting. Reassert cannot revive a forgotten
@@ -122,29 +127,55 @@ evidence_quote. Derive them from the chosen mode and held map.
 | Mode | Additional selectable support | Meaning |
 | --- | --- | --- |
 | Direct | None | Current user's own assertion/correction/removal supplies the claim; a targeted prior fact identifies what changes, not new authority |
-| Resolve-user | Earlier-user handle and exact quote, plus any intervening clarification context handle needed to identify the question | Current answer completes an earlier user's assertion; earlier support is not independent write authority |
-| Endorse-assistant | Prior assistant proposition handle/quote | Explicit current assent endorses that particular proposition, not all assistant text |
+| Resolve-user | Earlier-user handle and exact quote, plus intervening clarification context if needed | Current answer completes an earlier user's assertion or explicit lifecycle request; earlier support is not independent authority |
+| Endorse-assistant | Prior assistant proposition/action-request handle and quote | Explicit current assent endorses that particular factual proposition or action, not all assistant text |
 
 Quotes must match one exact span in the selected message; ambiguous duplicates,
 missing quotes, out-of-bundle handles, and role/chronology mismatches fail.
 Do not implement fuzzy repair or choose an arbitrary duplicate occurrence.
 
 Direct mode cannot use assistant text as factual support. Resolve-user requires
-a real earlier user assertion and a current answer tied to that unresolved claim;
-it cannot extract unrelated historical facts. Endorse-assistant requires locally
+a real earlier user assertion/request and a current answer tied to its unresolved
+part; it cannot extract unrelated historical facts. Endorse-assistant requires locally
 affirmative assent tied to the proposition and rejects negated/quoted/hypothetical
 assent and bare names. The model's mode label is not itself proof of endorsement.
 
 Required contrast: earlier user says "one dog is a Husky", assistant asks "Rocky
 or Roxy?", user says "Roxy": allow bounded user-antecedent resolution. Assistant
-alone asks "Is Roxy a Husky?", user says "Roxy": do not save breed. Explicit
-"Yes, Roxy is a Husky" can authorize it. Ambiguous multi-proposition "yes" defers.
+alone asks "Is Roxy a Husky?", user says "Roxy": do not save breed. A clear short
+"Yes" to that single proposition can authorize it; test this separately from the
+self-contained "Yes, Roxy is a Husky". Ambiguous multi-proposition "yes" defers.
+Inject the bare-name attempted write under every mode: switching mode must not
+provide an escape. Never pool all bound quotes as interchangeable value support;
+only that mode's permitted factual sources may contribute factual properties.
+
+Resolution completes only the missing part. It retains uncertainty, quoted or
+fictional framing, conditions and no-save restrictions attached to the antecedent.
+Eligibility considers the admitted surrounding exchange and intervening corrections,
+withdrawals or restrictions, not just the chosen substring. "Might be a Husky"
+followed by "Roxy" does not become a definite breed. "Don't save that" followed
+by a name does not become saving permission. A fresh self-contained current
+assertion or explicit change of saving intent is evaluated separately. This is
+bounded assertion scope, not persistent topic suppression beyond the admitted text.
+
+Authorization is operation-specific. A current target answer completing an explicit
+user removal request can authorize forget; affirmative assent to an assistant's
+specific proposed removal can too. "Remove one drink preference" / "Coffee or
+tea?" / "The morning-coffee one" and "Shall I remove saved morning coffee?" /
+"Yes, please" are positive cases. "Is morning coffee no longer your preference?"
+/ "Yes" can support ending, not forgetting. Identifying an old record alone
+authorizes neither. Bind the exact action, target and current assent; no free-form
+"authorized" flag or extra classifier call. Earlier-user requests remain support
+only; the current resolution/endorsement is the authority anchor. Cancellation,
+negation and unresolved target ambiguity defer rather than guess an action.
 
 Use the existing affirmative/uncertainty helpers where their semantics fit and
 add narrow negative tests, not a broad yes-word heuristic. Some interpretation
 remains semantic; exact citation matching is necessary, not sufficient for truth.
-If the implementation cannot enforce these distinctions without inventing a new
-semantic model stage, stop for review rather than claiming the mode tag solves it.
+Native checks establish binding and permitted combinations, not universal semantic
+entailment. Freeze the concrete contrasts as tests; measure broader interpretation
+quality live. Escalate an unimplementable contract, not the absence of a theorem
+about natural language; do not introduce another judge to manufacture certainty.
 
 Persist current authority and supporting provenance distinctly. Propose adding
 `user_resolution` (current anchor) and `user_antecedent` (support-only) to the
@@ -152,6 +183,12 @@ existing source-role contract. Keep `user_assertion`, `user_endorsement`, and
 `assistant_referent`. Update DB check constraints, readback verification, presenters,
 API schema and UI role display together; do not relabel old evidence. Assistant
 context in a resolution is not licensed to add assistant-origin facts.
+Expose the current anchor explicitly in the bound representation. Never recover
+authority as "the first non-assistant source" or "any user source". Current roles
+are user_assertion/user_endorsement/user_resolution as allowed by mode; antecedents
+are support-only regardless of source ordering. Writes and readback must bind the
+anchor to the originating run's current user message and check support chronology.
+Update diagnostic safety checks too. Operator actions retain separate causation.
 
 ### Dispositions And Atomicity
 
@@ -161,21 +198,36 @@ Do not transform an invalid write into a defer, silently drop sources, or salvag
 valid siblings from malformed output.
 
 No-save applies at claim scope and dominates equivalent writes in either order.
-A no-save item carries its exact current scope, not a invented target. Retain
-the independent native no-save check on every proposed write; a defer declaration
+A no-save item carries its exact current scope, not an invented target. Adapt
+the independent native no-save check to the admitted exchange and explicit anchor,
+including inherited restrictions; do not reuse its sentence-only implementation.
+A defer declaration
 cannot hide a contradictory sibling. Clear removal of an existing fact requires
 an authorized forget operation; "do not save this" does not by itself delete it.
 Unrelated supported writes survive legitimate deferrals.
+Mandatory contrasts include "I prefer coffee in the morning. Don't save that.
+I now live in Toronto" and natural Chinese "别保存". Coffee may defer while
+Toronto writes; an unauthorized coffee write still rejects the attempt rather
+than being silently dropped to rescue its sibling. Restrictions apply to the
+identified claim, not indiscriminately to all current facts.
 
-A grounded conflict can exist without a new write. Require the current claim/
-permitted support and a uniquely bound conflicting candidate span; an unrelated
-question is not conflict. A validated conflict vetoes the whole attempt. Semantic
+A grounded conflict can exist without a new write. Allow relevant read-only fact
+or identity handles from the held lifecycle snapshot, together with current query/
+context and a uniquely bound conflicting candidate span. A question need not become
+a fabricated user assertion. If F1 names the dog Roxy, "What is my dog's name?" /
+"Rocky" can ground a conflict with zero writes. A correct answer followed by an
+unrelated question is not conflict. Conflict grounding grants no mutation authority
+and adds no retrieval or fourth write-evidence mode. A validated conflict vetoes
+the whole attempt. Semantic
 contradiction remains reviewer judgment subject to fixtures, not string matching.
 
 After filtering genuine deferrals, derive the effective write set and dependent
 new entities/embeddings once. All-deferred/no-change must not create entities,
 write embeddings, or advance memory generation. Query embeddings for retrieval,
 if already used, are not mutation embeddings and must be reported separately.
+Bind once to trusted operation records. Finalization revalidates ownership, source
+integrity and original versions transactionally, without rerunning semantic
+interpretation, allocating different identities, or rebinding against fresh rows.
 
 ### Completion And Failure Classes
 
@@ -205,12 +257,22 @@ Count once at the shared outbound ADE-to-router dispatch boundary, not again in
 nested stage/capture wrappers. Catalog discovery is separate from model usage.
 Use stable request IDs to aggregate API/worker events without shared in-memory
 counters or a new accounting database/service.
+Use one canonical event producer on successful and failed attempts. Remove
+reconstructed request-start/completion events in `worker_events.py` success paths;
+keep authoritative domain events for messages, revisions, summaries and tools.
+Do not deduplicate by provider response ID: failed requests may have none.
 
 Report attempted, completed, failed, and unresolved counts by kind/model/stage
 and run/iteration. These are ADE outbound attempts, not provider billing or a
 guarantee of network receipt. Timeouts may have reached the provider; do not
 record them as zero. Surface expected versus observed counts as diagnostics,
 never a spending veto or a reason to silently omit remaining cases.
+Attempted means one retained local dispatch-start ID; completed means transport
+returned a supported envelope, even if the product later rejects the proposal.
+Failed/cancelled means that invocation ended exceptionally. Unresolved means a
+known start lacks a terminal observation. Missing starts make the total incomplete,
+not a known exact total with some unresolved calls. Cancellation must be counted
+without swallowing cancellation or converting it to success.
 
 For workflow setup outside a run, use the same small event shape in its existing
 artifact writer. If process death/capture loss makes coverage incomplete, label
@@ -218,14 +280,24 @@ counts incomplete/unknown; never manufacture zero or claim exact billing.
 Ordinary telemetry failure must not prevent a product request or alter its result.
 An evaluation may remain unscorable because evidence is missing, distinct from
 a monetary stop. Do not build durable pre-request reservations again.
+Apply non-vetoing observation to trace-start, completion, reviewer callbacks and
+capture writes, including writes in finally. Preserve the original result or
+exception if observation fails; never trigger retries from capture errors. Use a
+small helper, not an observability framework. Required source/revision/run-outcome
+persistence is not optional telemetry. Keep optional writes outside or isolated
+from the authoritative transaction; do not swallow transaction persistence errors.
 
 Keep existing historical ledgers/frozen files byte-for-byte. Active commands stop
 enforcing old monetary schedules; docs mark those schedules historical. Remove
 active imports/validation of old caps, while retained fixtures still specify their
 semantic cases. Current context/iteration/tool-call bounds remain explicit.
-Do not silently remove the 180-second timeout clamp formerly embedded in the
-budget wrapper: locate intended timeout ownership and preserve each documented
-runtime/diagnostic timeout at that layer, with regression tests.
+Timeout ownership remains explicit: the attempt controller owns one execution
+deadline shared by conversation, continuations and reviewer; the transport receives
+the remaining allowance. Preserve the former budget wrapper's applicable
+180-second per-request diagnostic ceiling in non-accounting transport construction,
+not as a fresh full window at each stage. Explicit retries create distinct attempts
+under existing rules. Do not redefine the deadline to span all retries/finalization.
+Move timeout tests before deleting budget tests; add no new timeout framework.
 
 ## Implementation Checkpoints After Approval
 
@@ -245,6 +317,12 @@ assistant support, missing-shape no-op, genuine unresolved deferral, subject UUI
 selection, stale/cross-subject handles and time-scoped correction. Separate
 mechanical checks from semantic accuracy claims. Exit: reviewers can trace each
 decision field to model work or server binding; no unresolved authority shortcut.
+Include definite versus uncertain/no-save/withdrawn antecedents, following-sentence
+restrictions, short affirmative versus bare-name assent, action versus factual
+confirmation, conflict grounded in an existing fact, and source-order permutation.
+Freeze each case's complete permitted before/after delta: required mutations,
+unchanged identities/scopes and forbidden extra changes. Expected-fact presence
+alone cannot pass; semantically equivalent values remain subject to explicit review.
 
 ### 2. Remove Spending Gates, Retain Observation
 
@@ -254,6 +332,10 @@ transport, route validation, exact retries, timeouts and behavioral stops.
 Exit: fake transport tests cover failed sends, continuations, retries, setup and
 API/worker aggregation with no double counts; exceeding an expected count does
 not block a request. Missing telemetry is explicit and does not veto product work.
+Inject telemetry failure before/after a successful call and during an original
+provider error/cancellation; preserve the result/exception. Required provenance
+storage failure must still fail commit. Verify one ID/event source on both success
+and failure, with setup and embedding calls included.
 
 ### 3. Implement Compact Review And Provenance
 
@@ -264,10 +346,13 @@ construction/preflight without changing other generation behavior. Use cohesive
 modules, preferably below 400 lines; split responsibilities before adding to
 files over 500 lines. No general policy engine.
 
-Add a forward migration for provenance-role constraints only if needed by the
-final typed contract; update readers/UI/OpenAPI in the same checkpoint. Test
+The two proposed source roles require a forward constraint migration; update
+readers/UI/OpenAPI and diagnostic authority sets in the same checkpoint. Test
 fresh and existing disposable DB migrations non-destructively. Existing messages,
 facts/revisions and receipts must remain readable unchanged.
+Read historical records by their originating policy/lineage without retroactively
+certifying them under new endorsement rules, relabeling sources or inventing assent.
+Antecedent-only new revisions must fail; source order cannot change authority.
 
 Use a new immutable reviewer/policy binding for new semantics. Old conversations
 remain readable, with unsupported fresh sends rejected rather than silently
@@ -306,7 +391,11 @@ contexts; chronological scoped tea and typo correction; related-entity creation;
 user-antecedent clarification; positive and bare-name negative endorsement;
 genuine unresolved deferral beside an independent update; same-turn no-save;
 explicit removal followed by fresh restatement. Publish exact case counts/order,
-source-linked setup, expected state and permitted reply claims before execution.
+source-linked setup, complete allowed mutation deltas and permitted reply claims
+before execution. Include the new restriction/action/conflict contrasts in the
+frozen diagnostic subset, not only hand-authored unit tests. Optional same-subject
+later recall may be added before freezing; without it, label results reconciliation/
+write evidence and leave retrieval/continuity claims to the later comparison.
 
 No financial request caps or reservation ledgers. Use counters and a fixed finite
 case list, timeout and tool-loop bounds. Repetitions are scheduled observations,
@@ -323,9 +412,10 @@ for model/task-shape review rather than more metadata or permissive validation.
 
 ## Release Boundary And Pro Review Questions
 
-No merge/push/deployment/promotion, source-fingerprint rebind, or production data
-change is part of writing or reviewing this plan. Publication is a separate
-review checkpoint. Eventual release still requires fresh evidence, approved
+No implementation push, merge/deployment/promotion, source-fingerprint rebind, or
+production data change is part of writing or reviewing this plan. Documentation-only
+review publication is pre-approved under the tracker's standing authorization.
+Eventual release still requires fresh evidence, approved
 policy/envelope, matched builds and non-destructive migration/recovery checks.
 
 Ask the Pros to scrutinize: whether three evidence modes truly separate authority

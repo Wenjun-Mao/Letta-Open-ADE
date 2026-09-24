@@ -15,7 +15,7 @@ the approved publication scope.
 
 ## Current Focus
 
-The next deliverable is **Pro review of revision 4 of the single
+The next deliverable is **Pro review of revision 5 of the single
 [natural-memory implementation plan](plans/natural-memory-implementation.md)**.
 The prior live campaign and three development iterations are stopped, not A/B
 qualification. The [reviewer-interface assessment](findings/natural-memory-consultation/reviewer-interface-assessment.md)
@@ -24,7 +24,10 @@ The proposed next implementation removes model-owned persistence bookkeeping,
 separates authority from antecedent support, makes genuine deferral representable,
 and replaces request-budget enforcement with observational counters. No new
 runtime work, live diagnostic, policy selection or release is authorized by this
-planning checkpoint. Earlier chronology below is historical, not a restart order.
+planning checkpoint. Revision 5 incorporates the [compact-plan reviews](findings/natural-memory-consultation/compact-plan-review-assessment.md): inherited
+restrictions, operation-specific assent, read-only conflict grounding, explicit
+authority anchors, canonical non-vetoing observation and full mutation-delta tests.
+Earlier chronology below is historical, not a restart order.
 
 ### Earlier Milestone History
 
