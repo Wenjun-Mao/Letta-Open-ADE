@@ -126,24 +126,21 @@ def build_natural_context(
             input_limit=budget.input_limit,
         ):
             lifecycle_withheld = True
-            if variant == "A":
-                fact_section = (
-                    "Current lifecycle snapshot WITHHELD: complete snapshot exceeds "
-                    "the input limit. Do not infer omitted memory or prior dialogue."
-                )
-                suffix = []
-            else:
-                suffix, selected_facts, fact_section = _selective_section(
-                    base_sections=base_sections,
-                    suffix=suffix,
-                    current_content=current_content,
-                    input_limit=budget.input_limit,
-                    facts=facts,
-                    retrieved_facts=retrieved_facts,
-                    entities=entities,
-                    selective_fact_limit=selective_fact_limit,
-                    exact_entity_expansion_limit=exact_entity_expansion_limit,
-                )
+            # A and A0 retain the same full-snapshot prerequisite. When it
+            # fails, current memory may be selected, but prior narrative cannot
+            # enter either generation bundle. B alone admits the local suffix.
+            suffix, selected_facts, fact_section = _selective_section(
+                base_sections=base_sections,
+                suffix=[],
+                current_content=current_content,
+                input_limit=budget.input_limit,
+                facts=facts,
+                retrieved_facts=retrieved_facts,
+                entities=entities,
+                selective_fact_limit=selective_fact_limit,
+                exact_entity_expansion_limit=exact_entity_expansion_limit,
+                withheld_narrative=True,
+            )
         else:
             selected_facts = facts
             fact_section = full_snapshot
@@ -238,7 +235,17 @@ def _selective_section(
     entities: list[dict[str, Any]],
     selective_fact_limit: int,
     exact_entity_expansion_limit: int,
+    withheld_narrative: bool = False,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
+    def section(selected: list[dict[str, Any]]) -> str:
+        current_views = _section("Selected current lifecycle views", selected)
+        if not withheld_narrative:
+            return current_views
+        return (
+            "Prior dialogue and summary WITHHELD: the complete lifecycle snapshot "
+            "does not fit.\n" + current_views
+        )
+
     suffix = _fit_suffix(suffix, base_sections, current_content, input_limit)
     selected_facts = _select_relevant_facts(
         facts=facts,
@@ -252,17 +259,14 @@ def _selective_section(
     while (
         selected_facts
         and _request_tokens(
-            [
-                *base_sections,
-                _section("Selected current lifecycle views", selected_facts),
-            ],
+            [*base_sections, section(selected_facts)],
             suffix,
             current_content,
         )
         > input_limit
     ):
         selected_facts.pop()
-    fact_section = _section("Selected current lifecycle views", selected_facts)
+    fact_section = section(selected_facts)
     if (
         _request_tokens([*base_sections, fact_section], suffix, current_content)
         > input_limit

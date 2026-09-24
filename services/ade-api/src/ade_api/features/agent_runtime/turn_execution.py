@@ -198,6 +198,24 @@ class TurnExecution:
                 compaction_input_token_budget=budget.input_limit,
             )
         )
+        summary_boundary = int(summary["through_sequence"]) if summary else 0
+        if natural_variant in {"A", "A0"} and compaction_plan is not None:
+            planned_history = conversation_history_metadata(
+                messages=state["messages"],
+                current_sequence=current_sequence,
+                summary_through_sequence=compaction_plan.through_sequence,
+            )
+            if not full_lifecycle_snapshot_fits(
+                system_prompt=str(definition["prompt_content"]),
+                persona=str(definition["persona_content"]),
+                current_user_content=str(current_user["content"]),
+                lifecycle_facts=state["facts"],
+                history_metadata=planned_history,
+                input_limit=budget.input_limit,
+            ):
+                # Narrative is ineligible for both A and A0 on this turn.
+                # Do not spend a compaction call on content the bundle withholds.
+                compaction_plan = None
         compaction = (
             await compaction_executor.compact(
                 model_key=str(conversation_deployment["route_alias"]),
@@ -211,7 +229,6 @@ class TurnExecution:
             else None
         )
 
-        summary_boundary = int(summary["through_sequence"]) if summary else 0
         summary_content = str(summary["content"]) if summary else ""
         if compaction is not None:
             summary_boundary = compaction.plan.through_sequence
@@ -228,7 +245,7 @@ class TurnExecution:
             summary_through_sequence=summary_boundary,
         )
         selective_retrieval = natural_variant not in {"A", "A0"}
-        if natural_variant == "A0":
+        if natural_variant in {"A", "A0"}:
             selective_retrieval = not full_lifecycle_snapshot_fits(
                 system_prompt=str(definition["prompt_content"]),
                 persona=str(definition["persona_content"]),

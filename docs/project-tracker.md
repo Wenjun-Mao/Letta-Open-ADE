@@ -56,6 +56,19 @@ API/browser journey remain open. Continue between static
 checkpoints without routine confirmation; pause for material scope/tradeoff decisions,
 unsafe actions or genuine blockers. No runtime context policy has been selected;
 checkpoint 6 and live calls still need separate authority.
+Director review corrected two checkpoint regressions: A0's overflow path had
+admitted B's prior-dialogue suffix despite A/A0's shared full-snapshot
+prerequisite, and a policy test had inverted the selected-candidate freshness
+assertion. A/A0 now share a current-memory-only overflow fallback; the original
+positive freshness gate is restored and remains failing until separately
+authorized requalification, not treated as an expected pass.
+Review-fix verification: the full suite reports 709 passed, 14 skipped and
+exactly one failure at
+`test_selected_candidates_use_current_policy_without_rebinding_history`;
+the separate historical-evidence rejection test passes. The isolated
+PostgreSQL persistence suite reports 41 passed. The next focused assignment
+owns the cancellation/lease matrix, paired manifests, and browser journey on
+an isolated API/PostgreSQL stack; this review fix does not advance those gates.
 No live budget or production context-policy selection is implied.
 The user authorized publication of the review checkpoint, not adoption of the
 design or a merge/release. Resolve plan-review findings before implementation or

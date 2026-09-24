@@ -7,7 +7,10 @@ from ade_api.features.agent_runtime.context import (
     ConversationHistoryMetadata,
 )
 from ade_api.features.agent_runtime.errors import RuntimeValidationError
-from ade_api.features.agent_runtime.natural_context import build_natural_context
+from ade_api.features.agent_runtime.natural_context import (
+    build_natural_context,
+    full_lifecycle_snapshot_fits,
+)
 
 
 def _fact(number: int, *, size: int = 48) -> dict:
@@ -86,6 +89,18 @@ def _build(variant: str, *, facts: list[dict], retrieved: list[dict] | None = No
 
 def test_pressure_a_withholds_optional_narrative_b_keeps_shared_suffix() -> None:
     facts = [_fact(index, size=240) for index in range(48)]
+    assert not full_lifecycle_snapshot_fits(
+        system_prompt="Policy",
+        persona="Companion",
+        current_user_content="What did I choose for the interview?",
+        lifecycle_facts=facts,
+        history_metadata=ConversationHistoryMetadata(
+            completed_user_turns=2, summary_through_sequence=0
+        ),
+        input_limit=ContextBudget(
+            context_window=4096, max_output_tokens=512, tool_schema_tokens=128
+        ).input_limit,
+    )
     a = _build("A", facts=facts, retrieved=[facts[0]])
     a0 = _build("A0", facts=facts, retrieved=[facts[0]])
     b = _build("B", facts=facts, retrieved=[facts[0]])
@@ -103,13 +118,32 @@ def test_pressure_a_withholds_optional_narrative_b_keeps_shared_suffix() -> None
     assert b.context.retrieved_fact_ids == ["fact-0"]
     assert "INACTIVE" in b.context.messages[0]["content"]
     assert a0.lifecycle_withheld is True
-    assert a0.context.messages == b.context.messages
-    assert a0.source_messages == b.source_messages
-    assert a0.context.retrieved_fact_ids == b.context.retrieved_fact_ids
+    assert a0.context.messages == a.context.messages
+    assert a0.source_messages == a.source_messages
+    assert a0.context.retrieved_fact_ids == a.context.retrieved_fact_ids == ["fact-0"]
+    assert a0.context.omitted_message_ids == a.context.omitted_message_ids
+    assert a0.context.section_tokens == a.context.section_tokens
+    assert "Prior dialogue and summary WITHHELD" in a.context.messages[0]["content"]
+    assert (
+        "The afternoon product-role interview" not in a.context.messages[0]["content"]
+    )
+    assert a.context.messages != b.context.messages
 
 
 def test_a0_preserves_a_raw_cutoff_and_nonsummary_sections() -> None:
     facts = [_fact(index) for index in range(12)]
+    assert full_lifecycle_snapshot_fits(
+        system_prompt="Policy",
+        persona="Companion",
+        current_user_content="What did I choose for the interview?",
+        lifecycle_facts=facts,
+        history_metadata=ConversationHistoryMetadata(
+            completed_user_turns=2, summary_through_sequence=0
+        ),
+        input_limit=ContextBudget(
+            context_window=4096, max_output_tokens=512, tool_schema_tokens=128
+        ).input_limit,
+    )
     a = _build("A", facts=facts)
     a0 = _build("A0", facts=facts)
     assert [message["id"] for message in a.source_messages] == [
@@ -209,6 +243,12 @@ def test_full_snapshot_whole_request_boundary(count: int, size: int) -> None:
         recent_first = None
     if below is not None:
         assert below.lifecycle_withheld is True
+        control_below = assemble(high - 1, "A")
+        assert control_below.context.messages == below.context.messages
+        assert control_below.source_messages == below.source_messages
+        assert (
+            control_below.context.retrieved_fact_ids == below.context.retrieved_fact_ids
+        )
     assert at_boundary.lifecycle_withheld is False
     assert control_a.lifecycle_withheld is False
     assert [item["id"] for item in control_a.source_messages] == [

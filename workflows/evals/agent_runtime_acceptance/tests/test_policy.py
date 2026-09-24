@@ -34,7 +34,7 @@ def test_production_policy_inputs_are_existing_roots_and_files() -> None:
         assert all((PROJECT_ROOT / path).is_file() for path in paths)
 
 
-def test_natural_memory_changes_invalidate_candidate_policy_until_requalified() -> None:
+def test_selected_candidates_use_current_policy_without_rebinding_history() -> None:
     manifest = load_deployment_manifest(
         Path("config/model-router/deployment-manifest.json"),
         project_root=PROJECT_ROOT,
@@ -50,11 +50,19 @@ def test_natural_memory_changes_invalidate_candidate_policy_until_requalified() 
         assert deployment is not None
         assert deployment.lifecycle == "candidate"
         assert not deployment.qualification.qualified
-        # The natural-memory implementation changes governed runtime inputs.
-        # Existing candidate fingerprints must remain historical until the
-        # separately authorized qualification and promotion work.
-        assert fingerprint_policy_hashes(deployment.fingerprint) != expected
+        assert fingerprint_policy_hashes(deployment.fingerprint) == expected
 
+
+def test_historical_release_evidence_rejects_changed_policy() -> None:
+    manifest = load_deployment_manifest(
+        Path("config/model-router/deployment-manifest.json"),
+        project_root=PROJECT_ROOT,
+    )
+    expected = production_policy_hashes()
+    selected_aliases = (
+        "deepseek::deepseek-flash",
+        "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+    )
     # Schema-v3 evidence and incumbent fingerprints are historical, not
     # silently relabeled as authorization for the new selected routes.
     assert any(

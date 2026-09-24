@@ -122,8 +122,9 @@ The context tests use synthetic records at 0, 12, 48, 128 and 256 records,
 short and long values, and check the first whole-request boundary at which
 the full lifecycle snapshot fits. These are capacity and contract checks, not
 evidence of useful model recall. The A/A0/B binding IDs are development-only;
-under snapshot pressure A0 uses B's selective recipe and shared local suffix,
-while the A/A0 nonsummary equality assertion covers full-snapshot cells.
+under snapshot pressure A/A0 share the scoped current-memory fallback and
+withhold prior narrative, while B alone admits the shared local suffix. The
+A/A0 nonsummary equality assertion covers both full-snapshot and overflow cells.
 the default product binding has not been changed. No live comparison or policy
 selection is implied by this offline workflow.
 
