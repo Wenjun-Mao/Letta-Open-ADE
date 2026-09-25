@@ -30,11 +30,25 @@ retained development branch, not the deployed production revision.
 | PC-08 | Keep ADE-owned PostgreSQL persistence and one product API/runtime. Model Router separates model/provider identity from product behavior. Embedding identity must not depend on deployment on Spark specifically. | Native foundation implemented; current policy changes are not release-qualified. | [ADR 0019](adr/0019-ade-steady-state-runtime.md), [ADR 0027](adr/0027-provider-neutral-release-and-embedding-space.md) |
 | PC-09 | Prefer minimum code and direct ownership. No speculative memory service, episode store, second reviewer, or generic framework. Count provider requests observationally, without spending gates; retain execution timeouts, explicit retry semantics and finite tool loops. | Spending controls removed; new architectural additions require a demonstrated need and explicit decision. | User direction 2026-09-24, [ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md), [conventions](development-conventions.md) |
 
+## Archived Conversations
+
+**PC-10 (agreed 2026-09-25):** Archived conversations remain eligible for natural
+historical recall within PC-03's same-user/same-character boundary, including
+ordinary persona-version updates. Archiving changes conversation-list visibility;
+it does not erase history or reset character continuity. Retrieval must not restore
+the conversation merely to read it. Eligibility does not require mentioning every
+archived conversation or make its historical statements current facts.
+
+This is an agreed product contract, not implemented historical-retrieval behavior.
+Explicit fact removal remains governed by PC-07; reconciling recovered source text
+with corrected or removed facts must be specified in the historical-recovery plan.
+
 ## Open Decisions, Not Agreements
 
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
-  reviewer, archived-conversation treatment, and failure behavior. PC-03's
-  character boundary is settled; these mechanics are not.
+  reviewer, reconciliation with corrected or removed facts, and failure behavior.
+  PC-03's character boundary and PC-10's archive eligibility are settled;
+  these mechanics are not.
 - Whether existing dialogue/history access suffices for habits, concerns and
   shared experiences before adding fact types or episode records. A drinking
   habit must not silently become a preference merely to fit today's registry.
