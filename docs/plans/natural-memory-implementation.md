@@ -163,6 +163,19 @@ miss. A scope-loss contrast would need its own frozen decision; the higher-cap
 contrast and two remaining native probes are unrun. Including this isolated
 reviewer call, retained dispatches total 24 completed generations (23 native,
 one reviewer-only) and 19 embedding attempts (18 completed, one failed).
+The final [reviewer-only scope contrast](../findings/natural-memory-factual-followup-2026-09-24.md#one-reviewer-only-morning-scope-contrast)
+used the exact morning-coffee setup packet with low effort as the sole change.
+It proposed one valid, direct-source `person.preference` value `早上喝咖啡`,
+where the retained high response had dropped `早上`. Both low replays matched
+their frozen complete deltas, but each is one sample. The habit replay retained
+the high run's broad coffee target, so it cannot show sequential low-effort
+native behavior. If selected, the next bounded diagnostic should use fresh
+disposable subjects and the low-effort reviewer in native sequence through
+scope setup, uncertainty, habit, recall and subject isolation, with full-delta
+scoring and early stop. No low-effort policy/default choice follows yet. All
+retained dispatches now total 25 completed generations (23 native, two
+reviewer-only) and 19 embedding attempts (18 completed, one failed); the
+higher-cap contrast and remaining native probes were not run.
 
 Director offline reproduction confirmed that a bare current "Roxy" plus an
 assistant "Is Roxy a Husky?" can prepare a breed operation through the current

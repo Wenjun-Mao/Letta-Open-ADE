@@ -218,7 +218,72 @@ separate reviewer-only contrast gives **24 completed generation dispatches**
 and **19 embedding attempts** (18 completed, one failed) across all retained
 bindings; only 23 of those generations belong to native turn attempts.
 
-The next decision is whether a distinct, frozen scope-loss contrast is useful
-before any low-effort reviewer policy change. This one response supports the
-habit-turn zero-delta judgment but cannot qualify the unresolved scope and
-subject-isolation behavior or justify a production/default change.
+At that point, the next decision was whether a distinct, frozen scope-loss
+contrast was useful before any low-effort reviewer policy change. This one
+response supports the habit-turn zero-delta judgment but cannot qualify the
+unresolved scope and subject-isolation behavior or justify a production/default
+change.
+
+## One reviewer-only morning-scope contrast
+
+Under the director's final small diagnostic continuation, a second and final
+disposable reviewer replay used the exact retained morning-scope setup packet.
+The reconstructed high-effort request matched its original SHA-256
+`ac5f6190f00183f060a6e07aaa84c031b016852ab081b90cda5a1576bf875d1d`.
+The frozen low request SHA-256 was
+`e15b272baf673faf4c3b42db677a4e534abe3ffdcb8b693cbd7fc06a07933eea`;
+only `reasoning_effort` changed from `high` to `low`. Messages, schema,
+thinking enabled, JSON-object mode, DeepSeek Flash route and 4,096-token cap
+were unchanged. The before-call fixture and diff are retained. Offline adapter
+checks confirmed that the router preserves explicit low effort and the cap.
+
+The catalog deployment fingerprint remained
+`870ff4fb8a25a9c2016f67dcda05e26e82a6c5dea6ad55781a80be2201161cfe`,
+and the provider system fingerprint remained
+`aeb56401ca74e127821c4f9126dcb669`. Exactly one reviewer-only generation
+completed, with zero retries, repairs, embeddings, conversation generations,
+memory commits or reply delivery. It finished normally in **2,198 ms** with
+3,727 prompt, 230 completion and 3,957 total tokens; the provider reported
+180 reasoning tokens. The earlier high-effort response on this same packet
+finished in 1,833 ms and 200 completion tokens. Neither timing nor token
+count measures semantic correctness, and one response per setting cannot
+establish that effort caused the different value.
+
+The low response contained one `subject_add` for `person.preference`, qualifier
+`drink`, value **`早上喝咖啡`**, citing exactly `我早上更喜欢喝咖啡。` as a direct
+current-user assertion. The retained high response had the same operation and
+source but value `咖啡`, losing morning scope. The low response passed the
+existing schema parser. Rebuilt from the original empty fact snapshot, the
+binding packet matched the captured reviewer input exactly; the existing
+preparation logic accepted exactly one active preference add with the full
+current-user source span and no other operation, defer or entity. This is a
+correct **proposed** complete delta. It did not repair the already committed
+unscoped fact from the native follow-up.
+
+Private, ignored evidence is under
+`workflows/evals/character_memory_dev/outputs/natural-reviewer-scope-low-20260924-ac5f6190/`.
+The before-call preflight artifact SHA-256 is
+`ce312a932e967274c79d90b5859116eb5f2d28aaa8ca54ae0068cdc19c3bd4b8`;
+the redacted provider capture SHA-256 is
+`612d2b820a1dd35ba4aea5141c223df485464c367a2b370a8b6391d778b439e4`;
+the binder validation SHA-256 is
+`e8912cd6531710daa5a33561bad347138375c5c2714cb7bf68313251b30b46c2`.
+Across all retained bindings there are now **25 completed generation
+dispatches** (23 native, two reviewer-only) and **19 embedding attempts**
+(18 completed, one failed). The earlier native outcomes and eight unrun
+scheduled turns across the two native schedules are unchanged.
+
+The two low-effort reviewer-only samples each produced the expected proposed
+delta on its frozen packet. The high-effort habit turn provided no semantic
+decision because of output exhaustion; that is a completion failure, not
+evidence of inability to distinguish habit from preference. The scope case
+shows that the existing value representation can carry morning scope, but one
+low response does not qualify that behavior. The habit replay still contained
+the high run's broad coffee target, so these two isolated replays do not form
+a coherent low-effort native sequence. A next **small, freshly bound native
+low-effort diagnostic** is supported if the director wants to test that
+composition: morning-scoped setup, uncertainty and habit handling, subsequent
+same-subject recall and other-subject isolation, with exact full-delta scoring
+and early stop. This is preferable to a representation change on current
+evidence. It is a proposed diagnostic, not a policy selection; no further
+calls, cap change or default-setting change were made here.
