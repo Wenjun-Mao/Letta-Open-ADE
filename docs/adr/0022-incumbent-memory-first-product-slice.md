@@ -1,6 +1,12 @@
 # ADR 0022: Incumbent Memory First For The Next Product Slice
 
-Status: Accepted on 2026-09-22 for one bounded M3 slice.
+Status: Accepted incumbent-memory direction; execution details partially superseded.
+
+> The external-service comparison remains deferred, not passed. DeepSeek replaces
+> the Luna-only lane ([ADR 0025](0025-deepseek-development-lane.md)); the current
+> reviewer and explicit operator-removal path follow
+> [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md).
+> Subject sharing and immutable persona versions remain current.
 
 ## Context
 

@@ -1,6 +1,13 @@
 # ADR 0009: ADE Owns The Conversational Agent Runtime
 
-- Status: Accepted for implementation; production cutover not approved
+- Status: Accepted foundation; partially superseded.
+
+> Lifecycle review 2026-09-25: The cutover and Letta removal subsequently completed;
+> [ADR 0019](0019-ade-steady-state-runtime.md) owns the current stack.
+> [ADR 0027](0027-provider-neutral-release-and-embedding-space.md) owns selected-route
+> release policy, and [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md)
+> amends reviewer authority. The original study and implementation status below
+> are historical; they neither block the completed cutover nor qualify later changes.
 - Date: 2026-08-29
 - Study: [ADE-Native Agent Runtime Replacement Study](../architecture/agent-runtime-replacement-study.md)
 

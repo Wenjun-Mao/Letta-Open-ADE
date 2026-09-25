@@ -1,6 +1,10 @@
 # ADR 0016: ADE-Native Agent Studio Uses A Fresh-Start, Evidence-Gated Cutover
 
-- Status: Accepted; effective cutover activated on 2026-09-03
+- Status: Historical completed cutover, activated 2026-09-03; transitional
+  deployment and rollback superseded by [ADR 0019](0019-ade-steady-state-runtime.md).
+
+> Retain this record as cutover rationale, not a current runbook. Recovery now
+> uses deployment rollback and PostgreSQL backup/restore, not Letta rollback.
 - Date: 2026-09-02
 - Related: [ADR 0009](0009-ade-owned-agent-runtime.md),
   [ADR 0010](0010-production-path-runtime-qualification.md),
@@ -98,7 +102,8 @@ not a migration failure.
 - Record any deployment, policy, prompt, tool, schema, or retrieval identity change as
   a requalification event before a release claim.
 - Follow the executable sequence in the
-  [Agent Studio cutover runbook](../operations/agent-studio-cutover.md).
+  former `docs/operations/agent-studio-cutover.md` (retired with the transition;
+  retained only in Git history).
 
 ## Activation Record
 

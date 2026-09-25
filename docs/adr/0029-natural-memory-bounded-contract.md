@@ -1,6 +1,11 @@
 # ADR 0029: Bounded Natural-Memory Lifecycle and Comparison Contract
 
-- Status: Accepted for checkpoints 1–5 implementation; not a release or context-policy acceptance
+- Status: Partially superseded; lifecycle and atomic subject-generation guards retained.
+
+> [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md) replaces
+> the model-facing proposal interface, semantic/privacy validators, and accounting
+> rules. Old policy binding IDs and comparison authorization below are historical.
+> Neither this ADR nor its amendment selects a context policy or qualifies a release.
 - Date: 2026-09-24
 - Authority: [natural-memory implementation plan](../plans/natural-memory-implementation.md), revision 3
 

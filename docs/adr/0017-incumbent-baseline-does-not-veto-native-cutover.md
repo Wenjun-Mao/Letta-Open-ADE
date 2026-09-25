@@ -1,6 +1,10 @@
 # ADR 0017: An Observed Incumbent Baseline Does Not Veto Native Cutover
 
-- Status: Accepted
+- Status: Retired cutover gate; superseded by
+  [ADR 0019](0019-ade-steady-state-runtime.md).
+
+> Letta parity and incumbent-baseline collection are no longer release work.
+> The historical comparison evidence remains valid only for its recorded run.
 - Date: 2026-09-02
 - Related: [ADR 0012](0012-content-addressed-behavior-evaluation-decisions.md) and
   [ADR 0016](0016-ade-native-agent-studio-cutover.md)

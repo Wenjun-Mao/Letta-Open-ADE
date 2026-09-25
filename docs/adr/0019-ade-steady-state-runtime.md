@@ -1,6 +1,10 @@
 # ADR 0019: ADE Owns The Steady-State Agent Runtime
 
-- Status: Accepted
+- Status: Accepted stack architecture; release details amended by
+  [ADR 0027](0027-provider-neutral-release-and-embedding-space.md).
+
+> Schema-v3 evidence is historical. Current selected-route release preparation
+> uses schema v4; this amendment does not qualify or promote the development branch.
 - Date: 2026-09-07
 - Supersedes the transitional deployment and rollback portions of ADRs 0013,
   0016, and 0017

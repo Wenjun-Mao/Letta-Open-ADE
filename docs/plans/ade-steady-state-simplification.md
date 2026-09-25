@@ -1,6 +1,12 @@
 # ADE Steady-State Simplification And Letta Removal
 
-Status: Approved
+Status: Historical completed Letta-removal milestone; qualification and promotion
+recorded on 2026-09-08 in the [roadmap](../product-roadmap.md).
+
+The plan below preserves its original scope and acceptance checklist, not fresh
+execution authority. Later changes require their own qualification. Release
+schema and selected-provider requirements were amended by
+[ADR 0027](../adr/0027-provider-neutral-release-and-embedding-space.md).
 
 ## Outcome
 

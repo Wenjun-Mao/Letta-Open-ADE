@@ -1,6 +1,10 @@
 # ADR 0033: Separate Reviewer Output-Envelope Diagnostic
 
-- Status: Accepted for development diagnostic iteration 2 on 2026-09-24
+- Status: Historical diagnostic iteration 2 on 2026-09-24.
+
+> This bounded output-envelope experiment is not a current default or new-call
+> authorization. See [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md)
+> for the current reviewer contract.
 - Scope: isolated natural-memory evaluation sessions using the native B policy
 
 ## Problem

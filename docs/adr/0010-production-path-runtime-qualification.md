@@ -1,6 +1,11 @@
 # ADR 0010: Agent Runtime Qualification Uses Production-Path Evidence
 
-- Status: Accepted
+- Status: Accepted production-path principle; release details partially superseded.
+
+> Current release contracts: [ADR 0019](0019-ade-steady-state-runtime.md) and
+> [ADR 0027](0027-provider-neutral-release-and-embedding-space.md). The historical
+> `agent_runtime_v3_acceptance` workflow is now `agent_runtime_acceptance`.
+> Earlier DGX/llama gate relationships below are not current provider requirements.
 - Date: 2026-08-29
 - Extends: [ADR 0009](0009-ade-owned-agent-runtime.md)
 

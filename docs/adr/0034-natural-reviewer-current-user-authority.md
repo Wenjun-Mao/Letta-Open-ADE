@@ -1,6 +1,10 @@
 # ADR 0034: Reviewer Citation Authority for Natural-Memory Proposals
 
-- Status: Accepted for development diagnostic iteration 3 on 2026-09-24
+- Status: Historical diagnostic; source-authority interface superseded by
+  [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md).
+
+> Preserve the failed diagnostic evidence; do not restore its model-owned
+> authority choices or treat the original authorization as a new-run approval.
 - Scope: shared natural-memory reviewer instruction contract
 
 ## Problem

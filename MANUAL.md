@@ -83,7 +83,9 @@ make probe-models SOURCE=ark
 
 The release ledger binds the reviewed runtime revision, API/worker build
 identity, policy hashes, active model aliases, agent bundle, deterministic
-conformance, native qualification, and llama-server compatibility. Use the
+conformance, native qualification, and compatibility of the selected routes under
+[ADR 0027](docs/adr/0027-provider-neutral-release-and-embedding-space.md).
+A particular DGX or llama-server endpoint is not a permanent release requirement. Use the
 release commands documented by `make help`; a failed gate requires a new
 qualification and promotion, not a hidden fallback.
 

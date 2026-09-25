@@ -1,6 +1,9 @@
 # ADR 0031: Pinned Evaluation Capacity for Natural-Memory Checkpoint 6
 
-- Status: Accepted for the single checkpoint-6 campaign on 2026-09-24
+- Status: Historical single-campaign decision on 2026-09-24.
+
+> Frozen capacity settings explain the retained comparison evidence. They are
+> not production defaults, a policy selection, or standing authorization to rerun.
 - Authority: [implementation plan](../plans/natural-memory-implementation.md)
 - Scope: isolated development evaluation sessions only
 

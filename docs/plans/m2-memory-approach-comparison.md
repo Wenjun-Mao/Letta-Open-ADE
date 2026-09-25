@@ -1,6 +1,11 @@
 # M2 Memory-Approach Comparison Plan
 
-Status: In progress — Luna development evidence and intent contrast captured; candidate comparison pending
+Status: Deferred external-candidate comparison under
+[ADR 0022](../adr/0022-incumbent-memory-first-product-slice.md).
+
+Luna and PostgreSQL development evidence is retained; it does not establish an
+ADE/Hindsight comparison winner. The original work specification below is not
+active installation or experiment authority.
 
 ## Decision Question
 

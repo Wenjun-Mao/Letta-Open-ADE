@@ -1,6 +1,10 @@
 # ADR 0020: Luna Subscription Calls For Local Character Experiments
 
-- Status: Accepted
+- Status: Retained development workflow; no longer the primary provider lane.
+
+> [ADR 0025](0025-deepseek-development-lane.md) establishes DeepSeek development;
+> [ADR 0024](0024-local-luna-agent-backend-feasibility.md) keeps the Luna backend
+> investigation on hold. Historical Luna evidence is not native-runtime qualification.
 - Date: 2026-09-22
 
 ## Context

@@ -1,10 +1,18 @@
 # ADE-Native Agent Runtime Replacement Study
 
+> Historical research snapshot (2026-08-29), not a current architecture or runbook.
+> Letta removal subsequently completed under [ADR 0019](../adr/0019-ade-steady-state-runtime.md).
+> The executable study was removed; this report preserves its rationale.
+> Dates, pending gates, proposed APIs, and "today" below
+> refer to the study period. Start with [system status](system-status.md) and the
+> [product contract](../product-contract.md) for the current system.
+
 - Study date: 2026-08-29
 - Production impact: none
 - Decision state: implementation accepted; Phase 4 paired-baseline candidate
   qualification and Phase 5 effective cutover evidence remain pending
-- Reproducible workflow: [`workflows/evals/agent_runtime_study/`](../../workflows/evals/agent_runtime_study/README.md)
+- Former workflow: `workflows/evals/agent_runtime_study/` (removed under ADR 0019;
+  inspect the study-era Git revision for historical code, not current execution)
 - Accepted implementation decision: [ADR 0009](../adr/0009-ade-owned-agent-runtime.md)
 - Cutover contract: [ADR 0016](../adr/0016-ade-native-agent-studio-cutover.md)
 - Baseline gate semantics: [ADR 0017](../adr/0017-incumbent-baseline-does-not-veto-native-cutover.md)
@@ -136,16 +144,16 @@ Test Center/chat-memory eval
 
 Agent creation embeds the chosen system prompt, persona/human blocks, model,
 embedding, tools, and a `16384` context limit in
-[`agents_api.py`](../../services/ade-api/src/ade_api/features/agent_studio/agents_api.py).
+`agent_studio/agents_api.py` (study-era module, since removed).
 Letta owns the resulting agent, message history, block mutations, tool loop, search,
 and compaction. ADE projects those objects in
-[`state_api.py`](../../services/ade-api/src/ade_api/features/agent_studio/state_api.py)
+`agent_studio/state_api.py` (study-era module, since removed)
 and normalizes turn traces in
-[`message_parser.py`](../../services/ade-api/src/ade_api/integrations/letta/message_parser.py).
+`integrations/letta/message_parser.py` (since removed).
 
 ADE disables retries on the base Letta SDK client, then applies request-scoped SDK
 timeout/retry options in
-[`agent_service.py`](../../services/ade-api/src/ade_api/integrations/letta/agent_service.py).
+`integrations/letta/agent_service.py` (since removed).
 Model Router forwards exactly one upstream request in
 [`forwarding.py`](../../services/model-router/src/model_router/forwarding.py).
 Agent Studio has one separate context-limit fallback for datetime-hint messages,

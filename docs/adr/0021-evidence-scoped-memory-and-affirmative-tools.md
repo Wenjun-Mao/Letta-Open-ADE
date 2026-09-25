@@ -1,6 +1,11 @@
 # ADR 0021: Evidence-Scoped Memory Confidence And Affirmative Tool Requirements
 
-- Status: Accepted
+- Status: Superseded semantic heuristics by
+  [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md) and
+  [ADR 0036](0036-discretionary-curated-tools-and-structured-requirements.md).
+
+> Do not restore phrase-based confidence, no-save, or affirmative-tool rules.
+> Structural evidence binding remains required; natural meaning belongs to the reviewer.
 - Date: 2026-09-22
 - Amendment: [ADR 0036](0036-discretionary-curated-tools-and-structured-requirements.md)
   supersedes the affirmative phrase-based tool requirement rule below.

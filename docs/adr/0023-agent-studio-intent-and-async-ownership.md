@@ -1,6 +1,11 @@
 # ADR 0023: Agent Studio Intent And Async Ownership
 
-Status: Accepted for the M3 profile-memory slice on 2026-09-22.
+Status: Partially superseded; async ownership and immutable-version guard principles remain.
+
+> The phrase-based memory-intent/schema selector below was removed under
+> [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md).
+> It is not a current correction contract. See the
+> [product contract](../product-contract.md) for natural updates and operator removal.
 
 ## Context
 

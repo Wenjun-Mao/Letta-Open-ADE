@@ -1,6 +1,11 @@
 # ADR 0025: Official DeepSeek API Is the Bounded Development Lane
 
-- Status: Accepted for development integration; not release qualification
+- Status: Accepted provider integration; development-only scope extended by
+  [ADR 0027](0027-provider-neutral-release-and-embedding-space.md).
+
+> DeepSeek is now a selected release candidate, not a qualified deployment.
+> Original smoke budgets and lane restrictions below describe that checkpoint,
+> not current spend controls or a permanent prohibition on production use.
 - Date: 2026-09-23
 - Scope: Agent Studio, Comment Lab, and Label Lab on this operator's ADE checkout
 

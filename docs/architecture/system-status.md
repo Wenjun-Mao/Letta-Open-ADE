@@ -31,8 +31,11 @@ with their own task-specific contracts.
 
 Every released Agent Studio build is tied to a clean source revision, exact API
 and worker identities, policy hashes, an approved model/agent bundle, native
-three-round qualification, llama-server compatibility, and deterministic
-conformance. The release ledger records that evidence. Changing a governed
+three-round qualification of selected routes and deterministic conformance.
+[ADR 0027](../adr/0027-provider-neutral-release-and-embedding-space.md) defines
+schema-v4 evidence and selected-route compatibility, not a mandatory DGX or
+llama-server provider. Historical schema-v3 evidence does not qualify the current
+development branch. The release ledger records qualified evidence. Changing a governed
 runtime input requires new evidence and promotion.
 
 Recovery is deployment rollback and PostgreSQL backup/restore. The project name

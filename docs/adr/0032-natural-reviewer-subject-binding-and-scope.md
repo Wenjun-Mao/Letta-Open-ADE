@@ -1,6 +1,10 @@
 # ADR 0032: Reviewer Subject Binding and Scoped Values
 
-- Status: Accepted for development diagnostics on 2026-09-24
+- Status: Historical diagnostic; model-facing interface superseded by
+  [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md).
+
+> Scoped factual fidelity remains a product requirement, but this earlier
+> model-owned binding interface is not the current implementation contract.
 - Scope: natural-memory reviewer request and typed proposal contract
 
 ## Problem

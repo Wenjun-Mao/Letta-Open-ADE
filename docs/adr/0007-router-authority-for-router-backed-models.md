@@ -1,6 +1,10 @@
 # ADR 0007: Router Authority For Router-Backed Models
 
-- Status: Accepted
+- Status: Superseded by [ADR 0019](0019-ade-steady-state-runtime.md).
+
+> Lifecycle review 2026-09-25: Router authority survives in ADR 0019; Letta
+> handles, catalog enrichment, embedding authority, and persisted-agent coupling
+> below are historical, not requirements for the native runtime.
 - Date: 2026-08-23
 
 ## Context

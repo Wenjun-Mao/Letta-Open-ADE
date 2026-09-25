@@ -29,5 +29,8 @@ create compatibility aliases, duplicate product paths, or generic shared folders
 to avoid deciding ownership.
 
 Historical ADRs and the replacement study explain why the current runtime was
-chosen. They are provenance, not onboarding instructions. Start with
-[ADR 0019](adr/0019-ade-steady-state-runtime.md) for the current decision.
+chosen. They are provenance, not onboarding instructions. Use the
+[decision lifecycle index](adr/README.md) to distinguish current, partially
+superseded, retired, and paused decisions. Start with
+[ADR 0019](adr/0019-ade-steady-state-runtime.md) for the stack and
+[ADR 0027](adr/0027-provider-neutral-release-and-embedding-space.md) for release policy.

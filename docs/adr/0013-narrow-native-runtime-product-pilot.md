@@ -1,6 +1,10 @@
 # ADR 0013: The First Native Runtime Product Pilot Is Separate And Memory-Focused
 
-- Status: Accepted; first exposure gate satisfied on 2026-09-02
+- Status: Historical completed pilot; separate deployment superseded by
+  [ADR 0019](0019-ade-steady-state-runtime.md).
+
+> The first exposure gate was satisfied on 2026-09-02. Do not recreate a native
+> sidecar, preview product, or Letta fallback from this pilot specification.
 - Date: 2026-08-30
 - Related: [ADR 0009](0009-ade-owned-agent-runtime.md),
   [ADR 0010](0010-production-path-runtime-qualification.md), and

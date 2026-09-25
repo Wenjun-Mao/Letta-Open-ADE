@@ -1,6 +1,13 @@
 # M3 Provider-Neutral Release Preparation
 
-Status: static candidate prepared under [ADR 0027](../adr/0027-provider-neutral-release-and-embedding-space.md) and [ADR 0028](../adr/0028-agent-runtime-qualification-request-ledger.md). The separately approved single Stage A attempt failed; Stage B, release qualification, and promotion are blocked. See the [Stage A finding](../findings/stage-a-provider-neutral-preflight-2026-09-23.md).
+Status: Historical staged preparation; release qualification remains pending.
+
+The selected-route design in [ADR 0027](../adr/0027-provider-neutral-release-and-embedding-space.md)
+remains current. The spend-ledger dependency and request-cap execution contract
+below are retired by [ADR 0035](../adr/0035-compact-natural-review-and-observational-dispatch.md).
+The single Stage A attempt failed ([finding](../findings/stage-a-provider-neutral-preflight-2026-09-23.md));
+its unused budget does not authorize another campaign. Consult the
+[tracker](../project-tracker.md) for current work rather than executing these old stages.
 
 1. Trace schema-v3 evidence, promotion, native qualification configuration,
    router source resolution, and stored vector lookup. Preserve the historical

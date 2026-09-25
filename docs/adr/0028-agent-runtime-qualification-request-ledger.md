@@ -1,6 +1,10 @@
 # ADR 0028: Shared Pre-Request Budget for Native Qualification
 
-- Status: Accepted for static implementation; live caps require approval
+- Status: Retired; replaced by observational dispatch counting in
+  [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md).
+
+> Pre-request spend reservations, cap enforcement, and cap approval below are
+> historical. Runtime timeouts, retry limits, and bounded tool loops remain.
 - Date: 2026-09-23
 
 ## Problem
