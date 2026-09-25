@@ -10,6 +10,10 @@ decision; the running system has no Letta dependency.
 
 ## Start Here
 
+For current product agreements and exclusions, start with the
+[product contract](docs/product-contract.md). It distinguishes agreed intent
+from implemented and verified behavior.
+
 1. Create `.env` from `.env.example`, replacing placeholder secrets and enabling
    only model sources reachable from this machine.
 2. Start the stack:

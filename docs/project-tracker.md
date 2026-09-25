@@ -1,7 +1,29 @@
 # ADE Project Tracker
 
-Updated: 2026-09-24. Owner: this ADE task, using Relay for delegated reporting.
+Updated: 2026-09-25. Owner: this ADE task, using Relay for delegated reporting.
 Direction and milestone completion criteria live in the [roadmap](product-roadmap.md).
+
+## Current Summary
+
+Current agreed intent lives in the [product contract](product-contract.md),
+especially PC-03 (same-character history across persona versions), PC-05/06
+(reviewer meaning versus structural checks; removed privacy/phrase policies),
+and PC-09 (simplicity and observational request counts).
+
+- Offline compact-review and subsequent rule-removal work is committed on the
+  retained development branch; production/release qualification is not complete.
+- Bounded live diagnostics observed scoped recall successes, a scope omission,
+  and reviewer truncation. Two reviewer-only low-effort contrasts produced the
+  expected proposed deltas; they are not committed native turns or a selected
+  default. See the [latest finding](findings/natural-memory-factual-followup-2026-09-24.md).
+- Current activity is product-agreement consolidation and historical-recall
+  brainstorming/planning. No historical-recall implementation is authorized.
+- The candidate-policy freshness failure remains unwaived; no release promotion
+  or production change follows from these diagnostic results.
+
+Earlier authorization and status statements below describe their dated
+checkpoints, not current commands or proof of completion. In particular, old
+no-save/semantic-regex/spending-control requirements have been superseded.
 
 ## Standing Review Publication Authorization
 
@@ -13,7 +35,7 @@ not authorize new implementation pushes, merging to main, deployment, release
 promotion, or disclosure of private artifacts. Stop if outgoing history exceeds
 the approved publication scope.
 
-## Current Focus
+## Historical Checkpoint Record
 
 The user authorized offline implementation of revision-5 checkpoints 1–4 on
 2026-09-24 after both final Pro GO reviews. Work is assigned to the retained

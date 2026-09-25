@@ -35,6 +35,12 @@ without workflow-specific inputs and outputs belong in `scripts/`.
 
 ## Decisions And Verification
 
+[The product contract](product-contract.md) owns current product intent. Cite
+relevant PC IDs in product-affecting plans and reviews; distinguish agreement,
+implementation and evidence. Update it when direction changes and explicitly
+supersede old requirements. [ADR 0037](adr/0037-current-product-contract.md)
+defines document ownership; do not create parallel agreement summaries.
+
 Record durable API, runtime, data-authority, or deployment changes in a concise
 ADR. Run the smallest relevant checks first, then the broader repository checks
 proportional to risk. Update the owning README when an endpoint, storage

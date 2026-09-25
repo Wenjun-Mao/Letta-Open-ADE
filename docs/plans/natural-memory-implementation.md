@@ -1,5 +1,11 @@
 # Natural Memory: Bounded Implementation Plan
 
+Product agreement references: [PC-01 through PC-09](../product-contract.md).
+The current product contract and the dated amendments below supersede conflicting
+historical clauses in this plan. In particular, privacy/no-save semantic rules and
+spending gates are removed, not pending implementation. Historical source-recovery
+planning remains separate from approval to implement it.
+
 Status: revision 5 plan with an offline reviewer/ADE amendment implemented on
 2026-09-24. This document grants no live-call, deployment, or release approval.
 It replaces the next-work instructions in revision 3, not its historical evidence.

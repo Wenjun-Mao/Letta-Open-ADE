@@ -1,5 +1,10 @@
 # Natural Conversational Memory: Proposed Design
 
+Historical design: consult the [current product contract](../product-contract.md)
+for settled intent and later exclusions. Section 3's character-root boundary is
+retained as PC-03; later privacy-policy and phrase-rule removals supersede the
+corresponding proposals here. This document is not the current status summary.
+
 Revision 4, 2026-09-23. **Amended proposal accompanying an implementation plan for review.**
 This is a design, not an implementation plan or authorization to change runtime,
 schema, providers, budgets, deployment, or release evidence. Accepted ADRs still

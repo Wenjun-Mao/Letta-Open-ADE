@@ -2,6 +2,10 @@
 
 Read these pages in order when joining the project:
 
+Start with the [current product contract](product-contract.md) for settled
+behavior, exclusions, and genuinely open decisions. Plans and product reviews
+reference its PC IDs; historical design documents are not competing current rules.
+
 For delivery priorities, consult the [roadmap](product-roadmap.md) and
 [project tracker](project-tracker.md) before choosing work.
 

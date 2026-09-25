@@ -2,6 +2,9 @@
 
 ## Product Outcome
 
+The [product contract](product-contract.md) owns current agreements and exclusions.
+This roadmap orders outcomes; milestone scope is not a competing product contract.
+
 ADE helps an operator improve agent behavior with evidence: configure an
 experience, run a representative evaluation, inspect reply/tool/memory evidence,
 refine the relevant content, and make a clear decision.
