@@ -48,7 +48,8 @@ with corrected or removed facts must be specified in the historical-recovery pla
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
   reviewer, reconciliation with corrected or removed facts, and failure behavior.
   PC-03's character boundary and PC-10's archive eligibility are settled;
-  these mechanics are not.
+  these mechanics are not. The [historical-recall proposal](plans/natural-history-recall.md)
+  develops these choices for review, without approving them.
 - Whether existing dialogue/history access suffices for habits, concerns and
   shared experiences before adding fact types or episode records. A drinking
   habit must not silently become a preference merely to fit today's registry.

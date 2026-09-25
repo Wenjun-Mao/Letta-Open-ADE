@@ -16,8 +16,11 @@ and PC-09 (simplicity and observational request counts).
   and reviewer truncation. Two reviewer-only low-effort contrasts produced the
   expected proposed deltas; they are not committed native turns or a selected
   default. See the [latest finding](findings/natural-memory-factual-followup-2026-09-24.md).
-- Current activity is product-agreement consolidation and historical-recall
-  brainstorming/planning. No historical-recall implementation is authorized.
+- Product-agreement consolidation and ADR lifecycle cleanup are recorded. PC-10
+  confirms archived conversations remain eligible within the same-character boundary.
+- The [historical-recall plan](plans/natural-history-recall.md) is proposed for review:
+  bounded source recovery, current-versus-historical evidence, and automatic versus
+  discretionary retrieval. No implementation or new live experiment is authorized.
 - The candidate-policy freshness failure remains unwaived; no release promotion
   or production change follows from these diagnostic results.
 
