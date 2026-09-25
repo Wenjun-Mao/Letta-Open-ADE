@@ -152,6 +152,17 @@ product changes follow from this offline diagnosis. Across the separate
 infrastructure, five-turn and eight-turn bindings, the observational total is
 23 completed generation dispatches and 19 embedding attempts (18 completed,
 one failed); eight scheduled turns across the latter two remain unrun.
+The director-selected [reviewer-only low-effort contrast](../findings/natural-memory-factual-followup-2026-09-24.md#one-reviewer-only-low-effort-contrast)
+then replayed the exact captured habit packet once, changing only effort from
+high to low. The route and provider fingerprints matched; it returned a valid,
+bound empty decision in 4.3 seconds with 812 completion tokens, including 805
+reported reasoning tokens. No habit preference was proposed, no prior fact was
+changed, and no native turn or memory write occurred. This one response does
+not establish a reliable reviewer setting or repair the separate morning-scope
+miss. A scope-loss contrast would need its own frozen decision; the higher-cap
+contrast and two remaining native probes are unrun. Including this isolated
+reviewer call, retained dispatches total 24 completed generations (23 native,
+one reviewer-only) and 19 embedding attempts (18 completed, one failed).
 
 Director offline reproduction confirmed that a bare current "Roxy" plus an
 assistant "Is Roxy a Husky?" can prepare a breed operation through the current

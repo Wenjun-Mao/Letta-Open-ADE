@@ -163,3 +163,62 @@ commits, one atomic rejection and two unrun turns. Thus the observational
 dispatch total is **23 completed generations and 19 embedding attempts**
 (18 completed, one failed). These separately bound schedules do not form one
 failure-rate sample or a completed campaign.
+
+## One reviewer-only low-effort contrast
+
+After director review, one disposable reviewer request replayed the exact
+sixth-turn system and user messages. The source request was reconstructed from
+the retained capture and matched its unredacted SHA-256
+`8b0dba462709c7eb2a9d588976428bb68e246ac8a1d5b1e2d048709f1f42934a`.
+The sole changed field was `reasoning_effort: high → low`; thinking stayed
+enabled, and the DeepSeek Flash route, JSON-object format, 4,096-token cap and
+messages were unchanged. The low request SHA-256 was
+`f9ee7a0d5dfcbef40020ed73ad98062892253ac8a62e188f97892ca4e36039d0`.
+The fixture, one-field diff and hashes were saved before dispatch. The current
+official [Chat Completions API](https://api-docs.deepseek.com/api/create-chat-completion/)
+supports `low` effort, and offline adapter checks confirmed that the router
+accepts and preserves an explicit `low` rather than replacing it with its
+high default.
+
+The isolated router catalog reported the same deployment fingerprint
+`870ff4fb8a25a9c2016f67dcda05e26e82a6c5dea6ad55781a80be2201161cfe`;
+the response reported the same provider system fingerprint
+`aeb56401ca74e127821c4f9126dcb669` as the retained high-effort response.
+Exactly **one** reviewer-only generation was dispatched and completed, with
+zero retries, repairs, embeddings, conversation generations or memory commits.
+It returned `finish_reason=stop` and visible `{"decisions":[]}` in **4,297 ms**:
+4,014 prompt, 812 completion and 4,826 total tokens. The provider reported
+805 reasoning tokens within the completion; hidden reasoning text was redacted.
+The earlier high-effort response on the same packet took 20,736 ms, used its
+full 4,096 completion tokens and had no visible content. This contrast is one
+sample per setting, so it does not prove effort caused the difference or
+establish completion or latency reliability.
+
+The returned object passed the existing schema parser. Rebuilding the binding
+packet from the captured subject, messages, target fact and candidate reply
+matched the original reviewer user packet exactly; the existing preparation
+logic accepted the decision with zero operations, deferrals or new entities.
+This is the correct **proposed** delta for the current report of tea-drinking
+behavior: no tea preference was inferred and the prior broad `咖啡` value was
+not changed to invent morning scope. The earlier missing morning scope remains
+a committed semantic miss. This replay delivered no assistant reply and is
+not a successful native turn. The separate scope-loss contrast, higher-cap
+contrast, same-subject recall and cross-subject probe remain unrun.
+
+Private, ignored evidence is under
+`workflows/evals/character_memory_dev/outputs/natural-reviewer-low-20260924-8b0dba46/`.
+The preflight artifact SHA-256 is
+`3ce3941af13e3484a148184a36375ec8768780b16efbd72bfa71125016375a88`;
+the redacted provider capture SHA-256 is
+`0ea1831db0166e2bcd9fe8bce28d9cfb358e107de0be89c7eb2a05fd1b266824`;
+the binder validation SHA-256 is
+`e4d5ee858869d59f9e9a01e4f273e8a69320094379d7e9c722dfbbd62fe226a1`.
+The previous three-binding totals above remain unchanged. Including this
+separate reviewer-only contrast gives **24 completed generation dispatches**
+and **19 embedding attempts** (18 completed, one failed) across all retained
+bindings; only 23 of those generations belong to native turn attempts.
+
+The next decision is whether a distinct, frozen scope-loss contrast is useful
+before any low-effort reviewer policy change. This one response supports the
+habit-turn zero-delta judgment but cannot qualify the unresolved scope and
+subject-isolation behavior or justify a production/default change.
