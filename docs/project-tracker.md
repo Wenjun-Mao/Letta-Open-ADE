@@ -92,6 +92,13 @@ and PC-09 (simplicity and observational request counts).
   while the fresh preference became a new fact and the old one stayed forgotten.
   Four subjects and seven committed turns have independent PostgreSQL readback;
   this is bounded evidence, not human acceptance or a policy/default choice.
+- An [offline packet diagnosis](findings/natural-memory-consultation/history-target-attribution-diagnostic-2026-09-26.md#offline-generation-packet-diagnosis-and-handoff)
+  found the old base prompt's editable-block/searchable-conversation claims in
+  both failing generation stacks. The jasmine turn's admitted H quote remained
+  visible after `search_memory` returned no saved facts. The note separates
+  that observable order from the unproven overshadowing hypothesis and proposes
+  a narrow future generation-contract alignment. No prompt or runtime source
+  changed after the seven-turn run.
 
 Earlier authorization and status statements below describe their dated
 checkpoints, not current commands or proof of completion. In particular, old

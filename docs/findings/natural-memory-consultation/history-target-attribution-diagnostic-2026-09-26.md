@@ -54,8 +54,70 @@ uses an existing lifecycle instruction; no prompt change or rerun followed it.
 
 ## Interpretation and boundary
 
-The bounded reviewer contract correction prevented the early unsupported dog
-mutation in these two live trajectories and did not suppress clear updates.
+Under the bounded reviewer contract correction, these two live trajectories
+had no early unsupported dog mutation and clear updates still committed. This
+is an observed contrast, not causal proof from controlled repeated samples.
 It did not resolve answer quality for an ambiguous referent or removed fact's
 retained testimony. This is one diagnostic, with no production-default or
 release-policy decision. The historical policy-freshness gate remains unwaived.
+
+## Offline generation-packet diagnosis and handoff
+
+The [Nini ambiguous attempt](../../../workflows/evals/character_memory_dev/outputs/history-target-diagnostic-20260926/attempts/a2437a84-5c1d-4041-945e-332212c05616/attempt-001.json)
+(`ab76c823…`) had the old user exchanges naming both dogs in
+the generation system packet and no `search_memory` call. The one generation
+request directly produced “那黑色那只现在叫小黑啦.” Its subsequent reviewer request
+had the same H evidence and both held pet targets, then deferred the mutation.
+The generator was not given the reviewer's new target-attribution instruction.
+The active [base system template](../../../content/prompts/system/chat/chat_v20260516.py)
+instead says to update a “human memory block immediately” and describes recall
+memory as historical conversation messages that “can be searched.” The
+[persona record](../../../content/personas/personas.jsonl) asks the character
+to remember user preferences and small details, without defining a source or
+referent rule. ADE's appended [runtime memory rules](../../../services/ade-api/src/ade_api/features/agent_runtime/context.py)
+assign writes to a separate reviewer; the [H instruction](../../../services/ade-api/src/ade_api/features/agent_runtime/history_admission.py)
+marks admitted dialogue read-only. Neither generation instruction expressly
+requires a neutral question when a pronoun could refer to either held entity.
+The old and ADE instructions coexist in the same generated system message;
+neither removes the other from the model's view.
+This is an observable generation-contract gap, not proof of the model's internal
+reason for choosing the black dog.
+
+For the [removed-jasmine attempt](../../../workflows/evals/character_memory_dev/outputs/history-target-diagnostic-20260926/attempts/1d1be788-f445-4fc0-850d-16a6c1e634c3/attempt-001.json)
+(`010d4f48…`), the original “我以前喜欢茉莉花茶。” and its
+forgotten lineage were present in the system message of **both** generation
+requests. The current lifecycle view supplied no active fact. The first request
+called `search_memory` for tea/drink preference; the second carried its successful
+`{"facts": []}` result immediately before the final answer. The actual
+[tool schema](../../../services/ade-api/src/ade_api/features/agent_runtime/executor.py)
+says it searches older **committed facts**, and the
+[handler](../../../services/ade-api/src/ade_api/features/agent_runtime/turn_retrieval.py)
+queries saved fact descriptors, not historical conversation. The base template's
+searchable-conversation claim conflicts with that tool contract. The appended
+[tool rules](../../../services/ade-api/src/ade_api/features/agent_runtime/tool_policy.py)
+tell the generator to treat returned results as evidence; an empty
+fact result may have overshadowed the admitted H testimony, but the capture
+does not establish that causal path. It establishes the conflicting claims,
+request order, empty fact result, retained source quote and final denial.
+
+The reviewer is one factual-change reviewer with a narrow reply-conflict path.
+Its [wire contract](../../../services/ade-api/src/ade_api/features/agent_runtime/natural_memory_review.py)
+allows an exact H quote to ground `conflict`, and the H instruction permits that
+use. Its affirmative conflict wording centers a visible contradiction with held
+F/E memory; it does not clearly require vetoing every reply about unavailable
+past testimony. The `decisions: []` outcome did not use the available H-grounded
+conflict path; it is not enough by itself to label a violation of an explicit mandatory
+H-dialogue check or to justify turning the reviewer into a second answer judge.
+
+The smallest coherent next generation-contract proposal is to align the active
+versioned system template with the actual ADE runtime: remove the editable-block
+and searchable-transcript claims for new definitions, while preserving persona
+style. Give the generator two general evidence rules at the existing instruction
+owners: when several entities remain plausible, ask neutrally which one the user
+means before asserting a target-specific change; when answering what was said,
+use admitted attributed H dialogue as past testimony and treat an empty
+`search_memory` result only as absence of matching saved facts, not absence of
+that dialogue. Clear explicit references remain answerable directly. This is a
+proposal for a separately reviewed source revision and new prompt binding, not
+an implemented patch or authorization for another live run. No phrase table,
+validator, extra reviewer, or new retrieval tool is indicated by this packet.
