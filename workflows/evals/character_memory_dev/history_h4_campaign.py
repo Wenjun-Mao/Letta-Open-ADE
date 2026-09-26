@@ -60,7 +60,12 @@ from .history_h4_run import (
     _frozen_inputs,
 )
 from .history_h4_transport import SplitHistoryTransport
-from .history_h4_remaining import load_remaining, ORIGINAL_SHA256, PROPOSAL_SHA256
+from .history_h4_remaining import (
+    AFTER_TWO_PROPOSAL_SHA256,
+    ORIGINAL_SHA256,
+    SECOND_SHA256,
+    load_remaining_after_two,
+)
 from .history_h4_disposition import (
     CampaignStop,
     _classify_cell as _classify_cell,
@@ -122,7 +127,7 @@ async def run(args: argparse.Namespace) -> None:
     checked_url, database_name = isolated_database_url(args.database_url)
     source_revision, source_fingerprint = source_identity()
     contract, fixture, _h2 = _frozen_inputs()
-    original, proposal, selected_cells = load_remaining(
+    original, second, proposal, selected_cells = load_remaining_after_two(
         _planned_cells(contract, fixture)
     )
     selected_keys = {(cell["name"], cell["arm"]) for cell in selected_cells}
@@ -161,12 +166,19 @@ async def run(args: argparse.Namespace) -> None:
     old_definition = original["cells"][0]["session"]
     if (
         current_fixture != original["fixture_sha256"]
+        or current_fixture != second["fixture_sha256"]
         or contract["binding"] != original["capacity"]
+        or contract["binding"] != second["capacity"]
         or HISTORY_PROBE_POLICY != original["policy"]
+        or HISTORY_PROBE_POLICY != second["policy"]
         or instruction_sha != original["reviewer_instruction_sha256"]
+        or instruction_sha != second["reviewer_instruction_sha256"]
         or schema_sha != original["reviewer_schema_sha256"]
+        or schema_sha != second["reviewer_schema_sha256"]
         or prompt_sha != old_definition["prompt_sha256"]
+        or prompt_sha != second["prompt_sha256"]
         or persona_sha != old_definition["persona_sha256"]
+        or persona_sha != second["persona_sha256"]
     ):
         raise RuntimeError(
             "H4 prompt, persona, fixture, policy, or reviewer binding drifted"
@@ -217,12 +229,14 @@ async def run(args: argparse.Namespace) -> None:
         qwen = items[HISTORY_EMBEDDING_ROUTE]["deployment"]["fingerprint"]
         if (
             deepseek.get("sha256") != original["routes"]["deepseek::deepseek-flash"]
+            or deepseek.get("sha256") != second["routes"]["deepseek::deepseek-flash"]
             or qwen.get("sha256") != QWEN_FINGERPRINT
             or qwen.get("artifact_reference") != "Qwen/Qwen3-Embedding-0.6B"
             or qwen.get("artifact_revision")
             != "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3"
             or qwen.get("sampling_settings", {}).get("dimensions") != 1024
             or qwen.get("sha256") != original["routes"][HISTORY_EMBEDDING_ROUTE]
+            or qwen.get("sha256") != second["routes"][HISTORY_EMBEDDING_ROUTE]
             or deepseek.get("context_settings", {}).get("reviewer_repair_count") != 0
             or int(deepseek.get("context_settings", {}).get("total_tokens") or 0)
             < 16384
@@ -248,10 +262,12 @@ async def run(args: argparse.Namespace) -> None:
         manifest = {
             "schema_version": 1,
             "status": "running",
-            "campaign_kind": "approved_remaining_21_turns",
+            "campaign_kind": "approved_remaining_18_turns",
             "original_manifest_sha256": ORIGINAL_SHA256,
-            "proposal_sha256": PROPOSAL_SHA256,
+            "second_manifest_sha256": SECOND_SHA256,
+            "proposal_sha256": AFTER_TWO_PROPOSAL_SHA256,
             "original_source_revision": original["source_revision"],
+            "second_source_revision": second["source_revision"],
             "prompt_sha256": prompt_sha,
             "persona_sha256": persona_sha,
             "source_revision": source_revision,
@@ -283,9 +299,17 @@ async def run(args: argparse.Namespace) -> None:
                     sort_keys=True,
                 ).encode()
             ).hexdigest(),
-            "scheduled_controls": contract["paired_schedule"]["native_control_ids"],
-            "scheduled_targets": [case["id"] for case in fixture["cases"]],
-            "scheduled_followups_per_arm": fixture["followup_schedule"],
+            "scheduled_controls": [],
+            "scheduled_targets": list(
+                dict.fromkeys(cell["name"] for cell in selected_cells)
+            ),
+            "scheduled_followups_per_arm": list(
+                dict.fromkeys(
+                    cell["name"]
+                    for cell in selected_cells
+                    if cell.get("followup_scheduled")
+                )
+            ),
             "planned_cells": selected_cells,
             "planned_turns": proposal["remaining_turns"],
             "cells": [],
@@ -387,18 +411,12 @@ async def run(args: argparse.Namespace) -> None:
                     manifest["cell_dispositions"].extend(_classify_cell_turns(result))
                     write_json(args.output / "manifest.json", manifest)
                     index += 1
-                if case["id"] == "user_retraction":
-                    prior = next(
-                        cell
-                        for cell in original["cells"]
-                        if cell["name"] == case["id"] and cell["arm"] == "empty_history"
+                if len(paired) != 2:
+                    raise CampaignStop(
+                        f"{case['id']} does not have both newly run arms"
                     )
-                    check = _paired_packet_check(case["id"], [prior, paired[0]])
-                    check["scope"] = "cross_campaign"
-                    check["original_manifest_sha256"] = ORIGINAL_SHA256
-                else:
-                    check = _paired_packet_check(case["id"], paired)
-                    check["scope"] = "remaining_campaign"
+                check = _paired_packet_check(case["id"], paired)
+                check["scope"] = "remaining_18_campaign"
                 manifest["pair_checks"].append(check)
                 write_json(args.output / "manifest.json", manifest)
                 if manifest["pair_checks"][-1]["base_packet_equal"] is False:

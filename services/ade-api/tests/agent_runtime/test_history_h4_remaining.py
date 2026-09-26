@@ -12,7 +12,9 @@ from workflows.evals.character_memory_dev.history_h4_campaign import (
 )
 from workflows.evals.character_memory_dev.history_h4_remaining import (
     load_remaining,
+    load_remaining_after_two,
     validate_remaining,
+    validate_remaining_after_two,
 )
 
 
@@ -40,6 +42,43 @@ def test_approved_remaining_schedule_excludes_all_attempted_and_binds_dependenci
     changed["remaining_turns"][4]["dependency"] = None
     with pytest.raises(RuntimeError):
         validate_remaining(original, changed, _planned_cells(contract, fixture))
+
+
+def test_18_turn_schedule_excludes_both_campaigns_and_keeps_dependencies() -> None:
+    contract, fixture, _ = _frozen_inputs()
+    planned = _planned_cells(contract, fixture)
+    original, first_proposal, _ = load_remaining(planned)
+    loaded_original, second, proposal, selected = load_remaining_after_two(planned)
+    assert loaded_original == original
+    assert len(selected) == 12
+    assert len(proposal["remaining_turns"]) == 18
+    assert len(proposal["excluded_attempted_turns"]) == 14
+    assert sum(turn["turn"] == "followup" for turn in proposal["remaining_turns"]) == 6
+    selected_keys = {(cell["name"], cell["arm"]) for cell in selected}
+    excluded_keys = {
+        (turn["case"], turn["arm"]) for turn in proposal["excluded_attempted_turns"]
+    }
+    assert selected_keys.isdisjoint(excluded_keys)
+    assert ("invalidated_ended", "empty_history") in excluded_keys
+    assert ("invalidated_ended", "automatic_history") in excluded_keys
+    for turn in proposal["remaining_turns"]:
+        if turn["turn"] == "followup":
+            assert (
+                turn["dependency"] == f"{turn['case']}:{turn['arm']}:target_committed"
+            )
+
+    changed_second = deepcopy(second)
+    changed_second["cells"][1]["status"] = "unrun_after_stop"
+    with pytest.raises(RuntimeError):
+        validate_remaining_after_two(
+            original, first_proposal, changed_second, proposal, planned
+        )
+    changed_proposal = deepcopy(proposal)
+    changed_proposal["remaining_turns"][1]["dependency"] = None
+    with pytest.raises(RuntimeError):
+        validate_remaining_after_two(
+            original, first_proposal, second, changed_proposal, planned
+        )
 
 
 def _committed() -> dict:
