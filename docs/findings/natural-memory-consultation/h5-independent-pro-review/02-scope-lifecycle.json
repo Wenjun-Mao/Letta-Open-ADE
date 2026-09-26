@@ -1,0 +1,716 @@
+{
+  "schema_version": 1,
+  "status": "key_free_review_context_v1",
+  "fixture_sha256": "7a402aa3b0dba6c0672515698248b511c214fa08ed37c94fc0db2b881d7886df",
+  "blind_packet_sha256": {
+    "history-h4-live-20260926": "6bad1ea045a9d782fe223d6dd7535e154beab26e228ca0558cec0a76f32ce8bb",
+    "history-h4-remaining-live-20260926": "d0a540380bf7c0af901be670835683d66ef86eea6dc73b850f59aeb14c845905",
+    "history-h4-final-remaining-live-20260926": "9889fdd65ea772500a4640cba27d13308cfb6a62d7e2b28c37754fc5966276a3"
+  },
+  "instructions": "Use this arm-neutral fixture context with the existing blind answer packets. Scope eligibility names what source could enter the history corpus; it does not reveal which anonymous answer received history or which windows were admitted.",
+  "eligibility_contract": {
+    "workspace": "same primary workspace required",
+    "subject": "same primary subject required",
+    "definition_root": "same primary character root required; compatible versions and archived conversations may remain eligible",
+    "purpose": "evaluation purpose required; preview does not enter evaluation history",
+    "active": "current held assertion",
+    "inactive": "historical held assertion, not current",
+    "forgotten": "removed assertion, not a current target; its retained eligible dialogue may still answer a question about earlier testimony",
+    "historical_dialogue": "read-only answer evidence; cannot independently authorize a current write or become U/A write support",
+    "revision_or_correction": "A saved-fact representation change alone does not prove that the user retracted the original testimony; inspect the source utterance.",
+    "unknown_intermediate": "Do not infer unrecorded intermediate values or causes from transition codes.",
+    "source_less_removal": "An operator removal can mark a fact forgotten without supplying a new user utterance; eligible retained dialogue remains available as earlier testimony."
+  },
+  "cases": [
+    {
+      "case_id": "archived_version_recall",
+      "target_question": "我以前说过是谁教我包饺子吗？",
+      "source_scope": [
+        {
+          "source_id": "a1",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": true
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": "Archived and compatible-version exchanges remain eligible when scope otherwise matches."
+        },
+        {
+          "source_id": "a2",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 2,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": "Archived and compatible-version exchanges remain eligible when scope otherwise matches."
+        }
+      ],
+      "fact_lifecycle": []
+    },
+    {
+      "case_id": "correction_return",
+      "target_question": "我是不是一直都更喜欢早上喝咖啡？",
+      "source_scope": [
+        {
+          "source_id": "c1",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "c2",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "c3",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        }
+      ],
+      "fact_lifecycle": [
+        {
+          "fixture_fact_id": "morning_drink",
+          "entity_key": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.preference",
+          "qualifier": "drink",
+          "lifecycle": [
+            {
+              "operation": "add",
+              "status_after": "active",
+              "value": "早上更喜欢咖啡",
+              "source": "c1:user",
+              "reason": null
+            },
+            {
+              "operation": "revise",
+              "status_after": "active",
+              "value": "早上更喜欢茶",
+              "source": "c2:user",
+              "reason": "correct"
+            },
+            {
+              "operation": "revise",
+              "status_after": "active",
+              "value": "早上又更喜欢咖啡",
+              "source": "c3:user",
+              "reason": "supersede"
+            }
+          ],
+          "current_status": "active",
+          "current_value": "早上又更喜欢咖啡",
+          "current_assertion": true
+        }
+      ]
+    },
+    {
+      "case_id": "extraction_repair",
+      "target_question": "我一开始说的是整天都喜欢咖啡，还是只说早上？",
+      "source_scope": [
+        {
+          "source_id": "r1",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "r2",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        }
+      ],
+      "fact_lifecycle": [
+        {
+          "fixture_fact_id": "drink_scope",
+          "entity_key": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.preference",
+          "qualifier": "drink",
+          "lifecycle": [
+            {
+              "operation": "add",
+              "status_after": "active",
+              "value": "整天更喜欢咖啡",
+              "source": "r1:user",
+              "reason": null
+            },
+            {
+              "operation": "revise",
+              "status_after": "active",
+              "value": "早上更喜欢咖啡",
+              "source": "r2:user",
+              "reason": "correct"
+            }
+          ],
+          "current_status": "active",
+          "current_value": "早上更喜欢咖啡",
+          "current_assertion": true
+        }
+      ]
+    },
+    {
+      "case_id": "user_retraction",
+      "target_question": "我最早怎么说北京的事，后来又怎么澄清？",
+      "source_scope": [
+        {
+          "source_id": "u1",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "u2",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        }
+      ],
+      "fact_lifecycle": [
+        {
+          "fixture_fact_id": "beijing_residence",
+          "entity_key": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.current_location",
+          "qualifier": null,
+          "lifecycle": [
+            {
+              "operation": "add",
+              "status_after": "active",
+              "value": "北京",
+              "source": "u1:user",
+              "reason": null
+            },
+            {
+              "operation": "end",
+              "status_after": "inactive",
+              "value": null,
+              "source": "u2:user",
+              "reason": "invalidated"
+            }
+          ],
+          "current_status": "inactive",
+          "current_value": null,
+          "current_assertion": false
+        }
+      ]
+    },
+    {
+      "case_id": "invalidated_ended",
+      "target_question": "我之前说的北京住址和小王关系现在还成立吗？",
+      "source_scope": [
+        {
+          "source_id": "i1",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "i2",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "i3",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "i4",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        }
+      ],
+      "fact_lifecycle": [
+        {
+          "fixture_fact_id": "beijing_residence",
+          "entity_key": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.current_location",
+          "qualifier": null,
+          "lifecycle": [
+            {
+              "operation": "add",
+              "status_after": "active",
+              "value": "北京",
+              "source": "i1:user",
+              "reason": null
+            },
+            {
+              "operation": "end",
+              "status_after": "inactive",
+              "value": null,
+              "source": "i2:user",
+              "reason": "invalidated"
+            }
+          ],
+          "current_status": "inactive",
+          "current_value": null,
+          "current_assertion": false
+        },
+        {
+          "fixture_fact_id": "xiao_wang_relationship",
+          "entity_key": "xiao_wang",
+          "entity_kind": "related_person",
+          "fact_type": "relationship.person",
+          "qualifier": "partner",
+          "lifecycle": [
+            {
+              "operation": "add",
+              "status_after": "active",
+              "value": "小王",
+              "source": "i3:user",
+              "reason": null
+            },
+            {
+              "operation": "end",
+              "status_after": "inactive",
+              "value": null,
+              "source": "i4:user",
+              "reason": "ended"
+            }
+          ],
+          "current_status": "inactive",
+          "current_value": null,
+          "current_assertion": false
+        }
+      ]
+    },
+    {
+      "case_id": "removed_acknowledgment",
+      "target_question": "你还记得我以前提过什么茶吗？",
+      "source_scope": [
+        {
+          "source_id": "f1",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        }
+      ],
+      "fact_lifecycle": [
+        {
+          "fixture_fact_id": "jasmine_preference",
+          "entity_key": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.preference",
+          "qualifier": "drink",
+          "lifecycle": [
+            {
+              "operation": "add",
+              "status_after": "active",
+              "value": "以前喜欢茉莉花茶",
+              "source": "f1:user",
+              "reason": null
+            },
+            {
+              "operation": "forget",
+              "status_after": "forgotten",
+              "value": null,
+              "source": "source_less_operator_action",
+              "reason": "forgotten"
+            }
+          ],
+          "current_status": "forgotten",
+          "current_value": null,
+          "current_assertion": false
+        }
+      ]
+    },
+    {
+      "case_id": "h_only_referent",
+      "target_question": "它现在叫小黑。",
+      "source_scope": [
+        {
+          "source_id": "h1",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "h2",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "h3",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        }
+      ],
+      "fact_lifecycle": [
+        {
+          "fixture_fact_id": "roxy_name",
+          "entity_key": "roxy_pet",
+          "entity_kind": "pet",
+          "fact_type": "pet.name",
+          "qualifier": null,
+          "lifecycle": [
+            {
+              "operation": "add",
+              "status_after": "active",
+              "value": "Roxy",
+              "source": "h2:user",
+              "reason": null
+            }
+          ],
+          "current_status": "active",
+          "current_value": "Roxy",
+          "current_assertion": true
+        },
+        {
+          "fixture_fact_id": "nini_name",
+          "entity_key": "nini_pet",
+          "entity_kind": "pet",
+          "fact_type": "pet.name",
+          "qualifier": null,
+          "lifecycle": [
+            {
+              "operation": "add",
+              "status_after": "active",
+              "value": "Nini",
+              "source": "h3:user",
+              "reason": null
+            }
+          ],
+          "current_status": "active",
+          "current_value": "Nini",
+          "current_assertion": true
+        }
+      ]
+    },
+    {
+      "case_id": "habit_not_preference",
+      "target_question": "这周我喝茶，是不是说明我更喜欢茶？",
+      "source_scope": [
+        {
+          "source_id": "p1",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "p2",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        }
+      ],
+      "fact_lifecycle": [
+        {
+          "fixture_fact_id": "morning_drink",
+          "entity_key": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.preference",
+          "qualifier": "drink",
+          "lifecycle": [
+            {
+              "operation": "add",
+              "status_after": "active",
+              "value": "早上更喜欢咖啡",
+              "source": "p1:user",
+              "reason": null
+            }
+          ],
+          "current_status": "active",
+          "current_value": "早上更喜欢咖啡",
+          "current_assertion": true
+        }
+      ]
+    },
+    {
+      "case_id": "resolved_concern",
+      "target_question": "我之前担心的那场面试后来怎么样了？",
+      "source_scope": [
+        {
+          "source_id": "q1",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "q2",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        }
+      ],
+      "fact_lifecycle": []
+    },
+    {
+      "case_id": "ambiguity_and_unrelated",
+      "target_question": "那本挺有意思的书是谁推荐的？",
+      "source_scope": [
+        {
+          "source_id": "m1",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        },
+        {
+          "source_id": "m2",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": true,
+          "exclusion_reasons": [],
+          "note": null
+        }
+      ],
+      "fact_lifecycle": []
+    },
+    {
+      "case_id": "isolation",
+      "target_question": "你还记得我有什么爱好吗？",
+      "source_scope": [
+        {
+          "source_id": "x1",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "different",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": false,
+          "exclusion_reasons": [
+            "different_root"
+          ],
+          "note": null
+        },
+        {
+          "source_id": "x2",
+          "scope": {
+            "workspace": "primary",
+            "subject": "different",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": false,
+          "exclusion_reasons": [
+            "different_subject"
+          ],
+          "note": null
+        },
+        {
+          "source_id": "x3",
+          "scope": {
+            "workspace": "different",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "evaluation",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": false,
+          "exclusion_reasons": [
+            "different_workspace"
+          ],
+          "note": null
+        },
+        {
+          "source_id": "x4",
+          "scope": {
+            "workspace": "primary",
+            "subject": "primary",
+            "root": "primary",
+            "purpose": "preview",
+            "definition_version": 1,
+            "archived": false
+          },
+          "corpus_eligible_by_scope": false,
+          "exclusion_reasons": [
+            "different_purpose"
+          ],
+          "note": null
+        }
+      ],
+      "fact_lifecycle": []
+    }
+  ]
+}

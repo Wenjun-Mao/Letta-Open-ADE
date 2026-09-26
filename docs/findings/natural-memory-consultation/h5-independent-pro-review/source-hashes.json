@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "fixture_sha256": "7a402aa3b0dba6c0672515698248b511c214fa08ed37c94fc0db2b881d7886df",
+  "scope_lifecycle_companion_sha256": "932133da4d26e5add599c76b9bf1526261a5757436f81890fd175fbfa5e4ac02",
+  "batches": [
+    {
+      "batch": "history-h4-live-20260926",
+      "blind_review_sha256": "6bad1ea045a9d782fe223d6dd7535e154beab26e228ca0558cec0a76f32ce8bb",
+      "manifest_sha256": "07228ca7c3642d3528c76db345ef5a14e2bd9463ada14858784872af1b9458a2",
+      "source_revision": "ac2ede969aed03a1dc446949274d19815de9a990"
+    },
+    {
+      "batch": "history-h4-remaining-live-20260926",
+      "blind_review_sha256": "d0a540380bf7c0af901be670835683d66ef86eea6dc73b850f59aeb14c845905",
+      "manifest_sha256": "e309d643542406446cd349962bc3dee598f22ac49bfaaceaf8b6fd1e606ddb6a",
+      "source_revision": "2f724a495c1d4fe12893fda12fca6413590a1ef1"
+    },
+    {
+      "batch": "history-h4-final-remaining-live-20260926",
+      "blind_review_sha256": "9889fdd65ea772500a4640cba27d13308cfb6a62d7e2b28c37754fc5966276a3",
+      "manifest_sha256": "cf5f8bbc144a33e7aa3678683f8fbc99e9bb232883c438d06a757f001bb24cb8",
+      "source_revision": "a9e6cffc8fdf66f46f332adea3de97f207638e49"
+    }
+  ]
+}

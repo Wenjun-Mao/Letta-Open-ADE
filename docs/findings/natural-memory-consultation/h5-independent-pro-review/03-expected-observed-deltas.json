@@ -1,0 +1,919 @@
+{
+  "schema_version": 1,
+  "caveat": "Exact comparator flags are string/operation/count diagnostics, not independent semantic judgments. The expected side is the frozen fixture; the observed side is committed readback with run identifiers removed.",
+  "cases": [
+    {
+      "case_id": "archived_version_recall",
+      "comparison_status": "comparable",
+      "turns": [
+        {
+          "turn": "target",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "a2",
+                  "a1"
+                ],
+                "ranked_sources": [
+                  "a1",
+                  "a2"
+                ],
+                "admitted_sources": [
+                  "a1",
+                  "a2"
+                ],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "correction_return",
+      "comparison_status": "comparable",
+      "turns": [
+        {
+          "turn": "target",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "c3",
+                  "c2",
+                  "c1"
+                ],
+                "ranked_sources": [
+                  "c1",
+                  "c3",
+                  "c2"
+                ],
+                "admitted_sources": [
+                  "c1",
+                  "c3",
+                  "c2"
+                ],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "extraction_repair",
+      "comparison_status": "comparable",
+      "turns": [
+        {
+          "turn": "target",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "r2",
+                  "r1"
+                ],
+                "ranked_sources": [
+                  "r2",
+                  "r1"
+                ],
+                "admitted_sources": [
+                  "r2",
+                  "r1"
+                ],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "invalidated_ended",
+      "comparison_status": "confounded_base_packet_mismatch",
+      "turns": [
+        {
+          "turn": "target",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "i4",
+                  "i3",
+                  "i2",
+                  "i1"
+                ],
+                "ranked_sources": [
+                  "i2",
+                  "i3",
+                  "i4",
+                  "i1"
+                ],
+                "admitted_sources": [
+                  "i2",
+                  "i3",
+                  "i4",
+                  "i1"
+                ],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "user_retraction",
+      "comparison_status": "one_sided_bounded_rejection",
+      "turns": [
+        {
+          "turn": "target",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "C",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "u2",
+                  "u1"
+                ],
+                "ranked_sources": [
+                  "u2",
+                  "u1"
+                ],
+                "admitted_sources": [
+                  "u2",
+                  "u1"
+                ],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "removed_acknowledgment",
+      "comparison_status": "comparable",
+      "turns": [
+        {
+          "turn": "target",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "f1"
+                ],
+                "ranked_sources": [
+                  "f1"
+                ],
+                "admitted_sources": [
+                  "f1"
+                ],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        },
+        {
+          "turn": "followup",
+          "expected": {
+            "expected_delta": [
+              {
+                "kind": "subject_add",
+                "fact_id": "new_jasmine_preference",
+                "entity_id": "subject",
+                "fact_type": "person.preference",
+                "qualifier": "drink",
+                "value": "现在喜欢茉莉花茶",
+                "source_quote": "我现在又喜欢茉莉花茶了"
+              }
+            ],
+            "expected_generation_advance": 1,
+            "expected_revision_count": 1,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 1,
+              "revision_count": 1,
+              "entity_additions_count": 0,
+              "run_revisions": [
+                {
+                  "fact_id": "new_fact_1",
+                  "operation": "add",
+                  "reason": null,
+                  "value": "茉莉花茶",
+                  "fact_type": "person.preference",
+                  "qualifier": "drink",
+                  "entity": "subject",
+                  "sources": [
+                    {
+                      "quote": "我现在又喜欢茉莉花茶了。",
+                      "authority_role": "user_assertion"
+                    }
+                  ]
+                }
+              ],
+              "exact_comparator_flags": [
+                "write:new_jasmine_preference",
+                "extra_target_write"
+              ],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 1,
+              "revision_count": 1,
+              "entity_additions_count": 0,
+              "run_revisions": [
+                {
+                  "fact_id": "new_fact_1",
+                  "operation": "add",
+                  "reason": null,
+                  "value": "茉莉花茶",
+                  "fact_type": "person.preference",
+                  "qualifier": "drink",
+                  "entity": "subject",
+                  "sources": [
+                    {
+                      "quote": "我现在又喜欢茉莉花茶了。",
+                      "authority_role": "user_assertion"
+                    }
+                  ]
+                }
+              ],
+              "exact_comparator_flags": [
+                "write:new_jasmine_preference",
+                "extra_target_write"
+              ],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "target_turn",
+                  "f1"
+                ],
+                "ranked_sources": [
+                  "target_turn",
+                  "f1"
+                ],
+                "admitted_sources": [
+                  "target_turn",
+                  "f1"
+                ],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "h_only_referent",
+      "comparison_status": "comparable",
+      "turns": [
+        {
+          "turn": "target",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 1,
+              "revision_count": 1,
+              "entity_additions_count": 0,
+              "run_revisions": [
+                {
+                  "fact_id": "roxy_name",
+                  "operation": "revise",
+                  "reason": "supersede",
+                  "value": "小黑",
+                  "fact_type": "pet.name",
+                  "qualifier": null,
+                  "entity": "roxy_pet",
+                  "sources": [
+                    {
+                      "quote": "它现在叫小黑。",
+                      "authority_role": "user_assertion"
+                    }
+                  ]
+                }
+              ],
+              "exact_comparator_flags": [
+                "memory_generation",
+                "revision_count",
+                "extra_target_write"
+              ],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "h3",
+                  "h2",
+                  "h1"
+                ],
+                "ranked_sources": [
+                  "h2",
+                  "h1",
+                  "h3"
+                ],
+                "admitted_sources": [
+                  "h2",
+                  "h1",
+                  "h3"
+                ],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        },
+        {
+          "turn": "followup",
+          "expected": {
+            "expected_delta": [
+              {
+                "kind": "revise",
+                "fact_id": "roxy_name",
+                "reason": "supersede",
+                "value": "小黑",
+                "source_quote": "以前那只叫 Roxy 的黑狗，现在叫小黑"
+              }
+            ],
+            "expected_generation_advance": 1,
+            "expected_revision_count": 1,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [
+                "memory_generation",
+                "revision_count",
+                "write:roxy_name"
+              ],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "target_turn",
+                  "h3",
+                  "h2",
+                  "h1"
+                ],
+                "ranked_sources": [
+                  "target_turn",
+                  "h1",
+                  "h2",
+                  "h3"
+                ],
+                "admitted_sources": [
+                  "target_turn",
+                  "h1",
+                  "h2",
+                  "h3"
+                ],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 1,
+              "revision_count": 1,
+              "entity_additions_count": 0,
+              "run_revisions": [
+                {
+                  "fact_id": "roxy_name",
+                  "operation": "revise",
+                  "reason": "supersede",
+                  "value": "小黑",
+                  "fact_type": "pet.name",
+                  "qualifier": null,
+                  "entity": "roxy_pet",
+                  "sources": [
+                    {
+                      "quote": "我是说以前那只叫 Roxy 的黑狗，现在叫小黑。",
+                      "authority_role": "user_assertion"
+                    }
+                  ]
+                }
+              ],
+              "exact_comparator_flags": [
+                "write:roxy_name",
+                "extra_target_write"
+              ],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "habit_not_preference",
+      "comparison_status": "comparable",
+      "turns": [
+        {
+          "turn": "target",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "p2",
+                  "p1"
+                ],
+                "ranked_sources": [
+                  "p2",
+                  "p1"
+                ],
+                "admitted_sources": [
+                  "p2",
+                  "p1"
+                ],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "resolved_concern",
+      "comparison_status": "comparable",
+      "turns": [
+        {
+          "turn": "target",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "q2",
+                  "q1"
+                ],
+                "ranked_sources": [
+                  "q2",
+                  "q1"
+                ],
+                "admitted_sources": [
+                  "q2",
+                  "q1"
+                ],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "ambiguity_and_unrelated",
+      "comparison_status": "comparable",
+      "turns": [
+        {
+          "turn": "target",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "m2",
+                  "m1"
+                ],
+                "ranked_sources": [
+                  "m2",
+                  "m1"
+                ],
+                "admitted_sources": [
+                  "m2",
+                  "m1"
+                ],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        },
+        {
+          "turn": "followup",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "admitted",
+                "corpus_sources": [
+                  "target_turn",
+                  "m2",
+                  "m1"
+                ],
+                "ranked_sources": [
+                  "target_turn",
+                  "m1",
+                  "m2"
+                ],
+                "admitted_sources": [
+                  "target_turn",
+                  "m1",
+                  "m2"
+                ],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "isolation",
+      "comparison_status": "comparable",
+      "turns": [
+        {
+          "turn": "target",
+          "expected": {
+            "expected_delta": [],
+            "expected_generation_advance": 0,
+            "expected_revision_count": 0,
+            "expected_entity_additions": []
+          },
+          "responses": [
+            {
+              "label": "A",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            },
+            {
+              "label": "B",
+              "turn_status": "committed",
+              "generation_advance": 0,
+              "revision_count": 0,
+              "entity_additions_count": 0,
+              "run_revisions": [],
+              "exact_comparator_flags": [],
+              "candidate_delivered_equal": true,
+              "history_stage": {
+                "status": "empty",
+                "corpus_sources": [],
+                "ranked_sources": [],
+                "admitted_sources": [],
+                "omitted_capacity_sources": []
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
