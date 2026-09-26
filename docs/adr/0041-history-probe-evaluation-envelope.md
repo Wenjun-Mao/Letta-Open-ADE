@@ -1,6 +1,6 @@
 # ADR 0041: Bound the H4 Probe to the H2 Provider and Frozen Capacity
 
-Status: H4 reviewer envelope amended for the evaluation-only campaign on 2026-09-26; live outcome pending.
+Status: H4 reviewer envelope amended for evaluation on 2026-09-26; first live run stopped at the separate conversation ceiling.
 
 ## Problem
 
@@ -20,4 +20,6 @@ Before any live dispatch, the runner checks the smallest H-capable reviewer requ
 
 ## Alternatives and consequences
 
-Rejected mutable route-only selection, spoofed fingerprints, silent reviewer budget widening and post-generation-only capacity checks. The original preflight failure and offline capacity diagnosis remain historical evidence. The amended profile must pass native fake-provider paired packets before live dispatch; that check does not supply a dialogue score.
+Rejected mutable route-only selection, spoofed fingerprints, silent reviewer budget widening and post-generation-only capacity checks. The original preflight failure and offline capacity diagnosis remain historical evidence. The amended profile passed native fake-provider paired packets before live dispatch; that check does not supply a dialogue score.
+
+The first amended live run passed the reviewer envelope but stopped at the separately frozen two-request conversation tool-step ceiling. This observed H4 outcome leaves the remaining cells unrun; it does not revise the reviewer amendment or authorize a conversation-ceiling change within that run.

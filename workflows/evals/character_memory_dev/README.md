@@ -75,6 +75,8 @@ H4's one-shot native runner is `python -m workflows.evals.character_memory_dev.h
 
 The first H4 preflight stopped **before live dispatch**: its smallest H-capable request estimates 7,958 input tokens against the original 6,759 limit. The director-approved [H4 reviewer amendment](fixtures/history_recall/h4_reviewer_amendment.json) binds the unchanged H2-hashed contract, H2 result and H4 cases, and supplies an evaluation-only 16,384 context/4,096 output/11,469 input reviewer envelope to both arms and controls. See [the preflight diagnosis](../../../docs/findings/natural-memory-consultation/history-h4-preflight-blocker-2026-09-26.md). The runner still fails closed on the full candidate reserve. Optional older windows can be lost on long follow-ups; retain their capacity omissions as observations.
 
+The first amended live run stopped when the `user_retraction` empty-arm turn exhausted the unchanged two-request conversation tool-step ceiling. The [partial H4/H5 finding](../../../docs/findings/natural-memory-consultation/history-h4-h5-partial-live-2026-09-26.md) records 10 committed, one rejected and 15 unrun cells. Its ignored output directory keeps the exact attempt packets, blind review packet, stage audit and independent database readback; do not resume that one-shot directory or reroll its failed cell.
+
 To reproduce the structural database checks, use an isolated PostgreSQL 15
 instance with pgvector and a passwordless loopback `ade_owner` database named
 `ade_history_test_<hex>`. On a host with Docker, for example:

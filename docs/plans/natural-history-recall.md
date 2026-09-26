@@ -412,8 +412,12 @@ preflight diagnosis. The original H2-hashed contract remains unchanged; the
 evaluation-only H4 overlay sets reviewer context to 16,384 and input to 11,469
 while retaining 4,096 output and the 5% safety rule. Both arms and controls use
 the same envelope. Long follow-up replies may omit optional older windows;
-record that as capacity loss. H4/H5 dialogue scoring and any production decision
-remain pending.
+record that as capacity loss. The amended one-shot run subsequently completed
+four controls and three paired targets before the empty-arm `user_retraction`
+turn exhausted the unchanged two-request conversation tool-step ceiling. It
+preserved one failed and 15 unrun cells, including all follow-ups, with no
+retry. See the [partial H4/H5 finding](../findings/natural-memory-consultation/history-h4-h5-partial-live-2026-09-26.md).
+Blind director scoring and any production decision remain pending.
 
 [Assessment dispositions](../findings/natural-memory-consultation/history-recall-review-assessment.md)
 map to sections 1/2 (snapshot and source-relative lineage), 3 (distinct transcript

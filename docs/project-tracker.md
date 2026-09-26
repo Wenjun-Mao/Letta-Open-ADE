@@ -58,7 +58,13 @@ and PC-09 (simplicity and observational request counts).
   The H2-hashed source contract stays unchanged; the separate H4 overlay binds
   that evidence and gives both paired arms and all controls 16,384 reviewer
   context, 4,096 output and 11,469 input after the existing 5% safety reserve.
-  H4/H5 live outcomes remain pending. The stale-policy gate remains unwaived.
+  The stale-policy gate remains unwaived.
+- The amended one-shot H4 campaign reached four controls and three complete
+  target pairs before `user_retraction` exhausted the frozen two-request
+  conversation tool-step ceiling. Its 10 committed, one rejected and 15 unrun
+  cells are retained in the [partial H4/H5 finding](findings/natural-memory-consultation/history-h4-h5-partial-live-2026-09-26.md).
+  Three base-packet pairs match; blind human labels and follow-up trajectories
+  remain pending. No retry, ceiling increase or production promotion followed.
 
 Earlier authorization and status statements below describe their dated
 checkpoints, not current commands or proof of completion. In particular, old
