@@ -1,6 +1,8 @@
 # H4/H5 partial live checkpoint: conversation tool-step ceiling
 
-Status: stopped at the first structural run failure; director semantic review pending, 2026-09-26.
+Status: historical runner stopped at its first uncommitted turn; later offline review classified it as a verified bounded rejection. Director semantic review remains pending, 2026-09-26.
+
+Post-run [offline interpretation correction](history-h4-offline-review-correction-2026-09-26.md): the old runner's `stopped_structural` label overclassified a verified bounded no-commit rejection. The original manifest and captures are unchanged. Its 15 unrun top-level cells plus six dependent follow-ups are 21 unrun native turns; provisional director AI observations are recorded separately.
 
 **Read the [blind three-pair packet](../../../workflows/evals/character_memory_dev/outputs/history-h4-live-20260926/blind-review.json) before the stage interpretations below.** Its A/B labels do not identify the arms. The key is stored separately in the ignored output directory. Candidate and delivered text are both present; no human score has been entered.
 
@@ -41,4 +43,4 @@ These excerpts are not scores. The repair answer that says “是早上呀” ma
 
 Only three of eleven target pairs are complete, and just two belong to H2's named held-out ranking subset. No follow-up trajectory, long-reply capacity behavior, repeated callback tendency, stable latency distribution, or full H4 score is available. Blind labels have not been reviewed by a person; there were no extra judge calls. This checkpoint cannot establish human acceptance, the frozen p95 criterion, product reliability, or production qualification. The known stale-policy gate remains unwaived.
 
-The director must decide whether a separate re-frozen campaign with a different conversation request ceiling is warranted. This run is immutable evidence of the two-request ceiling and its 15 unrun cells. No further H4 dispatch should be attached to this one-shot result.
+The director must decide whether a fresh source-bound campaign for independent unrun cases is warranted and whether the inherited prompt/tool contract needs correction first. This run is immutable evidence of the two-request ceiling and its 15 unrun top-level cells. No further H4 dispatch should be attached to this one-shot result; a ceiling increase is not implied by this failure.

@@ -69,6 +69,9 @@ class CampaignStop(RuntimeError):
     """A native integrity failure invalidates the remaining finite schedule."""
 
 
+OBSERVABLE_REJECTION_DETAILS = frozenset({"conversation_tool_step_budget_exceeded"})
+
+
 def _planned_cells(contract: dict, fixture: dict) -> list[dict]:
     followups = set(contract["paired_schedule"]["followup_case_ids_per_arm"])
     return [
@@ -85,17 +88,69 @@ def _planned_cells(contract: dict, fixture: dict) -> list[dict]:
     ]
 
 
-def _require_valid_cell(result: dict) -> None:
+def _planned_turns(contract: dict, fixture: dict) -> list[dict[str, str]]:
+    turns = []
+    for cell in _planned_cells(contract, fixture):
+        turns.append({"name": cell["name"], "arm": cell["arm"], "turn": "target"})
+        if cell.get("followup_scheduled"):
+            turns.append(
+                {"name": cell["name"], "arm": cell["arm"], "turn": "followup"}
+            )
+    return turns
+
+
+def _classify_cell(result: dict) -> str:
+    """Separate a verified bounded model rejection from native integrity loss."""
     target = result.get("target") or {}
-    if (
-        result.get("status") != "observed"
-        or target.get("status") != "committed"
-        or target.get("base_packet") is None
+    captures = target.get("provider_captures") or []
+    evidence_complete = (
+        target.get("terminal_safety") == "verified"
+        and bool(target.get("attempt_sha256"))
+        and captures
+        and all(receipt.get("status") == "completed" for receipt in captures)
+    )
+    if evidence_complete and result.get("status") == "observed" and (
+        target.get("status") == "committed"
+        and target.get("terminal_outcome") == "committed"
+        and target.get("base_packet") is not None
     ):
-        raise CampaignStop(
-            f"{result['name']}/{result['arm']} failed native integrity: "
-            f"{result.get('failure') or target.get('failure') or target.get('status')}"
-        )
+        return "committed"
+    delta = target.get("observed_delta") or {}
+    no_commit = (
+        delta.get("generation_advance") == 0
+        and delta.get("revision_count") == 0
+        and delta.get("entity_additions") == []
+        and delta.get("run_revisions") == []
+        and delta.get("other_revision_ids") == []
+    )
+    if evidence_complete and no_commit and result.get("status") == "rejected" and (
+        target.get("status") == "rejected"
+        and target.get("terminal_outcome") == "confirmed_rejection"
+        and (target.get("run") or {}).get("status") == "failed"
+        and target.get("failure_detail_code") in OBSERVABLE_REJECTION_DETAILS
+    ):
+        return "bounded_rejection"
+    raise CampaignStop(
+        f"{result['name']}/{result['arm']} has invalid native evidence: "
+        f"{result.get('failure') or target.get('failure') or target.get('status')}"
+    )
+
+
+def _paired_packet_check(case_id: str, paired: list[dict]) -> dict:
+    left = paired[0].get("target", {}).get("base_packet")
+    right = paired[1].get("target", {}).get("base_packet")
+    comparable = left is not None and right is not None
+    equal = left == right if comparable else None
+    return {
+        "case_id": case_id,
+        "comparable": comparable,
+        "base_packet_equal": equal,
+        "status": (
+            "incomplete_bounded_rejection"
+            if not comparable
+            else "matched" if equal else "mismatched"
+        ),
+    }
 
 
 def reviewer_envelope_lower_bound(contract: dict, fixture: dict) -> dict[str, int]:
@@ -227,12 +282,13 @@ async def run(args: argparse.Namespace) -> None:
                     sort_keys=True,
                 ).encode()
             ).hexdigest(),
-            "dispatch_ceiling": {"generation": 96, "embedding": 160},
             "scheduled_controls": contract["paired_schedule"]["native_control_ids"],
             "scheduled_targets": [case["id"] for case in fixture["cases"]],
             "scheduled_followups_per_arm": fixture["followup_schedule"],
             "planned_cells": _planned_cells(contract, fixture),
+            "planned_turns": _planned_turns(contract, fixture),
             "cells": [],
+            "cell_dispositions": [],
             "pair_checks": [],
         }
         write_json(args.output / "manifest.json", manifest)
@@ -321,7 +377,11 @@ async def run(args: argparse.Namespace) -> None:
                 )
                 manifest["cells"].append(result)
                 write_json(args.output / "manifest.json", manifest)
-                _require_valid_cell(result)
+                disposition = _classify_cell(result)
+                manifest["cell_dispositions"].append(
+                    {"name": result["name"], "arm": result["arm"], "disposition": disposition}
+                )
+                write_json(args.output / "manifest.json", manifest)
                 index += 1
             for case in fixture["cases"]:
                 paired = []
@@ -343,25 +403,24 @@ async def run(args: argparse.Namespace) -> None:
                     manifest["cells"].append(result)
                     paired.append(result)
                     write_json(args.output / "manifest.json", manifest)
-                    _require_valid_cell(result)
+                    disposition = _classify_cell(result)
+                    manifest["cell_dispositions"].append(
+                        {"name": result["name"], "arm": result["arm"], "disposition": disposition}
+                    )
+                    write_json(args.output / "manifest.json", manifest)
                     index += 1
-                left = paired[0].get("target", {}).get("base_packet")
-                right = paired[1].get("target", {}).get("base_packet")
-                manifest["pair_checks"].append(
-                    {
-                        "case_id": case["id"],
-                        "comparable": left is not None and right is not None,
-                        "base_packet_equal": (
-                            left == right
-                            if left is not None and right is not None
-                            else None
-                        ),
-                    }
-                )
+                manifest["pair_checks"].append(_paired_packet_check(case["id"], paired))
                 write_json(args.output / "manifest.json", manifest)
-                if manifest["pair_checks"][-1]["base_packet_equal"] is not True:
+                if manifest["pair_checks"][-1]["base_packet_equal"] is False:
                     raise CampaignStop(f"{case['id']} paired base packets differ")
-            manifest["status"] = "completed_pending_director_semantic_review"
+            manifest["status"] = (
+                "completed_with_bounded_rejections_pending_director_review"
+                if any(
+                    item["disposition"] == "bounded_rejection"
+                    for item in manifest["cell_dispositions"]
+                )
+                else "completed_pending_director_semantic_review"
+            )
         except CampaignStop as exc:
             manifest["status"] = "stopped_structural"
             manifest["stop_reason"] = str(exc)

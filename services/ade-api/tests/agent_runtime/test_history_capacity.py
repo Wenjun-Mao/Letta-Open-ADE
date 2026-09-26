@@ -14,8 +14,10 @@ from ade_api.features.agent_runtime.history_capacity import (
 from ade_api.features.agent_runtime.natural_context import HISTORY_PROBE_POLICY
 from workflows.evals.character_memory_dev.history_h4_campaign import (
     CampaignStop,
+    _classify_cell,
+    _paired_packet_check,
     _planned_cells,
-    _require_valid_cell,
+    _planned_turns,
     reviewer_envelope_lower_bound,
 )
 from workflows.evals.character_memory_dev.history_h4_run import (
@@ -79,6 +81,7 @@ def test_amended_h4_reviewer_envelope_reserves_full_generation_reply() -> None:
 def test_h4_schedule_retains_all_cells_and_stops_only_on_integrity() -> None:
     contract, fixture, _ = _frozen_inputs()
     assert len(_planned_cells(contract, fixture)) == 4 + 11 * 2
+    assert len(_planned_turns(contract, fixture)) == 4 + 11 * 2 + 3 * 2
     semantic_failure = {
         "name": "control-scope_add",
         "arm": "empty_history",
@@ -86,13 +89,55 @@ def test_h4_schedule_retains_all_cells_and_stops_only_on_integrity() -> None:
         "target": {
             "status": "committed",
             "base_packet": {"messages": []},
+            "terminal_safety": "verified",
+            "terminal_outcome": "committed",
+            "attempt_sha256": "a" * 64,
+            "provider_captures": [{"status": "completed"}],
             "expected_delta_issues": ["wrong semantic delta"],
         },
     }
-    _require_valid_cell(semantic_failure)
+    assert _classify_cell(semantic_failure) == "committed"
     semantic_failure["target"]["base_packet"] = None
     with pytest.raises(CampaignStop):
-        _require_valid_cell(semantic_failure)
+        _classify_cell(semantic_failure)
+
+
+def test_h4_verified_tool_step_rejection_is_observed_without_committed_output() -> None:
+    rejected = {
+        "name": "user_retraction",
+        "arm": "empty_history",
+        "status": "rejected",
+        "target": {
+            "status": "rejected",
+            "run": {"status": "failed"},
+            "terminal_safety": "verified",
+            "terminal_outcome": "confirmed_rejection",
+            "failure_detail_code": "conversation_tool_step_budget_exceeded",
+            "attempt_sha256": "a" * 64,
+            "provider_captures": [{"status": "completed"}],
+            "observed_delta": {
+                "generation_advance": 0,
+                "revision_count": 0,
+                "entity_additions": [],
+                "run_revisions": [],
+                "other_revision_ids": [],
+            },
+        },
+    }
+    assert _classify_cell(rejected) == "bounded_rejection"
+    incomplete = _paired_packet_check(
+        "user_retraction",
+        [rejected, {"target": {"base_packet": {"messages": []}}}],
+    )
+    assert incomplete["status"] == "incomplete_bounded_rejection"
+    assert incomplete["base_packet_equal"] is None
+    rejected["target"]["failure_detail_code"] = "natural_history_integrity"
+    with pytest.raises(CampaignStop):
+        _classify_cell(rejected)
+    rejected["target"]["failure_detail_code"] = "conversation_tool_step_budget_exceeded"
+    rejected["target"]["provider_captures"][0]["status"] = "missing"
+    with pytest.raises(CampaignStop):
+        _classify_cell(rejected)
 
 
 @pytest.mark.parametrize("mutation", ["fingerprint", "capacity", "provider", "repair"])

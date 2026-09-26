@@ -415,9 +415,17 @@ the same envelope. Long follow-up replies may omit optional older windows;
 record that as capacity loss. The amended one-shot run subsequently completed
 four controls and three paired targets before the empty-arm `user_retraction`
 turn exhausted the unchanged two-request conversation tool-step ceiling. It
-preserved one failed and 15 unrun cells, including all follow-ups, with no
-retry. See the [partial H4/H5 finding](../findings/natural-memory-consultation/history-h4-h5-partial-live-2026-09-26.md).
+preserved one failed and 15 unrun top-level cells; all six follow-ups were
+also unrun, with no retry. See the [partial H4/H5 finding](../findings/natural-memory-consultation/history-h4-h5-partial-live-2026-09-26.md).
 Blind director scoring and any production decision remain pending.
+
+The [offline review correction](../findings/natural-memory-consultation/history-h4-offline-review-correction-2026-09-26.md)
+keeps that one-shot result immutable while classifying the failed turn as a
+verified bounded rejection rather than an observed integrity violation. The
+15 unrun top-level cells plus six dependent follow-ups are 21 unrun native
+turns. Future H4 transport counts dispatches without campaign-wide spend
+gates, and its scheduler may continue independent cells after this specific
+fully evidenced rejection; the two-request per-turn ceiling remains frozen.
 
 [Assessment dispositions](../findings/natural-memory-consultation/history-recall-review-assessment.md)
 map to sections 1/2 (snapshot and source-relative lineage), 3 (distinct transcript

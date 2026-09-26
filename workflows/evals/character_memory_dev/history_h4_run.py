@@ -25,7 +25,10 @@ from ade_api.features.agent_runtime.history_native_rank import (
 from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
 )
-from ade_api.features.agent_runtime.persistence.metadata import memory_entities
+from ade_api.features.agent_runtime.persistence.metadata import (
+    memory_entities,
+    run_events,
+)
 from ade_api.features.agent_runtime.resource_service import ResourceService
 from ade_api.features.agent_runtime.run_service import RunService
 from ade_api.features.agent_runtime.worker import AgentRuntimeWorker
@@ -318,6 +321,15 @@ async def _execute_turn(
                     memory_entities.c.kind == "subject",
                 )
             )
+            failure_payload = await connection.scalar(
+                select(run_events.c.payload)
+                .where(
+                    run_events.c.run_id == run_id,
+                    run_events.c.event_type == "run.failed",
+                )
+                .order_by(run_events.c.sequence.desc())
+                .limit(1)
+            )
         issues = compare_expected_delta(
             observed,
             expected,
@@ -338,6 +350,8 @@ async def _execute_turn(
             attempt_artifact=str(attempt_path),
             attempt_sha256=sha256_file(attempt_path),
             terminal_safety=safety,
+            terminal_outcome=attempt["terminal_readback"]["outcome"],
+            failure_detail_code=(failure_payload or {}).get("error_detail_code"),
             observed_delta=observed,
             expected_delta_issues=issues,
             stage_evidence=attempt.get("history_selection"),

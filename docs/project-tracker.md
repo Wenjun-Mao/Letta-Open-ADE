@@ -65,6 +65,13 @@ and PC-09 (simplicity and observational request counts).
   cells are retained in the [partial H4/H5 finding](findings/natural-memory-consultation/history-h4-h5-partial-live-2026-09-26.md).
   Three base-packet pairs match; blind human labels and follow-up trajectories
   remain pending. No retry, ceiling increase or production promotion followed.
+- [Offline review](findings/natural-memory-consultation/history-h4-offline-review-correction-2026-09-26.md)
+  corrected the runner's blanket structural-stop label for the verified
+  tool-step rejection and removed its active campaign-wide 96/160 dispatch
+  gates; counts remain observational. The historical manifest is unchanged.
+  Its 26 top-level cells plus six dependent follow-ups mean 11 attempted and
+  21 unrun native turns. Provisional director AI semantic notes are not human
+  or fully blind acceptance. No new provider calls followed this review.
 
 Earlier authorization and status statements below describe their dated
 checkpoints, not current commands or proof of completion. In particular, old

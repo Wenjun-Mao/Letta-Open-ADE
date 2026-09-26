@@ -77,6 +77,8 @@ The first H4 preflight stopped **before live dispatch**: its smallest H-capable 
 
 The first amended live run stopped when the `user_retraction` empty-arm turn exhausted the unchanged two-request conversation tool-step ceiling. The [partial H4/H5 finding](../../../docs/findings/natural-memory-consultation/history-h4-h5-partial-live-2026-09-26.md) records 10 committed, one rejected and 15 unrun cells. Its ignored output directory keeps the exact attempt packets, blind review packet, stage audit and independent database readback; do not resume that one-shot directory or reroll its failed cell.
 
+The [offline interpretation correction](../../../docs/findings/natural-memory-consultation/history-h4-offline-review-correction-2026-09-26.md) distinguishes that verified bounded rejection from a source-integrity failure. H4 dispatch counters are observational; wrong routes still fail, and the per-turn request limits remain. The 15 unrun top-level targets and six dependent follow-ups are 21 unrun native turns. A separate review-only proposal lists them; no dispatch or replay is implied.
+
 To reproduce the structural database checks, use an isolated PostgreSQL 15
 instance with pgvector and a passwordless loopback `ade_owner` database named
 `ade_history_test_<hex>`. On a host with Docker, for example:

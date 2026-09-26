@@ -10,20 +10,15 @@ from .history_h2_router import ContainerEmbeddingClient
 
 
 class SplitHistoryTransport:
-    """One catalog, two pinned providers, with finite pre-dispatch ceilings."""
+    """One catalog, two pinned providers, with observational dispatch counts."""
 
     def __init__(
         self,
         deepseek,
         qwen: ContainerEmbeddingClient,
-        *,
-        max_generation: int = 96,
-        max_embedding: int = 160,
     ) -> None:
         self.deepseek = deepseek
         self.qwen = qwen
-        self.max_generation = max_generation
-        self.max_embedding = max_embedding
         self.generation_dispatches = 0
         self.embedding_dispatches = 0
 
@@ -45,11 +40,8 @@ class SplitHistoryTransport:
     async def chat_completion(
         self, payload: dict[str, Any], *, timeout_seconds: float
     ) -> dict[str, Any]:
-        if (
-            payload.get("model") != "deepseek::deepseek-flash"
-            or self.generation_dispatches >= self.max_generation
-        ):
-            raise RuntimeError("H4 generation route or dispatch ceiling differs")
+        if payload.get("model") != "deepseek::deepseek-flash":
+            raise RuntimeError("H4 generation route differs")
         self.generation_dispatches += 1
         return await self.deepseek.chat_completion(
             payload, timeout_seconds=timeout_seconds
@@ -58,11 +50,8 @@ class SplitHistoryTransport:
     async def embeddings(
         self, payload: dict[str, Any], *, timeout_seconds: float
     ) -> dict[str, Any]:
-        if (
-            payload.get("model") != HISTORY_EMBEDDING_ROUTE
-            or self.embedding_dispatches >= self.max_embedding
-        ):
-            raise RuntimeError("H4 embedding route or dispatch ceiling differs")
+        if payload.get("model") != HISTORY_EMBEDDING_ROUTE:
+            raise RuntimeError("H4 embedding route differs")
         self.embedding_dispatches += 1
         vectors = await self.qwen.embed(
             inputs=payload["input"], timeout_seconds=timeout_seconds
