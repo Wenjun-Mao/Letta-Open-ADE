@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "offline-schedule-awaiting-director-review",
+  "status": "director-approved-seven-turn-diagnostic",
   "source_cases_sha256": "7a402aa3b0dba6c0672515698248b511c214fa08ed37c94fc0db2b881d7886df",
   "h2_result_sha256": "8c6bc0ff6c648f05be0edcfd2834f34116f237d619e4531234ac13599142ba32",
   "h4_reviewer_amendment_sha256": "8d5958eb85006dd03705687026dd13031e599858c8611a946e2919468feefdb9",

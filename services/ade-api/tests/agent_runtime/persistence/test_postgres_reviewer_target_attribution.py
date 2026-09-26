@@ -6,11 +6,9 @@ import asyncio
 import hashlib
 import json
 import os
-from copy import deepcopy
 from pathlib import Path
 
 import pytest
-from sqlalchemy import select
 
 import ade_api.features.agent_runtime.natural_attempt_evidence as evidence_module
 from ade_api.features.agent_runtime.agent_studio_sessions import PurposeSessionService
@@ -22,14 +20,13 @@ from ade_api.features.agent_runtime.natural_context import HISTORY_PROBE_POLICY
 from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
 )
-from ade_api.features.agent_runtime.persistence.metadata import memory_facts
 from ade_api.features.agent_runtime.resource_service import ResourceService
 from ade_api.features.agent_runtime.run_service import RunService
 from ade_api.features.agent_runtime.worker import AgentRuntimeWorker
 from ade_api.platform.settings import AdeApiSettings
-from workflows.evals.character_memory_dev.history_h4_run import (
-    QWEN_FINGERPRINT,
-    _execute_cell,
+from workflows.evals.character_memory_dev.history_h4_run import QWEN_FINGERPRINT
+from workflows.evals.character_memory_dev.history_target_diagnostic_run import (
+    execute_trajectory,
 )
 from workflows.evals.character_memory_dev.natural_live_transport import (
     NaturalLiveTransport,
@@ -193,6 +190,11 @@ def test_native_target_attribution_and_removed_jasmine_trajectories(
                 expected_embedding_fingerprint=QWEN_FINGERPRINT,
             ),
         )
+        schedule = json.loads(
+            Path(
+                "workflows/evals/character_memory_dev/fixtures/history_recall/target_attribution_diagnostic.json"
+            ).read_text()
+        )
         cases = {
             case["id"]: case
             for case in json.loads(
@@ -202,42 +204,43 @@ def test_native_target_attribution_and_removed_jasmine_trajectories(
             )["cases"]
         }
         try:
-            for index, old_name in enumerate(("Roxy", "Nini")):
-                case = deepcopy(cases["h_only_referent"])
-                case["followup"]["user"] = (
-                    f"我是说以前那只叫 {old_name} 的"
-                    f"{'黑' if old_name == 'Roxy' else '白'}狗，现在叫小黑。"
-                )
-                result = await _execute_cell(
-                    name=f"ambiguous-{old_name.lower()}",
-                    case=case,
-                    target=case,
-                    arm="automatic_history",
+            results = {}
+            for index, trajectory in enumerate(schedule["trajectories"]):
+                result = await execute_trajectory(
+                    trajectory=trajectory,
+                    case=cases[trajectory["seed_case"]],
+                    index=index,
                     sessions=sessions,
                     service=service,
                     resources=resources,
-                    workers={"automatic_history": worker},
+                    worker=worker,
                     engine=engine,
                     transport=transport,
                     output=tmp_path,
-                    index=index,
                 )
-                assert result["status"] == "observed", result.get("failure")
-                target = result["target"]
-                followup = result["followup"]
-                assert target["observed_delta"]["revision_count"] == 0
-                assert target["observed_delta"]["generation_advance"] == 0
-                target_facts = {fact["id"]: fact for fact in target["memory"]["facts"]}
+                assert result["status"] == "observed"
+                results[trajectory["id"]] = result
+            assert (
+                len({item["session"]["subject_id"] for item in results.values()}) == 4
+            )
+
+            for old_name, key in (
+                ("Roxy", "ambiguous_then_roxy"),
+                ("Nini", "ambiguous_then_nini"),
+            ):
+                result = results[key]
+                ambiguous, clarified = result["turns"]
+                assert ambiguous["disposition"] == "committed"
+                assert ambiguous["observed_delta"]["revision_count"] == 0
+                by_id = {fact["id"]: fact for fact in ambiguous["after_facts"]}
                 assert (
-                    target_facts[result["setup"]["fact_ids"]["roxy_name"]]["value"]
-                    == "Roxy"
+                    by_id[result["setup"]["fact_ids"]["roxy_name"]]["value"] == "Roxy"
                 )
                 assert (
-                    target_facts[result["setup"]["fact_ids"]["nini_name"]]["value"]
-                    == "Nini"
+                    by_id[result["setup"]["fact_ids"]["nini_name"]]["value"] == "Nini"
                 )
-                assert followup["status"] == "committed"
-                revisions = followup["observed_delta"]["run_revisions"]
+                assert clarified["disposition"] == "committed"
+                revisions = clarified["run_revisions"]
                 assert len(revisions) == 1
                 assert (
                     revisions[0]["fact_id"]
@@ -249,97 +252,54 @@ def test_native_target_attribution_and_removed_jasmine_trajectories(
                 assert revisions[0]["value"] == "小黑"
                 assert any(
                     source["authority_role"] == "user_assertion"
-                    and source["quote"] == case["followup"]["user"]
+                    and source["quote"] == clarified["user"]
                     for source in revisions[0]["sources"]
                 )
-                by_id = {fact["id"]: fact for fact in followup["memory"]["facts"]}
+                by_id = {fact["id"]: fact for fact in clarified["after_facts"]}
                 other = "nini_name" if old_name == "Roxy" else "roxy_name"
                 assert by_id[result["setup"]["fact_ids"][other]]["value"] == (
                     "Nini" if old_name == "Roxy" else "Roxy"
                 )
 
-            explicit = deepcopy(cases["h_only_referent"])
-            explicit["target"]["user"] = "Roxy 现在叫小黑。"
-            explicit.pop("followup")
-            result = await _execute_cell(
-                name="explicit-roxy",
-                case=explicit,
-                target=explicit,
-                arm="automatic_history",
-                sessions=sessions,
-                service=service,
-                resources=resources,
-                workers={"automatic_history": worker},
-                engine=engine,
-                transport=transport,
-                output=tmp_path,
-                index=2,
-            )
-            assert result["status"] == "observed", result.get("failure")
-            revisions = result["target"]["observed_delta"]["run_revisions"]
+            result = results["explicit_roxy"]
+            explicit = result["turns"][0]
+            assert explicit["disposition"] == "committed"
+            revisions = explicit["run_revisions"]
             assert len(revisions) == 1
             assert revisions[0]["fact_id"] == result["setup"]["fact_ids"]["roxy_name"]
             assert revisions[0]["value"] == "小黑"
-            explicit_facts = {
-                fact["id"]: fact for fact in result["target"]["memory"]["facts"]
-            }
+            explicit_facts = {fact["id"]: fact for fact in explicit["after_facts"]}
             assert (
                 explicit_facts[result["setup"]["fact_ids"]["nini_name"]]["value"]
                 == "Nini"
             )
 
-            jasmine = deepcopy(cases["removed_acknowledgment"])
-            result = await _execute_cell(
-                name="removed-jasmine",
-                case=jasmine,
-                target=jasmine,
-                arm="automatic_history",
-                sessions=sessions,
-                service=service,
-                resources=resources,
-                workers={"automatic_history": worker},
-                engine=engine,
-                transport=transport,
-                output=tmp_path,
-                index=3,
-            )
-            assert result["status"] == "observed", result.get("failure")
-            assert result["target"]["observed_delta"]["revision_count"] == 0
-            target_attempt = json.loads(
-                Path(result["target"]["attempt_artifact"]).read_text()
-            )
-            assert "以前提过茉莉花茶" in target_attempt["candidate_visible_reply"]
-            reviewer_packet = json.loads(
-                target_attempt["reviewer_request"]["messages"][1]["content"]
-            )
+            result = results["removed_jasmine"]
+            remembered, renewed = result["turns"]
+            assert remembered["observed_delta"]["revision_count"] == 0
+            assert "以前提过茉莉花茶" in remembered["delivered_reply"]
             assert any(
                 "我以前喜欢茉莉花茶" in message["content"]
-                for exchange in reviewer_packet["history"]
+                for exchange in remembered["admitted_history"]
                 for message in exchange["messages"]
             )
-            revisions = result["followup"]["observed_delta"]["run_revisions"]
+            revisions = renewed["run_revisions"]
             assert len(revisions) == 1
             assert revisions[0]["operation"] == "add"
-            assert revisions[0]["fact_type"] == "person.preference"
             assert (
                 revisions[0]["fact_id"]
                 != result["setup"]["fact_ids"]["jasmine_preference"]
             )
             assert revisions[0]["value"] == "现在喜欢茉莉花茶"
-            assert revisions[0]["sources"] == [
-                {
-                    "quote": jasmine["followup"]["user"],
-                    "authority_role": "user_assertion",
-                }
-            ]
-            async with engine.connect() as connection:
-                old_status = await connection.scalar(
-                    select(memory_facts.c.status).where(
-                        memory_facts.c.id
-                        == result["setup"]["fact_ids"]["jasmine_preference"]
-                    )
-                )
-            assert old_status == "forgotten"
+            assert len(revisions[0]["sources"]) == 1
+            assert revisions[0]["sources"][0]["quote"] == renewed["user"]
+            assert revisions[0]["sources"][0]["authority_role"] == "user_assertion"
+            by_id = {fact["id"]: fact for fact in renewed["after_facts"]}
+            assert (
+                by_id[result["setup"]["fact_ids"]["jasmine_preference"]]["status"]
+                == "forgotten"
+            )
+            assert by_id[revisions[0]["fact_id"]]["fact_type"] == "person.preference"
         finally:
             await engine.dispose()
 

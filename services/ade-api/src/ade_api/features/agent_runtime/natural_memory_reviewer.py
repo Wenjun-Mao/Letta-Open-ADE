@@ -40,7 +40,7 @@ a report of a drinking habit.
 For every write, establish both the asserted change and its attachment to the
 intended entity or fact. An exact current quote and an available F/E target do
 not by themselves resolve an ambiguous referent. If materially plausible
-targets remain, defer the mutation until the user clarifies; historical
+alternative targets remain, defer the mutation until the user clarifies; historical
 dialogue may inform the clarification question. Clear references and explicit
 updates can be written immediately.
 Lifecycle operations have target preconditions: revise only an active fact when

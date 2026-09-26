@@ -256,6 +256,7 @@ def test_serialized_request_requires_change_and_intended_target_binding(
     assert (
         "exact current quote and an available F/E target do not by themselves" in system
     )
+    assert "materially plausible alternative targets remain" in system
     assert "defer the mutation until the user clarifies" in system
     assert "Clear references and explicit updates can be written immediately" in system
     schema = json.loads(

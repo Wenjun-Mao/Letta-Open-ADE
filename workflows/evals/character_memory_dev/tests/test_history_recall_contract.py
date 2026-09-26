@@ -87,7 +87,7 @@ def test_target_attribution_diagnostic_is_seven_fresh_native_turns() -> None:
             CONTRACT.with_name("h4_reviewer_amendment.json").read_bytes()
         ).hexdigest()
     )
-    assert schedule["status"] == "offline-schedule-awaiting-director-review"
+    assert schedule["status"] == "director-approved-seven-turn-diagnostic"
     assert schedule["arm"] == "automatic_history"
     trajectories = schedule["trajectories"]
     assert [len(item["turns"]) for item in trajectories] == [2, 2, 1, 2]

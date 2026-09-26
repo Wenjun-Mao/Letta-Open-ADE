@@ -1,7 +1,8 @@
 # ADR 0043: Reviewer Target Attribution Before Mutation
 
-Status: Proposed for director review of the offline correction checkpoint, 2026-09-26.
-No live semantic acceptance, production history policy, or release qualification.
+Status: Accepted for the bounded diagnostic on 2026-09-26 after director
+offline review. No live semantic acceptance, production history policy, or
+release qualification.
 
 ## Problem
 

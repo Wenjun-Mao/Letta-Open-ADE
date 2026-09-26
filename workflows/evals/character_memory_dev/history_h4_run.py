@@ -68,7 +68,8 @@ def _frozen_inputs() -> tuple[dict, dict, dict]:
     if (
         sha256_file(FIXTURES / "contract.json") != H2_CONTRACT_SHA256
         or sha256_file(FIXTURES / "cases.json") != H4_CASES_SHA256
-        or amendment != {
+        or amendment
+        != {
             "schema_version": 1,
             "status": "director-approved-h4-reviewer-envelope-2026-09-26",
             "h2_contract_sha256": H2_CONTRACT_SHA256,
@@ -266,7 +267,7 @@ async def _execute_turn(
     *,
     label: str,
     content: str,
-    expected: dict,
+    expected: dict | None,
     arm: str,
     conversation_id: str,
     subject_id: str,
@@ -330,11 +331,15 @@ async def _execute_turn(
                 .order_by(run_events.c.sequence.desc())
                 .limit(1)
             )
-        issues = compare_expected_delta(
-            observed,
-            expected,
-            seeded_fact_ids=seeded_fact_ids,
-            subject_entity_id=str(subject_entity_id),
+        issues = (
+            compare_expected_delta(
+                observed,
+                expected,
+                seeded_fact_ids=seeded_fact_ids,
+                subject_entity_id=str(subject_entity_id),
+            )
+            if expected is not None
+            else None
         )
         result.update(
             status=(

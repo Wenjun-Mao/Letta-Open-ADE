@@ -77,10 +77,13 @@ and PC-09 (simplicity and observational request counts).
   records its attributed interpretation and the narrow reviewer contract
   correction: mutation evidence must support both a change and its intended
   target. Serialized-request and seven-turn-shape native fake-provider PostgreSQL
-  checks passed offline. The [fresh diagnostic schedule](../workflows/evals/character_memory_dev/fixtures/history_recall/target_attribution_diagnostic.json)
-  awaits director review and a source-bound one-shot runner before any live
-  dispatch. No new live calls, production default, or release gate waiver
-  follow from the advisory review.
+  checks passed offline. Director accepted the bounded correction and authorized
+  the [fresh seven-turn diagnostic schedule](../workflows/evals/character_memory_dev/fixtures/history_recall/target_attribution_diagnostic.json).
+  Its one-shot native runner reuses the H4 seed, worker, transport, and evidence
+  path; fresh disposable PostgreSQL preflight and fake-provider execution passed.
+  Generation clarification and reviewer mutation deferral will be judged
+  separately. No production default or release gate waiver follows from the
+  advisory review or diagnostic authorization.
 
 Earlier authorization and status statements below describe their dated
 checkpoints, not current commands or proof of completion. In particular, old
