@@ -26,6 +26,11 @@ and PC-09 (simplicity and observational request counts).
   Revision 2 incorporates automatic versus baseline first, source-relative
   lifecycle and fresh-assertion boundaries, coherent snapshots, bounded purge checks,
   separate transcript ranking and stage-level scoring. Implementation remains unapproved.
+- Revision 2 received two conditional-go reports, preserved with a
+  [source-checked assessment](findings/natural-memory-consultation/history-recall-r2-review-assessment.md).
+  Remaining amendment: distinguish saved-fact repair from user retraction and
+  explicitly deadline-bound the new finalization history check. Other points are
+  bounded checkpoint tests, not a new architecture. No implementation is authorized.
 - The candidate-policy freshness failure remains unwaived; no release promotion
   or production change follows from these diagnostic results.
 
