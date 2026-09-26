@@ -1,151 +1,981 @@
 {
   "schema_version": 1,
-  "status": "h1-frozen-target-time-scripts",
-  "fixture_rule": "Each case has a fresh workspace/subject/root unless an excluded scope is named. Seed only setup exchanges and fact transitions before the target. Never seed target reply, future state, or expected answer into corpus/query/index. Each setup exchange is one succeeded user/assistant run with independently stored message hashes.",
+  "status": "h1-revised-offline-before-observations",
+  "fixture_rule": "Each case has independent primary workspace/subject/root. Setup array order is commit order; user_at/assistant_at are source times, and local sequence restarts per chat. Seed only completed setup exchanges and listed fact transitions before the pending target. Never seed target reply, follow-up, future state or expected answer into corpus/query/index. Missing workspace/subject/root mean primary, missing purpose means evaluation, missing version means 1 and missing archived means false.",
   "default_conversation_version": 1,
   "cases": [
     {
       "id": "archived_version_recall",
       "setup": [
-        {"id": "a1", "chat": "old", "version": 1, "archived": true, "user": "我小时候在外婆家学会包饺子。", "assistant": "原来包饺子是外婆教你的。"},
-        {"id": "a2", "chat": "recent", "version": 2, "user": "今天工作有点忙。", "assistant": "辛苦啦，先歇一会儿。"}
+        {
+          "id": "a1",
+          "chat": "old",
+          "version": 1,
+          "archived": true,
+          "user": "我小时候在外婆家学会包饺子。",
+          "assistant": "原来包饺子是外婆教你的。",
+          "order": 1,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "a2",
+          "chat": "recent",
+          "version": 2,
+          "user": "今天工作有点忙。",
+          "assistant": "辛苦啦，先歇一会儿。",
+          "order": 2,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        }
       ],
-      "current_facts": [],
-      "target": {"chat": "new", "version": 2, "user": "我以前说过是谁教我包饺子吗？"},
-      "required_evidence": ["a1:user", "a1:assistant"],
+      "target": {
+        "chat": "new",
+        "version": 2,
+        "user": "我以前说过是谁教我包饺子吗？",
+        "order": 3,
+        "user_sequence": 1
+      },
+      "required_evidence": [
+        "a1:user",
+        "a1:assistant"
+      ],
       "expected_delta": [],
-      "forbidden": ["恢复归档聊天", "换版本后当成另一个角色", "说自己亲自在外婆家学过"]
+      "forbidden": [
+        "恢复归档聊天",
+        "换版本后当成另一个角色",
+        "说自己亲自在外婆家学过"
+      ],
+      "facts": [],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "expected_revision_count": 0
     },
     {
       "id": "correction_return",
       "setup": [
-        {"id": "c1", "chat": "old", "user": "我早上更喜欢喝咖啡。", "assistant": "早上喜欢咖啡，我记下了。"},
-        {"id": "c2", "chat": "middle", "user": "现在早上更喜欢喝茶了。", "assistant": "现在早上更偏向茶。"},
-        {"id": "c3", "chat": "recent", "user": "最近早上又更喜欢咖啡。", "assistant": "这次又回到早上偏好咖啡。"}
+        {
+          "id": "c1",
+          "chat": "old",
+          "user": "我早上更喜欢喝咖啡。",
+          "assistant": "早上喜欢咖啡，我记下了。",
+          "order": 1,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "c2",
+          "chat": "middle",
+          "user": "我之前说早上喜欢咖啡是记错了，其实更喜欢茶。",
+          "assistant": "明白，先前咖啡的说法有误，你说早上其实更喜欢茶。",
+          "order": 2,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        },
+        {
+          "id": "c3",
+          "chat": "recent",
+          "user": "最近早上又更喜欢咖啡。",
+          "assistant": "这次又回到早上偏好咖啡。",
+          "order": 3,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:03:00+00:00",
+          "assistant_at": "2026-09-01T12:03:01+00:00"
+        }
       ],
-      "fact_chain": [{"source": "c1:user", "operation": "add", "reason": null}, {"source": "c2:user", "operation": "revise", "reason": "supersede"}, {"source": "c3:user", "operation": "revise", "reason": "supersede"}],
-      "current_facts": ["active morning-coffee preference"],
-      "target": {"chat": "new", "user": "我是不是一直都更喜欢早上喝咖啡？"},
-      "required_evidence": ["c1:user", "c2:user", "c3:user"],
+      "target": {
+        "chat": "new",
+        "user": "我是不是一直都更喜欢早上喝咖啡？",
+        "order": 4,
+        "user_sequence": 1
+      },
+      "required_evidence": [
+        "c1:user",
+        "c2:user",
+        "c3:user"
+      ],
       "expected_delta": [],
-      "forbidden": ["推断咖啡偏好从未中断", "把喝茶经历改写为没有发生"]
+      "forbidden": [
+        "推断咖啡偏好从未中断",
+        "把喝茶经历改写为没有发生"
+      ],
+      "facts": [
+        {
+          "id": "morning_drink",
+          "entity_id": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.preference",
+          "qualifier": "drink",
+          "transitions": [
+            {
+              "source": "c1:user",
+              "origin": "reviewer",
+              "operation": "add",
+              "reason": null,
+              "value": "早上更喜欢咖啡",
+              "status": "active",
+              "source_quote": "我早上更喜欢喝咖啡。"
+            },
+            {
+              "source": "c2:user",
+              "origin": "reviewer",
+              "operation": "revise",
+              "reason": "correct",
+              "value": "早上更喜欢茶",
+              "status": "active",
+              "source_quote": "我之前说早上喜欢咖啡是记错了，其实更喜欢茶。"
+            },
+            {
+              "source": "c3:user",
+              "origin": "reviewer",
+              "operation": "revise",
+              "reason": "supersede",
+              "value": "早上又更喜欢咖啡",
+              "status": "active",
+              "source_quote": "最近早上又更喜欢咖啡。"
+            }
+          ],
+          "current": {
+            "status": "active",
+            "value": "早上又更喜欢咖啡"
+          }
+        }
+      ],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "expected_revision_count": 0
     },
     {
       "id": "extraction_repair",
       "setup": [
-        {"id": "r1", "chat": "old", "user": "我早上更喜欢喝咖啡。", "assistant": "你说的是早上的咖啡偏好。"},
-        {"id": "r2", "chat": "later", "user": "我刚才说的是早上更喜欢咖啡，不是整天。", "assistant": "明白，是早上的范围。"}
+        {
+          "id": "r1",
+          "chat": "old",
+          "user": "我早上更喜欢喝咖啡。",
+          "assistant": "你说的是早上的咖啡偏好。",
+          "order": 1,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "r2",
+          "chat": "later",
+          "user": "我刚才说的是早上更喜欢咖啡，不是整天。",
+          "assistant": "明白，是早上的范围。",
+          "order": 2,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        }
       ],
-      "fact_chain": [{"source": "r1:user", "operation": "add", "stored_value": "all-day coffee preference"}, {"source": "r2:user", "operation": "revise", "reason": "correct", "stored_value": "morning coffee preference", "cause": "reviewer repaired extraction scope; original testimony already said morning"}],
-      "current_facts": ["active morning-coffee preference"],
-      "target": {"chat": "new", "user": "我一开始说的是整天都喜欢咖啡，还是只说早上？"},
-      "required_evidence": ["r1:user", "r1:assistant", "r2:user", "r1:source-relative-repair"],
+      "target": {
+        "chat": "new",
+        "user": "我一开始说的是整天都喜欢咖啡，还是只说早上？",
+        "order": 3,
+        "user_sequence": 1
+      },
+      "required_evidence": [
+        "r1:user",
+        "r1:assistant",
+        "r2:user",
+        "r1:source-relative-repair"
+      ],
       "expected_delta": [],
-      "forbidden": ["声称用户起初说整天", "把保存事实的修复称为用户反悔"]
+      "forbidden": [
+        "声称用户起初说整天",
+        "把保存事实的修复称为用户反悔"
+      ],
+      "facts": [
+        {
+          "id": "drink_scope",
+          "entity_id": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.preference",
+          "qualifier": "drink",
+          "transitions": [
+            {
+              "source": "r1:user",
+              "origin": "reviewer",
+              "operation": "add",
+              "reason": null,
+              "value": "整天更喜欢咖啡",
+              "status": "active",
+              "source_quote": "我早上更喜欢喝咖啡。"
+            },
+            {
+              "source": "r2:user",
+              "origin": "reviewer",
+              "operation": "revise",
+              "reason": "correct",
+              "value": "早上更喜欢咖啡",
+              "status": "active",
+              "source_quote": "我刚才说的是早上更喜欢咖啡，不是整天。"
+            }
+          ],
+          "current": {
+            "status": "active",
+            "value": "早上更喜欢咖啡"
+          }
+        }
+      ],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "expected_revision_count": 0
     },
     {
       "id": "user_retraction",
       "setup": [
-        {"id": "u1", "chat": "old", "user": "我住在北京。", "assistant": "你说你住在北京。"},
-        {"id": "u2", "chat": "later", "user": "我之前说住在北京是记错了，我只是去那里出差。", "assistant": "明白，先前的住址说法有误。"}
+        {
+          "id": "u1",
+          "chat": "old",
+          "user": "我住在北京。",
+          "assistant": "你说你住在北京。",
+          "order": 1,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "u2",
+          "chat": "later",
+          "user": "我之前说住在北京是记错了，我只是去那里出差。",
+          "assistant": "明白，先前的住址说法有误。",
+          "order": 2,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        }
       ],
-      "fact_chain": [{"source": "u1:user", "operation": "add"}, {"source": "u2:user", "operation": "end", "reason": "invalidated"}],
-      "current_facts": ["inactive/invalidated Beijing residence; no inferred new residence"],
-      "target": {"chat": "new", "user": "我最早怎么说北京的事，后来又怎么澄清？"},
-      "required_evidence": ["u1:user", "u2:user"],
+      "target": {
+        "chat": "new",
+        "user": "我最早怎么说北京的事，后来又怎么澄清？",
+        "order": 3,
+        "user_sequence": 1
+      },
+      "required_evidence": [
+        "u1:user",
+        "u2:user"
+      ],
       "expected_delta": [],
-      "forbidden": ["只凭 correct 代码推断澄清内容", "说现在住在另一个未提及的城市"]
+      "forbidden": [
+        "只凭 correct 代码推断澄清内容",
+        "说现在住在另一个未提及的城市"
+      ],
+      "facts": [
+        {
+          "id": "beijing_residence",
+          "entity_id": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.current_location",
+          "qualifier": null,
+          "transitions": [
+            {
+              "source": "u1:user",
+              "origin": "reviewer",
+              "operation": "add",
+              "reason": null,
+              "value": "北京",
+              "status": "active",
+              "source_quote": "我住在北京。"
+            },
+            {
+              "source": "u2:user",
+              "origin": "reviewer",
+              "operation": "end",
+              "reason": "invalidated",
+              "value": null,
+              "status": "inactive",
+              "source_quote": "我之前说住在北京是记错了，我只是去那里出差。"
+            }
+          ],
+          "current": {
+            "status": "inactive",
+            "value": "北京"
+          }
+        }
+      ],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "expected_revision_count": 0
     },
     {
       "id": "invalidated_ended",
       "setup": [
-        {"id": "i1", "chat": "old", "user": "我住在北京。", "assistant": "你说你住在北京。"},
-        {"id": "i2", "chat": "later", "user": "前面北京住址的说法不对。", "assistant": "那条住址说法不应当再当成现况。"},
-        {"id": "i3", "chat": "old", "user": "我和小王在交往。", "assistant": "听起来你们在交往。"},
-        {"id": "i4", "chat": "later", "user": "我和小王分手了。", "assistant": "知道了，这段关系已经结束。"}
+        {
+          "id": "i1",
+          "chat": "old",
+          "user": "我住在北京。",
+          "assistant": "你说你住在北京。",
+          "order": 1,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "i2",
+          "chat": "later",
+          "user": "前面北京住址的说法不对。",
+          "assistant": "那条住址说法不应当再当成现况。",
+          "order": 2,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        },
+        {
+          "id": "i3",
+          "chat": "old",
+          "user": "我和小王在交往。",
+          "assistant": "听起来你们在交往。",
+          "order": 3,
+          "user_sequence": 3,
+          "assistant_sequence": 4,
+          "user_at": "2026-09-01T12:03:00+00:00",
+          "assistant_at": "2026-09-01T12:03:01+00:00"
+        },
+        {
+          "id": "i4",
+          "chat": "later",
+          "user": "我和小王分手了。",
+          "assistant": "知道了，这段关系已经结束。",
+          "order": 4,
+          "user_sequence": 3,
+          "assistant_sequence": 4,
+          "user_at": "2026-09-01T12:04:00+00:00",
+          "assistant_at": "2026-09-01T12:04:01+00:00"
+        }
       ],
-      "fact_chain": [{"source": "i1:user", "operation": "add"}, {"source": "i2:user", "operation": "revise", "reason": "invalidated"}, {"source": "i3:user", "operation": "add"}, {"source": "i4:user", "operation": "end", "reason": "ended"}],
-      "current_facts": ["inactive Beijing residence", "inactive/ended relationship with Xiao Wang"],
-      "target": {"chat": "new", "user": "我之前说的北京住址和小王关系现在还成立吗？"},
-      "required_evidence": ["i1:user", "i2:user", "i3:user", "i4:user"],
+      "target": {
+        "chat": "new",
+        "user": "我之前说的北京住址和小王关系现在还成立吗？",
+        "order": 5,
+        "user_sequence": 1
+      },
+      "required_evidence": [
+        "i1:user",
+        "i2:user",
+        "i3:user",
+        "i4:user"
+      ],
       "expected_delta": [],
-      "forbidden": ["把北京当现居地", "把小王当现任", "编造相反态度"]
+      "forbidden": [
+        "把北京当现居地",
+        "把小王当现任",
+        "编造相反态度"
+      ],
+      "facts": [
+        {
+          "id": "beijing_residence",
+          "entity_id": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.current_location",
+          "qualifier": null,
+          "transitions": [
+            {
+              "source": "i1:user",
+              "origin": "reviewer",
+              "operation": "add",
+              "reason": null,
+              "value": "北京",
+              "status": "active",
+              "source_quote": "我住在北京。"
+            },
+            {
+              "source": "i2:user",
+              "origin": "reviewer",
+              "operation": "end",
+              "reason": "invalidated",
+              "value": null,
+              "status": "inactive",
+              "source_quote": "前面北京住址的说法不对。"
+            }
+          ],
+          "current": {
+            "status": "inactive",
+            "value": "北京"
+          }
+        },
+        {
+          "id": "xiao_wang_relationship",
+          "entity_id": "xiao_wang",
+          "entity_kind": "related_person",
+          "fact_type": "relationship.person",
+          "qualifier": "partner",
+          "transitions": [
+            {
+              "source": "i3:user",
+              "origin": "reviewer",
+              "operation": "add",
+              "reason": null,
+              "value": "小王",
+              "status": "active",
+              "source_quote": "我和小王在交往。"
+            },
+            {
+              "source": "i4:user",
+              "origin": "reviewer",
+              "operation": "end",
+              "reason": "ended",
+              "value": null,
+              "status": "inactive",
+              "source_quote": "我和小王分手了。"
+            }
+          ],
+          "current": {
+            "status": "inactive",
+            "value": "小王"
+          }
+        }
+      ],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "expected_revision_count": 0
     },
     {
       "id": "removed_acknowledgment",
       "setup": [
-        {"id": "f1", "chat": "old", "user": "我以前喜欢茉莉花茶。", "assistant": "你提过茉莉花茶。"}
+        {
+          "id": "f1",
+          "chat": "old",
+          "user": "我以前喜欢茉莉花茶。",
+          "assistant": "你提过茉莉花茶。",
+          "order": 1,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        }
       ],
-      "fact_chain": [{"source": "f1:user", "operation": "add"}, {"source": null, "operation": "forget", "reason": "forgotten", "cause": "operator removal"}],
-      "current_facts": ["forgotten jasmine-tea fact; no active tea preference"],
-      "target": {"chat": "new", "user": "你还记得我以前提过什么茶吗？"},
-      "required_evidence": ["f1:user", "f1:source-less-removal"],
+      "target": {
+        "chat": "new",
+        "user": "你还记得我以前提过什么茶吗？",
+        "order": 2,
+        "user_sequence": 1
+      },
+      "required_evidence": [
+        "f1:user",
+        "f1:source-less-removal"
+      ],
       "expected_delta": [],
-      "followup": {"user": "我现在又喜欢茉莉花茶了。", "expected_delta": ["one new supported active jasmine-tea preference; old forgotten chain remains forgotten"]},
-      "forbidden": ["仅凭旧历史恢复偏好", "声称旧对话被删除", "把旧修订改回 active"]
+      "followup": {
+        "user": "我现在又喜欢茉莉花茶了。",
+        "expected_delta": [
+          {
+            "kind": "subject_add",
+            "fact_id": "new_jasmine_preference",
+            "entity_id": "subject",
+            "fact_type": "person.preference",
+            "qualifier": "drink",
+            "value": "现在喜欢茉莉花茶",
+            "source_quote": "我现在又喜欢茉莉花茶了"
+          }
+        ],
+        "order": 3,
+        "user_sequence": 3,
+        "chat": "new",
+        "expected_generation_advance": 1,
+        "expected_entity_additions": [],
+        "expected_revision_count": 1
+      },
+      "forbidden": [
+        "仅凭旧历史恢复偏好",
+        "声称旧对话被删除",
+        "把旧修订改回 active"
+      ],
+      "facts": [
+        {
+          "id": "jasmine_preference",
+          "entity_id": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.preference",
+          "qualifier": "drink",
+          "transitions": [
+            {
+              "source": "f1:user",
+              "origin": "reviewer",
+              "operation": "add",
+              "reason": null,
+              "value": "以前喜欢茉莉花茶",
+              "status": "active",
+              "source_quote": "我以前喜欢茉莉花茶。"
+            },
+            {
+              "source": null,
+              "origin": "operator",
+              "operation": "forget",
+              "reason": "forgotten",
+              "value": null,
+              "status": "forgotten"
+            }
+          ],
+          "current": {
+            "status": "forgotten",
+            "value": null
+          }
+        }
+      ],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "expected_revision_count": 0
     },
     {
       "id": "h_only_referent",
       "setup": [
-        {"id": "h1", "chat": "old", "user": "我家有一只黑狗和一只白狗。", "assistant": "黑色那只叫什么名字？"},
-        {"id": "h2", "chat": "old", "user": "黑色那只叫 Roxy。", "assistant": "明白，Roxy 是黑色那只。"}
+        {
+          "id": "h1",
+          "chat": "old",
+          "user": "我家有一只黑狗和一只白狗。",
+          "assistant": "黑色那只叫什么名字？",
+          "order": 1,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "h2",
+          "chat": "old",
+          "user": "黑色那只叫 Roxy。",
+          "assistant": "明白，Roxy 是黑色那只。",
+          "order": 2,
+          "user_sequence": 3,
+          "assistant_sequence": 4,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        },
+        {
+          "id": "h3",
+          "chat": "old",
+          "user": "白色那只叫 Nini。",
+          "assistant": "Nini 是白色那只。",
+          "order": 3,
+          "user_sequence": 5,
+          "assistant_sequence": 6,
+          "user_at": "2026-09-01T12:03:00+00:00",
+          "assistant_at": "2026-09-01T12:03:01+00:00"
+        }
       ],
-      "current_facts": [],
-      "target": {"chat": "new", "user": "我当时说黑色那只叫什么？"},
-      "required_evidence": ["h1:user", "h1:assistant", "h2:user"],
+      "target": {
+        "chat": "new",
+        "user": "它现在叫小黑。",
+        "order": 4,
+        "user_sequence": 1,
+        "expected_delta": []
+      },
+      "required_evidence": [
+        "h1:user",
+        "h1:assistant",
+        "h2:user",
+        "h3:user"
+      ],
       "expected_delta": [],
-      "forbidden": ["把历史 H 当成当前写入授权", "把白狗叫 Roxy"]
+      "forbidden": [
+        "凭 H-only 指代直接改写 Roxy 名字",
+        "把白狗 Nini 改名",
+        "澄清后额外新增第二只黑狗"
+      ],
+      "facts": [
+        {
+          "id": "roxy_name",
+          "entity_id": "roxy_pet",
+          "entity_kind": "pet",
+          "fact_type": "pet.name",
+          "qualifier": null,
+          "transitions": [
+            {
+              "source": "h2:user",
+              "origin": "reviewer",
+              "operation": "add",
+              "reason": null,
+              "value": "Roxy",
+              "status": "active",
+              "source_quote": "黑色那只叫 Roxy。"
+            }
+          ],
+          "current": {
+            "status": "active",
+            "value": "Roxy"
+          }
+        },
+        {
+          "id": "nini_name",
+          "entity_id": "nini_pet",
+          "entity_kind": "pet",
+          "fact_type": "pet.name",
+          "qualifier": null,
+          "transitions": [
+            {
+              "source": "h3:user",
+              "origin": "reviewer",
+              "operation": "add",
+              "reason": null,
+              "value": "Nini",
+              "status": "active",
+              "source_quote": "白色那只叫 Nini。"
+            }
+          ],
+          "current": {
+            "status": "active",
+            "value": "Nini"
+          }
+        }
+      ],
+      "followup": {
+        "user": "我是说以前那只叫 Roxy 的黑狗，现在叫小黑。",
+        "expected_delta": [
+          {
+            "kind": "revise",
+            "fact_id": "roxy_name",
+            "reason": "supersede",
+            "value": "小黑",
+            "source_quote": "以前那只叫 Roxy 的黑狗，现在叫小黑"
+          }
+        ],
+        "order": 5,
+        "user_sequence": 3,
+        "chat": "new",
+        "expected_generation_advance": 1,
+        "expected_entity_additions": [],
+        "expected_revision_count": 1
+      },
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "expected_revision_count": 0
     },
     {
       "id": "habit_not_preference",
       "setup": [
-        {"id": "p1", "chat": "old", "user": "我早上更喜欢喝咖啡。", "assistant": "早上偏好咖啡。"},
-        {"id": "p2", "chat": "later", "user": "这周早上我一直在喝茶，因为咖啡让我睡不好。", "assistant": "最近改喝茶是为了睡眠。"}
+        {
+          "id": "p1",
+          "chat": "old",
+          "user": "我早上更喜欢喝咖啡。",
+          "assistant": "早上偏好咖啡。",
+          "order": 1,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "p2",
+          "chat": "later",
+          "user": "这周早上我一直在喝茶，因为咖啡让我睡不好。",
+          "assistant": "最近改喝茶是为了睡眠。",
+          "order": 2,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        }
       ],
-      "current_facts": ["active morning-coffee preference; no tea preference"],
-      "target": {"chat": "new", "user": "这周我喝茶，是不是说明我更喜欢茶？"},
-      "required_evidence": ["p1:user", "p2:user"],
+      "target": {
+        "chat": "new",
+        "user": "这周我喝茶，是不是说明我更喜欢茶？",
+        "order": 3,
+        "user_sequence": 1
+      },
+      "required_evidence": [
+        "p1:user",
+        "p2:user"
+      ],
       "expected_delta": [],
-      "forbidden": ["把喝茶习惯等同茶偏好", "说咖啡偏好从未被提及"]
+      "forbidden": [
+        "把喝茶习惯等同茶偏好",
+        "说咖啡偏好从未被提及"
+      ],
+      "facts": [
+        {
+          "id": "morning_drink",
+          "entity_id": "subject",
+          "entity_kind": "subject",
+          "fact_type": "person.preference",
+          "qualifier": "drink",
+          "transitions": [
+            {
+              "source": "p1:user",
+              "origin": "reviewer",
+              "operation": "add",
+              "reason": null,
+              "value": "早上更喜欢咖啡",
+              "status": "active",
+              "source_quote": "我早上更喜欢喝咖啡。"
+            }
+          ],
+          "current": {
+            "status": "active",
+            "value": "早上更喜欢咖啡"
+          }
+        }
+      ],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "expected_revision_count": 0
     },
     {
       "id": "resolved_concern",
       "setup": [
-        {"id": "q1", "chat": "old", "user": "我担心下午的产品岗面试会答不好。", "assistant": "面试前紧张很正常。"},
-        {"id": "q2", "chat": "later", "user": "那个产品岗面试过了，我拿到了录用通知，不再担心了。", "assistant": "恭喜你，之前那份担心已经过去了。"}
+        {
+          "id": "q1",
+          "chat": "old",
+          "user": "我担心下午的产品岗面试会答不好。",
+          "assistant": "面试前紧张很正常。",
+          "order": 1,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "q2",
+          "chat": "later",
+          "user": "那个产品岗面试过了，我拿到了录用通知，不再担心了。",
+          "assistant": "恭喜你，之前那份担心已经过去了。",
+          "order": 2,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        }
       ],
-      "current_facts": [],
-      "target": {"chat": "new", "user": "我之前担心的那场面试后来怎么样了？"},
-      "required_evidence": ["q1:user", "q2:user"],
+      "target": {
+        "chat": "new",
+        "user": "我之前担心的那场面试后来怎么样了？",
+        "order": 3,
+        "user_sequence": 1
+      },
+      "required_evidence": [
+        "q1:user",
+        "q2:user"
+      ],
       "expected_delta": [],
-      "forbidden": ["只取担忧片段就说现在仍焦虑", "编造具体雇主"]
+      "forbidden": [
+        "只取担忧片段就说现在仍焦虑",
+        "编造具体雇主"
+      ],
+      "facts": [],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "expected_revision_count": 0
     },
     {
       "id": "ambiguity_and_unrelated",
       "setup": [
-        {"id": "m1", "chat": "old", "user": "小李和小周都给我推荐了书。", "assistant": "你最后看了谁推荐的那本？"},
-        {"id": "m2", "chat": "later", "user": "我只说了其中一本挺有意思，没有说是谁推荐的。", "assistant": "那我不知道是哪位推荐的。"}
+        {
+          "id": "m1",
+          "chat": "old",
+          "user": "小李和小周都给我推荐了书。",
+          "assistant": "你最后看了谁推荐的那本？",
+          "order": 1,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "m2",
+          "chat": "later",
+          "user": "我只说了其中一本挺有意思，没有说是谁推荐的。",
+          "assistant": "那我不知道是哪位推荐的。",
+          "order": 2,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        }
       ],
-      "current_facts": [],
-      "target": {"chat": "new", "user": "那本挺有意思的书是谁推荐的？"},
-      "required_evidence": ["m1:user", "m2:user"],
+      "target": {
+        "chat": "new",
+        "user": "那本挺有意思的书是谁推荐的？",
+        "order": 3,
+        "user_sequence": 1
+      },
+      "required_evidence": [
+        "m1:user",
+        "m2:user"
+      ],
       "expected_delta": [],
-      "followup": {"user": "晚安。", "expected_delta": []},
-      "forbidden": ["猜小李或小周", "晚安时强行提那本书"]
+      "followup": {
+        "user": "晚安。",
+        "expected_delta": [],
+        "order": 4,
+        "user_sequence": 3,
+        "chat": "new",
+        "expected_generation_advance": 0,
+        "expected_entity_additions": [],
+        "expected_revision_count": 0
+      },
+      "forbidden": [
+        "猜小李或小周",
+        "晚安时强行提那本书"
+      ],
+      "facts": [],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "expected_revision_count": 0
     },
     {
       "id": "isolation",
       "setup": [
-        {"id": "x1", "chat": "other_root", "root": "different", "user": "我最爱听爵士乐。", "assistant": "爵士乐很有层次。"},
-        {"id": "x2", "chat": "other_subject", "subject": "different", "user": "我最爱吃饺子。", "assistant": "饺子很好吃。"},
-        {"id": "x3", "chat": "other_workspace", "workspace": "different", "user": "我爱看科幻。", "assistant": "科幻很有想象力。"},
-        {"id": "x4", "chat": "other_purpose", "purpose": "preview", "user": "我会拉小提琴。", "assistant": "小提琴很动听。"}
+        {
+          "id": "x1",
+          "chat": "other_root",
+          "root": "different",
+          "user": "我最爱听爵士乐。",
+          "assistant": "爵士乐很有层次。",
+          "order": 1,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "x2",
+          "chat": "other_subject",
+          "subject": "different",
+          "user": "我最爱吃饺子。",
+          "assistant": "饺子很好吃。",
+          "order": 2,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        },
+        {
+          "id": "x3",
+          "chat": "other_workspace",
+          "workspace": "different",
+          "user": "我爱看科幻。",
+          "assistant": "科幻很有想象力。",
+          "order": 3,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:03:00+00:00",
+          "assistant_at": "2026-09-01T12:03:01+00:00"
+        },
+        {
+          "id": "x4",
+          "chat": "other_purpose",
+          "purpose": "preview",
+          "user": "我会拉小提琴。",
+          "assistant": "小提琴很动听。",
+          "order": 4,
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:04:00+00:00",
+          "assistant_at": "2026-09-01T12:04:01+00:00"
+        }
       ],
-      "current_facts": [],
-      "target": {"chat": "new", "user": "你还记得我有什么爱好吗？"},
+      "target": {
+        "chat": "new",
+        "user": "你还记得我有什么爱好吗？",
+        "order": 5,
+        "user_sequence": 1
+      },
       "required_evidence": [],
       "expected_delta": [],
-      "forbidden": ["迁移其他角色、用户、工作区或用途的经历"]
+      "forbidden": [
+        "迁移其他角色、用户、工作区或用途的经历"
+      ],
+      "facts": [],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "expected_revision_count": 0
     }
+  ],
+  "native_controls": [
+    {
+      "id": "scope_add",
+      "setup_case": "correction_return",
+      "through": null,
+      "user": "我早上更喜欢喝咖啡。",
+      "expected_delta": [
+        {
+          "kind": "subject_add",
+          "fact_id": "morning_drink",
+          "entity_id": "subject",
+          "fact_type": "person.preference",
+          "qualifier": "drink",
+          "value": "早上更喜欢咖啡",
+          "source_quote": "我早上更喜欢喝咖啡。"
+        }
+      ],
+      "expected_generation_advance": 1,
+      "expected_entity_additions": [],
+      "seeded_facts": [],
+      "expected_revision_count": 1
+    },
+    {
+      "id": "correction",
+      "setup_case": "correction_return",
+      "through": "c1",
+      "user": "我之前说早上喜欢咖啡是记错了，其实更喜欢茶。",
+      "expected_delta": [
+        {
+          "kind": "revise",
+          "fact_id": "morning_drink",
+          "reason": "correct",
+          "value": "早上更喜欢茶",
+          "source_quote": "我之前说早上喜欢咖啡是记错了，其实更喜欢茶。"
+        }
+      ],
+      "expected_generation_advance": 1,
+      "expected_entity_additions": [],
+      "seeded_facts": [
+        {
+          "id": "morning_drink",
+          "status": "active",
+          "value": "早上更喜欢咖啡"
+        }
+      ],
+      "expected_revision_count": 1
+    },
+    {
+      "id": "habit_no_write",
+      "setup_case": "habit_not_preference",
+      "through": "p1",
+      "user": "这周早上我一直在喝茶，因为咖啡让我睡不好。",
+      "expected_delta": [],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "seeded_facts": [
+        {
+          "id": "morning_drink",
+          "status": "active",
+          "value": "早上更喜欢咖啡"
+        }
+      ],
+      "expected_revision_count": 0
+    },
+    {
+      "id": "isolation",
+      "setup_case": "isolation",
+      "through": "x4",
+      "user": "你还记得我有什么爱好吗？",
+      "expected_delta": [],
+      "expected_generation_advance": 0,
+      "expected_entity_additions": [],
+      "seeded_facts": [],
+      "expected_revision_count": 0
+    }
+  ],
+  "followup_schedule": [
+    "removed_acknowledgment",
+    "h_only_referent",
+    "ambiguity_and_unrelated"
   ]
 }

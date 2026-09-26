@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import os
-import re
 from uuid import uuid4
 
 import pytest
 from sqlalchemy import insert, update
-from sqlalchemy.engine import make_url
 
 import ade_api.features.agent_runtime.turn_memory_snapshot as snapshot_module
 import ade_api.features.agent_runtime.persistence.history as history_module
@@ -32,38 +30,23 @@ from workflows.evals.character_memory_dev.history_reader_test_support import (
     assistant,
     conversation,
     fact,
+    require_disposable_database_url,
     turn,
     version,
 )
 
 
 DATABASE_URL = os.getenv("ADE_TEST_DATABASE_URL")
-TEST_DATABASE = re.compile(r"^ade_history_test_[0-9a-f]{8,}$")
 pytestmark = pytest.mark.skipif(
     not DATABASE_URL, reason="disposable PostgreSQL history test database required"
 )
 
 
-def _require_disposable_database() -> None:
-    assert DATABASE_URL is not None
-    url = make_url(DATABASE_URL)
-    assert (
-        url.drivername == "postgresql+psycopg"
-        and url.host in {"localhost", "127.0.0.1", "::1"}
-        and url.username == "ade_owner"
-        and url.password is None
-        and url.database is not None
-        and TEST_DATABASE.fullmatch(url.database)
-    ), (
-        "history tests require a disposable passwordless loopback ade_history_test_<hex> database"
-    )
-
-
 def test_scope_versions_archive_and_snapshot_membership(
     seed_m2_memory_resources, monkeypatch
 ) -> None:
-    _require_disposable_database()
     assert DATABASE_URL is not None
+    require_disposable_database_url(DATABASE_URL)
 
     async def scenario():
         engine = create_persistence_engine(DATABASE_URL)
@@ -300,8 +283,8 @@ def test_scope_versions_archive_and_snapshot_membership(
 def test_source_relative_branch_and_source_less_removal(
     seed_m2_memory_resources, monkeypatch
 ) -> None:
-    _require_disposable_database()
     assert DATABASE_URL is not None
+    require_disposable_database_url(DATABASE_URL)
 
     async def scenario():
         engine = create_persistence_engine(DATABASE_URL)

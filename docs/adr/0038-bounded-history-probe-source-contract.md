@@ -47,3 +47,22 @@ policy-freshness release gate remains unwaived.
 Guardrails: H1's frozen fixture, disposable PostgreSQL snapshot/provenance tests,
 paired actual-packet comparison, and atomic no-write/purge tests in H3. Live
 ranking and dialogue evidence remain separate from this structural checkpoint.
+
+## Offline Review Correction, 2026-09-26
+
+The first fixture draft did not put more candidates than the top-four admission
+limit in any ranking case, and one lifecycle recipe paired `revise` with
+`invalidated`, which the actual natural reviewer schema forbids. Before any
+ranking observation or provider request, the fixture was revised to include
+10–12 fixed candidates per development case, explicit chronology and typed
+fact chains. Contract checks now validate reviewer operation/reason shapes,
+source quotes, scope, four native controls and three follow-ups. A wrong rank
+order demonstrably loses a required qualification in deterministic tests.
+
+The selection rule requires every positive development case's whole minimum
+evidence set in the top four. If neither literal bigrams nor probe-local Qwen
+cosine meets that bar, report infeasible. Among adequate recipes, prefer fewer
+irrelevant admissions on the no-match case, then literal for lower complexity.
+No-match admissions remain a measured risk because this probe has no cutoff.
+This rule and the fixture revision precede observations; they are mechanics,
+not evidence that either ranker or delivered dialogue succeeds.

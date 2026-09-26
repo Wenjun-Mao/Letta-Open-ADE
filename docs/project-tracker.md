@@ -42,6 +42,15 @@ and PC-09 (simplicity and observational request counts).
   mechanics evidence only; ranker quality, admitted packets, model dialogue and
   finalization guards remain H2/H3 work after director review. No provider call
   has been made for this checkpoint.
+- Director review found the initial ranking development corpus too small to
+  exercise top-four loss and an invalid lifecycle recipe. The pre-observation
+  correction adds fixed larger development corpora, a fail-closed typed fixture
+  validator, four exact controls, three follow-ups, and structural PostgreSQL
+  contrasts for linear correction/return, extraction repair versus user
+  retraction, source roles, scope, hash and edge-limit omission. Fake scores
+  establish mechanics only. The fixture is revised before observations;
+  live ranking feasibility and all H3 authorization/finalization work remain
+  pending director review. The release policy-freshness gate remains unwaived.
 - The candidate-policy freshness failure remains unwaived; no release promotion
   or production change follows from these diagnostic results.
 

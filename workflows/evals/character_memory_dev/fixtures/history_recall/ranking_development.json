@@ -1,33 +1,404 @@
 {
   "schema_version": 1,
-  "status": "h1-frozen-ranking-development-only",
-  "rule": "These independent subjects/roots tune ranking only. Do not score their dialogue as held-out target cases or use expected IDs in query construction. All exchanges are complete at target time.",
+  "status": "h1-revised-offline-before-observations",
+  "rule": "Independent subject/root per case; each candidate is one succeeded exchange in its own chat. The 10-12 target-time candidates exceed top-k=4. Order and source times are fixed. Expected IDs are scorer-only and never used in query or embedding document construction. The no-match case measures irrelevant admission with no cutoff.",
   "cases": [
     {
       "id": "mandarin_paraphrase_coffee",
       "exchanges": [
-        {"id": "d1", "user": "我一般醒来先冲一杯手磨咖啡。", "assistant": "早上的手磨咖啡是你的习惯。"},
-        {"id": "d2", "user": "我下午更想散步。", "assistant": "下午散步听起来不错。"},
-        {"id": "d3", "user": "我把旧照片整理到相册了。", "assistant": "整理照片会翻出不少回忆。"}
+        {
+          "id": "d1",
+          "user": "我一般醒来先冲一杯手磨咖啡。",
+          "assistant": "早上的手磨咖啡是你的习惯。",
+          "order": 1,
+          "chat": "chat_01",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "d2",
+          "user": "我今天起床后先开窗通风。",
+          "assistant": "早上空气不错。",
+          "order": 2,
+          "chat": "chat_02",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        },
+        {
+          "id": "d3",
+          "user": "我妹妹早上喝豆浆。",
+          "assistant": "她喜欢豆浆。",
+          "order": 3,
+          "chat": "chat_03",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:03:00+00:00",
+          "assistant_at": "2026-09-01T12:03:01+00:00"
+        },
+        {
+          "id": "d4",
+          "user": "我周末会把咖啡豆磨好给朋友。",
+          "assistant": "朋友收到会开心。",
+          "order": 4,
+          "chat": "chat_04",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:04:00+00:00",
+          "assistant_at": "2026-09-01T12:04:01+00:00"
+        },
+        {
+          "id": "d5",
+          "user": "我早餐通常吃一片吐司。",
+          "assistant": "吐司很方便。",
+          "order": 5,
+          "chat": "chat_05",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:05:00+00:00",
+          "assistant_at": "2026-09-01T12:05:01+00:00"
+        },
+        {
+          "id": "d6",
+          "user": "我晚上泡茶看书。",
+          "assistant": "晚上喝茶放松。",
+          "order": 6,
+          "chat": "chat_06",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:06:00+00:00",
+          "assistant_at": "2026-09-01T12:06:01+00:00"
+        },
+        {
+          "id": "d7",
+          "user": "我买了一个新的手冲壶。",
+          "assistant": "新壶用起来怎么样？",
+          "order": 7,
+          "chat": "chat_07",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:07:00+00:00",
+          "assistant_at": "2026-09-01T12:07:01+00:00"
+        },
+        {
+          "id": "d8",
+          "user": "我起床后先整理书桌。",
+          "assistant": "整理后更清爽。",
+          "order": 8,
+          "chat": "chat_08",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:08:00+00:00",
+          "assistant_at": "2026-09-01T12:08:01+00:00"
+        },
+        {
+          "id": "d9",
+          "user": "我同事喜欢拿铁。",
+          "assistant": "那是同事的口味。",
+          "order": 9,
+          "chat": "chat_09",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:09:00+00:00",
+          "assistant_at": "2026-09-01T12:09:01+00:00"
+        },
+        {
+          "id": "d10",
+          "user": "我想去看晨间电影。",
+          "assistant": "早场人可能少。",
+          "order": 10,
+          "chat": "chat_10",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:10:00+00:00",
+          "assistant_at": "2026-09-01T12:10:01+00:00"
+        },
+        {
+          "id": "d11",
+          "user": "我今天没吃早饭。",
+          "assistant": "别忘了照顾自己。",
+          "order": 11,
+          "chat": "chat_11",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:11:00+00:00",
+          "assistant_at": "2026-09-01T12:11:01+00:00"
+        },
+        {
+          "id": "d12",
+          "user": "我的杯子是蓝色的。",
+          "assistant": "蓝色杯子很好看。",
+          "order": 12,
+          "chat": "chat_12",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:12:00+00:00",
+          "assistant_at": "2026-09-01T12:12:01+00:00"
+        }
       ],
       "query": "我起床后通常先喝什么？",
-      "minimum_evidence": ["d1"]
+      "minimum_evidence": [
+        "d1"
+      ]
     },
     {
       "id": "mandarin_paraphrase_concern",
       "exchanges": [
-        {"id": "e1", "user": "我怕周五的答辩会卡壳。", "assistant": "你担心周五答辩不顺。"},
-        {"id": "e2", "user": "那场答辩顺利结束了，我已经不紧张了。", "assistant": "顺利结束真好。"},
-        {"id": "e3", "user": "我今天去买了水果。", "assistant": "买了些什么？"}
+        {
+          "id": "e1",
+          "user": "我怕周五的答辩会卡壳。",
+          "assistant": "你担心周五答辩不顺。",
+          "order": 1,
+          "chat": "chat_01",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "e3",
+          "user": "我整理了答辩用的幻灯片。",
+          "assistant": "整理材料很花时间。",
+          "order": 2,
+          "chat": "chat_02",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        },
+        {
+          "id": "e4",
+          "user": "我今天买了水果。",
+          "assistant": "买了些什么？",
+          "order": 3,
+          "chat": "chat_03",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:03:00+00:00",
+          "assistant_at": "2026-09-01T12:03:01+00:00"
+        },
+        {
+          "id": "e5",
+          "user": "朋友明天要做演讲。",
+          "assistant": "祝朋友顺利。",
+          "order": 4,
+          "chat": "chat_04",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:04:00+00:00",
+          "assistant_at": "2026-09-01T12:04:01+00:00"
+        },
+        {
+          "id": "e6",
+          "user": "我把旧照片整理到相册。",
+          "assistant": "回看照片很有意思。",
+          "order": 5,
+          "chat": "chat_05",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:05:00+00:00",
+          "assistant_at": "2026-09-01T12:05:01+00:00"
+        },
+        {
+          "id": "e7",
+          "user": "下周的会议改到下午了。",
+          "assistant": "下午开会也许更从容。",
+          "order": 6,
+          "chat": "chat_06",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:06:00+00:00",
+          "assistant_at": "2026-09-01T12:06:01+00:00"
+        },
+        {
+          "id": "e8",
+          "user": "我看了一本关于设计的书。",
+          "assistant": "书里有什么新想法？",
+          "order": 7,
+          "chat": "chat_07",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:07:00+00:00",
+          "assistant_at": "2026-09-01T12:07:01+00:00"
+        },
+        {
+          "id": "e9",
+          "user": "同事为自己的报告发愁。",
+          "assistant": "那是同事的担心。",
+          "order": 8,
+          "chat": "chat_08",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:08:00+00:00",
+          "assistant_at": "2026-09-01T12:08:01+00:00"
+        },
+        {
+          "id": "e10",
+          "user": "我周末去了公园。",
+          "assistant": "公园里天气好吗？",
+          "order": 9,
+          "chat": "chat_09",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:09:00+00:00",
+          "assistant_at": "2026-09-01T12:09:01+00:00"
+        },
+        {
+          "id": "e11",
+          "user": "我准备了一场不同主题的展示。",
+          "assistant": "那次展示什么时候？",
+          "order": 10,
+          "chat": "chat_10",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:10:00+00:00",
+          "assistant_at": "2026-09-01T12:10:01+00:00"
+        },
+        {
+          "id": "e12",
+          "user": "我昨天做了面条。",
+          "assistant": "听起来很香。",
+          "order": 11,
+          "chat": "chat_11",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:11:00+00:00",
+          "assistant_at": "2026-09-01T12:11:01+00:00"
+        },
+        {
+          "id": "e2",
+          "user": "那场答辩顺利结束了，我已经不紧张了。",
+          "assistant": "顺利结束真好。",
+          "order": 12,
+          "chat": "chat_12",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:12:00+00:00",
+          "assistant_at": "2026-09-01T12:12:01+00:00"
+        }
       ],
       "query": "之前让我焦虑的展示后来怎么样了？",
-      "minimum_evidence": ["e1", "e2"]
+      "minimum_evidence": [
+        "e1",
+        "e2"
+      ]
     },
     {
       "id": "unrelated_probe",
       "exchanges": [
-        {"id": "z1", "user": "我喜欢在周末去游泳。", "assistant": "游泳很解压。"},
-        {"id": "z2", "user": "昨晚我在看纪录片。", "assistant": "那部纪录片讲什么？"}
+        {
+          "id": "z1",
+          "user": "我喜欢在周末去游泳。",
+          "assistant": "游泳很解压。",
+          "order": 1,
+          "chat": "chat_01",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:01:00+00:00",
+          "assistant_at": "2026-09-01T12:01:01+00:00"
+        },
+        {
+          "id": "z2",
+          "user": "昨晚我在看纪录片。",
+          "assistant": "讲什么主题？",
+          "order": 2,
+          "chat": "chat_02",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:02:00+00:00",
+          "assistant_at": "2026-09-01T12:02:01+00:00"
+        },
+        {
+          "id": "z3",
+          "user": "我今天整理了书柜。",
+          "assistant": "整理完清爽。",
+          "order": 3,
+          "chat": "chat_03",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:03:00+00:00",
+          "assistant_at": "2026-09-01T12:03:01+00:00"
+        },
+        {
+          "id": "z4",
+          "user": "下周我要练习钢琴。",
+          "assistant": "祝练习顺利。",
+          "order": 4,
+          "chat": "chat_04",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:04:00+00:00",
+          "assistant_at": "2026-09-01T12:04:01+00:00"
+        },
+        {
+          "id": "z5",
+          "user": "我吃了番茄炒蛋。",
+          "assistant": "这道菜很家常。",
+          "order": 5,
+          "chat": "chat_05",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:05:00+00:00",
+          "assistant_at": "2026-09-01T12:05:01+00:00"
+        },
+        {
+          "id": "z6",
+          "user": "我买了新的雨伞。",
+          "assistant": "雨伞是什么颜色？",
+          "order": 6,
+          "chat": "chat_06",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:06:00+00:00",
+          "assistant_at": "2026-09-01T12:06:01+00:00"
+        },
+        {
+          "id": "z7",
+          "user": "朋友说周末可能下雨。",
+          "assistant": "那只是朋友的猜测。",
+          "order": 7,
+          "chat": "chat_07",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:07:00+00:00",
+          "assistant_at": "2026-09-01T12:07:01+00:00"
+        },
+        {
+          "id": "z8",
+          "user": "我在画一只小猫。",
+          "assistant": "画得怎么样？",
+          "order": 8,
+          "chat": "chat_08",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:08:00+00:00",
+          "assistant_at": "2026-09-01T12:08:01+00:00"
+        },
+        {
+          "id": "z9",
+          "user": "我把照片发给家人了。",
+          "assistant": "他们喜欢吗？",
+          "order": 9,
+          "chat": "chat_09",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:09:00+00:00",
+          "assistant_at": "2026-09-01T12:09:01+00:00"
+        },
+        {
+          "id": "z10",
+          "user": "我今天读了一首诗。",
+          "assistant": "诗写了什么？",
+          "order": 10,
+          "chat": "chat_10",
+          "user_sequence": 1,
+          "assistant_sequence": 2,
+          "user_at": "2026-09-01T12:10:00+00:00",
+          "assistant_at": "2026-09-01T12:10:01+00:00"
+        }
       ],
       "query": "明天会下雨吗？",
       "minimum_evidence": []

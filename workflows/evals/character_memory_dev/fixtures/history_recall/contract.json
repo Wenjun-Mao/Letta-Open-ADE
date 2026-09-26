@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "h1-frozen-offline-before-provider-requests",
+  "status": "h1-revised-offline-before-observations",
   "authority": "docs/plans/natural-history-recall.md revision 3; PC-01, PC-03, PC-05, PC-07, PC-09, PC-10",
   "binding": {
     "purpose": "evaluation",
@@ -35,12 +35,26 @@
   "ranking": {
     "development_cases": ["mandarin_paraphrase_coffee", "mandarin_paraphrase_concern", "unrelated_probe"],
     "held_out_cases": ["archived_version_recall", "correction_return", "removed_acknowledgment", "resolved_concern"],
-    "query": "current user text plus the same admitted local B suffix; no future state or expected answer",
+    "query": "history_ranking.query_text JSON with current_user and ordered role/content local_suffix, using the same admitted local B suffix; no future state or expected answer",
     "candidates": ["literal_token_match", "probe_local_qwen_cosine"],
-    "tie_break": "score descending, then assistant source time descending, then message ID",
-    "no_match_cutoff": "none; return up to four complete windows and record misses",
-    "vectors": "probe-local, content-and-recipe addressed; never use fact vector table or fact threshold",
-    "decision": "choose the ranker on development evidence only, before held-out dialogue scoring"
+    "document": "history_ranking.document_text, exact User and Assistant text only; no expected IDs",
+    "literal_recipe": "casefolded alphanumeric character bigram query overlap fraction",
+    "semantic_recipe": "Qwen document/query vectors under the probe-local recipe below; cosine similarity",
+    "tie_break": "score descending, then assistant source time descending, then exchange ID ascending",
+    "no_match_cutoff": "none; return up to four complete windows and report unrelated admissions as risk",
+    "semantic_vector_recipe": {
+      "route": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+      "artifact_reference": "Qwen/Qwen3-Embedding-0.6B",
+      "artifact_revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+      "dimensions": 1024,
+      "query_format": "history-query-json-v1 via history_ranking.query_text; no fact-space instruction",
+      "document_format": "history-exchange-roles-v1 via history_ranking.document_text",
+      "normalization": "L2 at probe comparison",
+      "comparison": "cosine similarity",
+      "identity": "SHA-256 of this recipe and sorted exchange-ID/document-text hashes; regenerate all probe-local vectors on recipe or corpus change"
+    },
+    "vectors": "in-memory probe-local only; never use fact vector table, fact query instruction or fact distance threshold",
+    "decision": "a recipe is adequate only if every positive development case contains its entire minimum evidence set in top four; if none is adequate report infeasible. Among adequate recipes choose lower unrelated-admission count, then literal before Qwen for least complexity. Score held-out cases only after this selection."
   },
   "paired_schedule": {
     "arms": ["empty_history", "automatic_history"],
@@ -49,7 +63,9 @@
     "base_packet_check": "compare actual serialized packets after removing history and normalizing fixture identities",
     "generation_output_and_reviewer_limits": "identical between arms; no baseline padding",
     "rerolls": 0,
-    "live_request_schedule": "3 ranking-development queries, 4 held-out ranking queries, 4 native-control turns, 11 target cases per arm, and 3 chronological follow-ups per arm; one planned run per cell and no success reroll; count actual generation and Qwen embedding dispatches observationally"
+    "native_control_ids": ["scope_add", "correction", "habit_no_write", "isolation"],
+    "followup_case_ids_per_arm": ["removed_acknowledgment", "h_only_referent", "ambiguity_and_unrelated"],
+    "live_request_schedule": "3 ranking-development queries, 4 held-out ranking queries, 4 named native-control turns, 11 target cases per arm, and the 3 named chronological follow-ups per arm; one planned run per cell and no success reroll; count actual generation and Qwen embedding dispatches observationally"
   },
   "evaluation": {
     "anticipated_added_p95_turn_latency_seconds": 8,
@@ -63,7 +79,7 @@
     {"id": "user_retraction", "target": "Ask about an earlier claim after the user explicitly said it was mistaken", "minimum_evidence": ["original user utterance", "later admitted user correction"], "delta": "no new fact/revision/entity; no memory-generation advance", "must_not": ["treat transition code alone as testimony", "give corrected value absent its dialogue"]},
     {"id": "invalidated_ended", "target": "Ask about an invalidated claim and an ended relationship", "minimum_evidence": ["earlier report", "invalidation or ending dialogue"], "delta": "no new fact/revision/entity; no memory-generation advance", "must_not": ["claim either remains current", "invent an opposite attitude"]},
     {"id": "removed_acknowledgment", "target": "Acknowledge a removed fact as historical dialogue, then follow with a fresh explicit restatement", "minimum_evidence": ["old exchange", "source-less operator removal record", "fresh current user restatement on follow-up"], "delta": "acknowledgment: no write; restatement: one supported new active fact only", "must_not": ["recreate from history alone", "erase transcript", "restore forgotten revision"]},
-    {"id": "h_only_referent", "target": "Ask which earlier referent was meant without a fresh factual assertion", "minimum_evidence": ["historical user antecedent", "historical assistant referent"], "delta": "no new fact/revision/entity; no memory-generation advance", "must_not": ["use H as write authority"]},
+    {"id": "h_only_referent", "target": "Make a fresh name assertion whose referent is available only in H, then clarify that referent in the next local turn", "minimum_evidence": ["historical user antecedent", "historical assistant referent", "both pet identities"], "delta": "target: no write; clarified follow-up: one supported revision of Roxy to Xiaohei only", "must_not": ["use H as write authority", "revise Nini"]},
     {"id": "habit_not_preference", "target": "Ask about a week of tea drinking despite retained morning-coffee preference", "minimum_evidence": ["morning-coffee preference", "week-of-tea habit utterance"], "delta": "no new fact/revision/entity; no memory-generation advance", "must_not": ["infer tea preference"]},
     {"id": "resolved_concern", "target": "Ask whether a past concern is still open", "minimum_evidence": ["old concern", "distant resolution"], "delta": "no new fact/revision/entity; no memory-generation advance", "must_not": ["present unresolved concern as current"]},
     {"id": "ambiguity_and_unrelated", "target": "Ambiguous antecedent and an unrelated goodnight follow-up", "minimum_evidence": ["all qualifying referent exchanges for the ambiguity"], "delta": "no new fact/revision/entity; no memory-generation advance", "must_not": ["guess referent", "force historical callback"]},

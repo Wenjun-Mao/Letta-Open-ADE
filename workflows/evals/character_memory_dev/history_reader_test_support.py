@@ -3,20 +3,37 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from uuid import uuid4
 
 from sqlalchemy import insert, update
+from sqlalchemy.engine import make_url
 
 from ade_api.features.agent_runtime.persistence.metadata import (
     agent_definition_versions,
     conversations,
     memory_actions,
     memory_facts,
+    memory_revision_predecessors,
     memory_revision_sources,
     memory_revisions,
     messages,
     runs,
 )
+
+
+def require_disposable_database_url(database_url: str) -> None:
+    url = make_url(database_url)
+    assert (
+        url.drivername == "postgresql+psycopg"
+        and url.host in {"localhost", "127.0.0.1", "::1"}
+        and url.username == "ade_owner"
+        and url.password is None
+        and url.database is not None
+        and re.fullmatch(r"ade_history_test_[0-9a-f]{8,}", url.database)
+    ), (
+        "history tests require a disposable passwordless loopback ade_history_test_<hex> database"
+    )
 
 
 async def turn(
@@ -61,9 +78,10 @@ async def turn(
 async def assistant(
     connection, workspace_id, conversation_id, turn, text="Understood."
 ):
+    message_id = str(uuid4())
     await connection.execute(
         insert(messages).values(
-            id=str(uuid4()),
+            id=message_id,
             workspace_id=workspace_id,
             conversation_id=conversation_id,
             sequence=turn["sequence"] + 1,
@@ -73,6 +91,7 @@ async def assistant(
             run_id=turn["run_id"],
         )
     )
+    return message_id
 
 
 async def version(connection, ids, *, root_id, version, purpose="development"):
@@ -142,7 +161,18 @@ async def action(connection, ids):
 
 
 async def fact(
-    connection, ids, *, source_id, source_run_id, content, quote=None, status="active"
+    connection,
+    ids,
+    *,
+    source_id,
+    source_run_id,
+    content,
+    quote=None,
+    status="active",
+    subject_key="subject_one",
+    fact_type="person.preference",
+    qualifier="drink",
+    value="早上更喜欢咖啡",
 ):
     quote = quote or content
     fact_id, revision_id = str(uuid4()), str(uuid4())
@@ -150,12 +180,12 @@ async def fact(
         insert(memory_facts).values(
             id=fact_id,
             workspace_id=ids["workspace"],
-            subject_id=ids["subject_one"],
-            entity_id=ids["subject_one"],
+            subject_id=ids[subject_key],
+            entity_id=ids[subject_key],
             normalized_key=f"history-{fact_id}",
-            fact_type="person.preference",
-            qualifier="morning",
-            value={"text": "coffee"},
+            fact_type=fact_type,
+            qualifier=qualifier,
+            value=value,
             status=status,
             version=1,
         )
@@ -165,10 +195,10 @@ async def fact(
             id=revision_id,
             fact_id=fact_id,
             workspace_id=ids["workspace"],
-            subject_id=ids["subject_one"],
+            subject_id=ids[subject_key],
             operation="add",
             fact_version=1,
-            value={"text": "coffee"},
+            value=value,
             run_id=source_run_id,
         )
     )
@@ -190,3 +220,62 @@ async def fact(
         )
     )
     return fact_id, revision_id
+
+
+async def append_revision(
+    connection,
+    ids,
+    *,
+    fact_id,
+    predecessor_id,
+    fact_version,
+    operation,
+    reason,
+    value,
+    status,
+    run_id,
+    source_id,
+    content,
+):
+    revision_id = str(uuid4())
+    await connection.execute(
+        insert(memory_revisions).values(
+            id=revision_id,
+            fact_id=fact_id,
+            workspace_id=ids["workspace"],
+            subject_id=ids["subject_one"],
+            operation=operation,
+            fact_version=fact_version,
+            value=value,
+            reason=reason,
+            run_id=run_id,
+        )
+    )
+    await connection.execute(
+        insert(memory_revision_predecessors).values(
+            revision_id=revision_id, predecessor_revision_id=predecessor_id
+        )
+    )
+    await connection.execute(
+        insert(memory_revision_sources).values(
+            id=str(uuid4()),
+            revision_id=revision_id,
+            message_id=source_id,
+            start_char=0,
+            end_char=len(content),
+            quote=content,
+            message_sha256=hashlib.sha256(content.encode()).hexdigest(),
+            authority_role="user_assertion",
+        )
+    )
+    await connection.execute(
+        update(memory_facts)
+        .where(memory_facts.c.id == fact_id)
+        .values(
+            version=fact_version,
+            status=status,
+            value=value,
+            current_revision_id=revision_id,
+        )
+    )
+    return revision_id

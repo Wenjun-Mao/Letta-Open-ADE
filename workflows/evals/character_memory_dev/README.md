@@ -17,6 +17,34 @@ fresh disposable PostgreSQL database migrated to head. The test uses only that
 database and makes no provider request. H2 ranking and H3 packet delivery are
 subsequent checkpoints under the [approved plan](../../../docs/plans/natural-history-recall.md).
 
+The offline review correction added [typed case scripts](fixtures/history_recall/cases.json),
+[ranking development scripts](fixtures/history_recall/ranking_development.json),
+and deterministic fake-score tests. Development corpora have more candidates
+than the top-four window limit, so a wrong ranking can lose needed evidence.
+`history_fixture_contract.py` validates source quotes, lifecycle operation/reason
+pairs, chronology, complete expected deltas and the finite control/follow-up
+schedule. These scripts have not produced model observations.
+
+To reproduce the structural database checks, use an isolated PostgreSQL 15
+instance with pgvector and a passwordless loopback `ade_owner` database named
+`ade_history_test_<hex>`. On a host with Docker, for example:
+
+```sh
+docker run -d --name ade-history-check -e POSTGRES_USER=ade_owner \
+  -e POSTGRES_DB=ade_history_test_01a0dbe2b -e POSTGRES_HOST_AUTH_METHOD=trust \
+  -p 127.0.0.1::5432 pgvector/pgvector:0.8.1-pg15
+docker port ade-history-check 5432
+# Substitute the reported port for PORT below.
+docker exec ade-history-check psql -U ade_owner -d ade_history_test_01a0dbe2b \
+  -c 'CREATE SCHEMA ade; CREATE EXTENSION IF NOT EXISTS vector;'
+ADE_DATABASE_MIGRATION_URL=postgresql+psycopg://ade_owner@127.0.0.1:PORT/ade_history_test_01a0dbe2b \
+  uv run --project services/ade-api alembic -c services/ade-api/alembic.ini upgrade head
+ADE_TEST_DATABASE_URL=postgresql+psycopg://ade_owner@127.0.0.1:PORT/ade_history_test_01a0dbe2b \
+  uv run python -m pytest services/ade-api/tests/agent_runtime/persistence/test_postgres_history_reader.py \
+  services/ade-api/tests/agent_runtime/persistence/test_postgres_history_lineage.py -q
+docker rm -f ade-history-check
+```
+
 Host-only experiments with the existing `chat_linxiaotang` (林小棠) persona,
 using GPT-6 Luna through the installed Codex CLI and its ChatGPT login.
 Run from the repository root on macOS/Linux. No Docker stack or Spark access
