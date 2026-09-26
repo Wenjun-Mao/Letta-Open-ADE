@@ -83,6 +83,8 @@ The separately authorized [remaining-turn run](../../../docs/findings/natural-me
 
 The separately authorized [final remaining-turn campaign](../../../docs/findings/natural-memory-consultation/history-h4-final-remaining-live-2026-09-26.md) committed its 18 turns and matched all six new target base-packet pairs. Its stage audit and independent database readback confirm execution integrity, while five turns have exact expected memory-delta issues. Across the original 32-turn plan, 31 committed and one bounded rejection; the earlier `invalidated_ended` pair remains confounded and `user_retraction` remains one-sided. The blind answer packet awaits human scoring. No production history policy is selected by these counts.
 
+The [offline H5 synthesis](../../../docs/findings/natural-memory-consultation/history-h5-offline-synthesis-2026-09-26.md) traces the ambiguous `h_only_referent` early write and the retained-dialogue miss in `removed_acknowledgment` without changing runtime or scorers. A separate [arm-neutral review companion](outputs/history-h4-offline-review-20260926/review-context-companion-v1.json) labels scope eligibility and fact lifecycle for all 11 cases while preserving the three original blind packets and keys.
+
 To reproduce the structural database checks, use an isolated PostgreSQL 15
 instance with pgvector and a passwordless loopback `ade_owner` database named
 `ade_history_test_<hex>`. On a host with Docker, for example:
