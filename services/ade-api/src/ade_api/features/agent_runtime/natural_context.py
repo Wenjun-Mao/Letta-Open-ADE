@@ -17,10 +17,12 @@ from .errors import RuntimeValidationError
 
 
 NaturalVariant = Literal["A", "A0", "B"]
+HISTORY_PROBE_POLICY = "natural-user-assertions-v4-b-history-probe"
 NATURAL_POLICY_BINDINGS: dict[str, NaturalVariant] = {
     "natural-user-assertions-v4-a": "A",
     "natural-user-assertions-v4-a0": "A0",
     "natural-user-assertions-v4-b": "B",
+    HISTORY_PROBE_POLICY: "B",
 }
 
 

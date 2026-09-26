@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from .embeddings import NATURAL_RETRIEVAL_POLICY_VERSION, RETRIEVAL_POLICY_VERSION
@@ -44,14 +45,20 @@ async def load_turn_state(
             "entities": await memory.list_entities(subject_id),
         }
         if include_history:
-            state["history"] = await read_history_corpus(
-                connection,
-                workspace_id=str(conversation["workspace_id"]),
-                subject_id=subject_id,
-                purpose=str(conversation["purpose"]),
-                definition_root_id=str(definition["agent_definition_id"]),
-                current_run_id=str(run["id"]),
-            )
+            try:
+                async with connection.begin_nested():
+                    state["history"] = await read_history_corpus(
+                        connection,
+                        workspace_id=str(conversation["workspace_id"]),
+                        subject_id=subject_id,
+                        purpose=str(conversation["purpose"]),
+                        definition_root_id=str(definition["agent_definition_id"]),
+                        current_run_id=str(run["id"]),
+                    )
+            except SQLAlchemyError:
+                # The mandatory RR snapshot remains intact on optional reader
+                # failure. Integrity errors from the reader are never softened.
+                state["history"] = {"exchanges": [], "unavailable": True}
         return state
 
 

@@ -19,6 +19,7 @@ from .persistence.base import OptimisticLockError
 from .persistence.conversations import ConversationRepository
 from .persistence.leases import ConversationLeaseRepository
 from .persistence.memory import MemoryRepository
+from .persistence.history_guard import validate_history_at_commit
 from .persistence.runs import RunRepository
 from .provider_tracing import AttemptTrace
 from .turn_execution import AttemptResult
@@ -75,6 +76,14 @@ class RunFinalizer:
                 )
             messages = await conversations.list_messages(conversation_id)
             current_user = _current_user_message(messages, run_id)
+            await validate_history_at_commit(
+                connection,
+                exchanges=result.admitted_history_exchanges,
+                deadline=result.history_deadline,
+                conversation=conversation,
+                subject_id=subject_id,
+                current_run_id=run_id,
+            )
             if isinstance(result.review, PreparedNaturalReview):
                 revalidate_bound_natural_review(
                     result.review,
@@ -160,6 +169,17 @@ class RunFinalizer:
                 provider_outcome={
                     "conversation_request_ids": result.executor.provider_request_ids,
                     "reviewer_request_ids": result.reviewer.provider_request_ids,
+                    **(
+                        {
+                            "history_probe_status": result.history_probe_status,
+                            "admitted_history_run_ids": [
+                                str(exchange["run_id"])
+                                for exchange in result.admitted_history_exchanges
+                            ],
+                        }
+                        if result.history_probe_status is not None
+                        else {}
+                    ),
                     "compaction_request_id": (
                         result.compaction.provider_request_id
                         if result.compaction is not None

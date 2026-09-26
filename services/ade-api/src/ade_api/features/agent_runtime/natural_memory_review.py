@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from copy import deepcopy
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Annotated, Any, Literal, TypeAlias
@@ -112,11 +113,23 @@ class NaturalDefer(_Closed):
 SnapshotReference: TypeAlias = Annotated[StrictStr, Field(pattern=r"^[FE][1-9][0-9]*$")]
 
 
+class HistoricalConflictEvidence(_Closed):
+    handle: StrictStr = Field(pattern=r"^H[1-9][0-9]*$")
+    quote: StrictStr = Field(min_length=1, max_length=10_000)
+
+
 class NaturalConflict(_Closed):
     kind: Literal["conflict"]
     current_quote: StrictStr = Field(min_length=1, max_length=10_000)
     candidate_reply_quote: StrictStr = Field(min_length=1, max_length=10_000)
-    references: list[SnapshotReference] = Field(min_length=1, max_length=6)
+    references: list[SnapshotReference] = Field(default_factory=list, max_length=6)
+    history: HistoricalConflictEvidence | None = None
+
+    @model_validator(mode="after")
+    def _grounding_contract(self):
+        if not self.references and self.history is None:
+            raise ValueError("conflict requires held F/E or H grounding")
+        return self
 
 
 NaturalWrite: TypeAlias = (
@@ -160,6 +173,8 @@ class BoundNaturalSource:
         "user_resolution",
         "user_antecedent",
         "assistant_referent",
+        "history_user",
+        "history_assistant",
     ]
 
 
@@ -193,5 +208,14 @@ def parse_natural_review_decision(payload: object) -> NaturalReviewDecision:
         ) from exc
 
 
-def natural_review_json_schema() -> dict:
-    return NaturalReviewDecision.model_json_schema()
+def natural_review_json_schema(*, history_capable: bool = False) -> dict:
+    schema = NaturalReviewDecision.model_json_schema()
+    if history_capable:
+        return schema
+    schema = deepcopy(schema)
+    conflict = schema["$defs"]["NaturalConflict"]
+    conflict["properties"].pop("history")
+    conflict["properties"]["references"]["minItems"] = 1
+    conflict["required"].append("references")
+    schema["$defs"].pop("HistoricalConflictEvidence")
+    return schema

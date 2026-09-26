@@ -30,9 +30,9 @@ Intermediate revision status is unknown because existing revisions do not store
 it; the current projection supplies the only held status. Earlier revision
 values are not exposed. Lifecycle operations and reasons describe saved
 representation changes, never prove what the user originally meant or retracted.
-An oversized required envelope omits its entire exchange. H3 will admit only
-complete windows through one shared generator/reviewer packet and keep `H`
-read-only, separate from writable local sources.
+An oversized required envelope omits its entire exchange. [ADR 0039](0039-history-probe-packet-and-commit-fence.md)
+records the H3 admission and finalization contract for complete read-only `H`
+windows, separate from writable local sources.
 
 ## Alternatives And Consequences
 

@@ -15,6 +15,7 @@ from ade_api.features.agent_runtime.memory_policy_binding import (
     TYPED_MEMORY_POLICY_VERSION,
     require_executable_memory_policy,
 )
+from ade_api.features.agent_runtime.natural_context import HISTORY_PROBE_POLICY
 from ade_api.features.agent_runtime.run_service import RunService, _turn_request_hash
 from ade_api.features.agent_runtime.turn_execution import TurnExecution
 import ade_api.features.agent_runtime.run_service as run_service_module
@@ -27,6 +28,22 @@ def test_only_current_typed_and_registered_natural_bindings_execute() -> None:
         with pytest.raises(RuntimeValidationError) as error:
             require_executable_memory_policy(binding)
         assert error.value.detail_code == "obsolete_memory_policy_binding"
+
+
+def test_history_binding_is_executable_only_in_development_evaluation() -> None:
+    require_executable_memory_policy(
+        HISTORY_PROBE_POLICY, purpose="evaluation", runtime_mode="development"
+    )
+    for purpose, mode in (
+        ("agent_studio", "development"),
+        ("evaluation", "release"),
+        (None, None),
+    ):
+        with pytest.raises(RuntimeValidationError) as error:
+            require_executable_memory_policy(
+                HISTORY_PROBE_POLICY, purpose=purpose, runtime_mode=mode
+            )
+        assert error.value.detail_code == "natural_history_binding"
 
 
 @pytest.mark.parametrize(

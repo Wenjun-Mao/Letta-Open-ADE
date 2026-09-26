@@ -132,6 +132,7 @@ class ConversationExecutor:
         max_model_requests: int = 6,
         input_token_limit: int | None = None,
         observe_request: Callable[[dict[str, Any]], None] | None = None,
+        authorize_request: Callable[[dict[str, Any]], Awaitable[None]] | None = None,
     ) -> ExecutorResult:
         enabled_tools = dict(tools or {})
         _validate_registry(enabled_tools)
@@ -147,28 +148,15 @@ class ConversationExecutor:
         request_ids: list[str | None] = []
         requirement_satisfied = False
         for request_number in range(1, max_model_requests + 1):
-            payload: dict[str, Any] = {
-                "model": model_key,
-                "messages": working_messages,
-                "max_tokens": max_output_tokens,
-                "stream": False,
-            }
-            if enabled_tools:
-                required_choice = (
-                    tool_requirement.tool_choice()
-                    if tool_requirement is not None and not requirement_satisfied
-                    else "auto"
-                )
-                payload.update(
-                    {
-                        "tools": [tool.definition for tool in enabled_tools.values()],
-                        "tool_choice": (
-                            "auto"
-                            if self.provider_adapter == "deepseek_openai"
-                            else required_choice
-                        ),
-                    }
-                )
+            payload = conversation_request(
+                model_key=model_key,
+                messages=working_messages,
+                max_output_tokens=max_output_tokens,
+                tools=enabled_tools,
+                provider_adapter=self.provider_adapter,
+                tool_requirement=tool_requirement,
+                requirement_satisfied=requirement_satisfied,
+            )
             if (
                 input_token_limit is not None
                 and estimate_tokens(
@@ -182,8 +170,13 @@ class ConversationExecutor:
                     "Serialized conversation request exceeds its input limit",
                     detail_code="natural_context_serialized_overflow",
                 )
+            if authorize_request is not None:
+                await authorize_request(payload)
             if observe_request is not None:
-                observe_request(payload)
+                try:
+                    observe_request(payload)
+                except Exception:
+                    pass
             response = await self.transport.chat_completion(
                 payload, timeout_seconds=timeout_seconds
             )
@@ -359,6 +352,59 @@ class ConversationExecutor:
             policy_sha256=compaction_policy_sha256(compaction_system),
             usage=usage,
         )
+
+
+def conversation_request(
+    *,
+    model_key: str,
+    messages: list[dict[str, Any]],
+    max_output_tokens: int,
+    tools: Mapping[str, CuratedTool],
+    provider_adapter: str,
+    tool_requirement: ToolRequirement | None = None,
+    requirement_satisfied: bool = False,
+) -> dict[str, Any]:
+    """The same serialized request shape used by admission and execution."""
+    payload: dict[str, Any] = {
+        "model": model_key,
+        "messages": messages,
+        "max_tokens": max_output_tokens,
+        "stream": False,
+    }
+    if tools:
+        required_choice = (
+            tool_requirement.tool_choice()
+            if tool_requirement is not None and not requirement_satisfied
+            else "auto"
+        )
+        payload.update(
+            {
+                "tools": [tool.definition for tool in tools.values()],
+                "tool_choice": (
+                    "auto" if provider_adapter == "deepseek_openai" else required_choice
+                ),
+            }
+        )
+    return payload
+
+
+def initial_conversation_request(
+    *,
+    model_key: str,
+    messages: list[dict[str, Any]],
+    max_output_tokens: int,
+    tools: Mapping[str, CuratedTool],
+    provider_adapter: str,
+) -> dict[str, Any]:
+    return conversation_request(
+        model_key=model_key,
+        messages=_with_tool_policy(messages)
+        if tools
+        else [dict(item) for item in messages],
+        max_output_tokens=max_output_tokens,
+        tools=tools,
+        provider_adapter=provider_adapter,
+    )
 
 
 def _search_memory_tool(search_memory: SearchMemoryHandler) -> CuratedTool:

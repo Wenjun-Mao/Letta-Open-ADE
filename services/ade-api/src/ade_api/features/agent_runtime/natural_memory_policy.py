@@ -75,6 +75,11 @@ def prepare_natural_memory_review(
     ):
         raise RuntimeValidationError("Memory subject entity is missing")
     staged_entities = _stage_related_identities(decision)
+    # A contradictory sibling invalidates the entire decision, independent of
+    # where the reviewer placed it relative to otherwise valid writes.
+    for item in decision.decisions:
+        if isinstance(item, NaturalConflict):
+            _validate_conflict(item, binding, candidate_reply)
     operations: list[PreparedNaturalOperation] = []
     touched: set[str] = set()
     add_keys: set[str] = set()
@@ -85,29 +90,7 @@ def prepare_natural_memory_review(
             deferrals.append({"quote": item.current_quote, "reason": item.reason})
             continue
         if isinstance(item, NaturalConflict):
-            bind_exact_quote(binding.current, item.current_quote, "user_assertion")
-            if candidate_reply.count(item.candidate_reply_quote) != 1:
-                raise RuntimeValidationError(
-                    "Conflict must bind one exact candidate span",
-                    detail_code="natural_review_binding",
-                )
-            if len(item.references) != len(set(item.references)):
-                raise RuntimeValidationError(
-                    "Duplicate conflict reference", detail_code="natural_review_binding"
-                )
-            grounding = [
-                binding.targets.get(ref) or binding.identities.get(ref)
-                for ref in item.references
-            ]
-            if any(value is None for value in grounding):
-                raise RuntimeValidationError(
-                    "Conflict reference is outside held snapshot",
-                    detail_code="natural_review_binding",
-                )
-            raise RuntimeValidationError(
-                "Candidate reply conflicts with held memory",
-                detail_code="natural_memory_reply_conflict",
-            )
+            continue
         sources, anchor = _bind_evidence(item, binding)
         existing = None
         if isinstance(item, (NaturalSubjectAdd, NaturalRelatedAdd)):
@@ -218,6 +201,42 @@ def prepare_natural_memory_review(
         ),
         operations=tuple(operations),
         deferred_claims=tuple(deferrals),
+    )
+
+
+def _validate_conflict(
+    item: NaturalConflict, binding: NaturalBindingMap, candidate_reply: str
+) -> None:
+    bind_exact_quote(binding.current, item.current_quote, "user_assertion")
+    if candidate_reply.count(item.candidate_reply_quote) != 1:
+        raise RuntimeValidationError(
+            "Conflict must bind one exact candidate span",
+            detail_code="natural_review_binding",
+        )
+    if len(item.references) != len(set(item.references)):
+        raise RuntimeValidationError(
+            "Duplicate conflict reference", detail_code="natural_review_binding"
+        )
+    if any(
+        binding.targets.get(ref) is None and binding.identities.get(ref) is None
+        for ref in item.references
+    ):
+        raise RuntimeValidationError(
+            "Conflict reference is outside held snapshot",
+            detail_code="natural_review_binding",
+        )
+    if item.history is not None:
+        source = binding.history_messages.get(item.history.handle)
+        if source is None:
+            raise RuntimeValidationError(
+                "Historical conflict handle is outside admitted packet",
+                detail_code="natural_review_binding",
+            )
+        role = source["role"]
+        bind_exact_quote(source, item.history.quote, f"history_{role}")
+    raise RuntimeValidationError(
+        "Candidate reply conflicts with held memory",
+        detail_code="natural_memory_reply_conflict",
     )
 
 

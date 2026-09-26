@@ -9,38 +9,32 @@ from ade_api.platform.settings import AdeApiSettings
 
 from .compaction import plan_compaction
 from .context import (
-    ContextBudget,
-    build_context,
     conversation_history_metadata,
     context_budget_from_deployment,
     validate_current_user_message,
 )
 from .embeddings import (
-    AUTOMATIC_MAXIMUM_COSINE_DISTANCE,
     NATURAL_RETRIEVAL_POLICY_VERSION,
     RETRIEVAL_POLICY_VERSION,
     EmbeddingClient,
     embedding_space_key,
-    qwen_query_text,
 )
 from .deployments import validate_definition_execution
 from .errors import RuntimeValidationError
 from .evaluation_tools import evaluation_tool_registry
 from .executor import ConversationExecutor, curated_tools
+from .history_admission import HistoryProbe
+from .history_attempt import HistoryAttempt, HistoryBeforeExposure
 from .memory_policy import prepare_memory_review
 from .memory_policy_binding import require_executable_memory_policy
 from .natural_attempt_evidence import capture_context, start_natural_capture
 from .natural_evaluation_capacity import checked_checkpoint6_capacity
 from .natural_context import (
+    HISTORY_PROBE_POLICY,
     NATURAL_POLICY_BINDINGS,
-    build_natural_context,
     full_lifecycle_snapshot_fits,
 )
-from .natural_memory_reviewer import (
-    execute_natural_review,
-    preflight_reviewer_bundle,
-    reviewer_suffix_limit,
-)
+from .natural_memory_reviewer import execute_natural_review
 from .provider_tracing import AttemptTrace
 from .release_policy import (
     ensure_agent_studio_release_ready,
@@ -55,16 +49,13 @@ from .turn_deployment import (
     required_deployment as _required_deployment,
     reviewer_max_model_requests as _reviewer_max_model_requests,
 )
+from .turn_embedding_results import embed_review_operations
 from .turn_memory_snapshot import (
     current_user_message as _current_user_message,
     load_turn_state,
-    search_turn_memory,
 )
-from .turn_memory_views import (
-    context_fact as _context_fact,
-    fact_document as _fact_document,
-    tool_fact as _tool_fact,
-)
+from .turn_retrieval import search_memory_handler, select_automatic_facts
+from .turn_context_selection import select_turn_context
 from .turn_result import AttemptResult
 
 
@@ -75,10 +66,12 @@ class TurnExecution:
         engine: AsyncEngine,
         transport: RouterTransport,
         settings: AdeApiSettings,
+        history_probe: HistoryProbe | None = None,
     ) -> None:
         self.engine = engine
         self.transport = transport
         self.settings = settings
+        self.history_probe = history_probe
 
     async def execute(
         self,
@@ -95,8 +88,22 @@ class TurnExecution:
         natural_variant = NATURAL_POLICY_BINDINGS.get(
             definition["memory_policy_version"]
         )
-        require_executable_memory_policy(str(definition["memory_policy_version"]))
+        require_executable_memory_policy(
+            str(definition["memory_policy_version"]),
+            purpose=str(conversation.get("purpose") or ""),
+            runtime_mode=self.settings.agent_runtime_mode,
+        )
         natural_mode = natural_variant is not None
+        history_probe_enabled = (
+            definition["memory_policy_version"] == HISTORY_PROBE_POLICY
+        )
+        if history_probe_enabled != (self.history_probe is not None) or (
+            history_probe_enabled and conversation.get("purpose") != "evaluation"
+        ):
+            raise RuntimeValidationError(
+                "History probe requires its evaluation-only policy and arm binding",
+                detail_code="natural_history_binding",
+            )
         if natural_mode and self.settings.agent_runtime_mode != "development":
             raise RuntimeValidationError(
                 "Experimental natural-memory bindings cannot run in release mode"
@@ -277,172 +284,131 @@ class TurnExecution:
         expected_dimensions = _embedding_dimensions(retriever_deployment)
         retrieved: list[dict[str, Any]] = []
         if selective_retrieval:
-            query_vector = (
-                await retrieval_embeddings.embed(
-                    model_key=str(retriever_deployment["route_alias"]),
-                    inputs=[qwen_query_text(str(current_user["content"]))],
-                    timeout_seconds=_remaining(deadline),
-                )
-            )[0]
-            if expected_dimensions and len(query_vector) != expected_dimensions:
-                raise RuntimeValidationError(
-                    "Embedding query dimensions do not match the deployment fingerprint"
-                )
-            retrieved = await search_turn_memory(
-                self.engine,
+            retrieved = await select_automatic_facts(
+                engine=self.engine,
+                embeddings=retrieval_embeddings,
+                deployment=retriever_deployment,
+                current_user_content=str(current_user["content"]),
                 subject_id=subject_id,
-                query_vector=query_vector,
                 fingerprint=retriever_space_key,
-                limit=8,
-                maximum_distance=AUTOMATIC_MAXIMUM_COSINE_DISTANCE,
+                expected_dimensions=expected_dimensions,
                 accepted_memory_generation=int(run["accepted_memory_generation"]),
                 natural=natural_mode,
+                deadline=deadline,
             )
-        active_facts = sorted(
-            state["active_facts"],
-            key=lambda item: (item["updated_at"], str(item["id"])),
-            reverse=True,
+        selection = select_turn_context(
+            state=state,
+            definition=definition,
+            current_user=current_user,
+            recent_messages=recent_messages,
+            retrieved=retrieved,
+            summary_content=summary_content,
+            history_metadata=history,
+            budget=budget,
+            natural_variant=natural_variant,
+            evaluation_capacity=evaluation_capacity,
+            reviewer_deployment=reviewer_deployment,
+            reviewer_adapter=reviewer_adapter,
+            history_capable=history_probe_enabled,
         )
-        natural_source_messages: tuple[dict[str, Any], ...] = ()
-        reviewer_input_limit = 0
-        reviewer_request_max_tokens = 1024
-        if natural_variant is not None:
-            reviewer_budget = (
-                evaluation_capacity.reviewer
-                if evaluation_capacity is not None
-                else ContextBudget(
-                    context_window=context_budget_from_deployment(
-                        reviewer_deployment
-                    ).context_window,
-                    max_output_tokens=1024,
-                    tool_schema_tokens=0,
-                )
-            )
-            reviewer_input_limit = reviewer_budget.input_limit
-            if evaluation_capacity is not None:
-                reviewer_request_max_tokens = (
-                    evaluation_capacity.reviewer_request_max_tokens
-                )
-            natural_bundle = build_natural_context(
-                variant=natural_variant,
-                system_prompt=str(definition["prompt_content"]),
-                persona=str(definition["persona_content"]),
+        built_context = selection.context
+        natural_source_messages = selection.natural_source_messages
+        active_facts = selection.active_facts
+        reviewer_input_limit = selection.reviewer_input_limit
+        reviewer_request_max_tokens = selection.reviewer_request_max_tokens
+
+        enabled_tool_names = tuple(str(name) for name in definition["tool_names"])
+        generation_tools = curated_tools(
+            enabled_tool_names,
+            search_memory=search_memory_handler(
+                engine=self.engine,
+                embeddings=tool_embeddings,
+                deployment=retriever_deployment,
+                subject_id=subject_id,
+                fingerprint=retriever_space_key,
+                expected_dimensions=expected_dimensions,
+                accepted_memory_generation=int(run["accepted_memory_generation"]),
+                natural=natural_mode,
+                deadline=deadline,
+            ),
+            additional_tools=(
+                evaluation_tool_registry()
+                if conversation.get("purpose") == "evaluation"
+                else None
+            ),
+        )
+        history_attempt: HistoryAttempt | None = None
+        if self.history_probe is not None:
+            history_attempt = HistoryAttempt(
+                engine=self.engine,
+                probe=self.history_probe,
+                corpus=state.get("history", {}),
+                run=run,
+                conversation=conversation,
+                definition=definition,
                 current_user=current_user,
-                eligible_recent_messages=recent_messages,
-                lifecycle_facts=state["facts"],
-                retrieved_facts=retrieved,
-                entities=state["entities"],
-                summary_content=summary_content,
-                history_metadata=history,
-                budget=budget,
-                reviewer_suffix_limit=(
-                    evaluation_capacity.reviewer_shared_suffix_tokens
-                    if evaluation_capacity is not None
-                    else reviewer_suffix_limit(
-                        model_key=str(reviewer_deployment["route_alias"]),
-                        provider_adapter=reviewer_adapter,
-                        current_user_message=current_user,
-                        facts=state["facts"],
-                        entities=state["entities"],
-                        input_token_limit=reviewer_input_limit,
-                        candidate_reply_reserve=budget.max_output_tokens,
-                    )
-                ),
-            )
-            built_context = natural_bundle.context
-            natural_source_messages = natural_bundle.source_messages
-            preflight_reviewer_bundle(
-                model_key=str(reviewer_deployment["route_alias"]),
-                provider_adapter=reviewer_adapter,
-                current_user_message=current_user,
                 source_messages=list(natural_source_messages),
                 facts=state["facts"],
                 entities=state["entities"],
-                candidate_reply_reserve=budget.max_output_tokens,
-                input_token_limit=reviewer_input_limit,
-                max_output_tokens=reviewer_request_max_tokens,
+                base_context=built_context,
+                generation_model_key=str(conversation_deployment["route_alias"]),
+                generation_adapter=conversation_adapter,
+                generation_tools=generation_tools,
+                generation_input_limit=budget.input_limit,
+                generation_max_output_tokens=budget.max_output_tokens,
+                reviewer_model_key=str(reviewer_deployment["route_alias"]),
+                reviewer_adapter=reviewer_adapter,
+                reviewer_input_limit=reviewer_input_limit,
+                reviewer_max_output_tokens=reviewer_request_max_tokens,
+                deadline=deadline,
             )
-        else:
+            built_context = history_attempt.prepare()
+
+        while True:
             try:
-                built_context = build_context(
-                    system_prompt=str(definition["prompt_content"]),
-                    persona=str(definition["persona_content"]),
-                    active_facts=[_context_fact(item) for item in active_facts[:12]],
-                    conversation_summary=summary_content,
-                    history_metadata=history,
-                    retrieved_facts=[_context_fact(item) for item in retrieved],
-                    recent_messages=recent_messages,
-                    current_user_content=str(current_user["content"]),
-                    budget=budget,
-                )
-            except ValueError as exc:
-                raise RuntimeValidationError(str(exc)) from exc
-        if natural_variant is None and built_context.omitted_message_ids:
-            raise RuntimeValidationError(
-                "Context construction omitted unsummarized conversation history"
-            )
-        capture_context(
-            trace.natural_evidence,
-            context=built_context,
-            source_messages=natural_source_messages,
-            input_limit=budget.input_limit,
-        )
-
-        async def search_memory(query: str, limit: int) -> list[dict[str, Any]]:
-            vector = (
-                await tool_embeddings.embed(
-                    model_key=str(retriever_deployment["route_alias"]),
-                    inputs=[qwen_query_text(query)],
+                executor_result = await conversation_executor.execute(
+                    model_key=str(conversation_deployment["route_alias"]),
+                    messages=built_context.messages,
                     timeout_seconds=_remaining(deadline),
+                    max_output_tokens=budget.max_output_tokens,
+                    max_model_requests=(
+                        evaluation_capacity.conversation_requests
+                        if evaluation_capacity is not None
+                        else _max_model_requests(conversation_deployment)
+                    ),
+                    input_token_limit=budget.input_limit if natural_mode else None,
+                    observe_request=(
+                        trace.natural_evidence.capture_generation_request
+                        if trace.natural_evidence is not None
+                        else None
+                    ),
+                    authorize_request=(
+                        history_attempt.authorize_request
+                        if history_attempt is not None
+                        else None
+                    ),
+                    tools=generation_tools,
                 )
-            )[0]
-            if expected_dimensions and len(vector) != expected_dimensions:
-                raise RuntimeValidationError(
-                    "Embedding tool-query dimensions do not match the deployment fingerprint"
-                )
-            rows = await search_turn_memory(
-                self.engine,
-                subject_id=subject_id,
-                query_vector=vector,
-                fingerprint=retriever_space_key,
-                limit=limit,
-                maximum_distance=None,
-                accepted_memory_generation=int(run["accepted_memory_generation"]),
-                natural=natural_mode,
+                break
+            except HistoryBeforeExposure as exc:
+                assert history_attempt is not None
+                built_context = history_attempt.omit_before_exposure(exc)
+        try:
+            capture_context(
+                trace.natural_evidence,
+                context=built_context,
+                source_messages=natural_source_messages,
+                input_limit=budget.input_limit,
             )
-            return [_tool_fact(item) for item in rows]
-
-        enabled_tool_names = tuple(str(name) for name in definition["tool_names"])
-        executor_result = await conversation_executor.execute(
-            model_key=str(conversation_deployment["route_alias"]),
-            messages=built_context.messages,
-            timeout_seconds=_remaining(deadline),
-            max_output_tokens=budget.max_output_tokens,
-            max_model_requests=(
-                evaluation_capacity.conversation_requests
-                if evaluation_capacity is not None
-                else _max_model_requests(conversation_deployment)
-            ),
-            input_token_limit=budget.input_limit if natural_mode else None,
-            observe_request=(
-                trace.natural_evidence.capture_generation_request
-                if trace.natural_evidence is not None
-                else None
-            ),
-            tools=curated_tools(
-                enabled_tool_names,
-                search_memory=search_memory,
-                additional_tools=(
-                    evaluation_tool_registry()
-                    if conversation.get("purpose") == "evaluation"
-                    else None
-                ),
-            ),
-        )
+        except Exception:
+            pass
         if trace.natural_evidence is not None:
-            trace.natural_evidence.capture_candidate(
-                executor_result.assistant_text, executor_result.tool_evidence
-            )
+            try:
+                trace.natural_evidence.capture_candidate(
+                    executor_result.assistant_text, executor_result.tool_evidence
+                )
+            except Exception:
+                pass
         recent_users = [
             message
             for message in state["messages"]
@@ -468,6 +434,17 @@ class TurnExecution:
                 timeout_seconds=_remaining(deadline),
                 input_token_limit=reviewer_input_limit,
                 max_output_tokens=reviewer_request_max_tokens,
+                history_exchanges=(
+                    history_attempt.admitted_exchanges
+                    if history_attempt is not None
+                    else []
+                ),
+                history_capable=history_probe_enabled,
+                authorize_request=(
+                    history_attempt.authorize_request
+                    if history_attempt is not None
+                    else None
+                ),
             )
         else:
             reviewer_result = await reviewer.review(
@@ -493,28 +470,14 @@ class TurnExecution:
                 active_facts=active_facts,
                 entities=state["entities"],
             )
-        embeddable = [
-            operation
-            for operation in prepared.operations
-            if operation.value is not None
-        ]
-        vectors = await memory_embeddings.embed(
-            model_key=str(retriever_deployment["route_alias"]),
-            inputs=[_fact_document(item) for item in embeddable],
+        operation_embeddings, dimensions = await embed_review_operations(
+            client=memory_embeddings,
+            deployment=retriever_deployment,
+            review=prepared,
+            expected_dimensions=expected_dimensions,
             timeout_seconds=_remaining(deadline),
+            evidence=trace.natural_evidence,
         )
-        vector_iterator = iter(vectors)
-        operation_embeddings = tuple(
-            None if operation.value is None else next(vector_iterator)
-            for operation in prepared.operations
-        )
-        dimensions = len(vectors[0]) if vectors else expected_dimensions
-        if expected_dimensions and vectors and dimensions != expected_dimensions:
-            raise RuntimeValidationError(
-                "Embedding dimensions do not match the deployment fingerprint"
-            )
-        if trace.natural_evidence is not None:
-            trace.natural_evidence.capture_embeddings(len(vectors), dimensions)
         return AttemptResult(
             assistant_text=executor_result.assistant_text,
             context=built_context,
@@ -531,10 +494,28 @@ class TurnExecution:
             ),
             compaction=compaction,
             natural_source_message_ids=natural_source_message_ids,
+            admitted_history_exchanges=(
+                tuple(history_attempt.admitted_exchanges)
+                if history_attempt is not None
+                else ()
+            ),
+            history_deadline=(
+                deadline
+                if history_attempt is not None and history_attempt.admitted_exchanges
+                else None
+            ),
+            history_probe_status=(
+                history_attempt.status if history_attempt is not None else None
+            ),
         )
 
     async def _load_state(self, run: dict[str, Any]) -> dict[str, Any]:
-        return await load_turn_state(self.engine, run)
+        return await load_turn_state(
+            self.engine,
+            run,
+            include_history=self.history_probe is not None
+            and self.history_probe.arm == "automatic_history",
+        )
 
 
 def _remaining(deadline: float) -> float:

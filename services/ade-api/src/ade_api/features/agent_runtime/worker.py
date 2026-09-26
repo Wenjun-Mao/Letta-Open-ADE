@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from ade_api.platform.settings import AdeApiSettings, get_settings
 
 from .errors import RuntimeNotReady
+from .history_admission import HistoryProbe
 from .flags import ensure_agent_runtime_enabled
 from .persistence.database import create_persistence_engine
 from .persistence.validation import validate_database_at_head
@@ -41,10 +42,16 @@ class AgentRuntimeWorker:
         engine: AsyncEngine,
         settings: AdeApiSettings,
         transport: RouterTransport,
+        history_probe: HistoryProbe | None = None,
     ) -> None:
         self.engine = engine
         self.settings = settings
-        execution = TurnExecution(engine=engine, transport=transport, settings=settings)
+        execution = TurnExecution(
+            engine=engine,
+            transport=transport,
+            settings=settings,
+            history_probe=history_probe,
+        )
         self.claimer = RunClaimer(engine=engine, settings=settings)
         self.attempts = AttemptController(
             engine=engine, settings=settings, execution=execution

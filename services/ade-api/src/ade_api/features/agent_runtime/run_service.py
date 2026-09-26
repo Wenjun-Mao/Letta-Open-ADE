@@ -88,7 +88,9 @@ class RunService:
                     )
                     return turn_accepted_response(prior, replayed=True)
                 require_executable_memory_policy(
-                    str(definition["memory_policy_version"])
+                    str(definition["memory_policy_version"]),
+                    purpose=str(conversation.get("purpose") or ""),
+                    runtime_mode=self.settings.agent_runtime_mode,
                 )
             catalog = await self.router_transport.catalog(
                 timeout_seconds=self.settings.model_discovery_timeout_seconds
@@ -148,7 +150,9 @@ class RunService:
                     )
                     return turn_accepted_response(prior, replayed=True)
                 require_executable_memory_policy(
-                    str(definition["memory_policy_version"])
+                    str(definition["memory_policy_version"]),
+                    purpose=str(conversation.get("purpose") or ""),
+                    runtime_mode=self.settings.agent_runtime_mode,
                 )
                 if await runs.active_for_conversation(conversation_id) is not None:
                     raise ConversationBusy(

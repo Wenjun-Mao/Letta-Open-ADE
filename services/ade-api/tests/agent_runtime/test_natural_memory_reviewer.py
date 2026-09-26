@@ -54,7 +54,13 @@ class _Transport:
         }
 
 
-def _review(transport: _Transport, *, observe_request=None, observe_decision=None):
+def _review(
+    transport: _Transport,
+    *,
+    observe_request=None,
+    observe_decision=None,
+    authorize_request=None,
+):
     def validate(decision) -> None:
         prepare_natural_memory_review(
             decision=decision,
@@ -79,6 +85,7 @@ def _review(transport: _Transport, *, observe_request=None, observe_decision=Non
             input_token_limit=100_000,
             observe_request=observe_request,
             observe_decision=observe_decision,
+            authorize_request=authorize_request,
         )
     )
 
@@ -239,3 +246,17 @@ def test_optional_reviewer_capture_cannot_veto_success() -> None:
         _Transport(json.dumps(WRITE)), observe_request=fail, observe_decision=fail
     )
     assert len(result.decision.decisions) == 1
+
+
+def test_reviewer_authorization_is_fatal_before_provider_dispatch() -> None:
+    transport = _Transport(json.dumps(WRITE))
+
+    async def reject(_payload):
+        raise RuntimeValidationError(
+            "exposed H source missing", detail_code="natural_history_missing"
+        )
+
+    with pytest.raises(RuntimeValidationError) as error:
+        _review(transport, authorize_request=reject)
+    assert error.value.detail_code == "natural_history_missing"
+    assert transport.calls == []

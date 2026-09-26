@@ -379,6 +379,15 @@ freshness failure unwaived. No live calls or tests have been run for this revisi
 
 ## Revision Coverage And Approval Boundary
 
+### Checkpoint state, 2026-09-26
+
+H1/H2 reader and frozen ranking mechanics have an accepted offline checkpoint.
+H2 live literal/Qwen feasibility and the selected ranker are still pending. H3
+now has an offline evaluation-only packet path and native fake-router/PostgreSQL
+boundary tests; director verification is pending before any live ranker or
+dialogue request. The H3 automatic arm requires a frozen selector and cannot
+silently choose a ranking recipe. No H4/H5 scores or production decision exist.
+
 [Assessment dispositions](../findings/natural-memory-consultation/history-recall-review-assessment.md)
 map to sections 1/2 (snapshot and source-relative lineage), 3 (distinct transcript
 recipe), 4 (fresh authority, temporal conflict and capacity), 5 (delivery races and

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from .compaction import ModelCompaction
 from .context import BuiltContext
@@ -26,3 +27,6 @@ class AttemptResult:
     retrieval_policy_version: str
     compaction: ModelCompaction | None
     natural_source_message_ids: tuple[str, ...] = ()
+    admitted_history_exchanges: tuple[dict[str, Any], ...] = ()
+    history_deadline: float | None = None
+    history_probe_status: str | None = None

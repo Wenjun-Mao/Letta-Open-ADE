@@ -1,21 +1,41 @@
 # Character Memory Development
 
-## Historical Recall Probe (H1/H2 Offline Checkpoint)
+## Historical Recall Probe (H1–H3 Offline Checkpoints)
 
 The [frozen history contract](fixtures/history_recall/contract.json) belongs to
 the approved bounded automatic-history versus empty-history probe. It is separate
 from the historical Luna captures and earlier natural-memory matrices. The H2
 reader is enabled only through `load_turn_state(..., include_history=True)`;
-normal runtime turns do not yet send history to a model. It reads at most 128
+normal runtime turns do not send history to a model. It reads at most 128
 complete succeeded exchanges from the accepted repeatable-read snapshot, with
 whole-window omission when text or required source lineage exceeds the frozen
 limits. Its omission counts and exact exchange/source IDs are mechanics evidence,
 not dialogue-quality or release evidence.
 
-Run `test_postgres_history_reader.py` with `ADE_TEST_DATABASE_URL` pointing at a
-fresh disposable PostgreSQL database migrated to head. The test uses only that
-database and makes no provider request. H2 ranking and H3 packet delivery are
-subsequent checkpoints under the [approved plan](../../../docs/plans/natural-history-recall.md).
+H3 adds the evaluation-only `natural-user-assertions-v4-b-history-probe` binding.
+Construct `AgentRuntimeWorker(..., history_probe=HistoryProbe(arm=...,
+select_run_ids=...))` only in an isolated evaluation runner. Both arms use that
+binding; the empty arm supplies no H windows, and the automatic arm requires
+the frozen H2 selector to return up to four run IDs from the reader's corpus.
+The selector is a pure offline ranking seam at this checkpoint. Live Qwen
+ranking, corpus embedding dispatch, and dialogue scoring remain pending H2/H4.
+An absent selector fails explicitly. Neither the native worker default nor
+public routes enable history.
+
+The H3 packet is admitted against serialized generation and projected reviewer
+capacity. Fresh source checks precede every H-bearing generation, continuation
+and review request, and the success transaction checks the held sources again
+even on a no-write turn. Genuine pre-exposure purge rebuilds the packet;
+post-exposure loss fails the run. The successful attempt outcome records
+`history_probe_status` and admitted run IDs. See [ADR 0039](../../../docs/adr/0039-history-probe-packet-and-commit-fence.md)
+for the exact boundary and limits.
+
+Run the reader and guard tests against a fresh disposable PostgreSQL database
+migrated to head. Run the native worker tests in a separate idle database because
+structural reader tests leave pending fixture runs; the worker intentionally
+claims the oldest eligible run. These tests use only fake-router calls. The
+[approved plan](../../../docs/plans/natural-history-recall.md) retains H2 live
+ranking feasibility and H4/H5 scoring as later checkpoints.
 
 The offline review correction added [typed case scripts](fixtures/history_recall/cases.json),
 [ranking development scripts](fixtures/history_recall/ranking_development.json),
@@ -41,7 +61,11 @@ ADE_DATABASE_MIGRATION_URL=postgresql+psycopg://ade_owner@127.0.0.1:PORT/ade_his
   uv run --project services/ade-api alembic -c services/ade-api/alembic.ini upgrade head
 ADE_TEST_DATABASE_URL=postgresql+psycopg://ade_owner@127.0.0.1:PORT/ade_history_test_01a0dbe2b \
   uv run python -m pytest services/ade-api/tests/agent_runtime/persistence/test_postgres_history_reader.py \
-  services/ade-api/tests/agent_runtime/persistence/test_postgres_history_lineage.py -q
+  services/ade-api/tests/agent_runtime/persistence/test_postgres_history_lineage.py \
+  services/ade-api/tests/agent_runtime/persistence/test_postgres_history_guard.py -q
+# For the native worker tests, create and migrate another fresh idle database.
+ADE_TEST_DATABASE_URL=postgresql+psycopg://ade_owner@127.0.0.1:PORT/ade_history_test_<other-hex> \
+  uv run python -m pytest services/ade-api/tests/agent_runtime/persistence/test_postgres_history_worker.py -q
 docker rm -f ade-history-check
 ```
 

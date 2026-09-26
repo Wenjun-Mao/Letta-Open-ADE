@@ -6,9 +6,20 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
+import hashlib
 
 from .errors import RuntimeValidationError
 from .fact_registry import fact_type_spec
+
+
+def _json_ready(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): _json_ready(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_ready(item) for item in value]
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return value
 
 
 @dataclass(frozen=True)
@@ -18,6 +29,8 @@ class NaturalBindingMap:
     targets: Mapping[str, Mapping[str, Any]]
     identities: Mapping[str, Mapping[str, Any]]
     ordered_messages: tuple[tuple[str, Mapping[str, Any]], ...]
+    history_messages: Mapping[str, Mapping[str, Any]]
+    history_packet: tuple[dict[str, Any], ...]
 
     def packet(self, candidate_reply: str) -> dict[str, Any]:
         return {
@@ -49,6 +62,7 @@ class NaturalBindingMap:
                 {"handle": handle, "kind": item["kind"], "label": item["label"]}
                 for handle, item in self.identities.items()
             ],
+            "history": list(self.history_packet),
             "candidate_visible_reply": candidate_reply,
         }
 
@@ -59,6 +73,7 @@ def build_natural_binding_map(
     source_messages: list[dict[str, Any]],
     facts: list[dict[str, Any]],
     entities: list[dict[str, Any]],
+    history_exchanges: list[dict[str, Any]] | None = None,
 ) -> NaturalBindingMap:
     current_id = str(current_user_message["id"])
     if current_user_message.get("role") != "user":
@@ -114,10 +129,56 @@ def build_natural_binding_map(
                 "label": str(fact.get("value") or ""),
             }
         )
+    history_messages: dict[str, Mapping[str, Any]] = {}
+    history_packet: list[dict[str, Any]] = []
+    for exchange in history_exchanges or []:
+        wire_messages = []
+        for message in exchange["messages"]:
+            role = str(message["role"])
+            content = str(message["content"])
+            digest = hashlib.sha256(content.encode()).hexdigest()
+            if role not in {"user", "assistant"} or digest != message["content_sha256"]:
+                raise RuntimeValidationError(
+                    "Historical source failed role or hash validation",
+                    detail_code="natural_history_integrity",
+                )
+            handle = f"H{len(history_messages) + 1}"
+            history_messages[handle] = MappingProxyType(dict(message))
+            wire_messages.append(
+                {
+                    "handle": handle,
+                    "role": role,
+                    "content": content,
+                    "content_sha256": digest,
+                    "created_at": message["created_at"].isoformat()
+                    if hasattr(message["created_at"], "isoformat")
+                    else str(message["created_at"]),
+                }
+            )
+        if len(wire_messages) != 2 or [item["role"] for item in wire_messages] != [
+            "user",
+            "assistant",
+        ]:
+            raise RuntimeValidationError(
+                "Historical evidence requires one complete exchange",
+                detail_code="natural_history_integrity",
+            )
+        history_packet.append(
+            {
+                "run_id": str(exchange["run_id"]),
+                "conversation_id": str(exchange["conversation_id"]),
+                "definition_version_id": str(exchange["definition_version_id"]),
+                "archived": bool(exchange["archived"]),
+                "messages": wire_messages,
+                "annotations": _json_ready(exchange["annotations"]),
+            }
+        )
     return NaturalBindingMap(
         current=MappingProxyType(dict(current_user_message)),
         messages=MappingProxyType(dict(ordered)),
         targets=MappingProxyType(targets),
         identities=MappingProxyType(identities),
         ordered_messages=tuple(ordered),
+        history_messages=MappingProxyType(history_messages),
+        history_packet=tuple(history_packet),
     )
