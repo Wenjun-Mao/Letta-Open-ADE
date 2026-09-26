@@ -1,6 +1,6 @@
 # ADE Current Product Contract
 
-Updated: 2026-09-25. This is the single entrypoint for **current agreed product
+Updated: 2026-09-26. This is the single entrypoint for **current agreed product
 intent**, not a claim that every agreement is implemented or release-qualified.
 It consolidates existing decisions; it does not authorize implementation, live
 experiments, deployment, or a change to release evidence.
@@ -48,8 +48,10 @@ with corrected or removed facts must be specified in the historical-recovery pla
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
   reviewer, reconciliation with corrected or removed facts, and failure behavior.
   PC-03's character boundary and PC-10's archive eligibility are settled;
-  these mechanics are not. The [historical-recall proposal](plans/natural-history-recall.md)
-  develops these choices for review, without approving them.
+  production mechanics are not. The [historical-recall plan](plans/natural-history-recall.md)
+  revision 3 is approved for a bounded automatic-versus-empty-history probe, including
+  read-only historical evidence and the final review conditions. This selects no
+  production retrieval policy, default, or release-qualified behavior.
 - Whether existing dialogue/history access suffices for habits, concerns and
   shared experiences before adding fact types or episode records. A drinking
   habit must not silently become a preference merely to fit today's registry.

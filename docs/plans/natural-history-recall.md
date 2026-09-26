@@ -1,17 +1,21 @@
 # Natural Historical Recall: Bounded Design And Plan
 
-Status: **Revision 2, proposed for Pro review**, 2026-09-25. No implementation,
-model calls, default change, or release promotion is authorized by this document.
+Status: **Revision 3, approved for bounded H1-H5 implementation and probe**,
+2026-09-26, following the user's "agreed, go" and the two conditional-go reviews.
+Freeze settings/fixtures and pass relevant offline checks before planned live
+DeepSeek/Qwen-embedding work. No production default change or release promotion.
 Runtime source inspected: `cece5bedd6032da3ebc3802c7be604eb505967e6`; subsequent
 checkpoints through `2be2c7f` changed documentation only.
 Product authority: [PC-01 through PC-10](../product-contract.md).
 Review basis: [independent reports and source-checked assessment](../findings/natural-memory-consultation/history-recall-review-assessment.md).
+Final conditions: [revision-2 review assessment](../findings/natural-memory-consultation/history-recall-r2-review-assessment.md).
 
 This is the single follow-on plan for historical source recovery. The
 [compact-reviewer plan](natural-memory-implementation.md) excludes transcript
 search; its evidence and open reliability work remain intact. Revision 2 replaces
 this plan's initial three-arm scope, not the historical reports or current product
-agreements. Proposed read semantics below still require approval.
+agreements. Revision 3 incorporates the approved final conditions below; acceptance
+of this isolated probe is not selection of a production memory policy.
 
 ## Outcome And Smaller Scope
 
@@ -74,6 +78,13 @@ Normal memory-generation fencing still handles concurrent fact mutations.
 ### 2. Source-Relative Lifecycle Meaning
 
 History establishes what was said, not that it was true then or remains true now.
+Lifecycle transitions describe changes to saved fact representations, not proof
+that the user retracted or misstated the original utterance. A known `correct`
+code can still have unspecified meaning for the testimony. Repairing an extraction
+that dropped "morning" must not imply the user originally said "all day."
+The scope/content of a user correction requires admitted dialogue; codes cannot
+supply missing details such as a corrected city or reason for travel. Freeze both
+extraction-repair and actual user-retraction contrasts in H1.
 
 | Evidence | Appropriate interpretation | Must not happen |
 | --- | --- | --- |
@@ -97,6 +108,8 @@ model-written timeline. Unknown/legacy transition meaning stays unknown.
 Where provenance branches, preserve the relevant recorded paths rather than
 inventing one linear history. Omit the optional window if its required envelope
 cannot fit; never silently trim away a material transition.
+Use deduplicated bounded revision records and predecessor edges, not enumerated
+path timelines or a graph framework.
 
 Apply annotations only to linked claims, not all clauses in a message. Read the
 existing revision metadata without exposing forgotten revision values; the retained
@@ -198,6 +211,19 @@ aborts the attempt; do not silently remove history only from the reviewer.
 Also check admitted-source existence during finalization before committing.
 Archive changes alone do not invalidate eligibility.
 
+Carry the successful attempt's absolute monotonic deadline to the new finalization
+history check and bound that check by remaining time. Expiry/failed validation
+prevents success commit; it does not schedule another provider attempt. Do not
+move `commit_success()` into generation retries or change acknowledgment-loss
+semantics. This bounds the new read, not every pre-existing finalizer operation.
+Keep admitted history identities separately from mutation sources and check them
+whenever nonempty, including a successful `decisions: []` review.
+
+Required authorization is an awaited fatal guard, never a best-effort observation
+callback. Apply it to source-bearing corpus embedding requests too; unused ranking
+candidates are not finalization dependencies. If optional history reading fails,
+preserve the existing mandatory snapshot rather than reloading newer state.
+
 The guarantee is bounded by each check: a purge after authorization cannot unsend
 an already authorized request, and this probe does not promise continuous freshness
 or introduce long-held source locks. Test loss visible before each boundary, not
@@ -226,6 +252,9 @@ expected evidence sets, complete deltas and human scoring rules.
 Record anticipated turn latency and the criterion for an unacceptable regression
 before scoring, not after seeing results; these are evaluation criteria, not spend caps.
 Current source scope and archive eligibility remain settled.
+Choose one recipe/target setup without fresh target-turn compaction, or freeze
+equivalent existing summaries, so paired base packets genuinely match. B is an
+allowed experimental choice, not a production-default selection.
 
 ### H2: Reader And Ranking Feasibility
 
@@ -235,6 +264,8 @@ sequences; and an exchange transaction started before capture but committed afte
 which must remain absent from this attempt. Freeze annotations and all local state
 in the same snapshot. Verify source-span chains, source-less operator removal,
 mixed corrected/unaffected claims, branches and bounded-envelope omission.
+Use a concurrently committed exchange with no fact mutation to prove membership
+isolation independently of subject-generation fencing.
 
 Run the separate ranker feasibility probe after authorization. Distinguish corpus
 miss, ranking miss and insufficient qualification/resolution evidence. Retain exact
@@ -255,6 +286,13 @@ Pause before generation, continuation, review and finalization to exercise visib
 purge, ordinary unavailability, scope/hash errors, timeout and cancellation.
 Use committed PostgreSQL readback; no assistant/fact commit after fatal rejection.
 Historical instructions remain source data, never system authority.
+Include deadline expiry and purge after review on a no-write success candidate;
+neither reply nor new revision may commit, and no provider rerun is allowed.
+Preserve post-commit acknowledgment-loss tests. Observation failures remain
+non-vetoing, unlike authorization failures. Compare actual paired base packets
+after removing only history and consistently normalizing fixture identities.
+Keep the final actual reviewer capacity check; its projected reply reserve is
+not a guarantee, and overflow is not permission to strip already exposed evidence.
 
 ### H4: Paired Targets And Short Semantic Sequences
 
@@ -301,6 +339,11 @@ values, qualifiers, lifecycle effects and source authority, not just intended ta
 A caught bad candidate is not a delivered success; a false reviewer veto is not a
 retrieval failure. Blind arm labels for human review, retain quotes/disagreements;
 a model judge is optional/advisory. Keep observations and interpretation separate.
+Safe incompleteness and sufficient historical recall are distinct scores. Reuse
+the existing harness, not mutation-only scoring that requires new revision IDs:
+zero-revision recall can pass, unintended additions fail, and required fresh
+updates must not be rewarded for doing nothing. Retain each follow-up's actual
+history packet to distinguish repeated history support from local-only continuity.
 
 Report every case, counts, actual latency and context costs. Recommend continuing
 only when automatic recovery adds demonstrated useful dialogue without structural
@@ -334,16 +377,15 @@ none is required merely to conduct the probe. Verify populated/fresh migrations
 if schema changes become necessary rather than assumed. Keep the known policy
 freshness failure unwaived. No live calls or tests have been run for this revision.
 
-## Revision 2 Coverage And Remaining Review
+## Revision Coverage And Approval Boundary
 
 [Assessment dispositions](../findings/natural-memory-consultation/history-recall-review-assessment.md)
 map to sections 1/2 (snapshot and source-relative lineage), 3 (distinct transcript
 recipe), 4 (fresh authority, temporal conflict and capacity), 5 (delivery races and
 errors), and H4/H5 (control fairness and stage-level outcomes).
-The original reports remain unchanged. This draft adds no accepted product decision.
-
-Review the source-relative envelope, historical acknowledgment versus fresh assertion,
-bounded purge guarantees and automatic-only comparison before implementation approval.
+The original reports remain unchanged. Revision 3 adds the accepted H1 testimony
+clarification, H3 deadline handoff and the final bounded checkpoint tests. Approval
+covers the isolated probe, not production policy/defaults or release qualification.
 Unlinked semantic corrections and reviewer quality remain empirical, not missing
 permission to add phrase rules. No privacy subsystem, spending gates, new fact types,
 extra reviewers, writable notes, episodes or general memory framework.

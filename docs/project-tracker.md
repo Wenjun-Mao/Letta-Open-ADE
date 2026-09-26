@@ -1,6 +1,6 @@
 # ADE Project Tracker
 
-Updated: 2026-09-25. Owner: this ADE task, using Relay for delegated reporting.
+Updated: 2026-09-26. Owner: this ADE task, using Relay for delegated reporting.
 Direction and milestone completion criteria live in the [roadmap](product-roadmap.md).
 
 ## Current Summary
@@ -18,19 +18,20 @@ and PC-09 (simplicity and observational request counts).
   default. See the [latest finding](findings/natural-memory-factual-followup-2026-09-24.md).
 - Product-agreement consolidation and ADR lifecycle cleanup are recorded. PC-10
   confirms archived conversations remain eligible within the same-character boundary.
-- The [historical-recall plan](plans/natural-history-recall.md), revision 2, is
-  proposed for a second Pro review: bounded source recovery, source-relative
-  lifecycle meaning and automatic recall versus a matched empty-history control.
-  Discretionary tools are deferred. No implementation or new live experiment is authorized.
-- Both Pro reports are preserved with a [source-checked assessment](findings/natural-memory-consultation/history-recall-review-assessment.md).
-  Revision 2 incorporates automatic versus baseline first, source-relative
-  lifecycle and fresh-assertion boundaries, coherent snapshots, bounded purge checks,
-  separate transcript ranking and stage-level scoring. Implementation remains unapproved.
-- Revision 2 received two conditional-go reports, preserved with a
-  [source-checked assessment](findings/natural-memory-consultation/history-recall-r2-review-assessment.md).
-  Remaining amendment: distinguish saved-fact repair from user retraction and
-  explicitly deadline-bound the new finalization history check. Other points are
-  bounded checkpoint tests, not a new architecture. No implementation is authorized.
+- The [historical-recall plan](plans/natural-history-recall.md), revision 3, is
+  approved for bounded H1-H5 implementation and a probe of automatic recall
+  versus a matched empty-history control. Discretionary history tools are deferred.
+- Both review rounds remain preserved with source-checked assessments:
+  [first round](findings/natural-memory-consultation/history-recall-review-assessment.md)
+  and [revision 2](findings/natural-memory-consultation/history-recall-r2-review-assessment.md).
+  Their final conditions distinguish saved-fact repair from user retraction and
+  deadline-bound the new finalization history check, with focused checkpoint tests.
+- The user's "agreed, go" on 2026-09-26 authorizes this bounded work.
+  Final testimony/deadline conditions and checkpoint tests are incorporated. Work
+  will use one serial writer on the retained checkout, with structural/offline
+  verification before the frozen live probe. DeepSeek generation and the existing
+  Qwen embedding route remain the intended providers; no spend gates or unplanned
+  diagnostic rerolls. Production defaults and release promotion remain excluded.
 - The candidate-policy freshness failure remains unwaived; no release promotion
   or production change follows from these diagnostic results.
 
