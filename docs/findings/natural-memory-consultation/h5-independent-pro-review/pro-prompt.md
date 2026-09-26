@@ -3,8 +3,8 @@
 I need an independent review of synthetic character-memory evidence. Use **only GitHub access** and this immutable documentation packet:
 
 - Repository: `https://github.com/Wenjun-Mao/Letta-Open-ADE`
-- Published documentation-only commit: `<PUBLISHED_DOC_REVIEW_COMMIT>`
-- Packet directory at that exact commit: `<PUBLISHED_PACKET_TREE_URL>`
+- Documentation-only evidence commit: `59d48af667cabe93e1eb168f0a8eb8b39a3dc20e`
+- Packet directory at that exact commit: https://github.com/Wenjun-Mao/Letta-Open-ADE/tree/59d48af667cabe93e1eb168f0a8eb8b39a3dc20e/docs/findings/natural-memory-consultation/h5-independent-pro-review
 
 Confirm the full commit SHA you actually inspected. If the link or any file is inaccessible, say exactly what you could and could not inspect. Do not silently substitute the repository default branch, a moving branch, or prior knowledge. The retained implementation source revision named in the packet is provenance only; it is not guaranteed to be available on GitHub. The bounded contract excerpts in file 04 are the source information available for this review.
 
