@@ -1,16 +1,19 @@
 # Natural History Recall: Independent Pro Review Briefs
 
-Prepared: 2026-09-25. Status: **Draft pending source-publication approval and
-anonymous GitHub access verification.** Do not hand off as a ready GitHub packet yet.
+Prepared: 2026-09-25. Status: **Ready for manual Pro review.** The user approved
+publication of the source checkpoint; all 15 required plan, contract, finding and
+source files at the pinned revision were fetched anonymously from GitHub and
+matched local Git blobs byte-for-byte.
 
 Source/plan anchor: `cece5bedd6032da3ebc3802c7be604eb505967e6`.
 Discovery repository: https://github.com/Wenjun-Mao/Letta-Open-ADE
 Discovery branch: `codex/character-continuity`.
-At preparation, the remote branch was `6915ceec2f953b44f653c4fbb3f012e56a0e418a`;
-the source anchor was 24 commits ahead, including implementation, not just docs.
-Publication of that history needs approval beyond the standing docs-only grant.
-No source push, consultant dispatch, live experiment or implementation follows
-from preparing these prompts. The user will paste each prompt into a separate Pro
+Publication advanced the review branch from `6915ceec2f953b44f653c4fbb3f012e56a0e418a`
+to `bae922feb4383d0cc500f80bf53bef93de5128a8` with the source and draft briefs;
+this later documentation checkpoint records readiness. The source/plan anchor
+above remains unchanged. Outgoing-history checks found no private capture/runtime
+paths or high-confidence credential patterns. No merge, deployment, release
+promotion or model calls occurred. The user will paste each prompt into a separate Pro
 conversation. Neither reviewer should see the other's findings before reporting.
 
 Purpose: critique a proposed bounded read-only historical-recall plan before

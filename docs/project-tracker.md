@@ -40,6 +40,14 @@ the approved publication scope.
 
 ## Historical Checkpoint Record
 
+2026-09-25 review-publication exception: the user explicitly approved pushing the
+accumulated source checkpoint and historical-recall briefs on the review branch.
+The source/plan anchor is `cece5bedd6032da3ebc3802c7be604eb505967e6`; required files
+were verified anonymously on GitHub. See the
+[two independent Pro briefs](findings/natural-memory-consultation/history-recall-review-briefs.md).
+This does not merge to main, qualify the branch, or grant standing permission to
+publish future implementation history. No historical-recall implementation began.
+
 The user authorized offline implementation of revision-5 checkpoints 1–4 on
 2026-09-24 after both final Pro GO reviews. Work is assigned to the retained
 `codex/character-continuity` worktree, beginning at `6915cee`; checkpoint 5
