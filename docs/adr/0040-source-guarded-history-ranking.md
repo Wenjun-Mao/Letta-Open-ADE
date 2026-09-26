@@ -1,7 +1,7 @@
 # ADR 0040: Source-Guarded Probe-Local History Ranking
 
-Status: Proposed for director verification of the H2 offline integration on
-2026-09-26. Ranking observations and H4 dialogue scoring remain separate gates.
+Status: H2 finite synthetic ranking observed on 2026-09-26; director review
+pending. H4 dialogue scoring remains a separate gate.
 
 ## Problem
 
@@ -53,5 +53,8 @@ source-loss checks, native PostgreSQL hash/scope/generation checks, and a
 full worker turn using the Qwen recipe with fake embeddings. The first combined
 worker rerun failed because `history_ranking` was missing from the trace-stage
 allowlist; this was the root cause and the allowlist now names the stage.
-The following fresh-database worker run passed 16 cases. No live ranking result
-is claimed in this offline checkpoint.
+The following fresh-database worker run passed 16 cases. The subsequent finite
+synthetic H2 schedule selected Qwen cosine from three development cases and
+completed four held-out cases. Its findings and exact artifact hashes are in
+[the H2 evidence record](../findings/natural-memory-consultation/history-h2-ranking-feasibility-2026-09-26.md).
+The synthetic calls do not prove native delivered continuity.

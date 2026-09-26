@@ -66,6 +66,10 @@ uv run --project services/ade-api python -m workflows.evals.character_memory_dev
 
 The second command is conditional on an adequate development selection. Each
 cell runs once; failed or unrun cells are retained without a reroll.
+The 2026-09-26 finite schedule selected Qwen cosine and completed all four
+held-out ranking cases. [Its finding](../../../docs/findings/natural-memory-consultation/history-h2-ranking-feasibility-2026-09-26.md)
+records the full evidence and limits; H4 native dialogue scoring is pending
+director review.
 
 To reproduce the structural database checks, use an isolated PostgreSQL 15
 instance with pgvector and a passwordless loopback `ade_owner` database named

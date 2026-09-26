@@ -293,6 +293,7 @@ async def run_phase(
         if decision["selected"] != prior["selection"]["selected"]:
             raise ValueError("held-out gate selection differs from frozen rule")
         selected = decision["selected"]
+        result["selected_recipe"] = selected
     try:
         result["provider_identity"] = _provider_identity(await embeddings.catalog())
         if (
@@ -382,7 +383,8 @@ def main() -> None:
             {
                 "phase": args.phase,
                 "output": str(args.output),
-                "selection": result.get("selection", {}).get("selected"),
+                "selection": result.get("selection", {}).get("selected")
+                or result.get("selected_recipe"),
                 "embedding_dispatches": result["embedding_dispatches"],
                 "succeeded": sum(
                     cell["status"] == "succeeded" for cell in result["cells"]

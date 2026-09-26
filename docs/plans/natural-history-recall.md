@@ -400,8 +400,14 @@ worker run failed because `history_ranking` was absent from the trace-stage
 allowlist. The trace contract now includes that stage, and the 16-case rerun
 passed. The path uses fresh source and subject-generation guards before each
 embedding dispatch. Synthetic fixture ranking is explicitly fixture-owned and
-makes no native source claim. Live literal/Qwen feasibility and the selected
-recipe remain pending the frozen schedule. No H4/H5 dialogue score or production
+makes no native source claim. The frozen live H2 schedule completed: Qwen
+cosine recovered both positive development evidence sets where literal missed,
+and the adequacy rule selected Qwen. Four held-out cases then retained every
+required exchange; their one-to-three-exchange corpora did not pressure the
+top-four rank. Both recipes admitted four irrelevant windows on the unrelated
+development case. Full scores, hashes, omissions, receipts and latency are
+recorded in [the H2 finding](../findings/natural-memory-consultation/history-h2-ranking-feasibility-2026-09-26.md).
+Director review is pending before H4; no H4/H5 dialogue score or production
 decision exists.
 
 [Assessment dispositions](../findings/natural-memory-consultation/history-recall-review-assessment.md)
