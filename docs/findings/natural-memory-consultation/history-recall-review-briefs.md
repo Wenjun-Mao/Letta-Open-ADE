@@ -1,76 +1,69 @@
 # Natural History Recall: Independent Pro Review Briefs
 
-Prepared: 2026-09-25. Status: **Ready for manual Pro review.** The user approved
-publication of the source checkpoint; all 15 required plan, contract, finding and
-source files at the pinned revision were fetched anonymously from GitHub and
-matched local Git blobs byte-for-byte.
-
-Source/plan anchor: `cece5bedd6032da3ebc3802c7be604eb505967e6`.
+Updated: 2026-09-25. **Revision 2 handoff, ready for manual Pro review.**
+Source/plan anchor: `8e298881e4165128c5a680a0b02c1789c894d8ff`.
 Discovery repository: https://github.com/Wenjun-Mao/Letta-Open-ADE
 Discovery branch: `codex/character-continuity`.
-Publication advanced the review branch from `6915ceec2f953b44f653c4fbb3f012e56a0e418a`
-to `bae922feb4383d0cc500f80bf53bef93de5128a8` with the source and draft briefs;
-this later documentation checkpoint records readiness. The source/plan anchor
-above remains unchanged. Outgoing-history checks found no private capture/runtime
-paths or high-confidence credential patterns. No merge, deployment, release
-promotion or model calls occurred. The user will paste each prompt into a separate Pro
-conversation. Neither reviewer should see the other's findings before reporting.
 
-Purpose: critique a proposed bounded read-only historical-recall plan before
-implementation. Wrong decisions risk stale-current assertions, invented shared
-experiences, write-authority expansion and unnecessary runtime complexity.
-One role examines product semantics; the other examines repository-grounded design
-and simplification. Neither supplies behavioral or release acceptance evidence.
+The plan, product contract, ADRs, findings/reports and relevant runtime files
+(21 required files) were fetched anonymously from GitHub at this anchor and
+matched local Git blobs byte-for-byte. This is publication verification, not
+execution or acceptance. Runtime code is unchanged from the first review anchor
+`cece5bedd6032da3ebc3802c7be604eb505967e6`; revision 2 changes documentation only.
+The earlier prompts are preserved in Git history, and the two original reports
+remain unchanged beside [our assessment](history-recall-review-assessment.md).
+
+Use a separate Pro conversation for each prompt. The roles are complementary:
+product semantics versus code-grounded minimal implementation. The intended
+decision is whether unresolved contracts need further revision before approval
+of a bounded probe. Consensus does not prove runtime or model behavior. No
+consultant account operation, implementation, live call, merge or release follows
+from this publication. Private generated captures and local services remain outside
+the evidence boundary.
 
 ## Pro 1: Product And Memory Semantics
 
 ```text
-Independently review ADE's proposed historical-recall plan for product and memory semantics. We will use your report to revise or approve bounded implementation, not to certify model quality. Prioritize concrete counterexamples and the smallest necessary corrections, not a larger memory platform.
+Review ADE's historical-recall plan REVISION 2 for product and memory semantics. We revised the first draft after independent reviews; determine whether consequential ambiguities remain before bounded implementation. Do not assume prior conversation context or that reviewer agreement proves correctness.
 
-ACCESS AND ANCHOR: GitHub only. Repository https://github.com/Wenjun-Mao/Letta-Open-ADE ; discovery branch codex/character-continuity ; exact source/plan commit cece5bedd6032da3ebc3802c7be604eb505967e6. State the commit and paths actually inspected. If inaccessible, report that limitation; do not silently substitute main, a different revision, or inferred code. You cannot access local worktrees, private captures, databases, services or prior chats. Published findings summarize observations; they are not raw live evidence available to you.
+GitHub-only access. Repository: https://github.com/Wenjun-Mao/Letta-Open-ADE ; discovery branch: codex/character-continuity ; exact source/plan commit: 8e298881e4165128c5a680a0b02c1789c894d8ff. State the revision/files actually inspected; report access failures rather than substituting main. Local services, ignored captures and private evidence are unavailable.
 
-PLAN: https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/cece5bedd6032da3ebc3802c7be604eb505967e6/docs/plans/natural-history-recall.md
-CURRENT PRODUCT AGREEMENTS: https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/cece5bedd6032da3ebc3802c7be604eb505967e6/docs/product-contract.md
-CURRENT TECHNICAL DECISIONS: At that commit, docs/adr/0035-compact-natural-review-and-observational-dispatch.md and docs/adr/0036-discretionary-curated-tools-and-structured-requirements.md. Use docs/adr/README.md to distinguish superseded rules.
-LIVE-EVIDENCE LIMITS: docs/findings/natural-memory-factual-followup-2026-09-24.md at that commit. Scope loss and reviewer truncation were observed; two low-effort reviewer-only replays succeeded but do not qualify native defaults or historical recall.
+PLAN: https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/8e298881e4165128c5a680a0b02c1789c894d8ff/docs/plans/natural-history-recall.md
+PRODUCT CONTRACT: https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/8e298881e4165128c5a680a0b02c1789c894d8ff/docs/product-contract.md
+At the same commit, consult ADRs 0035/0036 and docs/findings/natural-memory-factual-followup-2026-09-24.md. Prior reports and synthesis are in docs/findings/natural-memory-consultation/history-recall-review-assessment.md; reason independently before using them to check issue coverage.
 
-CONTEXT: ADE is a local-first character workspace, now using its own PostgreSQL runtime rather than Letta. The immediate character is Lin Xiaotang (林小棠). Existing facts are versioned and subject-owned; messages are immutable. The model reviewer interprets natural meaning while ADE binds provenance, ownership, versions and atomic writes. Current search_memory retrieves facts, not transcripts. The proposal reuses dialogue through bounded read-only search/read and compares existing behavior, automatic history retrieval, and discretionary tool retrieval.
+ADE has native PostgreSQL persistence, immutable dialogue, versioned subject facts and one reviewer before atomic commit. Lin Xiaotang should recall naturally across chats/persona versions. Historical retrieval is NOT implemented. Revision 2 proposes only baseline versus one automatic historical packet, using the same H-capable reviewer (empty H in control). Discretionary tools and separate search/read are deferred.
 
-SETTLED CONSTRAINTS: Natural conversation, not memory commands. Shared experiences are same user plus same character definition root across chats and ordinary persona versions. Profile facts may be shared with another character without implying participation in its conversations. Archived conversations remain recall-eligible without restoration. Explicit operator fact removal is not transcript erasure. No conversational privacy/no-save/consent subsystem, phrase-specific semantic regex or equivalent keyword rules, episode store, writable notebook, second reviewer, new memory service or spending gates. Structural isolation and provenance still apply. Challenge contradictions, but flag any suggested change to these agreements rather than quietly redesigning the product.
+Settled: same-user/same-character-root experience, archived chats eligible without restoration, shared facts do not imply shared experiences, and operator fact removal does not erase transcripts. No privacy/no-save subsystem, semantic phrase rules, episodes, writable notes, extra reviewer/service or spending gates. Structural isolation and provenance remain.
 
-YOUR MANDATE: Scrutinize the distinction between what was said and what is currently true, including corrections, invalidation, endings, removed facts with retained dialogue, habits versus preferences, resolved concerns and vague follow-ups. Does the proposed read contract make natural continuity possible without repetitive personalization or unsupported promises? Does retrieval-only no-write authority adequately prevent resurrection while allowing genuinely fresh statements? What should the character say when linked lifecycle metadata is absent or history is incomplete? Test these questions with short natural Mandarin multi-turn examples, including an archived conversation and a persona-version change. Do not turn examples into production phrase rules.
+Focus on source-relative corrections (including correction then return to the original value), removed facts followed by historical acknowledgment versus genuinely fresh assertion, H-only referents requiring local clarification, temporal false conflicts, resolved concerns, ambiguity and inappropriate callbacks. Does the plan preserve these meanings across the NEXT turn without expanding write authority or adding semantic heuristics? Can the proposed lineage envelope express the necessary distinctions without misleading claims? Are complete-delta outcomes and minimum sufficient evidence sets clear?
 
-Also challenge the evaluation: identify missing negative cases, misleading tool-call assertions, false precision and whether the comparison separates retrieval quality from reviewer/generation quality. You may recommend simplifying or not implementing part of the proposal. Do not conduct a vendor survey or claim live behavior you cannot observe.
-
-OUTPUT: Give an answer-first verdict (ready, targeted revision, or not ready), then prioritized issues with exact plan/source references, a concrete failure example, and the smallest correction. Separate implementation blockers from questions best resolved by the bounded experiment. State which proposed contracts you would keep, change or leave empirical. Include a compact natural-dialogue acceptance set and source/access limits. Label observations, inferences and hypotheses; do not manufacture issues or treat plausible examples as observed failures. Consultation is not implementation or release acceptance.
+Give an answer-first verdict: ready for bounded implementation, targeted revision, or not ready. List only remaining consequential issues with pinned references, a concrete natural Mandarin counterexample and smallest correction. Separate contract blockers from questions the experiment should answer; do not demand known model reliability before a feasibility probe. Identify successfully closed issues and any simplification still warranted. State evidence limits. No implementation, model calls or release qualification is requested.
 ```
 
 ## Pro 2: Architecture And Simplification
 
 ```text
-Independently review ADE's proposed historical-recall plan against the repository, with a primary mandate to reduce cognitive and implementation complexity while preserving explicit ownership and correctness. We need to know whether the smallest useful experiment is well designed, not how to build a general memory platform. Your report will guide a plan revision before implementation.
+Review ADE's historical-recall plan REVISION 2 against the repository for correctness and minimal implementation complexity. Determine whether it is ready for a bounded automatic-recall probe, not a general memory platform. Do not assume prior conversation context.
 
-ACCESS AND ANCHOR: GitHub only. Repository https://github.com/Wenjun-Mao/Letta-Open-ADE ; discovery branch codex/character-continuity ; exact source/plan commit cece5bedd6032da3ebc3802c7be604eb505967e6. State the commit and files actually inspected. If unavailable, state the limitation and do not substitute main or another revision. Local services, databases, ignored captures and prior conversations are unavailable. Published findings are summaries, not independently inspected private evidence.
+GitHub-only access. Repository: https://github.com/Wenjun-Mao/Letta-Open-ADE ; discovery branch: codex/character-continuity ; exact source/plan commit: 8e298881e4165128c5a680a0b02c1789c894d8ff. Report inspected paths/revision and access limits; do not substitute main. Local databases, services and private captures are unavailable.
 
-PLAN: https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/cece5bedd6032da3ebc3802c7be604eb505967e6/docs/plans/natural-history-recall.md
-PRODUCT AUTHORITY: https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/cece5bedd6032da3ebc3802c7be604eb505967e6/docs/product-contract.md
-DECISION MAP: docs/adr/README.md at that commit; in particular ADRs 0035 and 0036. Historical ADRs/plans are not competing current instructions.
-SOURCE ROOT: services/ade-api/src/ade_api/features/agent_runtime/ at that commit. Inspect natural_context.py, turn_execution.py, executor.py, natural_memory_reviewer.py, natural_memory_review.py, natural_memory_binding.py, persistence/metadata.py, persistence/conversations.py, persistence/memory_source_read.py and relevant tests under services/ade-api/tests/agent_runtime/. Follow only additional dependencies needed to verify a consequential claim.
+PLAN: https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/8e298881e4165128c5a680a0b02c1789c894d8ff/docs/plans/natural-history-recall.md
+PRODUCT CONTRACT: https://github.com/Wenjun-Mao/Letta-Open-ADE/blob/8e298881e4165128c5a680a0b02c1789c894d8ff/docs/product-contract.md
+Runtime root: services/ade-api/src/ade_api/features/agent_runtime/. Inspect turn_memory_snapshot.py, natural_context.py, turn_execution.py, executor.py, embeddings.py, natural_memory_binding.py, natural_memory_review.py, natural_memory_policy.py, natural_memory_reviewer.py, worker_finalization.py, persistence/metadata.py and persistence/memory_source_read.py as relevant. Consult ADRs 0035/0036 and existing tests. Prior reports/synthesis are in docs/findings/natural-memory-consultation/history-recall-review-assessment.md; evaluate independently before checking closure.
 
-CONTEXT: ADE owns a PostgreSQL native runtime with immutable messages, subject facts, lifecycle revisions, persona-definition roots/versions, a bounded model/tool loop and one synchronous reviewer before atomic finalization. Model Router provides conversation/reviewer and endpoint-independent embedding routes. Existing search_memory searches facts. Historical transcript recovery is proposed, not implemented. The retained branch is not release-qualified; a known stale policy-fingerprint gate remains unwaived.
+ADE already has a short coherent state snapshot, immutable dialogue, subject-generation fencing, one reviewer and atomic finalization. Historical retrieval is proposed, not implemented; the release-policy gate remains unwaived. Revision 2 narrows to a matched empty-history control versus one automatic packet. It reuses the snapshot, uses source-relative annotations and one admission path, and extends only read-only H conflict grounding. No new history tool is exposed.
 
-SETTLED CONSTRAINTS: Natural dialogue without storage/search commands; same-user/same-character experiences across conversations and ordinary persona versions; archived chats eligible without restoration. Profile facts are subject-owned, distinct from character experience. Operator removal retains raw history. No conversational privacy-policy system, semantic phrase rules, episode store, writable notes, extra reviewer/service, spending enforcement, compatibility scaffolding or broad refactor. Keep structural source isolation, exact attempt/timeout semantics, versions and atomicity. Prefer direct code over speculative abstraction.
+Settled: same-user/same-character-root transcripts across versions, archived sources eligible, shared facts remain subject-scoped, removal is not transcript erasure. No semantic phrase rules, privacy subsystem, episode store, writable notes, extra service/reviewer, spend gates or speculative framework.
 
-YOUR MANDATE: Trace the minimum changes needed for a bounded source reader, automatic versus discretionary access, and the proposed read-only H evidence/conflict extension. Challenge whether search/read really need two operations, whether the H extension is necessary or over-scoped, and whether existing code can be reused without weakening write authority. Examine snapshots versus commit order, cross-chat definition-root joins, archive/purge races, missing provenance links, source previews, context capacity, tool continuations, reviewer visibility and optional-read failure semantics. Distinguish genuine correctness holes from production-scale work deliberately excluded from an isolated bounded probe.
+Focus on coherent target-time snapshots, source-to-current lineage including source-less removal, packet admission for generator/reviewer/continuations, pre-dispatch and finalization purge checks with explicit race limits, read-only versus writable handles, and fatal versus optional errors. Does deferring the tool exception-wrapper fix remain safe for the automatic-only path? Does the separate probe-local transcript recipe avoid corrupting fact embeddings? Assess held-out ranking fixtures, identical reviewer controls, paired target prefixes, trajectory tests and stage-level failure accounting.
 
-Review the proposed ranking feasibility step and three-arm evaluation for confounding, future-turn leakage, mutable setup, mismatched evidence and unfair capacity. Is the baseline prerequisite useful or unnecessarily blocking? Can fewer mechanisms answer the central question? Specify the least additional contract or test required for any blocker; do not invent frameworks or demand production indexing before feasibility can be measured. No model/provider calls or implementation are requested.
-
-OUTPUT: Give an answer-first verdict (ready, targeted revision, or not ready), a minimal component/data-flow sketch, prioritized findings with pinned code/plan references and concrete falsification tests, and a keep/simplify/defer list. Separate proven code facts from inference and empirical unknowns. Recommend revised checkpoint boundaries only where materially useful. State what cannot be established without execution. Do not treat code inspection, reviewer consensus or mock tests as live quality or release acceptance.
+Give an answer-first verdict, remaining blockers with exact source/plan references and minimal falsification tests, and a keep/simplify/defer list. Distinguish actual defects from already-specified contracts and empirical unknowns. Challenge unnecessary implementation, but do not require production indexing or live quality certification before bounded feasibility. No implementation, provider calls or release approval is requested.
 ```
 
-## Integration Of Returned Reports
+## Handling Results
 
-Preserve each report unchanged. Record source corrections and synthesis separately;
-classify useful insights as Use, Test, Park or Discard. Verify consequential code
-claims locally and revise the existing historical-recall plan once. Further review
-is warranted only for unresolved consequential decisions, not consensus polishing.
+Preserve returned reports unchanged. Synthesize and verify consequential claims
+separately; distinguish Use, Test, Park and Discard. Revise the existing plan only
+where needed. Do not reopen settled scope or add machinery merely to achieve
+unanimous reviews; further review is for unresolved consequential issues.
