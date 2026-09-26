@@ -21,6 +21,10 @@ and PC-09 (simplicity and observational request counts).
 - The [historical-recall plan](plans/natural-history-recall.md) is proposed for review:
   bounded source recovery, current-versus-historical evidence, and automatic versus
   discretionary retrieval. No implementation or new live experiment is authorized.
+- Both Pro reports are preserved with a [source-checked assessment](findings/natural-memory-consultation/history-recall-review-assessment.md).
+  Recommended revision: automatic versus baseline first, clearer source-relative
+  lifecycle and fresh-assertion boundaries, and stage-level scoring. The existing
+  plan has not yet been revised or approved for implementation.
 - The candidate-policy freshness failure remains unwaived; no release promotion
   or production change follows from these diagnostic results.
 
