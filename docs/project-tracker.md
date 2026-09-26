@@ -18,13 +18,14 @@ and PC-09 (simplicity and observational request counts).
   default. See the [latest finding](findings/natural-memory-factual-followup-2026-09-24.md).
 - Product-agreement consolidation and ADR lifecycle cleanup are recorded. PC-10
   confirms archived conversations remain eligible within the same-character boundary.
-- The [historical-recall plan](plans/natural-history-recall.md) is proposed for review:
-  bounded source recovery, current-versus-historical evidence, and automatic versus
-  discretionary retrieval. No implementation or new live experiment is authorized.
+- The [historical-recall plan](plans/natural-history-recall.md), revision 2, is
+  proposed for a second Pro review: bounded source recovery, source-relative
+  lifecycle meaning and automatic recall versus a matched empty-history control.
+  Discretionary tools are deferred. No implementation or new live experiment is authorized.
 - Both Pro reports are preserved with a [source-checked assessment](findings/natural-memory-consultation/history-recall-review-assessment.md).
-  Recommended revision: automatic versus baseline first, clearer source-relative
-  lifecycle and fresh-assertion boundaries, and stage-level scoring. The existing
-  plan has not yet been revised or approved for implementation.
+  Revision 2 incorporates automatic versus baseline first, source-relative
+  lifecycle and fresh-assertion boundaries, coherent snapshots, bounded purge checks,
+  separate transcript ranking and stage-level scoring. Implementation remains unapproved.
 - The candidate-policy freshness failure remains unwaived; no release promotion
   or production change follows from these diagnostic results.
 

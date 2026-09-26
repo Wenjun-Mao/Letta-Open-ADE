@@ -83,3 +83,12 @@ Apply these changes to the [existing plan](../../plans/natural-history-recall.md
 not a parallel plan. This assessment does not itself revise that plan. Re-review
 only unresolved consequential contracts; implementation and live calls remain
 separate approvals. The historical policy-freshness gate remains unwaived.
+
+## Revision Follow-Up (2026-09-25)
+
+The user authorized revising the plan and seeking another Pro review, not
+implementation. [Revision 2](../../plans/natural-history-recall.md) incorporates
+the recommendations above, defers discretionary tools and keeps accepted product
+agreements distinct from proposed read/authority semantics. Its final section maps
+the corrections to the revised contracts and checkpoints. This update does not
+change the preserved reports or turn their recommendations into measured results.

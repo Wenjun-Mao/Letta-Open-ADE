@@ -1,238 +1,349 @@
 # Natural Historical Recall: Bounded Design And Plan
 
-Status: Proposed for review, 2026-09-25. No implementation, model calls, default
-change, or release promotion is authorized by this document.
-Source inspected: `3f688cb` on the retained `codex/character-continuity` branch.
+Status: **Revision 2, proposed for Pro review**, 2026-09-25. No implementation,
+model calls, default change, or release promotion is authorized by this document.
+Runtime source inspected: `cece5bedd6032da3ebc3802c7be604eb505967e6`; subsequent
+checkpoints through `2be2c7f` changed documentation only.
 Product authority: [PC-01 through PC-10](../product-contract.md).
+Review basis: [independent reports and source-checked assessment](../findings/natural-memory-consultation/history-recall-review-assessment.md).
 
 This is the single follow-on plan for historical source recovery. The
-[compact-reviewer plan](natural-memory-implementation.md) explicitly excludes
-transcript search; its evidence and open reliability work remain intact. This
-plan does not reopen its comparison or select a production context policy.
+[compact-reviewer plan](natural-memory-implementation.md) excludes transcript
+search; its evidence and open reliability work remain intact. Revision 2 replaces
+this plan's initial three-arm scope, not the historical reports or current product
+agreements. Proposed read semantics below still require approval.
 
-## Outcome And Diagnosis
+## Outcome And Smaller Scope
 
-Let Lin Xiaotang recall relevant shared dialogue across chats and ordinary persona
-versions without memory commands, invented experiences, or repetitive callbacks.
-An earlier interview-anxiety discussion should support a relevant later follow-up
-without necessarily becoming a new profile fact or episode record.
+Test whether **one automatically admitted historical packet improves natural
+continuity over a matched empty-history control**. Lin Xiaotang should recall
+relevant dialogue across chats/persona versions without commands, invented shared
+experiences or repetitive callbacks. This is a feasibility probe, not selection
+of the best retrieval trigger or a production rollout.
 
-The missing capability is historical source recovery, not a missing message store.
-ADE persists immutable messages, definition roots/versions, summaries, fact
-revisions and source links. `search_memory` retrieves fact projections, not
-transcripts. Natural context recipes supply bounded local dialogue and facts,
-with summaries depending on recipe/capacity. General historical recall is unproven.
+ADE already persists messages, definition roots/versions, summaries and fact
+provenance. `search_memory` retrieves facts, not transcripts. Reuse PostgreSQL and
+the existing one-reviewer/atomic-finalization path. Add one bounded reader and one
+history admission path; do not expose a new model tool or public history API.
 
-Separate known problem: the reviewer has lost temporal scope and exhausted output
-capacity in live diagnostics. Two low-effort reviewer-only contrasts succeeded,
-but did not qualify a native default. History retrieval does not fix inaccurate
-fact extraction. Do not change reviewer settings mid-comparison to hide failures.
+**Deferred:** discretionary/iterative retrieval, a search-preview/read protocol,
+production indexes/backfill, writable notes, episodes, another reviewer or memory
+service. If discretion is later justified, start with one combined
+`recall_history(query)` operation rather than two stateful operations.
+
+Fact-extraction reliability is a separate limitation: scope loss and truncation
+were observed; two low-effort reviewer-only contrasts did not qualify a native
+default. Do not change reviewer settings mid-comparison to conceal a failure.
+Reader tests and ranking feasibility do not depend on solving general extraction.
 
 ## Proposed Read Contract
 
-### Ownership And Eligibility
+### 1. Scope And One Coherent Snapshot
 
-ADE binds workspace, subject, definition root and purpose from the accepted run.
-Model arguments cannot choose them. Join a conversation's immutable definition
-version to its root; do not compare persona text or require identical versions.
-Both search and exact read enforce this boundary, including guessed identifiers.
-Archived conversations are eligible without restoration (PC-10). Another
-character's dialogue is not shared experience even when profile facts are shared.
-Evaluation history stays isolated from product history and other fixture cases.
-Old bindings may supply readable history without being permitted to execute.
+Use `load_turn_state()`'s existing short repeatable-read, read-only transaction.
+Materialize bounded historical exchanges and their annotations through the same
+connection as local messages, facts, entities and summaries. Check accepted subject
+generation as today; close the transaction before embedding or generation calls.
+No snapshot service, global commit counter or provider-duration transaction.
 
-Only committed exchanges visible to the attempt's read snapshot are eligible.
-Exclude rejected candidates, in-flight runs and future fixture turns. Message
-creation timestamps alone do not establish commit order; local sequence does not
-order different conversations. For the probe, materialize a bounded corpus of
-eligible exchange IDs, content and hashes in a short PostgreSQL read snapshot,
-then close it before provider calls. Search and read use that frozen corpus.
-This is an evaluation constraint, not a proposed all-history production scan.
+ADE binds workspace, subject, purpose and character definition root from the run.
+The transcript query joins conversation -> immutable definition version -> root;
+ordinary persona versions share the root. Do not infer identity from persona text.
+Archived conversations remain eligible without restoration. Other roots' transcripts
+are excluded; **shared subject facts are not restricted to this character root**.
+Enforce scope on materialization and source revalidation, not model-selected IDs.
+Evaluation cases use independent subjects/roots as needed to avoid cross-case leakage.
 
-### Past Reports Versus Current Facts
+Only successful committed exchanges visible in that snapshot are eligible.
+A persisted user message alone is not a completed exchange. Exclude in-flight runs,
+rejected candidates and unfinished turns. Local sequence orders one conversation;
+timestamps and history handles do not establish global commit order. Readable old
+policy bindings need not be executable to supply historical dialogue.
 
-The following interpretation is proposed, not an already approved amendment:
+For the bounded probe, retain attempt-local exchange IDs, roles, content hashes,
+source times, exact text and annotations. H1 freezes corpus coverage, maximum
+exchanges and whole-window selection rules without consulting expected answers.
+Record omissions; a relevant exchange outside that scope is a coverage miss.
+This does not propose loading every production conversation into memory.
 
-| Evidence | Appropriate reply | Must not happen |
+All fixture inputs are target-time state: messages, facts, revisions, annotations,
+summaries, query construction and ranking indexes must exclude future turns.
+Revalidation checks integrity/existence, not a silent refresh with later content.
+Normal memory-generation fencing still handles concurrent fact mutations.
+
+### 2. Source-Relative Lifecycle Meaning
+
+History establishes what was said, not that it was true then or remains true now.
+
+| Evidence | Appropriate interpretation | Must not happen |
 | --- | --- | --- |
-| Old morning coffee; current morning tea | Tea is the latest preference; coffee was reported earlier. | Present old coffee as current. |
-| A statement later invalidated as mistaken | Attribute it as an earlier disputed report if relevant. | Certify it as a true past fact. |
-| An ended preference/relationship | Describe the supported ending. | Invent an opposite preference or continuous state. |
-| Removed fact with retained source dialogue | A relevant historical quotation remains possible; removal is not transcript erasure. | Reactivate the chain or save it again from retrieval alone. |
-| Habit without a supported profile fact | Recall reported behavior with its source scope/time. | Convert drinking tea into liking tea. |
-| Old dialogue with no linked current fact | Attribute what was said and qualify unknown current status. | Treat a missing current fact as proof the old statement still holds. |
+| Explicit old morning-coffee preference; current morning-tea preference | Tea is latest; coffee was an earlier report. | Treat old coffee as current or a drinking habit as preference. |
+| Report corrected/invalidated, followed later by the original value | Preserve the intervening dispute; later agreement does not validate the original report. | Infer continuous truth from the matching latest value. |
+| Ended state | Describe the supported ending. | Invent an opposite preference or attitude. |
+| Removed fact; raw conversation retained | Relevant historical quotation remains possible; removal is not erasure. | Treat the removed chain as active or recreate it from retrieval alone. |
+| No usable fact linkage | Attribute source/time and qualify unknown currency. | Treat missing current memory as proof of continued truth. |
 
-Where revision provenance links a source span to a fact chain, accompany the
-source with current lifecycle annotations. Include eligible current descriptors;
-do not fetch forgotten revision values as model context. A retained transcript
-is a distinct source. If essential annotations cannot fit, omit the source window
-rather than show unqualified old text. These annotations are not write targets.
+Resolve links from the recovered message span to its originating revision, then
+through recorded predecessor relationships to the current fact. Looking only at
+the latest revision's sources misses operator removal, which can have no message
+source. Preserve source authority roles: antecedent/referent support is not itself
+an assertion of every sentence in the exchange.
 
-Not all dialogue has fact links; later corrections may use different wording.
-Do not invent semantic linkage with regexes, keyword tables or another model call.
-Supply chronological context and current lifecycle information, and measure the
-reviewer's interpretation. Missing linkage means unknown status, not currency.
-Historical truth repair and suppression of removed topics are not promised.
-A fresh explicit current statement can still support a new fact under PC-07.
+The bounded annotation envelope identifies the linked span, origin, recorded
+transitions on its source-to-current path (operation/reason/status and ordering),
+and eligible current descriptor. Preserve correction/invalidation even if a later
+value matches the origin. Do not replace this with a latest-status label or a
+model-written timeline. Unknown/legacy transition meaning stays unknown.
+Where provenance branches, preserve the relevant recorded paths rather than
+inventing one linear history. Omit the optional window if its required envelope
+cannot fit; never silently trim away a material transition.
 
-### Small Read Interface
+Apply annotations only to linked claims, not all clauses in a message. Read the
+existing revision metadata without exposing forgotten revision values; the retained
+transcript is the separate permitted source. Annotations are not write handles.
+Do not invent semantic links with regexes, keyword rules or another model call.
+Unlinked cross-chat corrections/resolutions remain a retrieval/interpretation
+problem, not grounds for a new semantic linkage system.
 
-Prototype internal operations, not generic public CRUD:
+Freeze minimum sufficient evidence sets for correction/resolution cases: a topic
+hit without its needed qualification is not sufficient recall. If later resolution
+is absent, past attribution remains possible; a current-state claim is unsupported.
+These are semantic evaluation expectations, not a promise of comprehensive
+historical truth repair.
 
-- `search_history(query, limit)`: ranked source-window references with role-labelled
-  previews, source conversation/time, coverage and lifecycle annotations.
-- `read_history(reference)`: the exact bounded contiguous exchange window.
-  References must come from this attempt's search, not arbitrary database IDs.
+### 3. One Combined Internal Read And Ranking Probe
 
-Search previews are model-visible evidence too: apply the same annotation,
-attribution and reviewer-visibility rules to them. Use whole exchanges; return
-explicit oversized/omitted status instead of excerpts that hide negation or a
-correction. Preserve verbatim text and roles; historical instructions are source
-data, never system authority. Summaries may locate ranges, not replace exact
-readback. No new summary-generation call is required.
+An internal reader ranks the frozen corpus and returns complete, bounded,
+role-labelled exchange windows with source identity/time and annotations. There
+are no model-visible previews, arbitrary-ID reads or extra expansion protocol.
+Source text is attributed data, not executable archived instructions/tool calls.
+Whole-window omission is explicit; do not clip away negation or corrections.
+Existing summaries may aid location only if captured at target time; they cannot
+substitute for exact dialogue or require a new summarization call.
 
-Compare a simple literal-search baseline with semantic ranking using the existing
-embedding route/space over the same bounded corpus. Mandarin paraphrase fixtures
-decide adequacy; literal/full-text matching is not semantic retrieval. Select one
-ranking implementation before comparing retrieval triggers. No permanent generic
-ranking framework, hybrid service or production indexing migration is assumed.
+Compare simple literal ranking with semantic ranking on **ranking-development
+fixtures separate from scored dialogue cases**. Reuse the embedding client/route
+and model artifact, not the fact-space recipe, fact-query instruction, vector table
+or fact distance threshold. Keep transcript vectors in the bounded probe, with
+identity covering corpus hashes, document/query formatting, model/artifact,
+dimensions and normalization/comparison. No permanent transcript schema is needed.
+Record corpus-embedding cost separately from per-turn cost. Regenerate any
+probe-local vectors when their recipe or corpus changes; never mutate fact vectors.
 
-### Retrieval Trigger Comparison
+Measure ranks and sufficient-evidence coverage for Mandarin paraphrases. Freeze
+selection/tie-breaking, query formatting, limits and any no-match cutoff before
+dialogue scoring; do not tune them on held-out answers. If neither ranker supplies
+needed evidence, report that feasibility limit before runtime comparison.
+No hybrid framework or extra query-rewrite model call is assumed.
 
-Freeze one natural-context recipe, reviewer configuration, routes, corpus and
-ranking implementation. Preserve its lifecycle-overflow rules: if that recipe
-withholds history, the extension cannot bypass the restriction. Report a capacity
-failure rather than silently enlarging context.
+### 4. Admission And Narrow Read-Only Review
 
-| Arm | Behavior | Trade-off |
-| --- | --- | --- |
-| Baseline | Existing facts/local context, no historical recovery. | Establishes whether recovery helps. |
-| Automatic | One search from the current message and bounded local context; read selected results before generation. | Supports spontaneous recall but may distract. |
-| Discretionary | Model can search/read via curated tools, without phrase-based forcing. | Targeted recovery, but search may be omitted or poorly queried. |
+Use one admission path against actual serialized generation and projected reviewer
+requests, including schemas, escaping, annotation metadata and output/candidate
+reserves. Preserve mandatory prompt/persona/current turn, existing local evidence
+and lifecycle rules. Optional history uses remaining capacity; it must not displace
+the matched control's local/fact context or bypass A/A0's narrative-withholding rule.
+Admit fewer whole annotated windows or record omission. No rolling eviction system.
 
-Both retrieval arms share the same source store and maximum history allowance.
-Actual passages may differ; retain them. Measure generation/review/embedding
-dispatch counts, tool steps, context/output sizes and latency. Do not equalize
-request counts artificially or reroll an arm. A combined production design is
-not selected in advance. User dialogue should not need explicit search commands.
+Both arms use the same immutable `H`-capable reviewer binding, model settings and
+limits. Baseline receives empty history; automatic receives the admitted packet.
+Expose identical history text, roles and annotations to generation and review,
+using a request-local `H` map separate from `U/A` support and `F/E` targets.
+Do not append cross-chat records to `source_messages`: those become write support
+and use conversation-local sequence comparisons.
 
-### One Reviewer, No New Write Authority
+Extend only the existing conflict decision to cite an exact candidate span and
+held `H` source span. ADE checks identity/scope, role, hash and unambiguous quote;
+the reviewer judges semantic contradiction and attribution. Historical difference
+alone is not conflict: a current tea assertion may differ from old coffee, and an
+attributed old-coffee answer may differ from current tea. Existing atomic rejection
+remains; no conflict is not proof that an answer is correct.
 
-Keep mandatory prompt/persona/current turn, required lifecycle information and
-existing local evidence ahead of optional history. Preflight actual serialized
-generator and reviewer packets with output reserves. Tool continuations share
-the cumulative history allowance, not a fresh allowance per call.
+History cannot become a current anchor, mutation target, earlier writable support,
+or fourth write-evidence mode. Independently admitted local messages retain their
+ordinary authority even if also present in history. No catch-up extraction.
 
-Give the generator and existing single reviewer identical model-visible history
-with request-local `H` references, separate from writable `U`/`A` support and held
-`F`/`E` targets. Retrieved history cannot become a current anchor, earlier write
-support, or a fourth evidence mode. No background catch-up extraction.
+Freeze these natural multi-turn contrasts, with complete expected deltas:
+- Old removed preference -> historical quotation -> "yes, you remembered correctly":
+  zero preference mutation; acknowledgment of recall is not necessarily current truth.
+- "I currently prefer oolong again": a supported new fact may be added while the
+  removed chain stays forgotten.
+- A local question explicitly asking about current preference -> genuine affirmative
+  answer: existing assistant-supported authority remains available; no short-answer ban.
+- "I like that tea from before again", referent available only in `H`: defer mutation
+  rather than disguise the referent as direct current evidence. Natural local
+  clarification can establish it through existing modes on a subsequent turn.
 
-Propose one narrow conflict-schema extension: exact candidate quotes may reference
-held `H` source spans for reply review only. ADE binds handle, role, hash and quote;
-the reviewer judges meaning. `H` references never authorize mutations. Grounded
-conflict retains atomic rejection; lack of conflict is not semantic proof.
-This requires an explicit ADR amendment and immutable evaluation policy binding,
-not silent rebinding of existing definitions, fixtures or release fingerprints.
+The reviewer, not phrase code, interprets these meanings. Namespace enforcement
+does not guarantee prevention of semantic laundering through a real current quote.
+Measure all resulting writes across the follow-up, not just the retrieval turn.
 
-### Failure And Concurrency Semantics
+The automatic packet is fixed before generation and persists through any existing
+tool continuations. Check actual continuation size; do not reset its allowance,
+silently strip evidence from review, or add a history retrieval loop.
+Review failure, truncation or contradiction retains existing atomic behavior.
 
-Empty search is a successful empty result, not proof that no relevant history
-exists. Proposed optional-read behavior: ordinary search unavailability before
-delivery is nonfatal, recorded as unavailable, allowing existing-context response
-or a natural clarification. It does not weaken mandatory retrieval/review failures.
+### 5. Availability, Purge Races And Error Ownership
 
-Scope/hash mismatch or an inconsistent required evidence packet fails the attempt.
-Cancellation/deadline abort normally; no extra retry, fallback or repair. Revalidate
-source existence before delivery: a source purged since snapshot must not be served
-from stale captured text. Archive changes alone do not change eligibility. Keep
-existing subject-generation fencing for concurrent fact changes, not a second lock
-scheme. Preserve supplied-source identity without claiming exhaustive latest history.
+Empty retrieval is successful empty evidence, not proof that history never existed.
+Ordinary optional-history unavailability before first exposure may produce an
+explicit unavailable result and an existing-context answer/clarification. This
+cannot soften mandatory fact retrieval, review or persistence errors.
 
-## Ordered Checkpoints
+Before each outbound model packet containing history, validate source existence
+and held identity/integrity using a fresh database read, not the original snapshot.
+Before first exposure, omit legitimately purged windows and rebuild both packets.
+After exposure, discovered source loss or inability to establish required integrity
+aborts the attempt; do not silently remove history only from the reviewer.
+Also check admitted-source existence during finalization before committing.
+Archive changes alone do not invalidate eligibility.
 
-### H1: Freeze Contract And Baseline
+The guarantee is bounded by each check: a purge after authorization cannot unsend
+an already authorized request, and this probe does not promise continuous freshness
+or introduce long-held source locks. Test loss visible before each boundary, not
+an impossible zero-race guarantee. Existing cancellation, lease, conversation-version
+and subject-generation fences still own atomic commit.
 
-After design approval, amend ADRs and bind the isolated policy. Freeze case outcomes,
-packet capacities, ranking-test inputs and reviewer settings before calls. First
-run a short native fact-only sequence for scope, correction, habit/no-write and
-isolation. Separate any reviewer failure from historical-retrieval work. A low-effort
-setting or A/A0/B recipe does not become a product default through this prerequisite.
+Scope/hash mismatch, stale generation, deadline and cancellation stay fatal;
+the reader adds no retry, fallback or repair. Timeout uses the existing attempt
+deadline. Request observations are non-vetoing; required evidence integrity is not.
 
-### H2: Read Repository And Ranking Feasibility
+No history tool is exposed in this revision. If a discretionary tool is later
+approved, first address `executor._execute_tool()`'s ordinary-handler-exception
+wrapper so integrity/version/timeout errors cannot become optional unavailability.
+Argument validation already fails outside the handler catch; do not claim all
+cancellation is swallowed. That future prerequisite is not a broad executor rewrite
+required for the automatic-only experiment.
 
-Add one cohesive history-read module using existing persistence. Verify real
-PostgreSQL scope boundaries, snapshots, archive/persona-version behavior, exact
-reads, source purge, annotations and future-turn exclusion. Compare literal and
-semantic ranking; retain source-hit results. If neither finds needed paraphrases,
-stop before runtime integration and report the retrieval gap, not a dialogue failure.
+## Checkpoints And Observable Completion
 
-### H3: Isolated Runtime Integration
+### H1: Freeze The Bounded Contract
 
-Add evaluation-only automatic/discretionary paths sharing that reader. Extend
-curated-tool allowlists for the isolated binding, not Agent Studio defaults. Add
-read-only `H` review/conflict support and actual packet preflight. Fake-provider
-and committed PostgreSQL tests cover rejected write references, atomic rejection,
-capacity, retries, cancellation, stale generations and optional-read unavailability.
-Test historical instruction text as attributed data, not an executable instruction;
-search previews must not leak a source that exact read would reject.
+After approval, amend the relevant ADR and create an isolated evaluation binding;
+do not rewrite old definitions/fixtures or release hashes. Freeze corpus selection,
+window/capacity limits, models/settings, ranking-development versus held-out cases,
+expected evidence sets, complete deltas and human scoring rules.
+Record anticipated turn latency and the criterion for an unacceptable regression
+before scoring, not after seeing results; these are evaluation criteria, not spend caps.
+Current source scope and archive eligibility remain settled.
 
-### H4: Natural Dialogue Comparison
+### H2: Reader And Ranking Feasibility
 
-Run three arms from independently seeded equivalent state, chronologically.
-Never retain future turns first or seed one arm from another's outputs. Distinguish
-failed setup from scored probes. Record failures and unrun work; no midrun scorer,
-prompt or parameter changes. Keep observational counts, not spending gates.
+Use a helper within the existing state-load transaction. PostgreSQL tests cover:
+scope/root joins and shared-fact scope; archived/versioned sources; overlapping local
+sequences; and an exchange transaction started before capture but committed after,
+which must remain absent from this attempt. Freeze annotations and all local state
+in the same snapshot. Verify source-span chains, source-less operator removal,
+mixed corrected/unaffected claims, branches and bounded-envelope omission.
 
-Required cases: distant same-character recall; persona-version update; archived
-source; another character with shared facts; another subject/workspace; scoped
-correction; invalidated report; ended state; operator removal with retained source;
-habit versus preference; resolved concern; and ambiguous/unrelated dialogue where
-a callback is inappropriate. Include paraphrases, long-history distractors and
-user statements versus assistant suggestions. Add a fresh-restatement case distinct
-from retrieval-only resurrection of a removed fact.
+Run the separate ranker feasibility probe after authorization. Distinguish corpus
+miss, ranking miss and insufficient qualification/resolution evidence. Retain exact
+ranked IDs/scores/recipe and source hashes. Reader tests need no live native baseline;
+ranking calls establish retrieval behavior only, not delivered-dialogue quality.
 
-Score retrieval and dialogue separately. Deterministic checks cover scope, source
-integrity, deltas and limits. Blind arm labels for human review of relevance, time,
-scope, attribution and repetition; preserve quotes and disagreements. A model judge
-is optional/advisory. Do not require a tool call when supplied context suffices.
+### H3: Automatic Packet And Reviewer Integration
 
-### H5: Decision, Not Automatic Rollout
+Add the automatic-only evaluation path and shared `H` reviewer binding; no tool
+allowlist or public-route expansion. Extend existing packet/finalization tests,
+not a second runtime harness. Verify `H` write references fail and `H` conflict
+plus a valid write rejects atomically in either order. Unknown handles and
+ambiguous source quotes fail binding, not semantic fallback.
 
-Recommend an arm only when history-dependent replies improve over baseline without
-cross-boundary evidence, unauthorized writes, stale-current assertions or unacceptable
-distraction/latency. Report every case, not just an aggregate. Small samples establish
-feasibility, not population reliability. If neither helps, retain baseline and identify
-the bottleneck; do not add episodes or combine arms to hide an inconclusive result.
-Ties favor less code and fewer round trips. Once a winner is approved, remove losing
-executable prototype paths while preserving fixtures and findings.
+Test serialized Chinese/escaped text, long annotations, output reserves and existing
+tool continuation pressure. Both models receive the same admitted evidence.
+Pause before generation, continuation, review and finalization to exercise visible
+purge, ordinary unavailability, scope/hash errors, timeout and cancellation.
+Use committed PostgreSQL readback; no assistant/fact commit after fatal rejection.
+Historical instructions remain source data, never system authority.
 
-Production delivery requires a subsequent reviewed decision on indexing/backfill,
-scale and freshness, exact source UI readback, defaults/bindings, and qualification.
-This probe does not close M3/M4, promote release evidence or authorize deployment.
+### H4: Paired Targets And Short Semantic Sequences
 
-## Owners, Checks And Exclusions
+Before scoring delivered dialogue, establish a traceable short native control for
+scope, correction, habit/no-write and isolation under the exact frozen binding.
+Disclose its failures rather than demanding general model qualification. Invalid
+setup cannot count as a scored retrieval success; unaffected independent cases may
+still be reported. Do not repair settings midrun or relabel candidate-only results
+as successful delivery.
 
-- `services/ade-api/src/ade_api/features/agent_runtime/persistence/`: source reads,
-  definition roots, provenance and the new cohesive reader.
-- `agent_runtime/natural_context.py`, `turn_execution.py`, `executor.py`: context
-  and curated reads. Split touched oversized responsibilities rather than adding
-  to monoliths or creating a generic retrieval framework.
-- `agent_runtime/natural_memory_reviewer.py`, `natural_memory_binding.py`,
-  `natural_memory_review.py`: distinct read-only evidence and conflict schema.
-- `workflows/evals/character_memory_dev/`: one chronological workflow, fixtures,
-  settings and ignored captures; reuse native diagnostics, not a parallel harness.
-- `services/ade-api/tests/agent_runtime/`: structural, protocol and PostgreSQL tests.
+First compare empty-history versus automatic history on independently reseeded,
+identical target-time prefixes. Query formatting uses current text and the same
+admitted local context, never future metadata or expected answers. The reviewer
+binding is identical; only admitted history differs. Keep input/output limits fixed;
+do not pad baseline, enlarge automatic limits or equalize actual request counts.
 
-Run focused checks, full Python tests, Ruff/changed-file formatting and OpenAPI drift.
-Run web tests/build if shared types or UI change; no new UI is needed for this probe.
-If storage changes become necessary, test populated and fresh migrations before
-proceeding. Keep the known release-freshness failure unwaived. No provider shopping,
-global budget controls, new memory service, episode store, writable notebook, second
-reviewer, privacy subsystem, semantic phrase rules, or unrelated refactoring.
+Separately run short chronological follow-ups for acknowledgment/restatement,
+ambiguity and repetitive callbacks. Once arm replies/writes diverge, label subsequent
+differences as trajectory effects, not isolated retrieval effects. Failed dependencies
+leave continuations unrun; preserve every failed/unrun result without success rerolls.
 
-## Review Before Implementation
+Required cases cover: distant/archived same-root recall across persona versions;
+other root/subject/workspace/purpose exclusion; correction then return to the original
+value; invalidation and ending; source-less removal, recall acknowledgment and fresh
+restatement; `H`-only referent clarification; habit versus preference; resolved
+concern with distant resolution; ambiguous antecedents; and an unrelated follow-up.
+No callback or tool call is required merely because history exists.
 
-The removal/history interpretation, optional-read failure policy and `H` conflict
-extension above are proposed choices, not settled product amendments. Scrutinize
-them before approval. Character scope and archive eligibility are already agreed.
+### H5: Interpret Before Expanding
+
+Produce one outcome record per turn with these distinct stages:
+
+| Stage | Required evidence |
+| --- | --- |
+| Corpus | Eligibility, scope, target-time state and declared coverage/omissions. |
+| Retrieval | Topic hit versus minimum sufficient evidence set and rank. |
+| Admission | Actual generator/reviewer source packets, sizes and omissions. |
+| Candidate | Relevance, attribution, time/scope and repetition given that packet. |
+| Review | Complete proposed delta and correct/missed/false conflict, including no decision. |
+| Delivery/persistence | Delivered reply and committed full delta, rejection, unavailable or unrun. |
+
+Structural tests gate isolation/provenance/atomicity. Semantic scoring inspects all
+values, qualifiers, lifecycle effects and source authority, not just intended targets.
+A caught bad candidate is not a delivered success; a false reviewer veto is not a
+retrieval failure. Blind arm labels for human review, retain quotes/disagreements;
+a model judge is optional/advisory. Keep observations and interpretation separate.
+
+Report every case, counts, actual latency and context costs. Recommend continuing
+only when automatic recovery adds demonstrated useful dialogue without structural
+violations, unauthorized writes, stale-current claims or unacceptable distraction/
+latency on the frozen criteria. A small clean sample is feasibility, not reliability.
+If results are mixed, identify the bottleneck; do not add episodes or a third arm
+to manufacture a winner. Retain baseline if value is unproven.
+
+A later discretionary proposal must name a demonstrated need (such as unnecessary
+automatic callbacks or query-selection misses) and use the same reader/admission.
+Production delivery requires a separate decision on scale, indexing/freshness,
+source UI, immutable bindings/defaults and release qualification. This probe does
+not close M3/M4, promote evidence or authorize deployment.
+
+## Owners And Verification
+
+- `agent_runtime/turn_memory_snapshot.py` and `persistence/`: bounded reader within
+  existing snapshot, root/source joins and revision metadata. No new persistence service.
+- `natural_context.py`, `turn_execution.py`: automatic admission and evidence propagation;
+  split touched oversized responsibilities rather than growing monoliths.
+- `natural_memory_reviewer.py`, `natural_memory_binding.py`, `natural_memory_review.py`
+  and structural policy binder: read-only conflict extension and actual packet preflight.
+- `executor.py`, worker control/finalization: existing continuations, deadlines,
+  cancellation and atomic commit; no discretionary history tool in this scope.
+- `workflows/evals/character_memory_dev/`: fixtures, runner, stage results and ignored
+  captures; reuse native diagnostics. Tests live in the existing runtime/workflow suites.
+
+Run focused tests, isolated PostgreSQL tests, full Python tests, Ruff/changed-file
+formatting and OpenAPI drift. Run web tests/build if shared types or UI change;
+none is required merely to conduct the probe. Verify populated/fresh migrations
+if schema changes become necessary rather than assumed. Keep the known policy
+freshness failure unwaived. No live calls or tests have been run for this revision.
+
+## Revision 2 Coverage And Remaining Review
+
+[Assessment dispositions](../findings/natural-memory-consultation/history-recall-review-assessment.md)
+map to sections 1/2 (snapshot and source-relative lineage), 3 (distinct transcript
+recipe), 4 (fresh authority, temporal conflict and capacity), 5 (delivery races and
+errors), and H4/H5 (control fairness and stage-level outcomes).
+The original reports remain unchanged. This draft adds no accepted product decision.
+
+Review the source-relative envelope, historical acknowledgment versus fresh assertion,
+bounded purge guarantees and automatic-only comparison before implementation approval.
+Unlinked semantic corrections and reviewer quality remain empirical, not missing
+permission to add phrase rules. No privacy subsystem, spending gates, new fact types,
+extra reviewers, writable notes, episodes or general memory framework.
