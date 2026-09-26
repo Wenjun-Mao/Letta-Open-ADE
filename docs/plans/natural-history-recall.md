@@ -567,9 +567,9 @@ checkout. No parallel writers or new task is authorized by this planning draft.
 
 ## Fresh Ordinary-Conversation Candidate Check
 
-Status: revised offline checkpoint frozen for director review on 2026-09-26;
-no native provider calls, live outcome, release qualification, or default decision. This
-small check follows the completed seven-turn candidate diagnostic above. It
+Status: the revised offline checkpoint was frozen before dispatch; its one-shot
+live run completed on 2026-09-26 and awaits director review. This small check
+follows the completed seven-turn candidate diagnostic above. It
 tests fresh ordinary conversations under PC-01/02/03/05/09/10 without changing
 the candidate or its shared instructions. The [fixture](../../workflows/evals/character_memory_dev/fixtures/history_recall/fresh_conversation_generalization.json)
 has SHA-256 `f5c73c2e48b95d1732278d7323718d8aa55f990231a4218213e80c8c8fa97465`
@@ -595,8 +595,8 @@ For the exhibit turn, judge "那个展" against the full actual preceding exchan
 if the assistant clearly foregrounded one exhibit, accept a grounded direct
 answer but mark the ambiguity challenge unexercised. If both remain plausible,
 require neutral clarification. Do not seed, regenerate or select an assistant
-reply to induce the intended ambiguity.
-Calibrated uncertainty when the needed source is unavailable is a good
+reply to induce the intended ambiguity. Calibrated uncertainty when the needed
+source is unavailable is a good
 factuality outcome, never a recall success. A missing setup fact makes a
 dependent target setup-limited; it is never repaired or silently counted as a
 pass. A structurally valid but semantically wrong write stays in observed state
@@ -632,6 +632,15 @@ fresh migrated disposable PostgreSQL database passed all 12 turns; it checked
 public session reuse, archiving, actual assistant-message storage and later
 historical admission, plus separate-subject isolation. Fake speech and scripted
 reviewer decisions establish mechanics only, not semantic compliance.
+
+The [one-shot source-bound finding](../findings/natural-memory-consultation/native-generation-fresh-conversations-live-2026-09-26.md)
+records 12 delivered turns on clean `237ff48`, complete provider and SQL
+readback, correct current-location and archived-event answers, no forced
+callback on unrelated arithmetic and no cross-subject attribution. The exhibit
+reply asked which exhibit but then guessed pottery while both remained
+plausible; reviewer deferral kept persistence safe, but the spoken neutral
+clarification criterion failed. The location answer had an active saved fact,
+so it does not isolate the value of H. This is not default or release evidence.
 
 These fixtures are new to this candidate's tuning, but are not statistically
 independent and cannot be guaranteed unseen to the base model. Twelve turns

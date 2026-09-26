@@ -117,18 +117,24 @@ and PC-09 (simplicity and observational request counts).
   carry possible premature future-memory wording. This supports continued
   candidate evaluation, not default adoption or release promotion.
 - A [fresh ordinary-conversation check](plans/natural-history-recall.md#fresh-ordinary-conversation-candidate-check)
-  is revised and frozen offline for director review. The first 13-turn fixture
+  completed one [source-bound 12-turn run](findings/natural-memory-consultation/native-generation-fresh-conversations-live-2026-09-26.md)
+  for director review. The first 13-turn offline fixture
   at `c424d44` used a sister-rename trajectory too close to the prior dog test;
   the [revised 12-turn fixture](../workflows/evals/character_memory_dev/fixtures/history_recall/fresh_conversation_generalization.json)
   substitutes two exhibit references with no supported profile write. Other
   trajectories cover location correction and cross-chat recall, archived event
   outcome, unrelated dialogue and subject isolation. The minimal
   `--fresh-conversations` runner uses genuine native turns, public session reuse,
-  actual assistant replies, and the existing capture/readback path. A
-  fake-provider run passed all 12 turns on fresh disposable PostgreSQL, including
-  archive and history admission. The candidate, reviewer, routes, limits,
-  retrieval and release bindings remain unchanged. No generation or embedding
-  provider calls were made; semantic review remains ahead.
+  actual assistant replies, and the existing capture/readback path. The live run
+  used clean `237ff48`, one attempt per turn, 31 chat and 42 embedding requests,
+  with complete SQL and capture readback. Location correction and archived
+  pottery outcome were answered correctly; arithmetic had no forced callback
+  and the isolated subject received no other user's fact. The exhibit turn
+  asked for clarification but also guessed pottery, failing neutral spoken
+  clarification while the reviewer correctly deferred a write. An active fact
+  also supported the location answer, so that case does not isolate historical
+  retrieval benefit. The candidate, reviewer, routes, limits, retrieval and
+  release bindings remain unchanged; no default or release promotion follows.
 
 Earlier authorization and status statements below describe their dated
 checkpoints, not current commands or proof of completion. In particular, old
