@@ -67,7 +67,10 @@ class NaturalRelatedAdd(_Write):
 
 
 class _Target(_Write):
-    target: StrictStr = Field(pattern=r"^F[1-9][0-9]*$")
+    target: StrictStr = Field(
+        pattern=r"^F[1-9][0-9]*$",
+        description="Held fact receiving the change; evidence must also establish that this is the intended fact.",
+    )
 
 
 class NaturalRevise(_Target):
@@ -105,7 +108,9 @@ class NaturalForget(_Target):
 
 
 class NaturalDefer(_Closed):
-    kind: Literal["defer"]
+    kind: Literal["defer"] = Field(
+        description="No write yet when a factual change or its intended entity remains unresolved."
+    )
     current_quote: StrictStr = Field(min_length=1, max_length=10_000)
     reason: Literal["unresolved", "uncertain", "nonasserted"]
 

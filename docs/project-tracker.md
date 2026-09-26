@@ -72,6 +72,15 @@ and PC-09 (simplicity and observational request counts).
   Its 26 top-level cells plus six dependent follow-ups mean 11 attempted and
   21 unrun native turns. Provisional director AI semantic notes are not human
   or fully blind acceptance. No new provider calls followed this review.
+- An independent Pro review of the published H5 packet advised against
+  safe-persistence/default acceptance. [ADR 0043](adr/0043-reviewer-target-attribution-before-mutation.md)
+  records its attributed interpretation and the narrow reviewer contract
+  correction: mutation evidence must support both a change and its intended
+  target. Serialized-request and seven-turn-shape native fake-provider PostgreSQL
+  checks passed offline. The [fresh diagnostic schedule](../workflows/evals/character_memory_dev/fixtures/history_recall/target_attribution_diagnostic.json)
+  awaits director review and a source-bound one-shot runner before any live
+  dispatch. No new live calls, production default, or release gate waiver
+  follow from the advisory review.
 
 Earlier authorization and status statements below describe their dated
 checkpoints, not current commands or proof of completion. In particular, old

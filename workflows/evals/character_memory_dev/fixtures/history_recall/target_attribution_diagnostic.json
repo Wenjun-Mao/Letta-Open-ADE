@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "status": "offline-schedule-awaiting-director-review",
+  "source_cases_sha256": "7a402aa3b0dba6c0672515698248b511c214fa08ed37c94fc0db2b881d7886df",
+  "h2_result_sha256": "8c6bc0ff6c648f05be0edcfd2834f34116f237d619e4531234ac13599142ba32",
+  "h4_reviewer_amendment_sha256": "8d5958eb85006dd03705687026dd13031e599858c8611a946e2919468feefdb9",
+  "policy": "natural-user-assertions-v4-b-history-probe",
+  "arm": "automatic_history",
+  "routes": {
+    "conversation_and_reviewer": {
+      "model": "deepseek::deepseek-flash",
+      "fingerprint": "870ff4fb8a25a9c2016f67dcda05e26e82a6c5dea6ad55781a80be2201161cfe"
+    },
+    "history_and_fact_embeddings": {
+      "model": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+      "fingerprint": "c549d7dc288d2112f10e8b1032b502eda74557d093bc1390fe0fc4f44de63086",
+      "artifact_revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+      "dimensions": 1024
+    }
+  },
+  "per_turn": {
+    "timeout_seconds": 180,
+    "retry_count": 0,
+    "reviewer_repairs": 0,
+    "generation_input_limit_tokens": 11213,
+    "generation_output_tokens": 4096,
+    "reviewer_input_limit_tokens": 11469,
+    "reviewer_output_tokens": 4096,
+    "conversation_request_ceiling": 2,
+    "reviewer_request_ceiling": 1,
+    "dispatch_counts": "observational; missing receipts mark counts incomplete"
+  },
+  "trajectories": [
+    {
+      "id": "ambiguous_then_roxy",
+      "seed_case": "h_only_referent",
+      "isolated_subject": true,
+      "turns": [
+        {"user": "它现在叫小黑。", "expect": "clarify and defer; both pet names unchanged"},
+        {"user": "我是说以前那只叫 Roxy 的黑狗，现在叫小黑。", "expect": "revise only Roxy pet.name; Nini unchanged"}
+      ]
+    },
+    {
+      "id": "ambiguous_then_nini",
+      "seed_case": "h_only_referent",
+      "isolated_subject": true,
+      "turns": [
+        {"user": "它现在叫小黑。", "expect": "clarify and defer; both pet names unchanged"},
+        {"user": "我是说以前那只叫 Nini 的白狗，现在叫小黑。", "expect": "revise only Nini pet.name; Roxy unchanged"}
+      ]
+    },
+    {
+      "id": "explicit_roxy",
+      "seed_case": "h_only_referent",
+      "isolated_subject": true,
+      "turns": [
+        {"user": "Roxy 现在叫小黑。", "expect": "revise Roxy pet.name immediately; Nini unchanged"}
+      ]
+    },
+    {
+      "id": "removed_jasmine",
+      "seed_case": "removed_acknowledgment",
+      "isolated_subject": true,
+      "turns": [
+        {"user": "你还记得我以前提过什么茶吗？", "expect": "acknowledge admitted earlier testimony with appropriate past attribution; zero current-preference writes"},
+        {"user": "我现在又喜欢茉莉花茶了。", "expect": "add a fresh current jasmine preference; old fact remains forgotten"}
+      ]
+    }
+  ]
+}

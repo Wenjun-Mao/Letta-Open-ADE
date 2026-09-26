@@ -237,6 +237,42 @@ def test_serialized_request_states_lifecycle_preconditions() -> None:
     )
 
 
+@pytest.mark.parametrize("history_capable", [False, True])
+def test_serialized_request_requires_change_and_intended_target_binding(
+    history_capable: bool,
+) -> None:
+    request = natural_review_request(
+        model_key="source::reviewer",
+        provider_adapter="deepseek_openai",
+        current_user_message={**CURRENT, "content": "It is now called Blackie."},
+        source_messages=[{**CURRENT, "content": "It is now called Blackie."}],
+        facts=[],
+        entities=ENTITIES,
+        candidate_reply="Which dog do you mean?",
+        history_capable=history_capable,
+    )
+    system = " ".join(request["messages"][0]["content"].split())
+    assert "both the asserted change and its attachment" in system
+    assert (
+        "exact current quote and an available F/E target do not by themselves" in system
+    )
+    assert "defer the mutation until the user clarifies" in system
+    assert "Clear references and explicit updates can be written immediately" in system
+    schema = json.loads(
+        request["messages"][0]["content"]
+        .split("Return JSON matching this exact schema: ", 1)[1]
+        .split("\nExample JSON:", 1)[0]
+    )
+    assert (
+        "intended fact"
+        in schema["$defs"]["NaturalRevise"]["properties"]["target"]["description"]
+    )
+    assert (
+        "remains unresolved"
+        in schema["$defs"]["NaturalDefer"]["properties"]["kind"]["description"]
+    )
+
+
 @pytest.mark.parametrize(
     "finish,code",
     [

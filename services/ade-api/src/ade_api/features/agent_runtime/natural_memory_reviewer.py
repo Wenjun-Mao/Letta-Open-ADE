@@ -37,6 +37,12 @@ Judge whether the current turn actually supports the proposed factual meaning,
 including temporal correction and requested end or forget operation. A factual
 ending is distinct from forgetting a record. Do not invent a preference from
 a report of a drinking habit.
+For every write, establish both the asserted change and its attachment to the
+intended entity or fact. An exact current quote and an available F/E target do
+not by themselves resolve an ambiguous referent. If materially plausible
+targets remain, defer the mutation until the user clarifies; historical
+dialogue may inform the clarification question. Clear references and explicit
+updates can be written immediately.
 Lifecycle operations have target preconditions: revise only an active fact when
 its claim changes or is corrected; end only an active fact; reassert only an
 inactive fact becoming active again; forget only an active or inactive fact on

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from copy import deepcopy
 from pathlib import Path
 
@@ -23,6 +24,7 @@ CONTRACT = (
 )
 CASES = CONTRACT.with_name("cases.json")
 RANKING_DEVELOPMENT = CONTRACT.with_name("ranking_development.json")
+TARGET_ATTRIBUTION_SCHEDULE = CONTRACT.with_name("target_attribution_diagnostic.json")
 
 
 def test_frozen_reader_limits_and_scoring_sets() -> None:
@@ -70,6 +72,55 @@ def test_frozen_reader_limits_and_scoring_sets() -> None:
         assert all(
             source.split(":", 1)[0] in setup_ids for source in case["required_evidence"]
         )
+
+
+def test_target_attribution_diagnostic_is_seven_fresh_native_turns() -> None:
+    schedule = json.loads(TARGET_ATTRIBUTION_SCHEDULE.read_text())
+    cases = {case["id"]: case for case in json.loads(CASES.read_text())["cases"]}
+    assert (
+        schedule["source_cases_sha256"]
+        == hashlib.sha256(CASES.read_bytes()).hexdigest()
+    )
+    assert (
+        schedule["h4_reviewer_amendment_sha256"]
+        == hashlib.sha256(
+            CONTRACT.with_name("h4_reviewer_amendment.json").read_bytes()
+        ).hexdigest()
+    )
+    assert schedule["status"] == "offline-schedule-awaiting-director-review"
+    assert schedule["arm"] == "automatic_history"
+    trajectories = schedule["trajectories"]
+    assert [len(item["turns"]) for item in trajectories] == [2, 2, 1, 2]
+    assert all(item["isolated_subject"] for item in trajectories)
+    assert [item["seed_case"] for item in trajectories] == [
+        "h_only_referent",
+        "h_only_referent",
+        "h_only_referent",
+        "removed_acknowledgment",
+    ]
+    assert (
+        trajectories[0]["turns"][0]["user"]
+        == cases["h_only_referent"]["target"]["user"]
+    )
+    assert (
+        trajectories[1]["turns"][0]["user"]
+        == cases["h_only_referent"]["target"]["user"]
+    )
+    assert (
+        trajectories[3]["turns"][0]["user"]
+        == cases["removed_acknowledgment"]["target"]["user"]
+    )
+    assert (
+        trajectories[3]["turns"][1]["user"]
+        == cases["removed_acknowledgment"]["followup"]["user"]
+    )
+    assert schedule["per_turn"]["retry_count"] == 0
+    assert schedule["per_turn"]["reviewer_repairs"] == 0
+    assert (
+        schedule["routes"]["conversation_and_reviewer"]["model"]
+        == "deepseek::deepseek-flash"
+    )
+    assert schedule["routes"]["history_and_fact_embeddings"]["dimensions"] == 1024
 
 
 def test_fixture_guards_reject_invalid_lifecycle_and_missing_cells() -> None:
