@@ -19,6 +19,9 @@ from ade_api.features.agent_runtime.history_admission import (
 from ade_api.features.agent_runtime.natural_memory_binding import (
     build_natural_binding_map,
 )
+from ade_api.features.agent_runtime.natural_context import (
+    HISTORY_LIFECYCLE_INSTRUCTION,
+)
 from ade_api.features.agent_runtime.natural_memory_policy import (
     prepare_natural_memory_review,
 )
@@ -212,6 +215,124 @@ def test_same_chinese_history_packet_in_generation_and_review() -> None:
     assert packet["history"][0]["messages"][0]["handle"] == "H1"
 
 
+def test_annotation_links_join_exact_h_sources_with_repeated_text() -> None:
+    exchange = _exchange("同一句话。")
+    assistant = exchange["messages"][1]
+    assistant["content"] = "同一句话。"
+    assistant["content_sha256"] = hashlib.sha256(
+        assistant["content"].encode()
+    ).hexdigest()
+    user_id = exchange["messages"][0]["id"]
+    assistant_id = assistant["id"]
+    exchange["annotations"]["links"] = [
+        {
+            "message_id": source_id,
+            "span": [0, 4],
+            "quote": "同一句话",
+            "authority_role": role,
+            "fact_id": fact_id,
+        }
+        for source_id, role, fact_id in (
+            (user_id, "user_assertion", "fact-one"),
+            (user_id, "user_assertion", "fact-two"),
+            (assistant_id, "assistant_referent", "fact-three"),
+        )
+    ]
+    base = BuiltContext(
+        messages=[
+            {"role": "system", "content": "Stay in character."},
+            {"role": "user", "content": CURRENT["content"]},
+        ],
+        section_tokens={},
+        omitted_message_ids=[],
+        retrieved_fact_ids=[],
+        estimated_input_tokens=0,
+    )
+    admission = admit_history(
+        base=base,
+        ranked_exchanges=[exchange],
+        current_user=CURRENT,
+        source_messages=[CURRENT],
+        facts=[],
+        entities=ENTITIES,
+        generation_model_key="deepseek::deepseek-flash",
+        generation_adapter="deepseek_openai",
+        generation_tools={},
+        generation_input_limit=10_000,
+        generation_max_output_tokens=512,
+        reviewer_model_key="deepseek::deepseek-flash",
+        reviewer_adapter="deepseek_openai",
+        reviewer_input_limit=100_000,
+        reviewer_max_output_tokens=4096,
+    )
+    generation_history = json.loads(
+        admission.context.messages[0]["content"].split(
+            "Historical evidence (read-only):\n", 1
+        )[1]
+    )
+    review = natural_review_request(
+        model_key="deepseek::deepseek-flash",
+        provider_adapter="deepseek_openai",
+        current_user_message=CURRENT,
+        source_messages=[CURRENT],
+        facts=[],
+        entities=ENTITIES,
+        candidate_reply="我记得。",
+        history_exchanges=list(admission.exchanges),
+        history_capable=True,
+    )
+    reviewer_history = json.loads(review["messages"][1]["content"])["history"]
+    assert generation_history == reviewer_history
+    window = reviewer_history[0]
+    by_handle = {message["handle"]: message for message in window["messages"]}
+    assert set(by_handle) == {"H1", "H2"}
+    assert by_handle["H1"]["content"] == by_handle["H2"]["content"]
+    links = window["annotations"]["links"]
+    assert [link["message_handle"] for link in links] == ["H1", "H1", "H2"]
+    assert {link["fact_id"] for link in links} == {
+        "fact-one",
+        "fact-two",
+        "fact-three",
+    }
+    assert all(
+        "message_id" not in link
+        and by_handle[link["message_handle"]]["content"][
+            link["span"][0] : link["span"][1]
+        ]
+        == link["quote"]
+        for link in links
+    )
+    assert [message["role"] for message in window["messages"]] == [
+        "user",
+        "assistant",
+    ]
+
+
+def test_orphan_or_duplicate_history_source_rejects_serialization() -> None:
+    exchange = _exchange()
+    exchange["annotations"]["links"] = [{"message_id": "absent"}]
+    with pytest.raises(RuntimeValidationError) as orphan:
+        build_natural_binding_map(
+            current_user_message=CURRENT,
+            source_messages=[CURRENT],
+            facts=[],
+            entities=ENTITIES,
+            history_exchanges=[exchange],
+        )
+    assert orphan.value.detail_code == "natural_history_integrity"
+
+    exchange["annotations"]["links"] = []
+    with pytest.raises(RuntimeValidationError) as duplicate:
+        build_natural_binding_map(
+            current_user_message=CURRENT,
+            source_messages=[CURRENT],
+            facts=[],
+            entities=ENTITIES,
+            history_exchanges=[exchange, exchange],
+        )
+    assert duplicate.value.detail_code == "natural_history_integrity"
+
+
 def test_long_annotation_omits_whole_exchange() -> None:
     exchange = _exchange()
     exchange["annotations"]["note"] = "x" * 20_000
@@ -294,6 +415,7 @@ def test_paired_serialized_base_packets_differ_only_by_history() -> None:
 
     assert generation(empty) == generation(automatic)
     assert HISTORY_DATA_INSTRUCTION in generation(empty)["messages"][0]["content"]
+    assert HISTORY_LIFECYCLE_INSTRUCTION in generation(empty)["messages"][0]["content"]
 
     def review(admission):
         payload = natural_review_request(
@@ -314,6 +436,15 @@ def test_paired_serialized_base_packets_differ_only_by_history() -> None:
         return payload
 
     assert review(empty) == review(automatic)
+    assert HISTORY_LIFECYCLE_INSTRUCTION in review(empty)["messages"][0]["content"]
+    for meaning in (
+        "never proof of user retraction",
+        "Intermediate states",
+        "codes supply no corrected value or cause",
+        "Archived exchanges remain eligible history",
+        "history alone cannot revive it as current",
+    ):
+        assert meaning in HISTORY_LIFECYCLE_INSTRUCTION
 
 
 def test_actual_h_reviewer_overflow_rejects_without_stripping_or_dispatch() -> None:

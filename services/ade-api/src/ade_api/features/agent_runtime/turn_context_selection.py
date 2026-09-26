@@ -13,7 +13,11 @@ from .context import (
     context_budget_from_deployment,
 )
 from .errors import RuntimeValidationError
-from .natural_context import NaturalVariant, build_natural_context
+from .natural_context import (
+    NaturalVariant,
+    build_natural_context,
+    full_lifecycle_snapshot_fits,
+)
 from .natural_evaluation_capacity import NaturalEvaluationCapacity
 from .natural_memory_reviewer import preflight_reviewer_bundle, reviewer_suffix_limit
 from .turn_memory_views import context_fact
@@ -26,6 +30,27 @@ class TurnContextSelection:
     active_facts: list[dict[str, Any]]
     reviewer_input_limit: int
     reviewer_request_max_tokens: int
+
+
+def needs_selective_retrieval(
+    *,
+    natural_variant: NaturalVariant | None,
+    definition: dict[str, Any],
+    current_user: dict[str, Any],
+    facts: list[dict[str, Any]],
+    history_metadata: ConversationHistoryMetadata,
+    input_limit: int,
+) -> bool:
+    if natural_variant not in {"A", "A0"}:
+        return True
+    return not full_lifecycle_snapshot_fits(
+        system_prompt=str(definition["prompt_content"]),
+        persona=str(definition["persona_content"]),
+        current_user_content=str(current_user["content"]),
+        lifecycle_facts=facts,
+        history_metadata=history_metadata,
+        input_limit=input_limit,
+    )
 
 
 def select_turn_context(

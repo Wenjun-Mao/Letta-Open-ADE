@@ -63,8 +63,14 @@ ADE_TEST_DATABASE_URL=postgresql+psycopg://ade_owner@127.0.0.1:PORT/ade_history_
   uv run python -m pytest services/ade-api/tests/agent_runtime/persistence/test_postgres_history_reader.py \
   services/ade-api/tests/agent_runtime/persistence/test_postgres_history_lineage.py \
   services/ade-api/tests/agent_runtime/persistence/test_postgres_history_guard.py -q
-# For the native worker tests, create and migrate another fresh idle database.
-ADE_TEST_DATABASE_URL=postgresql+psycopg://ade_owner@127.0.0.1:PORT/ade_history_test_<other-hex> \
+# The reader tests leave pending fixture runs. Create an independent idle DB
+# for worker claiming; use the same mapped PORT reported above.
+docker exec ade-history-check createdb -U ade_owner ade_history_test_01a0dbe2c
+docker exec ade-history-check psql -U ade_owner -d ade_history_test_01a0dbe2c \
+  -c 'CREATE SCHEMA ade; CREATE EXTENSION IF NOT EXISTS vector;'
+ADE_DATABASE_MIGRATION_URL=postgresql+psycopg://ade_owner@127.0.0.1:PORT/ade_history_test_01a0dbe2c \
+  uv run --project services/ade-api alembic -c services/ade-api/alembic.ini upgrade head
+ADE_TEST_DATABASE_URL=postgresql+psycopg://ade_owner@127.0.0.1:PORT/ade_history_test_01a0dbe2c \
   uv run python -m pytest services/ade-api/tests/agent_runtime/persistence/test_postgres_history_worker.py -q
 docker rm -f ade-history-check
 ```

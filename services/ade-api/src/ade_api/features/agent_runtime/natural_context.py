@@ -18,6 +18,13 @@ from .errors import RuntimeValidationError
 
 NaturalVariant = Literal["A", "A0", "B"]
 HISTORY_PROBE_POLICY = "natural-user-assertions-v4-b-history-probe"
+HISTORY_LIFECYCLE_INSTRUCTION = (
+    "Use source text for original testimony. A saved-fact revise or correct is a "
+    "representation change, never proof of user retraction. Intermediate states "
+    "absent from lineage remain unknown; transition codes supply no corrected "
+    "value or cause. Archived exchanges remain eligible history. Removing a fact "
+    "does not erase retained dialogue, and history alone cannot revive it as current."
+)
 NATURAL_POLICY_BINDINGS: dict[str, NaturalVariant] = {
     "natural-user-assertions-v4-a": "A",
     "natural-user-assertions-v4-a0": "A0",

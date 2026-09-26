@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
-import hashlib
 
 from .errors import RuntimeValidationError
 from .fact_registry import fact_type_spec
@@ -32,8 +32,10 @@ class NaturalBindingMap:
     history_messages: Mapping[str, Mapping[str, Any]]
     history_packet: tuple[dict[str, Any], ...]
 
-    def packet(self, candidate_reply: str) -> dict[str, Any]:
-        return {
+    def packet(
+        self, candidate_reply: str, *, history_capable: bool = False
+    ) -> dict[str, Any]:
+        packet = {
             "current_user": {
                 "handle": "CURRENT",
                 "role": "user",
@@ -62,9 +64,11 @@ class NaturalBindingMap:
                 {"handle": handle, "kind": item["kind"], "label": item["label"]}
                 for handle, item in self.identities.items()
             ],
-            "history": list(self.history_packet),
             "candidate_visible_reply": candidate_reply,
         }
+        if history_capable:
+            packet["history"] = list(self.history_packet)
+        return packet
 
 
 def build_natural_binding_map(
@@ -131,19 +135,28 @@ def build_natural_binding_map(
         )
     history_messages: dict[str, Mapping[str, Any]] = {}
     history_packet: list[dict[str, Any]] = []
+    seen_history_source_ids: set[str] = set()
     for exchange in history_exchanges or []:
         wire_messages = []
+        source_handles: dict[str, str] = {}
         for message in exchange["messages"]:
+            source_id = str(message["id"])
             role = str(message["role"])
             content = str(message["content"])
             digest = hashlib.sha256(content.encode()).hexdigest()
-            if role not in {"user", "assistant"} or digest != message["content_sha256"]:
+            if (
+                source_id in seen_history_source_ids
+                or role not in {"user", "assistant"}
+                or digest != message["content_sha256"]
+            ):
                 raise RuntimeValidationError(
-                    "Historical source failed role or hash validation",
+                    "Historical source failed identity, role or hash validation",
                     detail_code="natural_history_integrity",
                 )
+            seen_history_source_ids.add(source_id)
             handle = f"H{len(history_messages) + 1}"
             history_messages[handle] = MappingProxyType(dict(message))
+            source_handles[source_id] = handle
             wire_messages.append(
                 {
                     "handle": handle,
@@ -163,6 +176,24 @@ def build_natural_binding_map(
                 "Historical evidence requires one complete exchange",
                 detail_code="natural_history_integrity",
             )
+        annotations = _json_ready(exchange["annotations"])
+        links = annotations.get("links") if isinstance(annotations, dict) else None
+        if not isinstance(links, list) or any(
+            not isinstance(link, dict) for link in links
+        ):
+            raise RuntimeValidationError(
+                "Historical source annotations are malformed",
+                detail_code="natural_history_integrity",
+            )
+        for link in links:
+            source_handle = source_handles.get(str(link.get("message_id")))
+            if source_handle is None:
+                raise RuntimeValidationError(
+                    "Historical annotation source is outside its exchange",
+                    detail_code="natural_history_integrity",
+                )
+            link["message_handle"] = source_handle
+            del link["message_id"]
         history_packet.append(
             {
                 "run_id": str(exchange["run_id"]),
@@ -170,7 +201,7 @@ def build_natural_binding_map(
                 "definition_version_id": str(exchange["definition_version_id"]),
                 "archived": bool(exchange["archived"]),
                 "messages": wire_messages,
-                "annotations": _json_ready(exchange["annotations"]),
+                "annotations": annotations,
             }
         )
     return NaturalBindingMap(

@@ -384,9 +384,25 @@ freshness failure unwaived. No live calls or tests have been run for this revisi
 H1/H2 reader and frozen ranking mechanics have an accepted offline checkpoint.
 H2 live literal/Qwen feasibility and the selected ranker are still pending. H3
 now has an offline evaluation-only packet path and native fake-router/PostgreSQL
-boundary tests; director verification is pending before any live ranker or
+boundary tests. Director independently verified 43 focused reader/guard/admission/
+executor/reviewer tests and 15 worker fault cases on a fresh migrated PostgreSQL
+database. The first combined run failed the worker cases because reader fixtures
+left pending runs; all 15 passed when rerun on a separate fresh database. The
+README now documents the two-database procedure. Source annotation links now
+join model-visible H handles, tested with repeated identical text and multiple
+claims in actual generation and reviewer packets. Shared lifecycle instructions
+and ordinary reviewer packet compatibility have focused regression coverage.
+Director verification of this follow-up is pending before any live ranker or
 dialogue request. The H3 automatic arm requires a frozen selector and cannot
-silently choose a ranking recipe. No H4/H5 scores or production decision exist.
+silently choose a ranking recipe. The offline synchronous seam does not dispatch
+source-bearing transcript corpus embeddings; that guard is required before a
+provider-backed H2 selector. No H4/H5 scores or production decision exist.
+This follow-up passed 61 focused context/packet/executor tests, 11 evidence/
+finalization tests, six PostgreSQL reader/lineage/guard tests and 15 worker tests
+on separate freshly migrated databases.
+The first local PostgreSQL invocation used a nonhex disposable database suffix
+and was rejected by the test safety guard before case logic ran; the compliant
+rerun passed. Changed-file Ruff lint and format checks passed.
 
 [Assessment dispositions](../findings/natural-memory-consultation/history-recall-review-assessment.md)
 map to sections 1/2 (snapshot and source-relative lineage), 3 (distinct transcript

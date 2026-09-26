@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -13,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from .context import BuiltContext
 from .errors import RuntimeValidationError
-from .executor import CuratedTool
+from .executor import ConversationExecutor, CuratedTool, ExecutorResult
 from .history_admission import HistoryProbe, admit_history, select_ranked_exchanges
 from .persistence.history_guard import validate_admitted_history
 from .persistence.metadata import memory_subjects
@@ -179,3 +180,43 @@ class HistoryAttempt:
                 detail_code="natural_history_missing",
             )
         self.exposed = True
+
+
+async def execute_generation_with_history(
+    *,
+    executor: ConversationExecutor,
+    context: BuiltContext,
+    history_attempt: HistoryAttempt | None,
+    model_key: str,
+    max_output_tokens: int,
+    max_model_requests: int,
+    input_token_limit: int | None,
+    tools: Mapping[str, CuratedTool],
+    deadline: float,
+    observe_request: Callable[[dict[str, Any]], None] | None,
+) -> tuple[ExecutorResult, BuiltContext]:
+    """Rebuild only before first H exposure; continuations keep the same packet."""
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("whole runtime attempt timed out")
+        try:
+            result = await executor.execute(
+                model_key=model_key,
+                messages=context.messages,
+                timeout_seconds=remaining,
+                max_output_tokens=max_output_tokens,
+                max_model_requests=max_model_requests,
+                input_token_limit=input_token_limit,
+                observe_request=observe_request,
+                authorize_request=(
+                    history_attempt.authorize_request
+                    if history_attempt is not None
+                    else None
+                ),
+                tools=tools,
+            )
+            return result, context
+        except HistoryBeforeExposure as exc:
+            assert history_attempt is not None
+            context = history_attempt.omit_before_exposure(exc)

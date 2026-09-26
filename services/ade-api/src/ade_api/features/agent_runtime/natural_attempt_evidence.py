@@ -230,6 +230,32 @@ def capture_context(
     )
 
 
+def capture_generated_turn(
+    evidence: NaturalAttemptEvidence | None,
+    *,
+    context: BuiltContext,
+    source_messages: tuple[dict[str, Any], ...],
+    input_limit: int,
+    assistant_text: str,
+    tool_evidence: Any,
+) -> None:
+    # Evidence capture must never veto a turn. Keep the two writes independent.
+    try:
+        capture_context(
+            evidence,
+            context=context,
+            source_messages=source_messages,
+            input_limit=input_limit,
+        )
+    except Exception:
+        pass
+    if evidence is not None:
+        try:
+            evidence.capture_candidate(assistant_text, tool_evidence)
+        except Exception:
+            pass
+
+
 def classify_outcome(
     *,
     run_status: str | None,

@@ -24,10 +24,10 @@ from .errors import RuntimeValidationError
 from .evaluation_tools import evaluation_tool_registry
 from .executor import ConversationExecutor, curated_tools
 from .history_admission import HistoryProbe
-from .history_attempt import HistoryAttempt, HistoryBeforeExposure
+from .history_attempt import HistoryAttempt, execute_generation_with_history
 from .memory_policy import prepare_memory_review
 from .memory_policy_binding import require_executable_memory_policy
-from .natural_attempt_evidence import capture_context, start_natural_capture
+from .natural_attempt_evidence import capture_generated_turn, start_natural_capture
 from .natural_evaluation_capacity import checked_checkpoint6_capacity
 from .natural_context import (
     HISTORY_PROBE_POLICY,
@@ -55,7 +55,7 @@ from .turn_memory_snapshot import (
     load_turn_state,
 )
 from .turn_retrieval import search_memory_handler, select_automatic_facts
-from .turn_context_selection import select_turn_context
+from .turn_context_selection import needs_selective_retrieval, select_turn_context
 from .turn_result import AttemptResult
 
 
@@ -271,16 +271,14 @@ class TurnExecution:
             current_sequence=current_sequence,
             summary_through_sequence=summary_boundary,
         )
-        selective_retrieval = natural_variant not in {"A", "A0"}
-        if natural_variant in {"A", "A0"}:
-            selective_retrieval = not full_lifecycle_snapshot_fits(
-                system_prompt=str(definition["prompt_content"]),
-                persona=str(definition["persona_content"]),
-                current_user_content=str(current_user["content"]),
-                lifecycle_facts=state["facts"],
-                history_metadata=history,
-                input_limit=budget.input_limit,
-            )
+        selective_retrieval = needs_selective_retrieval(
+            natural_variant=natural_variant,
+            definition=definition,
+            current_user=current_user,
+            facts=state["facts"],
+            history_metadata=history,
+            input_limit=budget.input_limit,
+        )
         expected_dimensions = _embedding_dimensions(retriever_deployment)
         retrieved: list[dict[str, Any]] = []
         if selective_retrieval:
@@ -364,51 +362,34 @@ class TurnExecution:
             )
             built_context = history_attempt.prepare()
 
-        while True:
-            try:
-                executor_result = await conversation_executor.execute(
-                    model_key=str(conversation_deployment["route_alias"]),
-                    messages=built_context.messages,
-                    timeout_seconds=_remaining(deadline),
-                    max_output_tokens=budget.max_output_tokens,
-                    max_model_requests=(
-                        evaluation_capacity.conversation_requests
-                        if evaluation_capacity is not None
-                        else _max_model_requests(conversation_deployment)
-                    ),
-                    input_token_limit=budget.input_limit if natural_mode else None,
-                    observe_request=(
-                        trace.natural_evidence.capture_generation_request
-                        if trace.natural_evidence is not None
-                        else None
-                    ),
-                    authorize_request=(
-                        history_attempt.authorize_request
-                        if history_attempt is not None
-                        else None
-                    ),
-                    tools=generation_tools,
-                )
-                break
-            except HistoryBeforeExposure as exc:
-                assert history_attempt is not None
-                built_context = history_attempt.omit_before_exposure(exc)
-        try:
-            capture_context(
-                trace.natural_evidence,
-                context=built_context,
-                source_messages=natural_source_messages,
-                input_limit=budget.input_limit,
-            )
-        except Exception:
-            pass
-        if trace.natural_evidence is not None:
-            try:
-                trace.natural_evidence.capture_candidate(
-                    executor_result.assistant_text, executor_result.tool_evidence
-                )
-            except Exception:
-                pass
+        executor_result, built_context = await execute_generation_with_history(
+            executor=conversation_executor,
+            context=built_context,
+            history_attempt=history_attempt,
+            model_key=str(conversation_deployment["route_alias"]),
+            max_output_tokens=budget.max_output_tokens,
+            max_model_requests=(
+                evaluation_capacity.conversation_requests
+                if evaluation_capacity is not None
+                else _max_model_requests(conversation_deployment)
+            ),
+            input_token_limit=budget.input_limit if natural_mode else None,
+            tools=generation_tools,
+            deadline=deadline,
+            observe_request=(
+                trace.natural_evidence.capture_generation_request
+                if trace.natural_evidence is not None
+                else None
+            ),
+        )
+        capture_generated_turn(
+            trace.natural_evidence,
+            context=built_context,
+            source_messages=natural_source_messages,
+            input_limit=budget.input_limit,
+            assistant_text=executor_result.assistant_text,
+            tool_evidence=executor_result.tool_evidence,
+        )
         recent_users = [
             message
             for message in state["messages"]

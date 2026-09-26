@@ -105,6 +105,35 @@ def test_reviewer_sends_one_compact_request_and_binds_accepted_write() -> None:
     assert '"decisions":[]' in transport.calls[0]["messages"][0]["content"]
 
 
+def test_ordinary_packet_keeps_prior_fields_while_h_probe_has_empty_history() -> None:
+    common = {
+        "model_key": "source::reviewer",
+        "provider_adapter": "deepseek_openai",
+        "current_user_message": CURRENT,
+        "source_messages": [CURRENT],
+        "facts": [],
+        "entities": ENTITIES,
+        "candidate_reply": "Okay.",
+    }
+    ordinary = natural_review_request(**common)
+    history_ready = natural_review_request(**common, history_capable=True)
+    ordinary_packet = json.loads(ordinary["messages"][1]["content"])
+    history_packet = json.loads(history_ready["messages"][1]["content"])
+    assert set(ordinary_packet) == {
+        "current_user",
+        "context",
+        "eligible_support",
+        "targets",
+        "related_identities",
+        "candidate_visible_reply",
+        "allowed_fact_contracts",
+    }
+    assert history_packet.pop("history") == []
+    assert history_packet == ordinary_packet
+    assert "HistoricalConflictEvidence" not in ordinary["messages"][0]["content"]
+    assert "HistoricalConflictEvidence" in history_ready["messages"][0]["content"]
+
+
 def test_preflight_and_execution_serialize_the_same_bundle() -> None:
     request = natural_review_request(
         model_key="source::reviewer",
