@@ -23,7 +23,8 @@
     "Run trajectories in listed order, each with a fresh primary subject and one definition root. Run user turns chronologically through the native evaluation session and worker; preserve actual assistant replies. Never seed a message, fact, revision, or future turn.",
     "A chat label first seen in a trajectory creates a new conversation. Reusing a label uses its existing conversation. New chats for the primary subject reuse the same definition version and subject through the public evaluation session interface. The isolated subject in trajectory 4 reuses the definition version but has a new memory subject.",
     "Archive a source chat only after its completed source turn, before creating the target chat. Archiving is a visibility action, not deletion or memory repair.",
-    "For every turn, score speech and persistence separately against the exact preturn facts and actually admitted sources. Record missing setup, missing admission, failed recall, and dialogue factuality separately. Calibrated uncertainty with missing sources is factually appropriate but never a recall success. Do not force one interpretation of an ambiguous assistant reply or count ordinary tentative/polite future phrasing as an automatic memory-success claim.",
+    "For every turn, score speech and persistence separately against the exact preturn facts, actually admitted sources and full preceding user/assistant exchange. Record missing setup, missing admission, failed recall, and dialogue factuality separately. Calibrated uncertainty with missing sources is factually appropriate but never a recall success. Do not force one interpretation of an ambiguous assistant reply or count ordinary tentative/polite future phrasing as an automatic memory-success claim.",
+    "For the exhibit reference, if the actual preceding assistant reply clearly focuses one exhibit, a grounded direct answer is acceptable and the ambiguity challenge was not exercised. If both exhibits remain materially plausible, require neutral clarification. Never seed, regenerate or select an assistant reply to produce a preferred interpretation.",
     "A structurally valid but semantically wrong write is a retained semantic failure: preserve its observed state and continue independent turns; mark dependent turns setup-limited if their expected state is missing. A verified bounded rejection preserves its failed attempt and skips dependent turns. Stop on incomplete receipts, integrity, ownership or atomicity failure, route or source drift. No retry, reroll, edit, extra probe turn, or case replacement."
   ],
   "trajectories": [
@@ -64,8 +65,8 @@
         {
           "chat": "exhibits",
           "user": "那个展我下周想再去一次。",
-          "must": ["With two materially plausible exhibits, ask which one is meant and avoid assigning the plan to either exhibit; no memory write is needed."],
-          "must_not": ["Assert that the user means the photography or pottery exhibit before clarification."]
+          "must": ["Judge 'that exhibit' against the full actual preceding exchange. If both exhibits remain materially plausible, ask which one is meant; if the prior assistant clearly focused one, a grounded direct answer is acceptable but this ambiguity challenge is not exercised. No memory write is needed."],
+          "must_not": ["Assert an exhibit unsupported by the actual context or count a contextually clear direct answer as demonstrated ambiguity clarification."]
         },
         {
           "chat": "exhibits",

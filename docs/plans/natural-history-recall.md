@@ -572,7 +572,7 @@ no native provider calls, live outcome, release qualification, or default decisi
 small check follows the completed seven-turn candidate diagnostic above. It
 tests fresh ordinary conversations under PC-01/02/03/05/09/10 without changing
 the candidate or its shared instructions. The [fixture](../../workflows/evals/character_memory_dev/fixtures/history_recall/fresh_conversation_generalization.json)
-has SHA-256 `ef59e3bcb43e044262c08e4e9f8b3c56e0aeb2d666577552457a2a9139901ae1`
+has SHA-256 `f5c73c2e48b95d1732278d7323718d8aa55f990231a4218213e80c8c8fa97465`
 at this checkpoint; its generation binding has SHA-256
 `1d703e701e13fa61491d93fa89048b5405fa89d4c340c8523c8870d69001fa75`.
 The four independent trajectories contain 12 native user turns, including all
@@ -591,6 +591,11 @@ must arise from its actual preceding native turn. No scripted reply, fact,
 revision, future statement, or expected answer enters the corpus. The fixture
 freezes semantic must/must-not criteria before observation. Record missing
 setup, missing admission, failed recall and dialogue factuality separately.
+For the exhibit turn, judge "那个展" against the full actual preceding exchange:
+if the assistant clearly foregrounded one exhibit, accept a grounded direct
+answer but mark the ambiguity challenge unexercised. If both remain plausible,
+require neutral clarification. Do not seed, regenerate or select an assistant
+reply to induce the intended ambiguity.
 Calibrated uncertainty when the needed source is unavailable is a good
 factuality outcome, never a recall success. A missing setup fact makes a
 dependent target setup-limited; it is never repaired or silently counted as a
@@ -616,7 +621,9 @@ not a general campaign framework or copied runner.
 Before dispatch, bind a clean source revision, fixture and generation binding,
 actual prompt/persona/reviewer/schema hashes, route fingerprints and unchanged
 per-turn limits. Capture each request, attempt, admitted source, delivered reply,
-complete delta and independent PostgreSQL readback. Counts remain observational;
+complete delta and independent PostgreSQL readback. The fresh runner reads the
+run's persisted user/assistant messages and checks their hashes and candidate
+equality before calling an assistant reply delivered. Counts remain observational;
 zero retries or reviewer repairs. Preserve a failed turn and skip only its
 dependent turns after verified bounded rejection; stop on integrity, ownership,
 atomicity or setup faults. The offline fixture test checks count, source binding,

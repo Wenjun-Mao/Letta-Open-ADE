@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from uuid import uuid4
+
+from sqlalchemy import select
 
 from ade_api.features.agent_runtime.contracts import (
     CreateAgentDefinitionRequest,
@@ -12,6 +15,7 @@ from ade_api.features.agent_runtime.contracts import (
     CreateMemorySubjectRequest,
 )
 from ade_api.features.agent_runtime.history_native_rank import HISTORY_EMBEDDING_ROUTE
+from ade_api.features.agent_runtime.persistence.metadata import messages
 
 from .history_h4_run import _execute_turn
 from .history_target_diagnostic_run import (
@@ -28,7 +32,7 @@ FRESH_FIXTURE = (
     / "fixtures/history_recall/fresh_conversation_generalization.json"
 )
 FRESH_FIXTURE_SHA256 = (
-    "ef59e3bcb43e044262c08e4e9f8b3c56e0aeb2d666577552457a2a9139901ae1"
+    "f5c73c2e48b95d1732278d7323718d8aa55f990231a4218213e80c8c8fa97465"
 )
 
 
@@ -56,6 +60,53 @@ def frozen_fresh_schedule(*, generation_binding_sha256: str, per_turn: dict) -> 
     ):
         raise RuntimeError("fresh conversation fixture differs from frozen binding")
     return schedule
+
+
+async def persisted_turn_messages(
+    engine,
+    *,
+    conversation_id: str,
+    run_id: str,
+    user: str,
+    candidate: str | None,
+    committed: bool,
+) -> list[dict]:
+    """Confirm delivery from database rows, independent of candidate evidence."""
+    async with engine.connect() as connection:
+        rows = (
+            (
+                await connection.execute(
+                    select(
+                        messages.c.id,
+                        messages.c.sequence,
+                        messages.c.role,
+                        messages.c.content,
+                        messages.c.content_sha256,
+                    )
+                    .where(
+                        messages.c.run_id == run_id,
+                        messages.c.conversation_id == conversation_id,
+                    )
+                    .order_by(messages.c.sequence)
+                )
+            )
+            .mappings()
+            .all()
+        )
+    result = [{**row, "id": str(row["id"])} for row in rows]
+    if (
+        [row["role"] for row in result]
+        != (["user", "assistant"] if committed else ["user"])
+        or result[0]["content"] != user
+        or committed
+        and result[1]["content"] != candidate
+        or any(
+            hashlib.sha256(row["content"].encode()).hexdigest() != row["content_sha256"]
+            for row in result
+        )
+    ):
+        raise RuntimeError("persisted turn messages differ from native candidate")
+    return result
 
 
 async def execute_fresh_trajectory(
@@ -176,6 +227,14 @@ async def execute_fresh_trajectory(
         if disposition == "verified_rejection" and before != after:
             raise RuntimeError("rejected turn changed held facts")
         attempt = json.loads(Path(turn["attempt_artifact"]).read_text())
+        persisted_messages = await persisted_turn_messages(
+            engine,
+            conversation_id=conversation_id,
+            run_id=turn["run_id"],
+            user=planned["user"],
+            candidate=attempt.get("candidate_visible_reply"),
+            committed=disposition == "committed",
+        )
         packet = attempt.get("reviewer_request", {}).get("messages", [])
         history = (
             json.loads(packet[1]["content"]).get("history", [])
@@ -204,10 +263,11 @@ async def execute_fresh_trajectory(
                 "reviewer_decision": attempt.get("reviewer_decision"),
                 "candidate_reply": attempt.get("candidate_visible_reply"),
                 "delivered_reply": (
-                    attempt.get("candidate_visible_reply")
+                    persisted_messages[1]["content"]
                     if disposition == "committed"
                     else None
                 ),
+                "persisted_messages": persisted_messages,
                 "provider_captures": turn["provider_captures"],
                 "dispatch_after": turn["dispatch_after"],
             }

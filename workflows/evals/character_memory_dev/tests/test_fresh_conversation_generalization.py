@@ -42,6 +42,14 @@ def test_fresh_fixture_is_finite_chronological_and_source_bound() -> None:
     assert all(item["subject"] == "primary" for item in trajectories)
     assert trajectories[2]["archive_after"] == "source"
     assert trajectories[3]["turns"][2]["subject"] == "isolated"
+    assert trajectories[1]["turns"][1]["user"] == "那个展我下周想再去一次。"
+    assert "full actual preceding exchange" in " ".join(
+        trajectories[1]["turns"][1]["must"]
+    )
+    assert any(
+        "ambiguity challenge was not exercised" in rule
+        for rule in fixture["execution_rules"]
+    )
     assert all(
         turn["user"] and turn["chat"] and turn["must"] and turn["must_not"]
         for trajectory in trajectories

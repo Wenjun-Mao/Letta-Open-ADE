@@ -100,6 +100,11 @@ subject for the isolation control. It reuses the seven-turn source, route,
 transport, worker, evidence and readback guards while binding the separate
 fixture hash. A structurally valid semantic mistake remains in captured state;
 only a verified rejection skips dependent turns, while integrity failures stop.
+The runner independently compares each committed candidate to the actual
+persisted assistant message before labeling it delivered. Judge the exhibit
+reference against the full actual preceding exchange: a grounded direct answer
+after an assistant has clearly foregrounded one exhibit leaves the ambiguity
+challenge unexercised; unresolved alternatives call for clarification.
 Interpret missing setup and missing historical admission separately from
 factuality and recall success. The fake-provider mechanics test is
 `test_postgres_fresh_conversations.py` on an exclusively owned freshly migrated
