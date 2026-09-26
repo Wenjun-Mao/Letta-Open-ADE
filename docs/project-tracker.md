@@ -32,6 +32,16 @@ and PC-09 (simplicity and observational request counts).
   verification before the frozen live probe. DeepSeek generation and the existing
   Qwen embedding route remain the intended providers; no spend gates or unplanned
   diagnostic rerolls. Production defaults and release promotion remain excluded.
+- H1/H2 are at the offline director-review checkpoint: the frozen
+  [probe contract](../workflows/evals/character_memory_dev/fixtures/history_recall/contract.json)
+  and [ADR 0038](adr/0038-bounded-history-probe-source-contract.md) define the
+  source envelope, finite comparison and limits. The optional reader now uses
+  the accepted turn snapshot, with structural disposable-PostgreSQL tests for
+  root/archive/version scope, shared facts, concurrent membership, source
+  lineage/branching, source-less removal and whole-window omission. This is
+  mechanics evidence only; ranker quality, admitted packets, model dialogue and
+  finalization guards remain H2/H3 work after director review. No provider call
+  has been made for this checkpoint.
 - The candidate-policy freshness failure remains unwaived; no release promotion
   or production change follows from these diagnostic results.
 

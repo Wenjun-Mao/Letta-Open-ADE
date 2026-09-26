@@ -13,9 +13,12 @@ from .persistence.base import OptimisticLockError
 from .persistence.conversations import ConversationRepository
 from .persistence.definitions import DefinitionVersionRepository
 from .persistence.memory import MemoryRepository
+from .persistence.history import read_history_corpus
 
 
-async def load_turn_state(engine: AsyncEngine, run: dict[str, Any]) -> dict[str, Any]:
+async def load_turn_state(
+    engine: AsyncEngine, run: dict[str, Any], *, include_history: bool = False
+) -> dict[str, Any]:
     async with engine.connect() as connection:
         await connection.execute(
             text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
@@ -30,7 +33,7 @@ async def load_turn_state(engine: AsyncEngine, run: dict[str, Any]) -> dict[str,
         subject = await memory.get_subject(subject_id)
         if int(subject["memory_generation"]) != int(run["accepted_memory_generation"]):
             raise OptimisticLockError("subject memory changed after turn acceptance")
-        return {
+        state = {
             "conversation": conversation,
             "definition": definition,
             "subject": subject,
@@ -40,6 +43,16 @@ async def load_turn_state(engine: AsyncEngine, run: dict[str, Any]) -> dict[str,
             "facts": await memory.list_facts(subject_id),
             "entities": await memory.list_entities(subject_id),
         }
+        if include_history:
+            state["history"] = await read_history_corpus(
+                connection,
+                workspace_id=str(conversation["workspace_id"]),
+                subject_id=subject_id,
+                purpose=str(conversation["purpose"]),
+                definition_root_id=str(definition["agent_definition_id"]),
+                current_run_id=str(run["id"]),
+            )
+        return state
 
 
 def current_user_message(messages: list[dict[str, Any]], run_id: str) -> dict[str, Any]:

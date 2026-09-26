@@ -38,6 +38,7 @@ record's status notice before applying its original execution details.
 | [0035](0035-compact-natural-review-and-observational-dispatch.md) | Current amended reviewer boundary and observational counting; no release qualification implied. |
 | [0036](0036-discretionary-curated-tools-and-structured-requirements.md) | Current discretionary tools and explicit structured requirements. |
 | [0037](0037-current-product-contract.md) | Current documentation authority and agreement maintenance. |
+| [0038](0038-bounded-history-probe-source-contract.md) | Isolated historical-recall probe source and snapshot contract; no production selection. |
 
 ## Historical, Retired, Or On Hold
 

@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "status": "h1-frozen-ranking-development-only",
+  "rule": "These independent subjects/roots tune ranking only. Do not score their dialogue as held-out target cases or use expected IDs in query construction. All exchanges are complete at target time.",
+  "cases": [
+    {
+      "id": "mandarin_paraphrase_coffee",
+      "exchanges": [
+        {"id": "d1", "user": "我一般醒来先冲一杯手磨咖啡。", "assistant": "早上的手磨咖啡是你的习惯。"},
+        {"id": "d2", "user": "我下午更想散步。", "assistant": "下午散步听起来不错。"},
+        {"id": "d3", "user": "我把旧照片整理到相册了。", "assistant": "整理照片会翻出不少回忆。"}
+      ],
+      "query": "我起床后通常先喝什么？",
+      "minimum_evidence": ["d1"]
+    },
+    {
+      "id": "mandarin_paraphrase_concern",
+      "exchanges": [
+        {"id": "e1", "user": "我怕周五的答辩会卡壳。", "assistant": "你担心周五答辩不顺。"},
+        {"id": "e2", "user": "那场答辩顺利结束了，我已经不紧张了。", "assistant": "顺利结束真好。"},
+        {"id": "e3", "user": "我今天去买了水果。", "assistant": "买了些什么？"}
+      ],
+      "query": "之前让我焦虑的展示后来怎么样了？",
+      "minimum_evidence": ["e1", "e2"]
+    },
+    {
+      "id": "unrelated_probe",
+      "exchanges": [
+        {"id": "z1", "user": "我喜欢在周末去游泳。", "assistant": "游泳很解压。"},
+        {"id": "z2", "user": "昨晚我在看纪录片。", "assistant": "那部纪录片讲什么？"}
+      ],
+      "query": "明天会下雨吗？",
+      "minimum_evidence": []
+    }
+  ]
+}

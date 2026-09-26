@@ -1,5 +1,22 @@
 # Character Memory Development
 
+## Historical Recall Probe (H1/H2 Offline Checkpoint)
+
+The [frozen history contract](fixtures/history_recall/contract.json) belongs to
+the approved bounded automatic-history versus empty-history probe. It is separate
+from the historical Luna captures and earlier natural-memory matrices. The H2
+reader is enabled only through `load_turn_state(..., include_history=True)`;
+normal runtime turns do not yet send history to a model. It reads at most 128
+complete succeeded exchanges from the accepted repeatable-read snapshot, with
+whole-window omission when text or required source lineage exceeds the frozen
+limits. Its omission counts and exact exchange/source IDs are mechanics evidence,
+not dialogue-quality or release evidence.
+
+Run `test_postgres_history_reader.py` with `ADE_TEST_DATABASE_URL` pointing at a
+fresh disposable PostgreSQL database migrated to head. The test uses only that
+database and makes no provider request. H2 ranking and H3 packet delivery are
+subsequent checkpoints under the [approved plan](../../../docs/plans/natural-history-recall.md).
+
 Host-only experiments with the existing `chat_linxiaotang` (林小棠) persona,
 using GPT-6 Luna through the installed Codex CLI and its ChatGPT login.
 Run from the repository root on macOS/Linux. No Docker stack or Spark access

@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "status": "h1-frozen-target-time-scripts",
+  "fixture_rule": "Each case has a fresh workspace/subject/root unless an excluded scope is named. Seed only setup exchanges and fact transitions before the target. Never seed target reply, future state, or expected answer into corpus/query/index. Each setup exchange is one succeeded user/assistant run with independently stored message hashes.",
+  "default_conversation_version": 1,
+  "cases": [
+    {
+      "id": "archived_version_recall",
+      "setup": [
+        {"id": "a1", "chat": "old", "version": 1, "archived": true, "user": "我小时候在外婆家学会包饺子。", "assistant": "原来包饺子是外婆教你的。"},
+        {"id": "a2", "chat": "recent", "version": 2, "user": "今天工作有点忙。", "assistant": "辛苦啦，先歇一会儿。"}
+      ],
+      "current_facts": [],
+      "target": {"chat": "new", "version": 2, "user": "我以前说过是谁教我包饺子吗？"},
+      "required_evidence": ["a1:user", "a1:assistant"],
+      "expected_delta": [],
+      "forbidden": ["恢复归档聊天", "换版本后当成另一个角色", "说自己亲自在外婆家学过"]
+    },
+    {
+      "id": "correction_return",
+      "setup": [
+        {"id": "c1", "chat": "old", "user": "我早上更喜欢喝咖啡。", "assistant": "早上喜欢咖啡，我记下了。"},
+        {"id": "c2", "chat": "middle", "user": "现在早上更喜欢喝茶了。", "assistant": "现在早上更偏向茶。"},
+        {"id": "c3", "chat": "recent", "user": "最近早上又更喜欢咖啡。", "assistant": "这次又回到早上偏好咖啡。"}
+      ],
+      "fact_chain": [{"source": "c1:user", "operation": "add", "reason": null}, {"source": "c2:user", "operation": "revise", "reason": "supersede"}, {"source": "c3:user", "operation": "revise", "reason": "supersede"}],
+      "current_facts": ["active morning-coffee preference"],
+      "target": {"chat": "new", "user": "我是不是一直都更喜欢早上喝咖啡？"},
+      "required_evidence": ["c1:user", "c2:user", "c3:user"],
+      "expected_delta": [],
+      "forbidden": ["推断咖啡偏好从未中断", "把喝茶经历改写为没有发生"]
+    },
+    {
+      "id": "extraction_repair",
+      "setup": [
+        {"id": "r1", "chat": "old", "user": "我早上更喜欢喝咖啡。", "assistant": "你说的是早上的咖啡偏好。"},
+        {"id": "r2", "chat": "later", "user": "我刚才说的是早上更喜欢咖啡，不是整天。", "assistant": "明白，是早上的范围。"}
+      ],
+      "fact_chain": [{"source": "r1:user", "operation": "add", "stored_value": "all-day coffee preference"}, {"source": "r2:user", "operation": "revise", "reason": "correct", "stored_value": "morning coffee preference", "cause": "reviewer repaired extraction scope; original testimony already said morning"}],
+      "current_facts": ["active morning-coffee preference"],
+      "target": {"chat": "new", "user": "我一开始说的是整天都喜欢咖啡，还是只说早上？"},
+      "required_evidence": ["r1:user", "r1:assistant", "r2:user", "r1:source-relative-repair"],
+      "expected_delta": [],
+      "forbidden": ["声称用户起初说整天", "把保存事实的修复称为用户反悔"]
+    },
+    {
+      "id": "user_retraction",
+      "setup": [
+        {"id": "u1", "chat": "old", "user": "我住在北京。", "assistant": "你说你住在北京。"},
+        {"id": "u2", "chat": "later", "user": "我之前说住在北京是记错了，我只是去那里出差。", "assistant": "明白，先前的住址说法有误。"}
+      ],
+      "fact_chain": [{"source": "u1:user", "operation": "add"}, {"source": "u2:user", "operation": "end", "reason": "invalidated"}],
+      "current_facts": ["inactive/invalidated Beijing residence; no inferred new residence"],
+      "target": {"chat": "new", "user": "我最早怎么说北京的事，后来又怎么澄清？"},
+      "required_evidence": ["u1:user", "u2:user"],
+      "expected_delta": [],
+      "forbidden": ["只凭 correct 代码推断澄清内容", "说现在住在另一个未提及的城市"]
+    },
+    {
+      "id": "invalidated_ended",
+      "setup": [
+        {"id": "i1", "chat": "old", "user": "我住在北京。", "assistant": "你说你住在北京。"},
+        {"id": "i2", "chat": "later", "user": "前面北京住址的说法不对。", "assistant": "那条住址说法不应当再当成现况。"},
+        {"id": "i3", "chat": "old", "user": "我和小王在交往。", "assistant": "听起来你们在交往。"},
+        {"id": "i4", "chat": "later", "user": "我和小王分手了。", "assistant": "知道了，这段关系已经结束。"}
+      ],
+      "fact_chain": [{"source": "i1:user", "operation": "add"}, {"source": "i2:user", "operation": "revise", "reason": "invalidated"}, {"source": "i3:user", "operation": "add"}, {"source": "i4:user", "operation": "end", "reason": "ended"}],
+      "current_facts": ["inactive Beijing residence", "inactive/ended relationship with Xiao Wang"],
+      "target": {"chat": "new", "user": "我之前说的北京住址和小王关系现在还成立吗？"},
+      "required_evidence": ["i1:user", "i2:user", "i3:user", "i4:user"],
+      "expected_delta": [],
+      "forbidden": ["把北京当现居地", "把小王当现任", "编造相反态度"]
+    },
+    {
+      "id": "removed_acknowledgment",
+      "setup": [
+        {"id": "f1", "chat": "old", "user": "我以前喜欢茉莉花茶。", "assistant": "你提过茉莉花茶。"}
+      ],
+      "fact_chain": [{"source": "f1:user", "operation": "add"}, {"source": null, "operation": "forget", "reason": "forgotten", "cause": "operator removal"}],
+      "current_facts": ["forgotten jasmine-tea fact; no active tea preference"],
+      "target": {"chat": "new", "user": "你还记得我以前提过什么茶吗？"},
+      "required_evidence": ["f1:user", "f1:source-less-removal"],
+      "expected_delta": [],
+      "followup": {"user": "我现在又喜欢茉莉花茶了。", "expected_delta": ["one new supported active jasmine-tea preference; old forgotten chain remains forgotten"]},
+      "forbidden": ["仅凭旧历史恢复偏好", "声称旧对话被删除", "把旧修订改回 active"]
+    },
+    {
+      "id": "h_only_referent",
+      "setup": [
+        {"id": "h1", "chat": "old", "user": "我家有一只黑狗和一只白狗。", "assistant": "黑色那只叫什么名字？"},
+        {"id": "h2", "chat": "old", "user": "黑色那只叫 Roxy。", "assistant": "明白，Roxy 是黑色那只。"}
+      ],
+      "current_facts": [],
+      "target": {"chat": "new", "user": "我当时说黑色那只叫什么？"},
+      "required_evidence": ["h1:user", "h1:assistant", "h2:user"],
+      "expected_delta": [],
+      "forbidden": ["把历史 H 当成当前写入授权", "把白狗叫 Roxy"]
+    },
+    {
+      "id": "habit_not_preference",
+      "setup": [
+        {"id": "p1", "chat": "old", "user": "我早上更喜欢喝咖啡。", "assistant": "早上偏好咖啡。"},
+        {"id": "p2", "chat": "later", "user": "这周早上我一直在喝茶，因为咖啡让我睡不好。", "assistant": "最近改喝茶是为了睡眠。"}
+      ],
+      "current_facts": ["active morning-coffee preference; no tea preference"],
+      "target": {"chat": "new", "user": "这周我喝茶，是不是说明我更喜欢茶？"},
+      "required_evidence": ["p1:user", "p2:user"],
+      "expected_delta": [],
+      "forbidden": ["把喝茶习惯等同茶偏好", "说咖啡偏好从未被提及"]
+    },
+    {
+      "id": "resolved_concern",
+      "setup": [
+        {"id": "q1", "chat": "old", "user": "我担心下午的产品岗面试会答不好。", "assistant": "面试前紧张很正常。"},
+        {"id": "q2", "chat": "later", "user": "那个产品岗面试过了，我拿到了录用通知，不再担心了。", "assistant": "恭喜你，之前那份担心已经过去了。"}
+      ],
+      "current_facts": [],
+      "target": {"chat": "new", "user": "我之前担心的那场面试后来怎么样了？"},
+      "required_evidence": ["q1:user", "q2:user"],
+      "expected_delta": [],
+      "forbidden": ["只取担忧片段就说现在仍焦虑", "编造具体雇主"]
+    },
+    {
+      "id": "ambiguity_and_unrelated",
+      "setup": [
+        {"id": "m1", "chat": "old", "user": "小李和小周都给我推荐了书。", "assistant": "你最后看了谁推荐的那本？"},
+        {"id": "m2", "chat": "later", "user": "我只说了其中一本挺有意思，没有说是谁推荐的。", "assistant": "那我不知道是哪位推荐的。"}
+      ],
+      "current_facts": [],
+      "target": {"chat": "new", "user": "那本挺有意思的书是谁推荐的？"},
+      "required_evidence": ["m1:user", "m2:user"],
+      "expected_delta": [],
+      "followup": {"user": "晚安。", "expected_delta": []},
+      "forbidden": ["猜小李或小周", "晚安时强行提那本书"]
+    },
+    {
+      "id": "isolation",
+      "setup": [
+        {"id": "x1", "chat": "other_root", "root": "different", "user": "我最爱听爵士乐。", "assistant": "爵士乐很有层次。"},
+        {"id": "x2", "chat": "other_subject", "subject": "different", "user": "我最爱吃饺子。", "assistant": "饺子很好吃。"},
+        {"id": "x3", "chat": "other_workspace", "workspace": "different", "user": "我爱看科幻。", "assistant": "科幻很有想象力。"},
+        {"id": "x4", "chat": "other_purpose", "purpose": "preview", "user": "我会拉小提琴。", "assistant": "小提琴很动听。"}
+      ],
+      "current_facts": [],
+      "target": {"chat": "new", "user": "你还记得我有什么爱好吗？"},
+      "required_evidence": [],
+      "expected_delta": [],
+      "forbidden": ["迁移其他角色、用户、工作区或用途的经历"]
+    }
+  ]
+}
