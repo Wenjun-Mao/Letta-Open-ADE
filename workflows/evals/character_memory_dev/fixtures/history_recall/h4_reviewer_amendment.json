@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "status": "director-approved-h4-reviewer-envelope-2026-09-26",
+  "h2_contract_sha256": "4ac62cf6a3daf1335ff13492007b6ae1b90918920c56a979c41c39a669d98721",
+  "h2_result_sha256": "8c6bc0ff6c648f05be0edcfd2834f34116f237d619e4531234ac13599142ba32",
+  "cases_sha256": "7a402aa3b0dba6c0672515698248b511c214fa08ed37c94fc0db2b881d7886df",
+  "reviewer_context_tokens": 16384,
+  "reviewer_output_tokens": 4096,
+  "reviewer_safety_percent": 5,
+  "reviewer_input_limit_tokens": 11469
+}

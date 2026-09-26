@@ -53,6 +53,12 @@ and PC-09 (simplicity and observational request counts).
   pending director review. The release policy-freshness gate remains unwaived.
 - The candidate-policy freshness failure remains unwaived; no release promotion
   or production change follows from these diagnostic results.
+- Director approved the evaluation-only H4 reviewer amendment after the
+  [offline preflight diagnosis](findings/natural-memory-consultation/history-h4-preflight-blocker-2026-09-26.md).
+  The H2-hashed source contract stays unchanged; the separate H4 overlay binds
+  that evidence and gives both paired arms and all controls 16,384 reviewer
+  context, 4,096 output and 11,469 input after the existing 5% safety reserve.
+  H4/H5 live outcomes remain pending. The stale-policy gate remains unwaived.
 
 Earlier authorization and status statements below describe their dated
 checkpoints, not current commands or proof of completion. In particular, old

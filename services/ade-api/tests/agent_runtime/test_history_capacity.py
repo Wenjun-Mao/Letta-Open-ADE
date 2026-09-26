@@ -13,9 +13,16 @@ from ade_api.features.agent_runtime.history_capacity import (
 )
 from ade_api.features.agent_runtime.natural_context import HISTORY_PROBE_POLICY
 from workflows.evals.character_memory_dev.history_h4_campaign import (
+    CampaignStop,
+    _planned_cells,
+    _require_valid_cell,
     reviewer_envelope_lower_bound,
 )
-from workflows.evals.character_memory_dev.history_h4_run import _frozen_inputs
+from workflows.evals.character_memory_dev.history_h4_run import (
+    H2_CONTRACT_SHA256,
+    H2_RESULT_SHA256,
+    _frozen_inputs,
+)
 
 
 def _definition() -> dict:
@@ -53,16 +60,39 @@ def test_h4_capacity_is_exact_and_does_not_mutate_prepared_definition() -> None:
     assert original == frozen
     assert capacity.conversation.input_limit == 11213
     assert capacity.conversation.max_output_tokens == 4096
-    assert capacity.reviewer.input_limit == 6759
+    assert capacity.reviewer.input_limit == 11469
     assert capacity.reviewer_request_max_tokens == 4096
     assert capacity.conversation_requests == 2
 
 
-def test_frozen_h4_reviewer_envelope_cannot_reserve_full_generation_reply() -> None:
-    contract, fixture, _ = _frozen_inputs()
+def test_amended_h4_reviewer_envelope_reserves_full_generation_reply() -> None:
+    contract, fixture, h2 = _frozen_inputs()
     envelope = reviewer_envelope_lower_bound(contract, fixture)
-    assert envelope["frozen_input_limit"] == 6759
-    assert envelope["minimum_input_tokens"] > envelope["frozen_input_limit"]
+    assert h2["contract_sha256"] == H2_CONTRACT_SHA256
+    assert contract["h4_reviewer_amendment"]["h2_result_sha256"] == H2_RESULT_SHA256
+    assert contract["binding"]["generation_input_limit_tokens"] == 11213
+    assert contract["binding"]["reviewer_output_tokens"] == 4096
+    assert envelope["frozen_input_limit"] == 11469
+    assert envelope["minimum_input_tokens"] <= envelope["frozen_input_limit"]
+
+
+def test_h4_schedule_retains_all_cells_and_stops_only_on_integrity() -> None:
+    contract, fixture, _ = _frozen_inputs()
+    assert len(_planned_cells(contract, fixture)) == 4 + 11 * 2
+    semantic_failure = {
+        "name": "control-scope_add",
+        "arm": "empty_history",
+        "status": "observed",
+        "target": {
+            "status": "committed",
+            "base_packet": {"messages": []},
+            "expected_delta_issues": ["wrong semantic delta"],
+        },
+    }
+    _require_valid_cell(semantic_failure)
+    semantic_failure["target"]["base_packet"] = None
+    with pytest.raises(CampaignStop):
+        _require_valid_cell(semantic_failure)
 
 
 @pytest.mark.parametrize("mutation", ["fingerprint", "capacity", "provider", "repair"])

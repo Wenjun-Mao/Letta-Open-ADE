@@ -1,4 +1,4 @@
-"""H4's frozen reviewer envelope rejects both native arms before generation."""
+"""H4's amended envelope carries both native arms through paired packets."""
 
 from __future__ import annotations
 
@@ -195,16 +195,22 @@ def test_h4_pair_replays_archived_version_and_compares_base_packet(
                 )
                 for index, arm in enumerate(workers)
             ]
-            assert [result["status"] for result in results] == ["rejected"] * 2, [
+            assert [result["status"] for result in results] == ["observed"] * 2, [
                 result.get("failure") for result in results
             ]
-            assert all(result["target"]["status"] == "rejected" for result in results)
+            assert all(result["target"]["status"] == "committed" for result in results)
+            assert results[0]["target"]["base_packet"] == results[1]["target"]["base_packet"]
+            assert all(result["target"]["base_packet"] is not None for result in results)
+            for result in results:
+                attempt = json.loads(Path(result["target"]["attempt_artifact"]).read_text())
+                assert attempt["generation"]["input_limit"] == 11213
+                assert attempt["reviewer_request"]["max_tokens"] == 4096
+                assert (
+                    attempt["reviewer_request"]["serialized_visible_token_estimate"]
+                    <= 11469
+                )
             assert all(
-                result["target"]["run"]["status"] == "failed" for result in results
-            )
-            assert all(result["target"]["base_packet"] is None for result in results)
-            assert all(
-                not any(
+                any(
                     receipt["kind"] == "generation"
                     for receipt in result["target"]["provider_captures"]
                 )

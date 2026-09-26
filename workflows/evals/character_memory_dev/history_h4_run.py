@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 from uuid import uuid4
 
@@ -52,17 +53,45 @@ H2_RESULT = (
 )
 H2_RESULT_SHA256 = "8c6bc0ff6c648f05be0edcfd2834f34116f237d619e4531234ac13599142ba32"
 QWEN_FINGERPRINT = "c549d7dc288d2112f10e8b1032b502eda74557d093bc1390fe0fc4f44de63086"
+H2_CONTRACT_SHA256 = "4ac62cf6a3daf1335ff13492007b6ae1b90918920c56a979c41c39a669d98721"
+H4_CASES_SHA256 = "7a402aa3b0dba6c0672515698248b511c214fa08ed37c94fc0db2b881d7886df"
+H4_AMENDMENT = FIXTURES / "h4_reviewer_amendment.json"
 
 
 def _frozen_inputs() -> tuple[dict, dict, dict]:
-    contract = json.loads((FIXTURES / "contract.json").read_text())
+    h2_contract = json.loads((FIXTURES / "contract.json").read_text())
     fixture = json.loads((FIXTURES / "cases.json").read_text())
+    amendment = json.loads(H4_AMENDMENT.read_text())
+    if (
+        sha256_file(FIXTURES / "contract.json") != H2_CONTRACT_SHA256
+        or sha256_file(FIXTURES / "cases.json") != H4_CASES_SHA256
+        or amendment != {
+            "schema_version": 1,
+            "status": "director-approved-h4-reviewer-envelope-2026-09-26",
+            "h2_contract_sha256": H2_CONTRACT_SHA256,
+            "h2_result_sha256": H2_RESULT_SHA256,
+            "cases_sha256": H4_CASES_SHA256,
+            "reviewer_context_tokens": 16384,
+            "reviewer_output_tokens": 4096,
+            "reviewer_safety_percent": 5,
+            "reviewer_input_limit_tokens": 11469,
+        }
+        or h2_contract["binding"]["reviewer_input_limit_tokens"] != 6759
+        or h2_contract["binding"]["reviewer_output_tokens"] != 4096
+        or h2_contract["binding"]["generation_output_tokens"] != 4096
+    ):
+        raise RuntimeError("H4 amendment differs from approved H2-bound envelope")
+    contract = deepcopy(h2_contract)
+    contract["binding"]["reviewer_input_limit_tokens"] = amendment[
+        "reviewer_input_limit_tokens"
+    ]
+    contract["h4_reviewer_amendment"] = amendment
     validate_history_cases(contract, fixture)
     if sha256_file(H2_RESULT) != H2_RESULT_SHA256:
         raise RuntimeError("H2 result differs from reviewed selection")
     h2 = json.loads(H2_RESULT.read_text())
     if (
-        h2["contract_sha256"] != sha256_file(FIXTURES / "contract.json")
+        h2["contract_sha256"] != H2_CONTRACT_SHA256
         or h2["selection"]["selected"] != "probe_local_qwen_cosine"
         or h2["provider_identity"]["deployment_fingerprint"] != QWEN_FINGERPRINT
         or h2["vector_recipe"] != HISTORY_VECTOR_RECIPE

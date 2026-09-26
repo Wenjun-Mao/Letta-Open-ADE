@@ -52,6 +52,7 @@ from workflows.evals.deepseek_dev_smoke.isolation import (
 from .history_h2_router import ContainerEmbeddingClient
 from .history_h4_run import (
     FIXTURES,
+    H4_AMENDMENT,
     H2_RESULT_SHA256,
     QWEN_FINGERPRINT,
     _execute_cell,
@@ -62,6 +63,39 @@ from .history_h4_transport import SplitHistoryTransport
 from .natural_factual_live import source_identity
 from .natural_live_results import sha256_file, write_json
 from .natural_live_transport import NaturalLiveTransport
+
+
+class CampaignStop(RuntimeError):
+    """A native integrity failure invalidates the remaining finite schedule."""
+
+
+def _planned_cells(contract: dict, fixture: dict) -> list[dict]:
+    followups = set(contract["paired_schedule"]["followup_case_ids_per_arm"])
+    return [
+        {"name": f"control-{control['id']}", "arm": "empty_history"}
+        for control in fixture["native_controls"]
+    ] + [
+        {
+            "name": case["id"],
+            "arm": arm,
+            "followup_scheduled": case["id"] in followups,
+        }
+        for case in fixture["cases"]
+        for arm in contract["paired_schedule"]["arms"]
+    ]
+
+
+def _require_valid_cell(result: dict) -> None:
+    target = result.get("target") or {}
+    if (
+        result.get("status") != "observed"
+        or target.get("status") != "committed"
+        or target.get("base_packet") is None
+    ):
+        raise CampaignStop(
+            f"{result['name']}/{result['arm']} failed native integrity: "
+            f"{result.get('failure') or target.get('failure') or target.get('status')}"
+        )
 
 
 def reviewer_envelope_lower_bound(contract: dict, fixture: dict) -> dict[str, int]:
@@ -169,6 +203,10 @@ async def run(args: argparse.Namespace) -> None:
             "database": database_name,
             "fixture_sha256": {
                 "contract": sha256_file(FIXTURES / "contract.json"),
+                "h4_amendment": sha256_file(H4_AMENDMENT),
+                "effective_h4_contract": hashlib.sha256(
+                    json.dumps(contract, ensure_ascii=False, sort_keys=True).encode()
+                ).hexdigest(),
                 "cases": sha256_file(FIXTURES / "cases.json"),
                 "h2_result": H2_RESULT_SHA256,
             },
@@ -193,6 +231,7 @@ async def run(args: argparse.Namespace) -> None:
             "scheduled_controls": contract["paired_schedule"]["native_control_ids"],
             "scheduled_targets": [case["id"] for case in fixture["cases"]],
             "scheduled_followups_per_arm": fixture["followup_schedule"],
+            "planned_cells": _planned_cells(contract, fixture),
             "cells": [],
             "pair_checks": [],
         }
@@ -282,6 +321,7 @@ async def run(args: argparse.Namespace) -> None:
                 )
                 manifest["cells"].append(result)
                 write_json(args.output / "manifest.json", manifest)
+                _require_valid_cell(result)
                 index += 1
             for case in fixture["cases"]:
                 paired = []
@@ -303,6 +343,7 @@ async def run(args: argparse.Namespace) -> None:
                     manifest["cells"].append(result)
                     paired.append(result)
                     write_json(args.output / "manifest.json", manifest)
+                    _require_valid_cell(result)
                     index += 1
                 left = paired[0].get("target", {}).get("base_packet")
                 right = paired[1].get("target", {}).get("base_packet")
@@ -318,8 +359,29 @@ async def run(args: argparse.Namespace) -> None:
                     }
                 )
                 write_json(args.output / "manifest.json", manifest)
+                if manifest["pair_checks"][-1]["base_packet_equal"] is not True:
+                    raise CampaignStop(f"{case['id']} paired base packets differ")
             manifest["status"] = "completed_pending_director_semantic_review"
+        except CampaignStop as exc:
+            manifest["status"] = "stopped_structural"
+            manifest["stop_reason"] = str(exc)
+        except Exception as exc:
+            manifest["status"] = "stopped_unexpected_error"
+            manifest["stop_reason"] = f"{type(exc).__name__}: {exc}"
         finally:
+            for planned in manifest["planned_cells"][len(manifest["cells"]):]:
+                manifest["cells"].append(
+                    {
+                        **planned,
+                        "status": "unrun_after_stop",
+                        "target": {"status": "unrun_after_stop"},
+                        **(
+                            {"followup": {"status": "unrun_dependency"}}
+                            if planned.get("followup_scheduled")
+                            else {}
+                        ),
+                    }
+                )
             heartbeat_stop.set()
             await asyncio.gather(heartbeat, return_exceptions=True)
             await workers["empty_history"].presence.mark_stopped()
@@ -333,6 +395,8 @@ async def run(args: argparse.Namespace) -> None:
     finally:
         server.should_exit = True
         await asyncio.gather(server_task, return_exceptions=True)
+    if manifest["status"].startswith("stopped_"):
+        raise RuntimeError(manifest["stop_reason"])
 
 
 def main() -> None:

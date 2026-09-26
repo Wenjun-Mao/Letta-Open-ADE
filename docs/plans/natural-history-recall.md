@@ -407,8 +407,13 @@ required exchange; their one-to-three-exchange corpora did not pressure the
 top-four rank. Both recipes admitted four irrelevant windows on the unrelated
 development case. Full scores, hashes, omissions, receipts and latency are
 recorded in [the H2 finding](../findings/natural-memory-consultation/history-h2-ranking-feasibility-2026-09-26.md).
-Director review is pending before H4; no H4/H5 dialogue score or production
-decision exists.
+Director approved the narrow H4 reviewer-only amendment after the offline
+preflight diagnosis. The original H2-hashed contract remains unchanged; the
+evaluation-only H4 overlay sets reviewer context to 16,384 and input to 11,469
+while retaining 4,096 output and the 5% safety rule. Both arms and controls use
+the same envelope. Long follow-up replies may omit optional older windows;
+record that as capacity loss. H4/H5 dialogue scoring and any production decision
+remain pending.
 
 [Assessment dispositions](../findings/natural-memory-consultation/history-recall-review-assessment.md)
 map to sections 1/2 (snapshot and source-relative lineage), 3 (distinct transcript

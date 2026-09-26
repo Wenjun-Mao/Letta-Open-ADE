@@ -13,13 +13,13 @@ from .natural_evaluation_capacity import (
     NaturalEvaluationCapacity,
 )
 
-HISTORY_CAPACITY_CONTRACT = "natural-history-probe-h4-v1"
+HISTORY_CAPACITY_CONTRACT = "natural-history-probe-h4-v2"
 CONVERSATION_BUDGET = ContextBudget(
     context_window=16_384, max_output_tokens=4_096, tool_schema_tokens=256
 )
-# 11_426 - 4_096 - floor(11_426 * .05) = 6_759 input tokens.
+# 16_384 - 4_096 - floor(16_384 * .05) = 11_469 input tokens.
 REVIEWER_BUDGET = ContextBudget(
-    context_window=11_426, max_output_tokens=4_096, tool_schema_tokens=0
+    context_window=16_384, max_output_tokens=4_096, tool_schema_tokens=0
 )
 ROLE_LIMITS = {
     "conversation": {
@@ -28,7 +28,7 @@ ROLE_LIMITS = {
         "max_model_requests": 2,
     },
     "reviewer": {
-        "context_window": 11_426,
+        "context_window": 16_384,
         "max_output_tokens": 4_096,
         "max_model_requests": 1,
     },
@@ -111,7 +111,7 @@ def checked_history_probe_capacity(
         raise RuntimeValidationError("H4 requires zero reviewer repairs")
     if (
         CONVERSATION_BUDGET.input_limit != 11_213
-        or REVIEWER_BUDGET.input_limit != 6_759
+        or REVIEWER_BUDGET.input_limit != 11_469
     ):
         raise RuntimeValidationError("H4 frozen input limits drifted")
     return NaturalEvaluationCapacity(
