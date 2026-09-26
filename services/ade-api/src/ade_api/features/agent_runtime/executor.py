@@ -29,9 +29,10 @@ SEARCH_MEMORY_TOOL = {
     "function": {
         "name": "search_memory",
         "description": (
-            "Search older committed facts about the current user or account bound "
-            "to this conversation. Returned facts never describe the assistant "
-            "persona. Use the returned facts as evidence; do not invent results."
+            "Search saved fact descriptors about the current user or account "
+            "bound to this conversation, not historical conversation messages. "
+            "Returned facts never describe the assistant persona. Use the "
+            "returned facts as evidence; do not invent results."
         ),
         "parameters": {
             "type": "object",

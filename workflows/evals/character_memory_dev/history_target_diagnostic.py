@@ -24,13 +24,6 @@ from ade_api.features.agent_runtime.history_admission import HistoryProbe
 from ade_api.features.agent_runtime.history_capacity import bind_history_probe_capacity
 from ade_api.features.agent_runtime.history_native_rank import HISTORY_EMBEDDING_ROUTE
 from ade_api.features.agent_runtime.natural_context import HISTORY_PROBE_POLICY
-from ade_api.features.agent_runtime.natural_memory_review import (
-    natural_review_json_schema,
-)
-from ade_api.features.agent_runtime.natural_memory_reviewer import (
-    HISTORY_REVIEWER_INSTRUCTION,
-    NATURAL_REVIEWER_SYSTEM,
-)
 from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
 )
@@ -57,7 +50,14 @@ from .history_h4_run import (
     _frozen_inputs,
 )
 from .history_h4_transport import SplitHistoryTransport
-from .history_target_diagnostic_run import execute_trajectory, fact_state
+from .history_target_diagnostic_run import (
+    CANDIDATE_PROMPT_KEY,
+    GENERATION_BINDING,
+    admission_comparison,
+    execute_trajectory,
+    fact_state,
+    verified_generation_binding,
+)
 from .natural_factual_live import source_identity
 from .natural_live_results import sha256_file, write_json
 from .natural_live_transport import NaturalLiveTransport
@@ -86,6 +86,11 @@ OLD_MANIFESTS = (
         / "workflows/evals/character_memory_dev/outputs/history-h4-final-remaining-live-20260926/manifest.json",
         "cf5f8bbc144a33e7aa3678683f8fbc99e9bb232883c438d06a757f001bb24cb8",
     ),
+)
+PRIOR_DIAGNOSTIC = (
+    ROOT
+    / "workflows/evals/character_memory_dev/outputs/history-target-diagnostic-20260926/manifest.json",
+    "9c0753c07271f2beacb7e8ab3b0e92a8d8e2c43566b90a1b1a0908ce568c7b15",
 )
 
 
@@ -161,6 +166,16 @@ def frozen_schedule() -> tuple[dict, dict, dict]:
     return schedule, cases, previous[-1]
 
 
+def prior_diagnostic() -> dict:
+    path, expected_hash = PRIOR_DIAGNOSTIC
+    if sha256_file(path) != expected_hash:
+        raise RuntimeError("prior seven-turn diagnostic manifest changed")
+    manifest = json.loads(path.read_text())
+    if manifest.get("status") != "completed_pending_semantic_review":
+        raise RuntimeError("prior seven-turn diagnostic did not complete")
+    return manifest
+
+
 def validate_catalog(catalog: dict, schedule: dict) -> tuple[dict, dict]:
     """Bind live routes to the previously observed provider identities."""
     items = {item["model_key"]: item for item in catalog["items"]}
@@ -190,21 +205,34 @@ async def run(args: argparse.Namespace) -> None:
     database_url, database_name = isolated_database_url(args.database_url)
     source_revision, source_fingerprint = source_identity()
     schedule, cases, old_manifest = frozen_schedule()
+    prior_manifest = prior_diagnostic()
     if args.output.exists():
         raise RuntimeError("one-shot diagnostic output must be new")
     await _fresh_database(database_url, database_name)
     registry = build_prompt_template_reader(
         ROOT, persona_db_path=args.output.parent / ".target-diagnostic-personas.sqlite3"
     )
-    prompt = registry.get_template("prompt", "chat_v20260516", scenario="chat")
+    prompt = registry.get_template("prompt", CANDIDATE_PROMPT_KEY, scenario="chat")
+    old_prompt = registry.get_template("prompt", "chat_v20260516", scenario="chat")
     persona = registry.get_template("persona", "chat_linxiaotang", scenario="chat")
     prompt_hash = hashlib.sha256(str(prompt["content"]).encode()).hexdigest()
+    old_prompt_hash = hashlib.sha256(str(old_prompt["content"]).encode()).hexdigest()
     persona_hash = hashlib.sha256(str(persona["content"]).encode()).hexdigest()
     if (
-        prompt_hash != old_manifest["prompt_sha256"]
+        old_prompt_hash != old_manifest["prompt_sha256"]
         or persona_hash != old_manifest["persona_sha256"]
     ):
-        raise RuntimeError("prompt or persona differs from the H4 source")
+        raise RuntimeError("old prompt or persona differs from the H4 source")
+    binding = verified_generation_binding(
+        prompt,
+        persona,
+        old_manifest,
+        prior_manifest,
+        schedule,
+        schedule_sha256=sha256_file(SCHEDULE),
+        historical_manifest_sha256=[item[1] for item in OLD_MANIFESTS],
+        prior_diagnostic_manifest_sha256=PRIOR_DIAGNOSTIC[1],
+    )
     configured_router = router_settings(args.env_file, include_spark=False)
     router_app.get_settings = lambda: configured_router
     router_app.catalog_service = RouterCatalogService(
@@ -261,18 +289,13 @@ async def run(args: argparse.Namespace) -> None:
             "source_fingerprint": source_fingerprint,
             "database": database_name,
             "policy": HISTORY_PROBE_POLICY,
+            "prompt_key": CANDIDATE_PROMPT_KEY,
             "prompt_sha256": prompt_hash,
             "persona_sha256": persona_hash,
-            "reviewer_instruction_sha256": hashlib.sha256(
-                (NATURAL_REVIEWER_SYSTEM + HISTORY_REVIEWER_INSTRUCTION).encode()
-            ).hexdigest(),
-            "reviewer_schema_sha256": hashlib.sha256(
-                json.dumps(
-                    natural_review_json_schema(history_capable=True),
-                    ensure_ascii=False,
-                    sort_keys=True,
-                ).encode()
-            ).hexdigest(),
+            "generation_binding_sha256": sha256_file(GENERATION_BINDING),
+            "generation_binding": binding,
+            "reviewer_instruction_sha256": binding["reviewer_instruction_sha256"],
+            "reviewer_schema_sha256": binding["reviewer_schema_sha256"],
             "routes": {
                 "deepseek::deepseek-flash": deepseek["sha256"],
                 HISTORY_EMBEDDING_ROUTE: qwen["sha256"],
@@ -284,6 +307,7 @@ async def run(args: argparse.Namespace) -> None:
                 for number, _ in enumerate(item["turns"])
             ],
             "trajectories": [],
+            "admission_comparison": {},
         }
         write_json(args.output / "manifest.json", manifest)
         engine = create_persistence_engine(database_url)
@@ -341,6 +365,9 @@ async def run(args: argparse.Namespace) -> None:
             worker.presence.heartbeat_forever(heartbeat_stop)
         )
         try:
+            prior_trajectories = {
+                item["name"]: item for item in prior_manifest["trajectories"]
+            }
             for index, trajectory in enumerate(schedule["trajectories"]):
                 result = await execute_trajectory(
                     trajectory=trajectory,
@@ -353,7 +380,18 @@ async def run(args: argparse.Namespace) -> None:
                     engine=engine,
                     transport=transport,
                     output=args.output,
+                    prompt_key=CANDIDATE_PROMPT_KEY,
                 )
+                if (
+                    result["session"]["prompt_sha256"] != prompt_hash
+                    or result["session"]["persona_sha256"] != persona_hash
+                ):
+                    raise RuntimeError("session bound a different prompt or persona")
+                prior_turns = prior_trajectories[trajectory["id"]]["turns"]
+                manifest["admission_comparison"][trajectory["id"]] = [
+                    admission_comparison(turn, prior_turns[turn_index])
+                    for turn_index, turn in enumerate(result["turns"])
+                ]
                 manifest["trajectories"].append(result)
                 write_json(args.output / "manifest.json", manifest)
             ids = [item["session"]["subject_id"] for item in manifest["trajectories"]]

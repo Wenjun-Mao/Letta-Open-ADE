@@ -39,6 +39,8 @@ record's status notice before applying its original execution details.
 | [0036](0036-discretionary-curated-tools-and-structured-requirements.md) | Current discretionary tools and explicit structured requirements. |
 | [0037](0037-current-product-contract.md) | Current documentation authority and agreement maintenance. |
 | [0038](0038-bounded-history-probe-source-contract.md) | Isolated historical-recall probe source and snapshot contract; no production selection. |
+| [0043](0043-reviewer-target-attribution-before-mutation.md) | Bounded reviewer target-attribution correction; no general semantic acceptance. |
+| [0044](0044-native-generation-memory-contract-candidate.md) | Explicit chat candidate and shared generation instruction alignment; no default adoption. |
 
 ## Historical, Retired, Or On Hold
 

@@ -99,6 +99,14 @@ and PC-09 (simplicity and observational request counts).
   that observable order from the unproven overshadowing hypothesis and proposes
   a narrow future generation-contract alignment. No prompt or runtime source
   changed after the seven-turn run.
+- User approved the [native generation alignment follow-up](plans/natural-history-recall.md#proposed-follow-up-native-generation-contract-alignment)
+  on 2026-09-26. [ADR 0044](adr/0044-native-generation-memory-contract-candidate.md)
+  binds an explicitly selected chat candidate and owner-level shared instruction
+  corrections. [Offline source/packet review](findings/natural-memory-consultation/native-generation-contract-offline-2026-09-26.md)
+  and the frozen diagnostic binding passed focused and disposable-PostgreSQL
+  checks and are ready for director review before any new provider call. Shared
+  generation changes affect old bindings at assembly; no default, production,
+  reviewer or release binding changes are authorized.
 
 Earlier authorization and status statements below describe their dated
 checkpoints, not current commands or proof of completion. In particular, old

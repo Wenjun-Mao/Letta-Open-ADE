@@ -16,12 +16,18 @@ MEMORY_CONTROL_INSTRUCTIONS = """Memory rules:
 - A concern or request to ask next time is not durable memory unless a supported
   fact is separately committed by the reviewer. Do not promise to remember it
   or proactively ask later; offer to listen or ask about it now instead.
-- Use only committed facts shown in context. Never select or invent a subject ID.
+- Treat saved facts as current only when marked active. Attributed conversation
+  evidence can answer what was said earlier, but does not by itself prove what is
+  true now or authorize restoring a removed fact. Never select or invent a subject ID.
 - Facts in the bound memory-subject profile and search results describe the current
   user or account, never the assistant persona. Preserve I/you attribution exactly.
 - When a committed fact answers the user's question, state its concrete value
   directly instead of merely saying that you remember it.
-- Use search_memory only when older relevant details are absent from the profile.
+- If a reference still has materially plausible alternative people or things,
+  ask which one the user means before asserting one. Answer clear references
+  directly.
+- Use search_memory for relevant saved facts absent from the profile; it does
+  not search earlier conversation messages.
 - Return user-visible dialogue only; never expose private reasoning.
 """
 

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "prompt_key": "chat_v20260926",
+  "persona_key": "chat_linxiaotang",
+  "component_sha256": {
+    "candidate_prompt": "bbf7994507491171983300a3cfdfcd823692168d3035bbf6a6b36461dc6010a7",
+    "memory_control": "e144497d9d195d74f8ccf2244a483a96c6dd9de0556b62a71caf6479f4199022",
+    "history_data": "4d9e8febd6caa0725d2cb1aba76e7b4573144d74ae8393b4b5c9de333f16bca1",
+    "tool_use": "78378db8c5a0b354e13f7168012509061348e47aad2e4433a5b2bc9fe23f1e21",
+    "search_memory_tool": "045c681f8b3b60690ac923543803b2b0193de6da46ec74f8e1bf3c5e9bb53684"
+  },
+  "generation_instructions_sha256": "83f63d055004ecfc6b38cbecef174bf20423d716bbec39d08771d0289829ffd2",
+  "persona_sha256": "d78cf538395a685f960866a4ab3e9f375aeefb5aa94de8f6fcbae03ab152085b",
+  "prior_prompt_sha256": "d4131e8759c85ba640b74223512cb7ee099fd9c7e2fed12cbc5985ce80ffa4c5",
+  "source_cases_sha256": "7a402aa3b0dba6c0672515698248b511c214fa08ed37c94fc0db2b881d7886df",
+  "h2_result_sha256": "8c6bc0ff6c648f05be0edcfd2834f34116f237d619e4531234ac13599142ba32",
+  "h4_reviewer_amendment_sha256": "8d5958eb85006dd03705687026dd13031e599858c8611a946e2919468feefdb9",
+  "schedule_sha256": "5ab36b501ef280605dd4b696ebfa3ef84c782a3fa5eeb7ed7c05deaee3e59874",
+  "historical_manifest_sha256": [
+    "07228ca7c3642d3528c76db345ef5a14e2bd9463ada14858784872af1b9458a2",
+    "e309d643542406446cd349962bc3dee598f22ac49bfaaceaf8b6fd1e606ddb6a",
+    "cf5f8bbc144a33e7aa3678683f8fbc99e9bb232883c438d06a757f001bb24cb8"
+  ],
+  "prior_diagnostic_manifest_sha256": "9c0753c07271f2beacb7e8ab3b0e92a8d8e2c43566b90a1b1a0908ce568c7b15",
+  "prior_source_revision": "292148bb6a5293a12da78ce5e1fb102550f61274",
+  "prior_source_fingerprint": "e826d02bfa24d521510e2bfda0da67cc3f73f264c4d3ba778c8a08e7ac452f48",
+  "routes": {
+    "conversation_and_reviewer": {
+      "model": "deepseek::deepseek-flash",
+      "fingerprint": "870ff4fb8a25a9c2016f67dcda05e26e82a6c5dea6ad55781a80be2201161cfe"
+    },
+    "history_and_fact_embeddings": {
+      "model": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+      "fingerprint": "c549d7dc288d2112f10e8b1032b502eda74557d093bc1390fe0fc4f44de63086",
+      "artifact_revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+      "dimensions": 1024
+    }
+  },
+  "per_turn": {
+    "timeout_seconds": 180,
+    "retry_count": 0,
+    "reviewer_repairs": 0,
+    "generation_input_limit_tokens": 11213,
+    "generation_output_tokens": 4096,
+    "reviewer_input_limit_tokens": 11469,
+    "reviewer_output_tokens": 4096,
+    "conversation_request_ceiling": 2,
+    "reviewer_request_ceiling": 1,
+    "dispatch_counts": "observational; missing receipts mark counts incomplete"
+  },
+  "reviewer_instruction_sha256": "c1c36c4e47fc7c5f1af7f3f61c2c9043b042e9af63e8094a49f01212c8e17e59",
+  "reviewer_schema_sha256": "01b56de10e2afadc56f2e23714af0a9355dcb63915b53a484c2eb32c384f011d"
+}

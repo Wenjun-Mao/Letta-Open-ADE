@@ -13,6 +13,7 @@ from workflows.evals.character_memory_dev.history_target_diagnostic import (
     validate_catalog,
 )
 from workflows.evals.character_memory_dev.history_target_diagnostic_run import (
+    admission_comparison,
     verified_turn_disposition,
 )
 
@@ -82,3 +83,18 @@ def test_verified_rejection_can_continue_an_independent_trajectory() -> None:
     turn["observed_delta"]["revision_count"] = 1
     with pytest.raises(RuntimeError, match="inconsistent"):
         verified_turn_disposition(turn)
+
+
+def test_admission_comparison_exposes_source_and_capacity_differences() -> None:
+    prior = {
+        "admitted_history": [{"messages": [{"role": "user", "content": "old"}]}],
+        "history_selection": {"omitted_capacity_run_ids": ["prior-omitted"]},
+    }
+    current = {
+        "admitted_history": [{"messages": [{"role": "user", "content": "new"}]}],
+        "history_selection": {"omitted_capacity_run_ids": []},
+    }
+    comparison = admission_comparison(current, prior)
+    assert comparison["same_admitted_source_text"] is False
+    assert comparison["prior_omitted_capacity_count"] == 1
+    assert comparison["current_omitted_capacity_count"] == 0

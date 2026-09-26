@@ -217,6 +217,7 @@ def test_native_target_attribution_and_removed_jasmine_trajectories(
                     engine=engine,
                     transport=transport,
                     output=tmp_path,
+                    prompt_key="chat_v20260516",
                 )
                 assert result["status"] == "observed"
                 results[trajectory["id"]] = result

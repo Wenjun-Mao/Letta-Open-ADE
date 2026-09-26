@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from uuid import uuid4
@@ -14,17 +15,163 @@ from ade_api.features.agent_runtime.contracts import (
     CreateMemorySubjectRequest,
 )
 from ade_api.features.agent_runtime.history_native_rank import HISTORY_EMBEDDING_ROUTE
+from ade_api.features.agent_runtime.context import MEMORY_CONTROL_INSTRUCTIONS
+from ade_api.features.agent_runtime.history_admission import HISTORY_DATA_INSTRUCTION
+from ade_api.features.agent_runtime.executor import SEARCH_MEMORY_TOOL
+from ade_api.features.agent_runtime.natural_memory_review import (
+    natural_review_json_schema,
+)
+from ade_api.features.agent_runtime.natural_memory_reviewer import (
+    HISTORY_REVIEWER_INSTRUCTION,
+    NATURAL_REVIEWER_SYSTEM,
+)
 from ade_api.features.agent_runtime.persistence.metadata import (
     memory_facts,
     memory_revision_sources,
     memory_revisions,
 )
+from ade_api.features.agent_runtime.tool_policy import TOOL_USE_POLICY
 
 from .history_h4_run import _execute_turn
 from .history_h4_evidence import capture_receipts
 from .history_h4_seed import seed_history_case
 from .natural_live_results import write_json
 from .natural_live_transport import RequestScope
+
+
+CANDIDATE_PROMPT_KEY = "chat_v20260926"
+GENERATION_BINDING = (
+    Path(__file__).parent
+    / "fixtures/history_recall/generation_contract_diagnostic.json"
+)
+
+
+def _sha256(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
+
+def generation_binding(
+    prompt: dict,
+    persona: dict,
+    old_manifest: dict,
+    prior_manifest: dict,
+    schedule: dict,
+    *,
+    schedule_sha256: str,
+    historical_manifest_sha256: list[str],
+    prior_diagnostic_manifest_sha256: str,
+) -> dict:
+    """Record each instruction owner so shared changes cannot masquerade as a prompt contrast."""
+    components = {
+        "candidate_prompt": _sha256(str(prompt["content"])),
+        "memory_control": _sha256(MEMORY_CONTROL_INSTRUCTIONS),
+        "history_data": _sha256(HISTORY_DATA_INSTRUCTION),
+        "tool_use": _sha256(TOOL_USE_POLICY),
+        "search_memory_tool": _sha256(
+            json.dumps(SEARCH_MEMORY_TOOL, ensure_ascii=False, sort_keys=True)
+        ),
+    }
+    return {
+        "schema_version": 1,
+        "prompt_key": CANDIDATE_PROMPT_KEY,
+        "persona_key": "chat_linxiaotang",
+        "component_sha256": components,
+        "generation_instructions_sha256": _sha256(
+            json.dumps(components, sort_keys=True)
+        ),
+        "persona_sha256": _sha256(str(persona["content"])),
+        "prior_prompt_sha256": old_manifest["prompt_sha256"],
+        "source_cases_sha256": schedule["source_cases_sha256"],
+        "h2_result_sha256": schedule["h2_result_sha256"],
+        "h4_reviewer_amendment_sha256": schedule["h4_reviewer_amendment_sha256"],
+        "schedule_sha256": schedule_sha256,
+        "historical_manifest_sha256": historical_manifest_sha256,
+        "prior_diagnostic_manifest_sha256": prior_diagnostic_manifest_sha256,
+        "prior_source_revision": prior_manifest["source_revision"],
+        "prior_source_fingerprint": prior_manifest["source_fingerprint"],
+        "routes": schedule["routes"],
+        "per_turn": schedule["per_turn"],
+        "reviewer_instruction_sha256": _sha256(
+            NATURAL_REVIEWER_SYSTEM + HISTORY_REVIEWER_INSTRUCTION
+        ),
+        "reviewer_schema_sha256": _sha256(
+            json.dumps(
+                natural_review_json_schema(history_capable=True),
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+        ),
+    }
+
+
+def verified_generation_binding(
+    prompt: dict,
+    persona: dict,
+    old_manifest: dict,
+    prior_manifest: dict,
+    schedule: dict,
+    *,
+    schedule_sha256: str,
+    historical_manifest_sha256: list[str],
+    prior_diagnostic_manifest_sha256: str,
+) -> dict:
+    expected = json.loads(GENERATION_BINDING.read_text())
+    actual = generation_binding(
+        prompt,
+        persona,
+        old_manifest,
+        prior_manifest,
+        schedule,
+        schedule_sha256=schedule_sha256,
+        historical_manifest_sha256=historical_manifest_sha256,
+        prior_diagnostic_manifest_sha256=prior_diagnostic_manifest_sha256,
+    )
+    if (
+        actual["reviewer_instruction_sha256"]
+        != prior_manifest["reviewer_instruction_sha256"]
+        or actual["reviewer_schema_sha256"] != prior_manifest["reviewer_schema_sha256"]
+        or actual["persona_sha256"] != prior_manifest["persona_sha256"]
+        or actual["prior_prompt_sha256"] != prior_manifest["prompt_sha256"]
+    ):
+        raise RuntimeError(
+            "reviewer, persona or old prompt changed since prior diagnostic"
+        )
+    if expected != actual:
+        raise RuntimeError("candidate generation binding differs from frozen source")
+    return actual
+
+
+def admission_comparison(current_turn: dict, prior_turn: dict) -> dict:
+    """Compare visible source text, not fresh run IDs or a claimed matched packet."""
+
+    def signatures(turn: dict) -> list[str]:
+        return [
+            _sha256(
+                json.dumps(
+                    [
+                        {"role": message["role"], "content": message["content"]}
+                        for message in exchange["messages"]
+                    ],
+                    ensure_ascii=False,
+                    separators=(",", ":"),
+                )
+            )
+            for exchange in turn["admitted_history"]
+        ]
+
+    prior = signatures(prior_turn)
+    current = signatures(current_turn)
+    return {
+        "prior_admitted_source_sha256": prior,
+        "current_admitted_source_sha256": current,
+        "same_admitted_source_text": prior == current,
+        "prior_omitted_capacity_count": len(
+            prior_turn["history_selection"].get("omitted_capacity_run_ids", [])
+        ),
+        "current_omitted_capacity_count": len(
+            current_turn["history_selection"].get("omitted_capacity_run_ids", [])
+        ),
+    }
 
 
 async def fact_state(engine, subject_id: str) -> list[dict]:
@@ -152,6 +299,7 @@ async def execute_trajectory(
     engine,
     transport,
     output: Path,
+    prompt_key: str,
 ) -> dict:
     """Run one new subject serially; a rejected first turn blocks its followup."""
     name = trajectory["id"]
@@ -174,6 +322,7 @@ async def execute_trajectory(
                 model_key="deepseek::deepseek-flash",
                 reviewer_model_key="deepseek::deepseek-flash",
                 embedding_model_key=HISTORY_EMBEDDING_ROUTE,
+                prompt_key=prompt_key,
                 tool_names=["search_memory"],
             ),
             new_subject=CreateMemorySubjectRequest(

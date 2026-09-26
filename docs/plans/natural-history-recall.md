@@ -437,3 +437,127 @@ covers the isolated probe, not production policy/defaults or release qualificati
 Unlinked semantic corrections and reviewer quality remain empirical, not missing
 permission to add phrase rules. No privacy subsystem, spending gates, new fact types,
 extra reviewers, writable notes, episodes or general memory framework.
+
+## Proposed Follow-up: Native Generation Contract Alignment
+
+Status: approved by user for implementation, 2026-09-26. Checkpoint 0 records
+the serial offline implementation in the retained isolated checkout before code
+edits. Director review remains the gate before the fresh live diagnostic in
+checkpoint 4. This is the single plan for this follow-up, not an amendment to
+the immutable H4 fixtures, captures, or historical results.
+
+Checkpoint 1–3 offline work is prepared for director review. The
+[instruction audit](../findings/natural-memory-consultation/native-generation-contract-offline-2026-09-26.md)
+records the assembled packet review, binding and proportional checks. No live
+candidate diagnostic has run.
+
+### Outcome and Evidence
+
+Align the generator's description of memory with ADE's actual runtime while
+preserving Lin Xiaotang's persona and natural dialogue. Relevant agreements:
+PC-01/03/04/05/07/09/10. No product direction is changed.
+
+H4 execution is complete across three campaigns: nine comparable target pairs,
+one confounded pair, and one one-sided case. The independent Pro review is AI
+advice, not human acceptance. Under the later ADR 0043 reviewer correction, both
+ambiguous dog turns deferred writes, explicit updates worked, but one reply
+asserted the wrong dog and the removed-tea reply denied admitted testimony.
+See the [source-bound diagnostic and offline diagnosis](../findings/natural-memory-consultation/history-target-attribution-diagnostic-2026-09-26.md).
+These observations supersede the earlier progress notes above as current status;
+they do not establish a production winner or general reliability.
+
+Inspection confirms obsolete editable-memory-block and searchable-transcript
+claims in `content/prompts/system/chat/chat_v20260516.py`. Separately,
+`context.py` says "Use only committed facts shown in context," without clearly
+distinguishing current profile facts from admitted historical testimony. These
+are observable instruction conflicts; their causal contribution to a particular
+model answer remains unproven.
+
+### Design and Boundaries
+
+Create `content/prompts/system/chat/chat_v20260926.py` as an explicitly selected
+candidate, preserving the old template byte-for-byte. Preserve persona, Chinese
+dialogue style and output rules; do not redesign character identity or style.
+Replace obsolete memory capabilities, rather than append a competing override.
+The generator speaks; the existing reviewer interprets writes; ADE validates and
+commits. Do not claim a write already succeeded. `search_memory` searches saved
+fact descriptors, not transcripts, and lifecycle status remains meaningful.
+
+Teach two general generation rules at their existing owners:
+
+- Where materially plausible alternative referents remain, ask which entity the
+  user means without first asserting one. Clear references remain answerable.
+- Use admitted, attributed dialogue to answer what was said. Past testimony is
+  not automatically current truth. An empty fact search does not negate supplied
+  dialogue; unavailable history must not be invented. Operator removal neither
+  erases testimony nor authorizes restoring a removed fact.
+
+Audit the assembled base prompt, persona, `context.py`, `natural_context.py`,
+`history_admission.py`, tool descriptions in `executor.py`, and `tool_policy.py`.
+Clarify conflicting shared wording at its owner; avoid duplicating rules across
+every layer. Preserve ordinary no-history behavior and read-only H authority.
+Do not change reviewer instructions/schema, validators, retrieval/ranking, tools,
+timeouts, retry policy, model profiles, or memory lifecycle semantics.
+
+Shared generation-instruction changes affect assembly beyond the new template;
+they must be explicitly recorded and tested, not disguised as a prompt-only
+contrast. Existing definition/conversation prompt and persona bindings remain
+unchanged. No default switch, migration of existing agents, deployment, release
+rebind, or adoption is included. No phrase matching, privacy features, second
+reviewer, new retrieval tool, new evaluator framework, or unrelated refactoring.
+
+### Ordered Checkpoints
+
+1. Implement the candidate and minimal owner-level instruction alignment. Record
+   a concise ADR with the actual affected paths and supersession scope; link it
+   from this plan and the tracker. Keep historical prompt snapshots intact.
+   [ADR 0044](../adr/0044-native-generation-memory-contract-candidate.md)
+   records the selected candidate and shared generation-instruction effects.
+2. Test discovery and explicit candidate selection, old/new immutable bindings,
+   and actual assembled native packets with and without H. Cover empty saved-fact
+   tool continuation beside admitted testimony, ambiguous alternatives, and clear
+   references. Static/fake tests prove wire contracts and persistence mechanics,
+   not semantic compliance. Run focused tests, disposable PostgreSQL checks where
+   bindings are exercised, Ruff, and OpenAPI drift; run the broader runtime suite
+   proportionally. Do not waive the known stale release-policy gate.
+3. Adapt the existing `history_target_diagnostic.py` and
+   `history_target_diagnostic_run.py` minimally to select the candidate explicitly.
+   Preserve the original frozen schedule and captures. A separate diagnostic
+   binding records the new prompt and generation-instruction hashes, prior source
+   anchors, unchanged reviewer/schema hashes, and provider identities. Reuse the
+   seven semantic turns in four isolated subjects; no copied runner or generic
+   configuration framework. Check capacity before live dispatch: changed prompt
+   size may change H admission even with identical limits. Record actual admitted
+   evidence and do not claim matched context if it differs.
+4. After implementation approval and offline director review, execute one fresh
+   seven-turn diagnostic using pinned DeepSeek/Qwen routes, original per-turn
+   ceilings and zero retries/repairs. Use observational request counts, fresh
+   disposable PostgreSQL and a separate output directory. Commit/freeze source
+   first. No midrun changes or rerolls; stop integrity/setup faults. Independently
+   record semantic failures and continue safe independent trajectories. Retain
+   each attempt, complete deltas, exact sources and independent DB readback.
+5. Review dialogue and persistence separately and document adoption recommendation.
+   No automatic default change follows a successful sample. Repeated failures
+   warrant a new diagnosis, not an open-ended prompt-patching loop. Any production
+   history adoption or release qualification remains a separate decision.
+
+### Observable Acceptance and Interpretation
+
+- Each ambiguous dog turn asks a genuine clarification without asserting a chosen
+  dog; both saved names remain unchanged before clarification. Opposite later
+  clarifications update only the identified entity.
+- An explicit Roxy rename is answered directly and committed immediately, without
+  unnecessary clarification or suppression of clear updates.
+- The historical tea question acknowledges the admitted earlier mention as past
+  testimony, without asserting a current preference or writing one. Fresh renewal
+  adds a new active preference while the old record remains forgotten.
+- Judge entity, temporal meaning, attribution, revision timing and source support,
+  not fixed answer phrases or literal citation-substring equality. A later correct
+  state does not excuse an earlier unsupported assertion or write.
+- Record captured source availability, completed/delivered turns, and quality as
+  separate dimensions. Seven committed turns alone do not pass acceptance. This
+  small sequential contrast cannot isolate every instruction's causal effect or
+  demonstrate general reliability. Preserve adverse and prior evidence unchanged.
+
+Serial implementation should use the retained `codex/character-continuity`
+checkout. No parallel writers or new task is authorized by this planning draft.
