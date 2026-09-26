@@ -23,6 +23,7 @@ from ade_api.features.agent_runtime.contracts import (
 )
 from ade_api.features.agent_runtime.database_boundary import RuntimeDatabase
 from ade_api.features.agent_runtime.history_admission import HistoryProbe
+from ade_api.features.agent_runtime.history_native_rank import HISTORY_EMBEDDING_ROUTE
 from ade_api.features.agent_runtime.natural_context import HISTORY_PROBE_POLICY
 from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
@@ -55,6 +56,7 @@ pytestmark = pytest.mark.skipif(
     "fault",
     [
         "none",
+        "native_qwen",
         "empty_arm",
         "purge_before_generation",
         "hash_before_generation",
@@ -90,6 +92,16 @@ def test_no_write_history_finalization_is_atomic(
             agent_runtime_worker_id=f"history-h3-{fault}",
         )
         catalog = natural_worker_support.catalog()
+        if fault == "native_qwen":
+            retriever = next(
+                item
+                for item in catalog["items"]
+                if "retriever" in item["deployment"]["roles"]
+            )
+            retriever["model_key"] = HISTORY_EMBEDDING_ROUTE
+            retriever["deployment"]["fingerprint"]["sampling_settings"][
+                "dimensions"
+            ] = 1024
 
         class ProbeDefinitions(natural_worker_support.definitions):
             async def prepare(self, request, *, purpose):
@@ -100,6 +112,20 @@ def test_no_write_history_finalization_is_atomic(
         class ProbeTransport(natural_worker_support.transport):
             old_assistant_id: str | None = None
             target_run_id: str | None = None
+
+            async def embeddings(self, payload, *, timeout_seconds):
+                if fault == "native_qwen":
+                    self.calls.append(("embeddings", payload["model"]))
+                    assert payload["model"] == HISTORY_EMBEDDING_ROUTE
+                    return {
+                        "data": [
+                            {"index": index, "embedding": [1.0] * 1024}
+                            for index, _ in enumerate(payload["input"])
+                        ]
+                    }
+                return await super().embeddings(
+                    payload, timeout_seconds=timeout_seconds
+                )
 
             async def chat_completion(self, payload, *, timeout_seconds):
                 if payload["model"] == "fake::conversation" and fault in {
@@ -238,6 +264,10 @@ def test_no_write_history_finalization_is_atomic(
             HistoryProbe(arm="empty_history")
             if fault == "empty_arm"
             else HistoryProbe(
+                arm="automatic_history", ranking_recipe="probe_local_qwen_cosine"
+            )
+            if fault == "native_qwen"
+            else HistoryProbe(
                 arm="automatic_history",
                 select_run_ids=lambda corpus, _current, _local: [old_run_id],
             )
@@ -269,7 +299,11 @@ def test_no_write_history_finalization_is_atomic(
                         name="History H3 test",
                         model_key="fake::conversation",
                         reviewer_model_key="fake::reviewer",
-                        embedding_model_key="fake::retriever",
+                        embedding_model_key=(
+                            HISTORY_EMBEDDING_ROUTE
+                            if fault == "native_qwen"
+                            else "fake::retriever"
+                        ),
                         tool_names=(
                             ["search_memory"]
                             if fault == "purge_before_continuation"
@@ -354,7 +388,7 @@ def test_no_write_history_finalization_is_atomic(
                 "unavailable_before_generation",
                 "unavailable_before_review",
             }:
-                original_check = history_attempt_module.validate_admitted_history
+                original_check = history_attempt_module.validate_history_before_dispatch
                 check_count = 0
 
                 async def inject_check_fault(*args, **kwargs):
@@ -385,7 +419,7 @@ def test_no_write_history_finalization_is_atomic(
 
                 monkeypatch.setattr(
                     history_attempt_module,
-                    "validate_admitted_history",
+                    "validate_history_before_dispatch",
                     inject_check_fault,
                 )
             if fault == "deadline_after_review":
@@ -434,6 +468,7 @@ def test_no_write_history_finalization_is_atomic(
                 )
             committed = fault in {
                 "none",
+                "native_qwen",
                 "empty_arm",
                 "purge_before_generation",
                 "unavailable_before_generation",
@@ -462,6 +497,11 @@ def test_no_write_history_finalization_is_atomic(
                     "unavailable_before_review",
                 }
             )
+            if fault == "native_qwen":
+                # One existing fact query, then document and query dispatches.
+                assert (
+                    transport.calls.count(("embeddings", HISTORY_EMBEDDING_ROUTE)) == 3
+                )
             if committed:
                 assert outcomes[0]["history_probe_status"] == (
                     "purged"

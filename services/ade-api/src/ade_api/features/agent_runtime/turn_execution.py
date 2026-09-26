@@ -50,6 +50,7 @@ from .turn_deployment import (
     reviewer_max_model_requests as _reviewer_max_model_requests,
 )
 from .turn_embedding_results import embed_review_operations
+from .turn_history_setup import prepare_history_turn
 from .turn_memory_snapshot import (
     current_user_message as _current_user_message,
     load_turn_state,
@@ -337,30 +338,26 @@ class TurnExecution:
         )
         history_attempt: HistoryAttempt | None = None
         if self.history_probe is not None:
-            history_attempt = HistoryAttempt(
+            history_attempt, built_context = await prepare_history_turn(
                 engine=self.engine,
                 probe=self.history_probe,
-                corpus=state.get("history", {}),
+                state=state,
                 run=run,
                 conversation=conversation,
                 definition=definition,
                 current_user=current_user,
-                source_messages=list(natural_source_messages),
-                facts=state["facts"],
-                entities=state["entities"],
-                base_context=built_context,
-                generation_model_key=str(conversation_deployment["route_alias"]),
-                generation_adapter=conversation_adapter,
-                generation_tools=generation_tools,
-                generation_input_limit=budget.input_limit,
-                generation_max_output_tokens=budget.max_output_tokens,
-                reviewer_model_key=str(reviewer_deployment["route_alias"]),
+                selection=selection,
+                conversation_deployment=conversation_deployment,
+                reviewer_deployment=reviewer_deployment,
+                retriever_deployment=retriever_deployment,
+                conversation_adapter=conversation_adapter,
                 reviewer_adapter=reviewer_adapter,
-                reviewer_input_limit=reviewer_input_limit,
-                reviewer_max_output_tokens=reviewer_request_max_tokens,
+                generation_tools=generation_tools,
+                budget=budget,
                 deadline=deadline,
+                trace=trace,
+                transport=self.transport,
             )
-            built_context = history_attempt.prepare()
 
         executor_result, built_context = await execute_generation_with_history(
             executor=conversation_executor,

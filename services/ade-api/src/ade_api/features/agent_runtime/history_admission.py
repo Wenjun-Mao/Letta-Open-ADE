@@ -32,13 +32,18 @@ class HistoryProbe:
     select_run_ids: (
         Callable[[list[dict[str, Any]], str, list[dict[str, Any]]], list[str]] | None
     ) = None
+    ranking_recipe: Literal["literal_token_match", "probe_local_qwen_cosine"] | None = (
+        None
+    )
 
     def __post_init__(self) -> None:
         if self.arm not in {"empty_history", "automatic_history"}:
             raise RuntimeValidationError("Unknown history probe arm")
-        if self.arm == "automatic_history" and self.select_run_ids is None:
+        if self.arm == "automatic_history" and (
+            (self.select_run_ids is None) == (self.ranking_recipe is None)
+        ):
             raise RuntimeValidationError(
-                "Automatic history requires a frozen H2 selector",
+                "Automatic history requires exactly one frozen H2 selector",
                 detail_code="natural_history_selector_unavailable",
             )
 

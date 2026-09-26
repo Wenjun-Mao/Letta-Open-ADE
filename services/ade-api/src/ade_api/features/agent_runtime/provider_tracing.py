@@ -301,6 +301,7 @@ def _validate_stage(value: str) -> str:
         "catalog",
         "compaction",
         "retrieval_query",
+        "history_ranking",
         "conversation",
         "tool_retrieval",
         "reviewer",

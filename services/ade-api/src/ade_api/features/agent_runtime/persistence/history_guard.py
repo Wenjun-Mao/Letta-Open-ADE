@@ -157,6 +157,40 @@ async def validate_admitted_history(
     return missing
 
 
+async def validate_history_before_dispatch(
+    connection: AsyncConnection,
+    *,
+    exchanges: list[dict[str, Any]],
+    workspace_id: str,
+    subject_id: str,
+    purpose: str,
+    definition_root_id: str,
+    current_run_id: str,
+    accepted_memory_generation: int,
+) -> set[str]:
+    """One fresh authorization contract for generation and corpus embeddings."""
+    generation = await connection.scalar(
+        select(memory_subjects.c.memory_generation).where(
+            memory_subjects.c.id == subject_id,
+            memory_subjects.c.workspace_id == workspace_id,
+        )
+    )
+    if generation != accepted_memory_generation:
+        raise RuntimeValidationError(
+            "Subject memory changed before history exposure",
+            detail_code="natural_history_stale_generation",
+        )
+    return await validate_admitted_history(
+        connection,
+        exchanges=exchanges,
+        workspace_id=workspace_id,
+        subject_id=subject_id,
+        purpose=purpose,
+        definition_root_id=definition_root_id,
+        current_run_id=current_run_id,
+    )
+
+
 async def validate_history_at_commit(
     connection: AsyncConnection,
     *,

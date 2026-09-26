@@ -1,6 +1,6 @@
 # Character Memory Development
 
-## Historical Recall Probe (H1–H3 Offline Checkpoints)
+## Historical Recall Probe (H1–H3 Checkpoints)
 
 The [frozen history contract](fixtures/history_recall/contract.json) belongs to
 the approved bounded automatic-history versus empty-history probe. It is separate
@@ -14,13 +14,14 @@ not dialogue-quality or release evidence.
 
 H3 adds the evaluation-only `natural-user-assertions-v4-b-history-probe` binding.
 Construct `AgentRuntimeWorker(..., history_probe=HistoryProbe(arm=...,
-select_run_ids=...))` only in an isolated evaluation runner. Both arms use that
+ranking_recipe=...))` only in an isolated evaluation runner. Both arms use that
 binding; the empty arm supplies no H windows, and the automatic arm requires
-the frozen H2 selector to return up to four run IDs from the reader's corpus.
-The selector is a pure offline ranking seam at this checkpoint. Live Qwen
-ranking, corpus embedding dispatch, and dialogue scoring remain pending H2/H4.
-An absent selector fails explicitly. Neither the native worker default nor
-public routes enable history.
+one frozen H2 recipe or the earlier injected test selector. The native Qwen
+path ranks the accepted snapshot in memory, checking exact source integrity
+and subject generation immediately before each embedding dispatch. It uses
+the configured Qwen route with a distinct transcript recipe. An absent selector
+fails explicitly. Neither the native worker default nor public routes enable
+history. See [ADR 0040](../../../docs/adr/0040-source-guarded-history-ranking.md).
 
 The H3 packet is admitted against serialized generation and projected reviewer
 capacity. Fresh source checks precede every H-bearing generation, continuation
@@ -43,7 +44,28 @@ and deterministic fake-score tests. Development corpora have more candidates
 than the top-four window limit, so a wrong ranking can lose needed evidence.
 `history_fixture_contract.py` validates source quotes, lifecycle operation/reason
 pairs, chronology, complete expected deltas and the finite control/follow-up
-schedule. These scripts have not produced model observations.
+schedule. The finite H2 runner uses these frozen synthetic fixtures and labels
+them as fixture-owned data; it does not claim a native database source check.
+
+After the offline tests and exact route/artifact identity pass, run the finite
+ranking schedule through the configured development router container. The
+runner resolves the router credential inside that container and keeps it out
+of command arguments, logs and saved artifacts. It saves every planned cell
+and redacted embedding receipt under ignored `outputs/`. Run held-out cases
+only if `development.json` selects an adequate recipe by the frozen rule:
+
+```sh
+uv run --project services/ade-api python -m workflows.evals.character_memory_dev.history_h2_probe \
+  --phase development \
+  --output workflows/evals/character_memory_dev/outputs/history-h2-ranking/development.json
+uv run --project services/ade-api python -m workflows.evals.character_memory_dev.history_h2_probe \
+  --phase heldout \
+  --development-result workflows/evals/character_memory_dev/outputs/history-h2-ranking/development.json \
+  --output workflows/evals/character_memory_dev/outputs/history-h2-ranking/heldout.json
+```
+
+The second command is conditional on an adequate development selection. Each
+cell runs once; failed or unrun cells are retained without a reroll.
 
 To reproduce the structural database checks, use an isolated PostgreSQL 15
 instance with pgvector and a passwordless loopback `ade_owner` database named

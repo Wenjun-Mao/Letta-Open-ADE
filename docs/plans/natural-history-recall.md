@@ -382,27 +382,27 @@ freshness failure unwaived. No live calls or tests have been run for this revisi
 ### Checkpoint state, 2026-09-26
 
 H1/H2 reader and frozen ranking mechanics have an accepted offline checkpoint.
-H2 live literal/Qwen feasibility and the selected ranker are still pending. H3
-now has an offline evaluation-only packet path and native fake-router/PostgreSQL
-boundary tests. Director independently verified 43 focused reader/guard/admission/
-executor/reviewer tests and 15 worker fault cases on a fresh migrated PostgreSQL
-database. The first combined run failed the worker cases because reader fixtures
-left pending runs; all 15 passed when rerun on a separate fresh database. The
-README now documents the two-database procedure. Source annotation links now
-join model-visible H handles, tested with repeated identical text and multiple
-claims in actual generation and reviewer packets. Shared lifecycle instructions
-and ordinary reviewer packet compatibility have focused regression coverage.
-Director verification of this follow-up is pending before any live ranker or
-dialogue request. The H3 automatic arm requires a frozen selector and cannot
-silently choose a ranking recipe. The offline synchronous seam does not dispatch
-source-bearing transcript corpus embeddings; that guard is required before a
-provider-backed H2 selector. No H4/H5 scores or production decision exist.
-This follow-up passed 61 focused context/packet/executor tests, 11 evidence/
-finalization tests, six PostgreSQL reader/lineage/guard tests and 15 worker tests
-on separate freshly migrated databases.
-The first local PostgreSQL invocation used a nonhex disposable database suffix
-and was rejected by the test safety guard before case logic ran; the compliant
-rerun passed. Changed-file Ruff lint and format checks passed.
+H3 has an isolated evaluation-only packet and commit fence. Director first
+verified 43 focused tests and 15 worker fault cases. The initial combined
+PostgreSQL run collided with pending reader fixture runs; the worker suite
+passed on its own fresh database, now documented in the README. The H3 follow-up
+joined annotation links to H handles, added shared lifecycle guidance and kept
+ordinary reviewer packets unchanged. It passed 61 focused tests, 11 evidence/
+finalization tests, six reader/lineage/guard PostgreSQL tests and 15 worker
+cases. Director then independently verified 46 focused tests and accepted the
+H3 follow-up as offline evidence.
+
+H2 now has a source-guarded native embedding path and finite synthetic fixture
+runner. The offline integration passed 66 focused tests, four native PostgreSQL
+guard tests and 16 worker cases on a separate freshly migrated database; one
+worker case exercises the native Qwen recipe with fake embeddings. Its first
+worker run failed because `history_ranking` was absent from the trace-stage
+allowlist. The trace contract now includes that stage, and the 16-case rerun
+passed. The path uses fresh source and subject-generation guards before each
+embedding dispatch. Synthetic fixture ranking is explicitly fixture-owned and
+makes no native source claim. Live literal/Qwen feasibility and the selected
+recipe remain pending the frozen schedule. No H4/H5 dialogue score or production
+decision exists.
 
 [Assessment dispositions](../findings/natural-memory-consultation/history-recall-review-assessment.md)
 map to sections 1/2 (snapshot and source-relative lineage), 3 (distinct transcript

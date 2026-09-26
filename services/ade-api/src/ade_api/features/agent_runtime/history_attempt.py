@@ -8,16 +8,16 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from .context import BuiltContext
+from .embeddings import EmbeddingClient
 from .errors import RuntimeValidationError
 from .executor import ConversationExecutor, CuratedTool, ExecutorResult
 from .history_admission import HistoryProbe, admit_history, select_ranked_exchanges
-from .persistence.history_guard import validate_admitted_history
-from .persistence.metadata import memory_subjects
+from .history_native_rank import NativeHistoryRank, rank_native_history
+from .persistence.history_guard import validate_history_before_dispatch
 
 
 class HistoryBeforeExposure(Exception):
@@ -49,16 +49,45 @@ class HistoryAttempt:
     reviewer_input_limit: int
     reviewer_max_output_tokens: int
     deadline: float
+    ranking_embeddings: EmbeddingClient | None = None
+    ranking_model_key: str | None = None
     ranked_exchanges: list[dict[str, Any]] = field(default_factory=list)
     admitted_exchanges: list[dict[str, Any]] = field(default_factory=list)
     context: BuiltContext | None = None
     exposed: bool = False
+    ranking_exposed: bool = False
+    rank_observation: NativeHistoryRank | None = None
     status: str = "empty"
 
-    def prepare(self) -> BuiltContext:
+    async def prepare(self) -> BuiltContext:
         if self.probe.arm == "automatic_history":
             if self.corpus.get("unavailable"):
                 self.status = "unavailable"
+            elif self.probe.ranking_recipe is not None:
+                try:
+                    self.rank_observation = await rank_native_history(
+                        exchanges=self.corpus.get("exchanges", []),
+                        current_user=str(self.current_user["content"]),
+                        local_suffix=[
+                            message
+                            for message in self.source_messages
+                            if str(message["id"]) != str(self.current_user["id"])
+                        ],
+                        recipe=self.probe.ranking_recipe,
+                        embeddings=self.ranking_embeddings,
+                        model_key=self.ranking_model_key,
+                        deadline=self.deadline,
+                        authorize_sources=self.authorize_ranking_sources,
+                        mark_exposed=self.mark_ranking_exposed,
+                    )
+                except HistoryBeforeExposure as exc:
+                    if not exc.unavailable:
+                        raise
+                    self.status = "unavailable"
+                else:
+                    self.ranked_exchanges = self.rank_observation.exchanges
+                    if self.rank_observation.status == "purged":
+                        self.status = "purged"
             else:
                 self.ranked_exchanges = select_ranked_exchanges(
                     self.probe,
@@ -120,9 +149,11 @@ class HistoryAttempt:
         self.status = "unavailable" if failure.unavailable else "purged"
         return self._admit()
 
-    async def authorize_request(self, _payload: dict[str, Any]) -> None:
-        if not self.admitted_exchanges:
-            return
+    async def _validate_sources(
+        self, exchanges: list[dict[str, Any]], *, exposed: bool
+    ) -> set[str]:
+        if not exchanges:
+            return set()
         remaining = self.deadline - time.monotonic()
         if remaining <= 0:
             raise RuntimeValidationError(
@@ -133,26 +164,17 @@ class HistoryAttempt:
         async def check() -> set[str]:
             async with self.engine.connect() as connection:
                 subject_id = str(self.conversation["memory_subject_id"])
-                generation = await connection.scalar(
-                    select(memory_subjects.c.memory_generation).where(
-                        memory_subjects.c.id == subject_id,
-                        memory_subjects.c.workspace_id
-                        == str(self.conversation["workspace_id"]),
-                    )
-                )
-                if generation != int(self.run["accepted_memory_generation"]):
-                    raise RuntimeValidationError(
-                        "Subject memory changed before history exposure",
-                        detail_code="natural_history_stale_generation",
-                    )
-                return await validate_admitted_history(
+                return await validate_history_before_dispatch(
                     connection,
-                    exchanges=self.admitted_exchanges,
+                    exchanges=exchanges,
                     workspace_id=str(self.conversation["workspace_id"]),
                     subject_id=subject_id,
                     purpose=str(self.conversation["purpose"]),
                     definition_root_id=str(self.definition["agent_definition_id"]),
                     current_run_id=str(self.run["id"]),
+                    accepted_memory_generation=int(
+                        self.run["accepted_memory_generation"]
+                    ),
                 )
 
         try:
@@ -163,15 +185,37 @@ class HistoryAttempt:
                 detail_code="natural_history_timeout",
             ) from exc
         except SQLAlchemyError as exc:
-            if not self.exposed:
+            if not exposed:
                 raise HistoryBeforeExposure(
-                    {str(item["run_id"]) for item in self.admitted_exchanges},
+                    {str(item["run_id"]) for item in exchanges},
                     unavailable=True,
                 ) from exc
             raise RuntimeValidationError(
                 "Exposed history could not be revalidated",
                 detail_code="natural_history_unavailable",
             ) from exc
+        return missing
+
+    async def authorize_ranking_sources(
+        self, exchanges: list[dict[str, Any]]
+    ) -> set[str]:
+        missing = await self._validate_sources(exchanges, exposed=self.ranking_exposed)
+        if missing and self.ranking_exposed:
+            raise RuntimeValidationError(
+                "Exposed ranking source was removed",
+                detail_code="natural_history_missing",
+            )
+        return missing
+
+    def mark_ranking_exposed(self) -> None:
+        self.ranking_exposed = True
+
+    async def authorize_request(self, _payload: dict[str, Any]) -> None:
+        if not self.admitted_exchanges:
+            return
+        missing = await self._validate_sources(
+            self.admitted_exchanges, exposed=self.exposed
+        )
         if missing:
             if not self.exposed:
                 raise HistoryBeforeExposure(missing)

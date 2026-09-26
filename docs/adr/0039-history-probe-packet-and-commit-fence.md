@@ -17,10 +17,11 @@ held source would cross the source integrity contract even on a no-write turn.
 The evaluation-only `natural-user-assertions-v4-b-history-probe` policy uses
 the existing B local/fact context and one H-capable reviewer shape for both
 `empty_history` and `automatic_history` arms. An internal frozen selector must
-provide at most four ranked run IDs from the bounded H2 corpus; until H2 selects
-a recipe, the automatic arm cannot start. This offline seam is synchronous and
-performs no corpus embedding or provider dispatch. Existing natural bindings
-retain their original reviewer wire schema.
+provide at most four ranked run IDs from the bounded H2 corpus. The original
+H3 seam was synchronous and dispatched no embeddings. ADR 0040 adds guarded
+asynchronous Qwen ranking for H2 feasibility; a frozen recipe must be selected
+before scored automatic dialogue. Existing natural bindings retain their
+original reviewer wire schema.
 
 Admission tries complete annotated exchanges against the actual serialized
 initial generation request, including tool schema, and the projected reviewer
