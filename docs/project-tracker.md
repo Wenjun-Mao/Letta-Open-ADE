@@ -84,6 +84,14 @@ and PC-09 (simplicity and observational request counts).
   Generation clarification and reviewer mutation deferral will be judged
   separately. No production default or release gate waiver follows from the
   advisory review or diagnostic authorization.
+- The source-bound [seven-turn live diagnostic](findings/natural-memory-consultation/history-target-attribution-diagnostic-2026-09-26.md)
+  completed on `292148b`: both ambiguous turns deferred with zero writes;
+  opposite clarifications and the explicit rename updated only their intended
+  dog. One ambiguous reply still asserted the wrong dog despite reviewer
+  deferral. The removed-jasmine reply again denied available retained testimony,
+  while the fresh preference became a new fact and the old one stayed forgotten.
+  Four subjects and seven committed turns have independent PostgreSQL readback;
+  this is bounded evidence, not human acceptance or a policy/default choice.
 
 Earlier authorization and status statements below describe their dated
 checkpoints, not current commands or proof of completion. In particular, old
