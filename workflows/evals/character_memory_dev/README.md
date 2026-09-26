@@ -79,6 +79,8 @@ The first amended live run stopped when the `user_retraction` empty-arm turn exh
 
 The [offline interpretation correction](../../../docs/findings/natural-memory-consultation/history-h4-offline-review-correction-2026-09-26.md) distinguishes that verified bounded rejection from a source-integrity failure. H4 dispatch counters are observational; wrong routes still fail, and the per-turn request limits remain. The 15 unrun top-level targets and six dependent follow-ups are 21 unrun native turns. A separate review-only proposal lists them; no dispatch or replay is implied.
 
+The separately authorized [remaining-turn run](../../../docs/findings/natural-memory-consultation/history-h4-remaining-stopped-2026-09-26.md) committed three targets, then stopped on an unequal `invalidated_ended` paired base packet. Its manifest and the original remain immutable. [ADR 0042](../../../docs/adr/0042-h4-paired-fixture-fact-chronology.md) records the offline fixture-order correction and native PostgreSQL regression; no product reviewer sort or retrospective packet normalization was made. Run `test_postgres_history_h4_campaign.py` with `ADE_TEST_DATABASE_URL` set to a migrated disposable PostgreSQL database before any newly authorized provider campaign. The [review-only 18-turn proposal](outputs/history-h4-offline-review-20260926/remaining-after-two-campaigns-proposal.json) excludes all 14 turns attempted across both campaigns and requires a new authorization before live dispatch.
+
 To reproduce the structural database checks, use an isolated PostgreSQL 15
 instance with pgvector and a passwordless loopback `ade_owner` database named
 `ade_history_test_<hex>`. On a host with Docker, for example:

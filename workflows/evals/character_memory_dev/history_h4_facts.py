@@ -34,6 +34,19 @@ def selected_transitions(fact: dict, included: set[str], *, full: bool) -> list[
     ]
 
 
+def fixture_fact_created_at(
+    first_transition: dict, setup_by_id: dict[str, dict], fact_index: int
+) -> datetime:
+    """Keep paired fact read order tied to the same source chronology."""
+    source = first_transition.get("source")
+    if source is None:
+        raise ValueError("H4 fact must have a source-linked first transition")
+    exchange_id = source.split(":", 1)[0]
+    return datetime.fromisoformat(setup_by_id[exchange_id]["assistant_at"]) + timedelta(
+        microseconds=fact_index
+    )
+
+
 async def seed_fact_chains(
     connection,
     *,
@@ -54,7 +67,8 @@ async def seed_fact_chains(
     fact_ids: dict[str, str] = {}
     indexed: list[tuple[str, str, str, str, str, str | None, str | None]] = []
     entity_ids: dict[str, str] = {"subject": str(subject_entity_id)}
-    for fact in case["facts"]:
+    setup_by_id = {exchange["id"]: exchange for exchange in setup}
+    for fact_index, fact in enumerate(case["facts"]):
         transitions = selected_transitions(fact, included, full=full)
         if not transitions:
             continue
@@ -98,6 +112,9 @@ async def seed_fact_chains(
                 status=current["status"],
                 assertion_schema_version=2,
                 version=len(transitions),
+                created_at=fixture_fact_created_at(
+                    transitions[0], setup_by_id, fact_index
+                ),
             )
         )
         predecessor = None

@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import insert, select
 
 import ade_api.features.agent_runtime.natural_attempt_evidence as evidence_module
 from ade_api.features.agent_runtime.agent_studio_sessions import PurposeSessionService
@@ -23,13 +24,18 @@ from ade_api.features.agent_runtime.history_admission import HistoryProbe
 from ade_api.features.agent_runtime.history_capacity import bind_history_probe_capacity
 from ade_api.features.agent_runtime.history_native_rank import HISTORY_VECTOR_RECIPE
 from ade_api.features.agent_runtime.natural_context import HISTORY_PROBE_POLICY
+from ade_api.features.agent_runtime.natural_memory_reviewer import (
+    natural_review_request,
+)
 from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
 )
 from ade_api.features.agent_runtime.persistence.history import read_history_corpus
+from ade_api.features.agent_runtime.persistence.memory import MemoryRepository
 from ade_api.features.agent_runtime.persistence.metadata import (
     agent_definition_versions,
     conversations,
+    memory_facts,
 )
 from ade_api.features.agent_runtime.resource_service import ResourceService
 from ade_api.features.agent_runtime.run_service import RunService
@@ -38,6 +44,10 @@ from ade_api.platform.settings import AdeApiSettings
 from workflows.evals.character_memory_dev.history_h4_run import (
     QWEN_FINGERPRINT,
     _execute_cell,
+)
+import workflows.evals.character_memory_dev.history_h4_facts as fact_seed
+from workflows.evals.character_memory_dev.history_h4_facts import (
+    fixture_fact_created_at,
 )
 from workflows.evals.character_memory_dev.history_h4_seed import seed_history_case
 from workflows.evals.character_memory_dev.natural_live_transport import (
@@ -59,10 +69,14 @@ class FakeProvider:
         return self._catalog
 
     async def embeddings(self, payload, *, timeout_seconds):
+        def vector(content: str) -> list[float]:
+            digest = hashlib.sha256(content.encode()).digest()
+            return [(digest[index % len(digest)] + 1) / 256 for index in range(1024)]
+
         return {
             "data": [
-                {"index": index, "embedding": [1.0] * 1024}
-                for index, _ in enumerate(payload["input"])
+                {"index": index, "embedding": vector(content)}
+                for index, content in enumerate(payload["input"])
             ]
         }
 
@@ -83,8 +97,12 @@ class FakeProvider:
         }
 
 
-def test_h4_pair_replays_archived_version_and_compares_base_packet(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, natural_worker_support
+@pytest.mark.parametrize("id_order", ["reversed", "random"])
+def test_all_h4_pairs_keep_exact_base_packets_across_fact_id_orders(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    natural_worker_support,
+    id_order: str,
 ) -> None:
     assert DATABASE_URL is not None
     monkeypatch.setenv("ADE_SOURCE_REVISION", "0" * 40)
@@ -168,54 +186,181 @@ def test_h4_pair_replays_archived_version_and_compares_base_packet(
             )
             for arm in ("empty_history", "automatic_history")
         }
-        case = next(
-            item
-            for item in json.loads(
-                Path(
-                    "workflows/evals/character_memory_dev/fixtures/history_recall/cases.json"
-                ).read_text()
-            )["cases"]
-            if item["id"] == "archived_version_recall"
-        )
+        cases = json.loads(
+            Path(
+                "workflows/evals/character_memory_dev/fixtures/history_recall/cases.json"
+            ).read_text()
+        )["cases"]
+        run_prefix = uuid4().int & (((1 << 64) - 1) << 64)
         try:
-            results = [
-                await _execute_cell(
-                    name="archived_version_recall",
-                    case=case,
-                    target=case,
-                    arm=arm,
-                    sessions=sessions,
-                    service=service,
-                    resources=resources,
-                    workers=workers,
-                    engine=engine,
-                    transport=transport,
-                    output=tmp_path,
-                    index=index,
+            checked = []
+            for case_index, case in enumerate(cases):
+                results = []
+                for arm_index, arm in enumerate(workers):
+                    sequence = iter(range(1, 1000))
+                    base_id = (
+                        run_prefix + ((case_index + 1) << 32) + ((arm_index + 1) << 24)
+                    )
+
+                    def fixture_uuid() -> UUID:
+                        offset = next(sequence)
+                        return UUID(
+                            int=base_id + (offset if arm_index == 0 else 1000 - offset)
+                        )
+
+                    with monkeypatch.context() as patch:
+                        if id_order == "reversed":
+                            patch.setattr(fact_seed, "uuid4", fixture_uuid)
+                        result = await _execute_cell(
+                            name=case["id"],
+                            case=case,
+                            target=case,
+                            arm=arm,
+                            sessions=sessions,
+                            service=service,
+                            resources=resources,
+                            workers=workers,
+                            engine=engine,
+                            transport=transport,
+                            output=tmp_path,
+                            index=case_index * 2 + arm_index,
+                        )
+                    results.append(result)
+                assert [result["status"] for result in results] == ["observed"] * 2, [
+                    (case["id"], result.get("failure")) for result in results
+                ]
+                assert all(
+                    result["target"]["status"] == "committed" for result in results
                 )
-                for index, arm in enumerate(workers)
-            ]
-            assert [result["status"] for result in results] == ["observed"] * 2, [
-                result.get("failure") for result in results
-            ]
-            assert all(result["target"]["status"] == "committed" for result in results)
-            assert results[0]["target"]["base_packet"] == results[1]["target"]["base_packet"]
-            assert all(result["target"]["base_packet"] is not None for result in results)
-            for result in results:
-                attempt = json.loads(Path(result["target"]["attempt_artifact"]).read_text())
-                assert attempt["generation"]["input_limit"] == 11213
-                assert attempt["reviewer_request"]["max_tokens"] == 4096
+                assert all(
+                    result["target"]["base_packet"] is not None for result in results
+                )
                 assert (
-                    attempt["reviewer_request"]["serialized_visible_token_estimate"]
-                    <= 11469
+                    results[0]["target"]["base_packet"]
+                    == results[1]["target"]["base_packet"]
+                ), case["id"]
+                if len(case["facts"]) > 1:
+                    fact_keys = [fact["id"] for fact in case["facts"]]
+                    if id_order == "reversed":
+                        first_ids = results[0]["setup"]["fact_ids"]
+                        second_ids = results[1]["setup"]["fact_ids"]
+                        assert (
+                            UUID(first_ids[fact_keys[0]]).int
+                            < UUID(first_ids[fact_keys[1]]).int
+                        )
+                        assert (
+                            UUID(second_ids[fact_keys[0]]).int
+                            > UUID(second_ids[fact_keys[1]]).int
+                        )
+                    async with engine.connect() as connection:
+                        for result in results:
+                            read = await MemoryRepository(connection).list_facts(
+                                result["session"]["subject_id"]
+                            )
+                            assert [str(item["id"]) for item in read] == [
+                                result["setup"]["fact_ids"][key] for key in fact_keys
+                            ]
+                if case["id"] == "removed_acknowledgment":
+                    assert all(
+                        not result["target"]["base_packet"]["reviewer_packet"][
+                            "targets"
+                        ]
+                        for result in results
+                    )
+                if case["id"] == "h_only_referent":
+                    assert all(
+                        len(
+                            result["target"]["base_packet"]["reviewer_packet"][
+                                "related_identities"
+                            ]
+                        )
+                        == 2
+                        for result in results
+                    )
+                for result in results:
+                    attempt = json.loads(
+                        Path(result["target"]["attempt_artifact"]).read_text()
+                    )
+                    assert attempt["generation"]["input_limit"] == 11213
+                    assert attempt["reviewer_request"]["max_tokens"] == 4096
+                    assert (
+                        attempt["reviewer_request"]["serialized_visible_token_estimate"]
+                        <= 11469
+                    )
+                    assert any(
+                        receipt["kind"] == "generation"
+                        for receipt in result["target"]["provider_captures"]
+                    )
+                checked.append(case["id"])
+            assert len(checked) == 11
+        finally:
+            await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_fixture_timestamp_breaks_a_legitimate_source_time_tie(
+    seed_m2_memory_resources,
+) -> None:
+    assert DATABASE_URL is not None
+    exchange = {"same": {"assistant_at": "2026-09-01T12:01:01+00:00"}}
+    transition = {"source": "same:user"}
+    first = fixture_fact_created_at(transition, exchange, 0)
+    second = fixture_fact_created_at(transition, exchange, 1)
+    assert first < second
+    assert (second - first).total_seconds() == 0.000001
+
+    async def scenario() -> None:
+        engine = create_persistence_engine(DATABASE_URL)
+        try:
+            async with engine.begin() as connection:
+                ids = await seed_m2_memory_resources(connection)
+                high_id, low_id = (
+                    str(UUID(int=uuid4().int | (1 << 127))),
+                    str(UUID(int=uuid4().int & ((1 << 127) - 1))),
                 )
-            assert all(
-                any(
-                    receipt["kind"] == "generation"
-                    for receipt in result["target"]["provider_captures"]
-                )
-                for result in results
+                for fact_id, fact_type, created_at in (
+                    (high_id, "person.current_location", first),
+                    (low_id, "person.preference", second),
+                ):
+                    await connection.execute(
+                        insert(memory_facts).values(
+                            id=fact_id,
+                            workspace_id=ids["workspace"],
+                            subject_id=ids["subject_one"],
+                            entity_id=ids["subject_one"],
+                            normalized_key=fact_type,
+                            fact_type=fact_type,
+                            qualifier="drink"
+                            if fact_type == "person.preference"
+                            else None,
+                            value="北京"
+                            if fact_type == "person.current_location"
+                            else "咖啡",
+                            status="inactive",
+                            version=1,
+                            created_at=created_at,
+                        )
+                    )
+            async with engine.connect() as connection:
+                read = await MemoryRepository(connection).list_facts(ids["subject_one"])
+            assert [str(fact["id"]) for fact in read] == [high_id, low_id]
+            current = {"id": str(uuid4()), "role": "user", "content": "还成立吗？"}
+            request = natural_review_request(
+                model_key="deepseek::deepseek-flash",
+                provider_adapter="deepseek_openai",
+                current_user_message=current,
+                source_messages=[current],
+                facts=read,
+                entities=[{"id": ids["subject_one"], "kind": "subject", "label": "H4"}],
+                candidate_reply="不确定。",
+                history_capable=True,
             )
+            packet = json.loads(request["messages"][1]["content"])
+            assert [target["fact_type"] for target in packet["targets"]] == [
+                "person.current_location",
+                "person.preference",
+            ]
         finally:
             await engine.dispose()
 
