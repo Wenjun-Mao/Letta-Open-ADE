@@ -9,11 +9,35 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from .context import BuiltContext, ContextBudget
 from .embeddings import EmbeddingClient
 from .executor import CuratedTool
+from .errors import RuntimeValidationError
 from .history_admission import HistoryProbe
 from .history_attempt import HistoryAttempt
+from .history_native_rank import HISTORY_EMBEDDING_ROUTE, HISTORY_VECTOR_RECIPE
 from .provider_tracing import AttemptTrace
 from .router_transport import RouterTransport
 from .turn_context_selection import TurnContextSelection
+
+
+def validate_history_ranking_deployment(
+    probe: HistoryProbe, retriever_deployment: dict[str, Any]
+) -> None:
+    if probe.ranking_recipe == "probe_local_qwen_cosine":
+        payload = retriever_deployment.get("fingerprint_payload", {})
+        sampling = payload.get("sampling_settings", {})
+        if (
+            retriever_deployment.get("route_alias") != HISTORY_EMBEDDING_ROUTE
+            or retriever_deployment.get("fingerprint")
+            != probe.expected_embedding_fingerprint
+            or sampling.get("dimensions") != HISTORY_VECTOR_RECIPE["dimensions"]
+            or payload.get("artifact_reference")
+            != HISTORY_VECTOR_RECIPE["artifact_reference"]
+            or payload.get("artifact_revision")
+            != HISTORY_VECTOR_RECIPE["artifact_revision"]
+        ):
+            raise RuntimeValidationError(
+                "H2 Qwen deployment identity differs before history ranking",
+                detail_code="natural_history_selector_unavailable",
+            )
 
 
 async def prepare_history_turn(
@@ -37,6 +61,7 @@ async def prepare_history_turn(
     trace: AttemptTrace,
     transport: RouterTransport,
 ) -> tuple[HistoryAttempt, BuiltContext]:
+    validate_history_ranking_deployment(probe, retriever_deployment)
     attempt = HistoryAttempt(
         engine=engine,
         probe=probe,

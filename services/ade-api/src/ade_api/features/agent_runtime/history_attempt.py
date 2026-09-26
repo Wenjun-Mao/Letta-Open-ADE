@@ -53,6 +53,7 @@ class HistoryAttempt:
     ranking_model_key: str | None = None
     ranked_exchanges: list[dict[str, Any]] = field(default_factory=list)
     admitted_exchanges: list[dict[str, Any]] = field(default_factory=list)
+    omitted_capacity: list[str] = field(default_factory=list)
     context: BuiltContext | None = None
     exposed: bool = False
     ranking_exposed: bool = False
@@ -121,6 +122,7 @@ class HistoryAttempt:
         )
         self.context = admission.context
         self.admitted_exchanges = list(admission.exchanges)
+        self.omitted_capacity = list(admission.omitted_capacity)
         if self.status not in {"unavailable", "purged"}:
             self.status = (
                 "admitted"

@@ -90,6 +90,7 @@ class NaturalAttemptEvidence:
     reviewer_request: dict[str, Any] | None = None
     reviewer_decision: dict[str, Any] | None = None
     embedding_stage: dict[str, Any] | None = None
+    history_selection: dict[str, Any] | None = None
     provider_events: list[dict[str, Any]] = field(default_factory=list)
     provider_observation_incomplete: bool = False
     excluded_fields: tuple[str, ...] = field(
@@ -199,6 +200,36 @@ class NaturalAttemptEvidence:
 
     def capture_embeddings(self, count: int, dimensions: int) -> None:
         self.embedding_stage = {"count": count, "dimensions": dimensions}
+
+    def capture_history_selection(self, attempt: Any) -> None:
+        rank = attempt.rank_observation
+        self.history_selection = {
+            "arm": attempt.probe.arm,
+            "status": attempt.status,
+            "corpus_run_ids": [
+                str(item["run_id"]) for item in attempt.corpus.get("exchanges", [])
+            ],
+            "ranked_run_ids": [
+                str(item["run_id"]) for item in attempt.ranked_exchanges
+            ],
+            "admitted_run_ids": [
+                str(item["run_id"]) for item in attempt.admitted_exchanges
+            ],
+            "omitted_capacity_run_ids": list(attempt.omitted_capacity),
+            "rank": (
+                {
+                    "status": rank.status,
+                    "scores": rank.all_scores,
+                    "query_sha256": rank.query_sha256,
+                    "recipe_identity": rank.recipe_identity,
+                    "document_hashes": rank.document_hashes,
+                    "embedding_dispatches": rank.embedding_dispatches,
+                    "embedding_seconds": rank.embedding_seconds,
+                }
+                if rank is not None
+                else None
+            ),
+        }
 
     def capture_provider_events(
         self, events: tuple[Any, ...], *, observation_incomplete: bool = False
@@ -372,6 +403,7 @@ async def retain_attempt_evidence(
         "reviewer_request": evidence.reviewer_request or {"stage": "absent"},
         "reviewer_decision": evidence.reviewer_decision or {"stage": "absent"},
         "embedding_stage": evidence.embedding_stage or {"stage": "absent"},
+        "history_selection": evidence.history_selection or {"stage": "absent"},
         "provider_events": evidence.provider_events,
         "provider_request_counts": provider_counts,
         "terminal_readback": {

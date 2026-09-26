@@ -23,7 +23,10 @@ from ade_api.features.agent_runtime.contracts import (
 )
 from ade_api.features.agent_runtime.database_boundary import RuntimeDatabase
 from ade_api.features.agent_runtime.history_admission import HistoryProbe
-from ade_api.features.agent_runtime.history_native_rank import HISTORY_EMBEDDING_ROUTE
+from ade_api.features.agent_runtime.history_native_rank import (
+    HISTORY_EMBEDDING_ROUTE,
+    HISTORY_VECTOR_RECIPE,
+)
 from ade_api.features.agent_runtime.natural_context import HISTORY_PROBE_POLICY
 from ade_api.features.agent_runtime.persistence.database import (
     create_persistence_engine,
@@ -102,6 +105,10 @@ def test_no_write_history_finalization_is_atomic(
             retriever["deployment"]["fingerprint"]["sampling_settings"][
                 "dimensions"
             ] = 1024
+            retriever["deployment"]["fingerprint"].update(
+                artifact_reference=HISTORY_VECTOR_RECIPE["artifact_reference"],
+                artifact_revision=HISTORY_VECTOR_RECIPE["artifact_revision"],
+            )
 
         class ProbeDefinitions(natural_worker_support.definitions):
             async def prepare(self, request, *, purpose):
@@ -264,7 +271,9 @@ def test_no_write_history_finalization_is_atomic(
             HistoryProbe(arm="empty_history")
             if fault == "empty_arm"
             else HistoryProbe(
-                arm="automatic_history", ranking_recipe="probe_local_qwen_cosine"
+                arm="automatic_history",
+                ranking_recipe="probe_local_qwen_cosine",
+                expected_embedding_fingerprint="3" * 64,
             )
             if fault == "native_qwen"
             else HistoryProbe(

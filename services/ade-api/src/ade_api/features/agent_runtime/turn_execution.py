@@ -25,6 +25,7 @@ from .evaluation_tools import evaluation_tool_registry
 from .executor import ConversationExecutor, curated_tools
 from .history_admission import HistoryProbe
 from .history_attempt import HistoryAttempt, execute_generation_with_history
+from .history_capacity import checked_history_probe_capacity
 from .memory_policy import prepare_memory_review
 from .memory_policy_binding import require_executable_memory_policy
 from .natural_attempt_evidence import capture_generated_turn, start_natural_capture
@@ -130,10 +131,16 @@ class TurnExecution:
             mode=self.settings.agent_runtime_mode,
             **release_validation_kwargs(self.settings.agent_runtime_mode),
         )
-        evaluation_capacity = checked_checkpoint6_capacity(
-            definition,
-            purpose=str(conversation.get("purpose") or ""),
-            natural_variant=natural_variant,
+        evaluation_capacity = (
+            checked_history_probe_capacity(
+                definition, purpose=str(conversation.get("purpose") or "")
+            )
+            if history_probe_enabled
+            else checked_checkpoint6_capacity(
+                definition,
+                purpose=str(conversation.get("purpose") or ""),
+                natural_variant=natural_variant,
+            )
         )
         subject_id = str(conversation["memory_subject_id"])
         deployments = {
@@ -358,6 +365,8 @@ class TurnExecution:
                 trace=trace,
                 transport=self.transport,
             )
+            if trace.natural_evidence is not None:
+                trace.natural_evidence.capture_history_selection(history_attempt)
 
         executor_result, built_context = await execute_generation_with_history(
             executor=conversation_executor,
@@ -379,6 +388,8 @@ class TurnExecution:
                 else None
             ),
         )
+        if history_attempt is not None and trace.natural_evidence is not None:
+            trace.natural_evidence.capture_history_selection(history_attempt)
         capture_generated_turn(
             trace.natural_evidence,
             context=built_context,

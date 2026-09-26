@@ -35,6 +35,7 @@ class HistoryProbe:
     ranking_recipe: Literal["literal_token_match", "probe_local_qwen_cosine"] | None = (
         None
     )
+    expected_embedding_fingerprint: str | None = None
 
     def __post_init__(self) -> None:
         if self.arm not in {"empty_history", "automatic_history"}:
@@ -44,6 +45,13 @@ class HistoryProbe:
         ):
             raise RuntimeValidationError(
                 "Automatic history requires exactly one frozen H2 selector",
+                detail_code="natural_history_selector_unavailable",
+            )
+        if (self.ranking_recipe == "probe_local_qwen_cosine") != (
+            self.expected_embedding_fingerprint is not None
+        ):
+            raise RuntimeValidationError(
+                "Qwen history ranking requires a pinned deployment fingerprint",
                 detail_code="natural_history_selector_unavailable",
             )
 

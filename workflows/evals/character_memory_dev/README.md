@@ -71,6 +71,10 @@ held-out ranking cases. [Its finding](../../../docs/findings/natural-memory-cons
 records the full evidence and limits; H4 native dialogue scoring is pending
 director review.
 
+H4's one-shot native runner is `python -m workflows.evals.character_memory_dev.history_h4_campaign`. It requires a fresh migrated passwordless loopback `ade_m2_memory_test_<hex>` database with pgvector in the `extensions` schema and an effective search path that resolves the vector cosine operator, the configured development ADE API container for the exact H2 Qwen fingerprint, and the official DeepSeek settings from `--env-file`. It accepts `--database-url`, `--env-file`, `--qwen-container`, and a new ignored `--output` directory. The runner rejects reuse of an output directory and never rerolls a cell.
+
+The frozen H4 schedule is currently blocked **before live dispatch**. Its H-capable reviewer request must reserve a 4,096-token reply, but the smallest complete request already estimates 7,958 input tokens against the frozen 6,759-token input limit. The runner fails closed on this preflight. See [the H4 preflight finding](../../../docs/findings/natural-memory-consultation/history-h4-preflight-blocker-2026-09-26.md). Replan the reviewer contract and re-freeze the paired schedule before running it; the existing H2 result and H3 source guard do not authorize silently changing H4 limits.
+
 To reproduce the structural database checks, use an isolated PostgreSQL 15
 instance with pgvector and a passwordless loopback `ade_owner` database named
 `ade_history_test_<hex>`. On a host with Docker, for example:

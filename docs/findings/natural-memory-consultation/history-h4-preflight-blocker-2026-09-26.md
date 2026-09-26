@@ -1,0 +1,11 @@
+# H4 native preflight: frozen reviewer envelope is infeasible
+
+Status: structural blocker before live H4/H5 dialogue scoring, 2026-09-26.
+
+The H2 development result at SHA-256 `8c6bc0ff6c648f05be0edcfd2834f34116f237d619e4531234ac13599142ba32` selected Qwen cosine. Read-only catalog checks found the exact H2 Qwen deployment fingerprint `c549d7dc288d2112f10e8b1032b502eda74557d093bc1390fe0fc4f44de63086` in the configured development router container. The isolated official DeepSeek route resolves to fingerprint `870ff4fb8a25a9c2016f67dcda05e26e82a6c5dea6ad55781a80be2201161cfe`. Neither check dispatched generation or embedding.
+
+All 11 frozen setups were replayed into a disposable migrated PostgreSQL database with complete succeeded exchanges, archived/versioned conversations, scoped exclusions and source-linked fact revisions. The native history reader returned the expected eligible exchange counts `2, 3, 2, 2, 4, 1, 3, 2, 2, 2, 0` in fixture order, with no annotation omission. The isolation case returned zero. This is structural fixture evidence, not model behavior.
+
+The H4 capacity profile preserves the frozen generation maximum of 4,096 tokens and reviewer input limit of 6,759 tokens. The existing reviewer preflight reserves the full maximum candidate reply before generation. With only the first target's current user message, no facts, no historical exchange, and the H-capable reviewer instruction/schema, the serialized request estimates **7,958 input tokens**. It exceeds the limit by **1,199 tokens before any additional history or fact context**. A fake-provider native pair confirmed both arms fail with `natural_reviewer_capacity` after the ordinary retrieval embedding and before generation. No live H4 DeepSeek generation or Qwen embedding calls were made.
+
+This is a prompt/capacity contract mismatch, not a provider outage or fixture seeding error. The runner now checks the lower bound before starting an H4 campaign. A director replan must choose a feasible reviewer envelope or a revised prompt/schema/reserve contract, then re-freeze both paired arms and controls before any live schedule. The retained code and tests keep the exact source, provider and capacity guards for that decision.
