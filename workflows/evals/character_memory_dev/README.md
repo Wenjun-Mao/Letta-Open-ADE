@@ -1,5 +1,10 @@
 # Character Memory Development
 
+For a prospective human trial of Xiaotang's continuity, use the [hands-on
+script and current setup boundary](hands-on-trial.md). Its interactive history
+path is pending an explicit development API/runtime composition; the ordinary
+Agent Studio bundle does not enable that probe.
+
 ## Historical Recall Probe (H1–H3 Checkpoints)
 
 The [frozen history contract](fixtures/history_recall/contract.json) belongs to
