@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from ade_api.features.agent_runtime.fact_registry import fact_type_spec
 from workflows.evals.character_memory_dev.natural_live_results import sha256_file
 
 
@@ -17,7 +18,7 @@ def test_fresh_fixture_is_finite_chronological_and_source_bound() -> None:
     )
     binding = json.loads((FIXTURES / "generation_contract_diagnostic.json").read_text())
     assert fixture["schema_version"] == 1
-    assert fixture["status"] == "offline-frozen-pending-director-review"
+    assert fixture["status"] == "revised-offline-frozen-pending-director-review"
     assert fixture["generation_binding_sha256"] == sha256_file(
         FIXTURES / "generation_contract_diagnostic.json"
     )
@@ -32,12 +33,12 @@ def test_fresh_fixture_is_finite_chronological_and_source_bound() -> None:
     trajectories = fixture["trajectories"]
     assert [item["id"] for item in trajectories] == [
         "location_correction_cross_chat",
-        "two_sisters_ambiguous_then_clear",
+        "two_exhibits_ambiguous_then_clear",
         "archived_pottery_outcome",
         "unrelated_turn_and_subject_boundary",
     ]
-    assert [len(item["turns"]) for item in trajectories] == [3, 5, 2, 3]
-    assert sum(len(item["turns"]) for item in trajectories) == 13
+    assert [len(item["turns"]) for item in trajectories] == [3, 4, 2, 3]
+    assert sum(len(item["turns"]) for item in trajectories) == 12
     assert all(item["subject"] == "primary" for item in trajectories)
     assert trajectories[2]["archive_after"] == "source"
     assert trajectories[3]["turns"][2]["subject"] == "isolated"
@@ -51,3 +52,6 @@ def test_fresh_fixture_is_finite_chronological_and_source_bound() -> None:
         for trajectory in trajectories
         for turn in trajectory["turns"]
     )
+    assert fact_type_spec("person.current_location").name == "person.current_location"
+    assert "music" in fact_type_spec("person.preference").allowed_qualifiers
+    assert "visit" not in fact_type_spec("person.preference").allowed_qualifiers

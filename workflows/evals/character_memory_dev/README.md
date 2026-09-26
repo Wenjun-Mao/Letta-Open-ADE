@@ -91,6 +91,20 @@ For the approved [native generation follow-up](../../../docs/plans/natural-histo
 
 The one authorized [candidate run and semantic review](../../../docs/findings/natural-memory-consultation/native-generation-candidate-live-2026-09-26.md) used source `6618c4a` and a separate ignored output root. Its seven native turns, capture hashes, actual H admission comparisons, committed deltas and independent SQL readback are retained there. This bounded result does not change the default or qualify a release.
 
+The revised [fresh conversation fixture](fixtures/history_recall/fresh_conversation_generalization.json)
+uses the same runner with `--fresh-conversations` and a new output directory.
+It contains four independent trajectories and 12 total native turns, including
+setup. The variant creates real evaluation sessions and chats in order, retains
+actual assistant replies, archives the pottery source chat, and uses a distinct
+subject for the isolation control. It reuses the seven-turn source, route,
+transport, worker, evidence and readback guards while binding the separate
+fixture hash. A structurally valid semantic mistake remains in captured state;
+only a verified rejection skips dependent turns, while integrity failures stop.
+Interpret missing setup and missing historical admission separately from
+factuality and recall success. The fake-provider mechanics test is
+`test_postgres_fresh_conversations.py` on an exclusively owned freshly migrated
+disposable PostgreSQL database; it does not establish semantic performance.
+
 To reproduce the structural database checks, use an isolated PostgreSQL 15
 instance with pgvector and a passwordless loopback `ade_owner` database named
 `ade_history_test_<hex>`. On a host with Docker, for example:

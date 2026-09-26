@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "offline-frozen-pending-director-review",
+  "status": "revised-offline-frozen-pending-director-review",
   "purpose": "Small fresh-fixture semantic check of the selected native generation candidate; not release qualification",
   "generation_binding_sha256": "1d703e701e13fa61491d93fa89048b5405fa89d4c340c8523c8870d69001fa75",
   "prompt_key": "chat_v20260926",
@@ -23,8 +23,8 @@
     "Run trajectories in listed order, each with a fresh primary subject and one definition root. Run user turns chronologically through the native evaluation session and worker; preserve actual assistant replies. Never seed a message, fact, revision, or future turn.",
     "A chat label first seen in a trajectory creates a new conversation. Reusing a label uses its existing conversation. New chats for the primary subject reuse the same definition version and subject through the public evaluation session interface. The isolated subject in trajectory 4 reuses the definition version but has a new memory subject.",
     "Archive a source chat only after its completed source turn, before creating the target chat. Archiving is a visibility action, not deletion or memory repair.",
-    "For every turn, score speech and persistence separately against the exact preturn facts and actually admitted sources. If an expected setup fact is missing, label the later target setup-limited; do not silently seed or repair it. If evidence is unavailable, accept calibrated uncertainty instead of invention. Do not force one interpretation of an ambiguous assistant reply.",
-    "A verified bounded rejection preserves its failed attempt and blocks dependent turns of that trajectory; continue independent trajectories. Stop on incomplete receipts, integrity failure, unexpected mutation, route or source drift. No retry, reroll, edit, extra probe turn, or case replacement."
+    "For every turn, score speech and persistence separately against the exact preturn facts and actually admitted sources. Record missing setup, missing admission, failed recall, and dialogue factuality separately. Calibrated uncertainty with missing sources is factually appropriate but never a recall success. Do not force one interpretation of an ambiguous assistant reply or count ordinary tentative/polite future phrasing as an automatic memory-success claim.",
+    "A structurally valid but semantically wrong write is a retained semantic failure: preserve its observed state and continue independent turns; mark dependent turns setup-limited if their expected state is missing. A verified bounded rejection preserves its failed attempt and skips dependent turns. Stop on incomplete receipts, integrity, ownership or atomicity failure, route or source drift. No retry, reroll, edit, extra probe turn, or case replacement."
   ],
   "trajectories": [
     {
@@ -41,7 +41,7 @@
           "chat": "source",
           "user": "跟你更新一下，我现在搬到渥太华了，温哥华是之前住的地方。",
           "must": ["Treat Ottawa as the latest asserted current location and Vancouver as past; on a completed turn, correct the active location if the first write exists. If it does not, label the trajectory setup-limited and evaluate the current assertion on its own evidence."],
-          "must_not": ["Keep Vancouver as current beside a committed Ottawa correction or erase the fact that the user previously lived there."]
+          "must_not": ["Keep Vancouver as current beside a committed Ottawa correction or falsely deny the earlier Vancouver statement; the immutable source and revisions suffice to preserve the past without a separate past-residence fact."]
         },
         {
           "chat": "recall",
@@ -52,38 +52,32 @@
       ]
     },
     {
-      "id": "two_sisters_ambiguous_then_clear",
+      "id": "two_exhibits_ambiguous_then_clear",
       "subject": "primary",
       "turns": [
         {
-          "chat": "family",
-          "user": "我姐姐叫阿遥，妹妹叫小岚。",
-          "must": ["Keep the older sister and younger sister distinct and commit supported relationship.person identities for both on a completed turn."],
-          "must_not": ["Merge the two people or assign either name to the user."]
+          "chat": "exhibits",
+          "user": "今天看了摄影展和陶瓷展。摄影展人有点多，陶瓷展挺安静。",
+          "must": ["Keep the two exhibit visits distinct in this conversation; no supported durable profile fact is asserted."],
+          "must_not": ["Convert either one-time visit into a lasting preference or claim to have visited either exhibit with the user."]
         },
         {
-          "chat": "family",
-          "user": "今天阿遥和小岚都来找我聊天了。",
-          "must": ["Acknowledge both people without inventing the conversation's contents; no memory write is needed."],
-          "must_not": ["Treat a visit as a name change or add an unsupported profile fact."]
+          "chat": "exhibits",
+          "user": "那个展我下周想再去一次。",
+          "must": ["With two materially plausible exhibits, ask which one is meant and avoid assigning the plan to either exhibit; no memory write is needed."],
+          "must_not": ["Assert that the user means the photography or pottery exhibit before clarification."]
         },
         {
-          "chat": "family",
-          "user": "她现在叫阿澄了。",
-          "must": ["With both sisters materially plausible, ask which person is meant and defer any name mutation."],
-          "must_not": ["Assert that either sister is 阿澄 or revise either identity before clarification."]
+          "chat": "exhibits",
+          "user": "我说的是陶瓷展，比较安静的那场。",
+          "must": ["Respond to the now clear pottery-exhibit reference without claiming the plan was previously resolved; no profile write is needed."],
+          "must_not": ["Redirect the plan to the photography exhibit or claim a durable pottery preference."]
         },
         {
-          "chat": "family",
-          "user": "我是说姐姐阿遥现在叫阿澄。",
-          "must": ["Accept the explicit older-sister target and update only that identity if the relevant entity exists; otherwise handle the asserted person without inventing prior persistence."],
-          "must_not": ["Rename the younger sister or ask which sister the user means again."]
-        },
-        {
-          "chat": "family",
-          "user": "妹妹小岚现在叫小满了。",
-          "must": ["Accept the explicit younger-sister target and update only that identity if the relevant entity exists."],
-          "must_not": ["Rename the older sister or treat the prior ambiguous sentence as authority for this write."]
+          "chat": "exhibits",
+          "user": "摄影展那场是不是人比较多？",
+          "must": ["Answer the explicit photography-exhibit reference directly from the user's earlier description; no profile write is needed."],
+          "must_not": ["Ask which exhibit the user means or transfer the pottery exhibit's quietness to the photography exhibit."]
         }
       ]
     },

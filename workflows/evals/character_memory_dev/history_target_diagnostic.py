@@ -50,6 +50,11 @@ from .history_h4_run import (
     _frozen_inputs,
 )
 from .history_h4_transport import SplitHistoryTransport
+from .history_fresh_conversations import (
+    FRESH_FIXTURE,
+    execute_fresh_trajectory,
+    frozen_fresh_schedule,
+)
 from .history_target_diagnostic_run import (
     CANDIDATE_PROMPT_KEY,
     GENERATION_BINDING,
@@ -204,8 +209,18 @@ def validate_catalog(catalog: dict, schedule: dict) -> tuple[dict, dict]:
 async def run(args: argparse.Namespace) -> None:
     database_url, database_name = isolated_database_url(args.database_url)
     source_revision, source_fingerprint = source_identity()
-    schedule, cases, old_manifest = frozen_schedule()
+    base_schedule, cases, old_manifest = frozen_schedule()
     prior_manifest = prior_diagnostic()
+    fresh = getattr(args, "fresh_conversations", False)
+    schedule = (
+        frozen_fresh_schedule(
+            generation_binding_sha256=sha256_file(GENERATION_BINDING),
+            per_turn=base_schedule["per_turn"],
+        )
+        if fresh
+        else base_schedule
+    )
+    schedule_path = FRESH_FIXTURE if fresh else SCHEDULE
     if args.output.exists():
         raise RuntimeError("one-shot diagnostic output must be new")
     await _fresh_database(database_url, database_name)
@@ -228,7 +243,7 @@ async def run(args: argparse.Namespace) -> None:
         persona,
         old_manifest,
         prior_manifest,
-        schedule,
+        base_schedule,
         schedule_sha256=sha256_file(SCHEDULE),
         historical_manifest_sha256=[item[1] for item in OLD_MANIFESTS],
         prior_diagnostic_manifest_sha256=PRIOR_DIAGNOSTIC[1],
@@ -263,7 +278,7 @@ async def run(args: argparse.Namespace) -> None:
             ContainerEmbeddingClient(args.qwen_container),
         )
         deepseek, qwen = validate_catalog(
-            await split.catalog(timeout_seconds=30), schedule
+            await split.catalog(timeout_seconds=30), base_schedule
         )
         args.output.mkdir(parents=True, exist_ok=False)
         args.output.chmod(0o700)
@@ -283,7 +298,8 @@ async def run(args: argparse.Namespace) -> None:
         manifest = {
             "schema_version": 1,
             "status": "running",
-            "schedule_sha256": sha256_file(SCHEDULE),
+            "schedule_sha256": sha256_file(schedule_path),
+            "fixture_kind": "fresh_conversations" if fresh else "seven_turn_candidate",
             "historical_manifest_sha256": [item[1] for item in OLD_MANIFESTS],
             "source_revision": source_revision,
             "source_fingerprint": source_fingerprint,
@@ -300,7 +316,7 @@ async def run(args: argparse.Namespace) -> None:
                 "deepseek::deepseek-flash": deepseek["sha256"],
                 HISTORY_EMBEDDING_ROUTE: qwen["sha256"],
             },
-            "per_turn": schedule["per_turn"],
+            "per_turn": base_schedule["per_turn"],
             "planned_turns": [
                 {"trajectory": item["id"], "turn": number + 1}
                 for item in schedule["trajectories"]
@@ -340,7 +356,11 @@ async def run(args: argparse.Namespace) -> None:
             database=database,
             definitions=BoundDefinitions(),
             purpose="evaluation",
-            session_namespace="target-attribution-diagnostic",
+            session_namespace=(
+                "fresh-conversation-diagnostic"
+                if fresh
+                else "target-attribution-diagnostic"
+            ),
         )
         service = RunService(
             database=database,
@@ -369,9 +389,8 @@ async def run(args: argparse.Namespace) -> None:
                 item["name"]: item for item in prior_manifest["trajectories"]
             }
             for index, trajectory in enumerate(schedule["trajectories"]):
-                result = await execute_trajectory(
+                common = dict(
                     trajectory=trajectory,
-                    case=cases[trajectory["seed_case"]],
                     index=index,
                     sessions=sessions,
                     service=service,
@@ -382,31 +401,65 @@ async def run(args: argparse.Namespace) -> None:
                     output=args.output,
                     prompt_key=CANDIDATE_PROMPT_KEY,
                 )
+                result = (
+                    await execute_fresh_trajectory(**common)
+                    if fresh
+                    else await execute_trajectory(
+                        **common, case=cases[trajectory["seed_case"]]
+                    )
+                )
                 if (
                     result["session"]["prompt_sha256"] != prompt_hash
                     or result["session"]["persona_sha256"] != persona_hash
                 ):
                     raise RuntimeError("session bound a different prompt or persona")
-                prior_turns = prior_trajectories[trajectory["id"]]["turns"]
-                manifest["admission_comparison"][trajectory["id"]] = [
-                    admission_comparison(turn, prior_turns[turn_index])
-                    for turn_index, turn in enumerate(result["turns"])
-                ]
+                if not fresh:
+                    prior_turns = prior_trajectories[trajectory["id"]]["turns"]
+                    manifest["admission_comparison"][trajectory["id"]] = [
+                        admission_comparison(turn, prior_turns[turn_index])
+                        for turn_index, turn in enumerate(result["turns"])
+                    ]
                 manifest["trajectories"].append(result)
                 write_json(args.output / "manifest.json", manifest)
-            ids = [item["session"]["subject_id"] for item in manifest["trajectories"]]
+            ids = [
+                item["subjects"]["primary"] if fresh else item["session"]["subject_id"]
+                for item in manifest["trajectories"]
+            ]
             if len(ids) != 4 or len(set(ids)) != 4:
                 raise RuntimeError("diagnostic trajectories did not isolate subjects")
-            manifest["independent_final_readback"] = {
-                item["name"]: await fact_state(engine, item["session"]["subject_id"])
-                for item in manifest["trajectories"]
-            }
-            for item in manifest["trajectories"]:
-                if (
-                    manifest["independent_final_readback"][item["name"]]
-                    != item["turns"][-1]["after_facts"]
-                ):
-                    raise RuntimeError("final fact readback changed after a trajectory")
+            if fresh:
+                manifest["independent_final_readback"] = {}
+                for item in manifest["trajectories"]:
+                    manifest["independent_final_readback"][item["name"]] = {}
+                    for key, subject_id in item["subjects"].items():
+                        readback = await fact_state(engine, subject_id)
+                        manifest["independent_final_readback"][item["name"]][key] = (
+                            readback
+                        )
+                        latest = next(
+                            turn
+                            for turn in reversed(item["turns"])
+                            if turn["subject"] == key
+                        )
+                        if readback != latest["after_facts"]:
+                            raise RuntimeError(
+                                "final fact readback changed after a trajectory"
+                            )
+            else:
+                manifest["independent_final_readback"] = {
+                    item["name"]: await fact_state(
+                        engine, item["session"]["subject_id"]
+                    )
+                    for item in manifest["trajectories"]
+                }
+                for item in manifest["trajectories"]:
+                    if (
+                        manifest["independent_final_readback"][item["name"]]
+                        != item["turns"][-1]["after_facts"]
+                    ):
+                        raise RuntimeError(
+                            "final fact readback changed after a trajectory"
+                        )
             manifest["status"] = "completed_pending_semantic_review"
         except Exception as exc:
             manifest["status"] = "stopped_integrity_or_execution"
@@ -436,6 +489,7 @@ def main() -> None:
     parser.add_argument("--qwen-container", required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--router-port", type=int, default=8143)
+    parser.add_argument("--fresh-conversations", action="store_true")
     asyncio.run(run(parser.parse_args()))
 
 
