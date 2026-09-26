@@ -116,6 +116,15 @@ and PC-09 (simplicity and observational request counts).
   Follow-up H source text was not matched to the prior run, and two replies
   carry possible premature future-memory wording. This supports continued
   candidate evaluation, not default adoption or release promotion.
+- A [fresh ordinary-conversation check](plans/natural-history-recall.md#fresh-ordinary-conversation-candidate-check)
+  is frozen offline for director review. Its [13-turn fixture](../workflows/evals/character_memory_dev/fixtures/history_recall/fresh_conversation_generalization.json)
+  covers location correction and cross-chat recall, ambiguous versus clear
+  family references, archived event outcome, unrelated dialogue and subject
+  isolation. Setup uses genuine chronological native turns and actual assistant
+  replies; no facts or replies are preseeded. The candidate, reviewer, routes,
+  limits, retrieval and release bindings remain unchanged. This checkpoint made
+  no generation or embedding provider calls; live runner adaptation and review
+  remain ahead.
 
 Earlier authorization and status statements below describe their dated
 checkpoints, not current commands or proof of completion. In particular, old

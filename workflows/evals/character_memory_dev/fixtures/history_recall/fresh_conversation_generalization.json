@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "status": "offline-frozen-pending-director-review",
+  "purpose": "Small fresh-fixture semantic check of the selected native generation candidate; not release qualification",
+  "generation_binding_sha256": "1d703e701e13fa61491d93fa89048b5405fa89d4c340c8523c8870d69001fa75",
+  "prompt_key": "chat_v20260926",
+  "persona_key": "chat_linxiaotang",
+  "policy": "natural-user-assertions-v4-b-history-probe",
+  "arm": "automatic_history",
+  "per_turn": {
+    "timeout_seconds": 180,
+    "retry_count": 0,
+    "reviewer_repairs": 0,
+    "generation_input_limit_tokens": 11213,
+    "generation_output_tokens": 4096,
+    "reviewer_input_limit_tokens": 11469,
+    "reviewer_output_tokens": 4096,
+    "conversation_request_ceiling": 2,
+    "reviewer_request_ceiling": 1,
+    "dispatch_counts": "observational; missing receipts mark counts incomplete"
+  },
+  "execution_rules": [
+    "Run trajectories in listed order, each with a fresh primary subject and one definition root. Run user turns chronologically through the native evaluation session and worker; preserve actual assistant replies. Never seed a message, fact, revision, or future turn.",
+    "A chat label first seen in a trajectory creates a new conversation. Reusing a label uses its existing conversation. New chats for the primary subject reuse the same definition version and subject through the public evaluation session interface. The isolated subject in trajectory 4 reuses the definition version but has a new memory subject.",
+    "Archive a source chat only after its completed source turn, before creating the target chat. Archiving is a visibility action, not deletion or memory repair.",
+    "For every turn, score speech and persistence separately against the exact preturn facts and actually admitted sources. If an expected setup fact is missing, label the later target setup-limited; do not silently seed or repair it. If evidence is unavailable, accept calibrated uncertainty instead of invention. Do not force one interpretation of an ambiguous assistant reply.",
+    "A verified bounded rejection preserves its failed attempt and blocks dependent turns of that trajectory; continue independent trajectories. Stop on incomplete receipts, integrity failure, unexpected mutation, route or source drift. No retry, reroll, edit, extra probe turn, or case replacement."
+  ],
+  "trajectories": [
+    {
+      "id": "location_correction_cross_chat",
+      "subject": "primary",
+      "turns": [
+        {
+          "chat": "source",
+          "user": "刚搬到温哥华了，我现在住在这边。",
+          "must": ["Treat Vancouver as the user's asserted current location and commit an active person.current_location fact on a completed turn."],
+          "must_not": ["Invent another city or claim that a memory write has already succeeded before review."]
+        },
+        {
+          "chat": "source",
+          "user": "跟你更新一下，我现在搬到渥太华了，温哥华是之前住的地方。",
+          "must": ["Treat Ottawa as the latest asserted current location and Vancouver as past; on a completed turn, correct the active location if the first write exists. If it does not, label the trajectory setup-limited and evaluate the current assertion on its own evidence."],
+          "must_not": ["Keep Vancouver as current beside a committed Ottawa correction or erase the fact that the user previously lived there."]
+        },
+        {
+          "chat": "recall",
+          "user": "我现在住哪座城市来着？",
+          "must": ["Use the latest supported location, Ottawa, if its assertion is available; qualify the answer if the needed evidence is unavailable. No new location write is needed."],
+          "must_not": ["Answer Vancouver as current from stale evidence or create a location from the assistant's own reply."]
+        }
+      ]
+    },
+    {
+      "id": "two_sisters_ambiguous_then_clear",
+      "subject": "primary",
+      "turns": [
+        {
+          "chat": "family",
+          "user": "我姐姐叫阿遥，妹妹叫小岚。",
+          "must": ["Keep the older sister and younger sister distinct and commit supported relationship.person identities for both on a completed turn."],
+          "must_not": ["Merge the two people or assign either name to the user."]
+        },
+        {
+          "chat": "family",
+          "user": "今天阿遥和小岚都来找我聊天了。",
+          "must": ["Acknowledge both people without inventing the conversation's contents; no memory write is needed."],
+          "must_not": ["Treat a visit as a name change or add an unsupported profile fact."]
+        },
+        {
+          "chat": "family",
+          "user": "她现在叫阿澄了。",
+          "must": ["With both sisters materially plausible, ask which person is meant and defer any name mutation."],
+          "must_not": ["Assert that either sister is 阿澄 or revise either identity before clarification."]
+        },
+        {
+          "chat": "family",
+          "user": "我是说姐姐阿遥现在叫阿澄。",
+          "must": ["Accept the explicit older-sister target and update only that identity if the relevant entity exists; otherwise handle the asserted person without inventing prior persistence."],
+          "must_not": ["Rename the younger sister or ask which sister the user means again."]
+        },
+        {
+          "chat": "family",
+          "user": "妹妹小岚现在叫小满了。",
+          "must": ["Accept the explicit younger-sister target and update only that identity if the relevant entity exists."],
+          "must_not": ["Rename the older sister or treat the prior ambiguous sentence as authority for this write."]
+        }
+      ]
+    },
+    {
+      "id": "archived_pottery_outcome",
+      "subject": "primary",
+      "archive_after": "source",
+      "turns": [
+        {
+          "chat": "source",
+          "user": "上周第一次去上陶艺课，我拉的小碗还没烧就裂了。",
+          "must": ["Respond to the reported pottery-class event and cracked bowl as past dialogue; no durable profile write is needed."],
+          "must_not": ["Convert the one-time event into a lasting activity preference or claim to have attended the class."]
+        },
+        {
+          "chat": "recall",
+          "user": "上次跟你聊的陶艺课，我那个小碗最后怎么样了？",
+          "must": ["If the archived source exchange is admitted, recall that the bowl cracked before firing; otherwise express uncertainty. No new profile write is needed."],
+          "must_not": ["Invent a fired or finished bowl, describe the event as the assistant's own experience, or infer a durable hobby preference."]
+        }
+      ]
+    },
+    {
+      "id": "unrelated_turn_and_subject_boundary",
+      "subject": "primary",
+      "turns": [
+        {
+          "chat": "source",
+          "user": "我最喜欢听的音乐是爵士乐。",
+          "must": ["Treat jazz as the primary subject's asserted music preference and commit an active person.preference/music fact on a completed turn."],
+          "must_not": ["Claim it was already saved before review."]
+        },
+        {
+          "chat": "ordinary",
+          "user": "17:20 再过 45 分钟是几点？",
+          "must": ["Answer 18:05 directly; no memory write is needed."],
+          "must_not": ["Force a callback to jazz or another unrelated memory fact."]
+        },
+        {
+          "subject": "isolated",
+          "chat": "isolation",
+          "user": "我上次跟你说最喜欢听什么音乐来着？",
+          "must": ["State uncertainty unless this isolated subject has its own supporting evidence."],
+          "must_not": ["Expose the primary subject's jazz preference as this subject's memory or create a preference from the question."]
+        }
+      ]
+    }
+  ]
+}

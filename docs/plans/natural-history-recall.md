@@ -564,3 +564,55 @@ reviewer, new retrieval tool, new evaluator framework, or unrelated refactoring.
 
 Serial implementation should use the retained `codex/character-continuity`
 checkout. No parallel writers or new task is authorized by this planning draft.
+
+## Fresh Ordinary-Conversation Candidate Check
+
+Status: offline checkpoint frozen for director review on 2026-09-26; no native
+provider calls, live outcome, release qualification, or default decision. This
+small check follows the completed seven-turn candidate diagnostic above. It
+tests fresh ordinary conversations under PC-01/02/03/05/09/10 without changing
+the candidate or its shared instructions. The [fixture](../../workflows/evals/character_memory_dev/fixtures/history_recall/fresh_conversation_generalization.json)
+has SHA-256 `a5385bbe24fdeb78421cf9f3618ede3c804a1983a610de09f924dc31a4162e57`
+at this checkpoint; its generation binding has SHA-256
+`1d703e701e13fa61491d93fa89048b5405fa89d4c340c8523c8870d69001fa75`.
+The four independent trajectories contain 13 native user turns, including all
+setup turns. No earlier dog, tea, or jasmine target is reused.
+
+The finite schedule covers a current-location introduction and correction with
+recall in a separate chat; two sisters with one ambiguous pronoun and two clear
+name updates; recall of a cracked pottery bowl from an archived chat without
+turning an event into a profile fact; and an unrelated arithmetic question plus
+a different-subject boundary check. Every assistant reply and memory transition
+must arise from its actual preceding native turn. No scripted reply, fact,
+revision, future statement, or expected answer enters the corpus. The fixture
+freezes semantic must/must-not criteria before observation, including calibrated
+uncertainty if the relevant source is absent. A missing setup fact makes the
+later target setup-limited; it is never repaired or silently counted as a pass.
+Evaluate full replies and full fact deltas, not selected answer snippets.
+
+For the live adaptation, reuse `history_target_diagnostic.py` for frozen source
+and route checks, transport, worker, disposable-PostgreSQL boundary and manifest;
+reuse `history_target_diagnostic_run.py` for `fact_state`, `run_revisions`,
+`verified_turn_disposition` and per-turn evidence; and reuse the existing
+`_execute_turn` path. Replace only `seed_history_case` with chronological calls
+through `PurposeSessionService.create`: first chat creates the definition and
+subject, later chats bind that same definition version and subject, and the
+scope control creates a new subject under the same definition. Archive the event
+source chat through `set_archived` after its completed turn. Keep the runner
+adaptation small and local; do not copy the existing several-hundred-line
+runner or introduce a general campaign framework.
+
+Before dispatch, bind a clean source revision, fixture and generation binding,
+actual prompt/persona/reviewer/schema hashes, route fingerprints and unchanged
+per-turn limits. Capture each request, attempt, admitted source, delivered reply,
+complete delta and independent PostgreSQL readback. Counts remain observational;
+zero retries or reviewer repairs. Preserve a failed turn and skip only its
+dependent turns after verified bounded rejection; stop on integrity or setup
+faults. The offline checkpoint's fixture test checks count, source binding,
+configuration and absence of seeded replies. A later runner requires focused
+fake-provider and disposable-PostgreSQL checks before any live execution.
+
+These fixtures are new to this candidate's tuning, but are not statistically
+independent and cannot be guaranteed unseen to the base model. Thirteen turns
+can expose a failure or support a narrow feasibility observation; they cannot
+establish reliability, production history adoption, or release readiness.
