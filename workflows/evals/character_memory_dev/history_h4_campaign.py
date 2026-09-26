@@ -60,16 +60,16 @@ from .history_h4_run import (
     _frozen_inputs,
 )
 from .history_h4_transport import SplitHistoryTransport
+from .history_h4_remaining import load_remaining, ORIGINAL_SHA256, PROPOSAL_SHA256
+from .history_h4_disposition import (
+    CampaignStop,
+    _classify_cell as _classify_cell,
+    _classify_cell_turns,
+    _paired_packet_check,
+)
 from .natural_factual_live import source_identity
 from .natural_live_results import sha256_file, write_json
 from .natural_live_transport import NaturalLiveTransport
-
-
-class CampaignStop(RuntimeError):
-    """A native integrity failure invalidates the remaining finite schedule."""
-
-
-OBSERVABLE_REJECTION_DETAILS = frozenset({"conversation_tool_step_budget_exceeded"})
 
 
 def _planned_cells(contract: dict, fixture: dict) -> list[dict]:
@@ -93,64 +93,8 @@ def _planned_turns(contract: dict, fixture: dict) -> list[dict[str, str]]:
     for cell in _planned_cells(contract, fixture):
         turns.append({"name": cell["name"], "arm": cell["arm"], "turn": "target"})
         if cell.get("followup_scheduled"):
-            turns.append(
-                {"name": cell["name"], "arm": cell["arm"], "turn": "followup"}
-            )
+            turns.append({"name": cell["name"], "arm": cell["arm"], "turn": "followup"})
     return turns
-
-
-def _classify_cell(result: dict) -> str:
-    """Separate a verified bounded model rejection from native integrity loss."""
-    target = result.get("target") or {}
-    captures = target.get("provider_captures") or []
-    evidence_complete = (
-        target.get("terminal_safety") == "verified"
-        and bool(target.get("attempt_sha256"))
-        and captures
-        and all(receipt.get("status") == "completed" for receipt in captures)
-    )
-    if evidence_complete and result.get("status") == "observed" and (
-        target.get("status") == "committed"
-        and target.get("terminal_outcome") == "committed"
-        and target.get("base_packet") is not None
-    ):
-        return "committed"
-    delta = target.get("observed_delta") or {}
-    no_commit = (
-        delta.get("generation_advance") == 0
-        and delta.get("revision_count") == 0
-        and delta.get("entity_additions") == []
-        and delta.get("run_revisions") == []
-        and delta.get("other_revision_ids") == []
-    )
-    if evidence_complete and no_commit and result.get("status") == "rejected" and (
-        target.get("status") == "rejected"
-        and target.get("terminal_outcome") == "confirmed_rejection"
-        and (target.get("run") or {}).get("status") == "failed"
-        and target.get("failure_detail_code") in OBSERVABLE_REJECTION_DETAILS
-    ):
-        return "bounded_rejection"
-    raise CampaignStop(
-        f"{result['name']}/{result['arm']} has invalid native evidence: "
-        f"{result.get('failure') or target.get('failure') or target.get('status')}"
-    )
-
-
-def _paired_packet_check(case_id: str, paired: list[dict]) -> dict:
-    left = paired[0].get("target", {}).get("base_packet")
-    right = paired[1].get("target", {}).get("base_packet")
-    comparable = left is not None and right is not None
-    equal = left == right if comparable else None
-    return {
-        "case_id": case_id,
-        "comparable": comparable,
-        "base_packet_equal": equal,
-        "status": (
-            "incomplete_bounded_rejection"
-            if not comparable
-            else "matched" if equal else "mismatched"
-        ),
-    }
 
 
 def reviewer_envelope_lower_bound(contract: dict, fixture: dict) -> dict[str, int]:
@@ -178,6 +122,55 @@ async def run(args: argparse.Namespace) -> None:
     checked_url, database_name = isolated_database_url(args.database_url)
     source_revision, source_fingerprint = source_identity()
     contract, fixture, _h2 = _frozen_inputs()
+    original, proposal, selected_cells = load_remaining(
+        _planned_cells(contract, fixture)
+    )
+    selected_keys = {(cell["name"], cell["arm"]) for cell in selected_cells}
+    current_fixture = {
+        "contract": sha256_file(FIXTURES / "contract.json"),
+        "h4_amendment": sha256_file(H4_AMENDMENT),
+        "effective_h4_contract": hashlib.sha256(
+            json.dumps(contract, ensure_ascii=False, sort_keys=True).encode()
+        ).hexdigest(),
+        "cases": sha256_file(FIXTURES / "cases.json"),
+        "h2_result": H2_RESULT_SHA256,
+    }
+    instruction_sha = hashlib.sha256(
+        (NATURAL_REVIEWER_SYSTEM + HISTORY_REVIEWER_INSTRUCTION).encode()
+    ).hexdigest()
+    schema_sha = hashlib.sha256(
+        json.dumps(
+            natural_review_json_schema(history_capable=True),
+            ensure_ascii=False,
+            sort_keys=True,
+        ).encode()
+    ).hexdigest()
+    registry = build_prompt_template_reader(
+        ROOT, persona_db_path=args.output.parent / ".h4-remaining-personas.sqlite3"
+    )
+    prompt = registry.get_template("prompt", "chat_v20260516", scenario="chat")
+    persona = registry.get_template("persona", "chat_linxiaotang", scenario="chat")
+    prompt_sha = (
+        hashlib.sha256(str(prompt["content"]).encode()).hexdigest() if prompt else None
+    )
+    persona_sha = (
+        hashlib.sha256(str(persona["content"]).encode()).hexdigest()
+        if persona
+        else None
+    )
+    old_definition = original["cells"][0]["session"]
+    if (
+        current_fixture != original["fixture_sha256"]
+        or contract["binding"] != original["capacity"]
+        or HISTORY_PROBE_POLICY != original["policy"]
+        or instruction_sha != original["reviewer_instruction_sha256"]
+        or schema_sha != original["reviewer_schema_sha256"]
+        or prompt_sha != old_definition["prompt_sha256"]
+        or persona_sha != old_definition["persona_sha256"]
+    ):
+        raise RuntimeError(
+            "H4 prompt, persona, fixture, policy, or reviewer binding drifted"
+        )
     envelope = reviewer_envelope_lower_bound(contract, fixture)
     if envelope["minimum_input_tokens"] > envelope["frozen_input_limit"]:
         raise RuntimeError(
@@ -223,11 +216,13 @@ async def run(args: argparse.Namespace) -> None:
         deepseek = items["deepseek::deepseek-flash"]["deployment"]["fingerprint"]
         qwen = items[HISTORY_EMBEDDING_ROUTE]["deployment"]["fingerprint"]
         if (
-            qwen.get("sha256") != QWEN_FINGERPRINT
+            deepseek.get("sha256") != original["routes"]["deepseek::deepseek-flash"]
+            or qwen.get("sha256") != QWEN_FINGERPRINT
             or qwen.get("artifact_reference") != "Qwen/Qwen3-Embedding-0.6B"
             or qwen.get("artifact_revision")
             != "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3"
             or qwen.get("sampling_settings", {}).get("dimensions") != 1024
+            or qwen.get("sha256") != original["routes"][HISTORY_EMBEDDING_ROUTE]
             or deepseek.get("context_settings", {}).get("reviewer_repair_count") != 0
             or int(deepseek.get("context_settings", {}).get("total_tokens") or 0)
             < 16384
@@ -253,6 +248,12 @@ async def run(args: argparse.Namespace) -> None:
         manifest = {
             "schema_version": 1,
             "status": "running",
+            "campaign_kind": "approved_remaining_21_turns",
+            "original_manifest_sha256": ORIGINAL_SHA256,
+            "proposal_sha256": PROPOSAL_SHA256,
+            "original_source_revision": original["source_revision"],
+            "prompt_sha256": prompt_sha,
+            "persona_sha256": persona_sha,
             "source_revision": source_revision,
             "source_fingerprint": source_fingerprint,
             "database": database_name,
@@ -285,8 +286,8 @@ async def run(args: argparse.Namespace) -> None:
             "scheduled_controls": contract["paired_schedule"]["native_control_ids"],
             "scheduled_targets": [case["id"] for case in fixture["cases"]],
             "scheduled_followups_per_arm": fixture["followup_schedule"],
-            "planned_cells": _planned_cells(contract, fixture),
-            "planned_turns": _planned_turns(contract, fixture),
+            "planned_cells": selected_cells,
+            "planned_turns": proposal["remaining_turns"],
             "cells": [],
             "cell_dispositions": [],
             "pair_checks": [],
@@ -355,37 +356,17 @@ async def run(args: argparse.Namespace) -> None:
             workers["empty_history"].presence.heartbeat_forever(heartbeat_stop)
         )
         try:
-            by_case = {case["id"]: case for case in fixture["cases"]}
             index = 0
-            for control in fixture["native_controls"]:
-                case = by_case[control["setup_case"]]
-                result = await _execute_cell(
-                    name=f"control-{control['id']}",
-                    case=case,
-                    target=control,
-                    arm="empty_history",
-                    sessions=sessions,
-                    service=service,
-                    resources=resources,
-                    workers=workers,
-                    engine=engine,
-                    transport=transport,
-                    output=args.output,
-                    index=index,
-                    through=control["through"],
-                    empty_setup=control["through"] is None,
-                )
-                manifest["cells"].append(result)
-                write_json(args.output / "manifest.json", manifest)
-                disposition = _classify_cell(result)
-                manifest["cell_dispositions"].append(
-                    {"name": result["name"], "arm": result["arm"], "disposition": disposition}
-                )
-                write_json(args.output / "manifest.json", manifest)
-                index += 1
             for case in fixture["cases"]:
+                if not any(
+                    (case["id"], arm) in selected_keys
+                    for arm in contract["paired_schedule"]["arms"]
+                ):
+                    continue
                 paired = []
                 for arm in contract["paired_schedule"]["arms"]:
+                    if (case["id"], arm) not in selected_keys:
+                        continue
                     result = await _execute_cell(
                         name=case["id"],
                         case=case,
@@ -403,13 +384,22 @@ async def run(args: argparse.Namespace) -> None:
                     manifest["cells"].append(result)
                     paired.append(result)
                     write_json(args.output / "manifest.json", manifest)
-                    disposition = _classify_cell(result)
-                    manifest["cell_dispositions"].append(
-                        {"name": result["name"], "arm": result["arm"], "disposition": disposition}
-                    )
+                    manifest["cell_dispositions"].extend(_classify_cell_turns(result))
                     write_json(args.output / "manifest.json", manifest)
                     index += 1
-                manifest["pair_checks"].append(_paired_packet_check(case["id"], paired))
+                if case["id"] == "user_retraction":
+                    prior = next(
+                        cell
+                        for cell in original["cells"]
+                        if cell["name"] == case["id"] and cell["arm"] == "empty_history"
+                    )
+                    check = _paired_packet_check(case["id"], [prior, paired[0]])
+                    check["scope"] = "cross_campaign"
+                    check["original_manifest_sha256"] = ORIGINAL_SHA256
+                else:
+                    check = _paired_packet_check(case["id"], paired)
+                    check["scope"] = "remaining_campaign"
+                manifest["pair_checks"].append(check)
                 write_json(args.output / "manifest.json", manifest)
                 if manifest["pair_checks"][-1]["base_packet_equal"] is False:
                     raise CampaignStop(f"{case['id']} paired base packets differ")
@@ -428,7 +418,7 @@ async def run(args: argparse.Namespace) -> None:
             manifest["status"] = "stopped_unexpected_error"
             manifest["stop_reason"] = f"{type(exc).__name__}: {exc}"
         finally:
-            for planned in manifest["planned_cells"][len(manifest["cells"]):]:
+            for planned in manifest["planned_cells"][len(manifest["cells"]) :]:
                 manifest["cells"].append(
                     {
                         **planned,
