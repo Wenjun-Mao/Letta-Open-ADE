@@ -89,6 +89,8 @@ The [target-attribution diagnostic schedule](fixtures/history_recall/target_attr
 
 For the approved [native generation follow-up](../../../docs/plans/natural-history-recall.md#proposed-follow-up-native-generation-contract-alignment), the same runner now explicitly binds `chat_v20260926` through [its separate generation binding](fixtures/history_recall/generation_contract_diagnostic.json). That binding pins the unchanged persona, reviewer and schema, prior seven-turn manifest, provider routes, schedule, and hashes for the candidate plus shared generation instruction owners. Existing default and prior prompt snapshots remain bound to `chat_v20260516`. The next run requires a new clean source commit and separate output directory. It records admitted source-text and capacity-omission comparisons against the prior seven turns; a difference means the context is not matched. The [offline instruction review](../../../docs/findings/natural-memory-consultation/native-generation-contract-offline-2026-09-26.md) covers assembled packets and the limits of the preflight. No provider rerun is part of that offline checkpoint.
 
+The one authorized [candidate run and semantic review](../../../docs/findings/natural-memory-consultation/native-generation-candidate-live-2026-09-26.md) used source `6618c4a` and a separate ignored output root. Its seven native turns, capture hashes, actual H admission comparisons, committed deltas and independent SQL readback are retained there. This bounded result does not change the default or qualify a release.
+
 To reproduce the structural database checks, use an isolated PostgreSQL 15
 instance with pgvector and a passwordless loopback `ade_owner` database named
 `ade_history_test_<hex>`. On a host with Docker, for example:

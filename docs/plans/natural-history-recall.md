@@ -446,10 +446,13 @@ edits. Director review remains the gate before the fresh live diagnostic in
 checkpoint 4. This is the single plan for this follow-up, not an amendment to
 the immutable H4 fixtures, captures, or historical results.
 
-Checkpoint 1–3 offline work is prepared for director review. The
+Checkpoints 1–3 passed offline director review. The
 [instruction audit](../findings/natural-memory-consultation/native-generation-contract-offline-2026-09-26.md)
-records the assembled packet review, binding and proportional checks. No live
-candidate diagnostic has run.
+records the assembled packet review, binding and proportional checks.
+Checkpoint 4 completed one fresh seven-turn candidate diagnostic; the
+[source-bound finding](../findings/natural-memory-consultation/native-generation-candidate-live-2026-09-26.md)
+records checkpoint 5's bounded dialogue/persistence review and adoption
+recommendation. No default or release decision follows from it.
 
 ### Outcome and Evidence
 

@@ -107,6 +107,15 @@ and PC-09 (simplicity and observational request counts).
   checks and are ready for director review before any new provider call. Shared
   generation changes affect old bindings at assembly; no default, production,
   reviewer or release binding changes are authorized.
+- The one-shot [native generation candidate diagnostic](findings/natural-memory-consultation/native-generation-candidate-live-2026-09-26.md)
+  completed seven delivered turns on clean `6618c4a` across four isolated
+  subjects. Both ambiguous dog replies clarified without early writes; explicit
+  and clarified updates changed only named targets. The tea reply acknowledged
+  admitted past testimony after an empty saved-fact search, and a fresh
+  preference became a new active fact while the old one remained forgotten.
+  Follow-up H source text was not matched to the prior run, and two replies
+  carry possible premature future-memory wording. This supports continued
+  candidate evaluation, not default adoption or release promotion.
 
 Earlier authorization and status statements below describe their dated
 checkpoints, not current commands or proof of completion. In particular, old
