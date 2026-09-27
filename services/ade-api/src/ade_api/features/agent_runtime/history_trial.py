@@ -115,7 +115,9 @@ class HistoryTrialService:
         self.resources = resources
 
     async def options(self) -> dict[str, Any]:
-        return await self.sessions.options()
+        options = await self.sessions.options()
+        options["max_retry_count"] = 0
+        return options
 
     async def create(self, request: CreateAgentStudioSessionRequest) -> dict[str, Any]:
         return await self.sessions.create(request)

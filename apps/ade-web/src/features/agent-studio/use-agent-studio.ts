@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
+  HISTORY_TRIAL,
   acceptTurn,
   cancelRun,
   createAgentStudioSession,
@@ -92,11 +93,11 @@ export function useAgentStudio() {
   const [retryCount, setRetryCount] = useState(0);
   const [title, setTitle] = useState("New conversation");
   const [definitionChoice, setDefinitionChoice] = useState(NEW_RESOURCE_VALUE);
-  const [definitionName, setDefinitionName] = useState("ADE Native Companion");
-  const [definitionKey, setDefinitionKey] = useState("ade_native_companion");
+  const [definitionName, setDefinitionName] = useState(HISTORY_TRIAL ? "Lin Xiaotang · historical recall trial" : "ADE Native Companion");
+  const [definitionKey, setDefinitionKey] = useState(HISTORY_TRIAL ? "lin_xiaotang_history_trial" : "ade_native_companion");
   const [subjectChoice, setSubjectChoice] = useState(NEW_RESOURCE_VALUE);
-  const [subjectName, setSubjectName] = useState("New memory subject");
-  const [subjectKey, setSubjectKey] = useState("local-user");
+  const [subjectName, setSubjectName] = useState(HISTORY_TRIAL ? "" : "New memory subject");
+  const [subjectKey, setSubjectKey] = useState(HISTORY_TRIAL ? "" : "local-user");
   const [subjectRename, setSubjectRename] = useState("");
   const [evidenceMessageId, setEvidenceMessageId] = useState("");
   const [evidenceError, setEvidenceError] = useState("");

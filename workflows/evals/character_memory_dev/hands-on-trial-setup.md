@@ -35,8 +35,9 @@ and `history_trial_enabled` are set. The UI switches its resource endpoints to
 that purpose-scoped API only in the trial build. Resource creation binds
 `evaluation` purpose, the `chat_v20260926` candidate, the H4 history policy and
 capacity, `automatic_history`, the exact Qwen ranking recipe, DeepSeek for
-conversation and review, `search_memory`, and zero additional retries before
-persisting immutable versions. Worker startup configures the matching probe.
+conversation and review, and `search_memory` before persisting immutable
+versions. The trial UI sends zero additional retries for turns. Worker startup
+configures the matching probe.
 The ordinary Agent Studio API, defaults and production runtime are unchanged.
 See [ADR 0045](../../../docs/adr/0045-isolated-history-trial-composition.md).
 

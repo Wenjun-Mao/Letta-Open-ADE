@@ -12,6 +12,7 @@ const navigation = vi.hoisted(() => {
   return { state, router };
 });
 const api = vi.hoisted(() => ({
+  HISTORY_TRIAL: false,
   getAgentStudioOptions: vi.fn(), listAgentStudioSessions: vi.fn(), listAgentStudioDefinitions: vi.fn(),
   listAgentStudioSubjects: vi.fn(), getAgentStudioSession: vi.fn(), getConversationState: vi.fn(),
   getSubjectMemories: vi.fn(), listConversationRuns: vi.fn(), getRun: vi.fn(), getRunEventLog: vi.fn(),

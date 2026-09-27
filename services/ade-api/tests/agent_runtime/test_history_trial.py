@@ -107,12 +107,13 @@ def test_trial_options_expose_candidate_without_changing_ordinary_default() -> N
         database=None, settings=SimpleNamespace(agent_runtime_mode="development"),
         prompt_registry=None, router_transport=None,
     )  # type: ignore[arg-type]
-    trial = HistoryTrialSessionService(
-        database=None, definitions=HistoryTrialDefinitions(base), purpose="evaluation",
+    trial = HistoryTrialService(
+        database=None, definitions=base, resources=None,
     )  # type: ignore[arg-type]
     options = asyncio.run(trial.options())
     assert options["bundles"][0]["prompt_key"] == "chat_v20260926"
     assert options["bundles"][0]["memory_policy_version"] == HISTORY_PROBE_POLICY
+    assert options["max_retry_count"] == 0
     assert base.default_agent_studio_request().prompt_key == "chat_v20260516"
 
 
