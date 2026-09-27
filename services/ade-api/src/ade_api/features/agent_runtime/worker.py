@@ -10,6 +10,7 @@ from ade_api.platform.settings import AdeApiSettings, get_settings
 
 from .errors import RuntimeNotReady
 from .history_admission import HistoryProbe
+from .history_trial import TRIAL_QWEN_FINGERPRINT
 from .flags import ensure_agent_runtime_enabled
 from .persistence.database import create_persistence_engine
 from .persistence.validation import validate_database_at_head
@@ -281,10 +282,21 @@ def build_worker() -> AgentRuntimeWorker:
         raise RuntimeNotReady(
             "ADE_API_MODEL_ROUTER_BASE_URL is required for the agent runtime"
         )
+    if settings.history_trial_enabled and settings.agent_runtime_mode != "development":
+        raise RuntimeNotReady("History trial worker requires development mode")
     return AgentRuntimeWorker(
         engine=create_persistence_engine(settings.database_url),
         settings=settings,
         transport=build_runtime_router_transport(settings),
+        history_probe=(
+            HistoryProbe(
+                arm="automatic_history",
+                ranking_recipe="probe_local_qwen_cosine",
+                expected_embedding_fingerprint=TRIAL_QWEN_FINGERPRINT,
+            )
+            if settings.history_trial_enabled
+            else None
+        ),
     )
 
 

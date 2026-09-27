@@ -22,6 +22,7 @@ from ade_api.features.schema_center import api as schema_center
 from ade_api.features.test_center import api as test_center
 from ade_api.platform.openapi_metadata import OPENAPI_TAGS
 from ade_api.platform.settings import get_settings
+from ade_api.features.agent_runtime.history_trial_api import router as history_trial_router
 
 
 @asynccontextmanager
@@ -62,6 +63,10 @@ def create_app() -> FastAPI:
         return {"status": "ok", "version": APP_VERSION}
 
     app.include_router(agent_runtime_router)
+    if settings.history_trial_enabled:
+        if settings.agent_runtime_mode != "development" or not settings.agent_runtime_enabled:
+            raise RuntimeError("History trial requires enabled development runtime")
+        app.include_router(history_trial_router)
     app.include_router(comment_lab.router)
     app.include_router(label_lab.router)
     app.include_router(model_catalog.router)

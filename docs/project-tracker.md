@@ -1,6 +1,6 @@
 # ADE Project Tracker
 
-Updated: 2026-09-26. Owner: this ADE task, using Relay for delegated reporting.
+Updated: 2026-09-27. Owner: this ADE task, using Relay for delegated reporting.
 Direction and milestone completion criteria live in the [roadmap](product-roadmap.md).
 
 ## Current Summary
@@ -53,6 +53,15 @@ and PC-09 (simplicity and observational request counts).
   pending director review. The release policy-freshness gate remains unwaived.
 - The candidate-policy freshness failure remains unwaived; no release promotion
   or production change follows from these diagnostic results.
+- The [isolated Lin Xiaotang browser trial](../workflows/evals/character_memory_dev/hands-on-trial.md)
+  is running on loopback port 13001 with a development-only evaluation API,
+  automatic history worker, DeepSeek conversation/reviewer and pinned Qwen
+  ranking. [ADR 0045](adr/0045-isolated-history-trial-composition.md) records
+  the intentional composition. The [four-turn smoke](findings/natural-memory-consultation/hands-on-trial-smoke-2026-09-27.md)
+  verified archived-source admission and a correct separate-chat stool reply;
+  a different-subject question hit the existing tool-step ceiling with no
+  reply, so spoken isolation remains unverified in that smoke. No reroll,
+  default change, production deployment or release waiver followed.
 - Director approved the evaluation-only H4 reviewer amendment after the
   [offline preflight diagnosis](findings/natural-memory-consultation/history-h4-preflight-blocker-2026-09-26.md).
   The H2-hashed source contract stays unchanged; the separate H4 overlay binds

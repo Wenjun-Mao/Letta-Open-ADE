@@ -95,10 +95,12 @@ class DefinitionService:
             tool_names=tool_names,
         )
 
-    def configured_agent_studio_bundle(self) -> dict[str, Any]:
+    def configured_agent_studio_bundle(
+        self, request: CreateAgentDefinitionRequest | None = None
+    ) -> dict[str, Any]:
         """Describe the configured bundle without requiring a live provider."""
 
-        request = self.default_agent_studio_request()
+        request = request or self.default_agent_studio_request()
         manifest = load_deployment_manifest(
             PROJECT_ROOT / AGENT_STUDIO_DEPLOYMENT_MANIFEST_PATH,
             project_root=PROJECT_ROOT,

@@ -1,30 +1,162 @@
-# Lin Xiaotang hands-on continuity trial
+# Chatting with Lin Xiaotang: a hands-on trial
 
-Status: **script prepared; interactive historical-recall trial is not yet runnable in Agent Studio.** This is a development exercise, not a release qualification or an exact-answer test. It follows PC-01/02/03/04/05/09/10 and ADR 0044. Use only fictional details: conversation messages are sent to the configured DeepSeek provider. Do not paste real private information.
+**Allow 15–20 minutes.** Follow the examples loosely, respond naturally, and send
+one message at a time. This is a conversation, not an exact-answer exam.
 
-## Before starting
+Open the [isolated Lin Xiaotang trial](http://127.0.0.1:13001/agent-studio).
+It is labeled **Experimental history trial**. Use a new fictional **Memory
+subject** rather than an operator-created `SMOKE` subject. The trial stack must
+be running; the [operator setup note](hands-on-trial-setup.md) has the commands.
 
-The trial needs an isolated, loopback-only development app with its own PostgreSQL database and content storage, a worker bound to `HistoryProbe(arm="automatic_history", ranking_recipe=...)`, and evaluation-purpose resources carrying the H4 capacity and `chat_v20260926` snapshots. The definition should show Lin Xiaotang (`chat_linxiaotang`), DeepSeek for conversation and reviewer, Qwen for retriever, `search_memory`, and the history-probe policy. Confirm these bindings in the UI before chatting. Keep **Additional retries** at `0`. The trial operator should provide the local URL and start/stop commands after the development composition is implemented and verified; there is no safe startup command in the current app for this exercise.
+Use fictional details. Your messages go to DeepSeek. Technical preparation lives
+in the [operator setup note](hands-on-trial-setup.md), not in the chat script.
 
-The current **Agent Studio** UI creates `agent_studio` resources, whereas the history probe accepts only `evaluation` resources. Its present default bundle is `chat_v20260516` with typed memory. Merely changing the prompt selection cannot turn on historical recall. The existing evaluation API has no interactive list/archive/subject inspection UI. Do not use the current production Agent Studio URL as a substitute. Ordinary Agent Studio can already explore saved fact creation, correction, same-subject sharing, and subject isolation under its own policy; a successful answer about the stool there would not verify the evaluation-only historical retrieval path.
+## Your Route
 
-## Loose 15–20 minute script
+| Chat | What you do | Time |
+| --- | --- | --- |
+| 1 | Introduce yourself and tell a small story | 5 minutes |
+| 2 | Open a separate chat, recall the story, and update your city | 5 minutes |
+| 3 | Open another chat and see what carries over | 5 minutes |
+| Optional | Try an unclear reference or a different user | 2–5 minutes |
 
-Talk naturally. Read Xiaotang's actual reply before deciding the next line. The examples are prompts, not required exact wording or a score sheet.
+**For chats 1–3, use the same character and the same user.** A new chat is not a
+new user. The UI calls the user identity **Memory subject**. Keep its name handy
+so you can select it again.
 
-1. **First chat, about 5 minutes.** Under **Start a conversation**, choose the trial definition in **Definition version**, **Create a new subject** in **Memory subject**, and **Create immutable binding**. Give the subject a fictional name and stable key. In **User message**, say: “我现在住在蒙特利尔，周末比较喜欢去听现场音乐，尤其是爵士乐。” Run the turn. Then share a small event: “昨天第一次去做木工，想做个书架，结果把一块板锯短了，最后改成了小凳子。” Let the chat wander briefly. You can mention two exhibits, such as “今天看了摄影展和陶瓷展，一个有点吵，一个挺安静。” If Xiaotang's reply still leaves both exhibits plausible, try “那个我可能会拉朋友一起去” and notice whether she clarifies without pushing a guess. If her reply clearly singles one out, skip the ambiguity probe. Ask an unrelated question: “18:35 再过四十分钟是几点？” The answer is 19:15; notice whether she answers directly without forcing a memory callback.
-2. **Second chat, about 5 minutes.** Use **Start a conversation** again. Select the *same* definition version (or an ordinary new version of the same definition root, if the trial exposes one) and the *existing* subject from chat 1. **Create immutable binding**. Ask naturally about the woodworking mishap: “上次我做木工那个书架，最后变成了什么来着？” Then update a fact: “我搬到魁北克城了，现在住这边；蒙特利尔是之前住的地方。” Separately say something like “上周去了一场摇滚演出，挺热闹的。” Attending rock music is an event; it does not by itself replace the earlier jazz preference.
-3. **Third chat, about 5 minutes.** Optionally use **Archive conversation** on chat 1. Start another chat with the same definition root and existing subject. Ask “我现在住哪座城市来着？” and request a music suggestion for this weekend. Bring up the small stool again without repeating its outcome, then finish naturally with “晚安，小棠。” See whether the reply connects to relevant earlier dialogue, distinguishes current Quebec City from earlier Montreal, and avoids inventing details about the stool or turning every answer into a memory recap. Archiving chat 1 should affect visibility, not eligible recall.
-4. **Optional isolation check, 2 minutes.** Start one chat with **Create a new subject** and a different stable key. Ask “我现在住哪座城市来着？” It should not attribute the first subject's city to this new person. Ordinary uncertainty is fine.
+## Chat 1: Get Acquainted
 
-After chatting, inspect **Memory subject** and saved facts. Check the current location and whether any music preference was committed or revised. The woodworking event may be available through historical dialogue without becoming a saved fact. A hedged conversational guess is not automatically a memory failure: note whether it was asserted as true, how it sounded, and whether the reviewer actually committed a write. A model can sound confident while memory stayed unchanged, or answer cautiously while a write needs inspection.
+**Start:** create a conversation with the trial's Lin Xiaotang character and a
+new fictional memory subject. Keep the character version unchanged for the main
+script.
 
-Quick observation notes: Did continuity feel natural? Were the city and stool accurate? Did the city update displace the old current location? Did rock attendance leave the jazz preference appropriately interpreted? Did irrelevant questions stay simple? What felt pleasant or awkward overall? Record examples in your own words; no numeric grade or exact phrasing is required.
+### 1. Introduce Yourself
 
-## Boundary and implementation proposal
+> 我现在住在蒙特利尔，周末比较喜欢去听现场音乐，尤其是爵士乐。
 
-Current Agent Studio resource APIs list, create, archive, and read only `agent_studio` purpose through `agent_studio_api.py` and `AgentRuntimeApplication`. `PurposeSessionService` already encapsulates purpose-owned resource creation, but its Agent Studio instance is bound to `agent_studio`. `TurnExecution` rejects the history-probe policy for any purpose other than `evaluation`; `checked_history_probe_capacity` likewise requires evaluation purpose and exact bound snapshots. `build_worker()` constructs a worker without a probe. The evaluation API can create and inspect one evaluation session, but does not expose the subject/definition/conversation library needed for this script. In the browser, `use-agent-studio.ts` and `api.ts` call only Agent Studio resource URLs, while `agent-studio-view.tsx` owns the reusable conversation UI. These are independent contract checks, not a missing prompt toggle.
+Read her reply and chat back if you feel like it.
 
-A bounded follow-up could use the existing Studio view with an explicit **development trial mode** and evaluation-scoped service methods. `EvaluationSessionService` can reuse `PurposeSessionService` and `ResourceService` to expose the missing list/reuse/archive/memory reads, with reader/operator/admin roles and purpose checks preserved at each endpoint. Definition preparation must bind the H4 policy and capacity *before* immutable version creation; a workflow-local worker startup must construct the automatic-history probe with the pinned Qwen recipe. The isolated stack needs its own database, content storage and loopback ports. Every browser surface must visibly say it is experimental evaluation data.
+### 2. Tell a Small Story
 
-A separate copied Studio UI and parallel resource implementation would duplicate ownership and drift. A CLI-only evaluation runner would preserve the existing boundary but would not give the requested interactive browser trial. Reinterpreting existing `/agent-studio` URLs as evaluation resources or broadening `history_probe` to `agent_studio` would obscure purpose and access-control meaning. The proposed mode and endpoints are a public API and access-control design decision, so they need director scope approval before code is added. The follow-up needs a concise ADR for this intentional development divergence, focused purpose/ownership tests, and a browser/API/worker/PostgreSQL smoke check with a separate subject. No existing database rows or definition snapshots should be rewritten.
+> 昨天第一次去做木工，想做个书架，结果把一块板锯短了，最后改成了小凳子。
+
+Let the exchange develop for a turn or two. Don't ask her to save anything.
+Leave memory inspection until the end.
+
+### 3. Change the Subject
+
+> 18:35 再过四十分钟是几点？
+
+Then move on to chat 2.
+
+## Chat 2: Pick Up in a Separate Chat
+
+**Start:** create a new conversation with **the same character and existing
+memory subject** from chat 1. Do not create another subject.
+
+### 1. Refer Back Without Giving the Answer
+
+> 上次我做木工那个书架，最后变成了什么来着？
+
+Let her answer before explaining anything else.
+
+### 2. Update Your City
+
+> 我搬到魁北克城了，现在住这边；蒙特利尔是之前住的地方。
+
+Respond naturally to whatever she says.
+
+### 3. Mention an Outing
+
+> 上周去了一场摇滚演出，挺热闹的。
+
+You can talk about the evening. You don't need to restate the jazz preference.
+
+## Chat 3: See What Carries Over
+
+**Start:** create another conversation with **the same character and existing
+memory subject**.
+
+For an optional archive check, archive chat 1 before starting. Archiving should
+hide it from the ordinary list, not erase eligible recall.
+
+### 1. Ask About the Present
+
+> 我现在住哪座城市来着？
+
+### 2. Ask for a Suggestion
+
+> 这周末想听点现场音乐，你觉得我可以找什么样的演出？
+
+### 3. Revisit the Story
+
+> 还记得我第一次做木工，最后做成了什么吗？
+
+Again, let her answer without supplying the outcome.
+
+### 4. Say Goodnight
+
+> 晚安，小棠。
+
+Notice how the ending feels. A friendly callback is not automatically a problem;
+does it feel fitting or forced to you?
+
+## Optional Detours
+
+### An Unclear Reference
+
+Try this during any same-user chat:
+
+> 今天看了摄影展和陶瓷展，一个有点吵，一个挺安静。
+
+Read the reply. **Only if both exhibits still seem plausible**, continue:
+
+> 那个我可能会拉朋友一起去。
+
+Does she ask which one you mean, or jump to a conclusion? If her previous reply
+already singled one out, skip this check: the reference may no longer be unclear.
+You can then clarify whichever exhibit you meant.
+
+### A Different User
+
+Create a conversation with the same character but **a new memory subject**, with
+a different stable key. This is deliberately a different person.
+
+> 我现在住哪座城市来着？
+
+She should not attribute the first user's city to this person. Saying she doesn't
+know or asking you is fine.
+
+## After Chatting: A Quick Look Back
+
+Now inspect the original subject's saved facts. Keep **what she said** separate
+from **what was actually saved**.
+
+| Check | What to look for |
+| --- | --- |
+| City | Quebec City is current; Montreal is previous, not still current. |
+| Music | Attending a rock concert did not, by itself, replace the jazz preference. |
+| Woodworking | The result was a stool, without invented details. Dialogue can support recall even without a saved fact. |
+| Separate chats | Relevant details carried over without repetition from you. |
+| Simple question | The time answer was 19:15, without an unnecessary memory recap. |
+| Different user, if tried | The original user's facts were not attributed to the new subject. |
+| Overall feel | What felt natural, repetitive, pleasant, or awkward? |
+
+A tentative guess, a confident assertion, and a committed memory update are
+different observations. Note which happened rather than treating every awkward
+phrase as a memory failure. No numeric grade or exact wording is required.
+
+### Small Notes Template
+
+```text
+Trial date / character version:
+Original subject name:
+
+Best continuity moment:
+Most awkward or inaccurate moment:
+My message and her reply (if useful):
+Saved memory afterward (if relevant):
+One thing I would want improved:
+```
+
+This is a hands-on development trial, not release qualification.

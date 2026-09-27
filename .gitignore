@@ -25,6 +25,7 @@ content/prompts/system/letta_original/system_prompts
 tests/outputs
 diagnostics
 workflows/evals/*/outputs/
+workflows/evals/character_memory_dev/.trial/
 
 apps/ade-web/node_modules/
 apps/ade-web/.next/

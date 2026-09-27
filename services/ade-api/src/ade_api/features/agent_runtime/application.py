@@ -28,6 +28,7 @@ from .agent_studio_sessions import AgentStudioSessionService, AGENT_STUDIO_PURPO
 from .database_boundary import RuntimeDatabase
 from .definition_service import DefinitionService
 from .evaluation_sessions import EvaluationSessionService
+from .history_trial import HistoryTrialService
 from .errors import RuntimeNotReady
 from .persistence.database import create_persistence_engine
 from .resource_service import ResourceService
@@ -65,6 +66,11 @@ class AgentRuntimeApplication:
             definitions=self.definitions,
         )
         self.evaluations = EvaluationSessionService(
+            database=self.database,
+            definitions=self.definitions,
+            resources=self.resources,
+        )
+        self.history_trial = HistoryTrialService(
             database=self.database,
             definitions=self.definitions,
             resources=self.resources,

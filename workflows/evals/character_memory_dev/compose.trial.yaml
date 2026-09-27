@@ -1,0 +1,33 @@
+services:
+  model-router:
+    environment:
+      MODEL_ROUTER_SOURCES_FILE: config/model-router/sources.trial.json
+    volumes:
+      - ./workflows/evals/character_memory_dev/.trial/router-config:/app/config:ro
+      - ./content/model-catalog:/app/content/model-catalog:ro
+
+  postgres:
+    volumes:
+      - ./workflows/evals/character_memory_dev/.trial/pgdata:/var/lib/postgresql/data
+
+  ade-api:
+    environment:
+      ADE_API_HISTORY_TRIAL_ENABLED: "true"
+      ADE_API_PERSONA_DB_PATH: data/runtime/trial/personas.sqlite3
+    volumes:
+      - ./workflows/evals/character_memory_dev/.trial/content:/app/content
+      - ./workflows/evals/character_memory_dev/.trial/router-config:/app/config:ro
+      - ./workflows/evals/character_memory_dev/.trial/runtime:/app/data/runtime
+      - ./workflows/evals/character_memory_dev/.trial/outputs:/app/workflows/evals/agent_runtime_acceptance/outputs
+
+  ade-runtime-worker:
+    environment:
+      ADE_API_HISTORY_TRIAL_ENABLED: "true"
+      ADE_API_AGENT_RUNTIME_WORKER_ID: ade-history-trial-worker
+    volumes:
+      - ./workflows/evals/character_memory_dev/.trial/runtime:/app/data/runtime
+
+  ade-web:
+    build:
+      args:
+        NEXT_PUBLIC_HISTORY_TRIAL: "1"

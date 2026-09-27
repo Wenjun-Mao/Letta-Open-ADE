@@ -50,6 +50,7 @@ class AdeApiSettings(BaseSettings):
     persona_seed_jsonl_path: str = "content/personas/personas.jsonl"
     agent_runtime_enabled: bool = False
     agent_runtime_mode: Literal["release", "development"] = "release"
+    history_trial_enabled: bool = False
     database_url: str = ""
     agent_runtime_worker_id: str = "ade-runtime-worker"
     agent_runtime_worker_poll_seconds: float = 0.5

@@ -1,9 +1,10 @@
 # Character Memory Development
 
-For a prospective human trial of Xiaotang's continuity, use the [hands-on
-script and current setup boundary](hands-on-trial.md). Its interactive history
-path is pending an explicit development API/runtime composition; the ordinary
-Agent Studio bundle does not enable that probe.
+For an isolated human trial of Xiaotang's continuity, open the
+[trial browser](http://127.0.0.1:13001/agent-studio) and use the [step-by-step
+chat playbook](hands-on-trial.md). Start and stop commands are in the
+[operator setup note](hands-on-trial-setup.md). The experimental evaluation
+composition is separate from ordinary Agent Studio and production defaults.
 
 ## Historical Recall Probe (H1–H3 Checkpoints)
 

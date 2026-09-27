@@ -1,4 +1,4 @@
-import { requestJson, type ApiRequestOptions } from "@/shared/api/client";
+import { requestJson as baseRequestJson, type ApiRequestOptions, type RequestOptions } from "@/shared/api/client";
 
 import type {
   AgentDefinition,
@@ -15,6 +15,15 @@ import type {
 } from "./types";
 
 type ListResponse<T> = { total: number; items: T[] };
+
+export const HISTORY_TRIAL = process.env.NEXT_PUBLIC_HISTORY_TRIAL === "1";
+
+function requestJson<T>(path: string, options?: RequestOptions): Promise<T> {
+  const scopedPath = HISTORY_TRIAL
+    ? path.replace(/^\/api\/v3\/agent-studio(?=\/|$)/, "/api/v3/history-trial")
+    : path;
+  return baseRequestJson<T>(scopedPath, options);
+}
 
 function listPath(path: string, includeArchived: boolean): string {
   const query = new URLSearchParams({ limit: "200", offset: "0" });
