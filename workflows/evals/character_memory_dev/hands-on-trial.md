@@ -20,15 +20,17 @@ in the [operator setup note](hands-on-trial-setup.md), not in the chat script.
 | 3 | Open another chat and see what carries over | 5 minutes |
 | Optional | Try an unclear reference or a different user | 2–5 minutes |
 
-**For chats 1–3, use the same character and the same user.** A new chat is not a
-new user. The UI calls the user identity **Memory subject**. Keep its name handy
-so you can select it again.
+**For chats 1–3, use the same character and the same person.** A new chat is not
+a new person. In **Who is chatting?**, select that person's name again. The UI
+keeps the character and person selected after starting a chat, but check both
+before the next one.
 
 ## Chat 1: Get Acquainted
 
-**Start:** create a conversation with the trial's Lin Xiaotang character and a
-new fictional memory subject. Keep the character version unchanged for the main
-script.
+**Start:** under **Start a chat**, keep **Character** on Lin Xiaotang, choose
+**A new person** under **Who is chatting?**, and enter a fictional **Your name**.
+Give the chat a title and click **Start chat**. Keep the character version
+unchanged for the main script. Type each line into **Message** and click **Send**.
 
 ### 1. Introduce Yourself
 
@@ -51,8 +53,8 @@ Then move on to chat 2.
 
 ## Chat 2: Pick Up in a Separate Chat
 
-**Start:** create a new conversation with **the same character and existing
-memory subject** from chat 1. Do not create another subject.
+**Start:** create a new chat with **the same Character** and select your existing
+name in **Who is chatting?** Do not choose **A new person**.
 
 ### 1. Refer Back Without Giving the Answer
 
@@ -74,10 +76,10 @@ You can talk about the evening. You don't need to restate the jazz preference.
 
 ## Chat 3: See What Carries Over
 
-**Start:** create another conversation with **the same character and existing
-memory subject**.
+**Start:** create another chat with **the same Character** and your existing
+name in **Who is chatting?**
 
-For an optional archive check, archive chat 1 before starting. Archiving should
+For an optional archive check, choose **Archive chat** on chat 1 before starting. Archiving should
 hide it from the ordinary list, not erase eligible recall.
 
 ### 1. Ask About the Present
@@ -119,8 +121,9 @@ You can then clarify whichever exhibit you meant.
 
 ### A Different User
 
-Create a conversation with the same character but **a new memory subject**, with
-a different stable key. This is deliberately a different person.
+Create a chat with the same character but choose **A new person** under
+**Who is chatting?** and enter a different fictional name. This is deliberately
+a different person; the UI assigns a separate identity even if names match.
 
 > 我现在住哪座城市来着？
 

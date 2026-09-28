@@ -1,6 +1,7 @@
 "use client";
 
 import type { useAgentStudio } from "./use-agent-studio";
+import { FieldCaption, fieldCaptionId } from "./field-caption";
 
 type Controller = ReturnType<typeof useAgentStudio>;
 type Translate = (english: string, chinese: string) => string;
@@ -14,10 +15,10 @@ export function DefinitionVersion({ controller, t }: { controller: Controller; t
     <h3>{t("Create next immutable version", "创建下一个不可变版本")}</h3>
     <p className="muted">{t("Edit persona text in Prompt Center, then select the active prompt and persona here. This creates a new snapshot for future conversations; it does not change this conversation.", "在提示词中心编辑人设文本，再在这里选择活跃的提示词和人设。这将为未来对话创建新快照，不会更改当前对话。")}</p>
     <a href="/prompt-center">{t("Open Prompt Center to edit persona", "打开提示词中心编辑人设")}</a> · <button className="button muted" disabled={controller.busy} onClick={() => void controller.refreshTemplates()}>{t("Refresh template previews", "刷新模板预览")}</button>
-    <label className="field"><span>{t("Version name", "版本名称")}</span><input className="input" value={controller.versionName} onChange={(event) => controller.setVersionName(event.target.value)} /></label>
-    <label className="field"><span>{t("Prompt", "提示词")}</span><select className="input" value={controller.versionPromptKey} onChange={(event) => controller.setVersionPromptKey(event.target.value)}>{controller.prompts.map((item) => <option value={item.key} key={item.key}>{item.label || item.key}</option>)}</select></label>
+    <div className="field"><FieldCaption inputId="studio-version-name">{t("Version name", "版本名称")}</FieldCaption><input id="studio-version-name" aria-labelledby={fieldCaptionId("studio-version-name")} className="input" value={controller.versionName} onChange={(event) => controller.setVersionName(event.target.value)} /></div>
+    <div className="field"><FieldCaption inputId="studio-version-prompt">{t("Prompt", "提示词")}</FieldCaption><select id="studio-version-prompt" aria-labelledby={fieldCaptionId("studio-version-prompt")} className="input" value={controller.versionPromptKey} onChange={(event) => controller.setVersionPromptKey(event.target.value)}>{controller.prompts.map((item) => <option value={item.key} key={item.key}>{item.label || item.key}</option>)}</select></div>
     {prompt ? <pre className="studio-template-preview">{prompt.content}</pre> : null}
-    <label className="field"><span>{t("Persona", "人设")}</span><select className="input" value={controller.versionPersonaKey} onChange={(event) => controller.setVersionPersonaKey(event.target.value)}>{controller.personas.map((item) => <option value={item.key} key={item.key}>{item.label || item.key}</option>)}</select></label>
+    <div className="field"><FieldCaption inputId="studio-version-persona">{t("Persona", "人设")}</FieldCaption><select id="studio-version-persona" aria-labelledby={fieldCaptionId("studio-version-persona")} className="input" value={controller.versionPersonaKey} onChange={(event) => controller.setVersionPersonaKey(event.target.value)}>{controller.personas.map((item) => <option value={item.key} key={item.key}>{item.label || item.key}</option>)}</select></div>
     {persona ? <pre className="studio-template-preview">{persona.content}</pre> : null}
     <button className="button" disabled={controller.busy || !prompt || !persona || !controller.versionName.trim()} onClick={() => void controller.createDefinitionVersion()}>{t("Create version and select for new conversation", "创建版本并选作新对话定义")}</button>
     <p className="muted">{t("Current conversation remains bound to", "当前对话仍绑定于")} {definition.definition_key} v{definition.version}.</p>

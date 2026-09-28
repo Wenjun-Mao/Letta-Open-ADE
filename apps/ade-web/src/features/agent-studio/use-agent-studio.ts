@@ -70,6 +70,8 @@ export function useAgentStudio() {
   const olderPageRef = useRef<{ conversationId: string; cursor: number } | null>(null);
   const evidenceTargetRef = useRef<MemoryEvidence | null>(null);
   const activeMonitorRunRef = useRef<string | null>(null);
+  const createAttemptRef = useRef<{ signature: string; idempotencyKey: string } | null>(null);
+  const subjectBindingsRef = useRef<AgentStudioSession[]>([]);
 
   const [options, setOptions] = useState<AgentStudioOptions | null>(null);
   const [sessions, setSessions] = useState<AgentStudioSession[]>([]);
@@ -94,10 +96,10 @@ export function useAgentStudio() {
   const [title, setTitle] = useState("New conversation");
   const [definitionChoice, setDefinitionChoice] = useState(NEW_RESOURCE_VALUE);
   const [definitionName, setDefinitionName] = useState(HISTORY_TRIAL ? "Lin Xiaotang · historical recall trial" : "ADE Native Companion");
-  const [definitionKey, setDefinitionKey] = useState(HISTORY_TRIAL ? "lin_xiaotang_history_trial" : "ade_native_companion");
+  const [definitionKey, setDefinitionKey] = useState(() => identityKey("studio-character"));
   const [subjectChoice, setSubjectChoice] = useState(NEW_RESOURCE_VALUE);
   const [subjectName, setSubjectName] = useState(HISTORY_TRIAL ? "" : "New memory subject");
-  const [subjectKey, setSubjectKey] = useState(HISTORY_TRIAL ? "" : "local-user");
+  const [subjectKey, setSubjectKey] = useState(() => identityKey("studio-person"));
   const [subjectRename, setSubjectRename] = useState("");
   const [evidenceMessageId, setEvidenceMessageId] = useState("");
   const [evidenceError, setEvidenceError] = useState("");
@@ -165,12 +167,14 @@ export function useAgentStudio() {
   const refreshWorkspace = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextOptions, nextSessions, nextDefinitions, nextSubjects] = await Promise.all([
+      const [nextOptions, nextSessions, nextDefinitions, nextSubjects, allTrialSessions] = await Promise.all([
         getAgentStudioOptions(),
         listAgentStudioSessions(includeArchived),
         listAgentStudioDefinitions(includeArchived),
         listAgentStudioSubjects(includeArchived),
+        HISTORY_TRIAL && !includeArchived ? listAgentStudioSessions(true) : Promise.resolve(null),
       ]);
+      subjectBindingsRef.current = allTrialSessions?.items || nextSessions.items;
       setOptions(nextOptions);
       setSessions(nextSessions.items);
       setDefinitions(nextDefinitions.items);
@@ -347,17 +351,37 @@ export function useAgentStudio() {
 
   async function createSession() {
     try {
-      const payload = sessionDraftPayload(options, { title, definitionChoice, definitionName, definitionKey,
-        subjectChoice, subjectName, subjectKey }, identityKey("studio-session"));
+      const draft = { title, definitionChoice, definitionName, definitionKey,
+        subjectChoice, subjectName, subjectKey };
+      const signature = JSON.stringify(draft);
+      if (createAttemptRef.current?.signature !== signature) {
+        createAttemptRef.current = { signature, idempotencyKey: identityKey("studio-session") };
+      }
+      const payload = sessionDraftPayload(options, draft, createAttemptRef.current.idempotencyKey);
       setBusy(true);
       setError("");
       const created = await createAgentStudioSession(payload);
+      createAttemptRef.current = null;
       await refreshWorkspace();
+      setDefinitionChoice(created.agent_definition.id);
+      setSubjectChoice(created.memory_subject.id);
+      setDefinitionKey(identityKey("studio-character"));
+      setSubjectKey(identityKey("studio-person"));
+      setSubjectName("");
+      setTitle("New conversation");
       selectConversation(created.conversation.id);
     } catch (exc) {
       setError(messageFrom(exc));
     } finally {
       setBusy(false);
+    }
+  }
+
+  function selectSubjectForNewConversation(subjectId: string) {
+    setSubjectChoice(subjectId);
+    if (HISTORY_TRIAL && subjectId !== NEW_RESOURCE_VALUE) {
+      const prior = subjectBindingsRef.current.find((item) => item.memory_subject.id === subjectId);
+      if (prior) setDefinitionChoice(prior.agent_definition.id);
     }
   }
 
@@ -477,7 +501,7 @@ export function useAgentStudio() {
     activeRun: Boolean(run && !TERMINAL_RUN_STATUSES.has(run.status)),
     setIncludeArchived, setMessage, setTimeoutSeconds: (value: number) => setTimeoutSeconds(clampNumber(value, 5, 600)),
     setRetryCount: (value: number) => setRetryCount(clampNumber(value, 0, options?.max_retry_count || 5)),
-    setTitle, setDefinitionChoice, setDefinitionName, setDefinitionKey, setSubjectChoice, setSubjectName, setSubjectKey, setSubjectRename,
+    setTitle, setDefinitionChoice, setDefinitionName, setDefinitionKey, setSubjectChoice, selectSubjectForNewConversation, setSubjectName, setSubjectKey, setSubjectRename,
     selectConversation, inspectSubject, refreshWorkspace, createSession, setSessionArchived, setDefinitionArchived, setSubjectArchived,
     renameSubject, sendMessage, cancelActiveRun, loadOlderMessages, openEvidence, returnToLatestMessages, prepareMemoryAction,
     removeSavedFact, retryRemoval,

@@ -30,6 +30,22 @@ URLs with a visible experimental label. Controls without a trial endpoint are
 hidden. A workflow-local Compose override supplies distinct loopback ports,
 database and content/runtime directories; its stop command retains trial data.
 
+The shared Studio presentation uses person and character names for setup.
+Client-generated, opaque keys are created once per new draft and kept across
+failed submissions with the same idempotency key; a successful chat selects its
+existing person and character for the next chat, then prepares fresh keys for
+another new draft. Equal display names remain separate people. The trial uses
+its pinned character without editable definition internals. Ordinary Studio
+retains version creation and persona previews in an expandable management
+section. Hashes, deployment receipts and run events are available in collapsed
+technical details; saved facts, citations and failures remain visible. Visible
+field captions are selectable text connected with `aria-labelledby`; a plain
+caption click still focuses its control, while dragging preserves the selection.
+The original wrapping `<label>` caused browser label activation to take the
+selection into the input; an explicit `htmlFor` label still did so in a drag
+check. No CSS rule had disabled selection. The caption interaction belongs in
+the shared view because the form structure caused it in both Studio modes.
+
 ## Alternatives and guardrails
 
 A copied Studio application or generic experiment framework would duplicate

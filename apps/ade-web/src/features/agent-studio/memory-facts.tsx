@@ -29,7 +29,7 @@ export function MemoryFacts({ facts, t, openEvidence, prepareAction, removeSaved
   const historical = facts.filter((fact) => fact.status !== "active");
   return <div className="studio-fact-list">
     <h3>{t("Saved facts", "已保存事实")}</h3>
-    <p className="muted">{t("These facts are shared by conversations bound to this subject, not a private character relationship history.", "这些事实由绑定此主体的对话共享，并非角色的私人关系历史。")}</p>
+    <p className="muted">{t("These details may carry into later chats with the same person.", "这些细节可能会延续到与同一个人的后续聊天中。")}</p>
     {active.length ? active.map((fact) => <FactRow key={fact.id} fact={fact} t={t} openEvidence={openEvidence} prepareAction={prepareAction} removeSaved={removeSaved} canCorrect={canCorrect} canRemove={Boolean(canRemove)} />) : <p className="muted">{t("No active saved facts.", "没有活跃的已保存事实。")}</p>}
     <details><summary>{t("Inactive and removed facts", "非活跃及已移除事实")} ({historical.length})</summary>
       <p className="muted">{t("Inactive facts are former assertions, not current preferences. Removal excludes a fact chain from model fact selection; past messages, summaries and audit revisions remain.", "非活跃事实是过往陈述，不是当前偏好。移除会将该事实链排除出模型事实选择；过去的消息、摘要和审计修订仍会保留。")}</p>
@@ -50,8 +50,9 @@ function FactRow({ fact, t, openEvidence, prepareAction, removeSaved, canCorrect
   const [confirmingVersion, setConfirmingVersion] = useState<number | null>(null);
   const confirming = confirmingVersion === fact.version;
   const current = fact.revisions.find((revision) => revision.fact_version === fact.version);
-  return <details><summary><span><strong>{fact.fact_type}</strong> · {fact.entity_label || fact.entity_kind}</span><span className={fact.status === "active" ? "studio-status studio-status-good" : "studio-status studio-status-bad"}>{fact.status} · v{fact.version}</span></summary>
+  return <details><summary><span><strong>{fact.value || t("Removed memory", "已移除的记忆")}</strong></span><span className={fact.status === "active" ? "studio-status studio-status-good" : "studio-status studio-status-bad"}>{fact.status === "active" ? t("saved", "已保存") : t("previous", "过往")}</span></summary>
     <p className="studio-fact-value">{fact.status === "inactive" ? t("Former assertion: ", "过往陈述：") : null}{fact.value || t("Removed from model fact selection", "已从模型事实选择中移除")}</p>
+    <p className="muted">{fact.fact_type} · {fact.entity_label || fact.entity_kind} · v{fact.version}</p>
     {current?.reason ? <p className="muted">{t("Lifecycle reason", "生命周期原因")}: {current.reason}</p> : null}
     {fact.qualifier ? <p className="muted">{t("Qualifier", "限定词")}: {fact.qualifier}</p> : null}
     {canCorrect && fact.status === "active" ? <div className="toolbar"><button className="button muted" onClick={() => prepareAction(fact.id, fact.version, "correct")}>{t("Prepare reviewed correction", "准备审核更正")}</button></div> : null}

@@ -102,6 +102,26 @@
   margin-top: 14px;
 }
 
+.agent-studio-root .studio-field-caption {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: text;
+}
+
+.studio-technical-details {
+  margin-top: 12px;
+}
+
+.studio-technical-details > summary {
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.studio-technical-details[open] > summary {
+  margin-bottom: 12px;
+}
+
 .studio-setup-card {
   border-top: 4px solid var(--studio-blue);
 }
@@ -192,12 +212,7 @@
 }
 
 .studio-empty-state {
-  min-height: 460px;
-  padding: 36px;
-  border: 1px dashed #91bce0;
-  background:
-    linear-gradient(130deg, rgba(234, 245, 255, 0.9), rgba(255, 255, 255, 0.96)),
-    repeating-linear-gradient(135deg, transparent 0 12px, rgba(11, 93, 168, 0.03) 12px 13px);
+  padding: 22px 4px;
 }
 
 .studio-empty-state p {

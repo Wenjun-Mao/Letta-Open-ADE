@@ -98,6 +98,7 @@ async function flush() { await act(async () => { await new Promise((done) => set
 
 beforeEach(() => {
   vi.clearAllMocks(); streams.calls.length = 0;
+  api.HISTORY_TRIAL = false;
   navigation.state.query = new URLSearchParams("conversation=A");
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   container = document.createElement("div"); document.body.append(container); root = createRoot(container);
@@ -124,6 +125,53 @@ afterEach(async () => {
 });
 
 describe("Agent Studio async ownership", () => {
+  it("keeps an archived chat's character binding when its person is selected in the trial", async () => {
+    api.HISTORY_TRIAL = true;
+    navigation.state.query = new URLSearchParams();
+    api.listAgentStudioSessions.mockImplementation(async (includeArchived: boolean) =>
+      includeArchived ? { items: [session("archived")], total: 1 } : { items: [], total: 0 });
+    await render();
+    await act(async () => { controller.selectSubjectForNewConversation("subject-archived"); });
+    expect(controller.definitionChoice).toBe("definition-v1");
+  });
+
+  it("keeps hidden identities through failed starts, separates same-name people, and reuses selected bindings", async () => {
+    navigation.state.query = new URLSearchParams();
+    const createdSessions = new Map<string, AgentStudioSession>();
+    api.getAgentStudioSession.mockImplementation(async (id: string) => createdSessions.get(id) || session(id));
+    api.createAgentStudioSession.mockRejectedValueOnce(new Error("network lost"));
+    api.createAgentStudioSession.mockImplementation(async (payload: { new_subject?: { external_key: string } }) => {
+      const created = { ...session(`created-${api.createAgentStudioSession.mock.calls.length}`),
+        memory_subject: { ...session("created").memory_subject,
+        id: `person-${api.createAgentStudioSession.mock.calls.length}`,
+        external_key: payload.new_subject?.external_key || "existing" } };
+      createdSessions.set(created.conversation.id, created);
+      return created;
+    });
+    await render();
+    await act(async () => { controller.setSubjectName("Alex"); });
+    await act(async () => { await controller.createSession(); });
+    const first = api.createAgentStudioSession.mock.calls[0][0];
+    expect(first.new_subject.display_name).toBe("Alex");
+    expect(first.new_subject.external_key).toMatch(/^studio-person-/);
+    await act(async () => { await controller.createSession(); });
+    const retried = api.createAgentStudioSession.mock.calls[1][0];
+    expect(retried.new_subject.external_key).toBe(first.new_subject.external_key);
+    expect(retried.idempotency_key).toBe(first.idempotency_key);
+    expect(controller.subjectChoice).toBe("person-2");
+    expect(controller.definitionChoice).toBe("definition-v1");
+    await act(async () => { await controller.createSession(); });
+    const reused = api.createAgentStudioSession.mock.calls[2][0];
+    expect(reused.memory_subject_id).toBe("person-2");
+    expect(reused.agent_definition_id).toBe("definition-v1");
+    expect(reused.new_subject).toBeUndefined();
+    await act(async () => { controller.selectSubjectForNewConversation("__new__"); controller.setSubjectName("Alex"); });
+    await act(async () => { await controller.createSession(); });
+    const distinct = api.createAgentStudioSession.mock.calls[3][0];
+    expect(distinct.new_subject.display_name).toBe("Alex");
+    expect(distinct.new_subject.external_key).not.toBe(first.new_subject.external_key);
+  });
+
   it("keeps a live run monitored through same-conversation evidence navigation and refreshes on terminal", async () => {
     api.getAgentStudioSession.mockImplementation(async (id: string) => session(id, id === "A" ? run("running") : null));
     await render();
