@@ -59,6 +59,7 @@ def conversation_activity(
                     for event in observed
                     if event["event_type"] == "model.request.started"
                     and event.get("attempt") == terminal.get("attempt")
+                    and (event.get("payload") or {}).get("operation") != "catalog"
                 }
             )
             covered = expected_final == retained_final

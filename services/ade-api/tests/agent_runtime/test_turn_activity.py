@@ -26,6 +26,7 @@ def start(run_id, request_id, stage, operation="chat_completion", attempt=1):
 def test_success_counts_dispatches_tools_and_admitted_sources() -> None:
     run = {"id": "run", "status": "succeeded", "attempt_count": 1}
     events = [
+        start("run", "catalog", "catalog", "catalog"),
         start("run", "a", "conversation"),
         event("run", "model.response.completed", {"request_id": "a"}),
         start("run", "b", "reviewer"),
