@@ -122,6 +122,81 @@ def test_v2_current_turn_survives_unrelated_local_topic() -> None:
     assert guards == [[item["run_id"] for item in corpus]] * 4
 
 
+def test_v2_context_can_recover_anaphoric_source() -> None:
+    corpus = [
+        _exchange("answer", "那场答辩后来顺利结束了。"),
+        *[_exchange(f"distractor-{index}", "昨天整理了书柜。") for index in range(4)],
+    ]
+    current = "那后来怎么样了？"
+    suffix = [
+        {"role": "user", "content": "我之前提过一件让我焦虑的事。"},
+        {"role": "assistant", "content": "你说过那场答辩，当时很担心。"},
+    ]
+
+    async def authorize(_exchanges):
+        return set()
+
+    class Embeddings:
+        async def embed(self, *, model_key, inputs, timeout_seconds):
+            vectors = []
+            for item in inputs:
+                if item.startswith("User: 那场答辩"):
+                    head = [1.0, 0.0]
+                elif item == query_text(current, []):
+                    head = [0.65, 0.76]
+                elif item == query_text(current, suffix):
+                    head = [0.98, 0.2]
+                else:
+                    head = [0.0, 1.0]
+                vectors.append([*head, *([0.0] * 1022)])
+            return vectors
+
+    result = asyncio.run(
+        rank_native_history(
+            exchanges=corpus,
+            current_user=current,
+            local_suffix=suffix,
+            recipe="probe_local_qwen_cosine_v2",
+            embeddings=Embeddings(),
+            model_key=HISTORY_EMBEDDING_ROUTE,
+            deadline=time.monotonic() + 30,
+            authorize_sources=authorize,
+            mark_exposed=lambda: None,
+        )
+    )
+    assert result.ranked[0]["id"] == "answer"
+    assert result.all_scores["answer"] > result.all_scores["distractor-0"]
+
+
+def test_v2_without_local_suffix_uses_one_query() -> None:
+    requests: list[list[str]] = []
+
+    async def authorize(_exchanges):
+        return set()
+
+    class Embeddings:
+        async def embed(self, *, model_key, inputs, timeout_seconds):
+            requests.append(list(inputs))
+            return [[1.0] * 1024 for _ in inputs]
+
+    result = asyncio.run(
+        rank_native_history(
+            exchanges=[_exchange("source", "我做了一个小碗。")],
+            current_user="那个小碗是什么？",
+            local_suffix=[],
+            recipe="probe_local_qwen_cosine_v2",
+            embeddings=Embeddings(),
+            model_key=HISTORY_EMBEDDING_ROUTE,
+            deadline=time.monotonic() + 30,
+            authorize_sources=authorize,
+            mark_exposed=lambda: None,
+        )
+    )
+    assert requests[1] == [query_text("那个小碗是什么？", [])]
+    assert result.ranked[0]["id"] == "source"
+    assert result.embedding_dispatches == 2
+
+
 def test_native_qwen_omits_preexposure_purge_without_dispatch() -> None:
     calls = []
 
