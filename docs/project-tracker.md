@@ -71,6 +71,15 @@ and PC-09 (simplicity and observational request counts).
   records a versioned current-turn-weighted trial candidate; the frozen H2
   recipe and original outcome remain intact. The running trial has not been
   rebuilt or rebound to the candidate, and no production decision follows.
+- The woodworking follow-up retained a hash-bound, ignored as-of source export
+  and one v1/v2 Qwen replay, then ran one native v2 confirmation in a fresh
+  disposable evaluation database. The [updated finding](findings/natural-memory-consultation/woodworking-history-ranking-diagnostic-2026-09-29.md)
+  records exact source/document/query hashes, original versus new dispatch
+  counts, and receipt hashes. The native turn admitted both woodworking sources,
+  delivered the small-stool answer and committed no memory changes. Focused
+  regressions now cover topic switches, contextual references and empty suffix.
+  This is one-case development evidence for manager review, not general
+  ranking qualification. The running user trial still uses v1.
 - Director approved the evaluation-only H4 reviewer amendment after the
   [offline preflight diagnosis](findings/natural-memory-consultation/history-h4-preflight-blocker-2026-09-26.md).
   The H2-hashed source contract stays unchanged; the separate H4 overlay binds

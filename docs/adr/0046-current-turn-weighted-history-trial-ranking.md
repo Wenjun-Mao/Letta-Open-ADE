@@ -47,6 +47,9 @@ This weight is an empirical trial choice, not a general reliability claim.
 The source-bound replay recovers the missed exchange, while a separate small
 synthetic anaphoric probe retains both required exchanges; neither establishes
 performance across languages, long histories or temporal conflicts. Focused
-tests assert v1 preservation, v2 query inputs and weighting, dispatch counts,
-recipe identity and source guards. A disposable native turn can check delivery
-after review; original conversations remain untouched.
+tests assert v1 preservation, v2 query inputs and weighting, contextual
+references, empty suffix, dispatch counts, recipe identity and source guards.
+One disposable native turn admitted both woodworking sources, delivered the
+supported stool answer and made no memory changes. Its exact scope and limits
+are in the [finding](../findings/natural-memory-consultation/woodworking-history-ranking-diagnostic-2026-09-29.md).
+Original conversations remain untouched.
