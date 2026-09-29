@@ -53,6 +53,8 @@ availability separate when recording results.
 ## Follow-up Status
 
 - Character style and first-meeting behavior: captured for later; no tuning made.
-- Per-turn activity summary: requested; implementation and verification pending.
+- Per-turn activity summary: implemented and checked in the isolated trial.
+  Complete retained traces show generation, review, and embedding requests
+  separately from tools; partial or absent traces stay labeled as such.
 - Cross-chat recall: continue using the [playbook](hands-on-trial.md); this memo
   does not score the user's current conversation or infer its saved state.
