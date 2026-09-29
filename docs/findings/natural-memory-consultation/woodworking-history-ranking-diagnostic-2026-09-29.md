@@ -1,9 +1,9 @@
 # Trial Woodworking Recall: Source-Bound Ranking Diagnosis
 
-Status: 2026-09-29 development diagnostic and one disposable native
-confirmation; candidate v2 is not deployed to the running trial. Relevant
-agreements: PC-01/02/03/05/09/10. The trial database and original user
-conversations were read only.
+Status: 2026-09-29 development diagnostic, one disposable native confirmation,
+and reviewed v2 adoption in the isolated trial at 20:36 UTC. No production or
+release adoption. Relevant agreements: PC-01/02/03/05/09/10. The trial
+database and original user conversations were read only during diagnosis.
 
 Provenance: isolated Compose project `ade-history-trial`, database `ade`/schema
 `ade`, source revision `97555ba91a22cb94ddf04ad4f4694b4510de20a4`, and the
@@ -68,8 +68,8 @@ ranker query/score recipe; the reader returned the evidence and generation
 could not answer from history it was never supplied. [ADR 0046](../../adr/0046-current-turn-weighted-history-trial-ranking.md)
 records the explicit v2 candidate. Original adverse outcomes and H2 captures
 remain unchanged. The single native confirmation below supports the narrow
-fix for this miss. Broader recall quality remains unqualified, and manager
-review precedes any running-trial rebuild or production decision.
+fix for this miss. Broader recall quality remains unqualified. The later
+trial-only rebuild is recorded at the end; no production decision follows.
 
 ## Retained replay inputs and request counts
 
@@ -190,3 +190,48 @@ checks rejected an unsupported database name, a vector extension in the wrong
 schema, and a container without the API router credential before any native
 target turn or DeepSeek dispatch. Their fixes were confined to the disposable
 setup; the completed target received no retry.
+
+## Isolated hands-on trial adoption
+
+Manager review approved v2 for the isolated hands-on trial only. At
+`2026-09-29 20:36:09 UTC`, the existing `ade-history-trial` API and worker were
+recreated from clean commit `6dacaafefe1dfb21c1b2ad32bb9feaf4bb73307f`,
+source fingerprint
+`f6ebd4e87dcd0a6ab852e3bdfe710c82655cd2d3974884556735771a480922de`.
+Only those two services were rebuilt/recreated; PostgreSQL, the model router
+and the web container stayed up. The served worker names
+`probe_local_qwen_cosine_v2`; both rebuilt containers' native-rank source SHA-256
+is `1ec115d92511b1e53e77535bb67075080e0085bb36731d10a678c2a3dc91ec7a`.
+The API image is
+`sha256:42cde9d0bf8f44149972090b31f355b550434a17854292e2296002b2b8a8d8fd`
+and the worker image is
+`sha256:631b9e647a46db86a28b8e9071f53bfcbf40363f4c94ce557689861daa75921b`.
+
+Immediately before restart, there were zero pending or running runs. A private
+custom-format database backup is retained at
+`workflows/evals/character_memory_dev/.trial/diagnostic/trial-before-v2-20260929.dump`
+with SHA-256
+`9c85c6e0fe289a5a30ab0e4b46d5bb023c823641be883b4901cc97bec145e63d`.
+`pg_restore -l` listed the conversation, message, fact, revision and run table
+data. The ignored `trial_invariants.py` captured canonical row hashes before
+build, immediately before restart, and after the read-only checks. The before
+and after files are `trial-before-20260929.json` and
+`trial-after-20260929.json` in the same ignored directory. All global and
+user-subject counts and SHA-256 row hashes matched, including eight total
+conversations, 37 messages, four facts, six revisions, 19 runs and 19 attempts;
+for this user, four conversations, 26 messages, three facts and five revisions.
+No run was pending or running after restart. The original failed and successful
+turns, immutable definitions and source evidence remain intact.
+
+`/api/v2/health` returned 200, `/api/v3/worker-health` returned 200 with
+`worker_ready=true`, `database_ready=true` and the served source identity above.
+The existing web route `http://127.0.0.1:13001/agent-studio` returned 200.
+Via its same-origin proxy, read-only trial options, eight sessions, four
+subjects, the user's conversation state and four activity entries returned 200.
+No browser tab or draft was touched, and no new turn, model generation or
+embedding request was submitted during adoption.
+
+This is an isolated development trial switch. It does not establish general
+ranking quality, select a production default, qualify release evidence or
+waive the stale-policy gate. The earlier v1 user outcomes and their adverse
+assessment remain historical evidence.

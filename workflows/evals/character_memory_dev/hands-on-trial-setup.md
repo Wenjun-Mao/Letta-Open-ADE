@@ -37,7 +37,15 @@ that purpose-scoped API only in the trial build. Resource creation binds
 capacity, `automatic_history`, the exact Qwen ranking recipe, DeepSeek for
 conversation and review, and `search_memory` before persisting immutable
 versions. The trial UI sends zero additional retries for turns. Worker startup
-configures the matching probe.
+configures the matching probe. Following the reviewed 2026-09-29 trial-only
+update, the running worker uses `probe_local_qwen_cosine_v2` from clean source
+`6dacaafefe1dfb21c1b2ad32bb9feaf4bb73307f`. It scores the current
+question and contextual query separately while retaining the same eligible
+corpus and top-four admission. Earlier user outcomes and H2 captures remain
+under the v1 recipe. The [source-bound adoption record](../../../docs/findings/natural-memory-consultation/woodworking-history-ranking-diagnostic-2026-09-29.md#isolated-hands-on-trial-adoption)
+names the private backup and before/after data checks. The trial's current
+source can be checked at `/api/v3/worker-health`; no conversation resend is
+needed to see the updated worker on later turns.
 The ordinary Agent Studio API, defaults and production runtime are unchanged.
 See [ADR 0045](../../../docs/adr/0045-isolated-history-trial-composition.md).
 

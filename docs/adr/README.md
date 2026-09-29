@@ -42,7 +42,7 @@ record's status notice before applying its original execution details.
 | [0043](0043-reviewer-target-attribution-before-mutation.md) | Bounded reviewer target-attribution correction; no general semantic acceptance. |
 | [0044](0044-native-generation-memory-contract-candidate.md) | Explicit chat candidate and shared generation instruction alignment; no default adoption. |
 | [0045](0045-isolated-history-trial-composition.md) | Running development-only browser trial composition; no release qualification. |
-| [0046](0046-current-turn-weighted-history-trial-ranking.md) | Versioned trial ranking candidate for unrelated-local-context misses; review before rebuild. |
+| [0046](0046-current-turn-weighted-history-trial-ranking.md) | Versioned ranking selected for the isolated trial; no production/default qualification. |
 
 ## Historical, Retired, Or On Hold
 

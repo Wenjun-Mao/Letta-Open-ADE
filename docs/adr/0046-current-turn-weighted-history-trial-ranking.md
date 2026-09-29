@@ -1,7 +1,7 @@
 # ADR 0046: Current-Turn-Weighted Trial History Ranking
 
-Status: Candidate for isolated development trial review, 2026-09-29. No running
-trial, production default, H2 fixture, or prior capture is rebound by this record.
+Status: Accepted for the isolated development trial after manager review,
+2026-09-29. Production default, H2 fixtures and prior captures remain unchanged.
 Relevant product agreements: PC-01/02/03/05/09/10.
 
 ## Problem
@@ -31,9 +31,10 @@ format and score composition. Its query hash covers both ordered query strings.
 
 The prior `probe_local_qwen_cosine` path, synthetic H2 contract, fixtures,
 campaigns and captures retain their original meaning. The new recipe is a
-trial candidate only; using it in the running trial requires an explicit
-reviewed rebuild. Scope, archive eligibility, top-four admission, reviewer,
-saved-fact search, timeouts and provider routes are unchanged.
+trial-only selection. Its reviewed rebuild at `2026-09-29 20:36:09 UTC` is
+recorded in the [finding](../findings/natural-memory-consultation/woodworking-history-ranking-diagnostic-2026-09-29.md#isolated-hands-on-trial-adoption).
+Scope, archive eligibility, top-four admission, reviewer, saved-fact search,
+timeouts and provider routes are unchanged.
 
 ## Tradeoffs and guardrails
 
