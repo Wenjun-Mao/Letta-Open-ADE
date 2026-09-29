@@ -1,6 +1,6 @@
 # ADE Project Tracker
 
-Updated: 2026-09-27. Owner: this ADE task, using Relay for delegated reporting.
+Updated: 2026-09-29. Owner: this ADE task, using Relay for delegated reporting.
 Direction and milestone completion criteria live in the [roadmap](product-roadmap.md).
 
 ## Current Summary
@@ -62,6 +62,15 @@ and PC-09 (simplicity and observational request counts).
   a different-subject question hit the existing tool-step ceiling with no
   reply, so spoken isolation remains unverified in that smoke. No reroll,
   default change, production deployment or release waiver followed.
+- A later real-user woodworking question missed an eligible prior account and
+  earlier correct answer after two unrelated local city/music exchanges. The
+  [source-bound diagnosis](findings/natural-memory-consultation/woodworking-history-ranking-diagnostic-2026-09-29.md)
+  separates retained admission from a pinned Qwen as-of replay: both relevant
+  exchanges fell below top four only when the local suffix entered the old
+  query. [ADR 0046](adr/0046-current-turn-weighted-history-trial-ranking.md)
+  records a versioned current-turn-weighted trial candidate; the frozen H2
+  recipe and original outcome remain intact. The running trial has not been
+  rebuilt or rebound to the candidate, and no production decision follows.
 - Director approved the evaluation-only H4 reviewer amendment after the
   [offline preflight diagnosis](findings/natural-memory-consultation/history-h4-preflight-blocker-2026-09-26.md).
   The H2-hashed source contract stays unchanged; the separate H4 overlay binds

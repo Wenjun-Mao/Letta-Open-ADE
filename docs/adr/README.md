@@ -41,6 +41,8 @@ record's status notice before applying its original execution details.
 | [0038](0038-bounded-history-probe-source-contract.md) | Isolated historical-recall probe source and snapshot contract; no production selection. |
 | [0043](0043-reviewer-target-attribution-before-mutation.md) | Bounded reviewer target-attribution correction; no general semantic acceptance. |
 | [0044](0044-native-generation-memory-contract-candidate.md) | Explicit chat candidate and shared generation instruction alignment; no default adoption. |
+| [0045](0045-isolated-history-trial-composition.md) | Running development-only browser trial composition; no release qualification. |
+| [0046](0046-current-turn-weighted-history-trial-ranking.md) | Versioned trial ranking candidate for unrelated-local-context misses; review before rebuild. |
 
 ## Historical, Retired, Or On Hold
 

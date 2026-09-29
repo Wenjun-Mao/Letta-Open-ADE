@@ -291,7 +291,7 @@ def build_worker() -> AgentRuntimeWorker:
         history_probe=(
             HistoryProbe(
                 arm="automatic_history",
-                ranking_recipe="probe_local_qwen_cosine",
+                ranking_recipe="probe_local_qwen_cosine_v2",
                 expected_embedding_fingerprint=TRIAL_QWEN_FINGERPRINT,
             )
             if settings.history_trial_enabled

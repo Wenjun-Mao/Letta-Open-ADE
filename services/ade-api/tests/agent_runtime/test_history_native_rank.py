@@ -12,6 +12,7 @@ from ade_api.features.agent_runtime.history_native_rank import (
     HISTORY_EMBEDDING_ROUTE,
     rank_native_history,
 )
+from ade_api.features.agent_runtime.history_ranking import query_text
 from ade_api.features.agent_runtime.router_transport import RouterRequestError
 
 
@@ -66,6 +67,59 @@ def test_native_qwen_guards_both_dispatches_and_retains_source_identity() -> Non
     assert set(result.document_hashes) == {"r1", "r2"}
     assert [item["id"] for item in result.ranked] == ["r1", "r2"]
     assert result.recipe_identity and result.query_sha256
+
+
+def test_v2_current_turn_survives_unrelated_local_topic() -> None:
+    corpus = [
+        _exchange("story", "我第一次做陶艺，最后做成了小碗。"),
+        *[_exchange(f"local-{index}", "我在听爵士乐。") for index in range(4)],
+    ]
+    current = "第一次做陶艺最后做成了什么？"
+    suffix = [
+        {"role": "user", "content": "今晚想听爵士乐。"},
+        {"role": "assistant", "content": "可以找一场小乐队演出。"},
+    ]
+    requests: list[list[str]] = []
+    guards: list[list[str]] = []
+
+    async def authorize(exchanges):
+        guards.append([item["run_id"] for item in exchanges])
+        return set()
+
+    class Embeddings:
+        async def embed(self, *, model_key, inputs, timeout_seconds):
+            requests.append(list(inputs))
+            return [
+                [1.0, 0.0, *([0.0] * 1022)]
+                if item == query_text(current, [])
+                or item.startswith("User: 我第一次做陶艺")
+                else [0.0, 1.0, *([0.0] * 1022)]
+                for item in inputs
+            ]
+
+    # The test router distinguishes the current-only query from the contextual
+    # query, whose longer local dialogue points toward the unrelated documents.
+    async def rank(recipe):
+        return await rank_native_history(
+            exchanges=corpus,
+            current_user=current,
+            local_suffix=suffix,
+            recipe=recipe,
+            embeddings=Embeddings(),
+            model_key=HISTORY_EMBEDDING_ROUTE,
+            deadline=time.monotonic() + 30,
+            authorize_sources=authorize,
+            mark_exposed=lambda: None,
+        )
+
+    legacy = asyncio.run(rank("probe_local_qwen_cosine"))
+    revised = asyncio.run(rank("probe_local_qwen_cosine_v2"))
+    assert "story" not in [item["id"] for item in legacy.ranked]
+    assert revised.ranked[0]["id"] == "story"
+    assert requests[-1] == [query_text(current, []), query_text(current, suffix)]
+    assert revised.embedding_dispatches == 2
+    assert revised.recipe_identity != legacy.recipe_identity
+    assert guards == [[item["run_id"] for item in corpus]] * 4
 
 
 def test_native_qwen_omits_preexposure_purge_without_dispatch() -> None:

@@ -26,16 +26,19 @@ def _deployment() -> dict:
     }
 
 
-def test_qwen_probe_requires_pinned_identity() -> None:
+@pytest.mark.parametrize(
+    "recipe", ["probe_local_qwen_cosine", "probe_local_qwen_cosine_v2"]
+)
+def test_qwen_probe_requires_pinned_identity(recipe: str) -> None:
     deployment = _deployment()
     probe = HistoryProbe(
         arm="automatic_history",
-        ranking_recipe="probe_local_qwen_cosine",
+        ranking_recipe=recipe,
         expected_embedding_fingerprint=deployment["fingerprint"],
     )
     validate_history_ranking_deployment(probe, deployment)
     with pytest.raises(RuntimeValidationError):
-        HistoryProbe(arm="automatic_history", ranking_recipe="probe_local_qwen_cosine")
+        HistoryProbe(arm="automatic_history", ranking_recipe=recipe)
     for field, value in (
         ("route_alias", "other::route"),
         ("fingerprint", "0" * 64),

@@ -21,7 +21,10 @@ from .turn_context_selection import TurnContextSelection
 def validate_history_ranking_deployment(
     probe: HistoryProbe, retriever_deployment: dict[str, Any]
 ) -> None:
-    if probe.ranking_recipe == "probe_local_qwen_cosine":
+    if probe.ranking_recipe in {
+        "probe_local_qwen_cosine",
+        "probe_local_qwen_cosine_v2",
+    }:
         payload = retriever_deployment.get("fingerprint_payload", {})
         sampling = payload.get("sampling_settings", {})
         if (

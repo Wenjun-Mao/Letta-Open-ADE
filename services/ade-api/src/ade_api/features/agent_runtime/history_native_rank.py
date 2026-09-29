@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import time
 from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
@@ -32,6 +33,15 @@ HISTORY_VECTOR_RECIPE: dict[str, Any] = {
     "comparison": "cosine similarity",
     "identity": "SHA-256 of this recipe and sorted exchange-ID/document-text hashes; regenerate all probe-local vectors on recipe or corpus change",
 }
+HISTORY_VECTOR_RECIPE_V2: dict[str, Any] = {
+    **HISTORY_VECTOR_RECIPE,
+    "query_format": (
+        "history-query-json-v2: current-only and current-plus-local-suffix "
+        "via history_ranking.query_text"
+    ),
+    "comparison": "0.7 current-only cosine + 0.3 contextual cosine",
+}
+QWEN_RECIPES = frozenset({"probe_local_qwen_cosine", "probe_local_qwen_cosine_v2"})
 
 
 @dataclass(frozen=True)
@@ -52,7 +62,9 @@ async def rank_native_history(
     exchanges: Sequence[dict[str, Any]],
     current_user: str,
     local_suffix: Sequence[dict[str, Any]],
-    recipe: Literal["literal_token_match", "probe_local_qwen_cosine"],
+    recipe: Literal[
+        "literal_token_match", "probe_local_qwen_cosine", "probe_local_qwen_cosine_v2"
+    ],
     embeddings: EmbeddingClient | None,
     model_key: str | None,
     deadline: float,
@@ -66,12 +78,17 @@ async def rank_native_history(
     """
     corpus = list(exchanges)
     query = query_text(current_user, local_suffix)
+    query_inputs = (
+        [query_text(current_user, []), query]
+        if recipe == "probe_local_qwen_cosine_v2" and local_suffix
+        else [query]
+    )
     dispatches = 0
     elapsed = 0.0
     status = "ranked"
-    if recipe not in {"literal_token_match", "probe_local_qwen_cosine"}:
+    if recipe not in {"literal_token_match", *QWEN_RECIPES}:
         raise RuntimeValidationError("Unknown frozen history ranking recipe")
-    if recipe == "probe_local_qwen_cosine" and (
+    if recipe in QWEN_RECIPES and (
         embeddings is None or model_key != HISTORY_EMBEDDING_ROUTE
     ):
         raise RuntimeValidationError("Frozen Qwen history route is unavailable")
@@ -87,7 +104,7 @@ async def rank_native_history(
     }
     if len(documents) != len(corpus):
         raise RuntimeValidationError("Historical corpus has duplicate run IDs")
-    if recipe == "probe_local_qwen_cosine" and corpus:
+    if recipe in QWEN_RECIPES and corpus:
         # A genuine purge before first exposure removes whole windows. A database
         # error, altered row or purge after exposure cannot become an empty rank.
         while corpus:
@@ -140,23 +157,35 @@ async def rank_native_history(
             started = time.monotonic()
             dispatches += 1
             try:
-                query_vector = (
-                    await embeddings.embed(
-                        model_key=model_key, inputs=[query], timeout_seconds=remaining
-                    )
-                )[0]
+                query_vectors = await embeddings.embed(
+                    model_key=model_key,
+                    inputs=query_inputs,
+                    timeout_seconds=remaining,
+                )
             except (RouterRequestError, TimeoutError) as exc:
                 raise RuntimeValidationError(
                     "History query embedding failed without retry",
                     detail_code="natural_history_embedding_unavailable",
                 ) from exc
             elapsed += time.monotonic() - started
-            scores = {
-                exchange_id: cosine_score(
-                    query_vector, vector, dimensions=HISTORY_VECTOR_RECIPE["dimensions"]
+            scores = {}
+            for exchange_id, vector in zip(documents, document_vectors, strict=True):
+                contextual_score = cosine_score(
+                    query_vectors[-1],
+                    vector,
+                    dimensions=HISTORY_VECTOR_RECIPE["dimensions"],
                 )
-                for exchange_id, vector in zip(documents, document_vectors, strict=True)
-            }
+                scores[exchange_id] = (
+                    0.7
+                    * cosine_score(
+                        query_vectors[0],
+                        vector,
+                        dimensions=HISTORY_VECTOR_RECIPE["dimensions"],
+                    )
+                    + 0.3 * contextual_score
+                    if len(query_vectors) == 2
+                    else contextual_score
+                )
         else:
             scores = {}
     else:
@@ -175,10 +204,20 @@ async def rank_native_history(
         ranked=ranked,
         all_scores=scores,
         status=status,
-        query_sha256=hashlib.sha256(query.encode()).hexdigest(),
+        query_sha256=hashlib.sha256(
+            (
+                query
+                if len(query_inputs) == 1
+                else json.dumps(query_inputs, ensure_ascii=False, separators=(",", ":"))
+            ).encode()
+        ).hexdigest(),
         recipe_identity=vector_recipe_identity(
-            HISTORY_VECTOR_RECIPE
-            if recipe == "probe_local_qwen_cosine"
+            (
+                HISTORY_VECTOR_RECIPE_V2
+                if recipe == "probe_local_qwen_cosine_v2"
+                else HISTORY_VECTOR_RECIPE
+            )
+            if recipe in QWEN_RECIPES
             else {
                 "literal_recipe": "casefolded alphanumeric character bigram query overlap fraction"
             },
