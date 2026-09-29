@@ -1,5 +1,8 @@
 # Chatting with Lin Xiaotang: a hands-on trial
 
+Ongoing observations and deferred character tuning are recorded in the
+[hands-on feedback memo](hands-on-feedback.md).
+
 **Allow 15–20 minutes.** Follow the examples loosely, respond naturally, and send
 one message at a time. This is a conversation, not an exact-answer exam.
 
@@ -131,6 +134,14 @@ She should not attribute the first user's city to this person. Saying she doesn'
 know or asking you is fine.
 
 ## After Chatting: A Quick Look Back
+
+For a cross-chat check, keep the same person and character but start a new chat.
+Ask about the woodworking outcome without repeating it. Prefer a story detail
+that is absent from saved profile facts, then open that turn's **Turn activity and
+context** details: check whether older exchanges were admitted and inspect the
+source run IDs alongside saved facts. An admitted source means the model had it
+available, not that it caused the answer. Archiving chat 1 leaves it eligible
+for this check; archive does not mean forgetting.
 
 Now inspect the original subject's saved facts. Keep **what she said** separate
 from **what was actually saved**.

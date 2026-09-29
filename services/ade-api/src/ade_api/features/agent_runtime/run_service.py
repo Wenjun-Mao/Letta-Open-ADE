@@ -39,6 +39,7 @@ from .release_policy import (
     release_validation_kwargs,
 )
 from .router_transport import RouterTransport
+from .turn_activity import conversation_activity
 from .worker_health import RuntimeWorkerHealthServiceProtocol
 
 
@@ -266,6 +267,19 @@ class RunService:
                 event_response(row) for row in rows if row["visibility"] == "operator"
             ],
         }
+
+    async def list_conversation_activity(self, conversation_id: str) -> dict[str, Any]:
+        await self.database.ensure_ready()
+        async with self.database.translated_errors():
+            async with self.database.engine.connect() as connection:
+                conversation = await ConversationRepository(connection).get(
+                    conversation_id
+                )
+                require_default_workspace(conversation)
+                rows = await RunRepository(connection).conversation_activity_rows(
+                    conversation_id
+                )
+        return {"items": conversation_activity(*rows)}
 
     async def cancel_run(self, run_id: str) -> dict[str, Any]:
         await self.database.ensure_ready()

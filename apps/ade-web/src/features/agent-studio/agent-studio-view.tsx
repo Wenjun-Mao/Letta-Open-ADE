@@ -3,6 +3,7 @@
 import type { useAgentStudio } from "./use-agent-studio";
 import { NEW_RESOURCE_VALUE, defaultBundle, defaultSubjectLabel, isArchived } from "./selection";
 import type { AgentDefinition, RunEvent } from "./types";
+import { TurnActivityView } from "./turn-activity-view";
 import { MemoryFacts } from "./memory-facts";
 import { DefinitionVersion } from "./definition-version";
 import { HISTORY_TRIAL } from "./api";
@@ -112,7 +113,11 @@ function Conversation({ controller, t }: { controller: Controller; t: Translate 
   return <section className="card studio-conversation-card">
     <div className="studio-conversation-heading"><div><h2>{controller.session.conversation.title}</h2><p>{controller.session.agent_definition.name} · {defaultSubjectLabel(controller.session.memory_subject)}</p></div><div className="toolbar">{archived ? <button className="button muted" disabled={controller.busy} onClick={() => void controller.setSessionArchived(false)}>{t("Restore chat", "恢复聊天")}</button> : <button className="button muted" disabled={controller.busy || controller.activeRun} onClick={() => void controller.setSessionArchived(true)}>{t("Archive chat", "归档聊天")}</button>}{controller.run ? <span className={statusClass(controller.run.status)}>{controller.run.status}</span> : null}</div></div>
     {archived ? <div className="studio-boundary-warning">{t("This conversation is archived. Restore it before sending another turn.", "此对话已归档。请先恢复再发送新轮次。")}</div> : null}
-    <div className="studio-message-list" aria-live="polite">{controller.conversation.messages.length ? controller.conversation.messages.map((entry) => <article id={`message-${entry.id}`} className={`studio-message studio-message-${entry.role}${controller.evidenceMessageId === entry.id ? " studio-message-cited" : ""}`} key={entry.id}><header><strong>{entry.role === "user" ? t("User", "用户") : t("Assistant", "助手")}</strong><span>#{entry.sequence} · {date(entry.created_at)}</span></header><p>{entry.content}</p></article>) : <p className="muted">{t("No messages yet. Durable facts may be proposed by the runtime and appear in the typed memory panel after review.", "尚无消息。持久事实可由运行时提出，并在审核后显示在类型化记忆面板中。")}</p>}</div>
+    <div className="studio-message-list" aria-live="polite">{controller.conversation.messages.length ? controller.conversation.messages.map((entry) => {
+      const activity = controller.activity.find((item) => item.run_id === entry.run_id);
+      const hasReply = controller.conversation?.messages.some((item) => item.role === "assistant" && item.run_id === entry.run_id);
+      return <article id={`message-${entry.id}`} className={`studio-message studio-message-${entry.role}${controller.evidenceMessageId === entry.id ? " studio-message-cited" : ""}`} key={entry.id}><header><strong>{entry.role === "user" ? t("User", "用户") : t("Assistant", "助手")}</strong><span>#{entry.sequence} · {date(entry.created_at)}</span></header><p>{entry.content}</p>{activity && (entry.role === "assistant" || !hasReply) ? <TurnActivityView activity={activity} t={t} /> : null}</article>;
+    }) : <p className="muted">{t("No messages yet. Durable facts may be proposed by the runtime and appear in the typed memory panel after review.", "尚无消息。持久事实可由运行时提出，并在审核后显示在类型化记忆面板中。")}</p>}</div>
     {controller.conversation.next_before_sequence ? <button className="button muted" onClick={() => void controller.loadOlderMessages()}>{t("Load older messages", "加载更早的消息")}</button> : null}
     {controller.evidenceError ? <p role="alert" className="studio-run-error">{controller.evidenceError}</p> : null}
     {controller.evidenceMessageId ? <p><a href={`#message-${controller.evidenceMessageId}`}>{t("Jump to cited original message", "跳转至引用的原始消息")}</a> · <button className="button muted" onClick={() => void controller.returnToLatestMessages()}>{t("Return to latest messages", "返回最新消息")}</button></p> : null}

@@ -202,6 +202,22 @@ export type RunEvent = {
   payload: Record<string, unknown>;
 };
 
+export type TurnActivity = {
+  run_id: string;
+  status: RunStatus;
+  provider: Record<"generation" | "reviewer" | "embedding" | "other", number>;
+  provider_complete: boolean;
+  provider_observed: boolean;
+  tools: Array<{ name: string; succeeded: number; failed: number; unresolved: number }>;
+  tools_complete: boolean;
+  context: {
+    current_chat: boolean | null;
+    profile_fact_ids: string[] | null;
+    history_run_ids: string[] | null;
+    history_sources: Array<{ run_id: string; conversation_id: string }> | null;
+  };
+};
+
 export type CreateDefinition = {
   definition_key: string;
   name: string;

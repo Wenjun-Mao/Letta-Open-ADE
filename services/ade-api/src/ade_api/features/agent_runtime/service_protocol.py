@@ -104,6 +104,10 @@ class AgentRuntimeService(Protocol):
 
     async def get_run(self, run_id: str) -> dict[str, Any]: ...
 
+    async def list_conversation_activity(
+        self, conversation_id: str
+    ) -> dict[str, Any]: ...
+
     async def list_runs(
         self, conversation_id: str, *, limit: int, offset: int
     ) -> dict[str, Any]: ...

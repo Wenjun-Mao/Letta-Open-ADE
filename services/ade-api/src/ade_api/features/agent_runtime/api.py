@@ -18,6 +18,7 @@ from .contracts import (
     RunEventListResponse,
     RunListResponse,
     RunResponse,
+    ConversationActivityResponse,
     RuntimeWorkerHealthResponse,
     TurnAcceptedResponse,
 )
@@ -165,6 +166,18 @@ async def list_runs(
 )
 async def cancel_run(run_id: str, service: AgentRuntimeServiceDependency):
     return await call_runtime(service.cancel_run(run_id))
+
+
+@router.get(
+    "/conversations/{conversation_id}/activity",
+    response_model=ConversationActivityResponse,
+    dependencies=[Depends(require_reader)],
+    summary="Read retained per-turn provider, tool and context observations",
+)
+async def list_conversation_activity(
+    conversation_id: str, service: AgentRuntimeServiceDependency
+):
+    return await call_runtime(service.list_conversation_activity(conversation_id))
 
 
 @router.get(

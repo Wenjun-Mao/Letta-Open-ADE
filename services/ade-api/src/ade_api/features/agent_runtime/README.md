@@ -21,6 +21,10 @@ arguments cannot choose another subject.
 
 - `agent_studio_api.py` exposes Agent Studio sessions and state.
 - `api.py` exposes turns, runs, events, cancellation, and worker health.
+- `GET /api/v3/conversations/{id}/activity` reads retained per-turn dispatch,
+  tool, and context evidence with one conversation-scoped batch. It reports
+  incomplete traces as observed lower bounds and leaves missing history
+  unavailable. It does not estimate billing or prove which source caused a reply.
 - `application.py` and the narrow service modules own runtime behavior.
 - `turn_execution.py` assembles context and coordinates model, retrieval, and
   memory-review work for one ADE-owned attempt.

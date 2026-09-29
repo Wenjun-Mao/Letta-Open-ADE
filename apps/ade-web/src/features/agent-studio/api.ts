@@ -12,6 +12,7 @@ import type {
   Run,
   RunEvent,
   SubjectMemories,
+  TurnActivity,
 } from "./types";
 
 type ListResponse<T> = { total: number; items: T[] };
@@ -131,6 +132,10 @@ export function getRun(runId: string): Promise<Run> {
 
 export function listConversationRuns(conversationId: string): Promise<ListResponse<Run>> {
   return requestJson(`/api/v3/conversations/${encodeURIComponent(conversationId)}/runs`);
+}
+
+export function listConversationActivity(conversationId: string): Promise<{ items: TurnActivity[] }> {
+  return requestJson(`/api/v3/conversations/${encodeURIComponent(conversationId)}/activity`);
 }
 
 export function cancelRun(runId: string): Promise<Run> {

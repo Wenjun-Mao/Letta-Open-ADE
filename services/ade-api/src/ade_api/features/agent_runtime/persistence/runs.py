@@ -353,6 +353,87 @@ class RunRepository:
         )
         return [dict(row) for row in result.mappings()]
 
+    async def conversation_activity_rows(
+        self, conversation_id: str
+    ) -> tuple[
+        list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], dict[str, str]
+    ]:
+        """Read one conversation's runs, traces, receipts and admitted source links."""
+        run_rows = (
+            (
+                await self._connection.execute(
+                    select(runs.c.id, runs.c.status, runs.c.attempt_count).where(
+                        runs.c.conversation_id == conversation_id
+                    )
+                )
+            )
+            .mappings()
+            .all()
+        )
+        event_rows = (
+            (
+                await self._connection.execute(
+                    select(
+                        run_events.c.run_id,
+                        run_events.c.attempt,
+                        run_events.c.event_type,
+                        run_events.c.payload,
+                    )
+                    .join(runs, run_events.c.run_id == runs.c.id)
+                    .where(
+                        runs.c.conversation_id == conversation_id,
+                        run_events.c.visibility == "operator",
+                    )
+                    .order_by(run_events.c.run_id, run_events.c.sequence)
+                )
+            )
+            .mappings()
+            .all()
+        )
+        attempt_rows = (
+            (
+                await self._connection.execute(
+                    select(
+                        run_attempts.c.run_id,
+                        run_attempts.c.attempt_number,
+                        run_attempts.c.status,
+                        run_attempts.c.provider_outcome,
+                    )
+                    .join(runs, run_attempts.c.run_id == runs.c.id)
+                    .where(runs.c.conversation_id == conversation_id)
+                )
+            )
+            .mappings()
+            .all()
+        )
+        source_ids = {
+            source_id
+            for attempt in attempt_rows
+            for source_id in (attempt["provider_outcome"] or {}).get(
+                "admitted_history_run_ids", []
+            )
+            if isinstance(source_id, str)
+        }
+        source_rows = (
+            (
+                await self._connection.execute(
+                    select(runs.c.id, runs.c.conversation_id).where(
+                        runs.c.id.in_(source_ids)
+                    )
+                )
+            )
+            .mappings()
+            .all()
+            if source_ids
+            else []
+        )
+        return (
+            [dict(row) for row in run_rows],
+            [dict(row) for row in event_rows],
+            [dict(row) for row in attempt_rows],
+            {str(row["id"]): str(row["conversation_id"]) for row in source_rows},
+        )
+
     async def list_event_page(
         self, run_id: str, *, limit: int, after_sequence: int = 0
     ) -> tuple[int, list[dict[str, Any]]]:

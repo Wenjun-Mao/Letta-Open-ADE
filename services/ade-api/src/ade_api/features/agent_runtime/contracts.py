@@ -405,6 +405,35 @@ class RunListResponse(BaseModel):
     items: list[RunResponse]
 
 
+class TurnToolActivityResponse(BaseModel):
+    name: str
+    succeeded: int
+    failed: int
+    unresolved: int
+
+
+class TurnContextActivityResponse(BaseModel):
+    current_chat: bool | None = None
+    profile_fact_ids: list[str] | None = None
+    history_run_ids: list[str] | None = None
+    history_sources: list[dict[str, str]] | None = None
+
+
+class TurnActivityResponse(BaseModel):
+    run_id: str
+    status: RunStatus
+    provider: dict[str, int]
+    provider_complete: bool
+    provider_observed: bool
+    tools: list[TurnToolActivityResponse]
+    tools_complete: bool
+    context: TurnContextActivityResponse
+
+
+class ConversationActivityResponse(BaseModel):
+    items: list[TurnActivityResponse]
+
+
 class AgentStudioSessionResponse(BaseModel):
     session_id: str
     idempotent_replay: bool = False

@@ -46,6 +46,16 @@ selection into the input; an explicit `htmlFor` label still did so in a drag
 check. No CSS rule had disabled selection. The caption interaction belongs in
 the shared view because the form structure caused it in both Studio modes.
 
+Per-turn activity is read from retained run events and attempt receipts in one
+conversation-scoped readback. Provider attempts are deduplicated by ADE request
+ID and grouped as generation, review, embedding, or other dispatch; tool calls
+remain separate. A completed final-attempt trace establishes a real zero only
+when its retained dispatch starts match the terminal receipt. Missing or partial
+old traces are unavailable or observed lower bounds. Source details name current
+chat context, selected fact IDs, and admitted older run IDs when retained;
+admission shows availability and cannot establish what caused an answer. This
+readback is shared Studio presentation and does not alter trial bindings.
+
 ## Alternatives and guardrails
 
 A copied Studio application or generic experiment framework would duplicate

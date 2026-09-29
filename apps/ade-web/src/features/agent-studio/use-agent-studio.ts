@@ -18,6 +18,7 @@ import {
   listAgentStudioSessions,
   listAgentStudioSubjects,
   listConversationRuns,
+  listConversationActivity,
 } from "./api";
 import { openRunEventStream, TERMINAL_RUN_EVENT_TYPES } from "./event-stream";
 import { memoryActionDraft, memoryActionOutcome, type PendingMemoryAction } from "./memory-action";
@@ -41,6 +42,7 @@ import type {
   RunEvent,
   SubjectMemories,
   MemoryEvidence,
+  TurnActivity,
 } from "./types";
 
 const TERMINAL_RUN_STATUSES = new Set(["succeeded", "failed", "cancelled"]);
@@ -85,6 +87,7 @@ export function useAgentStudio() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [run, setRun] = useState<Run | null>(null);
   const [events, setEvents] = useState<RunEvent[]>([]);
+  const [activity, setActivity] = useState<TurnActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -133,6 +136,7 @@ export function useAgentStudio() {
     setRuns([]);
     setRun(null);
     setEvents([]);
+    setActivity([]);
     setEvidenceMessageId("");
     setEvidenceError("");
     setMemoryAction(null);
@@ -203,10 +207,11 @@ export function useAgentStudio() {
     try {
       const nextSession = await getAgentStudioSession(selectedId);
       const target = evidenceTargetRef.current?.conversation_id === selectedId ? evidenceTargetRef.current : null;
-      const [nextConversation, nextMemories, nextRuns] = await Promise.all([
+      const [nextConversation, nextMemories, nextRuns, nextActivity] = await Promise.all([
         getConversationState(selectedId, target ? target.message_sequence + 1 : undefined),
         getSubjectMemories(nextSession.memory_subject.id),
         listConversationRuns(selectedId),
+        listConversationActivity(selectedId),
       ]);
       if (selectionEpoch !== selectionEpochRef.current || readEpoch !== readEpochRef.current || selectedIdRef.current !== selectedId) return null;
       if (target && !nextConversation.messages.some((entry) => entry.id === target.message_id && entry.sequence === target.message_sequence)) {
@@ -218,6 +223,7 @@ export function useAgentStudio() {
       setConversation(nextConversation);
       setMemories(nextMemories);
       setRuns(nextRuns.items);
+      setActivity(nextActivity.items);
       setRun((current) => {
         const latest = nextSession.latest_run;
         if (current?.conversation_id !== selectedId) return latest;
@@ -336,6 +342,7 @@ export function useAgentStudio() {
     setConversation(null);
     setMemories(null);
     setRuns([]);
+    setActivity([]);
     if (conversationId) void refreshSelected(conversationId);
   }, [conversationId, refreshSelected, stopMonitoring]);
 
@@ -494,7 +501,7 @@ export function useAgentStudio() {
   }
 
   return {
-    options, sessions, definitions, subjects, session, inspectedSubject, inspectedMemories, conversation, memories, runs, run, events,
+    options, sessions, definitions, subjects, session, inspectedSubject, inspectedMemories, conversation, memories, runs, run, events, activity,
     loading, busy, error, streamWarning, includeArchived, message, timeoutSeconds, retryCount,
     title, definitionChoice, definitionName, definitionKey, subjectChoice, subjectName, subjectKey, subjectRename,
     evidenceMessageId, evidenceError, memoryAction, removal, ...definitionVersion,

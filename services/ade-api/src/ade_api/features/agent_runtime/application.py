@@ -240,6 +240,9 @@ class AgentRuntimeApplication:
     ) -> dict[str, Any]:
         return await self.runs.list_runs(conversation_id, limit=limit, offset=offset)
 
+    async def list_conversation_activity(self, conversation_id: str) -> dict[str, Any]:
+        return await self.runs.list_conversation_activity(conversation_id)
+
     async def list_run_events(
         self, run_id: str, *, limit: int, after_sequence: int
     ) -> dict[str, Any]:

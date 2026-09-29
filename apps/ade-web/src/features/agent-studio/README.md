@@ -9,6 +9,8 @@ explicit memory subjects, persistent conversations, and inspectable runs.
   monitoring, cancellation, and state refresh.
 - `agent-studio-view.tsx` presents definitions, subjects, conversations, typed
   memory lineage, summaries, and run evidence.
+- `turn-activity-view.tsx` shows each turn's retained provider and tool activity;
+  its collapsed source links open admitted older chats for inspection.
 - `selection.ts` contains pure resource-selection rules with colocated tests.
 
 A conversation binds exactly one immutable definition version to one memory

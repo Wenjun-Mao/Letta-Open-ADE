@@ -15,7 +15,7 @@ const api = vi.hoisted(() => ({
   HISTORY_TRIAL: false,
   getAgentStudioOptions: vi.fn(), listAgentStudioSessions: vi.fn(), listAgentStudioDefinitions: vi.fn(),
   listAgentStudioSubjects: vi.fn(), getAgentStudioSession: vi.fn(), getConversationState: vi.fn(),
-  getSubjectMemories: vi.fn(), listConversationRuns: vi.fn(), getRun: vi.fn(), getRunEventLog: vi.fn(),
+  getSubjectMemories: vi.fn(), listConversationRuns: vi.fn(), listConversationActivity: vi.fn(), getRun: vi.fn(), getRunEventLog: vi.fn(),
   acceptTurn: vi.fn(), createAgentStudioSession: vi.fn(), archiveAgentStudioDefinition: vi.fn(),
   archiveAgentStudioSession: vi.fn(), archiveAgentStudioSubject: vi.fn(), cancelRun: vi.fn(),
   restoreAgentStudioDefinition: vi.fn(), restoreAgentStudioSession: vi.fn(),
@@ -114,6 +114,7 @@ beforeEach(() => {
   api.getConversationState.mockImplementation(async (id: string, before?: number) => state(id, before));
   api.getSubjectMemories.mockImplementation(async (id: string) => id === "subject-A" ? memory(1) : { subject_id: id, facts: [] });
   api.listConversationRuns.mockResolvedValue({ items: [], total: 0 });
+  api.listConversationActivity.mockResolvedValue({ items: [] });
   api.getRun.mockResolvedValue(run("succeeded"));
   api.getRunEventLog.mockResolvedValue({ items: [], total: 0 });
 });

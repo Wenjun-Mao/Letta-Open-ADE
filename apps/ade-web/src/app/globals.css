@@ -292,6 +292,25 @@
   outline-offset: 2px;
 }
 
+.studio-turn-activity {
+  margin-top: 9px;
+  padding-top: 7px;
+  border-top: 1px solid #d4dee7;
+  color: #476279;
+  font-size: 11px;
+}
+
+.studio-turn-activity summary {
+  width: fit-content;
+  margin-top: 3px;
+  cursor: pointer;
+}
+
+.studio-turn-activity details p {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
 .studio-message-input {
   margin-top: 13px;
 }
