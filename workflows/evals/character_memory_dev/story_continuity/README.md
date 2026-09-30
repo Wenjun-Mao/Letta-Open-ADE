@@ -37,9 +37,10 @@ needs in some cases. Keep the frozen scorecard; do not infer a general novelty
 benefit or launch another selector before establishing query-relative sufficiency.
 
 The approved [packet-sufficiency audit](packet_sufficiency/README.md) now has ten
-frozen inputs and a neutral external-review packet. Independent AI annotation is
-pending; new-control selections and the decision readout must wait for its freeze.
-Offline admission toy tests do not supply those missing semantic judgments.
+frozen inputs and a neutral external-review packet. Two returned AI annotations
+have been preserved and source-checked, but both disclose prior ADE context.
+The clean-session gate is unmet; new-control comparisons remain unrun. Offline
+admission toy tests do not supply qualifying semantic judgments.
 
 ## Entrypoint And Freeze
 

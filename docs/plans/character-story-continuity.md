@@ -36,16 +36,19 @@ pairs for four slots, and some groups require more than the current query needs.
 The candidate's eight flagged sources comprise one other-episode and seven
 unrelated selections. Historical fixtures, metric totals and the failed native
 gate are unchanged. The user approved preparing an independent packet-sufficiency
-audit, not another selector; the reviewer handoff is ready and annotation is pending.
+audit, not another selector. Two returned annotations disclose prior ADE context;
+the clean-session gate remains unmet and new-control comparisons remain unrun.
 
 ## Packet-Sufficiency Audit
 
-Status: **Preparation implemented after user approval; independent annotation
-pending.** The [workflow](../../workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/README.md)
+Status: **Preparation and returned-report review implemented; clean-session gate
+not satisfied.** The [workflow](../../workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/README.md)
 freezes ten inputs and the neutral review packet. Five separate runtime-owned toy
 tests check realistic admission mechanics without selecting the new cases.
-Deliverable 1 and the handoff portion of 2 are implemented; deliverables 3-5 remain
-gated on the returned, frozen independent judgments. This is the single follow-up
+The [assessment and receipt](../../workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/reports/assessment-2026-09-30.md)
+preserve two source-checked AI reports with prior-context disclosures, not qualified
+blind labels. The user explicitly chose to keep the gate and obtain one clean-
+session replacement; deliverables 3-5 remain gated. This is the single follow-up
 plan; the native sequence remains closed and older deliverables remain historical.
 
 ### Decision And Scope

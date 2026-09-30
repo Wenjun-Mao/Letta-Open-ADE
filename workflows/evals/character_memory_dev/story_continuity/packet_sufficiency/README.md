@@ -1,9 +1,11 @@
 # Packet-Sufficiency Audit
 
-Status (2026-09-30): **Preparation implemented; independent annotation pending.**
+Status (2026-09-30): **Two reports received; clean-session gate not satisfied.**
 The user approved the [single follow-up plan](../../../../../docs/plans/character-story-continuity.md#packet-sufficiency-audit).
-Deliverable 1 and the handoff portion of deliverable 2 are ready. No independent
-labels, new-control selection results, semantic readout or adopted selector exist.
+The [returned-report assessment](reports/assessment-2026-09-30.md) preserves both
+originals and source checks; each reviewer disclosed inherited ADE context.
+Deliverable 1 and report capture/review in 2 are implemented. Qualifying labels,
+new-control selection results, a final readout and selector adoption remain absent.
 PC-03/04/05/06/09/10/11 remain unchanged; native turns 8-10 remain unrun.
 
 ## Why This Layer
@@ -81,6 +83,19 @@ Starlette/httpx deprecation warning. Ruff lint/format and scoped whitespace chec
 passed. No live service, database or provider verification was performed.
 
 ## Manual Handoff And Stop
+
+Current stop: the returned reports are advisory AI evidence, not certified blind
+annotations. Do not run the new-control comparison while the clean-session
+requirement is unresolved. The user explicitly chose on 2026-09-30 to keep the
+gate and obtain one clean-session replacement, not a non-blind diagnostic.
+Both original Markdown reports retain their exact bytes, including hard-break
+spaces; scoped whitespace checks exclude those imported originals only.
+
+The replacement handoff must require a prior-context preflight before reading the
+unchanged packet. If inherited ADE summaries, memories or earlier reviews are
+present, stop before annotation. Do not show the replacement reviewer these
+reports, their assessment, this README or the mapping. It is a fresh primary
+review, not an adjudication between A and B. No automatic account dispatch.
 
 Publish scoped inputs and verify the immutable packet URL without credentials.
 Send one fresh external AI reviewer only that URL and a self-contained assignment

@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "kind": "returned_ai_annotations_with_disclosed_prior_context",
+  "received_date": "2026-09-30",
+  "packet_commit": "a201ec0ed5ed20eda00c42983d1b4ebc504c5aca",
+  "packet_path": "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/REVIEW_PACKET.md",
+  "packet_sha256": "1cfb78f539c3c7a670e60f7132d870acf142b3a718f5c4be126422b9a9336794",
+  "packet_git_blob_sha1": "bba3fc44c2336259f62c3a86f186bf73d664e96d",
+  "source_check_scope": "Report bytes, pinned packet identity, all ten case sections and eight rubric headings per case, and exact same-case containment of Mandarin text in curly quotation marks. Semantic judgments and completeness of sufficient-set enumeration remain operator-reviewed, not mechanically proven.",
+  "clean_session_requirement_satisfied": false,
+  "human_validation": false,
+  "cross_report_independence_verified": false,
+  "new_control_selections_computed_at_receipt": false,
+  "reports": [
+    {
+      "id": "A",
+      "path": "annotation-a-2026-09-30.md",
+      "sha256": "051d099665f50900bff62362799d931be33e256bcb2bb145c59914f676de12f1",
+      "byte_count": 38955,
+      "reviewer_kind": "external_ai_self_report",
+      "provider_model_self_report": "OpenAI / GPT-6 Astra Pro",
+      "review_date_self_report": "2026-09-30",
+      "access_self_report": "Only the pinned review packet; contiguous reads recovered a truncated response and same-file ranges were rechecked. Reported Git blob matches the repository blob.",
+      "exposure_self_report": "Pre-existing conversation summaries included earlier ADE-review requests and an earlier request concerning this packet; no earlier conversations or assessments were retrieved as evidence. A genuinely context-empty session cannot be certified.",
+      "mandarin_quote_occurrences_checked": 66,
+      "source_text_mismatches": 0,
+      "covered_cases": ["C01", "C02", "C03", "C04", "C05", "C06", "C07", "C08", "C09", "C10"]
+    },
+    {
+      "id": "B",
+      "path": "annotation-b-2026-09-30.md",
+      "sha256": "a9a3e3f524d829b8455bdad16211178f01c0b39fe6be6423cae0d5419f7bfe77",
+      "byte_count": 37612,
+      "reviewer_kind": "external_ai_self_report",
+      "provider_model_self_report": "OpenAI / GPT-6 Astra Pro",
+      "review_date_self_report": "2026-09-30",
+      "access_self_report": "Only the pinned review packet via raw GitHub, revision-pinned connector fetch and same-content rereads; no other project sources or selection outcomes accessed.",
+      "exposure_self_report": "Hosting context contained high-level earlier ADE summaries, reportedly not these transcripts or their outcomes. No prior conversations were retrieved. A genuinely fresh blinded session cannot be certified.",
+      "mandarin_quote_occurrences_checked": 77,
+      "source_text_mismatches": 0,
+      "covered_cases": ["C01", "C02", "C03", "C04", "C05", "C06", "C07", "C08", "C09", "C10"]
+    }
+  ]
+}
