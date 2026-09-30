@@ -1,11 +1,19 @@
 # Character Story Continuity: Bounded Probe Plan
 
-Date: 2026-09-30. Status: **One bounded native sequence approved.** After the
+Date: 2026-09-30. Status: **Bounded native diagnostic closed at its turn-7 gate.** After the
 offline readiness audit, the user separately approved deliverable 3 and then
 confirmed local commits and isolated runner preparation. The approved scope is
 the frozen ten-turn ceiling, one attempt each, without rerolls or baseline edits.
 Retained-trial access, pushing, deployment and release remain unauthorized.
 Work serially on the primary `main` checkout.
+
+Native outcome: [seven turns delivered; stopped at turn 7's original-source
+admission gate](../findings/natural-memory-consultation/character-story-native-2026-09-30.md).
+All seven kept user-memory state unchanged. Early story behavior was consistent;
+archived retellings reached the new version, but the original ranked fifth outside
+the four selected windows. Turns 8-10 remain unrun. The user approved explicitly
+labeled agent annotations before turn 2; this is not independent human validation.
+The isolated services/database have been removed; no reroll, push or deployment.
 
 The [native entrypoint](../../workflows/evals/character_memory_dev/story_continuity/NATIVE.md)
 requires a clean committed source, actual isolated catalog/definition receipts,

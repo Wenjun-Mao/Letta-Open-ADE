@@ -118,3 +118,15 @@ and rejects changes to runtime, prompts, fixtures, models or evidence validators
 Supply `reviewer_kind: "agent"` and the agent's identity in annotation files.
 The same exact-quote and pre-outcome frontiers remain mandatory. This is not a
 fresh run or a reroll, and the final assessment must not claim human validation.
+
+## Native Outcome
+
+The [source-bound finding](../../../../docs/findings/natural-memory-consultation/character-story-native-2026-09-30.md)
+records seven delivered turns, unchanged full user-memory state and a required
+turn-7 origin-admission failure. The original remained eligible but ranked fifth;
+four archived later exchanges were admitted. Turns 8-10 were not dispatched.
+The owned services/database are removed and receipts preserved. This sequence
+is closed under its stop rule, not awaiting another annotation or eligible for
+a reroll. Agent-annotation checks passed: 130 portable workflow tests.
+Final combined runtime/workflow verification: 424 passed, three expected
+missing-historical-evidence skips, one existing Starlette/httpx warning.

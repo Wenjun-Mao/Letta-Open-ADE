@@ -10,9 +10,13 @@ now permits solo character episodes with expected later consistency within each
 user-character relationship, with authored biography as the common foundation;
 [ADR 0050](../../adr/0050-consistent-improvised-character-history.md) records the
 rationale and remaining design questions. No implementation follows automatically.
-The [draft character-story continuity plan](../../plans/character-story-continuity.md)
-turns the agreed stable-history direction into a bounded probe for review, without
-new storage or live-run authorization.
+The subsequently approved [character-story continuity probe](../../plans/character-story-continuity.md)
+now has a [source-bound native finding](character-story-native-2026-09-30.md): seven
+consistent delivered turns with unchanged user-memory state, stopped at the
+required archived-origin admission gate. The origin ranked fifth behind later
+exchanges; archived retrieval itself worked. Turns 8-10 remain unrun. Assessment
+is explicitly agent-reviewed following user approval, not human validation or
+release qualification; no new storage was introduced.
 The following packet remains the historical handoff record.
 
 The [character voice and memory review packet](character-contract-review-brief-2026-09-30.md)
