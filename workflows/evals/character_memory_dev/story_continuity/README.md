@@ -30,6 +30,12 @@ show better labeled evidence coverage but more unrelated admissions. The candida
 is evaluation-only and **not adopted**; passing its tests preserves that observed
 tradeoff, not a claim of native quality or a completed retrieval fix.
 
+The subsequent [review assessment](../../../../docs/findings/natural-memory-consultation/character-story-retrieval-review-assessment-2026-09-30.md)
+shows that all five apparent coverage gains occur with only four distinct text
+pairs for four slots. Source-group requirements also exceed demonstrated answer
+needs in some cases. Keep the frozen scorecard; do not infer a general novelty
+benefit or launch another selector before establishing query-relative sufficiency.
+
 ## Entrypoint And Freeze
 
 From the retained primary checkout on `main`:

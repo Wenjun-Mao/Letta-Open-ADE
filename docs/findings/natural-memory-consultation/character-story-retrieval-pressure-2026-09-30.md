@@ -42,8 +42,11 @@ Under the controlled scores, selection is always `s5, s6, s4, s3`; `s1` and `s2`
 are `selector_not_selected`. Paired corpora have different private document and
 recipe hashes, but the omitted source text never reaches either model. More
 careful model reasoning cannot reconstruct which of these two histories occurred
-from identical input. Abstention could avoid a contradiction, but would not
-deliver the requested faithful recall; model behavior is unmeasured here.
+from identical input. This prevents reliable selection of the differing
+weather/location details, not every faithful answer to the broad query: a
+common-core retelling could fit both histories. Abstention is not the only
+alternative. This wording was qualified after [external review](character-story-retrieval-review-assessment-2026-09-30.md);
+the synthetic inputs and outcomes are unchanged, and model behavior is unmeasured.
 
 ## Root Cause And Disposition
 
@@ -70,6 +73,11 @@ echoes. Neither limit is changed here. Do not introduce an episode store or fact
 type from this diagnostic (PC-09).
 
 ## Next Bounded Work
+
+Historical recommendation below: the subsequent diversity experiment and
+[review assessment](character-story-retrieval-review-assessment-2026-09-30.md)
+now favor auditing query-relative packet sufficiency before another selector.
+This does not revise this experiment's frozen inputs or results.
 
 Evaluate a source-diversity/related-source recovery candidate offline before
 choosing runtime semantics. Its central question is how to recover relevant

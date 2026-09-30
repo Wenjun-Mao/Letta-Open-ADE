@@ -4,7 +4,9 @@ Date: 2026-09-30. Status: **Bounded native diagnostic closed at its turn-7 gate.
 offline readiness audit, the user separately approved deliverable 3 and then
 confirmed local commits and isolated runner preparation. The approved scope is
 the frozen ten-turn ceiling, one attempt each, without rerolls or baseline edits.
-Retained-trial access, pushing, deployment and release remain unauthorized.
+Retained-trial access, pushing, deployment and release were outside that native
+authorization. Subsequent normal commits/pushes are pre-approved under ADR 0048;
+retained-trial access, deployment and release remain separately gated.
 Work serially on the primary `main` checkout.
 
 Native outcome: [seven turns delivered; stopped at turn 7's original-source
@@ -27,6 +29,14 @@ has now been compared offline on frozen lexical controls: complete labeled
 evidence improves from 2/7 to 7/7, but irrelevant admissions rise from 3 to 8.
 It is **not adopted**. These fixture counts do not measure native/model quality;
 relevance-aware recovery and correction interpretation remain unresolved.
+
+The [returned-review assessment](../findings/natural-memory-consultation/character-story-retrieval-review-assessment-2026-09-30.md)
+now qualifies that gain: all five improved cases have exactly four distinct text
+pairs for four slots, and some groups require more than the current query needs.
+The candidate's eight flagged sources comprise one other-episode and seven
+unrelated selections. Historical fixtures, metric totals and the failed native
+gate are unchanged. The next proposed investment is an independent packet-
+sufficiency audit, not another selector; it is conditional and not launched.
 
 The [native entrypoint](../../workflows/evals/character_memory_dev/story_continuity/NATIVE.md)
 requires a clean committed source, actual isolated catalog/definition receipts,

@@ -19,3 +19,5 @@
 | Content | Reviewed product material under `content/`: prompts, personas, schemas, and reports. |
 | Workflow | A self-contained eval, qualification, probe, or smoke check with inputs, config, artifacts, docs, and tests. |
 | Artifact | A generated CSV, JSONL, summary, log, or other run-owned workflow output. |
+| Diagnostic source-group coverage | An evaluation metric counting whether designated source groups appear in a packet. It does not by itself establish answer sufficiency, truth or model quality. |
+| Query-relative packet sufficiency | An assessment of whether the complete supplied context supports the claims needed for a particular question, including relevant attribution, dependencies and material counterevidence. Alternative packets may suffice; an original source is not universally required. This is distinct from measured model behavior or a frozen provenance gate. |

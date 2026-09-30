@@ -301,3 +301,61 @@ def test_observed_scorecard_and_source_binding():
             item["irrelevant_admitted"] for item in negative
         )
     assert summary == observed["summary"]
+
+
+def test_improved_cases_do_not_distinguish_novelty_from_duplicate_handling():
+    observed = json.loads((DIRECTORY / "observed.json").read_text())
+    improved = []
+    for case in _cases():
+        arms = observed["cases"][case["id"]]
+        if not (
+            _assess(case, arms["candidate"])["all_evidence"]
+            and _assess(case, arms["baseline"])["all_evidence"] is False
+        ):
+            continue
+        improved.append(case["id"])
+        classes = {}
+        for source_id, user, assistant in case["exchanges"]:
+            classes.setdefault((user, assistant), set()).add(source_id)
+        assert len(case["exchanges"]) == 7
+        assert len(classes) == LIMIT
+        # Every representative of at least one full text class satisfies each
+        # required group. This proves a fixture confound, not a deduplication rule.
+        for group in case["evidence_groups"]:
+            assert any(ids <= set(group) for ids in classes.values())
+        selected = set(arms["candidate"])
+        assert all(ids & selected for ids in classes.values())
+    assert improved == [
+        "wrong_repeated_echoes",
+        "supported_error_correction",
+        "unsupported_rewrite",
+        "compatible_new_detail",
+        "anaphoric_correction",
+    ]
+
+
+def test_positive_irrelevant_breakdown_separates_other_episode_and_chatter():
+    observed = json.loads((DIRECTORY / "observed.json").read_text())
+    totals = {}
+    for arm in ("baseline", "candidate"):
+        other_episode = unrelated = 0
+        for case in _cases():
+            if not case["evidence_groups"]:
+                continue
+            selected = set(observed["cases"][case["id"]][arm])
+            irrelevant = selected & set(case["irrelevant_ids"])
+            # Scorer-only classification of this frozen fixture. In the similar
+            # episode case, g is food chatter, not another cat encounter.
+            contrast = (
+                {"b", "d", "e", "f"}
+                if case["id"] == "distinct_similar_episodes"
+                else set()
+            )
+            other_episode += len(irrelevant & contrast)
+            unrelated += len(irrelevant - contrast)
+        totals[arm] = (other_episode, unrelated)
+        assert (
+            other_episode + unrelated
+            == observed["summary"][f"{arm}_positive_irrelevant_admissions"]
+        )
+    assert totals == {"baseline": (3, 0), "candidate": (1, 7)}

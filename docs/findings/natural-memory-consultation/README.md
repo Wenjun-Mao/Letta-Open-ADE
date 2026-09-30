@@ -1,6 +1,15 @@
 # Natural Memory Consultation Review
 
-Current consultation (2026-09-30): the [story-retrieval review packet](character-story-retrieval-review-brief-2026-09-30.md)
+Current consultation (2026-09-30): two returned story-retrieval reports are
+preserved unchanged as [A](reports/character-story-retrieval-review-a-2026-09-30.md)
+and [B](reports/character-story-retrieval-review-b-2026-09-30.md). The
+[source-checked assessment](character-story-retrieval-review-assessment-2026-09-30.md)
+verifies the exact-copy fixture confound, corrects the irrelevant-source breakdown,
+and separates diagnostic coverage from query-relative packet sufficiency. Runtime
+remains unchanged; the candidate is unadopted. A further packet audit is a
+conditional proposal, not a newly authorized experiment or revised native gate.
+
+The preceding [story-retrieval review packet](character-story-retrieval-review-brief-2026-09-30.md)
 requests one independent critique of original-source admission, correction
 coverage and the evidence methodology after the native probe and two offline
 follow-ups. Reviewed source is pinned to `79852e6ee8c17f2efdd7492dfae6627d91d12c7d`;

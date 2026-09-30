@@ -50,8 +50,10 @@ a model resolves it. No-match is not counted as a successful positive case.
 
 Complete labeled evidence improves from **2/7 to 7/7** positive cases, while
 irrelevant admissions increase from **3 to 8 of 28 slots**. The baseline's three
-are sources about the other episode; the candidate admits two other-episode
-sources and six unrelated-topic sources. Neither arm abstains on the no-match
+are sources about the other episode; the candidate admits one other-episode
+source and seven unrelated-topic sources. (Corrected after external review;
+the original two/six split was a reporting error, not a change to the scorecard.)
+Neither arm abstains on the no-match
 case. These are fixture counts, not accuracy percentages or model failure rates.
 All selected exchanges reached both packets without capacity drops.
 
@@ -76,8 +78,9 @@ serialization/role-label overlap, not semantic evidence. This is a limitation of
 using the existing lexical scorer for this experiment; it does not establish the
 same score behavior for Qwen. We do not patch that scorer or alter the query here.
 
-The candidate recovers sources without hardcoded origins, answering this bounded
-question positively. It does **not** justify production integration: it admits
+The candidate recovers sources without hardcoded origins in these fixtures.
+That does not distinguish general diversity from exact-copy handling; see the
+review addendum below. It does **not** justify production integration: it admits
 more unrelated text, does not identify correction authority, and has no measured
 native retrieval or generation benefit. Keep it evaluation-only and unadopted;
 do not describe passing characterization tests as a retrieval fix. No new ADR
@@ -115,3 +118,25 @@ uv run --locked python -m pytest services/ade-api/tests/agent_runtime workflows/
 455 passed, three explicit absent-historical-evidence skips (one H2, two H4),
 and one existing Starlette/httpx deprecation warning. Ruff check, format check
 and `git diff --check` passed. No push, deployment or provider requests.
+
+## External Review Addendum (2026-09-30)
+
+The [source-checked review assessment](character-story-retrieval-review-assessment-2026-09-30.md)
+qualifies the interpretation above without changing any frozen fixture, recipe,
+selected IDs or aggregate score. In all five newly covered cases, seven windows
+contain exactly four distinct complete user/assistant text pairs. One
+representative per distinct pair makes every declared evidence group available.
+The experiment therefore does not distinguish a general novelty benefit from
+freeing slots occupied by exact copies. This is not a runtime deduplication
+recommendation: repeated text can carry distinct times, attribution and authority.
+
+Coverage groups also mix answer support, conflict visibility, rejected-request
+provenance and optional detail. Their necessity for the exact query was not
+independently established. Preserve 2/7 versus 7/7 as diagnostic coverage, not
+answer accuracy or native retrieval benefit. The native selected windows were
+different elaboration/refusal/retelling/denial exchanges, not exact duplicate text.
+
+The earlier suggestion to proceed directly toward relevance-gated recovery is
+superseded by the assessment's narrower recommendation: first establish which
+missing evidence changes justified answers. Runtime remains unchanged. A fresh
+packet-sufficiency audit is conditional, not launched by receipt of the reviews.
