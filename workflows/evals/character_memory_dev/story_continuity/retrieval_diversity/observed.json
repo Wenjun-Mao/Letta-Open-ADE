@@ -1,0 +1,25 @@
+{
+  "status": "observed_lexical_mechanics_not_qualification",
+  "fixture_sha256": "37bdb1405a2373174915f43335b775a7b2f85a0d43666ee6b9e4b11b027e8e5b",
+  "recipe_sha256": "476fe754b8155980477928ad374eb59ff6519c258c0bb00efd78f966ca6717ff",
+  "selector_sha256": "3c092c759ffd44bbd849593577330f4382525dfcdf62000ec444795ac7272a46",
+  "cases": {
+    "faithful_paraphrases": {"baseline": ["e", "d", "b", "a"], "candidate": ["e", "b", "d", "a"]},
+    "wrong_repeated_echoes": {"baseline": ["e", "d", "c", "b"], "candidate": ["e", "a", "g", "f"]},
+    "supported_error_correction": {"baseline": ["f", "d", "c", "b"], "candidate": ["f", "a", "e", "g"]},
+    "unsupported_rewrite": {"baseline": ["f", "e", "c", "b"], "candidate": ["f", "d", "a", "g"]},
+    "distinct_similar_episodes": {"baseline": ["c", "f", "e", "d"], "candidate": ["c", "f", "g", "a"]},
+    "compatible_new_detail": {"baseline": ["f", "e", "d", "c"], "candidate": ["f", "b", "a", "g"]},
+    "anaphoric_correction": {"baseline": ["f", "d", "c", "b"], "candidate": ["f", "a", "e", "g"]},
+    "unrelated_topic": {"baseline": ["f", "c", "e", "d"], "candidate": ["f", "c", "b", "a"]}
+  },
+  "summary": {
+    "positive_cases": 7,
+    "baseline_complete_evidence": 2,
+    "candidate_complete_evidence": 7,
+    "baseline_positive_irrelevant_admissions": 3,
+    "candidate_positive_irrelevant_admissions": 8,
+    "baseline_no_match_irrelevant_admissions": 4,
+    "candidate_no_match_irrelevant_admissions": 4
+  }
+}

@@ -22,6 +22,12 @@ evidence-availability checks, not measured model failures or a retrieval fix.
 Baseline and native gate remain unchanged; a non-oracle source-recovery candidate
 and correction interpretation remain open before another native sequence.
 
+The [first non-oracle source-diversity candidate](../findings/natural-memory-consultation/character-story-source-diversity-2026-09-30.md)
+has now been compared offline on frozen lexical controls: complete labeled
+evidence improves from 2/7 to 7/7, but irrelevant admissions rise from 3 to 8.
+It is **not adopted**. These fixture counts do not measure native/model quality;
+relevance-aware recovery and correction interpretation remain unresolved.
+
 The [native entrypoint](../../workflows/evals/character_memory_dev/story_continuity/NATIVE.md)
 requires a clean committed source, actual isolated catalog/definition receipts,
 full private observations and human annotation pauses. Its implementation and

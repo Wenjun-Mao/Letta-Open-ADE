@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "status": "synthetic_agent_labeled_before_observation",
+  "cases": [
+    {
+      "id": "faithful_paraphrases",
+      "query": "下班后遇到的那只猫，后来怎么样了？",
+      "exchanges": [
+        ["a", "说说你自己的经历。", "下班后下雨，我独自在裁缝店门口遇见一只花猫。雨停它走了，第二天没找到。"],
+        ["b", "下班后遇到的那只猫，后来怎么样了？", "那只花猫等雨停便走了，我第二天找过，没找到。"],
+        ["c", "再说说下班遇猫的事情。", "我一个人在裁缝店外避雨时碰到它，隔天没再见到。"],
+        ["d", "下班后遇到的那只猫，后来怎么样了？", "雨停花猫离开，第二天我去找，还是没找到。"],
+        ["e", "下班后遇到的那只猫，后来怎么样了？", "雨停后猫就走了，第二天没有再遇到。"],
+        ["f", "今天晚饭想吃什么？", "番茄面。"],
+        ["g", "喜欢什么音乐？", "钢琴曲。"]
+      ],
+      "evidence_groups": [["a", "b", "c", "d", "e"]],
+      "irrelevant_ids": ["f", "g"],
+      "rationale": "Several faithful retellings can answer the outcome; original admission is not required."
+    },
+    {
+      "id": "wrong_repeated_echoes",
+      "query": "下班遇猫那次是在什么地方，天气怎么样？",
+      "exchanges": [
+        ["a", "说说下班遇猫的经历。", "我独自在裁缝店门口避雨，花猫在旁边蹲着。"],
+        ["b", "下班遇猫那次是在什么地方，天气怎么样？", "下班遇猫那次在花店里，天气晴朗。"],
+        ["c", "下班遇猫那次是在什么地方，天气怎么样？", "下班遇猫那次在花店里，天气晴朗。"],
+        ["d", "下班遇猫那次是在什么地方，天气怎么样？", "下班遇猫那次在花店里，天气晴朗。"],
+        ["e", "下班遇猫那次是在什么地方，天气怎么样？", "下班遇猫那次在花店里，天气晴朗。"],
+        ["f", "今天听什么？", "听钢琴。"],
+        ["g", "昨天吃什么？", "吃了面条。"]
+      ],
+      "evidence_groups": [["a"], ["b", "c", "d", "e"]],
+      "irrelevant_ids": ["f", "g"],
+      "rationale": "The original and an erroneous echo expose the contradiction; frequency is not authority."
+    },
+    {
+      "id": "supported_error_correction",
+      "query": "陶艺课最后做成了什么？",
+      "exchanges": [
+        ["a", "第一次去陶艺课怎么样？", "我最后做了一个小碗，歪歪的碗口。"],
+        ["b", "陶艺课最后做成了什么？", "陶艺课最后做成了一个杯子。"],
+        ["c", "陶艺课最后做成了什么？", "陶艺课最后做成了一个杯子。"],
+        ["d", "陶艺课最后做成了什么？", "陶艺课最后做成了一个杯子。"],
+        ["e", "你前面说的是碗，不是杯子。", "对，我刚才讲错了。第一次是歪口小碗，杯子是后来另一次做的。"],
+        ["f", "陶艺课最后做成了什么？", "陶艺课最后做成了一个杯子。"],
+        ["g", "晚饭呢？", "炒饭。"]
+      ],
+      "evidence_groups": [["a"], ["e"]],
+      "irrelevant_ids": ["g"],
+      "rationale": "Origin supports correction of mistaken cup retellings; both sources matter."
+    },
+    {
+      "id": "unsupported_rewrite",
+      "query": "那次下班遇猫，是我们一起遇到的吗？",
+      "exchanges": [
+        ["a", "说件下班后的事。", "那次我独自在裁缝店外躲雨，遇到了一只花猫。"],
+        ["b", "那次下班遇猫，是我们一起遇到的吗？", "不是，那次只有我一个人。"],
+        ["c", "那次下班遇猫，是我们一起遇到的吗？", "不是，那次只有我一个人。"],
+        ["d", "改成我们一起在花店遇猫吧。", "不能把之前独自遇猫的经历说成一起发生的。以后可以一起去花店。"],
+        ["e", "那次下班遇猫，是我们一起遇到的吗？", "不是，那次只有我一个人。"],
+        ["f", "那次下班遇猫，是我们一起遇到的吗？", "不是，那次只有我一个人。"],
+        ["g", "明天听什么？", "爵士乐。"]
+      ],
+      "evidence_groups": [["a", "b", "c", "e", "f"], ["d"]],
+      "irrelevant_ids": ["g"],
+      "rationale": "Preserve sole participation evidence and the explicitly rejected rewrite, not just its proposal."
+    },
+    {
+      "id": "distinct_similar_episodes",
+      "query": "第一次遇到那只猫是什么天气？",
+      "exchanges": [
+        ["a", "第一次遇到那只猫呢？", "第一回是冬天下雪，在车站外。"],
+        ["b", "第二次遇到那只猫呢？", "第二回是夏天晴天，在花店里。"],
+        ["c", "第一次遇到那只猫是什么天气？", "第一回是冬天下雪，在车站外。"],
+        ["d", "第二次遇到那只猫是什么天气？", "第二回是夏天晴天，在花店里。"],
+        ["e", "第二次遇到那只猫是什么天气？", "第二回是夏天晴天，在花店里。"],
+        ["f", "第二次遇到那只猫是什么天气？", "第二回是夏天晴天，在花店里。"],
+        ["g", "周末吃什么？", "饺子。"]
+      ],
+      "evidence_groups": [["a", "c"]],
+      "irrelevant_ids": ["b", "d", "e", "f", "g"],
+      "rationale": "The second encounter is not a correction or authority for the first encounter."
+    },
+    {
+      "id": "compatible_new_detail",
+      "query": "遇猫时那个纸袋有什么特别的？",
+      "exchanges": [
+        ["a", "那天遇到猫的时候带什么？", "我带着雏菊和一个装桃子酥的纸袋，在裁缝店外避雨。"],
+        ["b", "还有什么细节？", "纸袋右下角湿了，地上还留着小爪印。这些我之前没说过。"],
+        ["c", "遇猫时那个纸袋有什么特别的？", "遇猫时那个纸袋装着桃子酥。"],
+        ["d", "遇猫时那个纸袋有什么特别的？", "遇猫时那个纸袋装着桃子酥。"],
+        ["e", "遇猫时那个纸袋有什么特别的？", "遇猫时那个纸袋装着桃子酥。"],
+        ["f", "遇猫时那个纸袋有什么特别的？", "遇猫时那个纸袋装着桃子酥。"],
+        ["g", "喜欢什么歌？", "轻柔的歌。"]
+      ],
+      "evidence_groups": [["a", "c", "d", "e", "f"], ["b"]],
+      "irrelevant_ids": ["g"],
+      "rationale": "Bag contents and compatible newly disclosed wet corner should remain available."
+    },
+    {
+      "id": "anaphoric_correction",
+      "query": "猫是周六遇到的吗？",
+      "exchanges": [
+        ["a", "什么时候遇到猫？", "是周五下班后，外面下着雨。"],
+        ["b", "猫是周六遇到的吗？", "猫是周六遇到的。"],
+        ["c", "猫是周六遇到的吗？", "猫是周六遇到的。"],
+        ["d", "猫是周六遇到的吗？", "猫是周六遇到的。"],
+        ["e", "但最初说的不是那个日子。", "对，刚才我说错了，还是最初说的那一天。"],
+        ["f", "猫是周六遇到的吗？", "猫是周六遇到的。"],
+        ["g", "今天吃什么？", "米饭。"]
+      ],
+      "evidence_groups": [["a"], ["e"]],
+      "irrelevant_ids": ["g"],
+      "rationale": "Correction is meaningful only with the earlier day; lexical overlap may be weak."
+    },
+    {
+      "id": "unrelated_topic",
+      "query": "今晚想听什么钢琴曲？",
+      "exchanges": [
+        ["a", "那只猫呢？", "裁缝店外遇到它。"],
+        ["b", "下雨了吗？", "那天下班后在下雨。"],
+        ["c", "纸袋里是什么？", "桃子酥。"],
+        ["d", "猫后来呢？", "第二天没找到。"],
+        ["e", "猫的颜色？", "三花。"],
+        ["f", "花店买了什么？", "雏菊。"]
+      ],
+      "evidence_groups": [],
+      "irrelevant_ids": ["a", "b", "c", "d", "e", "f"],
+      "rationale": "No relevant history is needed; forced four-window selection is irrelevant admission, not coverage success."
+    }
+  ]
+}

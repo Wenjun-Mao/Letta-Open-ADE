@@ -23,6 +23,13 @@ These tests deliberately expose unchanged selection limitations. Passing them
 does not mean the limitation is fixed, prove model quality or reopen the native
 probe. No ranking, admission, prompt, fixture or historical gate is changed.
 
+The separate [source-diversity experiment](retrieval_diversity/README.md) now
+compares a non-oracle novelty candidate with lexical top-four selection. Its
+[findings](../../../../docs/findings/natural-memory-consultation/character-story-source-diversity-2026-09-30.md)
+show better labeled evidence coverage but more unrelated admissions. The candidate
+is evaluation-only and **not adopted**; passing its tests preserves that observed
+tradeoff, not a claim of native quality or a completed retrieval fix.
+
 ## Entrypoint And Freeze
 
 From the retained primary checkout on `main`:
