@@ -21,6 +21,10 @@ uses loopback port 13001; the API uses 18001. The stack uses Compose project
 It does not share the production app's ports or data. The startup script copies
 the required content into trial storage and prepares a trial-only router catalog.
 Its source selection checks the existing DeepSeek and pinned Qwen route identities.
+The workflow's ignored `.trial/` directory is also excluded by `.dockerignore`:
+local router credentials, PostgreSQL files, copied content and private evidence
+are runtime mounts, never image inputs. Git ignore rules alone do not protect
+Docker's `COPY workflows`. Keep this exclusion when changing packaging.
 
 Use a new fictional **Memory subject** for each person's trial. Existing
 `SMOKE` conversations and subjects were created by the operator and should not

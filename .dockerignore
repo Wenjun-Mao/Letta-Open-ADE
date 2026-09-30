@@ -12,6 +12,7 @@ config/model-router/sources.local.json
 diagnostics/
 tests/outputs/
 workflows/evals/*/outputs/
+workflows/evals/*/.trial/
 letta-souce-code/
 .github/
 .vscode/
