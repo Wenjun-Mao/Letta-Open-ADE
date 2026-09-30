@@ -1,9 +1,17 @@
 # Character Story Continuity: Bounded Probe Plan
 
-Date: 2026-09-30. Status: **Offline slice approved for implementation.** The user
-authorized deliverables 1-2 after the readiness review. Deliverable 3 still requires
-separate live approval; no provider calls, deployment or release are authorized.
+Date: 2026-09-30. Status: **One bounded native sequence approved.** After the
+offline readiness audit, the user separately approved deliverable 3 and then
+confirmed local commits and isolated runner preparation. The approved scope is
+the frozen ten-turn ceiling, one attempt each, without rerolls or baseline edits.
+Retained-trial access, pushing, deployment and release remain unauthorized.
 Work serially on the primary `main` checkout.
+
+The [native entrypoint](../../workflows/evals/character_memory_dev/story_continuity/NATIVE.md)
+requires a clean committed source, actual isolated catalog/definition receipts,
+full private observations and human annotation pauses. Its implementation and
+scripted tests alone do not establish native quality. Historical offline status
+below records what was authorized and verified at that earlier checkpoint.
 
 ### Offline Implementation Status (2026-09-30)
 

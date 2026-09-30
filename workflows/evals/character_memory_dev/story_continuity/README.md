@@ -2,10 +2,12 @@
 
 PC-11 preparation under PC-01/03/04/05/06/09/10 and ADR 0050. This directory is
 the new workflow entrypoint; historical schedules, fixtures and hash gates are
-unchanged. **All three readiness repairs are implemented offline. No provider
-runner or live permission exists here.** Scripted replies and vectors prove
-mechanics, not model quality. Fresh live source/definition/catalog receipts and
-separate approval remain required; offline-ready does not mean live-qualified.
+unchanged. **All three readiness repairs are implemented offline.** The separate
+[bounded native entrypoint](NATIVE.md) implements the subsequently approved live
+probe; offline `prepare` and `OfflineADE` remain network-free. Scripted replies
+and vectors prove mechanics, not model quality. Native assessment requires fresh
+source/definition/catalog receipts and actual outcomes; offline-ready does not
+mean live-qualified.
 
 ## Entrypoint And Freeze
 

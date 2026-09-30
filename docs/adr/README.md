@@ -50,6 +50,7 @@ record's status notice before applying its original execution details.
 | [0051](0051-evaluation-immutable-definition-versions.md) | Evaluation-owned immutable next versions through the gated history-trial API; no live qualification. |
 | [0052](0052-isolated-story-probe-deployment-binding.md) | Source-backed isolated story-probe deployment configuration, with computed fingerprints and no inherited qualification. |
 | [0053](0053-private-evaluation-observations.md) | Versioned private full-state and bounded history-omission observations; required for PC-11 evidence, not a public API or live qualification. |
+| [0054](0054-bounded-native-story-probe.md) | Separate approved native PC-11 runner: clean source, owned services, immutable one-attempt receipts and human annotation frontiers. |
 
 ## Historical, Retired, Or On Hold
 

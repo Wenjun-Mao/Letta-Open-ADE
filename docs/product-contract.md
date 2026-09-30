@@ -69,8 +69,9 @@ store nor an expanded reviewer mandate (PC-09). Story admission and correction
 semantics, and sufficient implementation remain open below.
 See [ADR 0050](adr/0050-consistent-improvised-character-history.md) for rationale
 and the distinction between new fiction and faithful recollection. The
-[continuity-probe plan](plans/character-story-continuity.md) is a draft for review,
-not implementation or live-run authorization.
+[continuity-probe plan](plans/character-story-continuity.md) records the separately
+approved bounded diagnostic and its evidence limits; PC-11 itself is not a
+standing live-run authorization or release qualification.
 
 ## Open Decisions, Not Agreements
 
