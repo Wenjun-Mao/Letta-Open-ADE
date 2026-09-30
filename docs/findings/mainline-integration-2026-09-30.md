@@ -1,6 +1,6 @@
 # Mainline Integration: 2026-09-30
 
-Status: integrated locally and verified with the audit limitation below;
+Status: integrated and published to `origin/main` with the audit limitation below;
 not deployment or release qualification.
 
 The user requested merging character-continuity work to `main` and staying there.
@@ -9,6 +9,9 @@ The development branch was 147 commits ahead with no divergence; 43 of those
 commits were not yet on its GitHub branch. The consultation draft was committed
 as `46402dd`, then `main` was fast-forwarded without conflict. ADR 0048 records
 the continuing mainline workflow. Existing trial worktrees/services were retained.
+Integration corrections were committed as `2b45c7d` and pushed to `origin/main`.
+The consultant's 11 pinned source files were anonymously verified on GitHub;
+the review packet records the distinct source and publication boundaries.
 
 ## Clean-Checkout Corrections
 
