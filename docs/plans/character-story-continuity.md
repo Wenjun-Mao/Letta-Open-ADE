@@ -15,6 +15,13 @@ the four selected windows. Turns 8-10 remain unrun. The user approved explicitly
 labeled agent annotations before turn 2; this is not independent human validation.
 The isolated services/database have been removed; no reroll, push or deployment.
 
+Post-native [offline retrieval-pressure controls](../findings/natural-memory-consultation/character-story-retrieval-pressure-2026-09-30.md)
+now demonstrate that misleading echoes can hide a contradictory origin from both
+models, while origin reservation alone can miss a correction. These are synthetic
+evidence-availability checks, not measured model failures or a retrieval fix.
+Baseline and native gate remain unchanged; a non-oracle source-recovery candidate
+and correction interpretation remain open before another native sequence.
+
 The [native entrypoint](../../workflows/evals/character_memory_dev/story_continuity/NATIVE.md)
 requires a clean committed source, actual isolated catalog/definition receipts,
 full private observations and human annotation pauses. Its implementation and

@@ -9,6 +9,20 @@ and vectors prove mechanics, not model quality. Native assessment requires fresh
 source/definition/catalog receipts and actual outcomes; offline-ready does not
 mean live-qualified.
 
+## Offline Retrieval Pressure Follow-Up
+
+The [post-native diagnostic](../../../../docs/findings/natural-memory-consultation/character-story-retrieval-pressure-2026-09-30.md)
+adds runtime-owned synthetic controls for faithful versus misleading echoes and
+omitted corrections. Run without a database or providers:
+
+```sh
+uv run --locked python -m pytest services/ade-api/tests/agent_runtime/test_story_retrieval_pressure.py -q
+```
+
+These tests deliberately expose unchanged selection limitations. Passing them
+does not mean the limitation is fixed, prove model quality or reopen the native
+probe. No ranking, admission, prompt, fixture or historical gate is changed.
+
 ## Entrypoint And Freeze
 
 From the retained primary checkout on `main`:
