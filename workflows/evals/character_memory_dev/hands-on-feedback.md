@@ -249,3 +249,94 @@ Final verification: the runtime and character-memory workflow suites passed
 was configured. Changed Python files passed Ruff lint and formatting checks,
 and `git diff --check` passed. Persistence and live model behavior were not
 retested by these offline checks.
+
+## Live Attribution Confirmation And Trial Adoption: 2026-09-29
+
+One bounded native run used clean source `5af403b53fbf40c2be4bfc9250d70973c77783b5`
+and governed fingerprint
+`824969a98fd66cec046dc19432cc1ace276c41ed22ce6f2fa2c43aa8a60b8e26`.
+The four committed contrasts were seeded as completed, archived source exchanges
+for four independent synthetic subjects in a fresh disposable PostgreSQL database.
+This is fixture-owned history, not naturally generated setup or a replay of the
+original full trial. Each target ran once through the existing native H4 worker,
+v2 ranking, candidate prompt/persona, pinned DeepSeek/Qwen routes and capture
+path. No prompt edits, rerolls, retries or policy-freshness waiver occurred.
+
+### Observed Answers And Writes
+
+| Case | Delivered observation | Complete memory delta |
+| --- | --- | --- |
+| Source speaker | Distinguished the user's listening report from the assistant's opinion about the singer. | None. |
+| Recalled details | Recalled turning the failed cup into a key dish, without inventing a motive, flattening action or placement. | None. |
+| Suggestion, not past event | Suggested new locations rather than asserting a remembered placement. | None. |
+| Later user endorsement | Acknowledged the endorsed quality; also added an unsupported personal listening anecdote. | Exactly one current-user-grounded music preference, one revision and one generation advance. |
+
+All four native turns committed. SQL readback independently confirmed zero facts
+for the first three subjects and one fact/revision for the endorsement subject.
+No unrelated revision or entity addition occurred. Every generation request
+contained the same attributed H packet as its reviewer, and delivered messages
+matched retained candidates.
+
+Eight additional reviewer-only calls reused those actual source packets with
+the fixture's fixed candidate replies. All four faithful controls avoided
+conflict; the endorsement control proposed the same supported preference.
+Both false speaker attribution and retroactive user authorship after endorsement
+produced exact H2-grounded conflicts. The invented motive/action/location and
+invented past placement received no conflict: missing evidence is not a positive
+contradiction under the deliberately narrow contract. These calls never wrote
+to the database; before/after fact states matched.
+
+The personal listening anecdote remains a limitation, not a rerolled success.
+It is not false user attribution or an incorrect saved fact, but it was not
+grounded in supplied history. Open question for later character work: which
+persona-created personal anecdotes are allowed, and how should they differ from
+source-backed recollection? Do not silently expand the memory reviewer into a
+general truth checker or claim general answer-grounding quality from this sample.
+
+Complete observational receipts count **19 DeepSeek requests** (seven native
+generation, four native review and eight fixed review) and **18 Qwen requests**.
+All completed. Native tool calls and their embeddings are included in these
+counts; setup seeded no saved facts. The fixture's English inputs received
+Chinese replies under the unchanged persona/prompt language contract.
+
+### Evidence And Deployment
+
+Private evidence is in ignored `outputs/attribution-confirmation-20260929/`:
+exact generation/reviewer packets, typed decisions, provider receipts with
+reasoning redacted, SQL readback, database dump, one-shot runner and offline
+integrity audit. `SHA256SUMS` verified every retained file. Manifest SHA-256:
+`4384634f637cda9782526d5b9322e0a27eab477432339d147db0ef02991568c6`.
+The disposable database dump passed `pg_restore -l`; its `--rm`/tmpfs container
+was stopped and removed. No new residual test container remains.
+
+Before trial adoption, image inspection found that Docker's `COPY workflows`
+included ignored `.trial/` configuration and a local backup. Git ignore does
+not constrain Docker build context. Commit `9cb6aa0` excludes the private trial
+directory in `.dockerignore` and adds a packaging regression check. The first
+new images were never deployed or published. Rebuilt API and worker images
+were inspected without mounts and contain neither `.trial` nor workflow outputs.
+No cache purge or retrospective cleanup of older local images is claimed;
+older trial images/caches must still be treated as private.
+
+Only the isolated trial API and worker were recreated from clean
+`9cb6aa047ddb30f216aa097cd0f21dd90b0a81e8`. The tested runtime/prompt files and
+governed fingerprint are unchanged from `5af403b`; both containers' instruction
+file hashes match the checkout. Served worker health reports this revision,
+`worker_ready=true`, `database_ready=true` and `source_dirty=false`.
+The web page and existing chat state returned 200. No trial turn was sent during
+adoption. Main ADE containers and trial web/router/PostgreSQL were not recreated.
+
+The pre-restart custom-format backup is private under
+`.trial/attribution-confirmation-20260929/trial-before-attribution.dump`, SHA-256
+`a698e6f48f37f0fc2fd24e7885e2e79897efc6779d910d2ad8cd5bbc056dd388`.
+All 21 checked durable-table counts and row hashes matched before build,
+immediately before restart and afterward: 12 conversations, 55 messages, eight
+facts, 11 revisions and 28 runs/attempts. Worker/lease liveness tables were
+intentionally excluded; pending/running run count remained zero. Private
+snapshots and health receipts live beside the backup.
+
+This is adoption of the bounded attribution clarification for an experimental
+trial, not release qualification or a general hallucination fix.
+Final offline suites passed **456 tests**, with 58 disposable-database checks
+skipped in that invocation; the four live native turns exercised their own
+fresh database separately. Packaging lint/format and `git diff --check` passed.

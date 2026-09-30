@@ -86,6 +86,13 @@ and PC-09 (simplicity and observational request counts).
   messages, immutable definitions, facts, revisions, runs and attempts, with
   zero queued turns. The original outcomes remain untouched. No production
   default, release evidence or stale-policy waiver changed.
+- The subsequent [attribution confirmation and trial rebuild](../workflows/evals/character_memory_dev/hands-on-feedback.md#live-attribution-confirmation-and-trial-adoption-2026-09-29)
+  used four native turns and eight reviewer-only contrasts: correct speaker
+  handling, supported endorsement and exact memory deltas were observed. An
+  unsupported assistant listening anecdote remains a separate grounding limit.
+  The isolated API/worker now serve `9cb6aa0`, with private trial storage excluded
+  from images and 21 durable-table hashes preserved. Temporary test storage was
+  exported and its container removed. No production or release change follows.
 - Director approved the evaluation-only H4 reviewer amendment after the
   [offline preflight diagnosis](findings/natural-memory-consultation/history-h4-preflight-blocker-2026-09-26.md).
   The H2-hashed source contract stays unchanged; the separate H4 overlay binds

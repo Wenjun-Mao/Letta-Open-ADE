@@ -3,6 +3,10 @@
 Status: Accepted for bounded development on 2026-09-29. No deployment, live
 semantic acceptance or release qualification is implied.
 
+Follow-up: [bounded live observations and isolated trial adoption](../../workflows/evals/character_memory_dev/hands-on-feedback.md#live-attribution-confirmation-and-trial-adoption-2026-09-29)
+now exist for this clarification. They do not establish general semantic quality
+or change the release boundary; the recorded anecdote limitation remains.
+
 ## Problem
 
 The [hands-on trial](../../workflows/evals/character_memory_dev/hands-on-feedback.md)

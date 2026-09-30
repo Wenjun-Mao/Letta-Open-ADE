@@ -26,6 +26,10 @@ ADE has not acquired a hidden phrase-based verifier. Live confirmation must
 retain actual reviewer decisions and full memory deltas as well as the answer.
 The prior generation diagnostic binding is intentionally stale under the new
 instruction hashes; do not rewrite its frozen fixture or reuse its evidence.
+The [bounded live confirmation and trial adoption](hands-on-feedback.md#live-attribution-confirmation-and-trial-adoption-2026-09-29)
+records actual reviewer decisions and SQL deltas for four native turns and eight
+fixed-review calls. The current trial includes the clarification; unsupported
+personal anecdotes and general hallucination detection remain outside acceptance.
 
 ## Historical Recall Probe (H1–H3 Checkpoints)
 
