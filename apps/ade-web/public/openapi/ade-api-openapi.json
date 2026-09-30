@@ -2316,6 +2316,22 @@
         "title": "CommentingGenerateRequest",
         "type": "object"
       },
+      "ConversationActivityResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TurnActivityResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ConversationActivityResponse",
+        "type": "object"
+      },
       "ConversationResponse": {
         "properties": {
           "agent_definition_id": {
@@ -4903,6 +4919,148 @@
           "events_url"
         ],
         "title": "TurnAcceptedResponse",
+        "type": "object"
+      },
+      "TurnActivityResponse": {
+        "properties": {
+          "context": {
+            "$ref": "#/components/schemas/TurnContextActivityResponse"
+          },
+          "provider": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Provider",
+            "type": "object"
+          },
+          "provider_complete": {
+            "title": "Provider Complete",
+            "type": "boolean"
+          },
+          "provider_observed": {
+            "title": "Provider Observed",
+            "type": "boolean"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/TurnToolActivityResponse"
+            },
+            "title": "Tools",
+            "type": "array"
+          },
+          "tools_complete": {
+            "title": "Tools Complete",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "provider",
+          "provider_complete",
+          "provider_observed",
+          "tools",
+          "tools_complete",
+          "context"
+        ],
+        "title": "TurnActivityResponse",
+        "type": "object"
+      },
+      "TurnContextActivityResponse": {
+        "properties": {
+          "current_chat": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Chat"
+          },
+          "history_run_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Run Ids"
+          },
+          "history_sources": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History Sources"
+          },
+          "profile_fact_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Fact Ids"
+          }
+        },
+        "title": "TurnContextActivityResponse",
+        "type": "object"
+      },
+      "TurnToolActivityResponse": {
+        "properties": {
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "succeeded": {
+            "title": "Succeeded",
+            "type": "integer"
+          },
+          "unresolved": {
+            "title": "Unresolved",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "succeeded",
+          "failed",
+          "unresolved"
+        ],
+        "title": "TurnToolActivityResponse",
         "type": "object"
       },
       "UpdateMemorySubjectRequest": {
@@ -7876,6 +8034,53 @@
           }
         ],
         "summary": "Restore an Agent Studio memory subject",
+        "tags": [
+          "Agent Runtime"
+        ]
+      }
+    },
+    "/api/v3/conversations/{conversation_id}/activity": {
+      "get": {
+        "operationId": "list_conversation_activity_api_v3_conversations__conversation_id__activity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationActivityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read retained per-turn provider, tool and context observations",
         "tags": [
           "Agent Runtime"
         ]

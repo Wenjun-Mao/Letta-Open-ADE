@@ -44,6 +44,8 @@ record's status notice before applying its original execution details.
 | [0045](0045-isolated-history-trial-composition.md) | Running development-only browser trial composition; no release qualification. |
 | [0046](0046-current-turn-weighted-history-trial-ranking.md) | Versioned ranking selected for the isolated trial; no production/default qualification. |
 | [0047](0047-recalled-dialogue-attribution.md) | Shared generation source fidelity and grounded H-speaker conflicts; no general answer verifier or live acceptance. |
+| [0048](0048-mainline-development.md) | Main is the ongoing development baseline; source integration is not deployment or release qualification. |
+| [0049](0049-portable-offline-evidence-checks.md) | Portable synthetic mechanics checks remain separate from exact private historical replay and release evidence. |
 
 ## Historical, Retired, Or On Hold
 

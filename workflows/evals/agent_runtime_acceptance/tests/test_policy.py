@@ -15,6 +15,8 @@ from ade_api.features.agent_runtime.release_policy import (
     POLICY_INPUT_FILES,
     POLICY_INPUT_ROOTS,
 )
+from ade_api.features.agent_runtime.deployments import resolve_deployment
+from ade_api.features.agent_runtime.errors import UnqualifiedDeployment
 from ade_api.features.agent_runtime.release_evidence import (
     AgentStudioReleaseEvidenceError,
     file_sha256,
@@ -34,7 +36,7 @@ def test_production_policy_inputs_are_existing_roots_and_files() -> None:
         assert all((PROJECT_ROOT / path).is_file() for path in paths)
 
 
-def test_selected_candidates_use_current_policy_without_rebinding_history() -> None:
+def test_selected_candidates_remain_historical_and_cannot_authorize_release() -> None:
     manifest = load_deployment_manifest(
         Path("config/model-router/deployment-manifest.json"),
         project_root=PROJECT_ROOT,
@@ -50,7 +52,20 @@ def test_selected_candidates_use_current_policy_without_rebinding_history() -> N
         assert deployment is not None
         assert deployment.lifecycle == "candidate"
         assert not deployment.qualification.qualified
-        assert fingerprint_policy_hashes(deployment.fingerprint) == expected
+        # Development changed governed sources without rebinding old evidence.
+        assert fingerprint_policy_hashes(deployment.fingerprint) != expected
+        catalog = {
+            "items": [{"model_key": alias, "deployment": deployment.as_catalog_dict()}]
+        }
+        with pytest.raises(UnqualifiedDeployment, match="not qualified"):
+            resolve_deployment(
+                catalog,
+                route_alias=alias,
+                role=deployment.roles[0],
+                mode="release",
+                expected_policy_hashes=expected,
+                source_clean=True,
+            )
 
 
 def test_historical_release_evidence_rejects_changed_policy() -> None:

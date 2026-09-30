@@ -33,7 +33,10 @@ def test_subject_add_has_no_entity_selector_even_in_generated_schema() -> None:
                         "fact_type": "person.preference",
                         "qualifier": "drink",
                         "value": "morning coffee",
-                        "evidence": {"mode": "direct", "current_quote": "morning coffee"},
+                        "evidence": {
+                            "mode": "direct",
+                            "current_quote": "morning coffee",
+                        },
                         "entity_ref": "subject-uuid",
                     }
                 ]

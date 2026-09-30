@@ -6,6 +6,8 @@ from copy import deepcopy
 
 import pytest
 
+from workflows.evals.character_memory_dev import history_h4_run
+
 from ade_api.features.agent_runtime.errors import RuntimeValidationError
 from ade_api.features.agent_runtime.history_capacity import (
     bind_history_probe_capacity,
@@ -24,6 +26,7 @@ from workflows.evals.character_memory_dev.history_h4_run import (
     H2_CONTRACT_SHA256,
     H2_RESULT_SHA256,
     _frozen_inputs,
+    load_frozen_h4_contract,
 )
 
 
@@ -68,9 +71,9 @@ def test_h4_capacity_is_exact_and_does_not_mutate_prepared_definition() -> None:
 
 
 def test_amended_h4_reviewer_envelope_reserves_full_generation_reply() -> None:
-    contract, fixture, h2 = _frozen_inputs()
+    contract, fixture = load_frozen_h4_contract()
     envelope = reviewer_envelope_lower_bound(contract, fixture)
-    assert h2["contract_sha256"] == H2_CONTRACT_SHA256
+    assert contract["h4_reviewer_amendment"]["h2_contract_sha256"] == H2_CONTRACT_SHA256
     assert contract["h4_reviewer_amendment"]["h2_result_sha256"] == H2_RESULT_SHA256
     assert contract["binding"]["generation_input_limit_tokens"] == 11213
     assert contract["binding"]["reviewer_output_tokens"] == 4096
@@ -79,7 +82,7 @@ def test_amended_h4_reviewer_envelope_reserves_full_generation_reply() -> None:
 
 
 def test_h4_schedule_retains_all_cells_and_stops_only_on_integrity() -> None:
-    contract, fixture, _ = _frozen_inputs()
+    contract, fixture = load_frozen_h4_contract()
     assert len(_planned_cells(contract, fixture)) == 4 + 11 * 2
     assert len(_planned_turns(contract, fixture)) == 4 + 11 * 2 + 3 * 2
     semantic_failure = {
@@ -100,6 +103,27 @@ def test_h4_schedule_retains_all_cells_and_stops_only_on_integrity() -> None:
     semantic_failure["target"]["base_packet"] = None
     with pytest.raises(CampaignStop):
         _classify_cell(semantic_failure)
+
+
+@pytest.mark.skipif(
+    not history_h4_run.H2_RESULT.is_file(),
+    reason="ignored historical H2 result is unavailable",
+)
+def test_frozen_h4_inputs_validate_retained_h2_evidence() -> None:
+    _, _, h2 = _frozen_inputs()
+    assert h2["contract_sha256"] == H2_CONTRACT_SHA256
+
+
+def test_live_h4_inputs_still_require_exact_historical_evidence(
+    tmp_path, monkeypatch
+) -> None:
+    result = tmp_path / "h2.json"
+    monkeypatch.setattr(history_h4_run, "H2_RESULT", result)
+    with pytest.raises(FileNotFoundError):
+        _frozen_inputs()
+    result.write_text("{}")
+    with pytest.raises(RuntimeError, match="H2 result differs"):
+        _frozen_inputs()
 
 
 def test_h4_verified_tool_step_rejection_is_observed_without_committed_output() -> None:

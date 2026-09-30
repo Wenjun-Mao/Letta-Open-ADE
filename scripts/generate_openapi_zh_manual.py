@@ -64,6 +64,7 @@ SUMMARY_TRANSLATIONS = {
     "Purge archived system prompt template": "清除已归档系统提示词模板",
     "Purge archived Label Lab JSON schema": "清除已归档 Label Lab JSON Schema",
     "Read normalized agent runtime events as JSON": "以 JSON 读取规范化智能体运行事件",
+    "Read retained per-turn provider, tool and context observations": "读取保留的每轮提供方、工具和上下文观测",
     "Read test run artifact content": "读取测试运行产物内容",
     "Rename an Agent Studio memory subject": "重命名 Agent Studio 记忆主体",
     "Reset only fresh-start Agent Studio state": "仅重置全新启动的 Agent Studio 状态",
@@ -147,6 +148,9 @@ TAG_TRANSLATIONS = {
 }
 
 TITLE_TRANSLATIONS = {
+    "Failed": "失败次数",
+    "Succeeded": "成功次数",
+    "Unresolved": "未确定次数",
     "ADE API": "ADE API",
     "Baseline": "基线",
     "Bundles": "套件",
@@ -348,6 +352,10 @@ TITLE_TRANSLATIONS = {
 }
 
 TITLE_TOKEN_TRANSLATIONS = {
+    "activity": "活动",
+    "complete": "完整",
+    "observed": "已观测",
+    "sources": "来源",
     "action": "动作",
     "assertion": "陈述",
     "authority": "权威来源",

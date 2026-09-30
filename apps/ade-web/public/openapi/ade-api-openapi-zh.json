@@ -2316,6 +2316,22 @@
         "title": "评论 生成 请求",
         "type": "object"
       },
+      "ConversationActivityResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TurnActivityResponse"
+            },
+            "title": "条目",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "会话 活动 响应",
+        "type": "object"
+      },
       "ConversationResponse": {
         "properties": {
           "agent_definition_id": {
@@ -4903,6 +4919,148 @@
           "events_url"
         ],
         "title": "轮次 已接受 响应",
+        "type": "object"
+      },
+      "TurnActivityResponse": {
+        "properties": {
+          "context": {
+            "$ref": "#/components/schemas/TurnContextActivityResponse"
+          },
+          "provider": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "供应商",
+            "type": "object"
+          },
+          "provider_complete": {
+            "title": "供应商 完整",
+            "type": "boolean"
+          },
+          "provider_observed": {
+            "title": "供应商 已观测",
+            "type": "boolean"
+          },
+          "run_id": {
+            "title": "运行 ID",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/TurnToolActivityResponse"
+            },
+            "title": "工具",
+            "type": "array"
+          },
+          "tools_complete": {
+            "title": "工具 完整",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "run_id",
+          "status",
+          "provider",
+          "provider_complete",
+          "provider_observed",
+          "tools",
+          "tools_complete",
+          "context"
+        ],
+        "title": "轮次 活动 响应",
+        "type": "object"
+      },
+      "TurnContextActivityResponse": {
+        "properties": {
+          "current_chat": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "当前 对话"
+          },
+          "history_run_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "历史 运行 ID"
+          },
+          "history_sources": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "历史 来源"
+          },
+          "profile_fact_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile 事实 ID"
+          }
+        },
+        "title": "轮次 上下文 活动 响应",
+        "type": "object"
+      },
+      "TurnToolActivityResponse": {
+        "properties": {
+          "failed": {
+            "title": "失败次数",
+            "type": "integer"
+          },
+          "name": {
+            "title": "名称",
+            "type": "string"
+          },
+          "succeeded": {
+            "title": "成功次数",
+            "type": "integer"
+          },
+          "unresolved": {
+            "title": "未确定次数",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "succeeded",
+          "failed",
+          "unresolved"
+        ],
+        "title": "轮次 工具 活动 响应",
         "type": "object"
       },
       "UpdateMemorySubjectRequest": {
@@ -7876,6 +8034,53 @@
           }
         ],
         "summary": "恢复 Agent Studio 记忆主体",
+        "tags": [
+          "智能体运行时"
+        ]
+      }
+    },
+    "/api/v3/conversations/{conversation_id}/activity": {
+      "get": {
+        "operationId": "list_conversation_activity_api_v3_conversations__conversation_id__activity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "会话 ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationActivityResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "读取保留的每轮提供方、工具和上下文观测",
         "tags": [
           "智能体运行时"
         ]

@@ -4,6 +4,15 @@ ADE favors direct ownership over flexibility for its own sake. Start with the
 [reading guide](reading-guide.md), then use the [codebase map](codebase-map.md)
 to find the feature, service, or workflow that owns the change.
 
+## Work On Main
+
+Use `main` in the primary checkout for ongoing development, per the user's
+2026-09-30 direction and [ADR 0048](adr/0048-mainline-development.md). Separate
+development branches/worktrees require an explicit request. Preserve existing
+trial worktrees while services or private evidence depend on them; do not keep
+developing there. Source integration/publication is not deployment or release
+qualification, and the existing verification and evidence gates still apply.
+
 ## Keep One Owner
 
 - `apps/ade-web` owns browser routes, UI, and same-origin proxying.
@@ -45,3 +54,9 @@ Record durable API, runtime, data-authority, or deployment changes in a concise
 ADR. Run the smallest relevant checks first, then the broader repository checks
 proportional to risk. Update the owning README when an endpoint, storage
 authority, external integration, or operator workflow changes.
+
+Offline mechanics tests must run from tracked inputs or explicitly synthetic
+fixtures in a clean checkout. Private historical replay checks may skip only
+when their evidence is absent; available but invalid evidence must fail. Never
+replace a live evidence gate with a synthetic fallback or rebind historical
+policy fingerprints solely to pass CI. See [ADR 0049](adr/0049-portable-offline-evidence-checks.md).

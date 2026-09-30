@@ -1,9 +1,17 @@
 # ADE Project Tracker
 
-Updated: 2026-09-29. Owner: this ADE task, using Relay for delegated reporting.
+Updated: 2026-09-30. Owner: this ADE task, using Relay for delegated reporting.
 Direction and milestone completion criteria live in the [roadmap](product-roadmap.md).
 
 ## Current Summary
+
+The user directed integration into `main` and continued development in the
+primary checkout ([ADR 0048](adr/0048-mainline-development.md)). Earlier retained-
+branch references below describe historical work, not the current development
+location. The isolated trial remains on its previously served revision; source
+integration does not deploy or qualify it. The current integration checks and
+dependency-audit follow-up are tracked in the
+[integration finding](findings/mainline-integration-2026-09-30.md).
 
 Current agreed intent lives in the [product contract](product-contract.md),
 especially PC-03 (same-character history across persona versions), PC-05/06

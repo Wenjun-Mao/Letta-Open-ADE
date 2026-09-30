@@ -61,7 +61,8 @@ H4_CASES_SHA256 = "7a402aa3b0dba6c0672515698248b511c214fa08ed37c94fc0db2b881d788
 H4_AMENDMENT = FIXTURES / "h4_reviewer_amendment.json"
 
 
-def _frozen_inputs() -> tuple[dict, dict, dict]:
+def load_frozen_h4_contract() -> tuple[dict, dict]:
+    """Load tracked schedule inputs without claiming historical run evidence."""
     h2_contract = json.loads((FIXTURES / "contract.json").read_text())
     fixture = json.loads((FIXTURES / "cases.json").read_text())
     amendment = json.loads(H4_AMENDMENT.read_text())
@@ -91,6 +92,11 @@ def _frozen_inputs() -> tuple[dict, dict, dict]:
     ]
     contract["h4_reviewer_amendment"] = amendment
     validate_history_cases(contract, fixture)
+    return contract, fixture
+
+
+def _frozen_inputs() -> tuple[dict, dict, dict]:
+    contract, fixture = load_frozen_h4_contract()
     if sha256_file(H2_RESULT) != H2_RESULT_SHA256:
         raise RuntimeError("H2 result differs from reviewed selection")
     h2 = json.loads(H2_RESULT.read_text())

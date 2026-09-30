@@ -9,7 +9,10 @@ from .contracts import CreateAgentDefinitionRequest, CreateAgentStudioSessionReq
 from .database_boundary import RuntimeDatabase
 from .definition_service import DefinitionService
 from .errors import RuntimeValidationError
-from .history_capacity import bind_history_probe_capacity, checked_history_probe_capacity
+from .history_capacity import (
+    bind_history_probe_capacity,
+    checked_history_probe_capacity,
+)
 from .history_native_rank import HISTORY_EMBEDDING_ROUTE
 from .natural_context import HISTORY_PROBE_POLICY
 from .natural_evaluation_capacity import DEEPSEEK_ROUTE
@@ -17,8 +20,12 @@ from .resource_service import ResourceService
 
 TRIAL_PROMPT = "chat_v20260926"
 TRIAL_PERSONA = "chat_linxiaotang"
-TRIAL_DEEPSEEK_FINGERPRINT = "870ff4fb8a25a9c2016f67dcda05e26e82a6c5dea6ad55781a80be2201161cfe"
-TRIAL_QWEN_FINGERPRINT = "c549d7dc288d2112f10e8b1032b502eda74557d093bc1390fe0fc4f44de63086"
+TRIAL_DEEPSEEK_FINGERPRINT = (
+    "870ff4fb8a25a9c2016f67dcda05e26e82a6c5dea6ad55781a80be2201161cfe"
+)
+TRIAL_QWEN_FINGERPRINT = (
+    "c549d7dc288d2112f10e8b1032b502eda74557d093bc1390fe0fc4f44de63086"
+)
 
 
 def trial_definition_request() -> CreateAgentDefinitionRequest:
@@ -37,8 +44,7 @@ def trial_definition_request() -> CreateAgentDefinitionRequest:
 def require_trial_definition(definition: dict[str, Any]) -> None:
     if (
         definition.get("memory_policy_version") != HISTORY_PROBE_POLICY
-        or
-        definition.get("prompt_key") != TRIAL_PROMPT
+        or definition.get("prompt_key") != TRIAL_PROMPT
         or definition.get("persona_key") != TRIAL_PERSONA
         or definition.get("model_key") != DEEPSEEK_ROUTE
         or definition.get("reviewer_model_key") != DEEPSEEK_ROUTE
@@ -80,8 +86,12 @@ class HistoryTrialDefinitions:
             raise RuntimeValidationError("History trial requires evaluation purpose")
         expected = trial_definition_request()
         for key in (
-            "model_key", "reviewer_model_key", "embedding_model_key",
-            "prompt_key", "persona_key", "tool_names",
+            "model_key",
+            "reviewer_model_key",
+            "embedding_model_key",
+            "prompt_key",
+            "persona_key",
+            "tool_names",
         ):
             if getattr(request, key) != getattr(expected, key):
                 raise RuntimeValidationError("History trial definition differs")
@@ -103,7 +113,10 @@ class HistoryTrialSessionService(PurposeSessionService):
 
 class HistoryTrialService:
     def __init__(
-        self, *, database: RuntimeDatabase, definitions: DefinitionService,
+        self,
+        *,
+        database: RuntimeDatabase,
+        definitions: DefinitionService,
         resources: ResourceService,
     ) -> None:
         self.sessions = HistoryTrialSessionService(
@@ -125,26 +138,37 @@ class HistoryTrialService:
     async def get(self, conversation_id: str) -> dict[str, Any]:
         return await self.sessions.get(conversation_id)
 
-    async def list(self, *, include_archived: bool, limit: int, offset: int) -> dict[str, Any]:
+    async def list(
+        self, *, include_archived: bool, limit: int, offset: int
+    ) -> dict[str, Any]:
         return await self.sessions.list(
             include_archived=include_archived, limit=limit, offset=offset
         )
 
-    async def set_archived(self, conversation_id: str, *, archived: bool) -> dict[str, Any]:
+    async def set_archived(
+        self, conversation_id: str, *, archived: bool
+    ) -> dict[str, Any]:
         return await self.sessions.set_archived(conversation_id, archived=archived)
 
-    async def list_definitions(self, *, include_archived: bool, limit: int, offset: int) -> dict[str, Any]:
+    async def list_definitions(
+        self, *, include_archived: bool, limit: int, offset: int
+    ) -> dict[str, Any]:
         return await self.sessions.list_definitions(
             include_archived=include_archived, limit=limit, offset=offset
         )
 
-    async def list_subjects(self, *, include_archived: bool, limit: int, offset: int) -> dict[str, Any]:
+    async def list_subjects(
+        self, *, include_archived: bool, limit: int, offset: int
+    ) -> dict[str, Any]:
         return await self.sessions.list_subjects(
             include_archived=include_archived, limit=limit, offset=offset
         )
 
     async def conversation_state(
-        self, conversation_id: str, *, message_limit: int,
+        self,
+        conversation_id: str,
+        *,
+        message_limit: int,
         before_sequence: int | None,
     ) -> dict[str, Any]:
         await self.sessions.get(conversation_id)

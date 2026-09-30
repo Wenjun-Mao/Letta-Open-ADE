@@ -4,11 +4,15 @@ from copy import deepcopy
 
 import pytest
 
+from workflows.evals.character_memory_dev import history_h4_remaining as remaining
 from workflows.evals.character_memory_dev.history_h4_campaign import (
     CampaignStop,
     _classify_cell_turns,
-    _frozen_inputs,
     _planned_cells,
+)
+from workflows.evals.character_memory_dev.history_h4_run import load_frozen_h4_contract
+from workflows.evals.character_memory_dev.tests.h4_schedule_support import (
+    synthetic_schedules,
 )
 from workflows.evals.character_memory_dev.history_h4_remaining import (
     load_remaining,
@@ -18,11 +22,18 @@ from workflows.evals.character_memory_dev.history_h4_remaining import (
 )
 
 
-def test_approved_remaining_schedule_excludes_all_attempted_and_binds_dependencies() -> (
-    None
-):
-    contract, fixture, _ = _frozen_inputs()
-    original, proposal, selected = load_remaining(_planned_cells(contract, fixture))
+@pytest.mark.parametrize("source", ["synthetic", "historical"])
+def test_approved_remaining_schedule_excludes_all_attempted_and_binds_dependencies(
+    source: str,
+) -> None:
+    contract, fixture = load_frozen_h4_contract()
+    planned = _planned_cells(contract, fixture)
+    if source == "historical":
+        _require_evidence(remaining.ORIGINAL_MANIFEST, remaining.PROPOSAL)
+        original, proposal, selected = load_remaining(planned)
+    else:
+        _, original, proposal, _, _ = synthetic_schedules()
+        selected = validate_remaining(original, proposal, planned)
     assert len(selected) == 15
     assert len(proposal["remaining_turns"]) == 21
     assert len(proposal["excluded_attempted_cells"]) == 11
@@ -44,12 +55,27 @@ def test_approved_remaining_schedule_excludes_all_attempted_and_binds_dependenci
         validate_remaining(original, changed, _planned_cells(contract, fixture))
 
 
-def test_18_turn_schedule_excludes_both_campaigns_and_keeps_dependencies() -> None:
-    contract, fixture, _ = _frozen_inputs()
+@pytest.mark.parametrize("source", ["synthetic", "historical"])
+def test_18_turn_schedule_excludes_both_campaigns_and_keeps_dependencies(
+    source: str,
+) -> None:
+    contract, fixture = load_frozen_h4_contract()
     planned = _planned_cells(contract, fixture)
-    original, first_proposal, _ = load_remaining(planned)
-    loaded_original, second, proposal, selected = load_remaining_after_two(planned)
-    assert loaded_original == original
+    if source == "historical":
+        _require_evidence(
+            remaining.ORIGINAL_MANIFEST,
+            remaining.PROPOSAL,
+            remaining.SECOND_MANIFEST,
+            remaining.AFTER_TWO_PROPOSAL,
+        )
+        original, first_proposal, _ = load_remaining(planned)
+        loaded_original, second, proposal, selected = load_remaining_after_two(planned)
+        assert loaded_original == original
+    else:
+        _, original, first_proposal, second, proposal = synthetic_schedules()
+        selected = validate_remaining_after_two(
+            original, first_proposal, second, proposal, planned
+        )
     assert len(selected) == 12
     assert len(proposal["remaining_turns"]) == 18
     assert len(proposal["excluded_attempted_turns"]) == 14
@@ -79,6 +105,24 @@ def test_18_turn_schedule_excludes_both_campaigns_and_keeps_dependencies() -> No
         validate_remaining_after_two(
             original, first_proposal, second, changed_proposal, planned
         )
+
+
+def _require_evidence(*paths) -> None:
+    if not all(path.is_file() for path in paths):
+        pytest.skip("ignored historical H4 schedule evidence is unavailable")
+
+
+def test_remaining_loader_does_not_substitute_synthetic_evidence(
+    tmp_path, monkeypatch
+) -> None:
+    contract, fixture = load_frozen_h4_contract()
+    path = tmp_path / "original.json"
+    monkeypatch.setattr(remaining, "ORIGINAL_MANIFEST", path)
+    with pytest.raises(FileNotFoundError):
+        load_remaining(_planned_cells(contract, fixture))
+    path.write_text("{}")
+    with pytest.raises(RuntimeError, match="hash changed"):
+        load_remaining(_planned_cells(contract, fixture))
 
 
 def _committed() -> dict:

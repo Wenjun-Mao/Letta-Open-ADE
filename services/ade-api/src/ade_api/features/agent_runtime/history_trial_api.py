@@ -27,24 +27,39 @@ PageLimit = Annotated[int, Query(ge=1, le=200)]
 PageOffset = Annotated[int, Query(ge=0)]
 
 
-@router.get("/options", response_model=AgentStudioOptionsResponse, dependencies=[Depends(require_reader)])
+@router.get(
+    "/options",
+    response_model=AgentStudioOptionsResponse,
+    dependencies=[Depends(require_reader)],
+)
 async def options(service: AgentRuntimeServiceDependency):
     return await call_runtime(service.history_trial.options())
 
 
-@router.get("/sessions", response_model=AgentStudioSessionListResponse, dependencies=[Depends(require_reader)])
+@router.get(
+    "/sessions",
+    response_model=AgentStudioSessionListResponse,
+    dependencies=[Depends(require_reader)],
+)
 async def sessions(
     service: AgentRuntimeServiceDependency,
     include_archived: bool = False,
     limit: PageLimit = 100,
     offset: PageOffset = 0,
 ):
-    return await call_runtime(service.history_trial.list(
-        include_archived=include_archived, limit=limit, offset=offset
-    ))
+    return await call_runtime(
+        service.history_trial.list(
+            include_archived=include_archived, limit=limit, offset=offset
+        )
+    )
 
 
-@router.post("/sessions", response_model=AgentStudioSessionResponse, status_code=201, dependencies=[Depends(require_operator)])
+@router.post(
+    "/sessions",
+    response_model=AgentStudioSessionResponse,
+    status_code=201,
+    dependencies=[Depends(require_operator)],
+)
 async def create_session(
     request: CreateAgentStudioSessionRequest,
     response: Response,
@@ -56,57 +71,97 @@ async def create_session(
     return result
 
 
-@router.get("/sessions/{conversation_id}", response_model=AgentStudioSessionResponse, dependencies=[Depends(require_reader)])
+@router.get(
+    "/sessions/{conversation_id}",
+    response_model=AgentStudioSessionResponse,
+    dependencies=[Depends(require_reader)],
+)
 async def get_session(conversation_id: str, service: AgentRuntimeServiceDependency):
     return await call_runtime(service.history_trial.get(conversation_id))
 
 
-@router.delete("/sessions/{conversation_id}", response_model=AgentStudioSessionResponse, dependencies=[Depends(require_operator)])
+@router.delete(
+    "/sessions/{conversation_id}",
+    response_model=AgentStudioSessionResponse,
+    dependencies=[Depends(require_operator)],
+)
 async def archive_session(conversation_id: str, service: AgentRuntimeServiceDependency):
-    return await call_runtime(service.history_trial.set_archived(conversation_id, archived=True))
+    return await call_runtime(
+        service.history_trial.set_archived(conversation_id, archived=True)
+    )
 
 
-@router.post("/sessions/{conversation_id}/restore", response_model=AgentStudioSessionResponse, dependencies=[Depends(require_operator)])
+@router.post(
+    "/sessions/{conversation_id}/restore",
+    response_model=AgentStudioSessionResponse,
+    dependencies=[Depends(require_operator)],
+)
 async def restore_session(conversation_id: str, service: AgentRuntimeServiceDependency):
-    return await call_runtime(service.history_trial.set_archived(conversation_id, archived=False))
+    return await call_runtime(
+        service.history_trial.set_archived(conversation_id, archived=False)
+    )
 
 
-@router.get("/sessions/{conversation_id}/state", response_model=ConversationStateResponse, dependencies=[Depends(require_reader)])
+@router.get(
+    "/sessions/{conversation_id}/state",
+    response_model=ConversationStateResponse,
+    dependencies=[Depends(require_reader)],
+)
 async def conversation_state(
     conversation_id: str,
     service: AgentRuntimeServiceDependency,
     message_limit: PageLimit = 200,
     before_sequence: Annotated[int | None, Query(ge=1)] = None,
 ):
-    return await call_runtime(service.history_trial.conversation_state(
-        conversation_id, message_limit=message_limit, before_sequence=before_sequence
-    ))
+    return await call_runtime(
+        service.history_trial.conversation_state(
+            conversation_id,
+            message_limit=message_limit,
+            before_sequence=before_sequence,
+        )
+    )
 
 
-@router.get("/definitions", response_model=AgentDefinitionListResponse, dependencies=[Depends(require_reader)])
+@router.get(
+    "/definitions",
+    response_model=AgentDefinitionListResponse,
+    dependencies=[Depends(require_reader)],
+)
 async def definitions(
     service: AgentRuntimeServiceDependency,
     include_archived: bool = False,
     limit: PageLimit = 100,
     offset: PageOffset = 0,
 ):
-    return await call_runtime(service.history_trial.list_definitions(
-        include_archived=include_archived, limit=limit, offset=offset
-    ))
+    return await call_runtime(
+        service.history_trial.list_definitions(
+            include_archived=include_archived, limit=limit, offset=offset
+        )
+    )
 
 
-@router.get("/subjects", response_model=MemorySubjectListResponse, dependencies=[Depends(require_reader)])
+@router.get(
+    "/subjects",
+    response_model=MemorySubjectListResponse,
+    dependencies=[Depends(require_reader)],
+)
 async def subjects(
     service: AgentRuntimeServiceDependency,
     include_archived: bool = False,
     limit: PageLimit = 100,
     offset: PageOffset = 0,
 ):
-    return await call_runtime(service.history_trial.list_subjects(
-        include_archived=include_archived, limit=limit, offset=offset
-    ))
+    return await call_runtime(
+        service.history_trial.list_subjects(
+            include_archived=include_archived, limit=limit, offset=offset
+        )
+    )
 
 
-@router.get("/subjects/{subject_id}/memories", response_model=SubjectMemoriesResponse, dependencies=[Depends(require_reader)])
+@router.get(
+    "/subjects/{subject_id}/memories",
+    response_model=SubjectMemoriesResponse,
+    dependencies=[Depends(require_reader)],
+)
 async def subject_memories(subject_id: str, service: AgentRuntimeServiceDependency):
     return await call_runtime(service.history_trial.subject_memories(subject_id))
