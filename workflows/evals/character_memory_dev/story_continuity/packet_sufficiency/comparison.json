@@ -1,0 +1,2389 @@
+{
+  "kind": "synthetic_nonblind_packet_diagnostic_not_model_evaluation",
+  "labels_commit": "bed18094eaaeabe66c5d754cb098fcccf29ec952",
+  "judgments_sha256": "af4931509e356e45d2151fd0d54e9e0105be7a54131b3571a8b88053e530b817",
+  "input_manifest_sha256": "5d1b78ad0a3c369ae88cf124656b96186a7d440ed84453b0525c41805fd7601d",
+  "context_sha256": "bc69d3061ed10b0aae0833af1e87bf4506125ff7687aa252ab0bb9711b88acbf",
+  "cases": [
+    {
+      "id": "C01",
+      "literal_scores": {
+        "E01": 0.21875,
+        "E02": 0.4375,
+        "E03": 0.25,
+        "E04": 0.3125,
+        "E05": 0.3125,
+        "E06": 0.28125,
+        "E07": 0.28125
+      },
+      "packets": {
+        "baseline": {
+          "selected": [
+            "E02",
+            "E05",
+            "E04",
+            "E07"
+          ],
+          "admitted": [
+            "E02",
+            "E05",
+            "E04",
+            "E07"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1595,
+          "reviewer_input_with_full_reply_reserve": 9139,
+          "history_equal": true,
+          "generation_sha256": "f40cbadae48663d4c3f470fd652a4250c456add2fa49c478e2aff518083c7222",
+          "reviewer_sha256": "8b8eaef86e4e8c2fe30a976c798286a1d1d466ee2663744dd9ed2e10b4f51da4",
+          "artifact_key": "C01/baseline",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "friday": false
+            },
+            "visibility": {
+              "explicit_correction_with_named_day": false
+            },
+            "dependencies": {
+              "name_restored_day": "missing"
+            },
+            "optional": {
+              "next_day_outcome": false,
+              "bag_detail": true
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "candidate": {
+          "selected": [
+            "E02",
+            "E05",
+            "E07",
+            "E06"
+          ],
+          "admitted": [
+            "E02",
+            "E05",
+            "E07",
+            "E06"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1590,
+          "reviewer_input_with_full_reply_reserve": 9135,
+          "history_equal": true,
+          "generation_sha256": "6b1f0bc1362ab69301ce1387322b966fcb81f7316cdd11928ec113d146ca9b51",
+          "reviewer_sha256": "eb24769ff49ab2ee9c53bbeaaa4d74878153da3b4c53978edbc0ff68f9fe7519",
+          "artifact_key": "C01/candidate",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "friday": false
+            },
+            "visibility": {
+              "explicit_correction_with_named_day": false
+            },
+            "dependencies": {
+              "name_restored_day": "not_triggered"
+            },
+            "optional": {
+              "next_day_outcome": true,
+              "bag_detail": true
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "empty": {
+          "selected": [],
+          "admitted": [],
+          "omitted_capacity": [],
+          "generation_input_estimate": 877,
+          "reviewer_input_with_full_reply_reserve": 8393,
+          "history_equal": true,
+          "generation_sha256": "8d9f0f1e38a012fa2e6095e0aa240fe0ff4a50afafdbf53c7f420d17c91ec48c",
+          "reviewer_sha256": "e1dcbb4b557d748c1ca2780931b2032a3f7ee862a54c834cedfa38b1f435cbf9",
+          "artifact_key": "C01/empty",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "friday": false
+            },
+            "visibility": {
+              "explicit_correction_with_named_day": false
+            },
+            "dependencies": {
+              "name_restored_day": "not_triggered"
+            },
+            "optional": {
+              "next_day_outcome": false,
+              "bag_detail": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01": {
+          "selected": [
+            "E01"
+          ],
+          "admitted": [
+            "E01"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1068,
+          "reviewer_input_with_full_reply_reserve": 8584,
+          "history_equal": true,
+          "generation_sha256": "f89c0f1c8e8335a9a10f861757d4d6c2d4149ab3fe98bd10471551b0f844eae7",
+          "reviewer_sha256": "5eaf782ea6ed19b6488deeeaeea9664ae5cfcabb26e91d2d2ed1aca6e1664b93",
+          "artifact_key": "C01/reference-E01",
+          "reference_for": [
+            "answer_routes/friday"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "friday": true
+            },
+            "visibility": {
+              "explicit_correction_with_named_day": false
+            },
+            "dependencies": {
+              "name_restored_day": "not_triggered"
+            },
+            "optional": {
+              "next_day_outcome": false,
+              "bag_detail": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E04": {
+          "selected": [
+            "E01",
+            "E04"
+          ],
+          "admitted": [
+            "E01",
+            "E04"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1249,
+          "reviewer_input_with_full_reply_reserve": 8774,
+          "history_equal": true,
+          "generation_sha256": "ac72af00fc402bf7d443b6453c244abc00158428b5aa1a6d5e7c483bcb77cd9d",
+          "reviewer_sha256": "94ec8408bbc3db7ba79f3c44f0a9b5f6477ee437f2b051e03a488b9eddd3ac3d",
+          "artifact_key": "C01/reference-E01-E04",
+          "reference_for": [
+            "visibility/explicit_correction_with_named_day"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "friday": true
+            },
+            "visibility": {
+              "explicit_correction_with_named_day": true
+            },
+            "dependencies": {
+              "name_restored_day": "resolved"
+            },
+            "optional": {
+              "next_day_outcome": false,
+              "bag_detail": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        }
+      }
+    },
+    {
+      "id": "C02",
+      "literal_scores": {
+        "E01": 0.17647058823529413,
+        "E02": 0.20588235294117646,
+        "E03": 0.5,
+        "E04": 0.5,
+        "E05": 0.5,
+        "E06": 0.5,
+        "E07": 0.14705882352941177
+      },
+      "packets": {
+        "baseline": {
+          "selected": [
+            "E06",
+            "E05",
+            "E04",
+            "E03"
+          ],
+          "admitted": [
+            "E06",
+            "E05",
+            "E04",
+            "E03"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1584,
+          "reviewer_input_with_full_reply_reserve": 9129,
+          "history_equal": true,
+          "generation_sha256": "c02774db90a74d74dc96a6e142f3938747996519fad5c46b5cd264e5cc8ad8cd",
+          "reviewer_sha256": "74ee4bde8c9dc8130cea20019a892ecf5fba62069c4a68bc817400d15d3de545",
+          "artifact_key": "C02/baseline",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "bag_contents": true,
+              "wet_corner": false
+            },
+            "visibility": {
+              "new_disclosure_boundary": false
+            },
+            "dependencies": {
+              "explicit_cat_bag_anchor": "not_triggered"
+            },
+            "optional": {
+              "wet_corner": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "candidate": {
+          "selected": [
+            "E06",
+            "E02",
+            "E01",
+            "E07"
+          ],
+          "admitted": [
+            "E06",
+            "E02",
+            "E01",
+            "E07"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1584,
+          "reviewer_input_with_full_reply_reserve": 9128,
+          "history_equal": true,
+          "generation_sha256": "270273df228bd65ef13421cfc46dfc5bd3a22691272b06c2bc3c01be6c436771",
+          "reviewer_sha256": "a35c19d35a2c46a8362997c9b4e425d5801bed47b38ab89c7eb93a5fdea73498",
+          "artifact_key": "C02/candidate",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "bag_contents": true,
+              "wet_corner": true
+            },
+            "visibility": {
+              "new_disclosure_boundary": true
+            },
+            "dependencies": {
+              "explicit_cat_bag_anchor": "resolved"
+            },
+            "optional": {
+              "wet_corner": true
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": [
+              "E07"
+            ]
+          }
+        },
+        "empty": {
+          "selected": [],
+          "admitted": [],
+          "omitted_capacity": [],
+          "generation_input_estimate": 878,
+          "reviewer_input_with_full_reply_reserve": 8394,
+          "history_equal": true,
+          "generation_sha256": "e6394ce40f8e4f4ed060b8510f4b14f130ff949ae7fed90baa206ddf4d249ed8",
+          "reviewer_sha256": "cf095a95fbf3b936a4709d61559ae2ac530ede8dcbaba296790e81c1f3025275",
+          "artifact_key": "C02/empty",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "bag_contents": false,
+              "wet_corner": false
+            },
+            "visibility": {
+              "new_disclosure_boundary": false
+            },
+            "dependencies": {
+              "explicit_cat_bag_anchor": "not_triggered"
+            },
+            "optional": {
+              "wet_corner": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01": {
+          "selected": [
+            "E01"
+          ],
+          "admitted": [
+            "E01"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1068,
+          "reviewer_input_with_full_reply_reserve": 8584,
+          "history_equal": true,
+          "generation_sha256": "cb5c010a4e9eacef86d9e02d93166652fb4927941d03989a9cf314d71ad28bbe",
+          "reviewer_sha256": "2d5e018bb5ca26722c4f4ff0f5135a669e3e182ab38e9cc2dc80d202ae18fafb",
+          "artifact_key": "C02/reference-E01",
+          "reference_for": [
+            "answer_routes/bag_contents"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "bag_contents": true,
+              "wet_corner": false
+            },
+            "visibility": {
+              "new_disclosure_boundary": false
+            },
+            "dependencies": {
+              "explicit_cat_bag_anchor": "not_triggered"
+            },
+            "optional": {
+              "wet_corner": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E03": {
+          "selected": [
+            "E03"
+          ],
+          "admitted": [
+            "E03"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1062,
+          "reviewer_input_with_full_reply_reserve": 8577,
+          "history_equal": true,
+          "generation_sha256": "b822d01f5d911a09111eb96ff209e0503c390de007b9a9b21cd5fc51622825d7",
+          "reviewer_sha256": "40a67f7ad3bbfb1e16f95baf3c074e7727cd426b594893690d0dccca4c8540c4",
+          "artifact_key": "C02/reference-E03",
+          "reference_for": [
+            "answer_routes/bag_contents"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "bag_contents": true,
+              "wet_corner": false
+            },
+            "visibility": {
+              "new_disclosure_boundary": false
+            },
+            "dependencies": {
+              "explicit_cat_bag_anchor": "not_triggered"
+            },
+            "optional": {
+              "wet_corner": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E04": {
+          "selected": [
+            "E04"
+          ],
+          "admitted": [
+            "E04"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1062,
+          "reviewer_input_with_full_reply_reserve": 8577,
+          "history_equal": true,
+          "generation_sha256": "cc428f983b8cd75a9ac52ba95b8a2482fd0aebbda30a4641f0cc08e6e8331e33",
+          "reviewer_sha256": "6d956ea0802f255873a7085d6f33bc97fc8058216d1adab131b410dc51d8ac71",
+          "artifact_key": "C02/reference-E04",
+          "reference_for": [
+            "answer_routes/bag_contents"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "bag_contents": true,
+              "wet_corner": false
+            },
+            "visibility": {
+              "new_disclosure_boundary": false
+            },
+            "dependencies": {
+              "explicit_cat_bag_anchor": "not_triggered"
+            },
+            "optional": {
+              "wet_corner": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E05": {
+          "selected": [
+            "E05"
+          ],
+          "admitted": [
+            "E05"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1062,
+          "reviewer_input_with_full_reply_reserve": 8577,
+          "history_equal": true,
+          "generation_sha256": "d3f88c2fd04ec64cd4bccba1f09ab8f8a4beefb8ce87b5c4e459ee4bbb69065c",
+          "reviewer_sha256": "9dee48b20595ca769a9038b93fb9891eb2a300f7517278cafcbcba40ff0a0abd",
+          "artifact_key": "C02/reference-E05",
+          "reference_for": [
+            "answer_routes/bag_contents"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "bag_contents": true,
+              "wet_corner": false
+            },
+            "visibility": {
+              "new_disclosure_boundary": false
+            },
+            "dependencies": {
+              "explicit_cat_bag_anchor": "not_triggered"
+            },
+            "optional": {
+              "wet_corner": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E06": {
+          "selected": [
+            "E06"
+          ],
+          "admitted": [
+            "E06"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1062,
+          "reviewer_input_with_full_reply_reserve": 8577,
+          "history_equal": true,
+          "generation_sha256": "26d8f403db9c1441de8b21fc6ac7de3b225767e7eee65bd240801b2e223d1f0b",
+          "reviewer_sha256": "d983a13d966182ebab568d23088fd6ca9ed5e4e6616940e2b6763581bb832e23",
+          "artifact_key": "C02/reference-E06",
+          "reference_for": [
+            "answer_routes/bag_contents"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "bag_contents": true,
+              "wet_corner": false
+            },
+            "visibility": {
+              "new_disclosure_boundary": false
+            },
+            "dependencies": {
+              "explicit_cat_bag_anchor": "not_triggered"
+            },
+            "optional": {
+              "wet_corner": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E02": {
+          "selected": [
+            "E02"
+          ],
+          "admitted": [
+            "E02"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1066,
+          "reviewer_input_with_full_reply_reserve": 8582,
+          "history_equal": true,
+          "generation_sha256": "a39a07bc1a1c66ed3986c4df310785332e02f77aea5029233f6055e6dd769e5c",
+          "reviewer_sha256": "e3717985f8522104a1a246ac9366852d609bb4e8bfd33b30e26217f9d6a74c80",
+          "artifact_key": "C02/reference-E02",
+          "reference_for": [
+            "answer_routes/wet_corner",
+            "visibility/new_disclosure_boundary"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "bag_contents": false,
+              "wet_corner": true
+            },
+            "visibility": {
+              "new_disclosure_boundary": true
+            },
+            "dependencies": {
+              "explicit_cat_bag_anchor": "missing"
+            },
+            "optional": {
+              "wet_corner": true
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        }
+      }
+    },
+    {
+      "id": "C03",
+      "literal_scores": {
+        "E01": 0.13333333333333333,
+        "E02": 0.13333333333333333,
+        "E03": 0.16666666666666666,
+        "E04": 0.13333333333333333,
+        "E05": 0.13333333333333333,
+        "E06": 0.16666666666666666
+      },
+      "packets": {
+        "baseline": {
+          "selected": [
+            "E06",
+            "E03",
+            "E05",
+            "E04"
+          ],
+          "admitted": [
+            "E06",
+            "E03",
+            "E05",
+            "E04"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1531,
+          "reviewer_input_with_full_reply_reserve": 9075,
+          "history_equal": true,
+          "generation_sha256": "267ff87fdddab430be25c78e28324a93abb2dfc54770f05e8b95a6374758595c",
+          "reviewer_sha256": "7c7af925e578175a6c1cee002a4c15a0dcc75d1e3dc3221605011a50d8989737",
+          "artifact_key": "C03/baseline",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "present_piano_choice": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": [
+              "E03",
+              "E04",
+              "E05",
+              "E06"
+            ]
+          }
+        },
+        "candidate": {
+          "selected": [
+            "E06",
+            "E03",
+            "E02",
+            "E01"
+          ],
+          "admitted": [
+            "E06",
+            "E03",
+            "E02",
+            "E01"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1536,
+          "reviewer_input_with_full_reply_reserve": 9081,
+          "history_equal": true,
+          "generation_sha256": "7706fb2cec790492beeb3e2506822d7bdedf0376ad16b644b91af240df235c7d",
+          "reviewer_sha256": "48eef0ae5be07cee8378990c76790647c72a1fc6be586196616c628788e6483d",
+          "artifact_key": "C03/candidate",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "present_piano_choice": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": [
+              "E01",
+              "E02",
+              "E03",
+              "E06"
+            ]
+          }
+        },
+        "empty": {
+          "selected": [],
+          "admitted": [],
+          "omitted_capacity": [],
+          "generation_input_estimate": 875,
+          "reviewer_input_with_full_reply_reserve": 8391,
+          "history_equal": true,
+          "generation_sha256": "5cc5271cda4b1fe749699318dd09f38ce60ab058e7f6aea24d47d6352c9466cf",
+          "reviewer_sha256": "77b6c7e937c1b5577ac21124db5ec05437fb1c372e947566f8b42023f427d581",
+          "artifact_key": "C03/empty",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "present_piano_choice": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-empty": {
+          "selected": [],
+          "admitted": [],
+          "omitted_capacity": [],
+          "generation_input_estimate": 875,
+          "reviewer_input_with_full_reply_reserve": 8391,
+          "history_equal": true,
+          "generation_sha256": "5cc5271cda4b1fe749699318dd09f38ce60ab058e7f6aea24d47d6352c9466cf",
+          "reviewer_sha256": "77b6c7e937c1b5577ac21124db5ec05437fb1c372e947566f8b42023f427d581",
+          "artifact_key": "C03/reference-empty",
+          "reference_for": [
+            "answer_routes/present_piano_choice"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "present_piano_choice": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        }
+      }
+    },
+    {
+      "id": "C04",
+      "literal_scores": {
+        "E01": 0.18421052631578946,
+        "E02": 0.5526315789473685,
+        "E03": 0.5526315789473685,
+        "E04": 0.5526315789473685,
+        "E05": 0.5526315789473685,
+        "E06": 0.13157894736842105,
+        "E07": 0.13157894736842105
+      },
+      "packets": {
+        "baseline": {
+          "selected": [
+            "E05",
+            "E04",
+            "E03",
+            "E02"
+          ],
+          "admitted": [
+            "E05",
+            "E04",
+            "E03",
+            "E02"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1612,
+          "reviewer_input_with_full_reply_reserve": 9156,
+          "history_equal": true,
+          "generation_sha256": "6076123c788776b6b49a1558799b9b9f6ea440f25d05603f464e7d15e8306dc4",
+          "reviewer_sha256": "95526b123729aff30ff79ae2e57286e51c0ac7d78d7c57aa7a0bea35cb548907",
+          "artifact_key": "C04/baseline",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": false
+            },
+            "visibility": {
+              "opposed_accounts": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "candidate": {
+          "selected": [
+            "E05",
+            "E01",
+            "E07",
+            "E06"
+          ],
+          "admitted": [
+            "E05",
+            "E01",
+            "E07",
+            "E06"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1572,
+          "reviewer_input_with_full_reply_reserve": 9116,
+          "history_equal": true,
+          "generation_sha256": "28030410989ea6f724bf27e99590b8d9884062105786a0d31fa3361a9d7012eb",
+          "reviewer_sha256": "a889c4a2d97e1aa4813cfcf6d245fbc30ef8a10ff2fc2de829453687bef548c4",
+          "artifact_key": "C04/candidate",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": true
+            },
+            "visibility": {
+              "opposed_accounts": true
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": [
+              "E06",
+              "E07"
+            ]
+          }
+        },
+        "empty": {
+          "selected": [],
+          "admitted": [],
+          "omitted_capacity": [],
+          "generation_input_estimate": 882,
+          "reviewer_input_with_full_reply_reserve": 8398,
+          "history_equal": true,
+          "generation_sha256": "37e15ba67b4e8a63c672bf2ef078852f89d6c4e0576f521047e5fdc73cf95a45",
+          "reviewer_sha256": "32dfaeb0b430c09da76e9636e29a9c17acd7f1766987410a6807d96fbe049cd2",
+          "artifact_key": "C04/empty",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": false
+            },
+            "visibility": {
+              "opposed_accounts": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E02": {
+          "selected": [
+            "E01",
+            "E02"
+          ],
+          "admitted": [
+            "E01",
+            "E02"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1248,
+          "reviewer_input_with_full_reply_reserve": 8773,
+          "history_equal": true,
+          "generation_sha256": "eb444f4ef424cae61241256a45bda8b24a4e1725ae9138bc39bd0b4f19953a9d",
+          "reviewer_sha256": "082df3495d57ee12f74936debb91bcc12d936d8a44b4f4f248fa5d79fc0f3ad9",
+          "artifact_key": "C04/reference-E01-E02",
+          "reference_for": [
+            "answer_routes/unresolved_place_weather",
+            "visibility/opposed_accounts"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": true
+            },
+            "visibility": {
+              "opposed_accounts": true
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E03": {
+          "selected": [
+            "E01",
+            "E03"
+          ],
+          "admitted": [
+            "E01",
+            "E03"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1248,
+          "reviewer_input_with_full_reply_reserve": 8773,
+          "history_equal": true,
+          "generation_sha256": "aad25e7e0a5ed5d8669393df60ab961d45472a1543cbfad7f910ee5a1a7465f3",
+          "reviewer_sha256": "01b3356a78270be9ff0d9b02096e503982bbf436ba9ff08ec6cbec2f5b276410",
+          "artifact_key": "C04/reference-E01-E03",
+          "reference_for": [
+            "answer_routes/unresolved_place_weather",
+            "visibility/opposed_accounts"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": true
+            },
+            "visibility": {
+              "opposed_accounts": true
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E04": {
+          "selected": [
+            "E01",
+            "E04"
+          ],
+          "admitted": [
+            "E01",
+            "E04"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1248,
+          "reviewer_input_with_full_reply_reserve": 8773,
+          "history_equal": true,
+          "generation_sha256": "9df760d33d8fec9ce6d344cdcc3ab77d5cacdea1f7aefdff3c1120383b7078c5",
+          "reviewer_sha256": "edccf0c0805a5239a24b0163afcd5062d9751a69d2d4e2b76b4af255d9990336",
+          "artifact_key": "C04/reference-E01-E04",
+          "reference_for": [
+            "answer_routes/unresolved_place_weather",
+            "visibility/opposed_accounts"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": true
+            },
+            "visibility": {
+              "opposed_accounts": true
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E05": {
+          "selected": [
+            "E01",
+            "E05"
+          ],
+          "admitted": [
+            "E01",
+            "E05"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1248,
+          "reviewer_input_with_full_reply_reserve": 8773,
+          "history_equal": true,
+          "generation_sha256": "20181a46bebf34e5fa4f0b3c4e1572f37e4c4cef0df36d891da3448b9ede9077",
+          "reviewer_sha256": "fd876279956e9831f373387385a49b4ba99e9c7f02e282153efc022177b8517c",
+          "artifact_key": "C04/reference-E01-E05",
+          "reference_for": [
+            "answer_routes/unresolved_place_weather",
+            "visibility/opposed_accounts"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": true
+            },
+            "visibility": {
+              "opposed_accounts": true
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        }
+      }
+    },
+    {
+      "id": "C05",
+      "literal_scores": {
+        "E01": 0.16666666666666666,
+        "E02": 0.5277777777777778,
+        "E03": 0.1388888888888889,
+        "E04": 0.5277777777777778,
+        "E05": 0.5277777777777778,
+        "E06": 0.1111111111111111,
+        "E07": 0.1111111111111111
+      },
+      "packets": {
+        "baseline": {
+          "selected": [
+            "E05",
+            "E04",
+            "E02",
+            "E01"
+          ],
+          "admitted": [
+            "E05",
+            "E04",
+            "E02",
+            "E01"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1621,
+          "reviewer_input_with_full_reply_reserve": 9165,
+          "history_equal": true,
+          "generation_sha256": "ca54c10ead34528223c69b87cfa428289b872141b32b9e7e8de5ebfe66bee8b3",
+          "reviewer_sha256": "cd8b33bebfebf7745c7d6e57e707d2ada728f1c9192dbf9b50c5ae8770f69087",
+          "artifact_key": "C05/baseline",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "bounded_next_day_outcome": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {
+              "explicit_search": true
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "candidate": {
+          "selected": [
+            "E05",
+            "E02",
+            "E04",
+            "E01"
+          ],
+          "admitted": [
+            "E05",
+            "E02",
+            "E04",
+            "E01"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1621,
+          "reviewer_input_with_full_reply_reserve": 9165,
+          "history_equal": true,
+          "generation_sha256": "6c72f3b394646e711976fd9ff025e0b07c079f5c11b3cc1c1e1883b800a9d643",
+          "reviewer_sha256": "3971574efc71229104c0be76ec6d74823b7a6543a7d721509ad012db21d41cd8",
+          "artifact_key": "C05/candidate",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "bounded_next_day_outcome": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {
+              "explicit_search": true
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "empty": {
+          "selected": [],
+          "admitted": [],
+          "omitted_capacity": [],
+          "generation_input_estimate": 880,
+          "reviewer_input_with_full_reply_reserve": 8396,
+          "history_equal": true,
+          "generation_sha256": "3dbd419493b5d6fb689865ac0fb7abaf7e0026430c0d158c5883b7dd14ce3bf8",
+          "reviewer_sha256": "ed413327c370567ec7ef28f200b80d8f67cbc6deb49ae994ae0018acfbd292a3",
+          "artifact_key": "C05/empty",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "bounded_next_day_outcome": false
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {
+              "explicit_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01": {
+          "selected": [
+            "E01"
+          ],
+          "admitted": [
+            "E01"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1077,
+          "reviewer_input_with_full_reply_reserve": 8592,
+          "history_equal": true,
+          "generation_sha256": "53cb7513f4230cefc7a64d2a7112c881006ece1462e4f0a96dfd9be7d99ab6e9",
+          "reviewer_sha256": "21bbfa9166577237e6ac26de599f316ab5eb4c77c7dd6530557343fce9bfb130",
+          "artifact_key": "C05/reference-E01",
+          "reference_for": [
+            "answer_routes/bounded_next_day_outcome"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "bounded_next_day_outcome": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {
+              "explicit_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E02": {
+          "selected": [
+            "E02"
+          ],
+          "admitted": [
+            "E02"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1073,
+          "reviewer_input_with_full_reply_reserve": 8589,
+          "history_equal": true,
+          "generation_sha256": "9d1ba8b37825e0d39d1900894cfa63676019deebf80fb41336b95fe4c34376ef",
+          "reviewer_sha256": "fcb92a3d6174715537a9c8d9108749d2588e21edba82da2c0f5c06624ea7de66",
+          "artifact_key": "C05/reference-E02",
+          "reference_for": [
+            "answer_routes/bounded_next_day_outcome"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "bounded_next_day_outcome": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {
+              "explicit_search": true
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E03": {
+          "selected": [
+            "E03"
+          ],
+          "admitted": [
+            "E03"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1069,
+          "reviewer_input_with_full_reply_reserve": 8585,
+          "history_equal": true,
+          "generation_sha256": "f47d62e4fc453b151f3ca9f059f06b81636b19914394e8f0a182d327bfdb250b",
+          "reviewer_sha256": "429e72e5bcc1742bb5244ec04a04b54d33ea4d5ea4f5c0f483321960ab17832c",
+          "artifact_key": "C05/reference-E03",
+          "reference_for": [
+            "answer_routes/bounded_next_day_outcome"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "bounded_next_day_outcome": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {
+              "explicit_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E04": {
+          "selected": [
+            "E04"
+          ],
+          "admitted": [
+            "E04"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1071,
+          "reviewer_input_with_full_reply_reserve": 8587,
+          "history_equal": true,
+          "generation_sha256": "393f09d4dd47d32cfc75ef589ce6745a3efb2810f3d42da0ae209364dffae361",
+          "reviewer_sha256": "b28a10506af85219c3ac95b4a388559a262ca0b420eaa748fcd435ad8e51cb02",
+          "artifact_key": "C05/reference-E04",
+          "reference_for": [
+            "answer_routes/bounded_next_day_outcome"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "bounded_next_day_outcome": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {
+              "explicit_search": true
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E05": {
+          "selected": [
+            "E05"
+          ],
+          "admitted": [
+            "E05"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1069,
+          "reviewer_input_with_full_reply_reserve": 8585,
+          "history_equal": true,
+          "generation_sha256": "a4d85d2f302e56476476c00e7bb0e069a97ded1ed376dd37648e26ba5090c974",
+          "reviewer_sha256": "9f0f71c1bddad6b9635c833788b7b496ca0741d22e5c5a45e76a670ee782676d",
+          "artifact_key": "C05/reference-E05",
+          "reference_for": [
+            "answer_routes/bounded_next_day_outcome"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "bounded_next_day_outcome": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {
+              "explicit_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        }
+      }
+    },
+    {
+      "id": "C06",
+      "literal_scores": {
+        "E01": 0.15384615384615385,
+        "E02": 0.1794871794871795,
+        "E03": 0.1282051282051282,
+        "E04": 0.20512820512820512,
+        "E05": 0.1794871794871795,
+        "E06": 0.15384615384615385,
+        "E07": 0.1282051282051282
+      },
+      "packets": {
+        "baseline": {
+          "selected": [
+            "E04",
+            "E05",
+            "E02",
+            "E06"
+          ],
+          "admitted": [
+            "E04",
+            "E05",
+            "E02",
+            "E06"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1600,
+          "reviewer_input_with_full_reply_reserve": 9144,
+          "history_equal": true,
+          "generation_sha256": "c667d173df3c484a0aec55a0596e80d340c39e2647c0792929dc2bdbe3b58814",
+          "reviewer_sha256": "07d757dc88d1abd7513127dc1a91feb2fb2085b8810c274d94b77ab4ac2819c6",
+          "artifact_key": "C06/baseline",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": false
+            },
+            "visibility": {
+              "opposed_accounts": false
+            },
+            "dependencies": {},
+            "optional": {
+              "next_day_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "candidate": {
+          "selected": [
+            "E04",
+            "E05",
+            "E02",
+            "E01"
+          ],
+          "admitted": [
+            "E04",
+            "E05",
+            "E02",
+            "E01"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1599,
+          "reviewer_input_with_full_reply_reserve": 9144,
+          "history_equal": true,
+          "generation_sha256": "2e0a59ce49a5ef236130922f79b3dc882f42977c5c190d98580d71ef841ac35d",
+          "reviewer_sha256": "b6c0c1f877bc4423089dc37ec8c2464973d3e8779ad7b947cdc0046b82acc22b",
+          "artifact_key": "C06/candidate",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": true
+            },
+            "visibility": {
+              "opposed_accounts": true
+            },
+            "dependencies": {},
+            "optional": {
+              "next_day_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "empty": {
+          "selected": [],
+          "admitted": [],
+          "omitted_capacity": [],
+          "generation_input_estimate": 883,
+          "reviewer_input_with_full_reply_reserve": 8399,
+          "history_equal": true,
+          "generation_sha256": "ec0ac983f7c91d9900e1cafb4751be3bbdf22fe61d29af8d2bbcfc9bd43fc33d",
+          "reviewer_sha256": "791a4f49f4ce13162bbcb7cb287f50d5f709a217091a96c94cf12690f6c5e32f",
+          "artifact_key": "C06/empty",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": false
+            },
+            "visibility": {
+              "opposed_accounts": false
+            },
+            "dependencies": {},
+            "optional": {
+              "next_day_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E02": {
+          "selected": [
+            "E01",
+            "E02"
+          ],
+          "admitted": [
+            "E01",
+            "E02"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1244,
+          "reviewer_input_with_full_reply_reserve": 8769,
+          "history_equal": true,
+          "generation_sha256": "da19ae5c16694e96289ef7de004c0766c720aab5c333e0600241866f5ad48c1e",
+          "reviewer_sha256": "6e6b9b1f2e3d6cc9355e5c8a8e60802df155cdadb98874bd5db861ba6e9d45a6",
+          "artifact_key": "C06/reference-E01-E02",
+          "reference_for": [
+            "answer_routes/unresolved_place_weather",
+            "visibility/opposed_accounts"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": true
+            },
+            "visibility": {
+              "opposed_accounts": true
+            },
+            "dependencies": {},
+            "optional": {
+              "next_day_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E03": {
+          "selected": [
+            "E01",
+            "E03"
+          ],
+          "admitted": [
+            "E01",
+            "E03"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1246,
+          "reviewer_input_with_full_reply_reserve": 8771,
+          "history_equal": true,
+          "generation_sha256": "52d6f6822744d3d63434770fcdcedbfb3aa9fc4c2b69acd238f500bb351cd5ea",
+          "reviewer_sha256": "ef568b6264a49bb1134639674c63cbbf952ce056ae77dbf248a4d816eacf643d",
+          "artifact_key": "C06/reference-E01-E03",
+          "reference_for": [
+            "answer_routes/unresolved_place_weather",
+            "visibility/opposed_accounts"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": true
+            },
+            "visibility": {
+              "opposed_accounts": true
+            },
+            "dependencies": {},
+            "optional": {
+              "next_day_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E04": {
+          "selected": [
+            "E01",
+            "E04"
+          ],
+          "admitted": [
+            "E01",
+            "E04"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1246,
+          "reviewer_input_with_full_reply_reserve": 8772,
+          "history_equal": true,
+          "generation_sha256": "cc46039bd893351830db711ff11b8f3c12457f42e6dd3fd67713f5530386d8f2",
+          "reviewer_sha256": "c5eb5e59d91b3fc5e6c1142df6f4218b298c58c66550a42e7b260c26bbfc901e",
+          "artifact_key": "C06/reference-E01-E04",
+          "reference_for": [
+            "answer_routes/unresolved_place_weather",
+            "visibility/opposed_accounts"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": true
+            },
+            "visibility": {
+              "opposed_accounts": true
+            },
+            "dependencies": {},
+            "optional": {
+              "next_day_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E05": {
+          "selected": [
+            "E01",
+            "E05"
+          ],
+          "admitted": [
+            "E01",
+            "E05"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1247,
+          "reviewer_input_with_full_reply_reserve": 8772,
+          "history_equal": true,
+          "generation_sha256": "d1a9075b4d3679e91799cc7bef1f765795487ebe6a85d8165d9fbc710dd98601",
+          "reviewer_sha256": "102e5a13f858460142f59c71ae5d740462e755fb0d1e80f02f01a7bd747b4223",
+          "artifact_key": "C06/reference-E01-E05",
+          "reference_for": [
+            "answer_routes/unresolved_place_weather",
+            "visibility/opposed_accounts"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": true
+            },
+            "visibility": {
+              "opposed_accounts": true
+            },
+            "dependencies": {},
+            "optional": {
+              "next_day_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E06": {
+          "selected": [
+            "E01",
+            "E06"
+          ],
+          "admitted": [
+            "E01",
+            "E06"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1247,
+          "reviewer_input_with_full_reply_reserve": 8772,
+          "history_equal": true,
+          "generation_sha256": "283616672a9a7f6edf17a03f40d7276a752d5001dcc1b391e5f9cd424c6a0dd5",
+          "reviewer_sha256": "0b7176cf394a4f110901ea6f7782ff9dbf003db289f36b060ff47ca7779942b8",
+          "artifact_key": "C06/reference-E01-E06",
+          "reference_for": [
+            "answer_routes/unresolved_place_weather",
+            "visibility/opposed_accounts"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "unresolved_place_weather": true
+            },
+            "visibility": {
+              "opposed_accounts": true
+            },
+            "dependencies": {},
+            "optional": {
+              "next_day_search": false
+            },
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        }
+      }
+    },
+    {
+      "id": "C07",
+      "literal_scores": {
+        "E01": 0.19444444444444445,
+        "E02": 0.5277777777777778,
+        "E03": 0.5277777777777778,
+        "E04": 0.2222222222222222,
+        "E05": 0.5277777777777778,
+        "E06": 0.5277777777777778,
+        "E07": 0.1111111111111111
+      },
+      "packets": {
+        "baseline": {
+          "selected": [
+            "E06",
+            "E05",
+            "E03",
+            "E02"
+          ],
+          "admitted": [
+            "E06",
+            "E05",
+            "E03",
+            "E02"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1593,
+          "reviewer_input_with_full_reply_reserve": 9137,
+          "history_equal": true,
+          "generation_sha256": "8d8c0e471b6f7584d85c1bf31cd4fd4264e31606dc3d1ad8e88d167c99969263",
+          "reviewer_sha256": "f0394be694add61ec764cf2fffcdfcc8e76c63ba169428d514433e4ca476a8be",
+          "artifact_key": "C07/baseline",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "not_shared": true
+            },
+            "visibility": {
+              "proposal_and_refusal": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "candidate": {
+          "selected": [
+            "E06",
+            "E04",
+            "E01",
+            "E07"
+          ],
+          "admitted": [
+            "E06",
+            "E04",
+            "E01",
+            "E07"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1589,
+          "reviewer_input_with_full_reply_reserve": 9133,
+          "history_equal": true,
+          "generation_sha256": "a25fa4f694d928d1ceb5395c8bc7fffec272bbe734fa7ab2cc1780963d0b7056",
+          "reviewer_sha256": "89354316df74758405e4c507a14b7aab378e0d830335b6c3966972120fb3edd7",
+          "artifact_key": "C07/candidate",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "not_shared": true
+            },
+            "visibility": {
+              "proposal_and_refusal": true
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": [
+              "E07"
+            ]
+          }
+        },
+        "empty": {
+          "selected": [],
+          "admitted": [],
+          "omitted_capacity": [],
+          "generation_input_estimate": 880,
+          "reviewer_input_with_full_reply_reserve": 8396,
+          "history_equal": true,
+          "generation_sha256": "ba6929a27c82bd50dadd2ebae4b0eb25a8c4d00537f3da8d781827e6df85ea8a",
+          "reviewer_sha256": "65f4c2f0683bd7ae245e69373f93003ec3ab6e272b455255de7ef9fddc92e703",
+          "artifact_key": "C07/empty",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "not_shared": false
+            },
+            "visibility": {
+              "proposal_and_refusal": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01": {
+          "selected": [
+            "E01"
+          ],
+          "admitted": [
+            "E01"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1065,
+          "reviewer_input_with_full_reply_reserve": 8581,
+          "history_equal": true,
+          "generation_sha256": "8f04e13ebaa73f3dde1c4ae7de90271afe17a05791e9642e31baf087480dafb9",
+          "reviewer_sha256": "72f49a8d398e8dbd6e56dd7d1514e201f27bbfcee5689f8953ef21e6f1811407",
+          "artifact_key": "C07/reference-E01",
+          "reference_for": [
+            "answer_routes/not_shared"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "not_shared": true
+            },
+            "visibility": {
+              "proposal_and_refusal": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E02": {
+          "selected": [
+            "E02"
+          ],
+          "admitted": [
+            "E02"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1065,
+          "reviewer_input_with_full_reply_reserve": 8581,
+          "history_equal": true,
+          "generation_sha256": "958ccb55db788dd7afe955f480e80e394817939120a625be8d472a0b1dcb5091",
+          "reviewer_sha256": "569d29efb736bdc17998b74e485529e9d964618b52d5c69a3b4cb0bda41f80e7",
+          "artifact_key": "C07/reference-E02",
+          "reference_for": [
+            "answer_routes/not_shared"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "not_shared": true
+            },
+            "visibility": {
+              "proposal_and_refusal": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E03": {
+          "selected": [
+            "E03"
+          ],
+          "admitted": [
+            "E03"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1065,
+          "reviewer_input_with_full_reply_reserve": 8581,
+          "history_equal": true,
+          "generation_sha256": "669f6e4607d1092ad2be5993825f261cf9922594f0fa8d672d09af8f450c42f6",
+          "reviewer_sha256": "0d3d509979d9f29eb7abcb865a3953e798b02f214644b7f4a9835e81ade58fab",
+          "artifact_key": "C07/reference-E03",
+          "reference_for": [
+            "answer_routes/not_shared"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "not_shared": true
+            },
+            "visibility": {
+              "proposal_and_refusal": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E04": {
+          "selected": [
+            "E04"
+          ],
+          "admitted": [
+            "E04"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1076,
+          "reviewer_input_with_full_reply_reserve": 8592,
+          "history_equal": true,
+          "generation_sha256": "93747d3da7a4a436940d92a2f18dde7b4a1da36ff84f53c95fd1d04942d65f6f",
+          "reviewer_sha256": "9e67e6911ed096c46e1b0ac8139f4ce2a158c9b449c437dd7358fa5fe6a111f4",
+          "artifact_key": "C07/reference-E04",
+          "reference_for": [
+            "answer_routes/not_shared",
+            "visibility/proposal_and_refusal"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "not_shared": true
+            },
+            "visibility": {
+              "proposal_and_refusal": true
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E05": {
+          "selected": [
+            "E05"
+          ],
+          "admitted": [
+            "E05"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1065,
+          "reviewer_input_with_full_reply_reserve": 8581,
+          "history_equal": true,
+          "generation_sha256": "24ee84b5a5a09311ffb4c746fd622d066549c355c130a6921c908f43dfb95985",
+          "reviewer_sha256": "87eff8301333c23764af99e475ad351e63eaaaa545c6ce674a9b47d810d11cd6",
+          "artifact_key": "C07/reference-E05",
+          "reference_for": [
+            "answer_routes/not_shared"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "not_shared": true
+            },
+            "visibility": {
+              "proposal_and_refusal": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E06": {
+          "selected": [
+            "E06"
+          ],
+          "admitted": [
+            "E06"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1065,
+          "reviewer_input_with_full_reply_reserve": 8581,
+          "history_equal": true,
+          "generation_sha256": "fa08adef71d5e16e14dc6ea2bc1807266ed7dcb93b803348190e83af86398651",
+          "reviewer_sha256": "425b078b5e16170b2caf495f1691b9cf5c85a78138ab63512c410a914d9b74cd",
+          "artifact_key": "C07/reference-E06",
+          "reference_for": [
+            "answer_routes/not_shared"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "not_shared": true
+            },
+            "visibility": {
+              "proposal_and_refusal": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        }
+      }
+    },
+    {
+      "id": "C08",
+      "literal_scores": {
+        "E01": 0.20689655172413793,
+        "E02": 0.41379310344827586,
+        "E03": 0.41379310344827586,
+        "E04": 0.41379310344827586,
+        "E05": 0.13793103448275862,
+        "E06": 0.41379310344827586,
+        "E07": 0.13793103448275862
+      },
+      "packets": {
+        "baseline": {
+          "selected": [
+            "E06",
+            "E04",
+            "E03",
+            "E02"
+          ],
+          "admitted": [
+            "E06",
+            "E04",
+            "E03",
+            "E02"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1551,
+          "reviewer_input_with_full_reply_reserve": 9095,
+          "history_equal": true,
+          "generation_sha256": "bbdc03a2917875d6d4d91ab9025281d7184df6592e9a7e162f665f6385aeaa64",
+          "reviewer_sha256": "c83776135feb2c2db3939ad0e2b7f0b9bbe595357c1cf873ba8dc2a2d634c005",
+          "artifact_key": "C08/baseline",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "named_day_conflict": false,
+              "withdrawal_and_reassertion": false
+            },
+            "visibility": {
+              "restoration_then_opposition": false
+            },
+            "dependencies": {
+              "name_original_day": "not_triggered",
+              "identify_withdrawn_saturday": "not_triggered"
+            },
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "candidate": {
+          "selected": [
+            "E06",
+            "E01",
+            "E05",
+            "E07"
+          ],
+          "admitted": [
+            "E06",
+            "E01",
+            "E05",
+            "E07"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1558,
+          "reviewer_input_with_full_reply_reserve": 9102,
+          "history_equal": true,
+          "generation_sha256": "27139adb96995db74cce32e0b8da6019dea5f21a83fb7730f84a4c0cff0fae3b",
+          "reviewer_sha256": "e64eb134a5e7cd2c883eb04ee6cf7a2d273e11bc23efc3212d65a87fda24b5d3",
+          "artifact_key": "C08/candidate",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "named_day_conflict": true,
+              "withdrawal_and_reassertion": false
+            },
+            "visibility": {
+              "restoration_then_opposition": true
+            },
+            "dependencies": {
+              "name_original_day": "resolved",
+              "identify_withdrawn_saturday": "missing"
+            },
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": [
+              "E07"
+            ]
+          }
+        },
+        "empty": {
+          "selected": [],
+          "admitted": [],
+          "omitted_capacity": [],
+          "generation_input_estimate": 874,
+          "reviewer_input_with_full_reply_reserve": 8390,
+          "history_equal": true,
+          "generation_sha256": "f24be459d584de47fe990d45e756bd166cfeb72f4893f78b1c8b1e9a9b4c795a",
+          "reviewer_sha256": "927fbd683cf9d70de48dd68ba4baeeb4db9e36c8dc31ce590310a0013361158a",
+          "artifact_key": "C08/empty",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "named_day_conflict": false,
+              "withdrawal_and_reassertion": false
+            },
+            "visibility": {
+              "restoration_then_opposition": false
+            },
+            "dependencies": {
+              "name_original_day": "not_triggered",
+              "identify_withdrawn_saturday": "not_triggered"
+            },
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E06": {
+          "selected": [
+            "E01",
+            "E06"
+          ],
+          "admitted": [
+            "E01",
+            "E06"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1220,
+          "reviewer_input_with_full_reply_reserve": 8745,
+          "history_equal": true,
+          "generation_sha256": "5a42ff35176fe080cfe114ff936f87af3c1f8c6b1b692a51e97f01c1cd7561ea",
+          "reviewer_sha256": "a2a22e750837fa4fd6ca75013742ad2e2ba5a541c2d3ccd42a49485af39ae5ef",
+          "artifact_key": "C08/reference-E01-E06",
+          "reference_for": [
+            "answer_routes/named_day_conflict"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "named_day_conflict": true,
+              "withdrawal_and_reassertion": false
+            },
+            "visibility": {
+              "restoration_then_opposition": false
+            },
+            "dependencies": {
+              "name_original_day": "not_triggered",
+              "identify_withdrawn_saturday": "not_triggered"
+            },
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E02-E05-E06": {
+          "selected": [
+            "E02",
+            "E05",
+            "E06"
+          ],
+          "admitted": [
+            "E02",
+            "E05",
+            "E06"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1394,
+          "reviewer_input_with_full_reply_reserve": 8929,
+          "history_equal": true,
+          "generation_sha256": "91cc383d47f1d8107d24d5a4da946a231a88d382bf7600537fe146d85abc24a4",
+          "reviewer_sha256": "7072bd8b2154b70f29aca72cacd4723a15f39e2bcdfa5f99f0863ddf2c3a53d3",
+          "artifact_key": "C08/reference-E02-E05-E06",
+          "reference_for": [
+            "answer_routes/withdrawal_and_reassertion"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "named_day_conflict": false,
+              "withdrawal_and_reassertion": true
+            },
+            "visibility": {
+              "restoration_then_opposition": false
+            },
+            "dependencies": {
+              "name_original_day": "missing",
+              "identify_withdrawn_saturday": "resolved"
+            },
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E03-E05-E06": {
+          "selected": [
+            "E03",
+            "E05",
+            "E06"
+          ],
+          "admitted": [
+            "E03",
+            "E05",
+            "E06"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1394,
+          "reviewer_input_with_full_reply_reserve": 8929,
+          "history_equal": true,
+          "generation_sha256": "2982cedf2ed698fc76ce42871e8e87dc9854ae6fb31104d177ee68686a9217c7",
+          "reviewer_sha256": "5a3630425136c47ceba6ad20143e655a413983a68d4b92aca3d246b3b093f534",
+          "artifact_key": "C08/reference-E03-E05-E06",
+          "reference_for": [
+            "answer_routes/withdrawal_and_reassertion"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "named_day_conflict": false,
+              "withdrawal_and_reassertion": true
+            },
+            "visibility": {
+              "restoration_then_opposition": false
+            },
+            "dependencies": {
+              "name_original_day": "missing",
+              "identify_withdrawn_saturday": "resolved"
+            },
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E04-E05-E06": {
+          "selected": [
+            "E04",
+            "E05",
+            "E06"
+          ],
+          "admitted": [
+            "E04",
+            "E05",
+            "E06"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1394,
+          "reviewer_input_with_full_reply_reserve": 8929,
+          "history_equal": true,
+          "generation_sha256": "9e5065555072be7de3ba8e9eebad1d901deb785f736ccdef5a50555936af6756",
+          "reviewer_sha256": "8b8a61979200b0e5f396501f37ac5306e756e71f7041e54facbb528f9ad675fa",
+          "artifact_key": "C08/reference-E04-E05-E06",
+          "reference_for": [
+            "answer_routes/withdrawal_and_reassertion"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "named_day_conflict": false,
+              "withdrawal_and_reassertion": true
+            },
+            "visibility": {
+              "restoration_then_opposition": false
+            },
+            "dependencies": {
+              "name_original_day": "missing",
+              "identify_withdrawn_saturday": "resolved"
+            },
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01-E05-E06": {
+          "selected": [
+            "E01",
+            "E05",
+            "E06"
+          ],
+          "admitted": [
+            "E01",
+            "E05",
+            "E06"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1397,
+          "reviewer_input_with_full_reply_reserve": 8932,
+          "history_equal": true,
+          "generation_sha256": "73b2a182c592f7d614e45a8f98550121e231b1e38c2375020294c10cce32a06f",
+          "reviewer_sha256": "6e2d84cf2753bee2f8152909228bc3d0576c987db646fb9f1401cada838b66e8",
+          "artifact_key": "C08/reference-E01-E05-E06",
+          "reference_for": [
+            "visibility/restoration_then_opposition"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "named_day_conflict": true,
+              "withdrawal_and_reassertion": false
+            },
+            "visibility": {
+              "restoration_then_opposition": true
+            },
+            "dependencies": {
+              "name_original_day": "resolved",
+              "identify_withdrawn_saturday": "missing"
+            },
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        }
+      }
+    },
+    {
+      "id": "C09",
+      "literal_scores": {
+        "E01": 0.35294117647058826,
+        "E02": 0.29411764705882354,
+        "E03": 0.5,
+        "E04": 0.4411764705882353,
+        "E05": 0.4411764705882353,
+        "E06": 0.4411764705882353,
+        "E07": 0.14705882352941177
+      },
+      "packets": {
+        "baseline": {
+          "selected": [
+            "E03",
+            "E06",
+            "E05",
+            "E04"
+          ],
+          "admitted": [
+            "E03",
+            "E06",
+            "E05",
+            "E04"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1587,
+          "reviewer_input_with_full_reply_reserve": 9132,
+          "history_equal": true,
+          "generation_sha256": "573a5bfc6d83bb9b4ea0689646eeeebd5c5550c3a6a30fbfd001f45346c6689d",
+          "reviewer_sha256": "333be4add84c618195ac4cb5da5027161dce945ecada023e9d3870d58fe36ee0",
+          "artifact_key": "C09/baseline",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "snow_first_encounter": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [
+              "E04",
+              "E05",
+              "E06"
+            ],
+            "unrelated_admitted": []
+          }
+        },
+        "candidate": {
+          "selected": [
+            "E03",
+            "E06",
+            "E07",
+            "E01"
+          ],
+          "admitted": [
+            "E03",
+            "E06",
+            "E07",
+            "E01"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1570,
+          "reviewer_input_with_full_reply_reserve": 9114,
+          "history_equal": true,
+          "generation_sha256": "32e1e747f5dcd550b2ae8098fe66f5a7251023f84ad41afcf220f333a3877088",
+          "reviewer_sha256": "5b06883f279cddcf154cf97074bfab60e6f1f7fa21bac578827ae1b4eed81bc9",
+          "artifact_key": "C09/candidate",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "snow_first_encounter": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [
+              "E06"
+            ],
+            "unrelated_admitted": [
+              "E07"
+            ]
+          }
+        },
+        "empty": {
+          "selected": [],
+          "admitted": [],
+          "omitted_capacity": [],
+          "generation_input_estimate": 878,
+          "reviewer_input_with_full_reply_reserve": 8394,
+          "history_equal": true,
+          "generation_sha256": "d0f71b64e9d8b43d04ba9f076d782d0f9ed72ed9e67b562291681b599cc20eba",
+          "reviewer_sha256": "2028edb19f017fb5050a11dc6716b0dc068efb3c0c1af974969c3b6f6c9768ce",
+          "artifact_key": "C09/empty",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "snow_first_encounter": false
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01": {
+          "selected": [
+            "E01"
+          ],
+          "admitted": [
+            "E01"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1059,
+          "reviewer_input_with_full_reply_reserve": 8575,
+          "history_equal": true,
+          "generation_sha256": "701ee254cc5ae2b4fd7033eaaa41cdba4f56c27cc416ae339ddbab6c5c50d1e0",
+          "reviewer_sha256": "7dc8aee4a4f28ecde55961a2fd2538ba2320f82827569ef4448a9ff4476cf250",
+          "artifact_key": "C09/reference-E01",
+          "reference_for": [
+            "answer_routes/snow_first_encounter"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "snow_first_encounter": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E03": {
+          "selected": [
+            "E03"
+          ],
+          "admitted": [
+            "E03"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1062,
+          "reviewer_input_with_full_reply_reserve": 8578,
+          "history_equal": true,
+          "generation_sha256": "e035dd849d8fff74db071b72234386209f06af229e5c653ba67ff78a6b89ed92",
+          "reviewer_sha256": "d353bf37f40a07d7dfe768adc84ac5fd88fae529191a487171fe427f515996d8",
+          "artifact_key": "C09/reference-E03",
+          "reference_for": [
+            "answer_routes/snow_first_encounter"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "snow_first_encounter": true
+            },
+            "visibility": {},
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        }
+      }
+    },
+    {
+      "id": "C10",
+      "literal_scores": {
+        "E01": 0.25806451612903225,
+        "E02": 0.45161290322580644,
+        "E03": 0.45161290322580644,
+        "E04": 0.45161290322580644,
+        "E05": 0.12903225806451613,
+        "E06": 0.45161290322580644,
+        "E07": 0.12903225806451613
+      },
+      "packets": {
+        "baseline": {
+          "selected": [
+            "E06",
+            "E04",
+            "E03",
+            "E02"
+          ],
+          "admitted": [
+            "E06",
+            "E04",
+            "E03",
+            "E02"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1573,
+          "reviewer_input_with_full_reply_reserve": 9117,
+          "history_equal": true,
+          "generation_sha256": "3763ef2c154bf7ae1a9a64bb12cebadc5af60804085e9a962acb2b47887b3332",
+          "reviewer_sha256": "ec9e9d7387fd288405afbb65e46c61284ee3e09df0e7547bd2661db23b121812",
+          "artifact_key": "C10/baseline",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "first_bowl_later_cup": false,
+              "conditional_first_class_bowl": false
+            },
+            "visibility": {
+              "explicit_episode_distinction": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "candidate": {
+          "selected": [
+            "E06",
+            "E01",
+            "E05",
+            "E07"
+          ],
+          "admitted": [
+            "E06",
+            "E01",
+            "E05",
+            "E07"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1576,
+          "reviewer_input_with_full_reply_reserve": 9120,
+          "history_equal": true,
+          "generation_sha256": "c622d1d0098fba894424bb025da3796c8049c0d19476c8ad73c9b2de7a869d00",
+          "reviewer_sha256": "8738e24a6dbe54cbe354effc53abdd5f1af966e81d8e7288fe4a8f79cecd097d",
+          "artifact_key": "C10/candidate",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "first_bowl_later_cup": true,
+              "conditional_first_class_bowl": true
+            },
+            "visibility": {
+              "explicit_episode_distinction": true
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": [
+              "E07"
+            ]
+          }
+        },
+        "empty": {
+          "selected": [],
+          "admitted": [],
+          "omitted_capacity": [],
+          "generation_input_estimate": 876,
+          "reviewer_input_with_full_reply_reserve": 8392,
+          "history_equal": true,
+          "generation_sha256": "7ffab64f498dfc7f7b35e1a7bace3f3f160144b2555343d2b70c79beb565a268",
+          "reviewer_sha256": "ca363220353cf8d4ab264133f5eb0cba5fa866c32ae725f47d022dd9914e829b",
+          "artifact_key": "C10/empty",
+          "reference_for": [],
+          "assessment": {
+            "answer_routes": {
+              "first_bowl_later_cup": false,
+              "conditional_first_class_bowl": false
+            },
+            "visibility": {
+              "explicit_episode_distinction": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E05": {
+          "selected": [
+            "E05"
+          ],
+          "admitted": [
+            "E05"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1071,
+          "reviewer_input_with_full_reply_reserve": 8586,
+          "history_equal": true,
+          "generation_sha256": "ece7dda928cc4f95a3d02bc45c8ca843ac0d6b094bbdca12dc3cebe4c7bcfed9",
+          "reviewer_sha256": "febea7ef486e50fd2326ea8d37cc8d4307c6978d8049240b076dc96f89e4383a",
+          "artifact_key": "C10/reference-E05",
+          "reference_for": [
+            "answer_routes/first_bowl_later_cup",
+            "visibility/explicit_episode_distinction"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "first_bowl_later_cup": true,
+              "conditional_first_class_bowl": false
+            },
+            "visibility": {
+              "explicit_episode_distinction": true
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        },
+        "reference-E01": {
+          "selected": [
+            "E01"
+          ],
+          "admitted": [
+            "E01"
+          ],
+          "omitted_capacity": [],
+          "generation_input_estimate": 1059,
+          "reviewer_input_with_full_reply_reserve": 8575,
+          "history_equal": true,
+          "generation_sha256": "c1a9feb2d5f8736a1cd5858d5133418280ee2ddded971a02056b6c4842f2b895",
+          "reviewer_sha256": "488e0a7e4cecbdc2080806dbcc807a7b3bd81827dd63ee711ec9812d87787558",
+          "artifact_key": "C10/reference-E01",
+          "reference_for": [
+            "answer_routes/conditional_first_class_bowl"
+          ],
+          "assessment": {
+            "answer_routes": {
+              "first_bowl_later_cup": false,
+              "conditional_first_class_bowl": true
+            },
+            "visibility": {
+              "explicit_episode_distinction": false
+            },
+            "dependencies": {},
+            "optional": {},
+            "other_episode_admitted": [],
+            "unrelated_admitted": []
+          }
+        }
+      }
+    }
+  ],
+  "packets_sha256": "28a5579513a0cd92db16de5c5513081afa649374a50da64a17badf0351708651"
+}

@@ -1,17 +1,20 @@
 # Packet-Sufficiency Audit
 
-Status (2026-09-30): **Non-blind diagnostic authorized; judgments frozen before comparison.**
+Status (2026-09-30): **Non-blind offline diagnostic complete; candidate unadopted.**
 The user approved the [single follow-up plan](../../../../../docs/plans/character-story-continuity.md#packet-sufficiency-audit).
 The [returned-report assessment](reports/assessment-2026-09-30.md) preserves both
 originals and source checks; each reviewer disclosed inherited ADE context.
-Deliverable 1 and report capture/review in 2 are implemented. Qualifying labels,
-new-control selection results, a final readout and selector adoption remain absent.
+The [readout](READOUT.md) covers all ten cases, 38 reference alternatives and 68
+exact paired packets. The candidate recovers opposed evidence under varied
+retelling but fails antecedent recovery. No blind qualification, measured model
+behavior or selector adoption is claimed.
 PC-03/04/05/06/09/10/11 remain unchanged; native turns 8-10 remain unrun.
 
 After a further preflight stopped before packet access, the user chose to use
 the existing Pro reports and declined API substitution. [ADR 0055](../../../../../docs/adr/0055-nonblind-packet-sufficiency-diagnostic.md)
-authorizes the remaining offline work as a non-blind diagnostic. `judgments.json`
-and its hash-bound loader transcribe the reports before new-control selections.
+authorized the remaining offline work as a non-blind diagnostic. `judgments.json`
+was committed at `bed18094eaaeabe66c5d754cb098fcccf29ec952` before new-control
+selections. A/B conditional alternatives remain distinct.
 The original freeze and receipt remain immutable; neither report becomes blind.
 
 ## Why This Layer
@@ -20,7 +23,7 @@ The earlier coverage metric checked author-designated source groups, not the
 claims justified by each question. Its improved cases also fit exactly four
 distinct text pairs into four slots. That evidence cannot establish a general
 retrieval benefit. This workflow changes measurement preparation, not runtime:
-freeze inputs, obtain independent query-relative judgments, then inspect actual
+freeze inputs, obtain external query-relative judgments, then inspect actual
 packets without tuning. See the [source-verified assessment](../../../../../docs/findings/natural-memory-consultation/character-story-retrieval-review-assessment-2026-09-30.md).
 
 ## Input Contract And Ownership
@@ -38,7 +41,7 @@ silent reuse of these results.
   seven distinct related exchanges, not four unique pairs padded with copies.
   Neither repeats its target query. The second includes a short overlapping
   correction referring to an earlier day; whether both sources are required for
-  this question remains the independent reviewer's decision.
+  this question is recorded separately from correction visibility in the Pro reports.
 - `context.json` declares controlled scope, roles, chronology, persona assumptions,
   empty facts/local suffix and H versus U/A authority. Each pair is a distinct
   archived synthetic conversation, matching the old packet mechanics. Synthetic
@@ -54,7 +57,7 @@ silent reuse of these results.
 
 The input author has seen historical results. Neutral IDs and a clean external
 session reduce presentation leakage, not all authorship bias or public-repository
-exposure. The review is independent AI annotation, never human validation. The
+exposure. The retained review is exposed-context AI annotation, never human validation. The
 operator must record prior exposure and consequential ambiguity rather than
 asserting perfect blindness.
 
@@ -64,13 +67,18 @@ From the repository root, with no database or provider access:
 
 ```sh
 uv run --locked python -m workflows.evals.character_memory_dev.story_continuity.packet_sufficiency.packet
-uv run --locked python -m pytest workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/tests services/ade-api/tests/agent_runtime/test_story_packet_sufficiency.py -q
+PYTHONPATH=. uv run --locked python services/ade-api/tests/agent_runtime/story_packet_comparison.py
+uv run --locked python -m pytest workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/tests services/ade-api/tests/agent_runtime/test_story_packet_sufficiency.py services/ade-api/tests/agent_runtime/test_story_packet_comparison.py -q
 ```
 
 The first command prints the packet; tests compare it exactly with the committed
 artifact. The loader imports only standard-library code, never selectors or
 runtime internals. The frozen historical outcome file is hash-checked but never
-decoded into the review packet. There is no comparison/dispatch command yet.
+decoded into the review packet. The second command is runtime-owned, regenerates
+`comparison.json` and `packets.jsonl`, and makes no provider or database calls.
+Tests reproduce their exact bytes and all eight old arm selections. Generated
+artifacts intentionally retain every inspectable packet rather than abridging
+source evidence to meet source-code file-length guidance.
 
 Runtime-owned tests separately call the existing context assembler, admission and
 reviewer builders. They bind `history_capacity.py`'s 11,213/11,469 input limits,
@@ -88,7 +96,12 @@ passed 495 tests, with 76 PostgreSQL/private-evidence skips and one existing
 Starlette/httpx deprecation warning. Ruff lint/format and scoped whitespace checks
 passed. No live service, database or provider verification was performed.
 
-## Manual Handoff And Stop
+## Historical Handoff And Stop
+
+The following records the superseded clean-session procedure, not a current
+request for another review. ADR 0055 replaced its prerequisite for this diagnostic
+after the user's final direction. The completed result is in READOUT.md; no
+further review dispatch or API substitute is authorized or needed here.
 
 Historical stop (superseded for diagnostic use by ADR 0055): the returned reports are advisory AI evidence, not certified blind
 annotations. Do not run the new-control comparison while the clean-session

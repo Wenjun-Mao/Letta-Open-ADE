@@ -42,8 +42,14 @@ reports as non-blind diagnostic evidence under ADR 0055, not pursue an API revie
 
 ## Packet-Sufficiency Audit
 
-Status: **Non-blind diagnostic authorized; operative judgments frozen before
-comparison.** The [workflow](../../workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/README.md)
+Status: **Non-blind offline diagnostic complete; original blind objective unmet.**
+The [readout](../../workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/READOUT.md)
+records all ten cases, 38 reference alternatives and 68 exact paired packets.
+All fit unchanged capacity limits. The candidate recovers opposed evidence in
+the varied-retelling control but both selectors miss the original named day in
+the antecedent-dependent control. Retain the baseline; no adoption or native
+continuation follows. Further measurement is proposed but not launched.
+The [workflow](../../workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/README.md)
 freezes ten inputs and the neutral review packet. Five separate runtime-owned toy
 tests check realistic admission mechanics without selecting the new cases.
 The [assessment and receipt](../../workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/reports/assessment-2026-09-30.md)
@@ -138,8 +144,10 @@ case-level evidence. A positive algorithm result is not required for completion.
 - If question-critical evidence is missing under nonidentical wording and an
   independently justified reference resolves the gap, propose one bounded next
   measurement. This still does not qualify the novelty candidate or authorize it.
-- Missing evidence, reviewer contamination or material disagreement prevents the
-  affected conclusion. Use a second adjudicator only for consequential disputes.
+- Missing evidence or material disagreement prevents the affected conclusion.
+  Exposed reviewer context prevents blind qualification; ADR 0055 permits only
+  an explicitly non-blind diagnostic instead. Preserve conditional readings,
+  using a second adjudicator only for consequential disputes.
 - Source/handle integrity or capacity failures stop the affected comparison.
   Do not change limits, source roles, scope or frozen inputs to obtain a pass.
 

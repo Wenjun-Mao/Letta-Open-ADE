@@ -36,11 +36,12 @@ pairs for four slots. Source-group requirements also exceed demonstrated answer
 needs in some cases. Keep the frozen scorecard; do not infer a general novelty
 benefit or launch another selector before establishing query-relative sufficiency.
 
-The approved [packet-sufficiency audit](packet_sufficiency/README.md) now has ten
-frozen inputs and a neutral external-review packet. Two returned AI annotations
-have been preserved and source-checked, but both disclose prior ADE context.
-The clean-session gate is unmet; new-control comparisons remain unrun. Offline
-admission toy tests do not supply qualifying semantic judgments.
+The [packet-sufficiency diagnostic](packet_sufficiency/READOUT.md) is complete
+under the user's non-blind amendment after clean-session review proved unavailable.
+Frozen Pro judgments precede new-control selection. The candidate recovers opposed
+evidence in a varied-retelling case but fails the new antecedent case; all 68
+packets fit unchanged limits. It remains unadopted. No native model quality or
+successful blind audit is claimed, and no further probe is launched.
 
 ## Entrypoint And Freeze
 
