@@ -11,11 +11,13 @@ from ade_api.platform.auth import require_operator, require_reader
 from .api_boundary import call_runtime
 from .contracts import (
     AgentDefinitionListResponse,
+    AgentDefinitionResponse,
     AgentStudioOptionsResponse,
     AgentStudioSessionListResponse,
     AgentStudioSessionResponse,
     ConversationStateResponse,
     CreateAgentStudioSessionRequest,
+    CreateAgentDefinitionRequest,
     MemorySubjectListResponse,
     SubjectMemoriesResponse,
 )
@@ -25,6 +27,22 @@ from .dependencies import AgentRuntimeServiceDependency
 router = APIRouter(prefix="/api/v3/history-trial", tags=["Agent Runtime"])
 PageLimit = Annotated[int, Query(ge=1, le=200)]
 PageOffset = Annotated[int, Query(ge=0)]
+
+
+@router.post(
+    "/definitions/{root_id}/versions",
+    response_model=AgentDefinitionResponse,
+    status_code=201,
+    dependencies=[Depends(require_operator)],
+)
+async def create_definition_version(
+    root_id: str,
+    request: CreateAgentDefinitionRequest,
+    service: AgentRuntimeServiceDependency,
+):
+    return await call_runtime(
+        service.history_trial.create_definition_version(root_id, request)
+    )
 
 
 @router.get(

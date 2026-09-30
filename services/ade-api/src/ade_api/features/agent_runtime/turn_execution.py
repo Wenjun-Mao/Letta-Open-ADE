@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from ade_api.platform.settings import AdeApiSettings
 
-from .compaction import plan_compaction
 from .context import (
     conversation_history_metadata,
     context_budget_from_deployment,
@@ -33,7 +32,6 @@ from .natural_evaluation_capacity import checked_checkpoint6_capacity
 from .natural_context import (
     HISTORY_PROBE_POLICY,
     NATURAL_POLICY_BINDINGS,
-    full_lifecycle_snapshot_fits,
 )
 from .natural_memory_reviewer import execute_natural_review
 from .provider_tracing import AttemptTrace
@@ -51,6 +49,7 @@ from .turn_deployment import (
     reviewer_max_model_requests as _reviewer_max_model_requests,
 )
 from .turn_embedding_results import embed_review_operations
+from .turn_compaction import compact_turn
 from .turn_history_setup import prepare_history_turn
 from .turn_memory_snapshot import (
     current_user_message as _current_user_message,
@@ -118,6 +117,8 @@ class TurnExecution:
                 run_id=str(run["id"]),
                 attempt=trace.attempt,
                 policy_binding=str(definition["memory_policy_version"]),
+                observation_binding=state.get("observation_binding"),
+                persistence_before=state.get("persistence_before"),
             )
         catalog = await trace.transport(self.transport, stage="catalog").catalog(
             timeout_seconds=min(
@@ -214,55 +215,18 @@ class TurnExecution:
             )
         except ValueError as exc:
             raise RuntimeValidationError(str(exc)) from exc
-        compaction_plan = (
-            None
-            if natural_variant == "B"
-            else plan_compaction(
-                messages=state["messages"],
-                current_user_message_id=str(current_user["id"]),
-                summary=summary,
-                recent_token_budget=budget.recent_tokens,
-                compaction_input_token_budget=budget.input_limit,
-            )
-        )
         summary_boundary = int(summary["through_sequence"]) if summary else 0
-        if natural_variant in {"A", "A0"} and compaction_plan is not None:
-            planned_history = conversation_history_metadata(
-                messages=state["messages"],
-                current_sequence=current_sequence,
-                summary_through_sequence=compaction_plan.through_sequence,
-            )
-            if not full_lifecycle_snapshot_fits(
-                system_prompt=str(definition["prompt_content"]),
-                persona=str(definition["persona_content"]),
-                current_user_content=str(current_user["content"]),
-                lifecycle_facts=state["facts"],
-                history_metadata=planned_history,
-                input_limit=budget.input_limit,
-            ):
-                # Narrative is ineligible for both A and A0 on this turn.
-                # Do not spend a compaction call on content the bundle withholds.
-                compaction_plan = None
-        compaction = (
-            await compaction_executor.compact(
-                model_key=str(conversation_deployment["route_alias"]),
-                model_fingerprint=str(conversation_deployment["fingerprint"]),
-                plan=compaction_plan,
-                timeout_seconds=_remaining(deadline),
-                max_output_tokens=budget.max_output_tokens,
-                summary_token_budget=budget.summary_tokens,
-                observe_request=(
-                    trace.natural_evidence.capture_compaction_request
-                    if trace.natural_evidence is not None
-                    else None
-                ),
-            )
-            if compaction_plan is not None
-            else None
+        compaction = await compact_turn(
+            state=state,
+            definition=definition,
+            current_user=current_user,
+            natural_variant=natural_variant,
+            budget=budget,
+            executor=compaction_executor,
+            deployment=conversation_deployment,
+            deadline=deadline,
+            evidence=trace.natural_evidence,
         )
-
-        if compaction is not None and trace.natural_evidence is not None:
-            trace.natural_evidence.capture_compaction_result(compaction)
 
         summary_content = str(summary["content"]) if summary else ""
         if compaction is not None:
@@ -504,6 +468,8 @@ class TurnExecution:
             run,
             include_history=self.history_probe is not None
             and self.history_probe.arm == "automatic_history",
+            capture_database_url=self.settings.database_url,
+            runtime_mode=self.settings.agent_runtime_mode,
         )
 
 

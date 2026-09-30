@@ -59,6 +59,7 @@ class HistoryAttempt:
     ranking_exposed: bool = False
     rank_observation: NativeHistoryRank | None = None
     status: str = "empty"
+    purged_run_ids: set[str] = field(default_factory=set)
 
     async def prepare(self) -> BuiltContext:
         if self.probe.arm == "automatic_history":
@@ -139,6 +140,8 @@ class HistoryAttempt:
                 "Exposed history cannot be rebuilt",
                 detail_code="natural_history_integrity",
             )
+        if not failure.unavailable:
+            self.purged_run_ids.update(failure.missing_run_ids)
         self.ranked_exchanges = (
             []
             if failure.unavailable
@@ -207,6 +210,7 @@ class HistoryAttempt:
                 "Exposed ranking source was removed",
                 detail_code="natural_history_missing",
             )
+        self.purged_run_ids.update(missing)
         return missing
 
     def mark_ranking_exposed(self) -> None:

@@ -68,6 +68,22 @@ class HistoryTrialDefinitions:
         self.base = base
         self.settings = base.settings
 
+    async def create_version(
+        self, root_id: str, request: CreateAgentDefinitionRequest
+    ) -> dict[str, Any]:
+        if not request.expected_current_version:
+            raise RuntimeValidationError(
+                "A positive expected_current_version is required"
+            )
+        prepared = await self.prepare(request, purpose=EVALUATION_PURPOSE)
+        return await self.base.create_next_version(
+            root_id,
+            request,
+            prepared,
+            purpose=EVALUATION_PURPOSE,
+            validate_current=require_trial_definition,
+        )
+
     def configured_agent_studio_bundle(self) -> dict[str, Any]:
         bundle = self.base.configured_agent_studio_bundle(trial_definition_request())
         bundle["key"] = "lin_xiaotang_history_trial"
@@ -134,6 +150,11 @@ class HistoryTrialService:
 
     async def create(self, request: CreateAgentStudioSessionRequest) -> dict[str, Any]:
         return await self.sessions.create(request)
+
+    async def create_definition_version(
+        self, root_id: str, request: CreateAgentDefinitionRequest
+    ) -> dict[str, Any]:
+        return await self.sessions.definitions.create_version(root_id, request)
 
     async def get(self, conversation_id: str) -> dict[str, Any]:
         return await self.sessions.get(conversation_id)

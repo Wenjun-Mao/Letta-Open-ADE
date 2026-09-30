@@ -46,6 +46,10 @@ record's status notice before applying its original execution details.
 | [0047](0047-recalled-dialogue-attribution.md) | Shared generation source fidelity and grounded H-speaker conflicts; no general answer verifier or live acceptance. |
 | [0048](0048-mainline-development.md) | Main is the ongoing development baseline; source integration is not deployment or release qualification. |
 | [0049](0049-portable-offline-evidence-checks.md) | Portable synthetic mechanics checks remain separate from exact private historical replay and release evidence. |
+| [0050](0050-consistent-improvised-character-history.md) | Accepted product intent: consistent improvised solo episodes are scoped to each user-character relationship, with common authored biography; implementation remains open. |
+| [0051](0051-evaluation-immutable-definition-versions.md) | Evaluation-owned immutable next versions through the gated history-trial API; no live qualification. |
+| [0052](0052-isolated-story-probe-deployment-binding.md) | Source-backed isolated story-probe deployment configuration, with computed fingerprints and no inherited qualification. |
+| [0053](0053-private-evaluation-observations.md) | Versioned private full-state and bounded history-omission observations; required for PC-11 evidence, not a public API or live qualification. |
 
 ## Historical, Retired, Or On Hold
 
@@ -64,6 +68,7 @@ record's status notice before applying its original execution details.
 | [0034](0034-natural-reviewer-current-user-authority.md) | Historical diagnostic; authority interface replaced by 0035. |
 
 ## Maintenance
+
 
 When an approved decision replaces earlier behavior, update the old record's
 status with a successor link and identify any surviving scope. Update this index

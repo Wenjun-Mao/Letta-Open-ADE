@@ -5,12 +5,14 @@ import re
 import time
 from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from .router_transport import RouterRequestError
 from .tool_policy import ToolRequirement
-from .natural_attempt_evidence import NaturalAttemptEvidence
+
+if TYPE_CHECKING:
+    from .natural_attempt_evidence import NaturalAttemptEvidence
 
 
 @dataclass(frozen=True)

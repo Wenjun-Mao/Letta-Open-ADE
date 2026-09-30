@@ -154,11 +154,7 @@ class DefinitionVersionRepository:
     ) -> dict[str, Any]:
         """Serialize root/version allocation and advance the current pointer."""
 
-        await fetch_one(
-            self._connection,
-            select(workspaces).where(workspaces.c.id == workspace_id).with_for_update(),
-            "workspace does not exist",
-        )
+        await self.lock_workspace(workspace_id)
         definition = values(payload)
         root_repository = AgentDefinitionRepository(self._connection)
         root = await root_repository.find_by_key(
@@ -226,3 +222,11 @@ class DefinitionVersionRepository:
             )
         )
         return version
+
+    async def lock_workspace(self, workspace_id: str) -> None:
+        """Keep service preconditions and allocation in the same lock order."""
+        await fetch_one(
+            self._connection,
+            select(workspaces).where(workspaces.c.id == workspace_id).with_for_update(),
+            "workspace does not exist",
+        )

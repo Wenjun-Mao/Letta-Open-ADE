@@ -11,6 +11,7 @@ import ade_api.platform.auth as auth_module
 from ade_api.features.agent_runtime.agent_studio_sessions import PurposeSessionService
 from ade_api.features.agent_runtime.errors import RuntimeValidationError
 from ade_api.features.agent_runtime.definition_service import DefinitionService
+from ade_api.features.agent_runtime.dependencies import get_agent_runtime_service
 from ade_api.features.agent_runtime.history_trial import (
     HistoryTrialDefinitions,
     HistoryTrialService,
@@ -75,7 +76,26 @@ def test_trial_routes_are_off_by_default_and_require_development_auth(
     app = app_module.create_app()
     paths = {route.path for route in app.routes}
     assert "/api/v3/history-trial/sessions" in paths
+    version_path = "/api/v3/history-trial/definitions/root/versions"
+    app.dependency_overrides[get_agent_runtime_service] = lambda: None
     with TestClient(app) as client:
+        assert client.post(version_path, json={}).status_code == 401
+        assert (
+            client.post(
+                version_path,
+                headers={"Authorization": "Bearer reader-test"},
+                json={},
+            ).status_code
+            == 403
+        )
+        assert (
+            client.post(
+                version_path,
+                headers={"Authorization": "Bearer operator-test"},
+                json={},
+            ).status_code
+            == 422
+        )
         assert client.get("/api/v3/history-trial/options").status_code == 401
         assert (
             client.post(
@@ -140,6 +160,30 @@ def test_trial_options_expose_candidate_without_changing_ordinary_default() -> N
     assert options["bundles"][0]["memory_policy_version"] == HISTORY_PROBE_POLICY
     assert options["max_retry_count"] == 0
     assert base.default_agent_studio_request().prompt_key == "chat_v20260516"
+
+
+def test_version_creation_keeps_provider_fingerprint_guard() -> None:
+    class Base:
+        settings = SimpleNamespace(agent_runtime_mode="development")
+
+        async def prepare(self, request, *, purpose):
+            prepared = _prepared_definition()
+            prepared["deployment_snapshot"][2]["fingerprint"] = "0" * 64
+            return prepared
+
+        async def create_next_version(self, *_args, **_kwargs):
+            pytest.fail("Invalid trial configuration must never reach persistence")
+
+    definitions = HistoryTrialDefinitions(Base())  # type: ignore[arg-type]
+    with pytest.raises(RuntimeValidationError, match="fingerprints differ"):
+        asyncio.run(
+            definitions.create_version(
+                "root",
+                trial_definition_request().model_copy(
+                    update={"expected_current_version": 1}
+                ),
+            )
+        )
 
 
 def test_selected_definition_and_reads_keep_evaluation_scope(monkeypatch) -> None:

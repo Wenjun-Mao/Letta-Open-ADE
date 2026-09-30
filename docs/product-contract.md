@@ -1,6 +1,6 @@
 # ADE Current Product Contract
 
-Updated: 2026-09-26. This is the single entrypoint for **current agreed product
+Updated: 2026-09-30. This is the single entrypoint for **current agreed product
 intent**, not a claim that every agreement is implemented or release-qualified.
 It consolidates existing decisions; it does not authorize implementation, live
 experiments, deployment, or a change to release evidence.
@@ -43,6 +43,35 @@ This is an agreed product contract, not implemented historical-retrieval behavio
 Explicit fact removal remains governed by PC-07; reconciling recovered source text
 with corrected or removed facts must be specified in the historical-recovery plan.
 
+## Improvised Character History
+
+**PC-11 (agreed 2026-09-30):** Xiaotang may invent solo past experiences as part
+of her fictional life. Users should expect those stories to remain consistent
+later, rather than being disposable conversational decoration. Permission to
+create her own history does not authorize invented user facts, past user
+statements or shared user-character experiences (PC-03/05).
+
+Authored biography remains the common foundation, subject to immutable persona
+version bindings (PC-04). Improvised stories belong to the same user/subject's
+continuing relationship with the same character within the workspace (PC-03),
+not to a universal biography shared across users. Their continuity spans chats
+and ordinary persona-version updates; archived chats remain eligible under
+PC-10. These stories do not transfer to another user/subject or character root.
+
+Ordinary conversation preserves established history while allowing compatible
+elaboration and genuine error correction. It is not a co-authoring interface for
+deliberately rewriting established episodes to match a new suggestion. New details
+must not be presented as details already told to, or experienced with, the user.
+
+This is accepted product intent, not a claim that current history retrieval or
+review implements reliable character-story continuity. It selects neither a new
+store nor an expanded reviewer mandate (PC-09). Story admission and correction
+semantics, and sufficient implementation remain open below.
+See [ADR 0050](adr/0050-consistent-improvised-character-history.md) for rationale
+and the distinction between new fiction and faithful recollection. The
+[continuity-probe plan](plans/character-story-continuity.md) is a draft for review,
+not implementation or live-run authorization.
+
 ## Open Decisions, Not Agreements
 
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
@@ -55,6 +84,13 @@ with corrected or removed facts must be specified in the historical-recovery pla
 - Whether existing dialogue/history access suffices for habits, concerns and
   shared experiences before adding fact types or episode records. A drinking
   habit must not silently become a preference merely to fit today's registry.
+- PC-11 implementation: what makes an utterance an established episode rather
+  than a joke, hypothetical or error;
+  how corrections and authored-persona conflicts are resolved; and whether the
+  existing dialogue/history path suffices. Permission to improvise solo episodes,
+  expected later consistency, per-user/per-character scope and ordinary-chat
+  stability rather than deliberate co-authoring are settled, not questions to
+  reopen.
 - Reviewer settings: two low-effort replays produced correct proposed deltas,
   but no coherent native low-effort sequence or default change is qualified.
 - Final context policy and release qualification. Historical release evidence

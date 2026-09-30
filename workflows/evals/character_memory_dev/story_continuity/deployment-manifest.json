@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "deployments": [
+    {
+      "id": "deepseek-v4_1-flash-development",
+      "route_aliases": [
+        "deepseek::deepseek-flash"
+      ],
+      "roles": [
+        "conversation",
+        "reviewer"
+      ],
+      "lifecycle": "candidate",
+      "fingerprint": {
+        "provider": "deepseek",
+        "endpoint_role": "openai-compatible-chat",
+        "endpoint_identity": "api.deepseek.com",
+        "served_model": "deepseek-flash",
+        "artifact_reference": "DeepSeek-V4.1-Flash",
+        "artifact_revision": null,
+        "artifact_sha256": null,
+        "runtime_implementation": "DeepSeek hosted API",
+        "runtime_version": null,
+        "runtime_image_digest": null,
+        "prompt_policy_sha256": "44da537dcbd06d6d5cce0c4d9d856ce713d6557ab01848a7071c725753df4458",
+        "tool_policy_sha256": "a6c2a34ae727777cdee30a59697a1bdb1b22e0e3db1a6ae06f9a4e30472391f3",
+        "schema_policy_sha256": "5c70557d019ba0701cb3e80ff50dd6d6d43b3a09058a120bd646f1863c3620e1",
+        "retrieval_policy_sha256": "377e783f4c7c495ebd13ba6defd51730a3813ee5186a391ac9acbe51e639ac32",
+        "sampling_settings": {
+          "thinking": "enabled",
+          "reasoning_effort": "high",
+          "stream": false,
+          "required_tool_choice": "auto; ADE fail-closed",
+          "structured_output": "json_object; ADE typed validation"
+        },
+        "context_settings": {
+          "total_tokens": 16384,
+          "response_reserve_tokens": 4096,
+          "max_output_tokens": 4096,
+          "max_model_requests": 6,
+          "reviewer_repair_count": 0,
+          "route_base_url": "https://api.deepseek.com"
+        },
+        "hardware_metadata": {
+          "host_class": "hosted API",
+          "runtime_host": "api.deepseek.com"
+        }
+      },
+      "qualification": {
+        "fingerprint_sha256": "870ff4fb8a25a9c2016f67dcda05e26e82a6c5dea6ad55781a80be2201161cfe",
+        "qualified": false,
+        "stale_round_count": 0,
+        "role_results": [
+          {
+            "role": "conversation",
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
+          },
+          {
+            "role": "reviewer",
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "dgx-qwen3-embedding-0_6b",
+      "route_aliases": [
+        "dgx_embedding_sidecar::qwen3-embedding-0.6b",
+        "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B"
+      ],
+      "roles": [
+        "retriever"
+      ],
+      "lifecycle": "candidate",
+      "fingerprint": {
+        "provider": "dgx_embedding_sidecar",
+        "endpoint_role": "openai-compatible-embeddings",
+        "endpoint_identity": "dgx-spark-embedding-sidecar:8001",
+        "served_model": "Qwen/Qwen3-Embedding-0.6B",
+        "artifact_reference": "Qwen/Qwen3-Embedding-0.6B",
+        "artifact_revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+        "artifact_sha256": null,
+        "runtime_implementation": "vLLM",
+        "runtime_version": "0.19.2rc1.dev134+gfe9c3d6c5",
+        "runtime_image_digest": "sha256:ffa30d66ff5c9346c6389507cc529827fc9934a6d2ee37855934f94fe1061cdc",
+        "prompt_policy_sha256": "a7c25c67fa41bfda5fdab5102192c9b1261310fb55e0fbb98c38b97ffafd422d",
+        "tool_policy_sha256": "2b30616cdc949a59db4d9258dc6592b434efd7fd450cfc7d0caeea77f1d78840",
+        "schema_policy_sha256": "094c22c790aae6b332e974e9091d63e5aa3e0ef00b5faa887c51eb3563c9464a",
+        "retrieval_policy_sha256": "a3944d7124416ad36cb2785eb92755f64703f932e9ed01a14330ad68863518f9",
+        "sampling_settings": {
+          "dimensions": 1024,
+          "query_instruction_enabled": true,
+          "strategy": "semantic",
+          "hidden_retries": 0
+        },
+        "context_settings": {
+          "endpoint_port": 8001,
+          "request_timeout_seconds": 15
+        },
+        "hardware_metadata": {
+          "host_class": "NVIDIA DGX Spark",
+          "runtime_host": "dgx-spark"
+        }
+      },
+      "qualification": {
+        "fingerprint_sha256": "c549d7dc288d2112f10e8b1032b502eda74557d093bc1390fe0fc4f44de63086",
+        "qualified": false,
+        "stale_round_count": 0,
+        "role_results": [
+          {
+            "role": "retriever",
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
+          }
+        ]
+      }
+    }
+  ]
+}

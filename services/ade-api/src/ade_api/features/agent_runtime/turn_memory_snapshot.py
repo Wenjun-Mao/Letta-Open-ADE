@@ -15,10 +15,18 @@ from .persistence.conversations import ConversationRepository
 from .persistence.definitions import DefinitionVersionRepository
 from .persistence.memory import MemoryRepository
 from .persistence.history import read_history_corpus
+from .persistence.evaluation_observations import observation_binding, observe_snapshot
+from .natural_attempt_evidence import capture_allowed
+from .natural_context import NATURAL_POLICY_BINDINGS
 
 
 async def load_turn_state(
-    engine: AsyncEngine, run: dict[str, Any], *, include_history: bool = False
+    engine: AsyncEngine,
+    run: dict[str, Any],
+    *,
+    include_history: bool = False,
+    capture_database_url: str | None = None,
+    runtime_mode: str = "",
 ) -> dict[str, Any]:
     async with engine.connect() as connection:
         await connection.execute(
@@ -44,6 +52,21 @@ async def load_turn_state(
             "facts": await memory.list_facts(subject_id),
             "entities": await memory.list_entities(subject_id),
         }
+        observe = (
+            capture_database_url is not None
+            and definition["memory_policy_version"] in NATURAL_POLICY_BINDINGS
+            and capture_allowed(
+                database_url=capture_database_url,
+                runtime_mode=runtime_mode,
+                purpose=str(conversation["purpose"]),
+            )
+        )
+        if observe:
+            binding = observation_binding(run, conversation, definition)
+            state["observation_binding"] = binding
+            state["persistence_before"] = await observe_snapshot(
+                connection, binding=binding
+            )
         if include_history:
             try:
                 async with connection.begin_nested():
@@ -54,6 +77,7 @@ async def load_turn_state(
                         purpose=str(conversation["purpose"]),
                         definition_root_id=str(definition["agent_definition_id"]),
                         current_run_id=str(run["id"]),
+                        include_observations=observe,
                     )
             except SQLAlchemyError:
                 # The mandatory RR snapshot remains intact on optional reader

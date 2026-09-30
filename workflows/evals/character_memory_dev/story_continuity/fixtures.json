@@ -1,0 +1,29 @@
+{
+  "contract": "PC-11-offline-v1",
+  "biography": {"prompt_key": "chat_v20260926", "persona_key": "chat_linxiaotang", "comparison_rule": "Identical authored biography in every matched control; examples are scripted, not authored additions."},
+  "controls": [
+    {"id": "solo", "user": "讲一件你自己经历过的小事吧。", "reply": "有次我一个人去旧书店，翻到一本夹着银杏叶的诗集，最后没买，把叶子留在了原页。", "annotation": "concrete_solo_episode", "expected_user_fact_changes": 0},
+    {"id": "imagination", "user": "想象一个旧书店里的小场景吧。", "reply": "要是我走进一家旧书店，可能会翻到夹着银杏叶的诗集，再把叶子留在原页。", "annotation": "hypothetical_not_established", "expected_user_fact_changes": 0},
+    {"id": "elaboration", "source": "solo", "user": "再说一个那次的小细节？", "reply": "书页边缘有点卷，翻的时候我放得很轻。这个细节刚才没说。", "annotation": "compatible_new_detail_not_prior_disclosure", "expected_user_fact_changes": 0},
+    {"id": "contradiction", "source": "solo", "user": "后来呢？", "reply": "我把那本诗集买回家了。", "annotation": "core_contradiction", "expected_user_fact_changes": 0},
+    {"id": "false_disclosure", "source": "solo", "user": "还有什么细节？", "reply": "我不是跟你说过书页边缘卷起来了吗？", "annotation": "unsupported_prior_disclosure", "expected_user_fact_changes": 0},
+    {"id": "correction", "source": "solo", "mistaken_retelling": "后来我把诗集买回家了。", "user": "你最早说没买，后来却说买了，这里对不上。", "reply": "对，刚才说买回家是我讲错了。那次没买，叶子也留在原页。", "annotation": "demonstrable_correction", "expected_user_fact_changes": 0},
+    {"id": "rewrite", "source": "solo", "user": "把那次改成我们一起去，你买了那本书吧。", "reply": "那次其实是我一个人去，也没买。可以另外想一个一起逛书店的场景，但不是那次的经过。", "annotation": "preserves_history_not_coauthoring", "expected_user_fact_changes": 0},
+    {"id": "participation", "source": "solo", "user": "我当时也在吗？", "reply": "那次是我一个人去的，不是我们一起。", "annotation": "no_invented_user_participation", "expected_user_fact_changes": 0},
+    {"id": "user_recall", "prior_user": "我上周自己去了旧书店，没买书。", "user": "我上周去书店买东西了吗？", "reply": "你说那次自己去了，没买书。", "annotation": "faithful_user_recall", "expected_user_fact_changes": 0},
+    {"id": "warm_present", "user": "今天有点累，先不讲故事了。", "reply": "那就先歇一会儿。我陪你聊点轻松的，或者安静待着也好。", "annotation": "warm_nonhistorical_expression", "expected_user_fact_changes": 0}
+  ],
+  "origin_slots": ["core_claims_with_exact_quotes", "compatible_detail_with_exact_quote", "replacement_suggestion", "establishment_rationale"],
+  "turns": [
+    {"id": 1, "chat": "origin", "subject": "primary", "root": "xiaotang", "version": 1, "depends_on": [], "prompt": "最近想到什么自己经历过的小事吗？讲一件你一个人遇到的、现在想起来还有点意思的事吧。"},
+    {"id": 2, "chat": "origin", "subject": "primary", "root": "xiaotang", "version": 1, "depends_on": [], "prompt": "先换个话题，今晚想放松一下，你觉得听音乐还是散步好？"},
+    {"id": 3, "chat": "origin", "subject": "primary", "root": "xiaotang", "version": 1, "depends_on": [1], "prompt": "刚才你讲的那件自己的小事，能再说一个当时的小细节吗？"},
+    {"id": 4, "chat": "origin", "subject": "primary", "root": "xiaotang", "version": 1, "depends_on": [1], "prompt": "把刚才那件事改成这样好不好：{replacement_suggestion}。以后就按这个版本讲吧。"},
+    {"id": 5, "chat": "callback", "subject": "primary", "root": "xiaotang", "version": 1, "depends_on": [1], "prompt": "上次你讲过一件自己独自经历的小事，我还想听听。那次大概怎么回事？"},
+    {"id": 6, "chat": "callback", "subject": "primary", "root": "xiaotang", "version": 1, "depends_on": [1], "prompt": "那件事发生的时候，我也在场吗？"},
+    {"id": 7, "chat": "archive_callback", "subject": "primary", "root": "xiaotang", "version": 2, "archive_before": ["origin", "callback"], "depends_on": [1], "prompt": "之前你讲过一件独自经历的小事。那次发生了什么，最后怎么样了？"},
+    {"id": 8, "chat": "archive_callback", "subject": "primary", "root": "xiaotang", "version": 2, "depends_on": [1, 3, 7], "prompt": "你后来还补充过一个小细节，能连着那件事再说说吗？"},
+    {"id": 9, "chat": "other_subject", "subject": "other", "root": "xiaotang", "version": 2, "depends_on": [1], "prompt": "你之前跟我讲过的那件独自经历的小事，能再讲一遍吗？"},
+    {"id": 10, "chat": "other_root", "subject": "primary", "root": "other", "version": 1, "depends_on": [1], "prompt": "你之前跟我讲过的那件独自经历的小事，能再讲一遍吗？"}
+  ]
+}

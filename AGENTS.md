@@ -14,3 +14,7 @@ Continue development on `main` in the primary checkout. Do not resume the old
 character-continuity branch or create a new development worktree unless the user
 requests it. Existing trial worktrees may remain as operational dependencies;
 merging source does not authorize redeployment. See ADR 0048.
+
+Local commits are pre-approved and are the default after each completed,
+verified iteration. Commit the iteration's scoped changes without asking again;
+do not include unrelated work. This does not authorize pushing or deployment.

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
 
@@ -17,9 +18,12 @@ from .database_boundary import (
     require_default_workspace,
 )
 from .deployments import ResolvedDeployment, resolve_deployment
-from .errors import RuntimeValidationError
+from .errors import RuntimeConflict, RuntimeNotFound, RuntimeValidationError
 from .memory_policy_binding import TYPED_MEMORY_POLICY_VERSION
-from .persistence.definitions import DefinitionVersionRepository
+from .persistence.definitions import (
+    AgentDefinitionRepository,
+    DefinitionVersionRepository,
+)
 from .presenters import definition_response
 from .release_policy import (
     AGENT_STUDIO_DEPLOYMENT_MANIFEST_PATH,
@@ -156,6 +160,51 @@ class DefinitionService:
                         **({"agent_definition_id": root_id} if root_id else {}),
                         **prepared,
                     },
+                    purpose=purpose,
+                    expected_current_version=request.expected_current_version,
+                )
+        return definition_response(row)
+
+    async def create_next_version(
+        self,
+        root_id: str,
+        request: CreateAgentDefinitionRequest,
+        prepared: dict[str, Any],
+        *,
+        purpose: str,
+        validate_current: Callable[[dict[str, Any]], None],
+    ) -> dict[str, Any]:
+        """Advance an existing scoped root using an already validated snapshot."""
+        if not request.expected_current_version:
+            raise RuntimeValidationError(
+                "A positive expected_current_version is required"
+            )
+        await self.database.ensure_ready()
+        async with self.database.translated_errors():
+            async with self.database.engine.begin() as connection:
+                versions = DefinitionVersionRepository(connection)
+                await versions.lock_workspace(DEFAULT_WORKSPACE_ID)
+                root = await AgentDefinitionRepository(connection).get_for_update(
+                    root_id
+                )
+                require_default_workspace(root)
+                if root["purpose"] != purpose:
+                    raise RuntimeNotFound(
+                        "agent definition does not exist in this purpose"
+                    )
+                if root["definition_key"] != request.definition_key:
+                    raise RuntimeValidationError(
+                        "Definition key must match the existing root"
+                    )
+                current = await versions.get(str(root["current_version_id"]))
+                if current["version"] != request.expected_current_version:
+                    raise RuntimeConflict(
+                        "agent definition current version does not match"
+                    )
+                validate_current(current)
+                row = await versions.create_next(
+                    DEFAULT_WORKSPACE_ID,
+                    {**prepared, "id": str(uuid4()), "agent_definition_id": root_id},
                     purpose=purpose,
                     expected_current_version=request.expected_current_version,
                 )

@@ -13,6 +13,11 @@ trial worktrees while services or private evidence depend on them; do not keep
 developing there. Source integration/publication is not deployment or release
 qualification, and the existing verification and evidence gates still apply.
 
+Local commits are pre-approved by the user's 2026-09-30 direction. After each
+completed iteration, run proportional verification and commit its scoped changes
+without a separate approval request. Preserve unrelated work and report any
+verification gaps. Pushing and deployment remain separately authorized actions.
+
 ## Keep One Owner
 
 - `apps/ade-web` owns browser routes, UI, and same-origin proxying.

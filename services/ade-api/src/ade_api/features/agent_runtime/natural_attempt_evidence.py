@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -24,14 +23,9 @@ from .errors import RuntimeNotReady
 from .request_counts import dispatch_counts
 from .context import BuiltContext
 from .context import estimate_tokens
-from .persistence.metadata import (
-    conversations,
-    memory_revisions,
-    memory_subjects,
-    messages,
-    run_attempts,
-    runs,
-)
+from .history_observations import history_observation
+from .natural_evidence_readback import terminal_readback
+from .persistence.evaluation_observations import observations
 
 
 ARTIFACT_ROOT = (
@@ -66,13 +60,19 @@ def start_natural_capture(
     run_id: str,
     attempt: int,
     policy_binding: str,
+    observation_binding: dict[str, Any] | None = None,
+    persistence_before: dict[str, Any] | None = None,
 ) -> NaturalAttemptEvidence | None:
     if not capture_allowed(
         database_url=database_url, runtime_mode=runtime_mode, purpose=purpose
     ):
         return None
     return NaturalAttemptEvidence(
-        run_id=run_id, attempt=attempt, policy_binding=policy_binding
+        run_id=run_id,
+        attempt=attempt,
+        policy_binding=policy_binding,
+        observation_binding=observation_binding,
+        persistence_before=persistence_before,
     )
 
 
@@ -81,6 +81,9 @@ class NaturalAttemptEvidence:
     run_id: str
     attempt: int
     policy_binding: str
+    observation_binding: dict[str, Any] | None = None
+    persistence_before: dict[str, Any] | None = None
+    history_observation: dict[str, Any] | None = None
     generation: dict[str, Any] | None = None
     generation_requests: list[dict[str, Any]] = field(default_factory=list)
     compaction_request: dict[str, Any] | None = None
@@ -230,6 +233,10 @@ class NaturalAttemptEvidence:
                 else None
             ),
         }
+        try:
+            self.history_observation = history_observation(attempt)
+        except Exception:
+            self.history_observation = {"status": "unavailable"}
 
     def capture_provider_events(
         self, events: tuple[Any, ...], *, observation_incomplete: bool = False
@@ -319,56 +326,14 @@ async def retain_attempt_evidence(
     if evidence.attempt < 1 or ARTIFACT_ROOT.is_symlink():
         raise RuntimeError("Natural-memory evidence path is not safe")
 
-    async with engine.connect() as connection:
-        run = (
-            (await connection.execute(select(runs).where(runs.c.id == evidence.run_id)))
-            .mappings()
-            .one_or_none()
-        )
-        attempt = (
-            (
-                await connection.execute(
-                    select(run_attempts).where(
-                        run_attempts.c.run_id == evidence.run_id,
-                        run_attempts.c.attempt_number == evidence.attempt,
-                    )
-                )
-            )
-            .mappings()
-            .one_or_none()
-        )
-        assistant_ids = list(
-            (
-                await connection.execute(
-                    select(messages.c.id).where(
-                        messages.c.run_id == evidence.run_id,
-                        messages.c.role == "assistant",
-                    )
-                )
-            ).scalars()
-        )
-        revision_ids = list(
-            (
-                await connection.execute(
-                    select(memory_revisions.c.id).where(
-                        memory_revisions.c.run_id == evidence.run_id
-                    )
-                )
-            ).scalars()
-        )
-        generation = None
-        if run is not None:
-            subject_id = await connection.scalar(
-                select(conversations.c.memory_subject_id).where(
-                    conversations.c.id == run["conversation_id"]
-                )
-            )
-            if subject_id is not None:
-                generation = await connection.scalar(
-                    select(memory_subjects.c.memory_generation).where(
-                        memory_subjects.c.id == subject_id
-                    )
-                )
+    (
+        run,
+        attempt,
+        assistant_ids,
+        revision_ids,
+        generation,
+        after,
+    ) = await terminal_readback(engine, evidence)
     run_status = str(run["status"]) if run is not None else None
     attempt_status = str(attempt["status"]) if attempt is not None else None
     outcome = classify_outcome(
@@ -404,6 +369,7 @@ async def retain_attempt_evidence(
         "reviewer_decision": evidence.reviewer_decision or {"stage": "absent"},
         "embedding_stage": evidence.embedding_stage or {"stage": "absent"},
         "history_selection": evidence.history_selection or {"stage": "absent"},
+        "private_observations": observations(evidence=evidence, after=after),
         "provider_events": evidence.provider_events,
         "provider_request_counts": provider_counts,
         "terminal_readback": {

@@ -20,6 +20,12 @@ requests it. Preserve existing trial checkouts, private evidence and operational
 mounts until their dependencies are explicitly retired. Their retention is not
 permission to continue a parallel development line.
 
+The user's subsequent 2026-09-30 direction pre-approves local commits and makes
+them the default after every completed, proportionally verified iteration.
+Do not repeatedly ask permission to record a local checkpoint. Scope each commit
+to the iteration, preserve unrelated work, and report material verification gaps.
+This replaces approval-per-commit, not the separate push or deployment boundary.
+
 ## Alternatives And Guardrails
 
 Keeping a separate review branch would publish evidence without integration,

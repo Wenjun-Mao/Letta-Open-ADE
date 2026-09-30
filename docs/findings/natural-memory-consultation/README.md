@@ -1,14 +1,29 @@
 # Natural Memory Consultation Review
 
-Current consultation (2026-09-30): [character voice and memory review packet](character-contract-review-brief-2026-09-30.md)
+Current consultation (2026-09-30): four returned reports are preserved unchanged.
+The [source-checked character-contract assessment](character-contract-assessment-2026-09-30.md)
+links both repository critiques and both research reports, records verification,
+and separates usable insights from proposed tests and unresolved product choices.
+No fiction policy, runtime change, provider experiment or release was authorized
+by their return. In a subsequent user decision, [PC-11](../../product-contract.md#improvised-character-history)
+now permits solo character episodes with expected later consistency within each
+user-character relationship, with authored biography as the common foundation;
+[ADR 0050](../../adr/0050-consistent-improvised-character-history.md) records the
+rationale and remaining design questions. No implementation follows automatically.
+The [draft character-story continuity plan](../../plans/character-story-continuity.md)
+turns the agreed stable-history direction into a bounded probe for review, without
+new storage or live-run authorization.
+The following packet remains the historical handoff record.
+
+The [character voice and memory review packet](character-contract-review-brief-2026-09-30.md)
 requests one independent, source-grounded critique of character fiction,
 source-backed recall and combined instruction ownership. It includes balanced
 bounded observations and access limits. The source is published through `main`,
 with all 12 referenced source/summary files anonymously verified at the mainline
 anchor `2e3322db32946df947f002143a964ec440628715`. The packet distinguishes this
 reviewed source from the earlier live-test and running-trial revisions.
-The packet is ready for manual handoff; no consultant dispatch, product-contract
-change or implementation authorization is implied. The reviews below are historical.
+The packet was ready for manual handoff; no product-contract change or
+implementation authorization was implied. The reviews below predate this round.
 
 The second implementation-plan reviews are back: [Round 2 A](reports/pro-plan-round2-a.md)
 and [Round 2 B](reports/pro-plan-round2-b.md). Both recommend bounded implementation.

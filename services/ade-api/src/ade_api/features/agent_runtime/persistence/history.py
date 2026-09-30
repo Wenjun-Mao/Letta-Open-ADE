@@ -32,6 +32,7 @@ async def read_history_corpus(
     purpose: str,
     definition_root_id: str,
     current_run_id: str,
+    include_observations: bool = False,
 ) -> dict[str, Any]:
     """Read completed same-character exchanges; caller owns the RR snapshot."""
     user = aliased(messages, name="history_user")
@@ -127,6 +128,7 @@ async def read_history_corpus(
             "annotation": 0,
         },
     )
+    candidates = []
     for row in rows[:MAX_EXCHANGES]:
         source = dict(row)
         exchange = {
@@ -144,6 +146,7 @@ async def read_history_corpus(
             for message in exchange["messages"]
         ):
             omitted["content"] += 1
+            candidates.append({"run_id": str(source["run_id"]), "reason": "content"})
             continue
         for message in exchange["messages"]:
             if (
@@ -162,7 +165,21 @@ async def read_history_corpus(
         )
         if annotations is None:
             omitted["annotation"] += 1
+            candidates.append({"run_id": str(source["run_id"]), "reason": "annotation"})
             continue
         exchange["annotations"] = annotations
         exchanges.append(exchange)
-    return {"exchanges": exchanges, "omitted": omitted}
+        candidates.append({"run_id": str(source["run_id"]), "reason": "eligible"})
+    result = {"exchanges": exchanges, "omitted": omitted}
+    if include_observations:
+        if len(rows) > MAX_EXCHANGES:
+            candidates.append(
+                {"run_id": str(rows[-1]["run_id"]), "reason": "reader_capacity"}
+            )
+        result["inventory"] = {
+            "status": "truncated" if omitted["capacity_at_least"] else "complete",
+            "universe": "scoped_completed_pairs",
+            "limit": MAX_EXCHANGES,
+            "candidates": candidates,
+        }
+    return result

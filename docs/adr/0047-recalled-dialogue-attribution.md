@@ -7,6 +7,12 @@ Follow-up: [bounded live observations and isolated trial adoption](../../workflo
 now exist for this clarification. They do not establish general semantic quality
 or change the release boundary; the recorded anecdote limitation remains.
 
+Product follow-up, 2026-09-30: [PC-11](../product-contract.md#improvised-character-history)
+now permits newly invented solo character episodes with expected later consistency.
+[ADR 0050](0050-consistent-improvised-character-history.md) resolves that permission
+question, not the unverified continuity behavior. The source-fidelity and reviewer
+contracts below remain unchanged for user/shared history and actual prior dialogue.
+
 ## Problem
 
 The [hands-on trial](../../workflows/evals/character_memory_dev/hands-on-feedback.md)
