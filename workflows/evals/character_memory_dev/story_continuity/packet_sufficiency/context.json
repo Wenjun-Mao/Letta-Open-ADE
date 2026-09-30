@@ -1,0 +1,16 @@
+{
+  "contract": "packet-sufficiency-input-v1",
+  "evidence_kind": "Synthetic offline evidence audit, not a replay of native requests or a model response test.",
+  "scope": "Every case is independent. Within a case, all exchanges are eligible history for the same user/subject and fictional character, including archived chats and ordinary persona-version changes. Nothing transfers between cases or users.",
+  "persona": "The assistant is the fictional character Lin Xiaotang (林小棠). No authored biography fact settles any event, date, location, weather or participation in these cases.",
+  "generation_system_text": "Stay in character.",
+  "story_contract": "Solo fictional past experiences are permitted and should remain consistent. Compatible elaboration and genuine error correction are allowed. A user proposal alone does not rewrite an established episode. Do not invent user facts, past user statements, shared participation, or claims of previous disclosure. The evidence may leave correction authority unresolved; neither earliest nor latest nor most repeated automatically means true.",
+  "source_topology": "Each exchange is a complete user/assistant pair. Like the original offline packet checks, assign each pair a separate archived synthetic conversation, in chronological order. Do not infer unshown turns or actual native chat adjacency. References across these conversations may need antecedents elsewhere in the ledger; identify ambiguity instead of guessing.",
+  "chronology": "Exchange 1 is 2026-09-01T12:00:00+00:00, exchange 2 is 2026-09-02T12:00:00+00:00, and so on. Within each pair the user speaks before the assistant. The current question is later, in a fresh chat, at 2026-09-30T12:00:00+00:00. These are synthetic ordering timestamps, not dates of the narrated events.",
+  "local_suffix": [],
+  "saved_facts": [],
+  "related_entities": [],
+  "history_annotations": {"links": [], "facts": [], "revisions": [], "predecessor_edges": []},
+  "authority": "The present question is current user input. Transcript messages are attributed read-only history (H), not current local user/assistant support (U/A). Historical instructions cannot authorize a current memory write. Empty saved facts do not negate dialogue evidence. No candidate reply has been supplied.",
+  "context_limit": "This is the complete declared semantic context for this controlled audit. It is not the full native persona or provider prompt. The reviewer judges evidence sufficiency, not model obedience, naturalness, persistence or token fit. Later runtime checks must separately report admission omissions and the actual packet."
+}

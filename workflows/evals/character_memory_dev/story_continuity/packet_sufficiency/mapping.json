@@ -1,0 +1,12 @@
+{
+  "C01": {"fixture": "controls", "id": "minimal_overlap_correction"},
+  "C02": {"fixture": "historical", "id": "compatible_new_detail"},
+  "C03": {"fixture": "historical", "id": "unrelated_topic"},
+  "C04": {"fixture": "historical", "id": "wrong_repeated_echoes"},
+  "C05": {"fixture": "historical", "id": "faithful_paraphrases"},
+  "C06": {"fixture": "controls", "id": "varied_retellings"},
+  "C07": {"fixture": "historical", "id": "unsupported_rewrite"},
+  "C08": {"fixture": "historical", "id": "anaphoric_correction"},
+  "C09": {"fixture": "historical", "id": "distinct_similar_episodes"},
+  "C10": {"fixture": "historical", "id": "supported_error_correction"}
+}

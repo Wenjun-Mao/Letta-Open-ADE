@@ -1,0 +1,29 @@
+{
+  "contract": "packet-sufficiency-input-v1",
+  "source_commit": "b792edb614a8544749c12495d58f08139d98229f",
+  "stage": "inputs_prepared_independent_annotation_pending",
+  "inputs": {
+    "historical": {"path": "../retrieval_diversity/cases.json", "sha256": "37bdb1405a2373174915f43335b775a7b2f85a0d43666ee6b9e4b11b027e8e5b"},
+    "historical_outcomes": {"path": "../retrieval_diversity/observed.json", "sha256": "d4152359ff97945f07ef120f52afabe3fadd15417e53a410d03eb05d2cf68fbf"},
+    "selector": {"path": "../retrieval_diversity/selector.py", "sha256": "3c092c759ffd44bbd849593577330f4382525dfcdf62000ec444795ac7272a46"},
+    "controls": {"path": "controls.json", "sha256": "8f595f3f14268c1bbc6956d317d0ea6ec74e0f514f9e3e24221825feee52bbfc"},
+    "context": {"path": "context.json", "sha256": "cc116dc5fd5c5f9d322d4225a1f8055ead7d12ad47d50b7747e2d08a7390aaf0"},
+    "mapping": {"path": "mapping.json", "sha256": "ba7bd813310c328a002adbe4c88e461eda01d45c4845187e8d4fa08842f7fcd9"},
+    "rubric": {"path": "RUBRIC.md", "sha256": "62581196a12f62797347110d6ad1bec6eb53d509c312cc2ac34ba26194ff6799"}
+  },
+  "runtime_sources": {
+    "services/ade-api/src/ade_api/features/agent_runtime/history_capacity.py": "6610ad7fd9a8f7761deb0cf6a949e267e1827a719889f00ae03968d99883ade4",
+    "services/ade-api/src/ade_api/features/agent_runtime/history_admission.py": "1caf41800519279d8a50926afbdd1fc31689d5487575ebdb5e6fc992e45b18b2",
+    "services/ade-api/src/ade_api/features/agent_runtime/history_ranking.py": "449066f3ddd28284cfb43c0920b8bf29cc82cfa61c5fd6bd365931ddbe4cbedc",
+    "services/ade-api/src/ade_api/features/agent_runtime/natural_memory_reviewer.py": "8bfffe28941dda714222ba0ca109f9b976c47d611618669a7aeee7148f8d1c5b",
+    "services/ade-api/src/ade_api/features/agent_runtime/natural_memory_binding.py": "685ed8edcc5298b992baaf6643ce116842526ac744c34e06a3610b15e5335424"
+  },
+  "capacity": {
+    "generation_input_tokens": 11213,
+    "reviewer_input_tokens": 11469,
+    "generation_output_reserve_tokens": 4096,
+    "reviewer_output_tokens": 4096,
+    "shared_suffix_tokens": 640,
+    "maximum_windows": 4
+  }
+}

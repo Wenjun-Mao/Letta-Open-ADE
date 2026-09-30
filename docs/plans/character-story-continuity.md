@@ -35,15 +35,18 @@ now qualifies that gain: all five improved cases have exactly four distinct text
 pairs for four slots, and some groups require more than the current query needs.
 The candidate's eight flagged sources comprise one other-episode and seven
 unrelated selections. Historical fixtures, metric totals and the failed native
-gate are unchanged. The next proposed investment is an independent packet-
-sufficiency audit, not another selector; it is conditional and not launched.
+gate are unchanged. The user approved preparing an independent packet-sufficiency
+audit, not another selector; the reviewer handoff is ready and annotation is pending.
 
-## Proposed Follow-Up: Packet-Sufficiency Audit
+## Packet-Sufficiency Audit
 
-Status: **Draft for review, not implementation authorization.** The user requested
-planning after the two external reports. The native sequence above remains
-closed. This section is the single follow-up plan for the same continuity scope;
-the older implementation/native deliverables below remain historical.
+Status: **Preparation implemented after user approval; independent annotation
+pending.** The [workflow](../../workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/README.md)
+freezes ten inputs and the neutral review packet. Five separate runtime-owned toy
+tests check realistic admission mechanics without selecting the new cases.
+Deliverable 1 and the handoff portion of 2 are implemented; deliverables 3-5 remain
+gated on the returned, frozen independent judgments. This is the single follow-up
+plan; the native sequence remains closed and older deliverables remain historical.
 
 ### Decision And Scope
 
@@ -52,7 +55,7 @@ question and complete supplied context, rather than merely reducing designated
 source coverage. PC-03/04/05/06/09/10/11 remain unchanged. Retain the current runtime
 and candidate status throughout; the audit may legitimately justify stopping.
 
-Proposed ceiling: the eight frozen diversity cases, unchanged, plus two new
+Frozen ceiling: the eight frozen diversity cases, unchanged, plus two new
 pre-frozen Mandarin wording controls. One replaces exact wrong-echo copies with
 nonidentical retellings without repeating the target query; one tests a minimal,
 high-overlap correction with a necessary antecedent. Both new decision-critical
@@ -132,7 +135,7 @@ case-level evidence. A positive algorithm result is not required for completion.
 
 No ADE/Model Router provider calls, database/trial access, new runtime policy,
 deduplication implementation, episode graph, prompt changes or resumed turns 8-10.
-External review is a manual handoff once execution is approved, not permission to
+External review is a manual handoff, not permission to
 operate an account or create another chat automatically. No native model settings
 are selected by this plan. A future native comparison needs separate approval,
 scope-isolation checks and a valid current-user-update positive control.
@@ -142,7 +145,7 @@ questions with multiple sufficient answers, and correction-authority ambiguity
 are the material risks. Portable tests verify source/packet mechanics only.
 Use `uv run --locked` for focused audit and existing history admission/attribution
 checks, then proportional broader tests. A new ADR is needed only if a later
-decision changes a durable runtime or qualification contract; this draft does not.
+decision changes a durable runtime or qualification contract; this audit does not.
 
 ## Historical Native Preparation
 
