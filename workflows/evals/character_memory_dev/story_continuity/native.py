@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .native_artifacts import (
     annotate,
+    amend_annotations,
     check_preparation,
     clean_preparation,
     read,
@@ -64,7 +65,10 @@ def start(directory: Path, *, approved: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["start", "resume", "annotate", "cleanup"])
+    parser.add_argument(
+        "command",
+        choices=["start", "resume", "annotate", "cleanup", "amend-annotations"],
+    )
     parser.add_argument("--directory", type=Path, required=True)
     parser.add_argument("--approved", action="store_true")
     parser.add_argument("--turn", type=int, choices=[1, 3])
@@ -72,6 +76,14 @@ def main() -> None:
     args = parser.parse_args()
     os.umask(0o077)
     directory = require_output_directory(args.directory)
+    if args.command == "amend-annotations":
+        amend_annotations(directory, approved=args.approved)
+        print(
+            json.dumps(
+                {"status": "annotation_protocol_amended", "reviewer_kind": "agent"}
+            )
+        )
+        return
     if args.command == "cleanup":
         remove_owned_database(directory)
         print(json.dumps({"status": "owned_database_removed"}))
@@ -83,7 +95,11 @@ def main() -> None:
         result = annotate(directory, args.turn, read(args.annotation))
         print(
             json.dumps(
-                {"status": "human_annotation_frozen", "usable": result["usable"]}
+                {
+                    "status": "annotation_frozen",
+                    "reviewer_kind": result["reviewer_kind"],
+                    "usable": result["usable"],
+                }
             )
         )
         return

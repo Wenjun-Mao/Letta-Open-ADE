@@ -17,6 +17,7 @@ from .native_artifacts import (
     check_preparation,
     delivered_reply,
     read,
+    reviewer_kind,
     write_once,
 )
 from .native_transport import NativeADE
@@ -185,7 +186,11 @@ def prior_evidence(directory: Path, before: int) -> tuple[dict, dict]:
         if number in {1, 3} and result["disposition"] == "committed":
             annotation = annotation_for(directory, number, record)
             if annotation is None:
-                raise ValueError(f"Human annotation required after turn {number}")
+                raise ValueError(
+                    f"Human annotation required after turn {number}"
+                    if reviewer_kind(directory) == "human"
+                    else f"Agent annotation required after turn {number}"
+                )
             result["usable_annotation"] = annotation["usable"]
         run = record["readback"]["run"]
         ledger[run["id"]] = {
@@ -338,8 +343,11 @@ async def run_sequence(api: NativeADE, directory: Path, launch: Path) -> dict:
         if turn["id"] in {1, 3} and disposition == "committed":
             if annotation_for(directory, turn["id"], result) is None:
                 return {
-                    "status": "human_annotation_required",
+                    "status": f"{reviewer_kind(directory)}_annotation_required",
                     "turn": turn["id"],
                     "reply": delivered_reply(result),
                 }
-    return {"status": "sequence_complete", "semantic": "human_review_required"}
+    return {
+        "status": "sequence_complete",
+        "semantic": f"{reviewer_kind(directory)}_review_required",
+    }

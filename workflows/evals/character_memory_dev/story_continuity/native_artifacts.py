@@ -8,7 +8,8 @@ from pathlib import Path
 import subprocess
 
 from .annotation import check_annotation, freeze_annotation
-from .schedule import ROOT, prepare
+from .schedule import ROOT, digest, prepare
+from .annotation_amendment import CONTRACT, validate_continuation, validate_record
 
 OUTPUTS = ROOT / "workflows/evals/character_memory_dev/outputs"
 
@@ -34,9 +35,69 @@ def clean_preparation() -> dict:
 
 def check_preparation(directory: Path) -> dict:
     expected = read(directory / "preparation.json")
-    if clean_preparation() != expected:
+    current = clean_preparation()
+    amendment = directory / "annotation-amendment.json"
+    if amendment.exists():
+        record = read(amendment)
+        if record["origin_receipt_sha256"] != digest(
+            (directory / "turn-01.json").read_bytes()
+        ):
+            raise ValueError(
+                "Original native outcome changed after annotation amendment"
+            )
+        validate_record(
+            record,
+            expected,
+            current,
+            digest((directory / "preparation.json").read_bytes()),
+        )
+        return current
+    if current != expected:
         raise ValueError("Source/configuration changed after native freeze")
     return expected
+
+
+def reviewer_kind(directory: Path) -> str:
+    path = directory / "annotation-amendment.json"
+    if not path.exists():
+        return "human"
+    record = read(path)
+    if record.get("contract") != CONTRACT or record.get("reviewer_kind") != "agent":
+        raise ValueError("Invalid annotation protocol")
+    return "agent"
+
+
+def amend_annotations(directory: Path, *, approved: bool) -> dict:
+    if not approved:
+        raise ValueError(
+            "Explicit user approval required for agent-reviewed annotations"
+        )
+    original = read(directory / "preparation.json")
+    current = clean_preparation()
+    validate_continuation(original, current)
+    origin = read(directory / "turn-01.json")
+    if (
+        origin["validation"]["disposition"] != "committed"
+        or any((directory / f"turn-{n:02d}.intent.json").exists() for n in range(2, 11))
+        or list(directory.glob("annotation-0[13].json"))
+    ):
+        raise ValueError(
+            "Amend annotation ownership only at the untouched origin frontier"
+        )
+    record = {
+        "contract": CONTRACT,
+        "reviewer_kind": "agent",
+        "effective_before_turn": 2,
+        "user_approval": "User agreed to clearly labeled agent-reviewed annotations and said: agreed, go",
+        "original_preparation_sha256": digest(
+            (directory / "preparation.json").read_bytes()
+        ),
+        "origin_receipt_sha256": digest((directory / "turn-01.json").read_bytes()),
+        "continued_preparation": current,
+        "limits": "Evaluator ownership only; no runtime, model, prompt, fixture, reroll or evidence-validation changes",
+    }
+    write_once(directory / "annotation-amendment.json", record)
+    return record
 
 
 def require_output_directory(directory: Path) -> Path:
@@ -65,8 +126,11 @@ def annotation_for(directory: Path, number: int, result: dict) -> dict | None:
     if not path.exists():
         return None
     record = read(path)
-    if record["reviewer_kind"] != "human" or not record["reviewer"].strip():
-        raise ValueError("A human annotation is required, not an agent-generated score")
+    if (
+        record["reviewer_kind"] != reviewer_kind(directory)
+        or not record["reviewer"].strip()
+    ):
+        raise ValueError("Annotation reviewer must match the approved protocol")
     if record["usable"]:
         check_annotation(
             record,
@@ -87,14 +151,16 @@ def annotate(directory: Path, number: int, supplied: dict) -> dict:
     if any(path.exists() for path in later):
         raise ValueError("Cannot annotate after a later dispatch intent")
     if (
-        supplied.get("reviewer_kind") != "human"
+        supplied.get("reviewer_kind") != reviewer_kind(directory)
         or not supplied.get("reviewer", "").strip()
     ):
-        raise ValueError("Identify the human who supplied this annotation")
+        raise ValueError(
+            "Identify the approved reviewer; do not mislabel agent work as human"
+        )
     if not isinstance(supplied.get("usable"), bool):
         raise ValueError("Human must explicitly classify whether details are usable")
     record = {
-        "reviewer_kind": "human",
+        "reviewer_kind": supplied["reviewer_kind"],
         "reviewer": supplied["reviewer"],
         "usable": supplied["usable"],
         "rationale": supplied["rationale"],

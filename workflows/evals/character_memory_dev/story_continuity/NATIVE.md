@@ -106,3 +106,15 @@ The initial integration caught the API's declared `sha256` inside its fingerprin
 payload; the runner now separates that field for recomputation and checks both
 declared and computed hashes. No runtime guard or baseline pin was relaxed.
 These checks dispatched no real model requests and establish no native quality.
+
+## Approved Agent Annotations
+
+After the first live turn, the user approved clearly labeled agent assessment
+instead of repeated human checkpoints. ADR 0054's annotation-only amendment
+supersedes the human-only sections above for this sequence. Before continuing,
+record `native amend-annotations --approved --directory ...` from the verified
+clean annotation-runner commit. It retains the original source/outcome receipts
+and rejects changes to runtime, prompts, fixtures, models or evidence validators.
+Supply `reviewer_kind: "agent"` and the agent's identity in annotation files.
+The same exact-quote and pre-outcome frontiers remain mandatory. This is not a
+fresh run or a reroll, and the final assessment must not claim human validation.

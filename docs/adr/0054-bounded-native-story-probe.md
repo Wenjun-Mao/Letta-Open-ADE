@@ -60,3 +60,21 @@ readback versus immutable identity, version-2 HTTP creation, definition drift,
 evidence-failure stops, container ownership and process-local alias scope.
 Existing scripted PostgreSQL checks remain the runtime mechanics guardrail.
 Native PC-11 feasibility requires actual retained outcomes and human review.
+
+## Annotation-Ownership Amendment (2026-09-30)
+
+After native turn 1, the user explicitly agreed to agent-reviewed annotations
+and autonomous continuation, reserving escalation for genuine ambiguity. This
+supersedes the human-only evaluator requirement for this sequence, not chronology,
+the semantic rubric, or any model/runtime baseline. Agent work must be labeled
+`reviewer_kind: agent`; it is not independent human validation.
+
+Preserve the original preparation, approval and turn-1 bytes. A separate immutable
+amendment receipt binds the old preparation hash, original outcome hash, explicit
+approval and new clean runner commit. Continuation permits only the four named
+annotation-runner source files to differ. The governed runtime fingerprint,
+prompts, persona, fixture, model configuration, dispatch rules and evidence
+validators must remain identical. Subsequent source drift still fails closed.
+No turn is rerun. Agent annotations still freeze before turns 2 and 4; the
+operator can resume immediately after making the assessment without asking the
+user to perform routine semantic classification.
