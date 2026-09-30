@@ -124,3 +124,90 @@ rationale from the reply. Assess habit-to-preference storage separately. The
 sample supports useful cross-chat continuity, not broad recall reliability.
 Character verbosity, repeated questions and unsolicited callbacks remain later
 tuning work; this trial changed none of them.
+
+## Attribution Investigation: 2026-09-29
+
+Offline follow-up to the two delivered errors above. No additional provider
+calls, trial-data writes, runtime/prompt changes or deployment occurred. A
+read-only GPT-6.1 Sol / Medium subagent independently inspected contract scope;
+the director inspected persisted evidence and performed the reconstruction.
+
+### What The Trace Establishes
+
+The served runtime matches the relevant source on the retained branch. For both
+runs, memory generation remains 4, matching the accepted generation. Using
+`load_turn_state`, the persisted admitted-run order, and the actual
+`build_natural_binding_map`, `_context_with_history`, and
+`natural_review_request` functions reconstructed identical H sections for
+generation and review. All selected source messages preceded the target turn.
+The disputed singer description is **H4, role `assistant`**, not user, in both
+reconstructed packets. The pottery source is H3, role `user`.
+
+The generation/review path in
+`services/ade-api/src/ade_api/features/agent_runtime/turn_execution.py` passes
+the same admitted exchanges and the candidate reply to the reviewer. Both
+requests completed normally in the original traces, and both replies committed
+without a new memory revision. There was no tool search in either failed answer.
+
+These are source-backed reconstructions, **not retained original requests**.
+The trial did not retain full request packets or the exact reviewer decision
+JSON. Zero writes does not prove an empty decisions array, and the available
+evidence does not reveal the model's internal reason for allowing the replies.
+
+### Root-Cause Boundary
+
+- **No evidence of a retrieval or role-serialization defect in these cases.**
+  The needed exchange was admitted; the serializer preserves speaker roles and
+  content hashes. Do not change ranking, erase assistant history, or label all
+  history as user testimony to address the failure.
+- **Generation failed source-faithful narration.** H instructions already say
+  not to invent unavailable history. The shared I/you rule is phrased around
+  profile/search facts, while the history wording is more general. Neither is
+  a guarantee against model elaboration or misattribution. A claim that the
+  runtime lost the speaker, or that a completely absent instruction explains
+  everything, would be too strong.
+- **Reviewer coverage is narrower than general answer verification.** The
+  instruction explicitly checks memory writes and replies that contradict held
+  facts; H evidence can ground such a conflict. It does not explicitly require
+  checking every narrative addition for support. The existing contract can
+  represent a source-speaker mismatch using the assistant H quote, but does not
+  expressly call out that check. This is the appropriate narrow review target.
+- **Unsupported is not necessarily contradicted.** A key-dish source does not
+  establish a doorstep location or motive, but it does not explicitly disprove
+  either. Using that source as a fabricated contradiction would misuse the
+  contract. A new general unsupported-claim veto would need a separate design
+  decision, not a silent expansion of `conflict`.
+
+A manually injected, exact H4-grounded speaker-mismatch conflict was rejected
+by the served `_validate_conflict` function with
+`natural_memory_reply_conflict`. That establishes rejection mechanics only,
+not reliable model detection. No database mutation or model call was involved.
+
+### Smallest Proposed Follow-up
+
+1. At the existing shared generation-instruction owner, clarify speaker and
+   assertion fidelity: assistant opinions are not user testimony; do not add
+   motives, actions or locations while presenting a recollection. Natural
+   suggestions and explicitly tentative inferences remain allowed. Do not
+   special-case the singer, pottery, keywords or observed Chinese phrases.
+2. Clarify the existing H-capable review instruction for a positively grounded
+   source-speaker mismatch. Keep the current schema and atomic rejection; do
+   not turn missing evidence alone into a contradiction or add another reviewer.
+3. Before live execution, prepare small contrasts: correctly attributed assistant
+   opinion versus false user attribution; supported recollection versus invented
+   remembered detail; an ordinary suggestion versus an asserted past event;
+   and explicit later user endorsement as a positive control. Measure both
+   delivered answers and complete memory deltas. Preserve these original errors.
+
+This is a proposed bounded correction, not an implemented or qualified fix.
+The habit-to-preference concern remains separate; character tuning is deferred.
+
+### Verification
+
+The existing policy, history-admission and generation-contract suites passed
+**28 tests**. The two reconstructions and injected conflict check passed using
+the served API code. Original `SHA256SUMS` is unchanged; ignored
+`attribution-reconstruction.json` and `reconstruct_attribution.py` beside the
+original captures have a separate `ATTRIBUTION-SHA256SUMS` receipt. The script
+runs read-only inside the API container and writes only a `/tmp` artifact.
+These checks support the layer diagnosis, not a claim of improved live behavior.
