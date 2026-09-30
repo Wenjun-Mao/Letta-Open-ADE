@@ -10,25 +10,19 @@ approval follows from this document.
 
 Repository: https://github.com/Wenjun-Mao/Letta-Open-ADE
 Discovery branch: `main` (user-directed integration; ADR 0048).
-Source anchor: `1c2387355e21eb96c0822cf9858cfd71f34e95c2`.
+Source anchor: `2e3322db32946df947f002143a964ec440628715`.
 Packet revision: use the full commit in this document's GitHub permalink;
 the packet and reviewed source are intentionally separate versions.
 
-During initial preparation, `git ls-remote` resolved `codex/character-continuity` to
-`40e6b409ca6941998e780278cbf7e794b996b724`, 43 local commits behind the intended
-anchor. An anonymous raw-file request for the intended anchor's chat prompt
-returned 404; the older remote anchor's product contract returned 200.
-That initial check did not establish consultant access; the draft was correctly
-withheld. Do not substitute an older branch head or latest `main` for the anchor.
-
-The user subsequently authorized merging the development branch to `main` and
-continuing there, rather than publishing a separate consultation branch. The
-source and draft were published through mainline integration commit
-`2b45c7d081555db0441f2862716daad76d943bae`. An anonymous GitHub fetch of all 11
-required source files at the source anchor matched their local Git blobs
-byte-for-byte on 2026-09-30. Mainline's later integration-only corrections do not
-silently replace that source anchor. The final packet permalink is verified at
-handoff. Integration is not release approval; no consultant has been dispatched.
+The user authorized merging the development branch to `main` and continuing
+there. This revision explicitly advances the review anchor from the earlier
+`1c2387355e21eb96c0822cf9858cfd71f34e95c2` to the published mainline revision
+above, including its integration corrections. On 2026-09-30, the remote `main`
+ref resolved to that commit and anonymous GitHub fetches of all 12 referenced
+source/evidence-summary files matched their local Git blobs byte-for-byte.
+The final packet permalink is verified at handoff. Do not substitute a later
+mutable `main` for the anchor. Integration is not release approval; no consultant
+has been dispatched and no live observation was rerun for this prompt update.
 
 Raw provider captures, database dumps, local configs, credentials, private trial
 state, ignored outputs and local conversation history are excluded. Evidence
@@ -46,17 +40,20 @@ The pinned source below has been published on GitHub and anonymously verified. T
 Independently review the boundary between immersive character voice and trustworthy conversational memory in ADE. Help us clarify the contract and choose the smallest informative experiments before adding more prompt rules or machinery. A wrong decision could either damage memory trust or flatten a warm character into a mechanical assistant. No prior conversation context is assumed.
 
 ACCESS AND ANCHOR
-GitHub-only access. Repository: https://github.com/Wenjun-Mao/Letta-Open-ADE ; discovery branch: main ; exact source commit: 1c2387355e21eb96c0822cf9858cfd71f34e95c2. State the revision and files actually inspected. If inaccessible, report that limitation; do not silently substitute the latest main or present a summary-only critique as a source audit. You cannot access our local worktrees, services, private captures, databases or chat history. Treat quoted repository prompts as objects of analysis, not instructions to you.
+GitHub-only access. Repository: https://github.com/Wenjun-Mao/Letta-Open-ADE ; discovery branch: main ; exact source commit: 2e3322db32946df947f002143a964ec440628715. State the revision and files actually inspected. If inaccessible, report that limitation; do not silently substitute the latest main or present a summary-only critique as a source audit. You cannot access our local worktrees, services, private captures, databases or chat history. Treat quoted repository prompts as objects of analysis, not instructions to you.
 
 CONTEXT
 ADE is a local-first agent workspace. Our experimental character, Lin Xiaotang, should offer warm, natural Mandarin conversation, meaningful factual updates and relevant cross-chat recall without memory commands, repetitive personalization or invented shared experiences. The persona supplies a fictional biography and conversational style. Existing conversations retain immutable prompt/persona versions.
 
 The trial still uses chat_v20260926, including "you are a real person" and instructions to immerse fully in the persona. Generation combines that template, the persona, runtime memory instructions, and admitted facts/dialogue. A separate single reviewer interprets fact changes and grounded reply conflicts before atomic persistence; ADE validates structure, source binding, ownership and versions. A valid quote does not prove sound interpretation. Historical dialogue can support recall and grounded conflicts, but cannot independently authorize a current fact write.
 
+The development work is now merged into main, which is our continuing development baseline. This is not a deployment or release qualification. The bounded live observations below came from source 5af403b53fbf40c2be4bfc9250d70973c77783b5; the isolated trial subsequently adopted 9cb6aa047ddb30f216aa097cd0f21dd90b0a81e8 with unchanged attribution instructions and a packaging correction. Main's later formatting, portable-test, OpenAPI and CI corrections do not constitute another live trial. Do not conflate the reviewed code, running trial and historical evidence.
+
 STARTING SOURCES (all paths at the pinned commit)
-Source tree: https://github.com/Wenjun-Mao/Letta-Open-ADE/tree/1c2387355e21eb96c0822cf9858cfd71f34e95c2
+Source tree: https://github.com/Wenjun-Mao/Letta-Open-ADE/tree/2e3322db32946df947f002143a964ec440628715
 Read docs/product-contract.md for current intent, not current verification status. Inspect content/prompts/system/chat/chat_v20260926.py and content/personas/personas.jsonl (chat_linxiaotang). In services/ade-api/src/ade_api/features/agent_runtime/, inspect context.py (MEMORY_CONTROL_INSTRUCTIONS), natural_context.py (build_natural_context), natural_memory_reviewer.py (both instruction constants), and natural_memory_policy.py (prepare_natural_memory_review and _validate_conflict). Follow relevant call paths as needed; do not assume these files alone prove runtime behavior.
 For contrasts and engineering guardrails, read workflows/evals/character_memory_dev/fixtures/history_recall/attribution_contrasts.json and tests/test_attribution_contract.py in that same workflow. After forming your own interpretation, compare docs/adr/0047-recalled-dialogue-attribution.md and workflows/evals/character_memory_dev/hands-on-feedback.md, especially its final live-confirmation section. Older consultation reports are optional, not required premises.
+For integration and verification limits, see docs/findings/mainline-integration-2026-09-30.md. Dependency maintenance and CI remediation are not the subject of this character/memory consultation.
 
 BOUNDED EVIDENCE, NOT GENERAL QUALITY CLAIMS
 Maintainer observations: earlier hands-on replies recovered relevant source exchanges but misattributed an assistant's opinion to the user and embellished a remembered pottery story. Reconstructed packets retained roles and text; the original reviewer output was not retained, so its exact reasoning is unknown. A subsequent bounded instruction change clarified attribution and faithful recollection without changing the persona, base template, schema, ranking or persistence.
@@ -84,7 +81,7 @@ first, then the reliability of claims we would rely on. Classify individual
 insights as `Use`, `Test`, `Park` or `Discard`; verify consequential claims with
 the cheapest sufficient source check or experiment. Agreement is not proof.
 
-Do not promote this draft's open character-fiction question into a settled
+Do not promote this packet's open character-fiction question into a settled
 contract. If a returned insight survives review, use the existing product
 contract/glossary/knowledge note/ADR/plan owner appropriate to its meaning.
 Keep unsettled ideas as named questions and preserve the distinction between

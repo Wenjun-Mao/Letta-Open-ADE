@@ -4,7 +4,9 @@ Current consultation (2026-09-30): [character voice and memory review packet](ch
 requests one independent, source-grounded critique of character fiction,
 source-backed recall and combined instruction ownership. It includes balanced
 bounded observations and access limits. The source is published through `main`,
-with all 11 required source files anonymously verified at the pinned revision.
+with all 12 referenced source/summary files anonymously verified at the mainline
+anchor `2e3322db32946df947f002143a964ec440628715`. The packet distinguishes this
+reviewed source from the earlier live-test and running-trial revisions.
 The packet is ready for manual handoff; no consultant dispatch, product-contract
 change or implementation authorization is implied. The reviews below are historical.
 
