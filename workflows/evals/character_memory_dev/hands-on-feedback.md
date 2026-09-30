@@ -211,3 +211,41 @@ the served API code. Original `SHA256SUMS` is unchanged; ignored
 original captures have a separate `ATTRIBUTION-SHA256SUMS` receipt. The script
 runs read-only inside the API container and writes only a `/tmp` artifact.
 These checks support the layer diagnosis, not a claim of improved live behavior.
+
+## Attribution Implementation And Container Cleanup: 2026-09-29
+
+The approved bounded correction is implemented under
+[ADR 0047](../../../docs/adr/0047-recalled-dialogue-attribution.md). Shared
+generation instructions preserve speaker and assertion scope, prohibit invented
+remembered details, and distinguish new suggestions from past events. H-capable
+review explicitly checks grounded speaker mismatches, considers later user
+endorsement, and does not treat missing evidence alone as a contradiction.
+Schema, ranking, persistence and rejection mechanics are unchanged.
+
+The four [attribution contrasts](fixtures/history_recall/attribution_contrasts.json)
+exercise identical generation/review sources across A/A0/B, cited rejection,
+no-change controls and a supported current-user write. All are offline scripted
+checks, not model-quality evidence. The old generation diagnostic binding now
+correctly rejects changed instruction hashes. Its fixture was not refreshed.
+Two pressure tests had coupled current policy to historical exact token counts;
+they now measure the assembled full packet and test its exact admission boundary
+while preserving the frozen fixture and original generation/reviewer limits.
+No provider calls, trial rebuild, deployment or release rebind occurred. Live
+answer quality and actual reviewer detection remain unverified.
+
+Container cleanup removed ten confirmed residual containers: all five services
+in `ade-stage-a-01a0ca1b`, plus `ade-wood-check-01a0eec6`, `ade-h4-check`,
+`ade-m2-memory-it-01a0ca1b`, `ade-natural-memory-it-b7fe` and
+`natural-c6-router-01a0d41d`. The woodworking database had no other client
+sessions and was stopped gracefully. All anonymous volumes and bind mounts
+were retained; their mapping is saved in the ignored
+`outputs/container-cleanup-20260929/removed-container-mounts.txt` receipt.
+No images, networks or unrelated containers were pruned. The active trial and
+main ADE services, including their successful migration containers, remain.
+Both API health endpoints returned `status: ok` after cleanup.
+
+Final verification: the runtime and character-memory workflow suites passed
+455 tests; 58 database-dependent checks skipped because no disposable test DB
+was configured. Changed Python files passed Ruff lint and formatting checks,
+and `git diff --check` passed. Persistence and live model behavior were not
+retested by these offline checks.

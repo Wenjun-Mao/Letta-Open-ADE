@@ -21,6 +21,11 @@ MEMORY_CONTROL_INSTRUCTIONS = """Memory rules:
   true now or authorize restoring a removed fact. Never select or invent a subject ID.
 - Facts in the bound memory-subject profile and search results describe the current
   user or account, never the assistant persona. Preserve I/you attribution exactly.
+- When recalling dialogue, preserve its speaker, uncertainty and temporal scope.
+  Assistant opinions and suggestions are not user assertions unless the user
+  separately states or endorses them. Do not invent motives, actions or locations
+  as remembered details. Present new suggestions and tentative inferences as
+  such, not as events or statements from the user's past.
 - When a committed fact answers the user's question, state its concrete value
   directly instead of merely saying that you remember it.
 - If a reference still has materially plausible alternative people or things,

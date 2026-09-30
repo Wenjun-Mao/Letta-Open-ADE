@@ -85,15 +85,15 @@ def test_compaction_must_preserve_useful_information_outside_raw_suffix() -> Non
 
 
 @pytest.mark.parametrize(
-    ("cell_id", "minimum_full_tokens", "required_source"),
+    ("cell_id", "historical_minimum_tokens", "required_source"),
     [
         ("pressure-dog", 3074, "u1"),
         ("pressure-interview", 3079, "u2"),
     ],
 )
-def test_pressure_packets_execute_the_frozen_serialized_boundary(
+def test_current_pressure_packets_preserve_the_capacity_boundary(
     cell_id: str,
-    minimum_full_tokens: int,
+    historical_minimum_tokens: int,
     required_source: str,
 ) -> None:
     cases, matrix = load_cases(), load_matrix()
@@ -160,6 +160,27 @@ def test_pressure_packets_execute_the_frozen_serialized_boundary(
     )
     assert budget.input_limit == generation["input_limit"]
     assert reviewer_budget.input_limit == reviewer["input_limit"]
+    # Historical packet sizes are observations, not limits for changed prompts.
+    # Measure an unpressured full packet, then test the admission fence exactly.
+    full = build_natural_context(
+        variant="A0",
+        system_prompt=policy,
+        persona="Companion",
+        current_user=current,
+        eligible_recent_messages=[],
+        lifecycle_facts=facts,
+        retrieved_facts=[],
+        entities=entities,
+        summary_content="",
+        history_metadata=history,
+        budget=ContextBudget(16384, 512, 256),
+        reviewer_suffix_limit=reviewer["shared_suffix_max"],
+    )
+    assert not full.lifecycle_withheld
+    assert len(full.context.retrieved_fact_ids) == len(facts)
+    minimum_full_tokens = full.context.estimated_input_tokens
+    assert minimum_full_tokens > budget.input_limit
+    assert minimum_full_tokens >= historical_minimum_tokens
     assert full_lifecycle_snapshot_fits(
         system_prompt=policy,
         persona="Companion",
@@ -202,10 +223,7 @@ def test_pressure_packets_execute_the_frozen_serialized_boundary(
     b_sources = [message["label"] for message in bundles["B"].source_messages]
     assert required_source in b_sources
     assert b_sources[-1] == cell["cutoff"]
-    assert (
-        bundles["B"].context.estimated_input_tokens
-        <= pressure["b_selective_packet_max_tokens"]
-    )
+    assert bundles["B"].context.estimated_input_tokens <= budget.input_limit
     reviewer_tokens = preflight_reviewer_bundle(
         model_key="fake::reviewer",
         provider_adapter="deepseek_openai",

@@ -6,6 +6,27 @@ chat playbook](hands-on-trial.md). Start and stop commands are in the
 [operator setup note](hands-on-trial-setup.md). The experimental evaluation
 composition is separate from ordinary Agent Studio and production defaults.
 
+## Attribution Contract Checks
+
+[ADR 0047](../../../docs/adr/0047-recalled-dialogue-attribution.md) clarifies
+source-faithful generation and positively grounded speaker conflicts. The
+[four contrasts](fixtures/history_recall/attribution_contrasts.json) separate
+assistant/user attribution, remembered detail, new suggestions and explicit
+later endorsement. Run the offline packet and scripted-decision checks with:
+
+```sh
+uv run --locked python -m pytest workflows/evals/character_memory_dev/tests/test_attribution_contract.py -q
+```
+
+These checks make no provider calls and do not score live model behavior. They
+verify identical attributed H packets, shared generation instructions across
+A/A0/B, reviewer scope, exact conflict binding and a current-user-only write.
+Scripted no-change decisions remain valid even for semantically bad replies:
+ADE has not acquired a hidden phrase-based verifier. Live confirmation must
+retain actual reviewer decisions and full memory deltas as well as the answer.
+The prior generation diagnostic binding is intentionally stale under the new
+instruction hashes; do not rewrite its frozen fixture or reuse its evidence.
+
 ## Historical Recall Probe (H1–H3 Checkpoints)
 
 The [frozen history contract](fixtures/history_recall/contract.json) belongs to

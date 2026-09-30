@@ -29,6 +29,8 @@ from workflows.evals.character_memory_dev.history_target_diagnostic import (
 )
 from workflows.evals.character_memory_dev.history_target_diagnostic_run import (
     CANDIDATE_PROMPT_KEY,
+    GENERATION_BINDING,
+    generation_binding,
     verified_generation_binding,
 )
 from workflows.evals.character_memory_dev.natural_live_results import sha256_file
@@ -135,10 +137,19 @@ def _packet(candidate, persona, *, user_text):
 
 
 def test_candidate_and_old_prompt_are_distinct_immutable_sources(tmp_path) -> None:
-    old, candidate, persona = _templates(tmp_path)
+    old, candidate, _ = _templates(tmp_path)
     assert old["content"] != candidate["content"]
     assert "memory blocks" in old["content"]
     assert "memory blocks" not in candidate["content"]
+    frozen = json.loads(GENERATION_BINDING.read_text())
+    assert (
+        hashlib.sha256(candidate["content"].encode()).hexdigest()
+        == frozen["component_sha256"]["candidate_prompt"]
+    )
+
+
+def test_attribution_changes_cannot_reuse_prior_diagnostic_binding(tmp_path) -> None:
+    old, candidate, persona = _templates(tmp_path)
     if not all(path.is_file() for path, _ in OLD_MANIFESTS):
         pytest.skip("ignored historical H4 manifests are unavailable")
     schedule, _, old_manifest = frozen_schedule()
@@ -147,7 +158,7 @@ def test_candidate_and_old_prompt_are_distinct_immutable_sources(tmp_path) -> No
         hashlib.sha256(old["content"].encode()).hexdigest()
         == old_manifest["prompt_sha256"]
     )
-    binding = verified_generation_binding(
+    binding = generation_binding(
         candidate,
         persona,
         old_manifest,
@@ -161,9 +172,18 @@ def test_candidate_and_old_prompt_are_distinct_immutable_sources(tmp_path) -> No
         binding["component_sha256"]["candidate_prompt"]
         != binding["prior_prompt_sha256"]
     )
-    with pytest.raises(RuntimeError, match="binding differs"):
+    frozen = json.loads(GENERATION_BINDING.read_text())
+    assert (
+        binding["component_sha256"]["memory_control"]
+        != frozen["component_sha256"]["memory_control"]
+    )
+    assert (
+        binding["reviewer_instruction_sha256"] != frozen["reviewer_instruction_sha256"]
+    )
+    assert binding["reviewer_schema_sha256"] == frozen["reviewer_schema_sha256"]
+    with pytest.raises(RuntimeError, match="reviewer, persona or old prompt changed"):
         verified_generation_binding(
-            {**candidate, "content": candidate["content"] + " changed"},
+            candidate,
             persona,
             old_manifest,
             prior_manifest,

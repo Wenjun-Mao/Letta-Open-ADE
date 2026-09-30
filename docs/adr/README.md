@@ -43,6 +43,7 @@ record's status notice before applying its original execution details.
 | [0044](0044-native-generation-memory-contract-candidate.md) | Explicit chat candidate and shared generation instruction alignment; no default adoption. |
 | [0045](0045-isolated-history-trial-composition.md) | Running development-only browser trial composition; no release qualification. |
 | [0046](0046-current-turn-weighted-history-trial-ranking.md) | Versioned ranking selected for the isolated trial; no production/default qualification. |
+| [0047](0047-recalled-dialogue-attribution.md) | Shared generation source fidelity and grounded H-speaker conflicts; no general answer verifier or live acceptance. |
 
 ## Historical, Retired, Or On Hold
 

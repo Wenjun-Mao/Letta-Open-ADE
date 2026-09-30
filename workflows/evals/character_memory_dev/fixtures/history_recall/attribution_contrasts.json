@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "purpose": "Source-use contrasts, not a live result or a phrase-based scorer. Scripted decisions exercise protocol mechanics only.",
+  "cases": [
+    {
+      "id": "source_speaker",
+      "history_user": "I have been listening to Mira lately.",
+      "history_assistant": "Her singing has a quiet defiance.",
+      "current_user": "What did we say about Mira?",
+      "faithful_reply": "You mentioned listening to Mira; I described her singing as quietly defiant.",
+      "unfaithful_reply": "You said her singing has a quiet defiance.",
+      "review_scope": "Grounded speaker mismatch: H2 is the assistant's opinion, with no supplied user endorsement.",
+      "scripted_conflict": {
+        "kind": "conflict",
+        "current_quote": "What did we say about Mira?",
+        "candidate_reply_quote": "You said her singing has a quiet defiance.",
+        "history": {"handle": "H2", "quote": "Her singing has a quiet defiance."}
+      }
+    },
+    {
+      "id": "recalled_details",
+      "history_user": "My pottery cup failed, so I made it into a dish for keys.",
+      "history_assistant": "That sounds like a useful second life for it.",
+      "current_user": "What did I do with that failed pottery cup?",
+      "faithful_reply": "You turned it into a dish for keys.",
+      "unfaithful_reply": "You could not bear to throw it away, so you flattened it and placed it by the front door.",
+      "review_scope": "Generation must not invent motives, actions or location. Silence is not an exact H contradiction."
+    },
+    {
+      "id": "suggestion_not_past_event",
+      "history_user": "My pottery cup failed, so I made it into a dish for keys.",
+      "history_assistant": "That sounds like a useful second life for it.",
+      "current_user": "Where could I put that dish now?",
+      "faithful_reply": "You could put it by the front door if that is where you usually leave your keys.",
+      "unfaithful_reply": "You put it by the front door last time.",
+      "review_scope": "A new conditional suggestion is allowed. An asserted past placement is unsupported, not positively contradicted."
+    },
+    {
+      "id": "later_user_endorsement",
+      "history_user": "I have been listening to Mira lately.",
+      "history_assistant": "Her singing has a quiet defiance.",
+      "current_user": "I agree: her singing has a quiet defiance. I like that quality in Mira's singing.",
+      "faithful_reply": "You also like that quietly defiant quality in her singing.",
+      "unfaithful_reply": "You said that before I did.",
+      "review_scope": "Explicit current endorsement supports user attribution; the earlier assistant source alone must not trigger a conflict.",
+      "scripted_write": {
+        "kind": "subject_add",
+        "fact_type": "person.preference",
+        "qualifier": "music",
+        "value": "quiet defiance in Mira's singing",
+        "evidence": {
+          "mode": "direct",
+          "current_quote": "I agree: her singing has a quiet defiance. I like that quality in Mira's singing."
+        }
+      }
+    }
+  ]
+}
