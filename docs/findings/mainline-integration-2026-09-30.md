@@ -61,3 +61,20 @@ deliberately, and rerun audit/tests/lint/build before treating the dependency ga
 as clear. Do not run `npm audit fix --force`, suppress advisories, or call this
 integration fully green. GitHub's unchanged frontend audit step may fail until
 that separate dependency work is completed. No dependency upgrade is included.
+
+## Hosted CI Follow-Up
+
+The [first integrated GitHub run](https://github.com/Wenjun-Mao/Letta-Open-ADE/actions/runs/36669236997)
+passed the Python/OpenAPI job and frontend tests/lint, then failed frontend audit
+as expected. Container validation also failed: CI exported the retired
+`LETTA_ENV_FILE`, while Compose reads `ADE_ENV_FILE`, and the clean runner has
+no private `.env`. The local architecture checks already used the correct name.
+
+Correct CI's environment variable rather than copying a private `.env`, making
+it optional, or changing Compose defaults. A guardrail now checks the workflow
+uses the same explicit `.env.example` selector as the existing Compose tests.
+This is a correction to the existing environment contract, not a CI-only runtime
+exception. The first run never reached container image builds or frontend build;
+the local frontend build result above remains separate evidence.
+The corrected Compose invocation passed locally; all 12 architecture guardrail
+tests, their lint/format checks, and `git diff --check` passed after the fix.

@@ -85,6 +85,12 @@ def _compose_config() -> dict[str, object]:
     return json.loads(result.stdout)
 
 
+def test_ci_compose_uses_the_same_explicit_environment_file() -> None:
+    workflow = (PROJECT_ROOT / ".github/workflows/verify.yml").read_text()
+    assert re.search(r"^\s+ADE_ENV_FILE: \.env\.example$", workflow, re.MULTILINE)
+    assert "LETTA_ENV_FILE" not in workflow
+
+
 def _python_files(root: Path) -> Iterable[Path]:
     return (
         path

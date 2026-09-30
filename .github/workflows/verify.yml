@@ -99,7 +99,7 @@ jobs:
     name: Compose and first-party images
     runs-on: ubuntu-latest
     env:
-      LETTA_ENV_FILE: .env.example
+      ADE_ENV_FILE: .env.example
 
     steps:
       - name: Checkout repository
