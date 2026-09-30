@@ -1,6 +1,14 @@
 # Natural Memory Consultation Review
 
-Current consultation (2026-09-30): four returned reports are preserved unchanged.
+Current consultation (2026-09-30): the [story-retrieval review packet](character-story-retrieval-review-brief-2026-09-30.md)
+requests one independent critique of original-source admission, correction
+coverage and the evidence methodology after the native probe and two offline
+follow-ups. Reviewed source is pinned to `79852e6ee8c17f2efdd7492dfae6627d91d12c7d`;
+source and packet publication are verified separately for public GitHub access.
+The candidate remains unadopted and the native sequence remains closed. No
+reviewer dispatch, external-account use or new provider experiment is authorized.
+
+Previous character-contract consultation (2026-09-30): four returned reports are preserved unchanged.
 The [source-checked character-contract assessment](character-contract-assessment-2026-09-30.md)
 links both repository critiques and both research reports, records verification,
 and separates usable insights from proposed tests and unresolved product choices.

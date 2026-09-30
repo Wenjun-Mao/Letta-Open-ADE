@@ -13,10 +13,14 @@ trial worktrees while services or private evidence depend on them; do not keep
 developing there. Source integration/publication is not deployment or release
 qualification, and the existing verification and evidence gates still apply.
 
-Local commits are pre-approved by the user's 2026-09-30 direction. After each
-completed iteration, run proportional verification and commit its scoped changes
-without a separate approval request. Preserve unrelated work and report any
-verification gaps. Pushing and deployment remain separately authorized actions.
+Commits and normal pushes to the configured upstream are pre-approved defaults
+by the user's 2026-09-30 direction. After each completed iteration, run
+proportional verification, commit its scoped changes and push without a separate
+approval request. Preserve unrelated work, exclude credentials/private evidence,
+and report material verification or publication gaps. Do not force-push to resolve
+divergence. Deployment, live provider experiments and external-account use remain
+separately authorized actions. ADR 0048 records this supersession of the earlier
+local-commit-only approval.
 
 ## Keep One Owner
 

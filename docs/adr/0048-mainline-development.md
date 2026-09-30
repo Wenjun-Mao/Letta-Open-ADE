@@ -24,7 +24,26 @@ The user's subsequent 2026-09-30 direction pre-approves local commits and makes
 them the default after every completed, proportionally verified iteration.
 Do not repeatedly ask permission to record a local checkpoint. Scope each commit
 to the iteration, preserve unrelated work, and report material verification gaps.
-This replaces approval-per-commit, not the separate push or deployment boundary.
+That initial direction replaced approval-per-commit, not the then-separate push
+or deployment boundary. The publication amendment below supersedes only that
+push boundary; earlier findings retain their historical authorization statements.
+
+### Publication Amendment (2026-09-30)
+
+The user subsequently directed: "Take commit and push as default and pre-approved."
+After each completed, proportionally verified iteration, commit the scoped work
+and normally push to the configured upstream without another permission request.
+This prevents local-only evidence from blocking GitHub-only consultation and
+keeps the shared development baseline current. Retaining push-by-push approval
+was rejected by the user's explicit workflow choice.
+
+Inspect the outgoing scope and preserve unrelated work. Do not publish secrets,
+private captures or account-bound data as an incidental part of a source push.
+Check remote state and verify publication; report failures or divergence rather
+than force-pushing or silently rewriting history. For consultation, independently
+verify the exact anchor and required files at the reviewer's access level.
+This is source-publication authority, not deployment, release qualification,
+live provider experimentation, external-account operation or reviewer dispatch.
 
 ## Alternatives And Guardrails
 

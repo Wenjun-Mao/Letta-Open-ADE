@@ -15,6 +15,8 @@ character-continuity branch or create a new development worktree unless the user
 requests it. Existing trial worktrees may remain as operational dependencies;
 merging source does not authorize redeployment. See ADR 0048.
 
-Local commits are pre-approved and are the default after each completed,
-verified iteration. Commit the iteration's scoped changes without asking again;
-do not include unrelated work. This does not authorize pushing or deployment.
+Commits and normal pushes to the configured upstream are pre-approved defaults
+after each completed, verified iteration. Commit and push the iteration's scoped
+changes without asking again; do not include unrelated work or private evidence.
+This does not authorize force-pushes, deployment, live provider experiments or
+external-account use. See ADR 0048 for the publication guardrails.
