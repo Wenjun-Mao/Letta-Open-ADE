@@ -1,5 +1,12 @@
 # Natural Memory Consultation Review
 
+Current preparation (2026-09-30): [character voice and memory review draft](character-contract-review-brief-2026-09-30.md)
+requests one independent, source-grounded critique of character fiction,
+source-backed recall and combined instruction ownership. It includes balanced
+bounded observations and access limits. This is local preparation only: source
+publication and consultant handoff remain pending, with no product-contract
+change or implementation authorization. The reviews below are historical.
+
 The second implementation-plan reviews are back: [Round 2 A](reports/pro-plan-round2-a.md)
 and [Round 2 B](reports/pro-plan-round2-b.md). Both recommend bounded implementation.
 The [source-checked assessment](pro-plan-round2-assessment.md) records four focused
