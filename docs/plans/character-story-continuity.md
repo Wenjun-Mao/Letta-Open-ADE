@@ -36,19 +36,22 @@ pairs for four slots, and some groups require more than the current query needs.
 The candidate's eight flagged sources comprise one other-episode and seven
 unrelated selections. Historical fixtures, metric totals and the failed native
 gate are unchanged. The user approved preparing an independent packet-sufficiency
-audit, not another selector. Two returned annotations disclose prior ADE context;
-the clean-session gate remains unmet and new-control comparisons remain unrun.
+audit, not another selector. Two returned annotations disclose prior ADE context.
+After a replacement preflight failed, the user chose to use the existing Pro
+reports as non-blind diagnostic evidence under ADR 0055, not pursue an API review.
 
 ## Packet-Sufficiency Audit
 
-Status: **Preparation and returned-report review implemented; clean-session gate
-not satisfied.** The [workflow](../../workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/README.md)
+Status: **Non-blind diagnostic authorized; operative judgments frozen before
+comparison.** The [workflow](../../workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/README.md)
 freezes ten inputs and the neutral review packet. Five separate runtime-owned toy
 tests check realistic admission mechanics without selecting the new cases.
 The [assessment and receipt](../../workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/reports/assessment-2026-09-30.md)
 preserve two source-checked AI reports with prior-context disclosures, not qualified
-blind labels. The user explicitly chose to keep the gate and obtain one clean-
-session replacement; deliverables 3-5 remain gated. This is the single follow-up
+blind labels. The user subsequently chose the existing reports after another
+preflight failed and declined API substitution. [ADR 0055](../adr/0055-nonblind-packet-sufficiency-diagnostic.md)
+supersedes only the clean-session prerequisite for deliverables 3-5; the result
+must remain explicitly non-blind, synthetic and non-qualifying. This is the single follow-up
 plan; the native sequence remains closed and older deliverables remain historical.
 
 ### Decision And Scope
@@ -70,6 +73,12 @@ clean session, independent of fixture/selector authorship and explicitly labeled
 AI-reviewed, not human validation. Neither the authoring agent nor the already
 unblinded returned reviews count as fresh blind annotation. Prepare the handoff
 for this arrangement without automatically operating an external account.
+
+Amendment: that arrangement failed in the available review environment. The user
+now accepts the existing exposed-context Pro reports for a non-blind diagnostic,
+without API substitution or more review dispatches. Keep conditional/report-specific
+interpretations distinct and freeze them before new-control selection. The original
+clean-session evidence objective was not achieved and is not claimed retroactively.
 
 ### Ordered Deliverables
 

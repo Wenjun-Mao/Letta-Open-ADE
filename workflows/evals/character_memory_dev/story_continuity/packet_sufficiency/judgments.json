@@ -1,0 +1,103 @@
+{
+  "contract": "packet-sufficiency-nonblind-v1",
+  "status": "operator_transcription_of_exposed_context_ai_reports_before_new_control_selection",
+  "packet_commit": "a201ec0ed5ed20eda00c42983d1b4ebc504c5aca",
+  "report_sha256": {
+    "A": "051d099665f50900bff62362799d931be33e256bcb2bb145c59914f676de12f1",
+    "B": "a9a3e3f524d829b8455bdad16211178f01c0b39fe6be6423cae0d5419f7bfe77"
+  },
+  "interpretation": "Routes describe source support for specified claims under each report's full-ledger reading, not guaranteed model answers or self-contained adjudication. Conditional routes never become unconditional successes. Visibility and dependencies are separately assessed. Source relevance classes below are operator transcriptions, not original scorer labels.",
+  "cases": [
+    {
+      "id": "C01",
+      "answer_routes": [
+        {"id": "friday", "reports": ["A", "B"], "condition": null, "sets": [["E01"]]}
+      ],
+      "visibility": [{"id": "explicit_correction_with_named_day", "sets": [["E01", "E04"]]}],
+      "dependencies": [{"trigger": "E04", "id": "name_restored_day", "sets": [["E01"]], "condition": null}],
+      "optional": [{"id": "next_day_outcome", "sets": [["E06"]]}, {"id": "bag_detail", "sets": [["E07"]]}],
+      "other_episode": [], "unrelated": [],
+      "uncertainty": "Cross-chat correction reference is inferred, not native adjacency; concise Friday support does not expose its adjudication."
+    },
+    {
+      "id": "C02",
+      "answer_routes": [
+        {"id": "bag_contents", "reports": ["A", "B"], "condition": null, "sets": [["E01"], ["E03"], ["E04"], ["E05"], ["E06"]]},
+        {"id": "wet_corner", "reports": ["A", "B"], "condition": "Accept same-bag coreference across separate archived chats.", "sets": [["E02"]]}
+      ],
+      "visibility": [{"id": "new_disclosure_boundary", "sets": [["E02"]]}],
+      "dependencies": [{"trigger": "E02", "id": "explicit_cat_bag_anchor", "sets": [["E01"], ["E03"], ["E04"], ["E05"], ["E06"]], "condition": "Only under a stricter cross-chat anchoring reading."}],
+      "optional": [{"id": "wet_corner", "sets": [["E02"]]}],
+      "other_episode": [], "unrelated": ["E07"],
+      "uncertainty": "Contents-only responsiveness to 'special' is accepted by both reports but pragmatically debatable; E02-only binding is conditional."
+    },
+    {
+      "id": "C03",
+      "answer_routes": [{"id": "present_piano_choice", "reports": ["A", "B"], "condition": null, "sets": [[]]}],
+      "visibility": [], "dependencies": [], "optional": [],
+      "other_episode": [], "unrelated": ["E01", "E02", "E03", "E04", "E05", "E06"],
+      "uncertainty": "A new present choice is permitted, not invented retrospective user preference."
+    },
+    {
+      "id": "C04",
+      "answer_routes": [{"id": "unresolved_place_weather", "reports": ["A", "B"], "condition": null, "sets": [["E01", "E02"], ["E01", "E03"], ["E01", "E04"], ["E01", "E05"]]}],
+      "visibility": [{"id": "opposed_accounts", "sets": [["E01", "E02"], ["E01", "E03"], ["E01", "E04"], ["E01", "E05"]]}],
+      "dependencies": [], "optional": [], "other_episode": [], "unrelated": ["E06", "E07"],
+      "uncertainty": "Neither account is adjudicated true; a possible two-stage event is not supplied reconciliation."
+    },
+    {
+      "id": "C05",
+      "answer_routes": [{"id": "bounded_next_day_outcome", "reports": ["A", "B"], "condition": null, "sets": [["E01"], ["E02"], ["E03"], ["E04"], ["E05"]]}],
+      "visibility": [], "dependencies": [],
+      "optional": [{"id": "explicit_search", "sets": [["E02"], ["E04"]]}],
+      "other_episode": [], "unrelated": ["E06", "E07"],
+      "uncertainty": "B also accepts narrower departure-only wording; it changes no minimum complete-exchange set. Ultimate fate and shared search are unsupported."
+    },
+    {
+      "id": "C06",
+      "answer_routes": [{"id": "unresolved_place_weather", "reports": ["A", "B"], "condition": null, "sets": [["E01", "E02"], ["E01", "E03"], ["E01", "E04"], ["E01", "E05"], ["E01", "E06"]]}],
+      "visibility": [{"id": "opposed_accounts", "sets": [["E01", "E02"], ["E01", "E03"], ["E01", "E04"], ["E01", "E05"], ["E01", "E06"]]}],
+      "dependencies": [], "optional": [{"id": "next_day_search", "sets": [["E07"]]}],
+      "other_episode": [], "unrelated": [],
+      "uncertainty": "Different wording does not reconcile location and weather; E04's corrective force is ambiguous."
+    },
+    {
+      "id": "C07",
+      "answer_routes": [{"id": "not_shared", "reports": ["A", "B"], "condition": null, "sets": [["E01"], ["E02"], ["E03"], ["E04"], ["E05"], ["E06"]]}],
+      "visibility": [{"id": "proposal_and_refusal", "sets": [["E04"]]}],
+      "dependencies": [], "optional": [], "other_episode": [], "unrelated": ["E07"],
+      "uncertainty": "The shared-episode proposal is not user testimony; its refusal is optional explanation for the current participation answer."
+    },
+    {
+      "id": "C08",
+      "answer_routes": [
+        {"id": "named_day_conflict", "reports": ["A", "B"], "condition": null, "sets": [["E01", "E06"]]},
+        {"id": "withdrawal_and_reassertion", "reports": ["B"], "condition": "Interpret E05's deictic wording as withdrawing a pre-correction Saturday assertion across chats; A does not enumerate this route.", "sets": [["E02", "E05", "E06"], ["E03", "E05", "E06"], ["E04", "E05", "E06"]]}
+      ],
+      "visibility": [{"id": "restoration_then_opposition", "sets": [["E01", "E05", "E06"]]}],
+      "dependencies": [
+        {"trigger": "E05", "id": "name_original_day", "sets": [["E01"]], "condition": null},
+        {"trigger": "E05", "id": "identify_withdrawn_saturday", "sets": [["E02"], ["E03"], ["E04"]], "condition": "Needed only for the deictic withdrawal route, not the named-day conflict answer."}
+      ],
+      "optional": [], "other_episode": [], "unrelated": ["E07"],
+      "uncertainty": "Authority of explicit correction versus a subsequent unmarked contrary assertion remains unresolved. No unconditional weekday verdict is adopted."
+    },
+    {
+      "id": "C09",
+      "answer_routes": [{"id": "snow_first_encounter", "reports": ["A", "B"], "condition": null, "sets": [["E01"], ["E03"]]}],
+      "visibility": [], "dependencies": [], "optional": [],
+      "other_episode": ["E02", "E04", "E05", "E06"], "unrelated": ["E07"],
+      "uncertainty": "Second-encounter sunshine is not contradictory first-encounter weather."
+    },
+    {
+      "id": "C10",
+      "answer_routes": [
+        {"id": "first_bowl_later_cup", "reports": ["A", "B"], "condition": null, "sets": [["E05"]]},
+        {"id": "conditional_first_class_bowl", "reports": ["A", "B"], "condition": "Answer explicitly scopes or conditions the claim to the first class without assuming the current referent.", "sets": [["E01"]]}
+      ],
+      "visibility": [{"id": "explicit_episode_distinction", "sets": [["E05"]]}],
+      "dependencies": [], "optional": [], "other_episode": [], "unrelated": ["E07"],
+      "uncertainty": "Current occasion is unspecified even with all history. Generic cup text is neither explicitly later-scoped nor automatically a renewed first-class error."
+    }
+  ]
+}

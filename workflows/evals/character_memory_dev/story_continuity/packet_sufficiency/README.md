@@ -1,12 +1,18 @@
 # Packet-Sufficiency Audit
 
-Status (2026-09-30): **Two reports received; clean-session gate not satisfied.**
+Status (2026-09-30): **Non-blind diagnostic authorized; judgments frozen before comparison.**
 The user approved the [single follow-up plan](../../../../../docs/plans/character-story-continuity.md#packet-sufficiency-audit).
 The [returned-report assessment](reports/assessment-2026-09-30.md) preserves both
 originals and source checks; each reviewer disclosed inherited ADE context.
 Deliverable 1 and report capture/review in 2 are implemented. Qualifying labels,
 new-control selection results, a final readout and selector adoption remain absent.
 PC-03/04/05/06/09/10/11 remain unchanged; native turns 8-10 remain unrun.
+
+After a further preflight stopped before packet access, the user chose to use
+the existing Pro reports and declined API substitution. [ADR 0055](../../../../../docs/adr/0055-nonblind-packet-sufficiency-diagnostic.md)
+authorizes the remaining offline work as a non-blind diagnostic. `judgments.json`
+and its hash-bound loader transcribe the reports before new-control selections.
+The original freeze and receipt remain immutable; neither report becomes blind.
 
 ## Why This Layer
 
@@ -84,7 +90,7 @@ passed. No live service, database or provider verification was performed.
 
 ## Manual Handoff And Stop
 
-Current stop: the returned reports are advisory AI evidence, not certified blind
+Historical stop (superseded for diagnostic use by ADR 0055): the returned reports are advisory AI evidence, not certified blind
 annotations. Do not run the new-control comparison while the clean-session
 requirement is unresolved. The user explicitly chose on 2026-09-30 to keep the
 gate and obtain one clean-session replacement, not a non-blind diagnostic.

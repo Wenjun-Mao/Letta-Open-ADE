@@ -1,5 +1,11 @@
 # Returned Annotation Assessment
 
+Subsequent decision: after the replacement preflight also reported inherited
+context and stopped, the user declined API substitution and chose the existing
+reports. ADR 0055 permits a **non-blind diagnostic**, not retroactive clean-session
+qualification. The historical gate assessment below remains accurate. Operative
+judgments are separately frozen in `../judgments.json` before new-control selection.
+
 Status: **Source-checked advisory AI annotations; clean-session gate not met.**
 This is the operator assessment, separate from the unchanged [report A](annotation-a-2026-09-30.md)
 and [report B](annotation-b-2026-09-30.md). The [receipt](receipt-2026-09-30.json)
