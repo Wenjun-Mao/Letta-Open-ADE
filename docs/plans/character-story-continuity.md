@@ -9,8 +9,8 @@ authorization. Subsequent normal commits/pushes are pre-approved under ADR 0048;
 retained-trial access, deployment and release remain separately gated.
 Work serially on the primary `main` checkout.
 
-Current next step: **Correction-dependency measurement proposed for review;
-not implemented or approved to run.** Planning does not reopen native work.
+Current next step: **Correction-dependency measurement approved for offline
+implementation; input/label freeze in preparation.** Native work stays closed.
 
 Native outcome: [seven turns delivered; stopped at turn 7's original-source
 admission gate](../findings/natural-memory-consultation/character-story-native-2026-09-30.md).
@@ -67,9 +67,11 @@ scorecards, packet artifacts and the native stop are not revised or rebound.
 
 ## Correction-Dependency Measurement
 
-Status: **Proposed bounded offline work, awaiting implementation approval.**
+Status: **User approved implementation; preparing the pre-selection freeze.**
 PC-01/03/04/05/06/09/10/11 remain unchanged. Retain the baseline and leave the
 novelty candidate unadopted. This is a measurement, not a retrieval fix.
+[ADR 0056](../adr/0056-matched-correction-dependency-measurement.md) records the
+bounded evidence contract and the user's internal Relay-delegation authorization.
 
 ### Question And Layer
 
@@ -202,7 +204,7 @@ The study ends with that readout. Small authored cases, known prior results and
 literal-only scoring limit generalization; lexical wording changes also affect
 relevance. Native generation, reviewer interpretation, naturalness, persistence,
 reader eligibility and production retrieval remain unmeasured. No provider/API
-calls, external-account operations, new chats/agents, prompt or runtime changes,
+calls, external-account/review operations, new user chats, prompt or runtime changes,
 episode store, semantic keyword rules, deployment or native turns 8-10. A later
 runtime/evidence-contract change needs its own approval and concise ADR; this
 plan makes none and does not extend ADR 0055's historical report authorization.

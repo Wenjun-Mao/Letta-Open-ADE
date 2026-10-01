@@ -1,0 +1,107 @@
+{
+  "contract": "correction-dependencies-judgments-v1",
+  "annotation_kind": "nonblind_author_agent_before_new_case_scoring",
+  "exposure": "The author knows the existing selectors and earlier diagnostic results. These are fresh constructed inputs, not blind or independent labels. Existing Pro reports informed the rubric only and did not annotate these cases.",
+  "interpretation": "In each complete ledger, E07 explicitly acknowledges later retelling mistakes and restores E01. No user supplies a replacement value, and no later episode assertion disputes the restoration. Named-value answer support is distinct from correction explanation and visibility of historical mistaken statements. Deletion challenges are set-relative; another source can substitute for an answer route.",
+  "families": [
+    {
+      "id": "P01",
+      "cases": {"self_contained": "D01", "antecedent_dependent": "D02"},
+      "minimum_answer": "The bookmark was found on Monday, without claiming the user was present or that every retelling already agreed.",
+      "restored_value": "周一",
+      "mistaken_value": "周三",
+      "quotes": [
+        {"source": "E01", "role": "assistant", "text": "那是周一下班后，我独自在公交站等车时捡到一枚银色书签。"},
+        {"source": "E02", "role": "assistant", "text": "公交站捡到银色书签是在周三，下班等车时看见的。"},
+        {"source": "E03", "role": "assistant", "text": "我下班经过公交站，在周三捡起那枚银色书签。"},
+        {"source": "E04", "role": "assistant", "text": "银色书签是周三在公交站捡到的，我当时刚下班。"},
+        {"source": "E05", "role": "assistant", "text": "想起来了，下班时在公交站看到银色书签，那天是周三。"},
+        {"source": "E06", "role": "assistant", "text": "我把银色书签夹在一本旧小说里，下班回家后发现它背面还有一小块划痕。"},
+        {"source": "E07", "role": "assistant", "variant": "self_contained", "text": "我后来把公交站捡到银色书签的日期说错了：不是周三，是周一，最初的说法才对。"},
+        {"source": "E07", "role": "assistant", "variant": "antecedent_dependent", "text": "我后来把公交站捡到银色书签的日期说错了：不是周三，是最初说的那天，最初的说法才对。"}
+      ],
+      "answer_routes": {"self_contained": [["E01"], ["E07"]], "antecedent_dependent": [["E01"]]},
+      "correction_explanation": {"self_contained": [["E07"]], "antecedent_dependent": [["E01", "E07"]]},
+      "correction_intent": [["E07"]],
+      "mistaken_retelling": [["E02"], ["E03"], ["E04"], ["E05"]],
+      "optional_detail": [["E06"]],
+      "unrelated": ["E08"],
+      "other_episode": [],
+      "dependency": {"trigger": "E07", "antecedent": "E01", "variant": "antecedent_dependent", "necessity": "Needed to name the value from the admitted referential correction, not for an original-only named answer."},
+      "deletion_challenges": [
+        {"sources": ["E01"], "remove": "E01", "loss": "No named weekday remains in this answer route. Self-contained E07 is a substitute only in D01."},
+        {"sources": ["E07"], "remove": "E07", "variant": "self_contained", "loss": "The named corrected weekday and acknowledged error disappear from this route; E01 can still substitute for the bare answer."},
+        {"sources": ["E01", "E07"], "remove": "E01", "variant": "antecedent_dependent", "loss": "E07 withdraws Wednesday but its restored weekday cannot be named."},
+        {"sources": ["E01", "E07"], "remove": "E07", "variant": "antecedent_dependent", "loss": "Monday remains named, but the acknowledgment and restoration of the mistaken retellings disappear."}
+      ],
+      "forbidden_attribution": "E01 says she was alone; no user turn claims participation. Do not invent user presence, user factual history or prior disclosure beyond supplied transcript.",
+      "uncertainty": []
+    },
+    {
+      "id": "P02",
+      "cases": {"self_contained": "D03", "antecedent_dependent": "D04"},
+      "minimum_answer": "The wind chime was outside the old bookshop, without inventing shared participation or presenting the tea-house retellings as settled.",
+      "restored_value": "旧书店门口",
+      "mistaken_value": "茶馆",
+      "quotes": [
+        {"source": "E01", "role": "assistant", "text": "那晚我独自散步，在旧书店门口看见一串木制风铃，风吹起来声音很轻。"},
+        {"source": "E02", "role": "assistant", "text": "那晚看到木制风铃是在茶馆里，挂得不高。"},
+        {"source": "E03", "role": "assistant", "text": "我那晚在茶馆里看到的木制风铃，细绳上串了几片小木块。"},
+        {"source": "E04", "role": "assistant", "text": "对，那晚我走进茶馆，才注意到里面那串木制风铃。"},
+        {"source": "E05", "role": "assistant", "text": "茶馆里那串木制风铃的轻响，让我想起小时候用木片做的小玩具。"},
+        {"source": "E06", "role": "assistant", "text": "木制风铃的细绳上系着一小段蓝线，木片的边缘磨得很圆。"},
+        {"source": "E07", "role": "assistant", "variant": "self_contained", "text": "我后来把那晚看到木制风铃的地方说错了：不是茶馆里，是旧书店门口，最初的说法才对。"},
+        {"source": "E07", "role": "assistant", "variant": "antecedent_dependent", "text": "我后来把那晚看到木制风铃的地方说错了：不是茶馆里，是最初说的那个地方，最初的说法才对。"}
+      ],
+      "answer_routes": {"self_contained": [["E01"], ["E07"]], "antecedent_dependent": [["E01"]]},
+      "correction_explanation": {"self_contained": [["E07"]], "antecedent_dependent": [["E01", "E07"]]},
+      "correction_intent": [["E07"]],
+      "mistaken_retelling": [["E02"], ["E03"], ["E04"], ["E05"]],
+      "optional_detail": [["E06"]],
+      "unrelated": ["E08"],
+      "other_episode": [],
+      "dependency": {"trigger": "E07", "antecedent": "E01", "variant": "antecedent_dependent", "necessity": "Needed to identify the restored place from the referential correction, not for an original-only answer."},
+      "deletion_challenges": [
+        {"sources": ["E01"], "remove": "E01", "loss": "The bookshop location disappears from this answer route. Self-contained E07 can substitute only in D03."},
+        {"sources": ["E07"], "remove": "E07", "variant": "self_contained", "loss": "The corrected location and acknowledged error disappear from this route; E01 still supports the bare place."},
+        {"sources": ["E01", "E07"], "remove": "E01", "variant": "antecedent_dependent", "loss": "The tea-house account is withdrawn, but the restored place is unnamed."},
+        {"sources": ["E01", "E07"], "remove": "E07", "variant": "antecedent_dependent", "loss": "The bookshop remains named, but the explicit correction of later retellings disappears."}
+      ],
+      "forbidden_attribution": "E01 describes a solo walk. No supplied user text establishes presence or a shared physical encounter; richer decoration cannot be backdated as earlier disclosure.",
+      "uncertainty": []
+    },
+    {
+      "id": "P03",
+      "cases": {"self_contained": "D05", "antecedent_dependent": "D06"},
+      "minimum_answer": "The snack was sesame flatbread, without attributing her solo ferry trip or snack to the user.",
+      "restored_value": "芝麻饼",
+      "mistaken_value": "栗子糕",
+      "quotes": [
+        {"source": "E01", "role": "assistant", "text": "那次我独自去码头赶渡轮，带的是芝麻饼，还装了一瓶温水。"},
+        {"source": "E02", "role": "assistant", "text": "我赶渡轮带的点心是栗子糕，怕路上饿。"},
+        {"source": "E03", "role": "assistant", "text": "赶渡轮那次，我先把栗子糕放进袋子，当作路上的点心。"},
+        {"source": "E04", "role": "assistant", "text": "不是，我那次赶渡轮带了栗子糕作点心，还提着装温水的瓶子。"},
+        {"source": "E05", "role": "assistant", "text": "那次赶渡轮的时候，我带的栗子糕是留到船上吃的点心。"},
+        {"source": "E06", "role": "assistant", "text": "点心放在蓝色布袋里，和那瓶温水挨着，袋口折了一下。"},
+        {"source": "E07", "role": "assistant", "variant": "self_contained", "text": "我后来把那次赶渡轮带的点心说错了：不是栗子糕，是芝麻饼，最初的说法才对。"},
+        {"source": "E07", "role": "assistant", "variant": "antecedent_dependent", "text": "我后来把那次赶渡轮带的点心说错了：不是栗子糕，是最初说的那种点心，最初的说法才对。"}
+      ],
+      "answer_routes": {"self_contained": [["E01"], ["E07"]], "antecedent_dependent": [["E01"]]},
+      "correction_explanation": {"self_contained": [["E07"]], "antecedent_dependent": [["E01", "E07"]]},
+      "correction_intent": [["E07"]],
+      "mistaken_retelling": [["E02"], ["E03"], ["E04"], ["E05"]],
+      "optional_detail": [["E06"]],
+      "unrelated": ["E08"],
+      "other_episode": [],
+      "dependency": {"trigger": "E07", "antecedent": "E01", "variant": "antecedent_dependent", "necessity": "Needed to identify the snack from the referential correction, not for an original-only named snack answer."},
+      "deletion_challenges": [
+        {"sources": ["E01"], "remove": "E01", "loss": "The sesame snack disappears from this answer route. Self-contained E07 can substitute only in D05."},
+        {"sources": ["E07"], "remove": "E07", "variant": "self_contained", "loss": "The corrected snack and acknowledged error disappear from this route; E01 still supports the bare snack."},
+        {"sources": ["E01", "E07"], "remove": "E01", "variant": "antecedent_dependent", "loss": "E07 withdraws the chestnut snack but leaves its replacement unnamed."},
+        {"sources": ["E01", "E07"], "remove": "E07", "variant": "antecedent_dependent", "loss": "The sesame snack remains named, but acknowledgment of the later mistake disappears."}
+      ],
+      "forbidden_attribution": "E01 says she went alone. The warm water and bag are optional detail, not evidence of user participation or a new user preference.",
+      "uncertainty": []
+    }
+  ]
+}

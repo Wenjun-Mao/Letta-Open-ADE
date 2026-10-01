@@ -1,0 +1,49 @@
+{
+  "contract": "correction-dependencies-input-v1",
+  "source_commit": "1896a5b0d5c0a0fbc95006a9f8691eb1ec0cc34b",
+  "stage": "nonblind_author_labels_before_new_case_scoring",
+  "case_count": 6,
+  "pair_count": 3,
+  "inputs": {
+    "corpus": {"path": "cases.json", "sha256": "9ea6003c0028d5c9194161104ffdd44c4daca41613ca852ee9cbd3654305b0f8"},
+    "context": {"path": "context.json", "sha256": "875a87156145fdd09ac4aca4e782b21731b2692dac2164b17ee8c222f6fe9309"},
+    "judgments": {"path": "judgments.json", "sha256": "cd729a0e2b2a2454cb315fb422afb1151a1abd6fcb12c4cf78a0b0be0723307d"}
+  },
+  "runtime_sources": {
+    "services/ade-api/src/ade_api/features/agent_runtime/context.py": "c46c504e5240dce4aabb4b6a63ca8fea73effe8ce5c05f40c1c024231108a7b6",
+    "services/ade-api/src/ade_api/features/agent_runtime/executor.py": "02efb8e8f969628066b163ae65b79149da072d429d43f76f66b42c8348aa53ff",
+    "services/ade-api/src/ade_api/features/agent_runtime/natural_context.py": "ccbbb0fe25674363f79bd3e2f11ae839c5ec363754c3c7eda762d61cbe3b1184",
+    "services/ade-api/src/ade_api/features/agent_runtime/history_capacity.py": "6610ad7fd9a8f7761deb0cf6a949e267e1827a719889f00ae03968d99883ade4",
+    "services/ade-api/src/ade_api/features/agent_runtime/history_admission.py": "1caf41800519279d8a50926afbdd1fc31689d5487575ebdb5e6fc992e45b18b2",
+    "services/ade-api/src/ade_api/features/agent_runtime/history_ranking.py": "449066f3ddd28284cfb43c0920b8bf29cc82cfa61c5fd6bd365931ddbe4cbedc",
+    "services/ade-api/src/ade_api/features/agent_runtime/natural_memory_reviewer.py": "8bfffe28941dda714222ba0ca109f9b976c47d611618669a7aeee7148f8d1c5b",
+    "services/ade-api/src/ade_api/features/agent_runtime/natural_memory_binding.py": "685ed8edcc5298b992baaf6643ce116842526ac744c34e06a3610b15e5335424",
+    "workflows/evals/character_memory_dev/story_continuity/retrieval_diversity/selector.py": "3c092c759ffd44bbd849593577330f4382525dfcdf62000ec444795ac7272a46"
+  },
+  "historical_artifacts": {
+    "workflows/evals/character_memory_dev/story_continuity/retrieval_diversity/cases.json": "37bdb1405a2373174915f43335b775a7b2f85a0d43666ee6b9e4b11b027e8e5b",
+    "workflows/evals/character_memory_dev/story_continuity/retrieval_diversity/observed.json": "d4152359ff97945f07ef120f52afabe3fadd15417e53a410d03eb05d2cf68fbf",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/freeze.json": "5d1b78ad0a3c369ae88cf124656b96186a7d440ed84453b0525c41805fd7601d",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/controls.json": "8f595f3f14268c1bbc6956d317d0ea6ec74e0f514f9e3e24221825feee52bbfc",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/context.json": "cc116dc5fd5c5f9d322d4225a1f8055ead7d12ad47d50b7747e2d08a7390aaf0",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/mapping.json": "ba7bd813310c328a002adbe4c88e461eda01d45c4845187e8d4fa08842f7fcd9",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/RUBRIC.md": "62581196a12f62797347110d6ad1bec6eb53d509c312cc2ac34ba26194ff6799",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/REVIEW_PACKET.md": "1cfb78f539c3c7a670e60f7132d870acf142b3a718f5c4be126422b9a9336794",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/judgments.json": "af4931509e356e45d2151fd0d54e9e0105be7a54131b3571a8b88053e530b817",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/comparison.json": "46733bab8a70eb79d0ef2395d43812dde6a165fcb2916879304e8783b4efbe94",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/packets.jsonl": "28a5579513a0cd92db16de5c5513081afa649374a50da64a17badf0351708651",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/READOUT.md": "7784e5724ad7c3242340864e5530d1157300dcce2f6d9bf9b629a02dd905652b",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/reports/annotation-a-2026-09-30.md": "051d099665f50900bff62362799d931be33e256bcb2bb145c59914f676de12f1",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/reports/annotation-b-2026-09-30.md": "a9a3e3f524d829b8455bdad16211178f01c0b39fe6be6423cae0d5419f7bfe77",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/reports/receipt-2026-09-30.json": "c8aca3dcc779472cfba9ad4b7be14c5440df67ec775ac872935b66d1a03aa3e0",
+    "workflows/evals/character_memory_dev/story_continuity/packet_sufficiency/reports/assessment-2026-09-30.md": "e90c2d37dc30a87d01689341105a091d241816f13077d8673ce7437b60df6fbd"
+  },
+  "capacity": {
+    "generation_input_tokens": 11213,
+    "reviewer_input_tokens": 11469,
+    "generation_output_reserve_tokens": 4096,
+    "reviewer_output_tokens": 4096,
+    "shared_suffix_tokens": 640,
+    "maximum_windows": 4
+  }
+}

@@ -52,6 +52,7 @@ record's status notice before applying its original execution details.
 | [0053](0053-private-evaluation-observations.md) | Versioned private full-state and bounded history-omission observations; required for PC-11 evidence, not a public API or live qualification. |
 | [0054](0054-bounded-native-story-probe.md) | Separate approved native PC-11 runner: clean source, owned services, immutable one-attempt receipts and human annotation frontiers. |
 | [0055](0055-nonblind-packet-sufficiency-diagnostic.md) | Existing exposed-context Pro reports may support a bounded non-blind offline diagnostic, not blind or runtime qualification. |
+| [0056](0056-matched-correction-dependency-measurement.md) | Pre-outcome matched correction pairs with explicit non-blind author labels and single-dialogue topology; unchanged selectors and no runtime adoption. |
 
 ## Historical, Retired, Or On Hold
 

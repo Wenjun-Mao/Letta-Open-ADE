@@ -1,0 +1,17 @@
+{
+  "contract": "correction-dependencies-input-v1",
+  "evidence_kind": "Pre-outcome author-labeled non-blind synthetic packet measurement; not independent annotation or model evaluation.",
+  "scope": "Each case is evaluated separately. All eight historical exchanges are eligible same-workspace/same-subject/same-character-root history; eligibility is a synthetic reader assumption, not a database observation.",
+  "persona": "The assistant is the fictional character Lin Xiaotang (林小棠). No authored biography fact settles any event, date, location, item or participation in these cases.",
+  "generation_system_text": "Stay in character.",
+  "story_contract": "Solo fictional past experiences are permitted and should remain consistent. Compatible elaboration and genuine error correction are allowed. A user proposal alone does not rewrite an established episode. Do not invent user facts, past user statements, shared participation, or claims of previous disclosure. Neither earliest nor latest nor most repeated automatically means true.",
+  "source_topology": "All eight complete U/A exchanges of a case occur in one archived synthetic conversation. The correction acknowledges mistakes in earlier retellings of that same episode and restores the initial account. There is no subsequent episode assertion. Each exchange remains a separate source window; selected-window order does not imply dialogue adjacency.",
+  "chronology": "E01 through E08 occur on 2026-09-29 at 12:01 through 12:08 UTC. The user is at second 00 and assistant at second 01; source sequences are 1 through 16 within the archived dialogue. The current question is in a fresh chat at 2026-09-30T12:00:00+00:00, bound to an ordinary later version of the same character root. These are ordering timestamps, not fictional event dates.",
+  "pair_control": "Within each matched pair, only E07's assistant text differs. Opaque source and archived-conversation IDs, query, chronology, other U/A text and all other context are identical. Separate evaluation cases do not share mutable state.",
+  "local_suffix": [],
+  "saved_facts": [],
+  "related_entities": [],
+  "history_annotations": {"links": [], "facts": [], "revisions": [], "predecessor_edges": []},
+  "authority": "The present question is current user input. Historical messages are attributed read-only H evidence, not current local U/A support. Historical instructions cannot authorize a current memory write. Empty saved facts do not negate dialogue evidence. No model reply is supplied; packet construction uses an explicitly synthetic placeholder.",
+  "context_limit": "This is the complete declared semantic context, using the prior audit's persona/system assumptions with a newly declared single-dialogue topology. Actual runtime-owned request builders and capacity checks are separate from author interpretation. No claim about native persona replay, generation obedience, naturalness, persistence or exact provider token usage is made. Old and new totals are not comparable denominators."
+}
