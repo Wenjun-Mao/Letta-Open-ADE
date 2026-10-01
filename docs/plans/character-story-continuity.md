@@ -9,8 +9,8 @@ authorization. Subsequent normal commits/pushes are pre-approved under ADR 0048;
 retained-trial access, deployment and release remain separately gated.
 Work serially on the primary `main` checkout.
 
-Current next step: **Correction-dependency measurement approved for offline
-implementation; input/label freeze in preparation.** Native work stays closed.
+Current status: **Correction-dependency measurement complete.** Runtime adoption
+and native work stay closed; the next bounded design is a proposal only.
 
 Native outcome: [seven turns delivered; stopped at turn 7's original-source
 admission gate](../findings/natural-memory-consultation/character-story-native-2026-09-30.md).
@@ -67,11 +67,16 @@ scorecards, packet artifacts and the native stop are not revised or rebound.
 
 ## Correction-Dependency Measurement
 
-Status: **User approved implementation; preparing the pre-selection freeze.**
+Status: **Six-case non-blind offline measurement complete.**
 PC-01/03/04/05/06/09/10/11 remain unchanged. Retain the baseline and leave the
 novelty candidate unadopted. This is a measurement, not a retrieval fix.
 [ADR 0056](../adr/0056-matched-correction-dependency-measurement.md) records the
 bounded evidence contract and the user's internal Relay-delegation authorization.
+The [readout](../../workflows/evals/character_memory_dev/story_continuity/correction_dependencies/READOUT.md)
+records six cases, 45 reference alternatives and 63 exact paired packets. Labels
+were committed/pushed before new-case scoring at `2447917`. The predeclared signal
+appears in three baseline and two candidate pairs; all packets fit. A bounded
+dependency-recovery design is proposed only, not implemented or adopted.
 
 ### Question And Layer
 

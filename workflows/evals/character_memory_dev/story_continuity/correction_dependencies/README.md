@@ -1,10 +1,15 @@
 # Correction-Dependency Measurement
 
-Status: **Inputs and non-blind author judgments prepared before selection.**
+Status: **Non-blind matched measurement complete; runtime unchanged.**
 The user approved the [bounded plan](../../../../../docs/plans/character-story-continuity.md#correction-dependency-measurement).
 This is an offline evidence-availability experiment, not a retrieval fix,
 independent review, native model evaluation or runtime adoption. PC-01/03/04/05/06/09/10/11
 remain unchanged. The baseline is retained and the novelty candidate is unadopted.
+The [readout](READOUT.md) records all six cases, 45 reference alternatives and 63
+exact paired packets. The repeated dependency-specific signal occurs in three
+baseline pairs and two candidate pairs; it supports a bounded design proposal
+only, not adoption. Input/label commit `2447917ddd979a8459d23e1998c421aa22f196bf`
+preceded the first new-case score or selection.
 
 ## Frozen Inputs And Ownership
 
@@ -42,7 +47,7 @@ The input/label freeze must be committed and pushed before any new-case scoring
 or selection. No variant search, scorer tuning, slot increase, prompt change,
 episode store, semantic keyword rule or native continuation is authorized.
 
-Stage-one verification from the repository root, without selectors or providers:
+Historical stage-one verification ran before comparison, without selectors or providers:
 
 ```sh
 uv run --locked python -m pytest workflows/evals/character_memory_dev/story_continuity/correction_dependencies/tests/test_inputs.py -q
@@ -72,4 +77,4 @@ or API calls, external account/review operation, native turns 8-10 or deployment
 The user's Relay request permits internal read-only technical review; that does
 not create independent semantic annotations. Keep the study explicitly non-blind
 and synthetic, with generation, naturalness, reviewer interpretation, persistence
-and production retrieval unmeasured. Final results will be recorded in `READOUT.md`.
+and production retrieval unmeasured. Final results and verification are in `READOUT.md`.

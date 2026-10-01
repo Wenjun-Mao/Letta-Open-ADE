@@ -41,7 +41,15 @@ under the user's non-blind amendment after clean-session review proved unavailab
 Frozen Pro judgments precede new-control selection. The candidate recovers opposed
 evidence in a varied-retelling case but fails the new antecedent case; all 68
 packets fit unchanged limits. It remains unadopted. No native model quality or
-successful blind audit is claimed, and no further probe is launched.
+successful blind audit is claimed, and that result did not authorize another probe.
+
+The user separately approved the [matched correction-dependency measurement](correction_dependencies/READOUT.md).
+Its six fresh cases and pre-selection author labels remain explicitly non-blind.
+All 63 packets fit. The baseline loses the named referent in three matched pairs;
+the novelty candidate does so in two, despite admitting each correction. This
+supports a bounded design proposal, not selector adoption, a completed retrieval
+fix or reopening native work. The workflow and exact reproduction commands are
+in [correction_dependencies](correction_dependencies/README.md).
 
 ## Entrypoint And Freeze
 

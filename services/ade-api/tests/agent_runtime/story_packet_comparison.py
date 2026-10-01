@@ -5,14 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 
-from ade_api.features.agent_runtime.context import (
-    ConversationHistoryMetadata,
-    estimate_tokens,
-)
-from ade_api.features.agent_runtime.executor import initial_conversation_request
 from ade_api.features.agent_runtime.history_admission import (
     MAX_ADMITTED_WINDOWS,
-    admit_history,
 )
 from ade_api.features.agent_runtime.history_capacity import (
     CONVERSATION_BUDGET,
@@ -24,12 +18,6 @@ from ade_api.features.agent_runtime.history_ranking import (
     literal_score,
     query_text,
     rank_windows,
-)
-from ade_api.features.agent_runtime.natural_context import build_natural_context
-from ade_api.features.agent_runtime.natural_memory_reviewer import (
-    natural_review_request,
-    preflight_reviewer_bundle,
-    reviewer_suffix_limit,
 )
 from workflows.evals.character_memory_dev.story_continuity.packet_sufficiency.judgments import (
     JUDGMENTS_SHA256,
@@ -48,17 +36,14 @@ from workflows.evals.character_memory_dev.story_continuity.retrieval_diversity.s
 )
 
 
+# Keep pytest's importlib package and the documented standalone CLI on one builder.
+if __package__:
+    from .story_packet_builder import build_history_packet, digest, wire
+else:
+    from story_packet_builder import build_history_packet, digest, wire
+
+
 LABEL_COMMIT = "bed18094eaaeabe66c5d754cb098fcccf29ec952"
-MODEL = "deepseek::deepseek-flash"
-ADAPTER = "deepseek_openai"
-
-
-def wire(value):
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-
-
-def digest(value):
-    return hashlib.sha256(wire(value).encode()).hexdigest()
 
 
 def select(case):
@@ -103,7 +88,6 @@ def exchanges(case, context):
 
 
 def build_packet(case, context, selected):
-    assert len(selected) == len(set(selected)) <= MAX_ADMITTED_WINDOWS
     current = {
         "id": f"{case['id']}-current",
         "role": "user",
@@ -111,110 +95,12 @@ def build_packet(case, context, selected):
         "sequence": 1,
         "created_at": "2026-09-30T12:00:00+00:00",
     }
-    suffix_limit = reviewer_suffix_limit(
-        model_key=MODEL,
-        provider_adapter=ADAPTER,
-        current_user_message=current,
-        facts=[],
-        entities=[],
-        input_token_limit=REVIEWER_BUDGET.input_limit,
-        candidate_reply_reserve=CONVERSATION_BUDGET.max_output_tokens,
-        history_capable=True,
+    return build_history_packet(
+        current=current,
+        context=context,
+        sources=exchanges(case, context),
+        selected=selected,
     )
-    base = build_natural_context(
-        variant="B",
-        system_prompt=context["generation_system_text"],
-        persona=context["persona"],
-        current_user=current,
-        eligible_recent_messages=[],
-        lifecycle_facts=[],
-        retrieved_facts=[],
-        entities=[],
-        summary_content="",
-        history_metadata=ConversationHistoryMetadata(
-            completed_user_turns=0, summary_through_sequence=0
-        ),
-        budget=CONVERSATION_BUDGET,
-        reviewer_suffix_limit=suffix_limit,
-        shared_suffix_token_limit=640,
-    )
-    assert list(base.source_messages) == [current]
-    by_id = exchanges(case, context)
-    admission = admit_history(
-        base=base.context,
-        ranked_exchanges=[by_id[source_id] for source_id in selected],
-        current_user=current,
-        source_messages=[current],
-        facts=[],
-        entities=[],
-        generation_model_key=MODEL,
-        generation_adapter=ADAPTER,
-        generation_tools={},
-        generation_input_limit=CONVERSATION_BUDGET.input_limit,
-        generation_max_output_tokens=CONVERSATION_BUDGET.max_output_tokens,
-        reviewer_model_key=MODEL,
-        reviewer_adapter=ADAPTER,
-        reviewer_input_limit=REVIEWER_BUDGET.input_limit,
-        reviewer_max_output_tokens=REVIEWER_BUDGET.max_output_tokens,
-    )
-    review_args = dict(
-        model_key=MODEL,
-        provider_adapter=ADAPTER,
-        current_user_message=current,
-        source_messages=[current],
-        facts=[],
-        entities=[],
-        history_exchanges=list(admission.exchanges),
-        history_capable=True,
-        max_output_tokens=REVIEWER_BUDGET.max_output_tokens,
-    )
-    projected = preflight_reviewer_bundle(
-        **review_args,
-        candidate_reply_reserve=CONVERSATION_BUDGET.max_output_tokens,
-        input_token_limit=REVIEWER_BUDGET.input_limit,
-    )
-    generation = initial_conversation_request(
-        model_key=MODEL,
-        messages=admission.context.messages,
-        max_output_tokens=CONVERSATION_BUDGET.max_output_tokens,
-        tools={},
-        provider_adapter=ADAPTER,
-    )
-    review = natural_review_request(
-        **review_args,
-        candidate_reply="Synthetic packet audit only; no model response was generated.",
-    )
-    reviewer_packet = json.loads(review["messages"][1]["content"])
-    history = reviewer_packet["history"]
-    system = generation["messages"][0]["content"]
-    assert reviewer_packet["eligible_support"] == []
-    if history:
-        assert (
-            json.loads(system.split("Historical evidence (read-only):\n", 1)[1])
-            == history
-        )
-    else:
-        assert "Historical evidence (read-only):\n" not in system
-    assert (
-        estimate_tokens(wire(generation))
-        == admission.context.estimated_input_tokens
-        <= 11213
-    )
-    assert projected <= 11469
-    run_to_id = {exchange["run_id"]: source_id for source_id, exchange in by_id.items()}
-    admitted = [run_to_id[exchange["run_id"]] for exchange in admission.exchanges]
-    return {
-        "selected": selected,
-        "admitted": admitted,
-        "omitted_capacity": [
-            run_to_id[run_id] for run_id in admission.omitted_capacity
-        ],
-        "generation_input_estimate": admission.context.estimated_input_tokens,
-        "reviewer_input_with_full_reply_reserve": projected,
-        "history_equal": True,
-        "generation_sha256": digest(generation),
-        "reviewer_sha256": digest(review),
-    }, {"generation": generation, "reviewer": review}
 
 
 def compact_assessment(judgment, admitted):
