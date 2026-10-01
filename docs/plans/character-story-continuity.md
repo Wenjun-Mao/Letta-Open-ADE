@@ -9,6 +9,9 @@ authorization. Subsequent normal commits/pushes are pre-approved under ADR 0048;
 retained-trial access, deployment and release remain separately gated.
 Work serially on the primary `main` checkout.
 
+Current next step: **Correction-dependency measurement proposed for review;
+not implemented or approved to run.** Planning does not reopen native work.
+
 Native outcome: [seven turns delivered; stopped at turn 7's original-source
 admission gate](../findings/natural-memory-consultation/character-story-native-2026-09-30.md).
 All seven kept user-memory state unchanged. Early story behavior was consistent;
@@ -57,123 +60,161 @@ preserve two source-checked AI reports with prior-context disclosures, not quali
 blind labels. The user subsequently chose the existing reports after another
 preflight failed and declined API substitution. [ADR 0055](../adr/0055-nonblind-packet-sufficiency-diagnostic.md)
 supersedes only the clean-session prerequisite for deliverables 3-5; the result
-must remain explicitly non-blind, synthetic and non-qualifying. This is the single follow-up
-plan; the native sequence remains closed and older deliverables remain historical.
+must remain explicitly non-blind, synthetic and non-qualifying. The completed
+procedure is preserved in the workflow and readout, not pending work below.
+This remains the single PC-11 plan; historical inputs, reports, judgments,
+scorecards, packet artifacts and the native stop are not revised or rebound.
 
-### Decision And Scope
+## Correction-Dependency Measurement
 
-Determine whether a missing passage changes the claims justified by the actual
-question and complete supplied context, rather than merely reducing designated
-source coverage. PC-03/04/05/06/09/10/11 remain unchanged. Retain the current runtime
-and candidate status throughout; the audit may legitimately justify stopping.
+Status: **Proposed bounded offline work, awaiting implementation approval.**
+PC-01/03/04/05/06/09/10/11 remain unchanged. Retain the baseline and leave the
+novelty candidate unadopted. This is a measurement, not a retrieval fix.
 
-Frozen ceiling: the eight frozen diversity cases, unchanged, plus two new
-pre-frozen Mandarin wording controls. One replaces exact wrong-echo copies with
-nonidentical retellings without repeating the target query; one tests a minimal,
-high-overlap correction with a necessary antecedent. Both new decision-critical
-corpora must contain more than four distinct plausible source texts. This is an
-audit of a bounded set, not a search for a winning formula or a new benchmark.
+### Question And Layer
 
-Reviewer arrangement selected by the user: a fresh external AI reviewer in a
-clean session, independent of fixture/selector authorship and explicitly labeled
-AI-reviewed, not human validation. Neither the authoring agent nor the already
-unblinded returned reviews count as fresh blind annotation. Prepare the handoff
-for this arrangement without automatically operating an external account.
+C01's baseline admitted a correction referring to the original day but not the
+passage naming that day; the candidate lost both. All packets fit, so this was
+selection rather than capacity failure. C06 shows that novelty can expose an
+opposing origin under varied wording, not that it recovers dependencies.
+Independent-window lexical selection has no dependency guarantee; how broadly
+that matters remains unmeasured. No generation failure is inferred.
 
-Amendment: that arrangement failed in the available review environment. The user
-now accepts the existing exposed-context Pro reports for a non-blind diagnostic,
-without API substitution or more review dispatches. Keep conditional/report-specific
-interpretations distinct and freeze them before new-control selection. The original
-clean-session evidence objective was not achieved and is not claimed retroactively.
+Question: under nonidentical competing retellings, do the unchanged selectors
+supply a named answer when a correction states it directly, but lose that answer
+when the same correction refers back to an earlier passage? Inspect correction
+availability separately from whether an admitted correction can be resolved.
+Minimum answer support is not the same as a complete correction explanation.
+
+Choose matched wording pairs over another broad review or larger mixed corpus:
+they localize this question without introducing more semantic axes. Reserving an
+origin, increasing slots or adding a dependency-aware selector would change the
+behavior before measuring the gap and is excluded. This probe cannot isolate
+semantic dependence from the lexical changes that naturally express it.
+
+### Frozen Six-Case Ceiling
+
+Use three new Mandarin episode families: a day, a location and a carried item.
+Each has one self-contained and one antecedent-dependent correction, for exactly
+six separately evaluated cases. These are pre-outcome author-labeled synthetic inputs,
+not an independent or statistically held-out benchmark. Do not reuse C01/C06 as
+new cases, search variants against ranks or enlarge the corpus after outcomes.
+
+Each case has eight complete U/A windows: one original account, four distinct
+mistaken retellings, one compatible detail, one correction and one unrelated
+exchange. Thus seven plausible episode sources compete for four slots without
+exact-copy padding. The correction follows every mistaken retelling and is the
+last episode-bearing exchange; the unrelated exchange is last overall. It
+explicitly acknowledges the retelling error and restores the original account,
+not an unsupported user retcon. No later recantation or C08-style authority
+conflict is introduced. Ambiguous restoration is unassessable, not assumed valid.
+
+Within each pair, only the correction's assistant text changes: directly name the
+restored value versus refer to the original account without naming it. Keep the
+correction's user turn, query, other transcripts, opaque IDs, ordering and context
+identical. Only the original and self-contained correction name the restored
+value; current query, user turns, compatible detail and saved context cannot leak
+it. Record text lengths and literal scores; do not equalize them artificially.
+
+Declare one archived synthetic conversation per case containing the eight ordered
+exchanges, and a fresh current chat in the same user/character scope and ordinary
+version lineage. Unlike the prior audit's separate-chat pairs, this makes the
+referenced original part of the same historical dialogue. Preserve conversation
+identity and source order; do not infer adjacency from selected-window order or
+merge windows. This topology is controlled metadata, not a database-reader test.
+Use the same declared persona/system context, empty facts and local suffix in
+both cases; no persona biography supplies the answer. Timestamps order utterances,
+not fictional event dates. Never compare new totals with old audit denominators.
 
 ### Ordered Deliverables
 
-1. **Freeze the audit inputs.** Work serially on the retained checkout. Reuse
-   `story_continuity/retrieval_diversity/cases.json` as immutable input, not a file
-   to revise. Put new controls, the audit rubric, neutral-ID mapping and later
-   results together under a prospective `story_continuity/packet_sufficiency/`
-   workflow directory. Pin source, original fixture hashes, the two new controls,
-   exact queries, source chronology/roles and relevant persona/fact/local context.
-   No new selector, scoring rule, model route or threshold is introduced.
-2. **Review claims before arm outcomes.** Prepare one self-contained review packet
-   containing transcripts, exact questions and relevant context, but not original
-   evidence groups, arm names, ranks or totals. Ask the independent reviewer for
-   permissible minimum claims, material opposing evidence, optional details,
-   prohibited speaker/participation/disclosure claims, antecedent dependencies,
-   alternative sufficient source sets and unresolved ambiguity, with exact quotes.
-   Challenge necessity by deleting a supposedly required passage. Record reviewer
-   identity/kind and exposure limits; freeze these judgments before revealing arms.
-   Public repository access cannot guarantee blindness: record any prior exposure
-   rather than asserting independence from a fresh session alone.
-3. **Compare actual supplied evidence.** Reproduce the original baseline/candidate
-   selections without retuning. For the two new controls, use the same existing
-   current-only literal recipe and unchanged selectors; keep their outputs sealed
-   until labels are frozen. Assemble evaluator-only minimal-reference packets from
-   independently justified alternatives, and an empty-history no-match control.
-   No reference IDs or answers may enter a selector. Include local suffix, facts,
-   roles and U/A versus H authority when judging the complete model context.
-4. **Check admission and assess omissions.** Runtime-owned tests should exercise
-   existing `admit_history` and generation/reviewer packet builders. Bind the
-   source-owned `history_capacity.py` limits: 11,213 generation input, 11,469
-   reviewer input, 4,096 output reserve and 640 shared-suffix tokens. Do not reuse
-   the prior 100,000-token test allowance as evidence of realistic fit. Add bounded
-   mechanics controls for a long window, nonempty annotations and local/H overlap,
-   without enlarging the ten semantic cases. Record reader assumptions, selected
-   sources, capacity omissions, post-admission evidence and history equality.
-   Separate answer sufficiency, conflict visibility, missing dependencies, optional
-   detail and unrelated versus other-episode selections. Do not collapse them into
-   one quality score. Report unresolved label disagreements, not forced consensus.
-5. **Publish one decision readout.** Preserve the frozen old scorecard and failed
-   native gate. Record every case and alternative packet, disputed judgments,
-   structural checks and why the findings do or do not justify further investment.
-   Keep actual generator/reviewer behavior, naturalness and native persistence
-   effects explicitly unmeasured. Commit/push scoped verified artifacts under
-   ADR 0048; publication is not runtime adoption or native-call authorization.
+1. **Author and freeze inputs plus labels before selection.** After approval,
+   colocate the corpus, context, judgments, freeze manifest, tests and eventual
+   readout in `workflows/evals/character_memory_dev/story_continuity/correction_dependencies/`.
+   Reuse the existing rubric's query-relative claims and deletion challenge;
+   quote exact source roles and distinguish answer routes, opposing evidence,
+   correction rationale, optional details and unresolved readings. The author has
+   prior exposure: label new judgments non-blind agent annotations. Existing Pro
+   reports are methodological context, not annotations of these six new cases.
+   No new external review, API substitute or human-validation claim. Commit/push
+   hash-bound inputs and labels before any new-case scoring or selection.
+2. **Run one unchanged comparison.** Use `query_text(current, [])`, complete U/A
+   `document_text`, `literal_score`, `rank_windows` top four and the existing
+   `retrieval_diversity/selector.py::select_diverse`, with no coefficient, query,
+   tie-break or threshold changes. Runtime-owned comparison code belongs beside
+   `services/ade-api/tests/agent_runtime/story_packet_comparison.py`; workflow
+   loaders remain standard-library-only. Reuse narrow packet-building mechanics
+   where cohesive, without routing new inputs through the old audit's pinned
+   labels/artifact writer or building a generic framework. Selector inputs are
+   allowlisted transcript fields, IDs, chronology and literal scores only.
+3. **Inspect actual admission and reference packets.** Build twelve selected-arm
+   packets, six empty-history packets and every distinct labeled reference set.
+   References are evaluator-only and enter assessment after selection, never a
+   selector. Call the real context/admission/generation/reviewer builders at the
+   unchanged 11,213/11,469 input limits, 4,096 reply reserve and 640 suffix ceiling.
+   Capture exact paired requests, hashes, selected/admitted IDs, omitted sources,
+   capacity estimates, conversation metadata and H role/handle equality. Reference
+   fit demonstrates available evidence, not actual model use or label correctness.
+4. **Publish one case-level decision.** Record every pair, both selectors, all
+   reference alternatives, ambiguity and separate omission causes. Test exact
+   regeneration, pair invariants, distinct sources, quote/handle integrity, label
+   immutability and no label/answer leakage into selectors. Re-run existing packet,
+   history-admission/capacity and attribution checks, then proportional broader
+   runtime/story-workflow tests with `uv run --locked`. Report PostgreSQL/private
+   skips; do not access a database to eliminate them. Publish scoped verified
+   artifacts under ADR 0048 without altering historical evidence.
 
-### Acceptance And Stop Rules
+### Assessment And Stop Rules
 
-The audit is complete when all ten cases have traceable judgments or explicit
-unresolved status, exact evaluated packets and omission reasons are inspectable,
-the unchanged historical artifacts still match, and the decision is supported by
-case-level evidence. A positive algorithm result is not required for completion.
+Labels must admit alternative minimum answer routes. An original-only packet may
+support the named value in either case; do not require original plus correction
+for every answer. A self-contained correction may support that value alone. An
+antecedent-dependent correction needs the original to resolve its reference,
+even when that dependency is optional for some other supported answer route.
+Use deletion challenges to distinguish answer-critical from explanation-only
+dependencies and retain any conditional interpretation explicitly.
 
-- If deficits are unnecessary source requirements or gains depend on exact copies,
-  retain the baseline and stop this retrieval branch. Do not tune until it wins.
-- If even a minimal reference packet leaves correction authority ambiguous, name
-  the product example for judgment; do not select a retrieval algorithm to decide it.
-- If question-critical evidence is missing under nonidentical wording and an
-  independently justified reference resolves the gap, propose one bounded next
-  measurement. This still does not qualify the novelty candidate or authorize it.
-- Missing evidence or material disagreement prevents the affected conclusion.
-  Exposed reviewer context prevents blind qualification; ADR 0055 permits only
-  an explicitly non-blind diagnostic instead. Preserve conditional readings,
-  using a second adjudicator only for consequential disputes.
-- Source/handle integrity or capacity failures stop the affected comparison.
-  Do not change limits, source roles, scope or frozen inputs to obtain a pass.
+Report named-answer support, correction admission, dependency resolution and
+opposition/qualification visibility separately, plus optional detail and
+unrelated/other-episode admissions. If the correction is absent, record absent
+correction rather than a dangling reference or a resolved dependency. If present
+without its antecedent, record that separately from missing all answer routes.
+No aggregate quality score or best-arm selection follows.
 
-### Boundaries And Risks
+- Complete the experiment when all six frozen cases have traceable assessments
+  or explicit unassessable status and reproducible packets; no positive result
+  is required. Structural/hash/capacity failures stop affected comparisons.
+- A repeated dependency-specific signal requires the same unchanged selector in
+  at least two episode pairs to admit the self-contained correction and support
+  a named answer, but admit the dependent correction without any named-answer
+  route, while a fitting reference resolves it. This is an investment trigger,
+  not a reliability threshold or statistical claim. It may justify proposing one
+  bounded dependency-recovery design, never implementing or adopting it here.
+- If corrections are absent in both forms, report correction-selection failure,
+  not demonstrated antecedent-specific loss. If both forms lose the answer, or
+  only one pair shows the signal, report the actual gaps but no repeated matched
+  signal. Retain the baseline; do not add cases or retune to obtain one.
+- If full-ledger meaning or a supposedly sufficient reference remains ambiguous,
+  exclude that pair from the dependency conclusion and name the unresolved
+  example. No silent correction-priority rule or forced label consensus.
 
-No ADE/Model Router provider calls, database/trial access, new runtime policy,
-deduplication implementation, episode graph, prompt changes or resumed turns 8-10.
-External review is a manual handoff, not permission to
-operate an account or create another chat automatically. No native model settings
-are selected by this plan. A future native comparison needs separate approval,
-scope-isolation checks and a valid current-user-update positive control.
-
-Source/fixture authorship bias, inability to guarantee external blindness, broad
-questions with multiple sufficient answers, and correction-authority ambiguity
-are the material risks. Portable tests verify source/packet mechanics only.
-Use `uv run --locked` for focused audit and existing history admission/attribution
-checks, then proportional broader tests. A new ADR is needed only if a later
-decision changes a durable runtime or qualification contract; this audit does not.
+The study ends with that readout. Small authored cases, known prior results and
+literal-only scoring limit generalization; lexical wording changes also affect
+relevance. Native generation, reviewer interpretation, naturalness, persistence,
+reader eligibility and production retrieval remain unmeasured. No provider/API
+calls, external-account operations, new chats/agents, prompt or runtime changes,
+episode store, semantic keyword rules, deployment or native turns 8-10. A later
+runtime/evidence-contract change needs its own approval and concise ADR; this
+plan makes none and does not extend ADR 0055's historical report authorization.
 
 ## Historical Native Preparation
 
 The [native entrypoint](../../workflows/evals/character_memory_dev/story_continuity/NATIVE.md)
 requires a clean committed source, actual isolated catalog/definition receipts,
 full private observations and human annotation pauses. Its implementation and
-scripted tests alone do not establish native quality. Historical offline status
-below records what was authorized and verified at that earlier checkpoint.
+scripted tests alone do not establish native quality. All remaining native-plan
+sections record historical scope and evidence, not authorization for the proposed
+correction-dependency measurement or another native run.
 
 ### Offline Implementation Status (2026-09-30)
 
