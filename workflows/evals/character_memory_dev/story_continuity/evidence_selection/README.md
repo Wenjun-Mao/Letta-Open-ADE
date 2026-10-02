@@ -19,6 +19,10 @@ are historical evidence; their then-current status is preserved. The
 and [ADR 0058](../../../../../docs/adr/0058-offline-packet-capacity-and-qualifications.md)
 own the delivery scope. PC-03/04/05/06/09/10/11 remain unchanged.
 
+The [research shortlist review](RESEARCH_REVIEW.md) checks five recommended
+papers against primary sources and the completed D04 outcomes. It records useful
+methods and transfer limits, not approval for new architecture or another run.
+
 ## Reproduction And Outputs
 
 Run from the repository root with the existing locked workspace environment:
