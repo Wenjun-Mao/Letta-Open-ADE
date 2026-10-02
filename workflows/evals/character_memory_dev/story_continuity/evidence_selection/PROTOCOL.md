@@ -5,6 +5,11 @@ execution are not implemented or frozen.** The user authorized preparing this
 protocol after agreeing to the design. This is not authorization to implement,
 dispatch model calls, access a database, deploy or restart native turns 8-10.
 
+External review update (2026-10-02): two reports are preserved with a
+[source-checked assessment](REVIEW_ASSESSMENT.md). It recommends an offline
+capacity/rubric slice first. Those amendments await a decision; the operative
+requirements of this proposal remain unchanged, not approved for implementation.
+
 The [continuity plan](../../../../../docs/plans/character-story-continuity.md#model-assisted-evidence-selection)
 remains the single delivery entrypoint. [ADR 0057](../../../../../docs/adr/0057-model-assisted-evidence-selection-investigation.md)
 owns the design rationale. PC-01/03/04/05/06/09/10/11 remain in force. This workflow
@@ -268,7 +273,8 @@ answer/reviewer sequence. Keep the baseline and native turn-7 stop unchanged.
    secrets and private provider receipts out of commits; publish only reviewed
    synthetic evidence and redacted metadata through ADR 0048's normal scoped push.
 
-At this checkpoint only this protocol and its documentation links exist. No new
-fixtures, labels, harness, result artifacts, provider receipts or model-quality
-results are claimed. The next implementation scope is offline preparation; actual
-execution, broader candidate retrieval and runtime integration remain separate.
+At this checkpoint the proposal and external review exist, not new fixtures,
+labels, a harness, campaign results, provider receipts or model-quality evidence.
+The review recommends a smaller offline slice before the preparation specified
+above; that decision remains pending. Actual execution, broader candidate
+retrieval and runtime integration remain separate.

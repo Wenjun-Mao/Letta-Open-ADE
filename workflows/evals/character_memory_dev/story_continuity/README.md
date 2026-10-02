@@ -54,11 +54,13 @@ in [correction_dependencies](correction_dependencies/README.md).
 The subsequent [model-assisted selection protocol](evidence_selection/PROTOCOL.md)
 specifies ten synthetic cases and three arms under the agreed ADR 0057 design.
 It separates source selection from candidate availability and final-answer quality.
-Only the protocol exists: no new harness, frozen inputs, model results or live-run
-authorization. The baseline, old evidence and native turn-7 stop remain unchanged.
-The [external direction-review packet](evidence_selection/EXTERNAL_REVIEW.md) is a
-single-reviewer, pinned GitHub handoff prepared before implementation, not a sent
-consultation or returned review result.
+No selector harness, new frozen inputs, model results or live-run authorization
+exist. The baseline, old evidence and native turn-7 stop remain unchanged.
+The user supplied two reports against the [external review packet](evidence_selection/EXTERNAL_REVIEW.md).
+Their [source-checked assessment](evidence_selection/REVIEW_ASSESSMENT.md) recommends
+an offline whole-packet rubric and eight-source capacity diagnostic first. This
+would explicitly amend the four-window experiment; no amendment or implementation
+is authorized by receipt of the reports. Both originals are preserved unchanged.
 
 ## Entrypoint And Freeze
 

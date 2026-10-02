@@ -217,7 +217,7 @@ plan makes none and does not extend ADR 0055's historical report authorization.
 
 ## Model-Assisted Evidence Selection
 
-Status (2026-10-02): **Design agreed; protocol specified; no implementation or run.**
+Status (2026-10-02): **Design agreed; protocol reviewed; revisions await decision.**
 [ADR 0057](../adr/0057-model-assisted-evidence-selection-investigation.md) records
 the rationale and candidate evidence-flow contract under PC-01/03/04/05/06/09/10/11.
 Keep this as the single PC-11 plan; retain the baseline and all historical evidence.
@@ -234,10 +234,12 @@ and one withheld-antecedent control. Compare unchanged literal selection, a fixe
 anchor-neighborhood rule and a single model selector with up to four final sources.
 The proposed route/settings, exact prompt, schema, budgets and one-attempt policy
 are recorded there, not implemented or verified through provider calls.
-An [external direction-review packet](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/EXTERNAL_REVIEW.md)
-is prepared for one GitHub-only critique before offline harness/input preparation.
-No external dispatch, implementation or model run is claimed. Candidate retrieval
-at scale and final-answer quality stay separate; retain the native turn-7 stop.
+Two reports against the [external review packet](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/EXTERNAL_REVIEW.md)
+are preserved in a [source-checked assessment](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/REVIEW_ASSESSMENT.md).
+It recommends a whole-packet rubric and an explicitly scoped eight-source capacity
+diagnostic before selector implementation. That four-window exception is not yet
+authorized. No harness or model run exists; retain the native turn-7 stop.
+Candidate retrieval at scale and final-answer quality remain separate questions.
 
 ## Historical Native Preparation
 
