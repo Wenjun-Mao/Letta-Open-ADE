@@ -217,7 +217,7 @@ plan makes none and does not extend ADR 0055's historical report authorization.
 
 ## Model-Assisted Evidence Selection
 
-Status (2026-10-02): **Design agreed; protocol reviewed; revisions await decision.**
+Status (2026-10-02): **Offline capacity/rubric slice approved; not yet measured.**
 [ADR 0057](../adr/0057-model-assisted-evidence-selection-investigation.md) records
 the rationale and candidate evidence-flow contract under PC-01/03/04/05/06/09/10/11.
 Keep this as the single PC-11 plan; retain the baseline and all historical evidence.
@@ -236,10 +236,11 @@ The proposed route/settings, exact prompt, schema, budgets and one-attempt polic
 are recorded there, not implemented or verified through provider calls.
 Two reports against the [external review packet](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/EXTERNAL_REVIEW.md)
 are preserved in a [source-checked assessment](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/REVIEW_ASSESSMENT.md).
-It recommends a whole-packet rubric and an explicitly scoped eight-source capacity
-diagnostic before selector implementation. That four-window exception is not yet
-authorized. No harness or model run exists; retain the native turn-7 stop.
-Candidate retrieval at scale and final-answer quality remain separate questions.
+The user approved the [offline protocol](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/OFFLINE_PROTOCOL.md)
+and [ADR 0058](../adr/0058-offline-packet-capacity-and-qualifications.md): a D04-only
+eight-source measurement and whole-packet rubric, without runtime count changes.
+No selector/provider work is authorized; retain the native turn-7 stop. Candidate
+retrieval at scale and final-answer quality remain separate questions.
 
 ## Historical Native Preparation
 

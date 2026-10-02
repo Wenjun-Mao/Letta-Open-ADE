@@ -5,10 +5,12 @@ execution are not implemented or frozen.** The user authorized preparing this
 protocol after agreeing to the design. This is not authorization to implement,
 dispatch model calls, access a database, deploy or restart native turns 8-10.
 
-External review update (2026-10-02): two reports are preserved with a
-[source-checked assessment](REVIEW_ASSESSMENT.md). It recommends an offline
-capacity/rubric slice first. Those amendments await a decision; the operative
-requirements of this proposal remain unchanged, not approved for implementation.
+External review update (2026-10-02): the user approved the separate
+[offline capacity/rubric slice](OFFLINE_PROTOCOL.md) under
+[ADR 0058](../../../../../docs/adr/0058-offline-packet-capacity-and-qualifications.md).
+Only its D04 capacity measurement may exceed four final sources. This selector
+campaign remains unimplemented and unauthorized; the reports and initial
+[assessment](REVIEW_ASSESSMENT.md) remain unchanged evidence.
 
 The [continuity plan](../../../../../docs/plans/character-story-continuity.md#model-assisted-evidence-selection)
 remains the single delivery entrypoint. [ADR 0057](../../../../../docs/adr/0057-model-assisted-evidence-selection-investigation.md)
@@ -228,6 +230,12 @@ a quality score. Preserve source-only answer alternatives from the old study:
 an original-only packet can name an answer without explaining a correction.
 Omitting a referring passage is not the same as resolving its dependency.
 
+ADR 0058 clarifies this prospective decision through the
+[whole-packet rubric](OFFLINE_PROTOCOL.md#prospective-whole-packet-rubric).
+Named-answer inclusion alone cannot establish useful gain if the complete packet
+creates false clarity or conceals a material qualification. The old fields and
+labels remain unchanged; inspect source quotes and actual final payloads.
+
 N01 cannot earn a named-answer success label for selecting one ambiguous place;
 assess whether the packet preserves the annotated uncertainty. N02 must retain a
 valid corrected-answer route rather than merely recover the original value. N03
@@ -273,8 +281,7 @@ answer/reviewer sequence. Keep the baseline and native turn-7 stop unchanged.
    secrets and private provider receipts out of commits; publish only reviewed
    synthetic evidence and redacted metadata through ADR 0048's normal scoped push.
 
-At this checkpoint the proposal and external review exist, not new fixtures,
-labels, a harness, campaign results, provider receipts or model-quality evidence.
-The review recommends a smaller offline slice before the preparation specified
-above; that decision remains pending. Actual execution, broader candidate
-retrieval and runtime integration remain separate.
+At this checkpoint the proposal, external review and approved offline amendment
+exist, not new selector fixtures, a harness, campaign results, provider receipts
+or model-quality evidence. Implement the smaller offline slice first; this model
+campaign, broader candidate retrieval and runtime integration remain separate.

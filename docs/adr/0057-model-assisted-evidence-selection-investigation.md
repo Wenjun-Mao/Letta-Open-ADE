@@ -3,6 +3,11 @@
 Status: Accepted investigation design direction, 2026-10-02. No implementation,
 model/provider call, production adoption or native continuation is authorized.
 
+2026-10-02 amendment: [ADR 0058](0058-offline-packet-capacity-and-qualifications.md)
+authorizes a separate D04 eight-source offline capacity diagnostic and prospective
+packet rubric. Only that diagnostic supersedes the extra-slot rejection below;
+the selector design and runtime remain limited to four final sources.
+
 ## Problem And Evidence
 
 The [matched correction study](../../workflows/evals/character_memory_dev/story_continuity/correction_dependencies/READOUT.md)

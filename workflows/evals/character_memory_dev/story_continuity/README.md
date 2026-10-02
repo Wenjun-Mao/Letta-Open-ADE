@@ -57,10 +57,10 @@ It separates source selection from candidate availability and final-answer quali
 No selector harness, new frozen inputs, model results or live-run authorization
 exist. The baseline, old evidence and native turn-7 stop remain unchanged.
 The user supplied two reports against the [external review packet](evidence_selection/EXTERNAL_REVIEW.md).
-Their [source-checked assessment](evidence_selection/REVIEW_ASSESSMENT.md) recommends
-an offline whole-packet rubric and eight-source capacity diagnostic first. This
-would explicitly amend the four-window experiment; no amendment or implementation
-is authorized by receipt of the reports. Both originals are preserved unchanged.
+Their [source-checked assessment](evidence_selection/REVIEW_ASSESSMENT.md) led to a
+separately approved [offline capacity/rubric slice](evidence_selection/OFFLINE_PROTOCOL.md).
+ADR 0058 permits all eight D04 sources only for that measurement, not runtime or
+selector requests. Both reports and all historical study bytes remain unchanged.
 
 ## Entrypoint And Freeze
 
