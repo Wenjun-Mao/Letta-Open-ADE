@@ -1,0 +1,14 @@
+[
+  {
+    "id": "deepseek",
+    "label": "DeepSeek official API",
+    "base_url": "https://api.deepseek.com",
+    "kind": "openai-compatible",
+    "adapter": "deepseek_openai",
+    "enabled": true,
+    "enabled_for": ["agent_studio", "comment_lab", "label_lab"],
+    "model_allowlist": ["deepseek-flash"],
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "api_key_secret": ""
+  }
+]

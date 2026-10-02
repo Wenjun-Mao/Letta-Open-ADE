@@ -1,5 +1,9 @@
 # Evidence Selection Investigation
 
+The separately approved [bounded D04 behavioral comparison](behavioral/README.md)
+has passed offline manager review under [ADR 0059](../../../../../docs/adr/0059-bounded-d04-behavioral-comparison.md).
+Live outcomes remain unrun; the historical measurement below is unchanged.
+
 Current status (2026-10-02): **Offline capacity/rubric diagnostic complete;
 implementation and results independently manager-reviewed.** The approved
 [offline protocol](OFFLINE_PROTOCOL.md) is frozen at

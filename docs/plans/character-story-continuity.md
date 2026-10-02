@@ -217,7 +217,7 @@ plan makes none and does not extend ADR 0055's historical report authorization.
 
 ## Model-Assisted Evidence Selection
 
-Status (2026-10-02): **Offline capacity/rubric complete and manager-reviewed.**
+Status (2026-10-02): **Capacity and [bounded D04 behavioral preparation](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/behavioral/README.md) manager-reviewed; live unrun (ADR 0059).**
 [ADR 0057](../adr/0057-model-assisted-evidence-selection-investigation.md) records
 the rationale and candidate evidence-flow contract under PC-01/03/04/05/06/09/10/11.
 Keep this as the single PC-11 plan; retain the baseline and all historical evidence.
@@ -240,7 +240,7 @@ The user approved the [offline protocol](../../workflows/evals/character_memory_
 and [ADR 0058](../adr/0058-offline-packet-capacity-and-qualifications.md). The
 [offline readout](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/READOUT.md)
 shows all eight D04 sources fit both unchanged budgets and clarifies packet certainty.
-Defer selector/provider work; retain runtime count limits and the native turn-7 stop.
+Defer selector work; only ADR 0059's separately approved comparison is prepared; retain runtime limits and native stop.
 Candidate retrieval at scale and final-answer quality remain separate questions.
 
 ## Historical Native Preparation
