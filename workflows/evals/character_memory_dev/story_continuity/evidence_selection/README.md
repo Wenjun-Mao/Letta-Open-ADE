@@ -15,8 +15,9 @@ changes the runtime four-window ceiling nor qualifies generated answers.
 The [four-window recovery plan](../../../../../docs/plans/character-evidence-recovery.md)
 is prepared for review. [Selector protocol v2](PROTOCOL.md) proposes comparing
 literal, neighborhood and joint model selection with common whole-packet admission;
-implementation remains unstarted. The
-[original external reports](reports/) and [source-checked assessment](REVIEW_ASSESSMENT.md)
+implementation remains unstarted. The [joint-packet review brief](JOINT_PACKET_REVIEW.md)
+pins this design for a requested independent Pro review; publication is not dispatch.
+The [original external reports](reports/) and [source-checked assessment](REVIEW_ASSESSMENT.md)
 are historical evidence; their then-current status is preserved. The
 [continuity plan](../../../../../docs/plans/character-story-continuity.md#model-assisted-evidence-selection)
 and [ADR 0058](../../../../../docs/adr/0058-offline-packet-capacity-and-qualifications.md)
