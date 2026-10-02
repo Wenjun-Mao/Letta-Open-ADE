@@ -9,8 +9,9 @@ authorization. Subsequent normal commits/pushes are pre-approved under ADR 0048;
 retained-trial access, deployment and release remain separately gated.
 Work serially on the primary `main` checkout.
 
-Current status: **Correction-dependency measurement complete.** Runtime adoption
-and native work stay closed; the next bounded design is a proposal only.
+Current status (2026-10-02): **Correction-dependency measurement complete;
+model-assisted selection design direction agreed.** Implementation, model calls,
+runtime adoption and native work remain unstarted for this next investigation.
 
 Native outcome: [seven turns delivered; stopped at turn 7's original-source
 admission gate](../findings/natural-memory-consultation/character-story-native-2026-09-30.md).
@@ -75,8 +76,8 @@ bounded evidence contract and the user's internal Relay-delegation authorization
 The [readout](../../workflows/evals/character_memory_dev/story_continuity/correction_dependencies/READOUT.md)
 records six cases, 45 reference alternatives and 63 exact paired packets. Labels
 were committed/pushed before new-case scoring at `2447917`. The predeclared signal
-appears in three baseline and two candidate pairs; all packets fit. A bounded
-dependency-recovery design is proposed only, not implemented or adopted.
+appears in three baseline and two candidate pairs; all packets fit. The study
+proposed a bounded dependency-recovery design; the subsequent agreement is below.
 
 ### Question And Layer
 
@@ -213,6 +214,30 @@ calls, external-account/review operations, new user chats, prompt or runtime cha
 episode store, semantic keyword rules, deployment or native turns 8-10. A later
 runtime/evidence-contract change needs its own approval and concise ADR; this
 plan makes none and does not extend ADR 0055's historical report authorization.
+
+## Model-Assisted Evidence Selection
+
+Status (2026-10-02): **Investigation design agreed; no implementation or model run.**
+[ADR 0057](../adr/0057-model-assisted-evidence-selection-investigation.md) records
+the rationale and candidate evidence-flow contract under PC-01/03/04/05/06/09/10/11.
+Keep this as the single PC-11 plan; retain the baseline and all historical evidence.
+
+Investigate a bounded semantic pass that selects up to four complete source windows
+from a broader eligible pool. Compare with retrieval-only context expansion.
+Fresh answer-generation and reviewer requests receive the same selected history,
+without the selector's broader context, reasoning or synthetic summaries.
+Incomplete recall remains uncertain rather than manufacturing a missing detail.
+
+Next deliverable: a bounded experiment protocol, not runtime wiring. First test
+selection when necessary evidence is available, using existing cases as exposed
+development checks plus ambiguous-reference, corrected-original and no-history
+controls. Freeze new inputs/labels, candidate limits, prompt/schema, comparison
+recipe, model/settings, attempt policy and assessment before any model outcomes.
+Larger-history candidate retrieval is a separate investigation; do not count an
+upstream corpus omission as a selector failure or treat these checks as independent.
+Verify source integrity, selection/admission omissions and fresh shared packets
+separately from semantic quality. Model calls, implementation, production adoption
+and native continuation require later authorization; this agreement grants none.
 
 ## Historical Native Preparation
 

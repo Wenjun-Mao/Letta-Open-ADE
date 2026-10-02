@@ -53,6 +53,7 @@ record's status notice before applying its original execution details.
 | [0054](0054-bounded-native-story-probe.md) | Separate approved native PC-11 runner: clean source, owned services, immutable one-attempt receipts and human annotation frontiers. |
 | [0055](0055-nonblind-packet-sufficiency-diagnostic.md) | Existing exposed-context Pro reports may support a bounded non-blind offline diagnostic, not blind or runtime qualification. |
 | [0056](0056-matched-correction-dependency-measurement.md) | Pre-outcome matched correction pairs with explicit non-blind author labels and single-dialogue topology; unchanged selectors and no runtime adoption. |
+| [0057](0057-model-assisted-evidence-selection-investigation.md) | Agreed investigation design: bounded semantic source selection, fresh shared final evidence and uncertain incomplete recall; no implementation, model run or adoption. |
 
 ## Historical, Retired, Or On Hold
 

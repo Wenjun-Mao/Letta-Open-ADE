@@ -1,6 +1,6 @@
 # ADE Current Product Contract
 
-Updated: 2026-09-30. This is the single entrypoint for **current agreed product
+Updated: 2026-10-02. This is the single entrypoint for **current agreed product
 intent**, not a claim that every agreement is implemented or release-qualified.
 It consolidates existing decisions; it does not authorize implementation, live
 experiments, deployment, or a change to release evidence.
@@ -63,6 +63,11 @@ elaboration and genuine error correction. It is not a co-authoring interface for
 deliberately rewriting established episodes to match a new suggestion. New details
 must not be presented as details already told to, or experienced with, the user.
 
+Clarification agreed 2026-10-02: when recalling an established episode, incomplete
+evidence should remain uncertain rather than invite an invented missing detail.
+Natural wording belongs to the answering model; no fixed uncertainty phrase is
+required. This does not withdraw permission to create new solo fictional stories.
+
 This is accepted product intent, not a claim that current history retrieval or
 review implements reliable character-story continuity. It selects neither a new
 store nor an expanded reviewer mandate (PC-09). Story admission and correction
@@ -78,7 +83,12 @@ standing live-run authorization or release qualification.
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
   reviewer, reconciliation with corrected or removed facts, and failure behavior.
   PC-03's character boundary and PC-10's archive eligibility are settled;
-  production mechanics are not. The [historical-recall plan](plans/natural-history-recall.md)
+  production mechanics are not. On 2026-10-02 the user agreed to investigate bounded
+  model-assisted source selection, compared with retrieval-only context expansion,
+  before answering. [ADR 0057](adr/0057-model-assisted-evidence-selection-investigation.md)
+  records the design direction, not implementation or live-run authorization.
+  Candidate retrieval at larger scale remains a separate question.
+  The [historical-recall plan](plans/natural-history-recall.md)
   revision 3 is approved for a bounded automatic-versus-empty-history probe, including
   read-only historical evidence and the final review conditions. This selects no
   production retrieval policy, default, or release-qualified behavior.
