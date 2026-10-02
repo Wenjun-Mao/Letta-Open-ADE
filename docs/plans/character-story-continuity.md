@@ -11,7 +11,8 @@ Work serially on the primary `main` checkout.
 
 Current status (2026-10-02): **Offline capacity and D04's six-request behavioral
 comparison are manager-reviewed**; see the evidence-selection section below.
-Selector implementation, runtime adoption and native continuation remain unstarted.
+The [four-window recovery design](character-evidence-recovery.md) is prepared for
+review; selector implementation, runtime adoption and native continuation remain unstarted.
 
 Native outcome: [seven turns delivered; stopped at turn 7's original-source
 admission gate](../findings/natural-memory-consultation/character-story-native-2026-09-30.md).
@@ -218,30 +219,26 @@ plan makes none and does not extend ADR 0055's historical report authorization.
 ## Model-Assisted Evidence Selection
 
 Status (2026-10-02): **D04's six requests and [AI readout](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/behavioral/READOUT.md) independently manager-reviewed (ADR 0059).**
-[ADR 0057](../adr/0057-model-assisted-evidence-selection-investigation.md) records
-the rationale and candidate evidence-flow contract under PC-01/03/04/05/06/09/10/11.
-Keep this as the single PC-11 plan; retain the baseline and all historical evidence.
+The user requested the [bounded recovery design and plan](character-evidence-recovery.md)
+and chose to retain four windows while comparing joint selection methods. This
+focused follow-on owns current planning; this document remains the parent PC-11
+plan. Selector implementation and all live/native continuation remain unstarted.
 
-Investigate a bounded semantic pass that selects up to four complete source windows
-from a broader eligible pool. Compare with retrieval-only context expansion.
-Fresh answer-generation and reviewer requests receive the same selected history,
-without the selector's broader context, reasoning or synthetic summaries.
-Incomplete recall remains uncertain rather than manufacturing a missing detail.
+[ADR 0057](../adr/0057-model-assisted-evidence-selection-investigation.md) retains
+the investigation direction. Proposed [ADR 0060](../adr/0060-joint-history-packet-admission.md)
+distinguishes a jointly selected packet from individually ranked candidates;
+neither its atomic admission nor a new runtime policy is adopted here.
+[Protocol v2](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/PROTOCOL.md)
+retains the ten cases and three methods, with a common proposed whole-packet
+admission rule. The first proposed implementation slice is offline preparation.
 
-The [bounded protocol](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/PROTOCOL.md)
-specifies ten cases: six exposed development cases, three new semantic controls
-and one withheld-antecedent control. Compare unchanged literal selection, a fixed
-anchor-neighborhood rule and a single model selector with up to four final sources.
-The proposed route/settings, exact prompt, schema, budgets and one-attempt policy
-are recorded there, not implemented or verified through provider calls.
-Two reports against the [external review packet](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/EXTERNAL_REVIEW.md)
-are preserved in a [source-checked assessment](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/REVIEW_ASSESSMENT.md).
-The user approved the [offline protocol](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/OFFLINE_PROTOCOL.md)
-and [ADR 0058](../adr/0058-offline-packet-capacity-and-qualifications.md). The
-[offline readout](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/READOUT.md)
-shows all eight D04 sources fit both unchanged budgets and clarifies packet certainty.
-Defer selector work; ADR 0059's single comparison is complete and reviewed; retain runtime limits and native stop.
-Candidate retrieval at scale, reliability and native delivery remain unqualified.
+The [offline readout](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/READOUT.md)
+established whole-pool capacity; the behavioral comparison established one
+supported-restoration witness and warranted missing-evidence uncertainty.
+The [research review](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/RESEARCH_REVIEW.md)
+informs semantic controls and evaluation limits. Original reports, frozen protocols,
+runtime ceilings and the native stop remain intact; candidate retrieval at scale,
+reliability and native delivery remain unqualified.
 
 ## Historical Native Preparation
 

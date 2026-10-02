@@ -87,6 +87,10 @@ standing live-run authorization or release qualification.
   model-assisted source selection, compared with retrieval-only context expansion,
   before answering. [ADR 0057](adr/0057-model-assisted-evidence-selection-investigation.md)
   records the design direction, not implementation or live-run authorization.
+  In the subsequent recovery planning, the user selected retaining four windows
+  while comparing joint source selection methods. The
+  [bounded recovery plan](plans/character-evidence-recovery.md) prepares that design;
+  its whole-packet admission contract remains proposed rather than adopted.
   Candidate retrieval at larger scale remains a separate question.
   The [historical-recall plan](plans/natural-history-recall.md)
   revision 3 is approved for a bounded automatic-versus-empty-history probe, including

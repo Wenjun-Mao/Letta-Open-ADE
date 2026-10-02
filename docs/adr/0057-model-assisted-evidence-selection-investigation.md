@@ -8,6 +8,12 @@ authorizes a separate D04 eight-source offline capacity diagnostic and prospecti
 packet rubric. Only that diagnostic supersedes the extra-slot rejection below;
 the selector design and runtime remain limited to four final sources.
 
+2026-10-02 planning follow-on: the user selected keeping four windows while
+comparing joint source selection methods. The [bounded recovery plan](../plans/character-evidence-recovery.md)
+and proposed [ADR 0060](0060-joint-history-packet-admission.md) refine the prospective
+packet contract. Atomic admission remains proposed; no runtime decision or new
+execution follows from this planning choice.
+
 ## Problem And Evidence
 
 The [matched correction study](../../workflows/evals/character_memory_dev/story_continuity/correction_dependencies/READOUT.md)

@@ -12,7 +12,10 @@ the eight complete packet pairs and source-grounded interpretation. D04's eight
 sources fit both unchanged request budgets with full reply reserves. This neither
 changes the runtime four-window ceiling nor qualifies generated answers.
 
-The [selector protocol](PROTOCOL.md) remains an unimplemented proposal. The
+The [four-window recovery plan](../../../../../docs/plans/character-evidence-recovery.md)
+is prepared for review. [Selector protocol v2](PROTOCOL.md) proposes comparing
+literal, neighborhood and joint model selection with common whole-packet admission;
+implementation remains unstarted. The
 [original external reports](reports/) and [source-checked assessment](REVIEW_ASSESSMENT.md)
 are historical evidence; their then-current status is preserved. The
 [continuity plan](../../../../../docs/plans/character-story-continuity.md#model-assisted-evidence-selection)
@@ -21,7 +24,8 @@ own the delivery scope. PC-03/04/05/06/09/10/11 remain unchanged.
 
 The [research shortlist review](RESEARCH_REVIEW.md) checks five recommended
 papers against primary sources and the completed D04 outcomes. It records useful
-methods and transfer limits, not approval for new architecture or another run.
+methods and transfer limits. The recovery plan records a research watchlist and
+revisit conditions; it does not start another run.
 
 ## Reproduction And Outputs
 
