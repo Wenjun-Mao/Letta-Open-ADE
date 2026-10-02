@@ -1,9 +1,10 @@
 # Bounded D04 Behavioral Comparison
 
-Status: Offline construction, scripted verification and independent manager readiness
-review complete. No provider requests, live discovery, credentials, services or
-databases were accessed. [Protocol](PROTOCOL.md) is prospective; provider outcomes
-remain unrun. [ADR 0059](../../../../../../docs/adr/0059-bounded-d04-behavioral-comparison.md)
+Status: Manager-approved live pass complete: all six planned requests captured.
+[Reviewed AI readout](READOUT.md) and [redacted machine summary](results.json)
+have passed independent manager outcome review. Original private receipts remain
+ignored; the owned isolated router exited. [Protocol](PROTOCOL.md) remains the unchanged prospective
+freeze. [ADR 0059](../../../../../../docs/adr/0059-bounded-d04-behavioral-comparison.md)
 owns the narrow exception. This is not a selector or runtime retrieval change.
 
 ## Offline Preparation And Verification
@@ -43,10 +44,15 @@ and 50 local documentation links/anchors passed; the continuity plan remains 499
 lines. Manager review reproduced all 124 focused/historical checks and separately
 ran the complete runtime/router plus behavioral suites: 535 passed, 76 skipped
 (database/private-evidence prerequisites unavailable), with the same warning.
-Manager Ruff lint and changed-Python formatting also passed. No provider/database,
-frontend, deployment or native verification was run.
+Manager Ruff lint and changed-Python formatting also passed. That readiness review
+included no provider/database, frontend, deployment or native verification; the
+later single live pass and manager outcome review are recorded in the readout.
 
-## Later Launch — Manager Continuation Required
+## Frozen Operator Procedure — Completed Once
+
+The procedure below records the completed pass from committed freeze
+`ffaf24dab13a9b74b78339a600c032bf1adba899`. It does not authorize another launch,
+resume, deletion of receipts or further requests. All six attempts are consumed.
 
 1. Review the diff, prospective rubric and scripted evidence. Commit the exact
    protocol/request freeze before provider outcomes; working tree must be clean.
@@ -117,7 +123,8 @@ workflows/evals/character_memory_dev/story_continuity/evidence_selection/behavio
    process you launched. No persistence, services on retained worktrees or native
    continuation is authorized.
 
-Remaining launch prerequisites: manager continuation, clean committed freeze,
-actual operator credentials and effective isolated-process
-configuration, fresh provider catalog. Scripted verification cannot establish
-availability, latency, provider token counts, behavior or reliability.
+Launch prerequisites passed for this single run: manager continuation, clean
+committed freeze, designated existing credential, effective isolated configuration
+and fresh matching catalog. Manager outcome review is complete. Observed usage,
+answer/reviewer behavior and evidence limits are in the readout; this does not
+qualify reliability, persistence, production retrieval or deployment.

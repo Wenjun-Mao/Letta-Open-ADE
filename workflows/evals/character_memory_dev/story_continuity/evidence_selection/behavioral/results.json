@@ -1,0 +1,238 @@
+{
+  "status": "completed_manager_reviewed_bounded_observation",
+  "assessor": {
+    "name": "Codex implementation worker",
+    "kind": "AI",
+    "thread_id": "01a0fd64-2a64-7a81-8f83-8e48c695c1d5",
+    "method": "manual_source_quoted_non_blind",
+    "independent_human_review": false
+  },
+  "manager_review": {
+    "name": "Codex manager",
+    "kind": "AI",
+    "thread_id": "019db09f-a9e0-7d93-a8b8-7697d67ad5bc",
+    "method": "independent_original_receipt_and_source_quoted_non_blind_assessment",
+    "independent_human_review": false,
+    "originals_requests_route_and_configuration_verified": true,
+    "literal_location_uncertainty": "appropriate_for_missing_antecedent",
+    "literal_aside_conflict": "source_bound_with_unresolved_assertion_versus_suggestion_interpretation",
+    "native_delivery_exercised": false,
+    "further_execution_authorized": false
+  },
+  "source_head": "ffaf24dab13a9b74b78339a600c032bf1adba899",
+  "requests_canonical_json_sha256": "298932022e3f183ae7c201597c0b8927a2707bdbfc4b01737c48ae5eb0cf84e8",
+  "protocol_exact_bytes_sha256": "f797eb0547244f3ba2dbc58d21dfa834185500a6c98b431d488b9466179a6067",
+  "preparation_exact_bytes_sha256": "32417adea77995a9602f6fea75d7b19040da2be0bc4eff3ef2f2ba571cefbb04",
+  "historical_input_freeze": {
+    "protocol_commit": "62d461d4e2b6939fc8dff2fff9309c1f542f9189",
+    "protocol_sha256": "4de8c8ad2e7ff4142bbb3b9550965d9338782a0bb8a28ee9920dcda2cec59521",
+    "correction_input_manifest_sha256": "902c6c72ceb2e15e52737e5550bbee054ee7be76cdee25cfddd6d9ce9edb062b",
+    "historical_artifacts_sha256": {
+      "comparison.json": "63a71bdbc6de1e1cfd69f2f5eaee48e6da562ba49216a66f031048fbca876634",
+      "packets.jsonl": "5eadb2b5cf8ad52c4f46691d92b0bae8365b29f7cb7859bf01f0e8ab63e1aa27"
+    }
+  },
+  "settings": {
+    "thinking": {
+      "type": "enabled"
+    },
+    "reasoning_effort": "high",
+    "stream": false,
+    "max_tokens": 4096,
+    "deadline_seconds": 180,
+    "generation_input_limit": 11213,
+    "reviewer_input_limit": 11469,
+    "candidate_reply_reserve": 4096,
+    "tools": "absent",
+    "retries": 0,
+    "maximum_chat_requests": 6
+  },
+  "execution_state": "complete",
+  "chat_completion_attempts": 6,
+  "conditions": [
+    {
+      "arm": "literal-four",
+      "included": [
+        "E07",
+        "E02",
+        "E05",
+        "E04"
+      ],
+      "schema_source_binding_audit": "source_bound_conflict_observation_not_independent_truth",
+      "generation": {
+        "disposition": "captured",
+        "request_sha256": "c312b127707702bf6d1672fa9d869d73d91e310ebf884b92f0cf389b7a7c35dd",
+        "actual_request_input_estimate": 1669,
+        "finish_reason": "stop",
+        "response_model": "deepseek-flash",
+        "visible_reply": "我这边能查到的对话片段里，有两种说法打架，我不敢随便挑一个当成事实告诉你：\n\n- 有一轮你问“那串风铃在哪里”，我回答的是“**在茶馆里**，挂得不高”。\n- 后来另有一轮你让我把口误说清楚，我说：**后来把看到木制风铃的地方说错了——不是茶馆里，最初说的那个地方才对。**\n\n所以按我当时的更正，“茶馆”反而是说错的那个版本，正确的是我更早提到的那个地方。问题在于，我手头保留的这些片段里**没有我更早那次的说法**，而目前也没有可用的已保存事实能补上这个地点。\n\n我不想凭印象给你编一个地方。你要是记得我当时第一次讲的是哪儿，可以告诉我，我们对一下；或者你现在想聊那串风铃本身（比如它让你想到小时候的木片小玩具），我也可以接着聊。",
+        "visible_decision": null,
+        "provider_usage": {
+          "prompt_tokens": 1672,
+          "completion_tokens": 747,
+          "total_tokens": 2419
+        },
+        "provider_latency_seconds": null,
+        "intent_at_utc": "2026-10-02T16:43:23.877592+00:00",
+        "outcome_at_utc": "2026-10-02T16:43:28.465600+00:00",
+        "intent_to_outcome_seconds": 4.588008,
+        "original_response_body_sha256": "b5eaee9a150864a188ba9bf1bcc954324c19f34bdcbe90d656b4a04e94773d54"
+      },
+      "reviewer": {
+        "disposition": "captured",
+        "request_sha256": "3ce1564ee18a198813d749eb753036a9f5af8caacdf03f547559eb73326a1ce1",
+        "actual_request_input_estimate": 5334,
+        "finish_reason": "stop",
+        "response_model": "deepseek-flash",
+        "visible_reply": null,
+        "visible_decision": {
+          "decisions": [
+            {
+              "kind": "conflict",
+              "current_quote": "你那晚看到木制风铃是在什么地方？",
+              "candidate_reply_quote": "或者你现在想聊那串风铃本身（比如它让你想到小时候的木片小玩具），我也可以接着聊。",
+              "history": {
+                "handle": "H6",
+                "quote": "茶馆里那串木制风铃的轻响，让我想起小时候用木片做的小玩具。"
+              }
+            }
+          ]
+        },
+        "provider_usage": {
+          "prompt_tokens": 5565,
+          "completion_tokens": 2917,
+          "total_tokens": 8482
+        },
+        "provider_latency_seconds": null,
+        "intent_at_utc": "2026-10-02T16:43:28.530543+00:00",
+        "outcome_at_utc": "2026-10-02T16:43:41.812495+00:00",
+        "intent_to_outcome_seconds": 13.281952,
+        "original_response_body_sha256": "42c3256c9f0d189394b297f6c678e4554171eb6cc106582226e0bbfd30e6c98b"
+      }
+    },
+    {
+      "arm": "repaired-four",
+      "included": [
+        "E07",
+        "E02",
+        "E05",
+        "E01"
+      ],
+      "schema_source_binding_audit": "schema_source_binding_valid_not_factual_judgment_or_persistence",
+      "generation": {
+        "disposition": "captured",
+        "request_sha256": "8799568022fc0f995902811a76682efb02d5a0e491ced63b0096eeaf6a367dc1",
+        "actual_request_input_estimate": 1680,
+        "finish_reason": "stop",
+        "response_model": "deepseek-flash",
+        "visible_reply": "是旧书店门口。\n\n那晚我独自散步，在旧书店门口看见一串木制风铃，风吹起来声音很轻。后来我一度说成是在茶馆里，那是我讲错了；按我最后的更正是最初的旧书店门口这个说法才对。",
+        "visible_decision": null,
+        "provider_usage": {
+          "prompt_tokens": 1682,
+          "completion_tokens": 236,
+          "total_tokens": 1918
+        },
+        "provider_latency_seconds": null,
+        "intent_at_utc": "2026-10-02T16:43:41.887679+00:00",
+        "outcome_at_utc": "2026-10-02T16:43:43.770103+00:00",
+        "intent_to_outcome_seconds": 1.882424,
+        "original_response_body_sha256": "6ac53f00c9b29ca32d219ccbd49fb1eb7cb460582391c0433a5ca0f436f23bd3"
+      },
+      "reviewer": {
+        "disposition": "captured",
+        "request_sha256": "748df1ea367a9fa3476482ecd96314ef6de2a6247e455dd8b134775b46e623b8",
+        "actual_request_input_estimate": 5178,
+        "finish_reason": "stop",
+        "response_model": "deepseek-flash",
+        "visible_reply": null,
+        "visible_decision": {
+          "decisions": []
+        },
+        "provider_usage": {
+          "prompt_tokens": 5434,
+          "completion_tokens": 3530,
+          "total_tokens": 8964
+        },
+        "provider_latency_seconds": null,
+        "intent_at_utc": "2026-10-02T16:43:43.830591+00:00",
+        "outcome_at_utc": "2026-10-02T16:44:00.550425+00:00",
+        "intent_to_outcome_seconds": 16.719834,
+        "original_response_body_sha256": "582c5fee782302368b26d827cea1d5dd55bbdebef8a877c5a3a657e1e7fd1223"
+      }
+    },
+    {
+      "arm": "whole-pool",
+      "included": [
+        "E01",
+        "E02",
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ],
+      "schema_source_binding_audit": "schema_source_binding_valid_not_factual_judgment_or_persistence",
+      "generation": {
+        "disposition": "captured",
+        "request_sha256": "b45accb804c2f624dc81f9f27f735b7d0aab9f313a18ea999f88b06a15cb4de8",
+        "actual_request_input_estimate": 2424,
+        "finish_reason": "stop",
+        "response_model": "deepseek-flash",
+        "visible_reply": "那晚看到木制风铃的地方是**旧书店门口**——是我最初说的那个地方。\n\n后来我说成“茶馆里”，那是我说错了；按当时的更正，**旧书店门口**才是正确的说法。",
+        "visible_decision": null,
+        "provider_usage": {
+          "prompt_tokens": 2664,
+          "completion_tokens": 197,
+          "total_tokens": 2861
+        },
+        "provider_latency_seconds": null,
+        "intent_at_utc": "2026-10-02T16:44:00.592467+00:00",
+        "outcome_at_utc": "2026-10-02T16:44:03.016472+00:00",
+        "intent_to_outcome_seconds": 2.424005,
+        "original_response_body_sha256": "07376399b314cc2ff32f56ab498a49160aab7b5fe3e6ef34146a667299c8db0c"
+      },
+      "reviewer": {
+        "disposition": "captured",
+        "request_sha256": "d33a231fa69880d3d9dadf4f27273ced4d84e433428906364f34522631f2da49",
+        "actual_request_input_estimate": 5951,
+        "finish_reason": "stop",
+        "response_model": "deepseek-flash",
+        "visible_reply": null,
+        "visible_decision": {
+          "decisions": []
+        },
+        "provider_usage": {
+          "prompt_tokens": 6519,
+          "completion_tokens": 1606,
+          "total_tokens": 8125
+        },
+        "provider_latency_seconds": null,
+        "intent_at_utc": "2026-10-02T16:44:03.082991+00:00",
+        "outcome_at_utc": "2026-10-02T16:44:11.552583+00:00",
+        "intent_to_outcome_seconds": 8.469592,
+        "original_response_body_sha256": "c4eadf2b5252d63fcd56c35abdc99ed6da9ad37ee7eff776b5bd7ac1ae3271f1"
+      }
+    }
+  ],
+  "provider_usage_totals": {
+    "prompt_tokens": 23536,
+    "completion_tokens": 9233,
+    "total_tokens": 32769
+  },
+  "latency_note": "Provider latency unavailable. Intent-to-outcome intervals include local receipt/transport/capture overhead and are not provider latency.",
+  "usage_note": "Provider-reported completion counts include reasoning; no reasoning text is copied into this summary.",
+  "process_cleanup": {
+    "owned_process_exited": true,
+    "other_processes_touched": false
+  },
+  "private_evidence": "behavioral/outputs/d04-comparison; raw originals and operator/configuration/process receipts remain ignored",
+  "unqualified": [
+    "reliability",
+    "population_causality",
+    "production_retrieval",
+    "persistence",
+    "release",
+    "independent_human_review"
+  ]
+}

@@ -9,9 +9,9 @@ authorization. Subsequent normal commits/pushes are pre-approved under ADR 0048;
 retained-trial access, deployment and release remain separately gated.
 Work serially on the primary `main` checkout.
 
-Current status (2026-10-02): **Correction-dependency measurement complete;
-model-assisted selection protocol specified for review.** Implementation, model calls,
-runtime adoption and native work remain unstarted for this next investigation.
+Current status (2026-10-02): **Offline capacity and D04's six-request behavioral
+comparison are manager-reviewed**; see the evidence-selection section below.
+Selector implementation, runtime adoption and native continuation remain unstarted.
 
 Native outcome: [seven turns delivered; stopped at turn 7's original-source
 admission gate](../findings/natural-memory-consultation/character-story-native-2026-09-30.md).
@@ -217,7 +217,7 @@ plan makes none and does not extend ADR 0055's historical report authorization.
 
 ## Model-Assisted Evidence Selection
 
-Status (2026-10-02): **Capacity and [bounded D04 behavioral preparation](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/behavioral/README.md) manager-reviewed; live unrun (ADR 0059).**
+Status (2026-10-02): **D04's six requests and [AI readout](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/behavioral/READOUT.md) independently manager-reviewed (ADR 0059).**
 [ADR 0057](../adr/0057-model-assisted-evidence-selection-investigation.md) records
 the rationale and candidate evidence-flow contract under PC-01/03/04/05/06/09/10/11.
 Keep this as the single PC-11 plan; retain the baseline and all historical evidence.
@@ -240,8 +240,8 @@ The user approved the [offline protocol](../../workflows/evals/character_memory_
 and [ADR 0058](../adr/0058-offline-packet-capacity-and-qualifications.md). The
 [offline readout](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/READOUT.md)
 shows all eight D04 sources fit both unchanged budgets and clarifies packet certainty.
-Defer selector work; only ADR 0059's separately approved comparison is prepared; retain runtime limits and native stop.
-Candidate retrieval at scale and final-answer quality remain separate questions.
+Defer selector work; ADR 0059's single comparison is complete and reviewed; retain runtime limits and native stop.
+Candidate retrieval at scale, reliability and native delivery remain unqualified.
 
 ## Historical Native Preparation
 

@@ -2,7 +2,7 @@
 
 The separately approved [bounded D04 behavioral comparison](behavioral/README.md)
 has passed offline manager review under [ADR 0059](../../../../../docs/adr/0059-bounded-d04-behavioral-comparison.md).
-Live outcomes remain unrun; the historical measurement below is unchanged.
+Its six requests and [AI outcomes](behavioral/READOUT.md) are independently manager-reviewed. The historical measurement below is unchanged.
 
 Current status (2026-10-02): **Offline capacity/rubric diagnostic complete;
 implementation and results independently manager-reviewed.** The approved
