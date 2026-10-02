@@ -1,0 +1,921 @@
+{
+  "kind": "offline_counterfactual_capacity_not_runtime_admission_or_model_evaluation",
+  "protocol_commit": "62d461d4e2b6939fc8dff2fff9309c1f542f9189",
+  "protocol_sha256": "4de8c8ad2e7ff4142bbb3b9550965d9338782a0bb8a28ee9920dcda2cec59521",
+  "correction_input_manifest_sha256": "902c6c72ceb2e15e52737e5550bbee054ee7be76cdee25cfddd6d9ce9edb062b",
+  "historical_artifacts_sha256": {
+    "comparison.json": "63a71bdbc6de1e1cfd69f2f5eaee48e6da562ba49216a66f031048fbca876634",
+    "packets.jsonl": "5eadb2b5cf8ad52c4f46691d92b0bae8365b29f7cb7859bf01f0e8ab63e1aa27"
+  },
+  "context_sha256": "5f099f2935e4345fe61f90f3192d961f06391d73260c546fc0b59c69dc025f0a",
+  "execution_sources": {
+    "services/ade-api/tests/agent_runtime/story_offline_capacity.py": "f0a73344e84ffaf7b92750c6c499d3c8208a6e5145a1f00b1bf15b963d459787",
+    "workflows/evals/character_memory_dev/story_continuity/evidence_selection/offline_inputs.py": "5c2f19748a4630f55c140e53b8b3e902d91b7dd9275cab79983b5159ff3aebdb"
+  },
+  "capacity_contract": {
+    "generation_input_limit": 11213,
+    "reviewer_input_limit": 11469,
+    "generation_output_reserve": 4096,
+    "reviewer_output_reserve": 4096,
+    "candidate_reply_reserve_tokens": 4096,
+    "candidate_reply_placeholder_ascii_chars": 16384,
+    "shared_suffix_limit": 640,
+    "model": "deepseek::deepseek-flash",
+    "adapter": "deepseek_openai",
+    "provider_configuration_status": "serializer_only_not_provider_verified",
+    "count_exception": "D04/whole-pool only; runtime and selector remain four"
+  },
+  "eligibility": "Frozen synthetic same-workspace/subject/character-root assumption; not database observation",
+  "literal_four": [
+    "E07",
+    "E02",
+    "E05",
+    "E04"
+  ],
+  "rows": [
+    {
+      "key": "D04/empty",
+      "included": [],
+      "included_source_count": 0,
+      "included_message_count": 0,
+      "source_order": [],
+      "history_equal": true,
+      "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "generation": {
+        "input_estimate": 879,
+        "input_limit": 11213,
+        "headroom": 10334,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_full_reserve": {
+        "input_estimate": 8396,
+        "input_limit": 11469,
+        "headroom": 3073,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_synthetic": {
+        "input_estimate": 4315,
+        "input_limit": 11469,
+        "headroom": 7154,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_preflight_error": null,
+      "counterfactual_capacity_status": "fits",
+      "runtime_admission": "not_attempted",
+      "generation_sha256": "34d3d88091775479e77093266d2bc21324fed26c0dad4bf182d861872af3dc16",
+      "reviewer_sha256": "9af6fd1dbae55b6a6d07affe629ea786ff2ea1b5f2ade0403c63d578d3edfcfb",
+      "reviewer_full_reserve_sha256": "5e259378a2cc75bc80a519aab6f97f22a34ff7a77d6a64ff2942383ee92f701f",
+      "historical_builder_parity": "byte_exact"
+    },
+    {
+      "key": "D04/literal-four",
+      "included": [
+        "E07",
+        "E02",
+        "E05",
+        "E04"
+      ],
+      "included_source_count": 4,
+      "included_message_count": 8,
+      "source_order": [
+        {
+          "source_id": "E07",
+          "message_id": "synthetic-archive-P02-E07-user",
+          "run_id": "synthetic-archive-P02-E07",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 13,
+          "role": "user",
+          "handle": "H1",
+          "created_at": "2026-09-29T12:07:00+00:00",
+          "content_sha256": "12c3ff8aaabe1877e728bbd3006bd36b1116cc7c7e3b5a36a015d441e18da561"
+        },
+        {
+          "source_id": "E07",
+          "message_id": "synthetic-archive-P02-E07-assistant",
+          "run_id": "synthetic-archive-P02-E07",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 14,
+          "role": "assistant",
+          "handle": "H2",
+          "created_at": "2026-09-29T12:07:01+00:00",
+          "content_sha256": "95540c6c783d1382914e70813a8909e2ebda02f440bc486b9774fc43b34c79cc"
+        },
+        {
+          "source_id": "E02",
+          "message_id": "synthetic-archive-P02-E02-user",
+          "run_id": "synthetic-archive-P02-E02",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 3,
+          "role": "user",
+          "handle": "H3",
+          "created_at": "2026-09-29T12:02:00+00:00",
+          "content_sha256": "3bafad44bd3bd37031c104599f4b38d32e0fdc029c25db3cf3280441605f653c"
+        },
+        {
+          "source_id": "E02",
+          "message_id": "synthetic-archive-P02-E02-assistant",
+          "run_id": "synthetic-archive-P02-E02",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 4,
+          "role": "assistant",
+          "handle": "H4",
+          "created_at": "2026-09-29T12:02:01+00:00",
+          "content_sha256": "096de3e09a17ad1e4d82e263961e6ba577cf1c2a035ea05c651a48cb3675bea6"
+        },
+        {
+          "source_id": "E05",
+          "message_id": "synthetic-archive-P02-E05-user",
+          "run_id": "synthetic-archive-P02-E05",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 9,
+          "role": "user",
+          "handle": "H5",
+          "created_at": "2026-09-29T12:05:00+00:00",
+          "content_sha256": "e46ced991c5cc4612b9c34dce646d567121be7d216b05781bb062a753f575ea8"
+        },
+        {
+          "source_id": "E05",
+          "message_id": "synthetic-archive-P02-E05-assistant",
+          "run_id": "synthetic-archive-P02-E05",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 10,
+          "role": "assistant",
+          "handle": "H6",
+          "created_at": "2026-09-29T12:05:01+00:00",
+          "content_sha256": "925316413f99ad46e739c9af3081822573a19cd24026f68522173faa8169386a"
+        },
+        {
+          "source_id": "E04",
+          "message_id": "synthetic-archive-P02-E04-user",
+          "run_id": "synthetic-archive-P02-E04",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 7,
+          "role": "user",
+          "handle": "H7",
+          "created_at": "2026-09-29T12:04:00+00:00",
+          "content_sha256": "d5dbd6075d3a27b034d2bd0b037e10870c34c8377ad509503aea6840862713b3"
+        },
+        {
+          "source_id": "E04",
+          "message_id": "synthetic-archive-P02-E04-assistant",
+          "run_id": "synthetic-archive-P02-E04",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 8,
+          "role": "assistant",
+          "handle": "H8",
+          "created_at": "2026-09-29T12:04:01+00:00",
+          "content_sha256": "cefa93eae6222e6a5aa14a4e05c7120e41f53a30787cbce231f35a6221bdf934"
+        }
+      ],
+      "history_equal": true,
+      "history_sha256": "199620936be77570011cbf74bb72fb458a2ba0057631d0bc337190d2dc434fcd",
+      "generation": {
+        "input_estimate": 1655,
+        "input_limit": 11213,
+        "headroom": 9558,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_full_reserve": {
+        "input_estimate": 9200,
+        "input_limit": 11469,
+        "headroom": 2269,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_synthetic": {
+        "input_estimate": 5119,
+        "input_limit": 11469,
+        "headroom": 6350,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_preflight_error": null,
+      "counterfactual_capacity_status": "fits",
+      "runtime_admission": "not_attempted",
+      "generation_sha256": "919ac79b51b1509271652b248da7bc5ca0b8e63c81c92b5fd96844d7ef8b5dcb",
+      "reviewer_sha256": "2d82d48c9c31f080fcc8cbd7a7c7fe57ddbdf0eb78676465b03a5431bb3367b4",
+      "reviewer_full_reserve_sha256": "4caeaec87dba89cc75f9efeb780019dc2daf995af9f9d819524e2c7b1fba172d",
+      "historical_builder_parity": "byte_exact"
+    },
+    {
+      "key": "D04/whole-pool",
+      "included": [
+        "E01",
+        "E02",
+        "E03",
+        "E04",
+        "E05",
+        "E06",
+        "E07",
+        "E08"
+      ],
+      "included_source_count": 8,
+      "included_message_count": 16,
+      "source_order": [
+        {
+          "source_id": "E01",
+          "message_id": "synthetic-archive-P02-E01-user",
+          "run_id": "synthetic-archive-P02-E01",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 1,
+          "role": "user",
+          "handle": "H1",
+          "created_at": "2026-09-29T12:01:00+00:00",
+          "content_sha256": "bedb086b131ecb99c965928deb853f361a620b375b69e72b21d73be3f9afcb0b"
+        },
+        {
+          "source_id": "E01",
+          "message_id": "synthetic-archive-P02-E01-assistant",
+          "run_id": "synthetic-archive-P02-E01",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 2,
+          "role": "assistant",
+          "handle": "H2",
+          "created_at": "2026-09-29T12:01:01+00:00",
+          "content_sha256": "9598e2c24db0945f7a6f154fff8ae0d5bae30f6b9fd10d87c26ecfba882183e7"
+        },
+        {
+          "source_id": "E02",
+          "message_id": "synthetic-archive-P02-E02-user",
+          "run_id": "synthetic-archive-P02-E02",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 3,
+          "role": "user",
+          "handle": "H3",
+          "created_at": "2026-09-29T12:02:00+00:00",
+          "content_sha256": "3bafad44bd3bd37031c104599f4b38d32e0fdc029c25db3cf3280441605f653c"
+        },
+        {
+          "source_id": "E02",
+          "message_id": "synthetic-archive-P02-E02-assistant",
+          "run_id": "synthetic-archive-P02-E02",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 4,
+          "role": "assistant",
+          "handle": "H4",
+          "created_at": "2026-09-29T12:02:01+00:00",
+          "content_sha256": "096de3e09a17ad1e4d82e263961e6ba577cf1c2a035ea05c651a48cb3675bea6"
+        },
+        {
+          "source_id": "E03",
+          "message_id": "synthetic-archive-P02-E03-user",
+          "run_id": "synthetic-archive-P02-E03",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 5,
+          "role": "user",
+          "handle": "H5",
+          "created_at": "2026-09-29T12:03:00+00:00",
+          "content_sha256": "02eecfff5de72d01fc0c32462a02fda8753ab0c2835861292c37679d24fbe66d"
+        },
+        {
+          "source_id": "E03",
+          "message_id": "synthetic-archive-P02-E03-assistant",
+          "run_id": "synthetic-archive-P02-E03",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 6,
+          "role": "assistant",
+          "handle": "H6",
+          "created_at": "2026-09-29T12:03:01+00:00",
+          "content_sha256": "665fef57272d67cb0cc8bf5edadd7d2892a54f7e288a476ce9364ab47a94fd83"
+        },
+        {
+          "source_id": "E04",
+          "message_id": "synthetic-archive-P02-E04-user",
+          "run_id": "synthetic-archive-P02-E04",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 7,
+          "role": "user",
+          "handle": "H7",
+          "created_at": "2026-09-29T12:04:00+00:00",
+          "content_sha256": "d5dbd6075d3a27b034d2bd0b037e10870c34c8377ad509503aea6840862713b3"
+        },
+        {
+          "source_id": "E04",
+          "message_id": "synthetic-archive-P02-E04-assistant",
+          "run_id": "synthetic-archive-P02-E04",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 8,
+          "role": "assistant",
+          "handle": "H8",
+          "created_at": "2026-09-29T12:04:01+00:00",
+          "content_sha256": "cefa93eae6222e6a5aa14a4e05c7120e41f53a30787cbce231f35a6221bdf934"
+        },
+        {
+          "source_id": "E05",
+          "message_id": "synthetic-archive-P02-E05-user",
+          "run_id": "synthetic-archive-P02-E05",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 9,
+          "role": "user",
+          "handle": "H9",
+          "created_at": "2026-09-29T12:05:00+00:00",
+          "content_sha256": "e46ced991c5cc4612b9c34dce646d567121be7d216b05781bb062a753f575ea8"
+        },
+        {
+          "source_id": "E05",
+          "message_id": "synthetic-archive-P02-E05-assistant",
+          "run_id": "synthetic-archive-P02-E05",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 10,
+          "role": "assistant",
+          "handle": "H10",
+          "created_at": "2026-09-29T12:05:01+00:00",
+          "content_sha256": "925316413f99ad46e739c9af3081822573a19cd24026f68522173faa8169386a"
+        },
+        {
+          "source_id": "E06",
+          "message_id": "synthetic-archive-P02-E06-user",
+          "run_id": "synthetic-archive-P02-E06",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 11,
+          "role": "user",
+          "handle": "H11",
+          "created_at": "2026-09-29T12:06:00+00:00",
+          "content_sha256": "230462d98c6cb70e637c272a01954ef6b492358d332b82084c554a5e43840ce2"
+        },
+        {
+          "source_id": "E06",
+          "message_id": "synthetic-archive-P02-E06-assistant",
+          "run_id": "synthetic-archive-P02-E06",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 12,
+          "role": "assistant",
+          "handle": "H12",
+          "created_at": "2026-09-29T12:06:01+00:00",
+          "content_sha256": "c16ff942508f7da77ff4845e6ba3e49343963147d268da85576800fe1ecd2956"
+        },
+        {
+          "source_id": "E07",
+          "message_id": "synthetic-archive-P02-E07-user",
+          "run_id": "synthetic-archive-P02-E07",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 13,
+          "role": "user",
+          "handle": "H13",
+          "created_at": "2026-09-29T12:07:00+00:00",
+          "content_sha256": "12c3ff8aaabe1877e728bbd3006bd36b1116cc7c7e3b5a36a015d441e18da561"
+        },
+        {
+          "source_id": "E07",
+          "message_id": "synthetic-archive-P02-E07-assistant",
+          "run_id": "synthetic-archive-P02-E07",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 14,
+          "role": "assistant",
+          "handle": "H14",
+          "created_at": "2026-09-29T12:07:01+00:00",
+          "content_sha256": "95540c6c783d1382914e70813a8909e2ebda02f440bc486b9774fc43b34c79cc"
+        },
+        {
+          "source_id": "E08",
+          "message_id": "synthetic-archive-P02-E08-user",
+          "run_id": "synthetic-archive-P02-E08",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 15,
+          "role": "user",
+          "handle": "H15",
+          "created_at": "2026-09-29T12:08:00+00:00",
+          "content_sha256": "b5c8fab8991e36bd8aff6ec4898d4cb56847a8a34b66f14d5f0d64dd5d2a66f7"
+        },
+        {
+          "source_id": "E08",
+          "message_id": "synthetic-archive-P02-E08-assistant",
+          "run_id": "synthetic-archive-P02-E08",
+          "conversation_id": "synthetic-archive-P02",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 16,
+          "role": "assistant",
+          "handle": "H16",
+          "created_at": "2026-09-29T12:08:01+00:00",
+          "content_sha256": "05006d1e43fd4e951715806e4e99dd79af0b1a228f449fea7b0f46e6966f6062"
+        }
+      ],
+      "history_equal": true,
+      "history_sha256": "3c0ae1882dcf3aa8d51b43e1bd642a35ac6afec7d4b22e3f3f99f7609c7b3ca2",
+      "generation": {
+        "input_estimate": 2410,
+        "input_limit": 11213,
+        "headroom": 8803,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_full_reserve": {
+        "input_estimate": 9993,
+        "input_limit": 11469,
+        "headroom": 1476,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_synthetic": {
+        "input_estimate": 5912,
+        "input_limit": 11469,
+        "headroom": 5557,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_preflight_error": null,
+      "counterfactual_capacity_status": "fits",
+      "runtime_admission": "not_attempted",
+      "generation_sha256": "5b3b58972eecebf35e166dcc5f9caad077fc832352b9a9132aff28940a2f1fb3",
+      "reviewer_sha256": "503516a04cb67d509fde9456fed0be14d8a726d8a34e0db1a8d7939de0d24897",
+      "reviewer_full_reserve_sha256": "eefa7dc97f5b855a0437a64128f1caf7ec65cb30569971f6fdf4c594130de0d4",
+      "historical_builder_parity": "outside_historical_four_window_contract"
+    },
+    {
+      "key": "D02/empty",
+      "included": [],
+      "included_source_count": 0,
+      "included_message_count": 0,
+      "source_order": [],
+      "history_equal": true,
+      "history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "generation": {
+        "input_estimate": 879,
+        "input_limit": 11213,
+        "headroom": 10334,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_full_reserve": {
+        "input_estimate": 8396,
+        "input_limit": 11469,
+        "headroom": 3073,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_synthetic": {
+        "input_estimate": 4315,
+        "input_limit": 11469,
+        "headroom": 7154,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_preflight_error": null,
+      "counterfactual_capacity_status": "fits",
+      "runtime_admission": "not_attempted",
+      "generation_sha256": "d606038e335acbbeb23f75287fa6bacf09cdbe835680ad34bdba514b3e9343fb",
+      "reviewer_sha256": "44f2e83ada6789a541060cd70d1a9a0bfe50aa1f1f130273e7cdfaa75184fb61",
+      "reviewer_full_reserve_sha256": "8d685bfa458af4a0af6f24619fcb345632418a49b94f80033e24997e5a079dc5",
+      "historical_builder_parity": "byte_exact"
+    },
+    {
+      "key": "D02/original",
+      "included": [
+        "E01"
+      ],
+      "included_source_count": 1,
+      "included_message_count": 2,
+      "source_order": [
+        {
+          "source_id": "E01",
+          "message_id": "synthetic-archive-P01-E01-user",
+          "run_id": "synthetic-archive-P01-E01",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 1,
+          "role": "user",
+          "handle": "H1",
+          "created_at": "2026-09-29T12:01:00+00:00",
+          "content_sha256": "383d0f7c832212b9b3fa68ec2b4df0407d58bef66722fb3ed05f8910fbbee19b"
+        },
+        {
+          "source_id": "E01",
+          "message_id": "synthetic-archive-P01-E01-assistant",
+          "run_id": "synthetic-archive-P01-E01",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 2,
+          "role": "assistant",
+          "handle": "H2",
+          "created_at": "2026-09-29T12:01:01+00:00",
+          "content_sha256": "04fff2e47d32f271e133d95aff3c7ef1cd99f93a36c2feba9fed38e89af5a4dd"
+        }
+      ],
+      "history_equal": true,
+      "history_sha256": "b5678cdbf07240d324d86ae9633d9fa63ac193ef9c99a35b4d0168e93893221a",
+      "generation": {
+        "input_estimate": 1079,
+        "input_limit": 11213,
+        "headroom": 10134,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_full_reserve": {
+        "input_estimate": 8595,
+        "input_limit": 11469,
+        "headroom": 2874,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_synthetic": {
+        "input_estimate": 4515,
+        "input_limit": 11469,
+        "headroom": 6954,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_preflight_error": null,
+      "counterfactual_capacity_status": "fits",
+      "runtime_admission": "not_attempted",
+      "generation_sha256": "b03f8725a09cba2c5b6127e078cee06d720457cec08f3ef078a482169232fe2a",
+      "reviewer_sha256": "5dce55c4af5798fa98db0b345323c5281b38826fab6e4de7ee228f81e4b29630",
+      "reviewer_full_reserve_sha256": "41c64f418e7d74e56652e67e2764bbf255819ff17211289f95530be5569b4956",
+      "historical_builder_parity": "byte_exact"
+    },
+    {
+      "key": "D02/competing",
+      "included": [
+        "E01",
+        "E02"
+      ],
+      "included_source_count": 2,
+      "included_message_count": 4,
+      "source_order": [
+        {
+          "source_id": "E01",
+          "message_id": "synthetic-archive-P01-E01-user",
+          "run_id": "synthetic-archive-P01-E01",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 1,
+          "role": "user",
+          "handle": "H1",
+          "created_at": "2026-09-29T12:01:00+00:00",
+          "content_sha256": "383d0f7c832212b9b3fa68ec2b4df0407d58bef66722fb3ed05f8910fbbee19b"
+        },
+        {
+          "source_id": "E01",
+          "message_id": "synthetic-archive-P01-E01-assistant",
+          "run_id": "synthetic-archive-P01-E01",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 2,
+          "role": "assistant",
+          "handle": "H2",
+          "created_at": "2026-09-29T12:01:01+00:00",
+          "content_sha256": "04fff2e47d32f271e133d95aff3c7ef1cd99f93a36c2feba9fed38e89af5a4dd"
+        },
+        {
+          "source_id": "E02",
+          "message_id": "synthetic-archive-P01-E02-user",
+          "run_id": "synthetic-archive-P01-E02",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 3,
+          "role": "user",
+          "handle": "H3",
+          "created_at": "2026-09-29T12:02:00+00:00",
+          "content_sha256": "2e3b85f86515dbfe1060ec8dcbf2745b9b234d5443cc551ffc0552761dccc566"
+        },
+        {
+          "source_id": "E02",
+          "message_id": "synthetic-archive-P01-E02-assistant",
+          "run_id": "synthetic-archive-P01-E02",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 4,
+          "role": "assistant",
+          "handle": "H4",
+          "created_at": "2026-09-29T12:02:01+00:00",
+          "content_sha256": "286c365b5e30b192a2acef53d6629f487c60672676701f68ce97cb1302677760"
+        }
+      ],
+      "history_equal": true,
+      "history_sha256": "01ed1ad4ee2b88c767faa82547124bd775e58f0953bf9e4c13d15d3956f1d63d",
+      "generation": {
+        "input_estimate": 1267,
+        "input_limit": 11213,
+        "headroom": 9946,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_full_reserve": {
+        "input_estimate": 8793,
+        "input_limit": 11469,
+        "headroom": 2676,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_synthetic": {
+        "input_estimate": 4712,
+        "input_limit": 11469,
+        "headroom": 6757,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_preflight_error": null,
+      "counterfactual_capacity_status": "fits",
+      "runtime_admission": "not_attempted",
+      "generation_sha256": "3b50a94ab24ce2e44838dab75ac3ca5afd971d791028e4828a3db4db58a3798f",
+      "reviewer_sha256": "e7ed077f69be488bf49853820afd59ec7e997ef080f9a97504af29ca43f53eee",
+      "reviewer_full_reserve_sha256": "e8c3daa653bbf17d97a8aafc9ea49bdbe34db19ded75f1a23e3986c42a4d158d",
+      "historical_builder_parity": "byte_exact"
+    },
+    {
+      "key": "D02/restored",
+      "included": [
+        "E01",
+        "E07"
+      ],
+      "included_source_count": 2,
+      "included_message_count": 4,
+      "source_order": [
+        {
+          "source_id": "E01",
+          "message_id": "synthetic-archive-P01-E01-user",
+          "run_id": "synthetic-archive-P01-E01",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 1,
+          "role": "user",
+          "handle": "H1",
+          "created_at": "2026-09-29T12:01:00+00:00",
+          "content_sha256": "383d0f7c832212b9b3fa68ec2b4df0407d58bef66722fb3ed05f8910fbbee19b"
+        },
+        {
+          "source_id": "E01",
+          "message_id": "synthetic-archive-P01-E01-assistant",
+          "run_id": "synthetic-archive-P01-E01",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 2,
+          "role": "assistant",
+          "handle": "H2",
+          "created_at": "2026-09-29T12:01:01+00:00",
+          "content_sha256": "04fff2e47d32f271e133d95aff3c7ef1cd99f93a36c2feba9fed38e89af5a4dd"
+        },
+        {
+          "source_id": "E07",
+          "message_id": "synthetic-archive-P01-E07-user",
+          "run_id": "synthetic-archive-P01-E07",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 13,
+          "role": "user",
+          "handle": "H3",
+          "created_at": "2026-09-29T12:07:00+00:00",
+          "content_sha256": "8365a01a3a642d835de40376104f431d42f76bb51f9a0928c6fb2e97d4b74898"
+        },
+        {
+          "source_id": "E07",
+          "message_id": "synthetic-archive-P01-E07-assistant",
+          "run_id": "synthetic-archive-P01-E07",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 14,
+          "role": "assistant",
+          "handle": "H4",
+          "created_at": "2026-09-29T12:07:01+00:00",
+          "content_sha256": "1479b35ec936b35e9437a2c9604d830b2bbc9d34df99aa2823b76c19c82d407e"
+        }
+      ],
+      "history_equal": true,
+      "history_sha256": "f24cef549a4fa14e1fc7780b055c6fc4389130aa458e4fc6b862c7de9464f1f1",
+      "generation": {
+        "input_estimate": 1288,
+        "input_limit": 11213,
+        "headroom": 9925,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_full_reserve": {
+        "input_estimate": 8814,
+        "input_limit": 11469,
+        "headroom": 2655,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_synthetic": {
+        "input_estimate": 4734,
+        "input_limit": 11469,
+        "headroom": 6735,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_preflight_error": null,
+      "counterfactual_capacity_status": "fits",
+      "runtime_admission": "not_attempted",
+      "generation_sha256": "b96f380c08c52879dda9c144143ea04299fdfe1e7812b353cdeb035ff6b94ecb",
+      "reviewer_sha256": "5a6fd35ba2c3677a9d181de0e67b22cb3069b0eef856700fc5a57f2a19c6cc8c",
+      "reviewer_full_reserve_sha256": "83ca42c1e441ea4283602a6561d8ac80f7dd6d94b5df6c6d90550771ecb2e6d1",
+      "historical_builder_parity": "byte_exact"
+    },
+    {
+      "key": "D02/neighborhood",
+      "included": [
+        "E02",
+        "E01",
+        "E03",
+        "E04"
+      ],
+      "included_source_count": 4,
+      "included_message_count": 8,
+      "source_order": [
+        {
+          "source_id": "E02",
+          "message_id": "synthetic-archive-P01-E02-user",
+          "run_id": "synthetic-archive-P01-E02",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 3,
+          "role": "user",
+          "handle": "H1",
+          "created_at": "2026-09-29T12:02:00+00:00",
+          "content_sha256": "2e3b85f86515dbfe1060ec8dcbf2745b9b234d5443cc551ffc0552761dccc566"
+        },
+        {
+          "source_id": "E02",
+          "message_id": "synthetic-archive-P01-E02-assistant",
+          "run_id": "synthetic-archive-P01-E02",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 4,
+          "role": "assistant",
+          "handle": "H2",
+          "created_at": "2026-09-29T12:02:01+00:00",
+          "content_sha256": "286c365b5e30b192a2acef53d6629f487c60672676701f68ce97cb1302677760"
+        },
+        {
+          "source_id": "E01",
+          "message_id": "synthetic-archive-P01-E01-user",
+          "run_id": "synthetic-archive-P01-E01",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 1,
+          "role": "user",
+          "handle": "H3",
+          "created_at": "2026-09-29T12:01:00+00:00",
+          "content_sha256": "383d0f7c832212b9b3fa68ec2b4df0407d58bef66722fb3ed05f8910fbbee19b"
+        },
+        {
+          "source_id": "E01",
+          "message_id": "synthetic-archive-P01-E01-assistant",
+          "run_id": "synthetic-archive-P01-E01",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 2,
+          "role": "assistant",
+          "handle": "H4",
+          "created_at": "2026-09-29T12:01:01+00:00",
+          "content_sha256": "04fff2e47d32f271e133d95aff3c7ef1cd99f93a36c2feba9fed38e89af5a4dd"
+        },
+        {
+          "source_id": "E03",
+          "message_id": "synthetic-archive-P01-E03-user",
+          "run_id": "synthetic-archive-P01-E03",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 5,
+          "role": "user",
+          "handle": "H5",
+          "created_at": "2026-09-29T12:03:00+00:00",
+          "content_sha256": "e6bb07f309b359f41126537dbf8c65718a6fbbc9c754efc6805d4ca012d94e3f"
+        },
+        {
+          "source_id": "E03",
+          "message_id": "synthetic-archive-P01-E03-assistant",
+          "run_id": "synthetic-archive-P01-E03",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 6,
+          "role": "assistant",
+          "handle": "H6",
+          "created_at": "2026-09-29T12:03:01+00:00",
+          "content_sha256": "cc780b695da493ce7dd523ddbeb9e4074b6335db3fb431ba72146c7c1f574f14"
+        },
+        {
+          "source_id": "E04",
+          "message_id": "synthetic-archive-P01-E04-user",
+          "run_id": "synthetic-archive-P01-E04",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 7,
+          "role": "user",
+          "handle": "H7",
+          "created_at": "2026-09-29T12:04:00+00:00",
+          "content_sha256": "bae042daf690654f40b2ba0dad928396c10a423e3301ac3e07faeb0c53ed2e28"
+        },
+        {
+          "source_id": "E04",
+          "message_id": "synthetic-archive-P01-E04-assistant",
+          "run_id": "synthetic-archive-P01-E04",
+          "conversation_id": "synthetic-archive-P01",
+          "definition_version_id": "synthetic-prior-version",
+          "archived": true,
+          "sequence": 8,
+          "role": "assistant",
+          "handle": "H8",
+          "created_at": "2026-09-29T12:04:01+00:00",
+          "content_sha256": "29d35f5c9e1f2d66094dbef01565fea37a5b392499fa4b92b7c9615b82613b46"
+        }
+      ],
+      "history_equal": true,
+      "history_sha256": "36fd86e36fe24b18dc79a0dca24c647843fbdeb530c7c1fbf3b44a1e1d4e31e0",
+      "generation": {
+        "input_estimate": 1635,
+        "input_limit": 11213,
+        "headroom": 9578,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_full_reserve": {
+        "input_estimate": 9180,
+        "input_limit": 11469,
+        "headroom": 2289,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_synthetic": {
+        "input_estimate": 5099,
+        "input_limit": 11469,
+        "headroom": 6370,
+        "overflow": 0,
+        "fits": true
+      },
+      "reviewer_preflight_error": null,
+      "counterfactual_capacity_status": "fits",
+      "runtime_admission": "not_attempted",
+      "generation_sha256": "d912ea00e2725365da1a86c5bdbe8b1c104a594412d45a8208592b36c34cd8be",
+      "reviewer_sha256": "e5eb9d208c931b73ebb51a58b4c452b4d4fbf5849e1a476083d8000471e1e6a6",
+      "reviewer_full_reserve_sha256": "a193a979124221f42094e25171e231c6328d3f9c2d62f74e27122df06e44f245",
+      "historical_builder_parity": "byte_exact"
+    }
+  ],
+  "packets_sha256": "30e42a17b021531e3a0f5ae47f52d2de850619986eab022e03234609dae89cdf",
+  "unmeasured": [
+    "provider_tokens",
+    "latency",
+    "generated_answers",
+    "reviewer_behavior",
+    "persistence",
+    "production_retrieval"
+  ]
+}

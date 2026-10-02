@@ -59,8 +59,10 @@ exist. The baseline, old evidence and native turn-7 stop remain unchanged.
 The user supplied two reports against the [external review packet](evidence_selection/EXTERNAL_REVIEW.md).
 Their [source-checked assessment](evidence_selection/REVIEW_ASSESSMENT.md) led to a
 separately approved [offline capacity/rubric slice](evidence_selection/OFFLINE_PROTOCOL.md).
-ADR 0058 permits all eight D04 sources only for that measurement, not runtime or
-selector requests. Both reports and all historical study bytes remain unchanged.
+The [offline readout](evidence_selection/READOUT.md) shows all eight D04 sources fit
+both unchanged budgets; implementation/results are independently manager-reviewed.
+ADR 0058's exception remains diagnostic-only. Defer the selector runner absent a
+separate compactness need; both reports and historical study bytes remain unchanged.
 
 ## Entrypoint And Freeze
 

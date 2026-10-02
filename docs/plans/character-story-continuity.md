@@ -217,7 +217,7 @@ plan makes none and does not extend ADR 0055's historical report authorization.
 
 ## Model-Assisted Evidence Selection
 
-Status (2026-10-02): **Offline capacity/rubric slice approved; not yet measured.**
+Status (2026-10-02): **Offline capacity/rubric complete and manager-reviewed.**
 [ADR 0057](../adr/0057-model-assisted-evidence-selection-investigation.md) records
 the rationale and candidate evidence-flow contract under PC-01/03/04/05/06/09/10/11.
 Keep this as the single PC-11 plan; retain the baseline and all historical evidence.
@@ -237,10 +237,11 @@ are recorded there, not implemented or verified through provider calls.
 Two reports against the [external review packet](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/EXTERNAL_REVIEW.md)
 are preserved in a [source-checked assessment](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/REVIEW_ASSESSMENT.md).
 The user approved the [offline protocol](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/OFFLINE_PROTOCOL.md)
-and [ADR 0058](../adr/0058-offline-packet-capacity-and-qualifications.md): a D04-only
-eight-source measurement and whole-packet rubric, without runtime count changes.
-No selector/provider work is authorized; retain the native turn-7 stop. Candidate
-retrieval at scale and final-answer quality remain separate questions.
+and [ADR 0058](../adr/0058-offline-packet-capacity-and-qualifications.md). The
+[offline readout](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/READOUT.md)
+shows all eight D04 sources fit both unchanged budgets and clarifies packet certainty.
+Defer selector/provider work; retain runtime count limits and the native turn-7 stop.
+Candidate retrieval at scale and final-answer quality remain separate questions.
 
 ## Historical Native Preparation
 

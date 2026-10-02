@@ -11,6 +11,8 @@ External review update (2026-10-02): the user approved the separate
 Only its D04 capacity measurement may exceed four final sources. This selector
 campaign remains unimplemented and unauthorized; the reports and initial
 [assessment](REVIEW_ASSESSMENT.md) remain unchanged evidence.
+The [completed offline readout](READOUT.md) reports whole-pool fit and prospective
+qualifications; implementation/results are independently manager-reviewed.
 
 The [continuity plan](../../../../../docs/plans/character-story-continuity.md#model-assisted-evidence-selection)
 remains the single delivery entrypoint. [ADR 0057](../../../../../docs/adr/0057-model-assisted-evidence-selection-investigation.md)
@@ -281,7 +283,8 @@ answer/reviewer sequence. Keep the baseline and native turn-7 stop unchanged.
    secrets and private provider receipts out of commits; publish only reviewed
    synthetic evidence and redacted metadata through ADR 0048's normal scoped push.
 
-At this checkpoint the proposal, external review and approved offline amendment
-exist, not new selector fixtures, a harness, campaign results, provider receipts
-or model-quality evidence. Implement the smaller offline slice first; this model
-campaign, broader candidate retrieval and runtime integration remain separate.
+At this checkpoint the separate offline capacity/rubric slice is complete and
+manager-reviewed. No new selector fixtures, selector harness, model-campaign
+results, provider receipts or model-quality evidence exist. Defer this campaign
+absent a separate compactness need; broader retrieval and runtime integration
+remain separate decisions.
