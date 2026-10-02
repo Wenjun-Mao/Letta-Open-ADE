@@ -56,6 +56,9 @@ specifies ten synthetic cases and three arms under the agreed ADR 0057 design.
 It separates source selection from candidate availability and final-answer quality.
 Only the protocol exists: no new harness, frozen inputs, model results or live-run
 authorization. The baseline, old evidence and native turn-7 stop remain unchanged.
+The [external direction-review packet](evidence_selection/EXTERNAL_REVIEW.md) is a
+single-reviewer, pinned GitHub handoff prepared before implementation, not a sent
+consultation or returned review result.
 
 ## Entrypoint And Freeze
 

@@ -234,10 +234,10 @@ and one withheld-antecedent control. Compare unchanged literal selection, a fixe
 anchor-neighborhood rule and a single model selector with up to four final sources.
 The proposed route/settings, exact prompt, schema, budgets and one-attempt policy
 are recorded there, not implemented or verified through provider calls.
-Next is offline harness/input preparation after implementation approval, including
-the pre-outcome freeze. Candidate retrieval at scale and final-answer quality stay
-separate. No model call, runtime adoption or native continuation is authorized by
-preparing this protocol; retain all historical results and the turn-7 stop.
+An [external direction-review packet](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/EXTERNAL_REVIEW.md)
+is prepared for one GitHub-only critique before offline harness/input preparation.
+No external dispatch, implementation or model run is claimed. Candidate retrieval
+at scale and final-answer quality stay separate; retain the native turn-7 stop.
 
 ## Historical Native Preparation
 
