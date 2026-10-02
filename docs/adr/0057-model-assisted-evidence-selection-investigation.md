@@ -44,7 +44,10 @@ bearing selector call requires integrity/scope checks and its own finite context
 and output budget; the four-window final limit does not bound its larger input.
 Keep observational request accounting, explicit timeout/retry semantics and
 direct ownership under PC-05/06/09. No new service, episode store or generic
-framework is selected. No model, route, settings or concrete prompt is chosen yet.
+framework is selected. The follow-on
+[protocol proposal](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/PROTOCOL.md)
+specifies a source-backed route, settings and prompt for review; they are not a
+runtime default, executed comparison or provider-verified configuration.
 
 ## Alternatives And Consequences
 

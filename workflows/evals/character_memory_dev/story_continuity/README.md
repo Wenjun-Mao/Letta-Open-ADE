@@ -51,6 +51,12 @@ supports a bounded design proposal, not selector adoption, a completed retrieval
 fix or reopening native work. The workflow and exact reproduction commands are
 in [correction_dependencies](correction_dependencies/README.md).
 
+The subsequent [model-assisted selection protocol](evidence_selection/PROTOCOL.md)
+specifies ten synthetic cases and three arms under the agreed ADR 0057 design.
+It separates source selection from candidate availability and final-answer quality.
+Only the protocol exists: no new harness, frozen inputs, model results or live-run
+authorization. The baseline, old evidence and native turn-7 stop remain unchanged.
+
 ## Entrypoint And Freeze
 
 From the retained primary checkout on `main`:

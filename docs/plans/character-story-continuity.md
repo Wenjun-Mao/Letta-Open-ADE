@@ -10,7 +10,7 @@ retained-trial access, deployment and release remain separately gated.
 Work serially on the primary `main` checkout.
 
 Current status (2026-10-02): **Correction-dependency measurement complete;
-model-assisted selection design direction agreed.** Implementation, model calls,
+model-assisted selection protocol specified for review.** Implementation, model calls,
 runtime adoption and native work remain unstarted for this next investigation.
 
 Native outcome: [seven turns delivered; stopped at turn 7's original-source
@@ -217,7 +217,7 @@ plan makes none and does not extend ADR 0055's historical report authorization.
 
 ## Model-Assisted Evidence Selection
 
-Status (2026-10-02): **Investigation design agreed; no implementation or model run.**
+Status (2026-10-02): **Design agreed; protocol specified; no implementation or run.**
 [ADR 0057](../adr/0057-model-assisted-evidence-selection-investigation.md) records
 the rationale and candidate evidence-flow contract under PC-01/03/04/05/06/09/10/11.
 Keep this as the single PC-11 plan; retain the baseline and all historical evidence.
@@ -228,16 +228,16 @@ Fresh answer-generation and reviewer requests receive the same selected history,
 without the selector's broader context, reasoning or synthetic summaries.
 Incomplete recall remains uncertain rather than manufacturing a missing detail.
 
-Next deliverable: a bounded experiment protocol, not runtime wiring. First test
-selection when necessary evidence is available, using existing cases as exposed
-development checks plus ambiguous-reference, corrected-original and no-history
-controls. Freeze new inputs/labels, candidate limits, prompt/schema, comparison
-recipe, model/settings, attempt policy and assessment before any model outcomes.
-Larger-history candidate retrieval is a separate investigation; do not count an
-upstream corpus omission as a selector failure or treat these checks as independent.
-Verify source integrity, selection/admission omissions and fresh shared packets
-separately from semantic quality. Model calls, implementation, production adoption
-and native continuation require later authorization; this agreement grants none.
+The [bounded protocol](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/PROTOCOL.md)
+specifies ten cases: six exposed development cases, three new semantic controls
+and one withheld-antecedent control. Compare unchanged literal selection, a fixed
+anchor-neighborhood rule and a single model selector with up to four final sources.
+The proposed route/settings, exact prompt, schema, budgets and one-attempt policy
+are recorded there, not implemented or verified through provider calls.
+Next is offline harness/input preparation after implementation approval, including
+the pre-outcome freeze. Candidate retrieval at scale and final-answer quality stay
+separate. No model call, runtime adoption or native continuation is authorized by
+preparing this protocol; retain all historical results and the turn-7 stop.
 
 ## Historical Native Preparation
 
