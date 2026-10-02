@@ -5,6 +5,8 @@ planning the correction-plus-antecedent recovery follow-on and chose to keep fou
 windows while comparing joint selection methods. Atomic admission below is a
 proposal for review, not adopted runtime behavior or execution authorization.
 The [bounded plan](../plans/character-evidence-recovery.md) owns delivery scope.
+The [external-review assessment](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/JOINT_PACKET_ASSESSMENT.md)
+clarifies this proposal's costs and follow-up questions; status remains proposed.
 
 ## Problem And Evidence
 
@@ -51,9 +53,11 @@ pool does not silently authorize a new semantic call or a partially reused outpu
 Final generation and reviewer H are identical. Evaluator annotations, the broader
 selector pool, model reasoning and synthetic summaries cannot enter either request.
 Structural checks establish valid sources and packet preservation, not semantic
-dependency completeness. Missing or ambiguous evidence remains a model
-interpretation question under PC-05/11. All applicable PC-01/03/04/05/06/07/08/09/10/11
-agreements remain unchanged.
+dependency completeness or minimum sufficiency. Selection can omit a material
+correction and leave both consumers with the same misleading subset. Assess the
+full eligible ledger as well as the actual final H. Missing or ambiguous evidence
+remains a model interpretation question under PC-05/11. All applicable
+PC-01/03/04/05/06/07/08/09/10/11 agreements remain unchanged.
 
 ## Alternatives And Consequences
 
@@ -68,15 +72,20 @@ agreements remain unchanged.
   rejected; meaningful correction and uncertainty belong to semantic interpretation.
 
 Atomic admission may reject an otherwise useful subset because an optional
-selected exchange overflows a request. Record that tradeoff explicitly. Selecting
-fewer useful sources can help; automatic reselection, output repair and caller-
-specific fallbacks are not part of this proposed experiment.
+selected exchange overflows a request or disappears. Where a source-quoted
+reference demonstrates that a smaller sufficient packet fits, record this as
+packet-policy rejection despite a useful admissible alternative. The original
+method's failed outcome remains in the comparison; the reference is not a fallback.
+Atomicity preserves the proposed set, not a claim that every source is essential.
+Selecting fewer useful sources can help; automatic reselection, output repair and
+caller-specific fallbacks are not part of this proposed experiment.
 
 ## Guardrails And Follow-Up
 
 The [protocol proposal](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/PROTOCOL.md)
 retains ten cases, three methods and the original source-only response schema.
-Its v2 change is proposed joint admission and clearer semantic assessment, not
+Its v2.1 revision adds explicit material-omission controls and a no-call prefix
+diagnostic to v2's proposed joint admission and semantic assessment. Neither is
 permission to run a campaign. Existing D04 count exceptions stay bounded to their
 completed diagnostics. ADR 0057's investigation direction and the native turn-7
 stop remain intact; this ADR would refine admission only if accepted.
@@ -86,6 +95,16 @@ full metadata retention, identical H, and byte-equality with the historical buil
 when the same selection fits. Preserve historical source/artifact hashes rather
 than rebinding them after a refactor. Source-quoted semantic review still needs to
 check omitted corrections, alternatives and warranted uncertainty.
+
+**Open before native adoption: selector-pool snapshot validity.** Define what
+happens when an unselected candidate changes or disappears while or after the
+selector sees it, including when the result is empty. It may have influenced which
+sources were selected. Trace mutation coverage of the accepted-generation fence
+and test drift of an unselected material qualification. Selected-source guards
+alone do not define the pool's validity period. Also distinguish proposal failure
+from user-turn failure; any later fallback would be a separately identified new
+proposal under an explicit policy. Fixed offline fixtures need neither native
+race handling nor that fallback to test selection and packet construction.
 
 No runtime, prompt, schema, provider binding or persistence code changes with this
 record. Implementation approval would first cover offline preparation; live

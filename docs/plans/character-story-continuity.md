@@ -228,9 +228,10 @@ plan. Selector implementation and all live/native continuation remain unstarted.
 the investigation direction. Proposed [ADR 0060](../adr/0060-joint-history-packet-admission.md)
 distinguishes a jointly selected packet from individually ranked candidates;
 neither its atomic admission nor a new runtime policy is adopted here.
-[Protocol v2](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/PROTOCOL.md)
+[Protocol v2.1](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/PROTOCOL.md)
 retains the ten cases and three methods, with a common proposed whole-packet
-admission rule. The first proposed implementation slice is offline preparation.
+admission rule. The [review assessment](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/JOINT_PACKET_ASSESSMENT.md)
+sharpens qualification and cost checks. The first proposed slice is offline preparation.
 
 The [offline readout](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/READOUT.md)
 established whole-pool capacity; the behavioral comparison established one

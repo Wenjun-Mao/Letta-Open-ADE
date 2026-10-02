@@ -1,13 +1,15 @@
 # Character Evidence Recovery Design And Plan
 
-Date: 2026-10-02. Status: **Design prepared for review; implementation unstarted.**
+Date: 2026-10-02. Status: **Design revised after external review; implementation unstarted.**
 The user requested this follow-on through `relay:brainstorm-and-plan` and selected
 keeping four windows while comparing joint source selection methods. This plan
 owns that bounded slice under the [story-continuity plan](character-story-continuity.md#model-assisted-evidence-selection).
 It replaces the earlier instruction to defer all selector planning, not the frozen
 studies or their execution boundaries. [ADR 0060](../adr/0060-joint-history-packet-admission.md)
-records the proposed packet contract; [protocol v2](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/PROTOCOL.md)
+records the proposed packet contract; [protocol v2.1](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/PROTOCOL.md)
 owns the exact comparison, prompt, schema and proposed execution envelope.
+The [review assessment](../../workflows/evals/character_memory_dev/story_continuity/evidence_selection/JOINT_PACKET_ASSESSMENT.md)
+records verified findings, narrow amendments and deferred native questions.
 
 Relevant product agreements: [PC-01/03/04/05/06/07/08/09/10/11](../product-contract.md).
 Product intent is unchanged. Work remains serial on the primary `main` checkout;
@@ -38,7 +40,7 @@ attributed to those later stages; they are design hazards supported by the code.
 
 | Approach | Value | Limitation | Place in this plan |
 | --- | --- | --- | --- |
-| Existing literal top four | Reproduces the measured baseline with no new model call. | Scores exchanges individually; a distant referent can lose to repeated retellings. | Fixed control. |
+| Existing literal top four | Reuses the measured selection recipe with no new model call. | Scores exchanges individually; a distant referent can lose to repeated retellings. New joint admission changes overflow behavior. | Fixed control. |
 | One anchor with immediate neighbors | Small deterministic implementation; sometimes supplies interpretive context. | Proximity misses distant references and can add unrelated material. | Fixed simpler candidate. |
 | One model selecting a joint set of original IDs | Can consider reference meaning, competing accounts and qualifications across the whole pool. | Adds a fallible request and cost; structural validation cannot prove its interpretation. | Candidate worth testing under the retained cap. |
 
@@ -105,7 +107,10 @@ rebuilding a subset. Scope/hash/annotation or accepted-generation drift remains
 fatal. After exposure, the packet is immutable through generation, review and
 commit checks. Before any broader-pool model exposure, authorize the actual pool,
 not only the final selected subset. Native failure behavior and integration need
-their own reviewed binding before that later work can start.
+their own reviewed binding before that later work can start. In particular, define
+the validity of the broader pool if an unselected source changes during/after the
+selector call, even for an empty result. Trace existing generation-fence coverage
+before adding another mechanism; ADR 0060 records this open native question.
 
 ### 4. Isolate The Consumers And Outcomes
 
@@ -126,11 +131,13 @@ only; it does not generate or persist a reply.
    six exposed D cases unchanged. Author N01 ambiguous reference, N02 corrected
    original and N03 no-history controls plus M01's withheld antecedent exactly as
    specified by the existing ten-case ceiling. Make N01/N02 structurally different
-   from the repeated original/restoration pattern. Review source-quoted sufficient
-   alternatives, material omissions and deletion challenges before new scoring.
-   Add isolated scripted capacity/source-loss examples for packet mechanics;
-   they are not extra semantic campaign cases. Confirm reference packets can
-   represent the intended meanings within four before building the model runner.
+   in positions and semantic relation from the repeated original/restoration pattern.
+   Freeze source-quoted sufficient alternatives and harmful-omission contrasts for
+   N01/N02/M01, plus the deterministic-prefix reference recipe. Inspect actual
+   serialized H before judging packet sufficiency. Add scripted optional-source
+   overflow/loss and material-correction-loss examples, with reference judgments
+   distinguishing useful subsets from misleading salvage. These are not extra
+   campaign cases. Confirm intended meanings fit four before building the runner.
 2. **Implement the offline candidate mechanics after approval.** Keep inputs,
    standard-library loaders, prompt/schema and tests with `evidence_selection/`.
    Add a cohesive service-test builder beside `story_packet_builder.py` that
@@ -138,7 +145,9 @@ only; it does not generate or persist a reply.
    Share only the narrow serialization needed; preserve old builders, hashes and
    artifacts. Verify the fixed neighborhood recipe, output validation, joint
    admission, final H isolation and attempt capture with scripted responses.
-   These checks establish mechanics, not semantic recovery quality.
+   After the case freeze, materialize all prefix references under its fixed rubric
+   and freeze their packets/assessments before selector dispatch. These checks
+   establish mechanics, not semantic recovery quality.
 3. **Freeze a concrete selector campaign for a separate live decision.** Publish
    exact inputs, judgments, prompt, route/settings, serialized requests, deadlines,
    stop rules and hashes before outcomes. Use the public Model Router boundary.
@@ -150,15 +159,19 @@ only; it does not generate or persist a reply.
    final packet against full eligible-ledger meaning and source quotes. Separate
    candidate availability, selection, admission, qualifications and uncertainty.
    Count unnecessary admissions and request cost without an aggregate quality
-   score. A completed comparison may conclude that neither candidate is useful.
+   score. Use matched-length prefix references to explain whether an apparent
+   gain needs different sources or merely a shorter packet, without claiming a
+   deterministic stopping policy. Count avoidable whole-packet rejection as a cost.
+   A completed comparison may conclude that neither candidate is useful.
 5. **Propose downstream work only from a useful result.** A selected packet gain
    must preserve controls and material qualifications, not merely add an answer
    string. If the simpler candidate matches it, prefer that path. A later bounded
-   answer/reviewer comparison must freeze its own requests and measure supported
+   answer/reviewer comparison must use method-produced packets, declare its
+   presentation-order control, freeze its requests and measure supported
    naming, uncertainty, ownership and naturalness. Native persistence/continuity
    and runtime adoption require their own evidence; the native turn-7 gate stands.
 
-The requested planning iteration ends with this reviewable design and protocol.
+The planning and consultation iterations end with this revised design and protocol.
 The next implementation slice is deliverables 1-2 only. It ends at offline readiness,
 with a complete proposed live packet available for review before any launch.
 
@@ -172,7 +185,7 @@ contract and source labels; code tests cannot establish natural-language truth.
 | --- | --- |
 | Direct correction becomes referential, with its antecedent available | A sufficient named-answer route remains possible; resolving an admitted reference requires its referent. Different source sets may be valid. |
 | Genuine correction changes the original account | Selected evidence must preserve the changed meaning; retrieving the original alone cannot earn settled-answer credit. |
-| Necessary antecedent is withheld | Name the availability gap; useful partial evidence is allowed. No credit for reconstructing the missing answer. |
+| Necessary antecedent is withheld | Name the availability gap; useful partial evidence is allowed. Concealing an available withdrawal behind a withdrawn-retelling-only packet is a regression. No credit for reconstructing the missing answer. |
 | Two plausible referents remain unresolved | Preserve the uncertainty-bearing evidence rather than silently elect one. |
 | Irrelevant dialogue is present or wording is paraphrased | Check the source-relative meaning and relevant qualifications before calling it an invariant. Equivalent text is not automatically equivalent evidence. |
 | Archive/version changes within the same relationship | Eligibility stays consistent; this campaign's fixture metadata alone does not qualify database behavior. |
@@ -185,8 +198,9 @@ Use source quotes to judge supported naming, qualified evidence and optional det
 Avoid a binary retrieved/not-retrieved score or fixed uncertainty phrase.
 
 For candidate continuation, require a useful packet gain versus both simpler arms
-under the protocol's qualification rules, with no control regression. Report gains
-on exposed D cases separately from new N01/N02 controls. A gain confined to the
+under the protocol's qualification rules, with no control regression, including
+M01's material qualifications. Report gains on exposed D cases separately from
+new N01/N02 controls. A gain confined to the
 known restoration pattern warrants limited follow-up, not native integration.
 An ambiguous or unassessable control cannot support a positive continuation claim.
 N03's empty semantic selection is conformance, not matched superiority over methods
@@ -217,7 +231,8 @@ service, episode store, graph/proxy model, second reviewer, semantic keyword rul
 rewritten summaries, new fact types, deployment or production-default change is
 part of this plan. Atomic selection trades opportunistic salvage for explicit
 failure when even one optional selected exchange makes the whole packet unfit;
-measure that cost before later adoption.
+measure that cost against separately assessed admissible subsets before later
+adoption. Preserving a proposal does not establish that every source is necessary.
 
 ## Research Revisit Conditions
 

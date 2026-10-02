@@ -13,10 +13,12 @@ sources fit both unchanged request budgets with full reply reserves. This neithe
 changes the runtime four-window ceiling nor qualifies generated answers.
 
 The [four-window recovery plan](../../../../../docs/plans/character-evidence-recovery.md)
-is prepared for review. [Selector protocol v2](PROTOCOL.md) proposes comparing
+has been revised after [external review](JOINT_PACKET_ASSESSMENT.md).
+[Selector protocol v2.1](PROTOCOL.md) proposes comparing
 literal, neighborhood and joint model selection with common whole-packet admission;
 implementation remains unstarted. The [joint-packet review brief](JOINT_PACKET_REVIEW.md)
-pins this design for a requested independent Pro review; publication is not dispatch.
+preserves the reviewed design's source anchor; both returned reports are archived
+unchanged and their verified findings are integrated into the proposal.
 The [original external reports](reports/) and [source-checked assessment](REVIEW_ASSESSMENT.md)
 are historical evidence; their then-current status is preserved. The
 [continuity plan](../../../../../docs/plans/character-story-continuity.md#model-assisted-evidence-selection)
