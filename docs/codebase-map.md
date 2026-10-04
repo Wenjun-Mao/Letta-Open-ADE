@@ -1,6 +1,10 @@
 # Codebase Map
 
-Use this page to find the first owner of a change. The current request path is:
+Use this page to find the first owner of a change. For logical capability ownership
+and measurement boundaries, use the
+[Domain/Subsystem/Module inventory and connected map](architecture/capability-map/README.md).
+That hierarchy complements this physical codebase map; it does not move files or
+create new runtime components. The current request path is:
 
 ```text
 Browser -> apps/ade-web -> services/ade-api -> PostgreSQL and Model Router

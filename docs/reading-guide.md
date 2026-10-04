@@ -13,6 +13,8 @@ For delivery priorities, consult the [roadmap](product-roadmap.md) and
 2. [Architecture overview](architecture/overview.md) for service and data boundaries.
 3. [Request flows](architecture/request-flows.md) for a product request end to end.
 4. [Codebase map](codebase-map.md) to find the owner of a change.
+   The [capability inventory and connected map](architecture/capability-map/README.md)
+   locates logical Character/Memory/Interface responsibilities and evidence gaps.
 5. The local README for the feature or workflow you will change.
 
 Keep this model in mind:

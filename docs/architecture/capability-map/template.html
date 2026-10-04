@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADE | Capability and dataflow map</title>
+<style>
+:root{color-scheme:light;--bg:#f6f8fb;--paper:#fbfdff;--ink:#11283d;--muted:#475569;--line:#dbe3ef;--blue:#0b5da8;--sky:#eaf5ff;--teal:#087d70;--character:#a14a2b;--optional:#75694d}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(150deg,#f6f8fb,#edf4fa 60%,#f7fafb);color:var(--ink);font-family:"Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5}
+main{max-width:1800px;margin:0 auto;padding:28px}h1,h2,h3,p{margin:0}h1{font-size:clamp(26px,3vw,38px);letter-spacing:-.035em}h2{font-size:21px}h3{font-size:16px}header p{color:var(--muted);margin:6px 0 14px;max-width:1000px}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--blue);font-weight:600}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:20px 0 12px}button{font:inherit;color:inherit;cursor:pointer}button:focus-visible,a:focus-visible{outline:3px solid #0b57d0;outline-offset:3px}.flow-button{border:1px solid var(--line);border-radius:8px;padding:9px 14px;background:white}.flow-button[aria-pressed=true]{background:var(--ink);color:white;border-color:var(--ink)}.legend{display:flex;gap:14px;flex-wrap:wrap;margin-left:auto;font-size:12px;color:var(--muted)}.legend span::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#62778b;margin-right:5px}.legend .partial::before{background:#b47a23}.legend .experimental::before{background:var(--blue)}.legend .deferred::before{background:#8d826e}
+.flow-note{padding:13px 16px;border-left:3px solid var(--blue);background:#ffffffb8;margin-bottom:20px;color:var(--muted)}.flow-note strong{color:var(--ink)}.flow-note ol{display:flex;gap:26px;flex-wrap:wrap;padding-left:20px;margin:9px 0 0;font-size:13px}.flow-note li{max-width:260px}
+.workspace{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:20px;align-items:start}.drawing{position:relative;padding:0 24px 0 12px}.map-grid{display:grid;grid-template-columns:240px minmax(0,1fr);gap:22px;align-items:start}.domain{position:relative;border:1px solid #b5cbe0;border-radius:14px;padding:17px;background:#f8fbff}.domain-title{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:16px}.domain-title small{color:var(--muted);font-size:12px}.character{border-color:#d7b6a8;background:#fffaf7}.memory{border-color:#9bc0e4}.interface{margin-top:22px;background:#f2f8f5;border-color:#b2cdbf}.external{margin-top:16px;background:#faf8f2;border:1px dashed #b4a98c}.subsystem{position:relative;margin-bottom:17px;padding:14px 0 0;border-top:1px solid var(--line)}.subsystem:first-of-type{border-top:0;padding-top:0}.subsystem h3{margin-bottom:10px;font-weight:600}.module-grid{display:grid;gap:12px}.recall-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.retention-grid,.organization-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.character .module-grid{grid-template-columns:1fr}.interface .module-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.node{position:relative;z-index:2;display:block;width:100%;text-align:left;border:1px solid #bdcfdf;border-radius:9px;background:white;padding:12px;min-height:115px;overflow-wrap:anywhere;transition:border-color .15s,box-shadow .15s}.node strong{display:block;font-size:15px;line-height:1.3;margin-bottom:7px}.node small{display:block;color:var(--muted);font-size:12px}.node .node-id{font-family:Consolas,"Courier New",monospace;font-size:11px;color:#597086;margin-bottom:5px}.badge{display:inline-block;margin-top:8px;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:#405b72}.badge.partial{color:#966212}.badge.experimental{color:var(--blue)}.badge.deferred{color:var(--optional)}.node[data-status=deferred]{border-style:dashed;background:#fbfaf7}.node.selected{border-color:var(--blue);box-shadow:0 0 0 2px #a1c9eb}.node.on-path{border-color:var(--blue)}body[data-flow=retain] .node.on-path{border-color:var(--teal)}body[data-flow=support] .node.on-path{border-color:#6d7e8d}
+.records{margin:18px 0;padding:14px;border-radius:10px;background:#eef3f8}.records h3{font-size:14px;margin-bottom:10px}.records-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.record{min-height:105px;border-radius:50% / 11px;padding-top:18px;background:linear-gradient(white,#f8fbfd)}.record strong{font-size:14px}.record .node-id{font-size:10px}.caption{font-size:12px;color:var(--muted);margin-top:10px}.support{margin-top:22px;padding:17px;border-top:3px solid #93a8ba;background:#f0f4f7;border-radius:10px}.support .module-grid{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:12px}.support .node{min-height:100px}.adjacent{margin:22px 0}.adjacent .module-grid{grid-template-columns:1fr 1fr;margin-top:10px}.adjacent .node{min-height:100px}
+.connections{position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none;overflow:visible}.connections path{fill:none;stroke-width:1.5;opacity:.7}.connections text{font-size:11px;fill:var(--ink);paint-order:stroke;stroke:#fbfdff;stroke-width:5px;stroke-linejoin:round}.connections path.secondary{stroke-dasharray:5 4;opacity:.55}.details{position:sticky;top:20px;border:1px solid var(--line);border-radius:12px;background:white;padding:19px;overflow-wrap:anywhere}.details .owner{font-size:12px;color:var(--muted);margin:5px 0 14px}.details h3{margin:15px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--blue)}.details p{font-size:13px}.details ul{padding:0;list-style:none;margin:4px 0}.details li{font:11px/1.65 Consolas,"Courier New",monospace;padding:3px 0}.details .notice{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}.mobile-links{display:none}footer{padding:16px 0;color:var(--muted);font-size:12px}footer a{color:var(--blue)}.boundary{font-size:13px;padding:12px 0 0;color:var(--muted)}
+@media(max-width:1400px){.workspace{grid-template-columns:minmax(0,1fr)}.details{position:static;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px}.details>h2,.details>.owner,.details>.notice{grid-column:1/-1}.map-grid{grid-template-columns:230px minmax(0,1fr)}}
+@media(max-width:1050px){.recall-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.interface .module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.records-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.support .module-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.mobile-links{display:block;margin-top:20px;padding:16px;background:#ffffffa6;border-radius:10px;color:var(--muted);font-size:13px}.mobile-links ul{columns:2;column-gap:32px}.mobile-links li{break-inside:avoid;margin:8px 0}.mobile-links button{border:0;background:transparent;color:var(--blue);padding:2px;text-decoration:underline}
+@media(max-width:760px){main{padding:18px 14px}.drawing{padding:0}.map-grid{grid-template-columns:1fr}.character .module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.retention-grid,.organization-grid{grid-template-columns:1fr}.support .module-grid,.interface .module-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.legend{margin-left:0}.flow-note ol{display:block}.flow-note li{max-width:none;margin:4px 0}.details{display:block}.connections{display:none}.mobile-links ul{columns:1}.node{min-height:110px}.adjacent .module-grid{grid-template-columns:1fr}.domain-title{flex-wrap:wrap}.flow-button{min-height:44px;padding:8px 12px}}
+@media(prefers-reduced-motion:reduce){.node{transition:none}}
+</style>
+</head>
+<body data-flow="recall">
+<main>
+<header><p class="eyebrow">ADE / Responsibility atlas</p><h1>Character, memory, and the machinery between them</h1><p>Domain &rarr; Subsystem &rarr; Module describes ownership. The highlighted connections describe dataflow. Select a piece to see its sources, evidence limits, gap and next isolated check.</p></header>
+<div class="controls" id="flow-controls" aria-label="Dataflow views"></div>
+<section class="flow-note" id="flow-note" aria-live="polite"></section>
+<div class="workspace">
+<div class="drawing" id="drawing">
+<div class="map-grid"><section class="domain character" id="character"></section><section class="domain memory" id="memory"></section></div>
+<section class="domain interface" id="interface"></section>
+<section class="domain external" id="external-tools"></section>
+<section class="support" id="support"></section>
+<section class="adjacent" id="adjacent"></section>
+<svg class="connections" id="connections" aria-hidden="true"></svg>
+</div>
+<aside class="details" id="details" aria-label="Selected responsibility details" aria-live="polite"></aside>
+</div>
+<section class="mobile-links" id="mobile-links" aria-label="Active flow connections"></section>
+<p class="boundary">A responsibility map, not a service/deployment diagram. Existing code does not imply released behavioral qualification. No new agent, memory store, background worker or model call is introduced by this map.</p>
+<footer id="footer"></footer>
+</main>
+<script type="application/json" id="inventory-data">__INVENTORY_DATA__</script>
+<script>
+const data=JSON.parse(document.getElementById("inventory-data").textContent);
+const all=[...data.entries,...data.records],byId=new Map(all.map(x=>[x.id,x]));
+const drawing=document.getElementById("drawing"),svg=document.getElementById("connections"),details=document.getElementById("details");
+let activeFlow=data.flows[0],selectedId="MEM-03";
+function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
+function append(parent,...children){children.forEach(x=>parent.appendChild(x));return parent;}
+function node(item,record=false){
+  const button=el("button",`node${record?" record":""}`);button.type="button";button.id=item.id;
+  button.dataset.status=item.status||"record";button.setAttribute("aria-pressed","false");
+  const level=item.domain&&!["support","adjacent"].includes(item.domain)?"L3 / ":"";
+  append(button,el("small","node-id",`${level}${item.id}`),el("strong","",item.name),el("small","",record?"Stored record, not processing":item.subsystem));
+  if(item.status)button.appendChild(el("span",`badge ${item.status}`,item.status));
+  button.addEventListener("click",()=>{selectedId=item.id;updateSelection();});return button;
+}
+function buildDomain(domain){
+  const section=document.getElementById(domain.id),title=el("div","domain-title");
+  append(title,el("h2","",`L1 / ${domain.name}`),el("small","",domain.role));section.appendChild(title);
+  for(const subsystem of domain.subsystems){
+    const group=el("section","subsystem");group.appendChild(el("h3","",`L2 / ${subsystem}`));
+    let gridClass="module-grid";
+    if(domain.id==="memory")gridClass+=subsystem==="Recall & Context"?" recall-grid":subsystem==="Retention & Updates"?" retention-grid":" organization-grid";
+    const grid=el("div",gridClass);
+    data.entries.filter(x=>x.domain===domain.id&&x.subsystem===subsystem).forEach(x=>grid.appendChild(node(x)));
+    group.appendChild(grid);section.appendChild(group);
+    if(domain.id==="memory"&&subsystem==="Recall & Context"){
+      const store=el("section","records");store.appendChild(el("h3","","Stored records / not L3 processing modules"));
+      const rows=el("div","records-grid");data.records.filter(x=>!["REC-DEFINITION","REC-RUNS"].includes(x.id)).forEach(x=>rows.appendChild(node(x,true)));store.appendChild(rows);section.appendChild(store);
+    }
+    if(domain.id==="character"&&subsystem==="Persona Definition"){
+      const store=el("section","records");store.appendChild(node(byId.get("REC-DEFINITION"),true));section.appendChild(store);
+    }
+  }
+  const caption=domain.id==="character"?"L3 responsibilities share existing generation; no separate reflection agent.":domain.id==="memory"?"MEM-09 is existing compaction. Only MEM-10 is a deferred additional view.":domain.id==="interface"?"Interface presents observations; modules and runtime own their capture.":"Memory tools are internal capabilities. Synthetic outside-tool fixtures belong to evaluation.";
+  section.appendChild(el("p","caption",caption));
+}
+data.domains.forEach(buildDomain);
+for(const [id,title,caption] of [["support","Supporting register / outside L1-L3 capability containment","Shared machinery retains its existing owner; it is not a fifth capability domain."],["adjacent","Adjacent ADE features","Independent labs are included without being reassigned to the character-memory loop."]]){
+  const section=document.getElementById(id);append(section,el("h2","",title),el("p","caption",caption));
+  const grid=el("div","module-grid");data.entries.filter(x=>x.domain===id).forEach(x=>grid.appendChild(node(x)));section.appendChild(grid);
+  if(id==="support"){const store=el("section","records");store.appendChild(node(byId.get("REC-RUNS"),true));section.appendChild(store);}
+}
+const controls=document.getElementById("flow-controls");
+data.flows.forEach(flow=>{const b=el("button","flow-button",flow.name);b.type="button";b.dataset.flow=flow.id;b.addEventListener("click",()=>{activeFlow=flow;updateFlow();});controls.appendChild(b);});
+const legend=el("div","legend");["implemented","partial","experimental","deferred"].forEach(x=>legend.appendChild(el("span",x,x)));controls.appendChild(legend);
+function sectionDetail(title,text){const group=el("section","");append(group,el("h3","",title),el("p","",text));details.appendChild(group);}
+function pathsDetail(title,paths){const group=el("section","");group.appendChild(el("h3","",title));const list=el("ul","");(paths.length?paths:["None; no implementation is implied."]).forEach(path=>list.appendChild(el("li","",path)));group.appendChild(list);details.appendChild(group);}
+function updateSelection(){
+  const item=byId.get(selectedId);details.replaceChildren();
+  document.querySelectorAll(".node").forEach(button=>{const yes=button.id===selectedId;button.classList.toggle("selected",yes);button.setAttribute("aria-pressed",String(yes));});
+  details.appendChild(el("h2","",`${item.id} / ${item.name}`));
+  const domain=data.domains.find(x=>x.id===item.domain);
+  details.appendChild(el("p","owner",domain?`${domain.name} / ${item.subsystem} / ${item.name}`:item.domain?`${item.domain} register / ${item.subsystem}`:"Stored record family, not a module"));
+  if(item.status){
+    sectionDetail("Implementation",item.status);sectionDetail("Input and output",`${item.input} -> ${item.output}`);
+    sectionDetail("Evidence and limits",item.evidence);sectionDetail("Known gap",item.gap);sectionDetail("Next isolated check",item.next_check);
+  }else sectionDetail("Authority",item.authority);
+  pathsDetail("Source homes",item.code);if(item.tests)pathsDetail("Existing checks (not rerun here)",item.tests);
+  const relations=activeFlow.edges.filter(x=>x[0]===item.id||x[1]===item.id);
+  if(relations.length)sectionDetail("Connections in this view",relations.map(([a,b,label])=>`${a} -> ${b}: ${label}`).join("; "));
+  details.appendChild(el("p","notice","Implementation status is separate from semantic evidence and release qualification. Sources are paths relative to the repository root."));
+}
+function drawConnections(){
+  svg.replaceChildren();if(window.innerWidth<=760)return;
+  const box=drawing.getBoundingClientRect();svg.setAttribute("viewBox",`0 0 ${box.width} ${box.height}`);
+  const ns="http://www.w3.org/2000/svg",color=activeFlow.id==="retain"?"#087d70":activeFlow.id==="support"?"#6d7e8d":"#0b5da8";
+  const defs=document.createElementNS(ns,"defs"),marker=document.createElementNS(ns,"marker");
+  Object.entries({id:"arrow",viewBox:"0 0 10 10",refX:"9",refY:"5",markerWidth:"7",markerHeight:"7",orient:"auto-start-reverse"}).forEach(([k,v])=>marker.setAttribute(k,v));
+  const tip=document.createElementNS(ns,"path");tip.setAttribute("d","M 0 0 L 10 5 L 0 10 z");tip.style.fill=color;tip.style.stroke="none";tip.style.opacity="1";marker.appendChild(tip);defs.appendChild(marker);svg.appendChild(defs);
+  function rect(element){const r=element.getBoundingClientRect();return{left:r.left-box.left,right:r.right-box.left,top:r.top-box.top,bottom:r.bottom-box.top,cx:r.left+r.width/2-box.left,cy:r.top+r.height/2-box.top};}
+  for(const [index,[from,to,label]] of activeFlow.edges.entries()){
+    const source=document.getElementById(from),target=document.getElementById(to),a=rect(source),b=rect(target);
+    const ag=source.closest(".subsystem,.records,.support,.domain"),bg=target.closest(".subsystem,.records,.support,.domain"),ar=rect(ag);
+    const ad=source.closest(".domain,.support"),bd=target.closest(".domain,.support"),dr=rect(ad);
+    let points;
+    if(ag===bg&&Math.abs(a.top-b.top)<8&&a.right<b.left){points=[[a.right,a.cy],[b.left,b.cy]];}
+    else if(ag===bg&&a.bottom<b.top){const mid=(a.bottom+b.top)/2;points=[[a.cx,a.bottom],[a.cx,mid],[b.cx,mid],[b.cx,b.top]];}
+    else if(ad?.id==="memory"&&bd?.id==="character"){const lane=dr.left-10;points=[[a.cx,a.bottom],[a.cx,ar.bottom+7],[lane,ar.bottom+7],[lane,b.cy],[b.right,b.cy]];}
+    else if(ad?.id==="character"&&bd?.id==="memory"){const lane=dr.right+10;points=[[a.right,a.cy],[lane,a.cy],[lane,b.top-7],[b.cx,b.top-7],[b.cx,b.top]];}
+    else{
+      const lane=Math.max(dr.right,rect(bd).right)+7+(index%3)*3;
+      points=[[a.cx,a.top],[a.cx,a.top-7],[lane,a.top-7],[lane,b.bottom+7],[b.cx,b.bottom+7],[b.cx,b.bottom]];
+    }
+    const path=document.createElementNS(ns,"path");path.setAttribute("d",points.map(([x,y],i)=>`${i?"L":"M"} ${x} ${y}`).join(" "));
+    path.dataset.edge=`${from}:${to}`;const title=document.createElementNS(ns,"title");title.textContent=`${from} -> ${to}: ${label}`;path.appendChild(title);
+    path.style.stroke=color;path.setAttribute("marker-end","url(#arrow)");svg.appendChild(path);
+  }
+}
+function updateFlow(){
+  document.body.dataset.flow=activeFlow.id;
+  document.querySelectorAll(".flow-button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.flow===activeFlow.id)));
+  const linked=new Set(activeFlow.edges.flatMap(x=>x.slice(0,2)));document.querySelectorAll(".node").forEach(b=>b.classList.toggle("on-path",linked.has(b.id)));
+  const note=document.getElementById("flow-note");note.replaceChildren();append(note,el("strong","",`${activeFlow.name}. `),el("span","",activeFlow.note));
+  const list=el("ol","");activeFlow.steps.forEach(step=>list.appendChild(el("li","",step)));note.appendChild(list);
+  const connections=document.getElementById("mobile-links");connections.replaceChildren();connections.appendChild(el("h2","","Connected boundaries"));
+  const links=el("ul","");activeFlow.edges.forEach(([a,b,label])=>{
+    const row=el("li","");for(const [i,id] of [a,b].entries()){if(i)row.appendChild(document.createTextNode(" -> "));const link=el("button","",`${id} / ${byId.get(id).name}`);link.type="button";link.addEventListener("click",()=>{selectedId=id;updateSelection();document.getElementById(id).scrollIntoView({block:"center",behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth"});});row.appendChild(link);}row.appendChild(document.createTextNode(`: ${label}`));links.appendChild(row);
+  });connections.appendChild(links);
+  updateSelection();drawConnections();
+}
+const footer=document.getElementById("footer");footer.appendChild(el("p","",`Reviewed ${data.reviewed_at} against ${data.source_baseline.slice(0,12)}. ${data.entries.length} registered pieces and ${data.records.length} record families. No live deployment or provider run was inspected.`));
+const inventoryLink=el("a","","Read the source-backed inventory");inventoryLink.href="inventory.md";footer.appendChild(inventoryLink);
+updateFlow();new ResizeObserver(()=>requestAnimationFrame(drawConnections)).observe(drawing);
+</script>
+</body>
+</html>

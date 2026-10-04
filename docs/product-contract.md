@@ -1,6 +1,6 @@
 # ADE Current Product Contract
 
-Updated: 2026-10-02. This is the single entrypoint for **current agreed product
+Updated: 2026-10-04. This is the single entrypoint for **current agreed product
 intent**, not a claim that every agreement is implemented or release-qualified.
 It consolidates existing decisions; it does not authorize implementation, live
 experiments, deployment, or a change to release evidence.
@@ -120,6 +120,10 @@ not approval to implement it or to reintroduce excluded privacy features.
 - **ADRs:** rationale, technical contracts and explicit supersession history.
 - **Roadmap:** ordered outcomes; **tracker:** present work, blockers and evidence.
 - **Plans:** bounded delivery steps referencing the relevant PC IDs.
+- **Capability inventory:** source-backed responsibility and measurement map using
+  Domain/Subsystem/Module (L1/L2/L3), agreed 2026-10-04; not competing product intent,
+  runtime redesign or qualification. See [ADR 0061](adr/0061-capability-responsibility-map.md)
+  and the [inventory entrypoint](architecture/capability-map/README.md).
 - **Findings:** observed results and limits, never automatic product decisions.
 
 When an older design, plan or historical ADR conflicts with a current product

@@ -35,6 +35,18 @@ Put behavior with the owning feature. A feature may use `platform/` and external
 integrations, but must not import another feature's internals. Create a shared
 package only when two services need one stable, versioned contract.
 
+## Capability Vocabulary
+
+Use `Domain -> Subsystem -> Module` (L1/L2/L3 containment depth) when locating
+character-memory work. Character and Memory are core capabilities; Interface
+supports use/inspection, and External Tools is a deferred outside-information/action
+boundary. Execution stages, services and stored records are separate concepts.
+The [capability inventory](architecture/capability-map/README.md) records source
+homes, implementation scope and evidence limits. Platform support and independent
+labs retain explicit supporting/adjacent registers instead of being forced into
+Character or Memory. [ADR 0061](adr/0061-capability-responsibility-map.md) records
+this vocabulary, not a refactor or new-agent authorization.
+
 ## Prefer The Smallest Durable Change
 
 - Solve the requested problem without speculative configuration or extension points.
