@@ -55,7 +55,7 @@ record's status notice before applying its original execution details.
 | [0056](0056-matched-correction-dependency-measurement.md) | Pre-outcome matched correction pairs with explicit non-blind author labels and single-dialogue topology; unchanged selectors and no runtime adoption. |
 | [0057](0057-model-assisted-evidence-selection-investigation.md) | Agreed investigation design: bounded semantic source selection, fresh shared final evidence and uncertain incomplete recall; no implementation, model run or adoption. |
 | [0058](0058-offline-packet-capacity-and-qualifications.md) | Approved D04-only eight-source offline capacity diagnostic and whole-packet qualification rubric; no runtime count change or provider calls. |
-| [0061](0061-capability-responsibility-map.md) | Domain/Subsystem/Module development vocabulary and source-backed capability inventory; no runtime redesign, pending-policy adoption or release qualification. |
+| [0061](0061-capability-responsibility-map.md) | Domain/Subsystem/Module inventory, authored-characterization versus contextual-application boundary, and three overlapping response-assessment lenses; no new runtime phases or release qualification. |
 
 ## Historical, Retired, Or On Hold
 

@@ -12,11 +12,11 @@ See the [entrypoint](README.md) for status definitions and authority boundaries.
 
 ### CHAR-01: Prompt and persona authoring
 Owner: **Character / Persona Definition**. Implementation: **implemented**.
-Input: Reviewed prompt/persona edits. Output: Versioned reusable content; no model invocation.
+Input: Reviewed character-specific prompt/persona edits. Output: Versioned authored characterization including behavioral tendencies; no model invocation.
 Code: [registry.py](../../../services/ade-api/src/ade_api/features/prompt_center/registry.py), [sqlite.py](../../../services/ade-api/src/ade_api/features/prompt_center/personas/sqlite.py), [personas.jsonl](../../../content/personas/personas.jsonl) Tests: [test_content_identity.py](../../../services/ade-api/src/ade_api/features/prompt_center/tests/test_content_identity.py), [test_persona_registry.py](../../../services/ade-api/src/ade_api/features/prompt_center/tests/test_persona_registry.py)
 Evidence limit: Content ownership and identity tests exist; characterization quality is a separate judgment.
-Known gap: A stored persona is not proof that models enact it consistently.
-Next isolated check: Review one persona against a small set of intended behavioral contrasts.
+Known gap: A stored persona is not proof that models enact it consistently; ADE-wide rules are not personality attributes.
+Next isolated check: Review coherent, distinguishable authored intent and character-specific contrasts, not a universal agreeable-assistant ideal (PC-12).
 
 ### CHAR-02: Immutable definition binding
 Owner: **Character / Persona Definition**. Implementation: **implemented**.
@@ -28,19 +28,19 @@ Next isolated check: Trace the same character root through two versions with fix
 
 ### CHAR-03: Evidence interpretation
 Owner: **Character / Conversation Behavior**. Implementation: **partial**.
-Input: Actual delivered evidence and current user turn. Output: Evidence-grounded meaning, uncertainty and conversational choices within generation.
+Input: Current exchange, bound characterization and actual delivered evidence with scope and qualifications. Output: Situational and evidence interpretation with warranted uncertainty within shared generation; no emitted intermediate or handoff.
 Code: [executor.py](../../../services/ade-api/src/ade_api/features/agent_runtime/executor.py), [context.py](../../../services/ade-api/src/ade_api/features/agent_runtime/context.py), [history_admission.py](../../../services/ade-api/src/ade_api/features/agent_runtime/history_admission.py) Tests: [test_executor.py](../../../services/ade-api/tests/agent_runtime/test_executor.py), [test_story_behavioral_comparison.py](../../../services/ade-api/tests/agent_runtime/test_story_behavioral_comparison.py)
-Evidence limit: D04 has bounded supported-answer and appropriate-uncertainty witnesses; no general interpretation certificate.
-Known gap: Callbacks, ambiguity and correction handling are not generally qualified.
-Next isolated check: Hold evidence fixed and compare supported answer, clarification and uncertainty behavior.
+Evidence limit: D04 has bounded supported-answer and appropriate-uncertainty witnesses; no general interpretation certificate. Shares generation with CHAR-04; descriptions distinguish responsibilities, not internal stages (PC-12).
+Known gap: Situational references, antecedents, ambiguity and correction qualifications are not generally qualified.
+Next isolated check: Verify actual persona/evidence delivery and semantic sufficiency, then describe observable grounding outcomes without claiming an isolated internal failure.
 
 ### CHAR-04: Character expression and continuity
 Owner: **Character / Conversation Behavior**. Implementation: **partial**.
-Input: Persona, recent dialogue and grounded meaning. Output: Natural candidate reply in character.
+Input: Authored characterization, current exchange, scoped evidence and ADE-wide requirements within the same generation as CHAR-03. Output: Observable candidate reply: choose an appropriate conversational action and express it in character, including continuity; not a style-only pass.
 Code: [executor.py](../../../services/ade-api/src/ade_api/features/agent_runtime/executor.py), [personas.jsonl](../../../content/personas/personas.jsonl) Tests: [test_postgres_story_continuity.py](../../../services/ade-api/tests/agent_runtime/persistence/test_postgres_story_continuity.py)
-Evidence limit: Shares the generation call with CHAR-03; story probes do not establish broad naturalness or personality quality (PC-11).
-Known gap: Distinct voice, non-repetitive memory use and long-run story continuity remain behavioral work.
-Next isolated check: Human-review a small matched set with sufficient evidence, separating fidelity from voice.
+Evidence limit: Shares the generation call with CHAR-03; story probes do not establish broad judgment, naturalness or personality quality. PC-12 clarifies assessment, not implementation or qualification.
+Known gap: Character-relative conversational choices, distinct voice, non-repetitive memory use and long-run story continuity remain behavioral work.
+Next isolated check: Assess grounding, conversational judgment and character fidelity separately on verified, sufficient inputs; cite persona intention, response passage and context, allowing multiple good or indeterminate outcomes (PC-11/12).
 
 ### CHAR-05: Curated tool choice and result use
 Owner: **Character / Conversation Behavior**. Implementation: **implemented**.

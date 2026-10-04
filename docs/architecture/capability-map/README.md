@@ -11,6 +11,8 @@ product contract, implementation authorization or behavioral acceptance result.
 - [Connected map](ade-capability-map.html): choose recall, retention or support;
   select a piece for sources, evidence limits, known gap and next isolated check.
 - [Readable inventory](inventory.md): generated reference for all registered pieces.
+- [Character assessment guide](character-assessment.md): PC-12's authored-intent
+  boundary and character-relative grounding, judgment and fidelity lenses.
 - [Inventory source](inventory.json): the single source for names, ownership,
   implementation scope, evidence limits, records and flow connections.
 - [ADR 0061](../../adr/0061-capability-responsibility-map.md): vocabulary and the
@@ -47,7 +49,11 @@ natural dialogue, subject/character ownership and persona binding; PC-05/07 defi
 review versus integrity/persistence authority; PC-06 preserves exclusions;
 PC-08/09 preserve the single runtime and minimum-code preference; PC-10/11 define
 archive eligibility and consistent, scoped improvised character history.
-No agreed product behavior changes with this map.
+PC-12 defines authored characterization versus contextual application and the
+three overlapping assessment lenses; these are not internal phases or a composite
+score. The [assessment guide](character-assessment.md) preserves creative scope,
+separate input/sufficiency checks and uncertainty in diagnostic conclusions.
+The map clarifies agreed intent; it changes no runtime behavior or qualification.
 
 - Original dialogue records what was said, not automatic fact acceptance.
 - CHAR-03/04 share the existing generation call, not two agents or a style rewriter.

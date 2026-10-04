@@ -47,6 +47,20 @@ def test_static_overview_has_every_piece_and_only_declared_edges(inventory):
             assert (node.get("data-from"), node.get("data-to")) in edges
 
 
+def test_character_refinement_preserves_existing_topology(inventory):
+    character = next(item for item in inventory["domains"] if item["id"] == "character")
+    assert character["subsystems"] == ["Persona Definition", "Conversation Behavior"]
+    entries = {
+        item["id"]: item
+        for item in inventory["entries"]
+        if item["domain"] == "character"
+    }
+    assert set(entries) == {"CHAR-01", "CHAR-02", "CHAR-03", "CHAR-04", "CHAR-05"}
+    assert entries["CHAR-03"]["status"] == entries["CHAR-04"]["status"] == "partial"
+    recall = next(flow for flow in inventory["flows"] if flow["id"] == "recall")
+    assert ["CHAR-03", "CHAR-04", "same generation call"] in recall["edges"]
+
+
 def test_duplicate_id_fails(inventory):
     inventory["entries"][1]["id"] = inventory["entries"][0]["id"]
     with pytest.raises(ValueError, match="Duplicate entry"):

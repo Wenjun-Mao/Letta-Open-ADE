@@ -78,6 +78,32 @@ and the distinction between new fiction and faithful recollection. The
 approved bounded diagnostic and its evidence limits; PC-11 itself is not a
 standing live-run authorization or release qualification.
 
+## Character Specification And Assessment
+
+**PC-12 (agreed 2026-10-04):** Persona Definition owns authored, versioned
+characterization, including behavioral tendencies. Conversation Behavior applies
+that characterization to the present exchange, interpreting available evidence
+and choosing and expressing a response. The boundary is authored intent versus
+contextual application, not static facts versus all behavioral instructions.
+ADE-wide requirements remain independent of persona-specific expectations.
+Traits are tendencies, not mandatory actions in every reply.
+
+Assess **grounding**, **conversational judgment**, and **character fidelity**
+separately as overlapping properties of observable responses. They are not
+independent causal diagnoses, internal phases, emitted planning objects, or scores
+to average into one character-quality result. Subjective assessments identify the
+relevant persona intention, response passage and contextual reason; multiple
+acceptable responses and genuinely indeterminate cases remain possible.
+Grounding respects PC-11's permitted new solo fiction without authorizing invented
+user/shared history or unsupported recollection. Story-admission mechanics remain
+open. Diagnostic comparisons verify actual inputs and semantic sufficiency;
+source identity alone proves neither sufficiency nor reliable behavior.
+
+This records agreed responsibility and assessment vocabulary, not a new subsystem,
+agent, reviewer, model phase, persona edit, live run or behavioral qualification.
+See [ADR 0061's clarification](adr/0061-capability-responsibility-map.md#character-clarification-2026-10-04)
+and the [assessment guide](architecture/capability-map/character-assessment.md).
+
 ## Open Decisions, Not Agreements
 
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
