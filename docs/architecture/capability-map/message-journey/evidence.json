@@ -6,8 +6,8 @@
     "repository": "https://github.com/vectorize-io/hindsight",
     "revision": "9269b88417ed263e5a8350f2e416ca2b322756b1",
     "files_inspected": ["hindsight-interfig/figures/what-hindsight-does.ts", "hindsight-interfig/src/index.tsx", "hindsight-interfig/src/model.ts", "hindsight-interfig/src/geometry.ts", "hindsight-interfig/README.md"],
-    "reuse": "Figure/group/node/edge/beat presentation contract only; no Hindsight architecture, code vendoring or dependency installation",
-    "license": "Repository MIT, Copyright 2025 Vectorize AI Inc.; retain attribution if renderer code is later copied/adapted"
+    "reuse": "Figure/group/node/edge/beat presentation contract and MIT edge-routing adaptation; no Hindsight architecture or ADE runtime dependency",
+    "license": "Repository MIT, Copyright 2025 Vectorize AI Inc.; notice included in THIRD_PARTY_NOTICES.md and generated presentations"
   },
   "presentation": {
     "title": "ADE - Journey of a message (review specification)",

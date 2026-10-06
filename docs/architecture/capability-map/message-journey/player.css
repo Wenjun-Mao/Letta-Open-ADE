@@ -1,0 +1,51 @@
+#ade-moving-message {
+  color: var(--foreground);
+  font-family: "IBM Plex Sans", "Avenir Next", sans-serif;
+  --journey-active: var(--viz-series-1);
+}
+#ade-moving-message *, #ade-moving-message *::before, #ade-moving-message *::after { box-sizing: border-box; }
+#ade-moving-message .journey-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+#ade-moving-message h2 { margin: 0; font-weight: 500; }
+#ade-moving-message .journey-domains { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted-foreground); }
+#ade-moving-message .journey-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 16px 0 10px; }
+#ade-moving-message .journey-controls label { display: flex; align-items: center; gap: 8px; }
+#ade-moving-message .journey-controls select { min-width: 0; max-width: 100%; }
+#ade-moving-message .journey-caption { display: block; color: var(--muted-foreground); margin-bottom: 10px; }
+#ade-moving-message .journey-viewport { width: 100%; }
+#ade-moving-message[data-standalone] .journey-viewport {
+  overflow: auto; max-height: 640px; scrollbar-gutter: stable;
+  background: radial-gradient(circle, color-mix(in srgb, var(--border) 65%, transparent) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+#ade-moving-message .journey-drawing { display: block; margin: auto; overflow: visible; }
+#ade-moving-message .ownership-frame { fill: none; stroke: var(--border); stroke-width: 1; }
+#ade-moving-message .domain-frame { fill: color-mix(in srgb, var(--background) 90%, transparent); }
+#ade-moving-message .frame-title { fill: var(--foreground); font-size: 12px; font-weight: 500; }
+#ade-moving-message .node-surface { fill: var(--card); stroke: var(--border); stroke-width: 1; }
+#ade-moving-message .store-rim { fill: none; stroke: var(--border); stroke-width: 1; }
+#ade-moving-message .is-active .node-surface { fill: color-mix(in srgb, var(--journey-active) 8%, var(--card)); stroke: var(--journey-active); }
+#ade-moving-message .is-deferred .node-surface { stroke-dasharray: 5 4; }
+#ade-moving-message .node-label { fill: var(--foreground); font-size: 12px; font-weight: 500; }
+#ade-moving-message .node-sub { fill: var(--muted-foreground); font-size: 11px; font-weight: 400; }
+#ade-moving-message .payload-tag { fill: var(--foreground); font-size: 11px; font-weight: 500; }
+#ade-moving-message .payload-text { fill: var(--foreground); font-size: 11px; font-weight: 400; }
+#ade-moving-message .connection { fill: none; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+#ade-moving-message .active-connection { stroke: var(--journey-active); }
+#ade-moving-message .trail-connection { stroke: var(--border); }
+#ade-moving-message .active-arrow, #ade-moving-message .packet-core { fill: var(--journey-active); }
+#ade-moving-message .trail-arrow { fill: var(--border); }
+#ade-moving-message .packet-halo { fill: color-mix(in srgb, var(--journey-active) 18%, transparent); }
+#ade-moving-message .journey-readout { display: flex; align-items: center; gap: 16px; margin-top: 12px; }
+#ade-moving-message .journey-progress { flex: 1; height: 3px; background: var(--muted); }
+#ade-moving-message .journey-progress > div { height: 100%; background: var(--journey-active); }
+#ade-moving-message .journey-narration { display: block; margin: 12px 0; min-height: 3em; }
+#ade-moving-message .journey-connections { display: block; color: var(--muted-foreground); }
+#ade-moving-message .journey-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 14px; color: var(--muted-foreground); }
+@media (max-width: 600px) {
+  #ade-moving-message .journey-controls label { flex-basis: 100%; }
+  #ade-moving-message .journey-controls select { flex: 1; }
+  #ade-moving-message[data-standalone] .journey-viewport { max-height: 520px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #ade-moving-message *, #ade-moving-message *::before, #ade-moving-message *::after { animation: none; transition: none; }
+}

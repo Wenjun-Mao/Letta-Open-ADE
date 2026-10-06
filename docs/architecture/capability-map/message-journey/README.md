@@ -1,12 +1,19 @@
-# ADE Message Journey: Proposed Interfig Specification
+# ADE Message Journey: Interactive Draft
 
-**Review first; no final figure or runtime change yet.** This proposes the
-presentation of existing ADE responsibilities and information movement, not a
-new pipeline. Reviewed 2026-10-06 against ADE source
+**Playable documentation preview; no ADE runtime change.** The user requested
+the moving chart on 2026-10-06 after the specification was produced. The
+architecture/status mapping remains a draft for review, not a newly adopted
+pipeline. Reviewed 2026-10-06 against ADE source
 `125082447c2c5f5ada7a2c5ed88be41bb8fba4bf`. Source inspection is not a live trace,
 behavioral acceptance result, deployment audit or new experiment authorization.
 
 ## Read In This Order
+
+Open [the moving chart](ade-message-journey.html), press **Play**, and use
+**Previous/Next** to examine one step at a time. **Whole architecture** exposes
+all ownership frames; the default focused view follows the current transfer.
+Tour selection resets to paused; Replay plays only the selected tour and stops
+at its end. With reduced motion, use manual stepping instead.
 
 1. [Layout](layout.json): nested ownership frames and processing/artifact boxes.
 2. [Edges](edges.json): named information/control connections, independent of depth.
@@ -136,7 +143,7 @@ not nodes/calls or a generic agreeable-character standard.
 - Failure/cancellation beats illustrate separate cases, not a run that fails and
   then cancels after already terminating. A cancellation request can lose to commit.
 
-## Reference And Later Rendering Gate
+## Reference And Presentation Implementation
 
 The exact source figure, [what-hindsight-does.ts](https://github.com/vectorize-io/hindsight/blob/9269b88417ed263e5a8350f2e416ca2b322756b1/hindsight-interfig/figures/what-hindsight-does.ts),
 is the presentation reference, not the screenshot. We inspected its layout,
@@ -147,15 +154,35 @@ and [authoring/export README](https://github.com/vectorize-io/hindsight/blob/926
 No Hindsight `retain`/`recall`/`reflect` API, background consolidation, mental models,
 knowledge pages, graph index or fact taxonomy is imported into ADE.
 
-After review, adapt the presentation renderer locally with MIT attribution and
-the approved specification, without changing product runtime. The reference
-package is private; do not assume a published npm dependency. Reference export is
+The local player adapts interfig's presentation contract to standalone SVG/DOM,
+using its MIT edge-routing algorithm and no new product dependency. The reference
+package is private; no published npm package is assumed. Reference export is
 `npm run svg -- <spec.json> <output.svg>` within its own package; this repository
-does not yet vendor that exporter. Its `around` routing is not a general obstacle
-solver, and narrow layouts scale then scroll instead of fully reflowing. Actual
-desktop/mobile readability, routing, keyboard use, pause/replay, reduced motion
-and static SVG equivalence must be checked during the later rendering iteration.
-Schema checks below do not qualify pixels, animation or ADE behavior.
+does not vendor that exporter. The editable presentation sources are
+`flow-model.js` (routing/layout), `flow-view.js` (drawing), `player.js` (finite
+playback), `player.css` and `player-template.html`. `build.py` embeds the validated
+specification and sources into one offline HTML file and optionally an inline
+conversation fragment. [Third-party notices](THIRD_PARTY_NOTICES.md) are embedded.
+
+The root cause of packet/text overlap in the first atomic-write drawing was
+upstream cubic routing without obstacle avoidance, not ADE dataflow. Obstructed
+active edges now use a tested card-aware Manhattan fallback; clear curves retain
+the upstream mechanism. Focused projections preserve ownership while showing
+only current endpoints/highlights. Full-map card sizes are fixed against all
+payloads, preventing layout jumps. Narrow focused layouts stack; large whole maps
+scroll without shrinking labels in the standalone version. The inline version
+reflows the same groups to its measured width, without an internal scroll pane.
+Both preserve text sizes rather than scaling a fixed canvas. During standalone
+focused playback the viewport follows the packet/atomic-write group center.
+
+Offline DOM tests cover desktop/mobile standalone and 736/320px inline widths,
+all tours/views, moving packet
+positions, pause/replay, end-of-tour stopping, reduced motion and obstacle routing.
+Native SVG raster snapshots were visually inspected for the send and atomic-write
+scenes plus the complete map. These are **not real browser-engine screenshots**:
+browser pixel layout, host integration and assistive-technology behavior remain
+unqualified.
+Drawing/interaction checks do not qualify ADE's product behavior.
 
 ## Offline Checks
 
@@ -165,9 +192,19 @@ From the repository root:
 uv run --locked python docs/architecture/capability-map/message-journey/review.py
 uv run --locked python docs/architecture/capability-map/message-journey/review.py --emit
 uv run --locked python -m pytest docs/architecture/capability-map/message-journey/test_review.py -q
+uv run --locked python docs/architecture/capability-map/message-journey/build.py
+uv run --locked python docs/architecture/capability-map/message-journey/build.py --check
+uv run --locked python -m pytest docs/architecture/capability-map/message-journey/test_build.py -q
+node --test docs/architecture/capability-map/message-journey/test_player.cjs
+node docs/architecture/capability-map/message-journey/snapshot.cjs
 ```
 
-No provider, database, browser or external-account calls are made by these checks.
-Review ownership/layout first, then the main spine and branch/status descriptions;
-approve rendering separately. No architecture/policy decision is promoted by
-publishing this proposed specification.
+Node checks use the existing `apps/ade-web/node_modules` packages (`jsdom`, plus
+`sharp` for optional snapshots), not a new dependency installation. Snapshot
+outputs remain under ignored `.preview/`. Build output is deterministic and
+`--check` rejects a stale tracked view. `--inline-dir <task-owned-directory>` also
+generates a fragment without changing the tracked presentation.
+
+No provider, database, real-browser or external-account calls are made by these
+checks. Review the main journey and ownership/branch descriptions through the
+playable draft. Publishing it promotes no architecture/policy decision.

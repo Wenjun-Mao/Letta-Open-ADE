@@ -1,0 +1,35 @@
+<section id="ade-moving-message" aria-label="ADE message journey">
+  <div class="journey-heading">
+    <h2>Journey of a message</h2>
+    <span class="text-small text-muted">Illustrative ADE flow, not a live trace</span>
+  </div>
+  <div class="journey-domains text-small" aria-label="Capability domains">
+    <span>L1 Character</span><span>L1 Memory</span><span>L1 Interface</span><span>L1 External Tools: deferred</span>
+  </div>
+  <div class="journey-controls viz-controls">
+    <label class="form-label">Tour <select class="form-select" data-tour aria-label="Select message journey tour"></select></label>
+    <button class="btn btn-primary" type="button" data-play aria-pressed="false">Play</button>
+    <button class="btn" type="button" data-previous>Previous</button>
+    <button class="btn" type="button" data-next>Next</button>
+    <button class="btn" type="button" data-replay>Replay</button>
+    <button class="btn" type="button" data-speed aria-label="Playback speed 1x">1x</button>
+    <button class="btn" type="button" data-whole aria-pressed="false">Whole architecture</button>
+  </div>
+  <output class="journey-caption text-small" data-caption></output>
+  <div class="journey-viewport" data-viewport aria-label="Animated architecture diagram"></div>
+  <div class="journey-readout">
+    <output class="tabular-nums text-small" data-count></output>
+    <div class="journey-progress" data-progress role="progressbar" aria-label="Tour step" aria-valuemin="1" aria-valuenow="1" aria-valuemax="1"><div></div></div>
+  </div>
+  <output class="journey-narration" data-narration aria-live="polite"></output>
+  <output class="journey-connections text-small" data-connections></output>
+  <div class="journey-foot text-small">
+    <span>L1/L2/L3: ownership, not execution order. Cylinders: persisted records.</span>
+    <span>Presentation adapted from Vectorize interfig (MIT).</span>
+  </div>
+  <script type="application/json" data-figure>__FIGURE__</script>
+</section>
+<style>__STYLE__</style>
+<script>__MODEL__</script>
+<script>__VIEW__</script>
+<script>__PLAYER__</script>
