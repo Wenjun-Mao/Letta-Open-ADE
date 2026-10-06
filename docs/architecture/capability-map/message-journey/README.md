@@ -9,15 +9,27 @@ behavioral acceptance result, deployment audit or new experiment authorization.
 
 ## Read In This Order
 
-Open [the moving chart](ade-message-journey.html), press **Play**, and use
-**Previous/Next** to examine one step at a time. The default **whole architecture**
-view keeps all ownership frames and card positions fixed throughout playback.
-**Follow this step** switches to the current endpoints. In the full-page player,
+Open [the moving chart](ade-message-journey.html), not `player-template.html`
+(the unbuilt source template). The default is a paused **six-chapter guided
+journey** with three to six relevant pieces visible. **Forward/Back** moves one
+chapter at a time and stays paused. **Play chapter** animates only the selected
+chapter and stops at its end; it never automatically advances to the next chapter.
+The chapter buttons jump directly to a chapter, paused.
+
+**Show detailed map** opens the existing full map at the current source beat.
+Here Forward/Back moves one detailed beat; **Follow this step** shows only its
+endpoints. **Guided journey** returns to the corresponding chapter of the main
+tour, or the remembered chapter when returning from another path. Both view
+changes pause playback. Expand **Explore other paths** for the seven original
+flows, including accurately labeled experiments and unimplemented work.
+
+In the full-page player,
 **Full screen** expands the chart when the browser supports native fullscreen;
 Escape exits without resetting the flow. The seven flow buttons sit under the
-canvas, with an active progress underline, narration and manual navigation.
-Tour selection resets to paused; Replay plays only the selected tour and stops
-at its end. With reduced motion, use manual stepping instead.
+canvas in that expandable section. Chapter selection has an active progress
+underline, narration and manual navigation below the canvas. Tour selection
+resets to paused; Replay plays only the selected chapter/flow and stops at its
+end. With reduced motion, use manual stepping instead.
 
 1. [Layout](layout.json): nested ownership frames and processing/artifact boxes.
 2. [Edges](edges.json): named information/control connections, independent of depth.
@@ -165,7 +177,8 @@ package is private; no published npm package is assumed. Reference export is
 does not vendor that exporter. The editable presentation sources are
 `flow-model.js` (routing), `flow-layout.js` (fixed content sizing),
 `flow-view.js` (drawing), `player.js` (finite
-playback), `player.css` and `player-template.html`. `build.py` embeds the validated
+playback), `guide.js` (source-backed reading projections), `player.css` and
+`player-template.html`. `build.py` embeds the validated
 specification and sources into one offline HTML file and optionally an inline
 conversation fragment. [Third-party notices](THIRD_PARTY_NOTICES.md) are embedded.
 
@@ -173,9 +186,9 @@ conversation fragment. [Third-party notices](THIRD_PARTY_NOTICES.md) are embedde
 
 The first player's focused default, upper toolbar and unfilled process cards
 made it a step inspector rather than the requested Hindsight-style moving map.
-The presentation now follows the inspected `src/index.tsx` more closely: dotted
+That revision followed the inspected `src/index.tsx` more closely: dotted
 canvas, softly filled nested frames, centered process/store labels, fixed inset
-data cards with dashed borders, blue cumulative trails, glowing packets,
+data cards with dashed borders, initially blue cumulative trails, glowing packets,
 traveling data chips, arrow labels, and a quiet bottom control track. This is
 still an SVG/DOM adaptation, **not** a claim that we use the original React
 component unchanged or achieved browser pixel parity. No `layout` ownership,
@@ -217,6 +230,53 @@ browser pixel layout, host integration and assistive-technology behavior remain
 unqualified.
 Drawing/interaction checks do not qualify ADE's product behavior.
 
+### Guided Reading Revision, 2026-10-06
+
+The complete map put ownership, provider mechanics, stored records and 42 main
+tour beats on the same initial surface. That presentation-level information
+overload, not an ADE runtime defect, made the journey hard to comprehend. The
+user approved trying progressive reading and requested their own pace.
+
+The guide partitions those existing beats into six reading chapters: accept
+message (0-7), assemble context (8-23), generate candidate (24-27), review updates
+(28-35), validate/commit (36-38), display reply (39-41). These are zero-based
+source beat ranges, **not new L2/L3 modules, agents or model calls** (PC-08/09/12).
+`guide.js` selects real endpoint nodes and exact original edges within each
+range, preserves their order and records each displayed beat's source identity.
+Visible data cards carry the source's accumulated state at that exact beat,
+including responses from omitted provider mechanics; hiding a transfer does not
+erase its returned data or advance a result before it exists in the source tour.
+It never invents a shortcut arrow for omitted provider work. The original
+layout/edges/steps/evidence and all 31 details remain available unchanged.
+
+The guided canvas uses one combined L1/L2 ownership header per group instead
+of nested frames. Runtime support, records and candidate artifacts stay distinct;
+layout placement does not establish execution order. Endpoint geometry is stable
+within a chapter, but intentionally changes between chapters. Only the current
+transfer is blue; completed transfers are subdued, including in the detailed map.
+Atomic grouped transfers still highlight together, not as parallel SQL calls.
+
+Provider/catalog mechanics, detailed snapshot reads and some atomic transaction
+members are omitted from the guided drawing, explicitly labeled as selected
+transfers. Narration retains the existing typed-policy branch, pre-turn persona
+binding, no historical retrieval/new summary, shared character generation, typed
+reviewer's exclusion of the candidate, vector preparation condition, atomic
+success and persisted UI refresh. Partial capability status remains visible;
+deferred/experimental/proposed work stays qualified in the footer and full map.
+This is a reading projection, not a simplified runtime specification or a new
+behavioral qualification (PC-02/04/05/09/12).
+
+Rejected alternatives were deleting low-level source information, redrawing a
+fictional linear pipeline, and merely slowing the same crowded full map. Manual
+chapter navigation remains paused, including after interrupting playback. Play
+and Replay stop at chapter boundaries; detailed controls still navigate all
+original beats. Saved state is presentation-versioned and restores paused, so
+old full-map state cannot defeat the new default. Offline guardrails verify
+source identity, range coverage, boundary stopping, view round trips, reduced
+motion, unobstructed routing and width-fitting without text scaling. Native SVG
+snapshots cover every chapter and a narrow projection; real-browser pixels and
+assistive-technology behavior remain unverified.
+
 ## Offline Checks
 
 From the repository root:
@@ -229,6 +289,7 @@ uv run --locked python docs/architecture/capability-map/message-journey/build.py
 uv run --locked python docs/architecture/capability-map/message-journey/build.py --check
 uv run --locked python -m pytest docs/architecture/capability-map/message-journey/test_build.py -q
 node --test docs/architecture/capability-map/message-journey/test_player.cjs
+node --test docs/architecture/capability-map/message-journey/test_guide.cjs
 node docs/architecture/capability-map/message-journey/snapshot.cjs
 ```
 

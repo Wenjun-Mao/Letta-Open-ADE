@@ -15,6 +15,7 @@ ASSETS = {
     "__STYLE__": "player.css",
     "__MODEL__": "flow-model.js",
     "__LAYOUT__": "flow-layout.js",
+    "__GUIDE__": "guide.js",
     "__VIEW__": "flow-view.js",
     "__PLAYER__": "player.js",
 }

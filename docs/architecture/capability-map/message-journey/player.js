@@ -3,9 +3,12 @@
   const root = document.getElementById('ade-moving-message');
   const figure = JSON.parse(root.querySelector('[data-figure]').textContent);
   const steps = figure.props.steps, model = globalThis.AdeFlowModel;
+  const guide = globalThis.AdeJourneyGuide;
+  const guidedFigure = guide.build(figure);
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const state = {tour: 0, beat: 0, playing: false, whole: true, rate: 1, elapsed: 0};
+  const state = {guide: true, chapter: 0, tour: 0, beat: 0, playing: false, whole: true, rate: 1, elapsed: 0};
   const view = globalThis.AdeFlowView.create(root, figure);
+  const guidedView = globalThis.AdeFlowView.create(root, guidedFigure);
   const tours = root.querySelector('[data-tours]');
   const play = root.querySelector('[data-play]');
   const previous = root.querySelector('[data-previous]');
@@ -18,7 +21,24 @@
   const caption = root.querySelector('[data-caption]');
   const narration = root.querySelector('[data-narration]');
   const fullscreen = root.querySelector('[data-fullscreen]');
+  const detail = root.querySelector('[data-detail]');
+  const chapterTitle = root.querySelector('[data-chapter-title]');
+  const chapters = root.querySelector('[data-chapters]');
   let frame = 0, lastTime = null;
+  const selected = () => state.guide ? guidedFigure.props.steps[state.chapter] : steps[state.tour];
+  const currentView = () => state.guide ? guidedView : view;
+  const fraction = () => state.playing || state.elapsed
+    ? Math.min(1, state.elapsed / ((selected().flow[state.beat].ms || figure.props.speed) * 0.8)) : 0.5;
+  const chapterButtons = guide.chapters.map((chapter, index) => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'btn journey-tour';
+    button.dataset.chapterIndex = String(index);
+    button.textContent = chapter.label;
+    const line = document.createElement('span');
+    line.className = 'tour-progress'; line.setAttribute('aria-hidden', 'true'); button.appendChild(line);
+    button.addEventListener('click', () => { state.chapter = index; jump(0); });
+    chapters.appendChild(button); return button;
+  });
   const tourButtons = steps.map((step, index) => {
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'btn journey-tour';
@@ -27,7 +47,7 @@
     button.setAttribute('aria-label', step.label);
     const line = document.createElement('span');
     line.className = 'tour-progress'; line.setAttribute('aria-hidden', 'true'); button.appendChild(line);
-    button.addEventListener('click', () => { state.tour = index; jump(0); });
+    button.addEventListener('click', () => { state.guide = false; state.tour = index; jump(0); });
     tours.appendChild(button); return button;
   });
   const moduleDetails = root.querySelector('[data-module-details]');
@@ -39,10 +59,14 @@
 
   function restore(saved) {
     const selected = saved?.privateContent;
-    if (selected?.presentation !== 2 || !Number.isInteger(selected.tour) || !steps[selected.tour]) return false;
+    if (selected?.presentation !== 3 || typeof selected.guide !== 'boolean'
+      || !Number.isInteger(selected.tour) || !steps[selected.tour]
+      || !Number.isInteger(selected.chapter) || !guide.chapters[selected.chapter]) return false;
+    state.guide = selected.guide; state.chapter = selected.chapter;
     state.tour = selected.tour;
+    const flow = state.guide ? guidedFigure.props.steps[state.chapter].flow : steps[state.tour].flow;
     state.beat = Number.isInteger(selected.beat)
-      ? Math.max(0, Math.min(steps[state.tour].flow.length - 1, selected.beat)) : 0;
+      ? Math.max(0, Math.min(flow.length - 1, selected.beat)) : 0;
     state.whole = typeof selected.whole === 'boolean' ? selected.whole : true;
     state.playing = false; state.elapsed = 0;
     return true;
@@ -50,52 +74,74 @@
   function save() {
     if (!window.openai?.setWidgetState) return;
     window.openai.setWidgetState({
-      modelContent: {tour: steps[state.tour].label, step: state.beat + 1},
-      privateContent: {presentation: 2, tour: state.tour, beat: state.beat, whole: state.whole},
+      modelContent: {view: state.guide ? 'guided' : 'detailed',
+        tour: selected().label, step: state.guide ? state.chapter + 1 : state.beat + 1},
+      privateContent: {presentation: 3, guide: state.guide, chapter: state.chapter,
+        tour: state.tour, beat: state.beat, whole: state.whole},
     }).catch(() => {});
   }
 
   function paint() {
-    const selected = steps[state.tour];
+    const step = selected();
     tourButtons.forEach((button, index) => button.setAttribute('aria-pressed', String(index === state.tour)));
-    caption.textContent = selected.caption;
-    narration.textContent = model.narration(selected, state.beat);
-    count.textContent = `Step ${state.beat + 1} of ${selected.flow.length}`;
-    progress.setAttribute('aria-valuemax', selected.flow.length);
-    progress.setAttribute('aria-valuenow', state.beat + 1);
-    progress.firstElementChild.style.width = `${(state.beat + 1) / selected.flow.length * 100}%`;
-    play.textContent = reduced.matches ? 'Motion reduced' : state.playing ? 'Pause' : 'Play';
+    chapterButtons.forEach((button, index) => button.setAttribute('aria-pressed', String(index === state.chapter)));
+    caption.textContent = step.caption;
+    narration.textContent = state.guide ? guide.chapters[state.chapter].say : model.narration(step, state.beat);
+    chapterTitle.textContent = state.guide ? `${state.chapter + 1}. ${step.label}` : step.label.replace(/^\d+ - /, '');
+    root.querySelector('[data-view-scope]').textContent = state.guide
+      ? 'Guided view: selected transfers. Provider mechanics and full atomic writes remain in the detailed map.' : '';
+    count.textContent = state.guide ? `Chapter ${state.chapter + 1} of ${guide.chapters.length}` : `Step ${state.beat + 1} of ${step.flow.length}`;
+    const total = state.guide ? guide.chapters.length : step.flow.length;
+    const current = state.guide ? state.chapter + 1 : state.beat + 1;
+    progress.setAttribute('aria-label', state.guide ? 'Reading chapter' : 'Tour step');
+    progress.setAttribute('aria-valuemax', total);
+    progress.setAttribute('aria-valuenow', current);
+    progress.firstElementChild.style.width = `${current / total * 100}%`;
+    play.textContent = reduced.matches ? 'Motion reduced' : state.playing ? 'Pause' : state.guide ? 'Play chapter' : 'Play';
     play.disabled = reduced.matches;
+    play.setAttribute('aria-label', state.playing ? 'Pause playback'
+      : state.guide ? 'Play this chapter; stop at its end' : 'Play this flow; stop at its end');
     play.setAttribute('aria-pressed', String(state.playing));
     mode.setAttribute('aria-pressed', String(state.whole));
     mode.textContent = state.whole ? 'Follow this step' : 'Whole architecture';
-    previous.disabled = state.beat === 0;
-    next.disabled = state.beat === selected.flow.length - 1;
+    mode.hidden = state.guide; chapters.hidden = !state.guide;
+    root.querySelector('[data-alternatives]').hidden = false;
+    detail.textContent = state.guide ? 'Show detailed map' : 'Guided journey';
+    previous.setAttribute('aria-label', state.guide ? 'Back one chapter' : 'Back one detailed step');
+    next.setAttribute('aria-label', state.guide ? 'Forward one chapter' : 'Forward one detailed step');
+    replay.textContent = state.guide ? 'Replay chapter' : 'Replay';
+    previous.disabled = current === 1;
+    next.disabled = current === total;
+    root.dataset.guide = String(state.guide);
+    root.dataset.chapter = String(state.chapter);
     root.dataset.tour = String(state.tour);
     root.dataset.beat = String(state.beat);
     root.dataset.playing = String(state.playing);
-    view.render(state);
+    currentView().render({...state, tour: state.guide ? state.chapter : state.tour, whole: !state.guide && state.whole});
     updateProgress();
-    view.position(state.playing || state.elapsed ? Math.min(1, state.elapsed / ((selected.flow[state.beat].ms || figure.props.speed) * 0.8)) : 0.5);
+    currentView().position(fraction());
   }
   function stopFrame() {
     if (frame) cancelAnimationFrame(frame);
     frame = 0; lastTime = null;
   }
-  function updateProgress(fraction = Math.min(1, state.elapsed / (steps[state.tour].flow[state.beat].ms || figure.props.speed))) {
+  function updateProgress(fraction = Math.min(1, state.elapsed / (selected().flow[state.beat].ms || figure.props.speed))) {
+    chapterButtons.forEach((button, index) => {
+      button.lastElementChild.style.transform = `scaleX(${state.guide && index === state.chapter ? (state.beat + fraction) / selected().flow.length : 0})`;
+    });
     tourButtons.forEach((button, index) => {
-      button.lastElementChild.style.transform = `scaleX(${index === state.tour ? (state.beat + fraction) / steps[state.tour].flow.length : 0})`;
+      button.lastElementChild.style.transform = `scaleX(${!state.guide && index === state.tour ? (state.beat + fraction) / steps[state.tour].flow.length : 0})`;
     });
   }
   function tick(time) {
     if (!state.playing || reduced.matches) { stopFrame(); return; }
     if (lastTime != null) state.elapsed += Math.min(200, time - lastTime) * state.rate;
     lastTime = time;
-    const duration = steps[state.tour].flow[state.beat].ms || figure.props.speed;
+    const duration = selected().flow[state.beat].ms || figure.props.speed;
     updateProgress(Math.min(1, state.elapsed / duration));
-    view.position(Math.min(1, state.elapsed / (duration * 0.8)));
+    currentView().position(Math.min(1, state.elapsed / (duration * 0.8)));
     if (state.elapsed >= duration) {
-      if (state.beat === steps[state.tour].flow.length - 1) {
+      if (state.beat === selected().flow.length - 1) {
         state.playing = false; state.elapsed = duration; stopFrame(); paint(); updateProgress(1); save(); return;
       }
       state.beat += 1; state.elapsed = 0; paint();
@@ -113,25 +159,36 @@
   play.addEventListener('click', () => {
     if (reduced.matches) return;
     state.playing = !state.playing;
-    if (state.playing && state.beat === steps[state.tour].flow.length - 1) {
+    if (state.playing && state.beat === selected().flow.length - 1) {
       state.beat = 0; state.elapsed = 0;
     }
-    const elapsed = state.elapsed;
     paint();
-    view.position(state.playing || elapsed ? Math.min(1, elapsed / ((steps[state.tour].flow[state.beat].ms || figure.props.speed) * 0.8)) : 0.5);
     startFrame(); save();
   });
-  previous.addEventListener('click', () => jump(Math.max(0, state.beat - 1)));
-  next.addEventListener('click', () => jump(Math.min(steps[state.tour].flow.length - 1, state.beat + 1)));
+  function move(direction) {
+    if (state.guide) {
+      state.chapter = Math.max(0, Math.min(guide.chapters.length - 1, state.chapter + direction));
+      jump(0);
+    } else jump(Math.max(0, Math.min(selected().flow.length - 1, state.beat + direction)));
+  }
+  previous.addEventListener('click', () => move(-1));
+  next.addEventListener('click', () => move(1));
   replay.addEventListener('click', () => {
     state.beat = 0; state.elapsed = 0; state.playing = !reduced.matches;
     paint(); startFrame(); save();
   });
   mode.addEventListener('click', () => {
     state.whole = !state.whole;
-    paint();
-    view.position(state.playing || state.elapsed ? Math.min(1, state.elapsed / ((steps[state.tour].flow[state.beat].ms || figure.props.speed) * 0.8)) : 0.5);
-    save();
+    paint(); save();
+  });
+  detail.addEventListener('click', () => {
+    if (state.guide) {
+      const sourceBeat = selected().flow[state.beat].sourceBeat;
+      state.guide = false; state.tour = 0; state.whole = true; jump(sourceBeat);
+    } else {
+      if (state.tour === 0) state.chapter = guide.chapters.findIndex(chapter => state.beat <= chapter.end);
+      state.guide = true; state.tour = 0; jump(0);
+    }
   });
   speed.addEventListener('click', () => {
     state.rate = state.rate === 1 ? 2 : 1;
@@ -167,7 +224,6 @@
     const updated = root.querySelector('[data-viewport]').clientWidth;
     if (updated === width) return;
     width = updated; paint();
-    view.position(state.playing || state.elapsed ? Math.min(1, state.elapsed / ((steps[state.tour].flow[state.beat].ms || figure.props.speed) * 0.8)) : 0.5);
   });
   observer.observe(root.querySelector('[data-viewport]'));
   window.addEventListener('pagehide', () => { stopFrame(); observer.disconnect(); }, {once: true});

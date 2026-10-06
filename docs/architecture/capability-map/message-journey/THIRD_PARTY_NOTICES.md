@@ -10,10 +10,14 @@ ideas from `src/index.tsx`: sequential beats, cumulative content, content-sized
 cards, moving packets, narration and independent tours. It is a small standalone
 SVG/DOM adaptation, not a vendored React renderer or ADE runtime dependency.
 Styling also adapts the dotted canvas, nested surfaces, inset data cards, blue
-trails/glows, arrow/data chips and lower playback track from `src/index.tsx`.
+transfers/glows, arrow/data chips and lower playback track from `src/index.tsx`.
 Controls add manual stepping and stop at the end instead of cycling into another
-tour. The default whole-architecture view retains all ownership frames and
-records; the optional focused view projects current endpoints. Full-page native
+tour. The default six-chapter guide selects exact source-backed transfers and
+combines ownership headers without changing the source specification. Manual
+Forward/Back stays paused; moving playback stops at chapter boundaries. The
+optional detailed whole-architecture view retains all ownership frames and
+records; its focused view projects current endpoints. Only current transfers
+are blue; completed transfers are subdued. Full-page native
 fullscreen preserves the selected beat. The ADE presentation adds a rounded
 card-aware visibility-grid fallback for obstructed transfers; otherwise it
 retains the adapted upstream cubic routing. Inline layout reflows rather than

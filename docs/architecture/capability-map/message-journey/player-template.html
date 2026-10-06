@@ -3,6 +3,8 @@
     <h2>Journey of a message</h2>
     <span class="text-small text-muted">Illustrative ADE flow, not a live trace</span>
   </div>
+  <output class="journey-chapter" data-chapter-title></output>
+  <output class="text-small text-muted" data-view-scope></output>
   <div class="journey-figure">
     <div class="journey-canvas">
       <button class="btn" type="button" data-fullscreen aria-label="Open chart full screen" hidden>Full screen</button>
@@ -10,21 +12,26 @@
     </div>
     <div class="journey-playback">
       <div class="journey-controls viz-controls">
-        <button class="btn" type="button" data-play aria-pressed="false">Play</button>
-        <div class="journey-tours" data-tours role="group" aria-label="Choose a flow"></div>
+        <button class="btn" type="button" data-play aria-pressed="false">Play chapter</button>
+        <div class="journey-tours" data-chapters role="group" aria-label="Choose a reading chapter"></div>
         <button class="btn" type="button" data-speed aria-label="Playback speed 1x">1x</button>
       </div>
       <output class="journey-narration" data-narration aria-live="polite"></output>
       <div class="journey-stepping viz-controls">
-        <button class="btn btn-ghost" type="button" data-previous>Previous</button>
+        <button class="btn" type="button" data-previous aria-label="Back one chapter">Back</button>
         <output class="tabular-nums text-small" data-count></output>
-        <button class="btn btn-ghost" type="button" data-next>Next</button>
+        <button class="btn btn-primary" type="button" data-next aria-label="Forward one chapter">Forward</button>
         <button class="btn btn-ghost" type="button" data-replay>Replay</button>
-        <button class="btn btn-ghost" type="button" data-whole aria-pressed="true">Follow this step</button>
+        <button class="btn btn-ghost" type="button" data-detail>Show detailed map</button>
+        <button class="btn btn-ghost" type="button" data-whole aria-pressed="true" hidden>Follow this step</button>
       </div>
       <div class="journey-progress" data-progress role="progressbar" aria-label="Tour step" aria-valuemin="1" aria-valuenow="1" aria-valuemax="1"><div></div></div>
     </div>
   </div>
+  <details class="journey-alternatives text-small" data-alternatives hidden>
+    <summary>Explore other paths</summary>
+    <div class="journey-tours" data-tours role="group" aria-label="Choose a detailed flow"></div>
+  </details>
   <details class="journey-details text-small">
     <summary>Flow conditions and module details</summary>
     <output class="journey-caption" data-caption></output>
@@ -32,7 +39,8 @@
     <dl data-module-details></dl>
   </details>
   <div class="journey-foot text-small">
-    <span>L1/L2/L3: ownership, not execution order. Cylinders: persisted records.</span>
+    <span>Chapters are reading steps, not new modules or calls. L1/L2/L3: ownership. Cylinders: persisted records.</span>
+    <span>External Tools and additional derived views are deferred; history selection is experimental/proposed. See the detailed map.</span>
     <span>Presentation adapted from Vectorize interfig (MIT).</span>
   </div>
   <script type="application/json" data-figure>__FIGURE__</script>
@@ -40,5 +48,6 @@
 <style>__STYLE__</style>
 <script>__MODEL__</script>
 <script>__LAYOUT__</script>
+<script>__GUIDE__</script>
 <script>__VIEW__</script>
 <script>__PLAYER__</script>

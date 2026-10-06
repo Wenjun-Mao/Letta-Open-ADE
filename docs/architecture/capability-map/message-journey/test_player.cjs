@@ -1,54 +1,7 @@
 // Offline DOM/playback contracts; not a browser pixel or assistive-technology audit.
 const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const {createRequire} = require('node:module');
 const test = require('node:test');
-const webRequire = createRequire(path.join(__dirname, '../../../../apps/ade-web/package.json'));
-const {JSDOM} = webRequire('jsdom');
-const html = fs.readFileSync(path.join(__dirname, 'ade-message-journey.html'), 'utf8');
-
-function player(width = 900, reducedMotion = false, inline = false, fullscreenEnabled = false) {
-  let time = 0, nextId = 1;
-  const callbacks = new Map(), mediaListeners = [];
-  const media = {matches: reducedMotion, addEventListener: (_, callback) => mediaListeners.push(callback)};
-  const source = inline ? html.replace('id="ade-moving-message" data-standalone', 'id="ade-moving-message"') : html;
-  const dom = new JSDOM(source, {
-    runScripts: 'dangerously',
-    beforeParse(window) {
-      Object.defineProperty(window.HTMLElement.prototype, 'clientWidth', {get: () => width});
-      window.matchMedia = () => media;
-      window.ResizeObserver = class { observe() {} disconnect() {} };
-      window.requestAnimationFrame = callback => { const id = nextId++; callbacks.set(id, callback); return id; };
-      window.cancelAnimationFrame = id => callbacks.delete(id);
-      if (fullscreenEnabled) {
-        window.HTMLElement.prototype.requestFullscreen = function () {
-          window.document.fullscreenElement = this;
-          window.document.dispatchEvent(new window.Event('fullscreenchange'));
-          return Promise.resolve();
-        };
-        window.document.exitFullscreen = () => {
-          window.document.fullscreenElement = null;
-          window.document.dispatchEvent(new window.Event('fullscreenchange'));
-          return Promise.resolve();
-        };
-      }
-    },
-  });
-  const root = dom.window.document.getElementById('ade-moving-message');
-  const find = name => root.querySelector(`[data-${name}]`);
-  function advance(milliseconds) {
-    for (let i = 0; i < milliseconds; i += 50) {
-      time += 50;
-      const pending = [...callbacks.values()]; callbacks.clear();
-      pending.forEach(callback => callback(time));
-    }
-  }
-  function select(index) {
-    root.querySelector(`[data-tour-index="${index}"]`).click();
-  }
-  return {dom, root, find, advance, select, media, mediaListeners, callbacks};
-}
+const {player} = require('./player-fixture.cjs');
 
 for (const width of [736, 320]) {
   test(`inline drawing reflows without scaling text or horizontal overflow at ${width}px`, () => {
@@ -133,7 +86,7 @@ test('unrelated host globals and old preview state do not stall playback', () =>
     assert.notEqual(app.find('viewport').querySelector('[data-packet]').getAttribute('transform'), before);
   }
   app.dom.window.dispatchEvent(new app.dom.window.CustomEvent('openai:set_globals', {detail: {globals: {
-    widgetState: {privateContent: {presentation: 2, tour: 4, beat: 1, whole: false}},
+    widgetState: {privateContent: {presentation: 3, guide: false, chapter: 0, tour: 4, beat: 1, whole: false}},
   }}}));
   assert.equal(app.root.dataset.tour, '4');
   assert.equal(app.root.dataset.beat, '1');
@@ -142,7 +95,7 @@ test('unrelated host globals and old preview state do not stall playback', () =>
   app.dom.window.close();
 });
 
-test('full map is the default, playback sits below it, and all beat changes preserve its geometry', () => {
+test('detailed map keeps full geometry and bottom playback; previous transfers are subdued', () => {
   const app = player(1440);
   assert.equal(app.find('viewport').dataset.view, 'whole');
   assert.equal(app.find('viewport').querySelectorAll('[data-node]').length, 31);
@@ -159,7 +112,7 @@ test('full map is the default, playback sits below it, and all beat changes pres
   assert.ok(app.find('viewport').querySelector('[data-edge="submit"].active-connection'));
   app.find('next').click();
   assert.equal(rect(), chat);
-  assert.ok(app.find('viewport').querySelector('[data-edge="submit"].active-connection'));
+  assert.ok(app.find('viewport').querySelector('[data-edge="submit"].completed-connection'));
   app.select(4);
   assert.equal(app.find('viewport').querySelector('svg').getAttribute('viewBox'), first);
   assert.equal(app.find('viewport').querySelector('[data-node="chat"] .payload-text').textContent, '-');

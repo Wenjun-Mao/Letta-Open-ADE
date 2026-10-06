@@ -86,9 +86,11 @@
       const step = data.steps[state.tour], beat = step.flow[state.beat];
       const hops = model.beatHops(beat), activeEdges = hops.map(hop => edgeMap.get(hop.edge));
       const wanted = new Set([...(beat.light || []), ...activeEdges.flatMap(edge => [edge.from, edge.to])]);
-      const key = `${state.whole}:${state.whole ? '' : [...wanted].sort().join(',')}:${viewport.clientWidth}`;
+      const included = state.guide ? new Set(step.nodes) : wanted;
+      const key = `${state.whole}:${state.whole ? '' : [...included].sort().join(',')}:${viewport.clientWidth}`;
       if (key !== cacheKey) {
-        const projection = state.whole ? data.layout : model.project(data.layout, wanted);
+        const projection = state.guide ? global.AdeJourneyGuide.layout(data.layout, step.nodes)
+          : state.whole ? data.layout : model.project(data.layout, included);
         const unbounded = standalone && state.whole;
         plan = layout.layout(projection, data.steps, !unbounded && viewport.clientWidth < 600,
           unbounded ? Infinity : Math.max(296, viewport.clientWidth));
@@ -116,14 +118,16 @@
         textLines(group, frame.title, frame.x + 18, frame.y + 29, 'frame-title', 18); svg.appendChild(group);
       }
       const trail = new Set(step.flow.slice(0, state.beat + 1).flatMap(item => model.beatHops(item).map(hop => hop.edge)));
-      const lit = new Set([...wanted, ...Object.keys(model.accumulated(step, state.beat)), ...(step.nodes || [])]);
-      for (const id of trail) { const edge = edgeMap.get(id); lit.add(edge.from).add(edge.to); }
-      const visible = routes.filter(curve => state.whole ? !curve.quiet || trail.has(curve.id) : hops.some(hop => hop.edge === curve.id));
+      const chapterEdges = new Set(step.flow.flatMap(item => model.beatHops(item).map(hop => hop.edge)));
+      const lit = state.guide ? wanted : new Set([...wanted, ...(step.nodes || [])]);
+      const current = new Set(hops.map(hop => hop.edge));
+      const visible = routes.filter(curve => state.guide ? chapterEdges.has(curve.id)
+        : state.whole ? !curve.quiet || trail.has(curve.id) : current.has(curve.id));
       curves = new Map(visible.map(curve => [curve.id, curve]));
       for (const curve of visible) {
-        const active = trail.has(curve.id);
+        const active = current.has(curve.id);
         svg.appendChild(element('path', {d: curve.d,
-          class: `connection ${active ? 'active-connection' : 'trail-connection'}`,
+          class: `connection ${active ? 'active-connection' : trail.has(curve.id) ? 'completed-connection' : 'trail-connection'}`,
           'marker-end': `url(#${active ? 'journey-arrow' : 'journey-trail-arrow'})`, 'data-edge': curve.id}));
       }
       const shown = model.accumulated(step, state.beat);
@@ -150,7 +154,7 @@
         }
         svg.appendChild(packet); return {packet, hop, chip, chipWidth, chipHeight};
       });
-      viewport.replaceChildren(svg); viewport.dataset.view = state.whole ? 'whole' : 'message';
+      viewport.replaceChildren(svg); viewport.dataset.view = state.guide ? 'guided' : state.whole ? 'whole' : 'message';
       root.querySelector('[data-connections]').textContent = activeEdges.map(edge =>
         `${nodes.get(edge.from).label} -> ${nodes.get(edge.to).label}: ${edge.label}`).join(' | ') || 'No transfer in this step';
       position(state.playing ? 0 : 0.5);

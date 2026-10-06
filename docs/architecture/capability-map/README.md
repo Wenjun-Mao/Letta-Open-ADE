@@ -14,7 +14,8 @@ product contract, implementation authorization or behavioral acceptance result.
 - [Character assessment guide](character-assessment.md): PC-12's authored-intent
   boundary and character-relative grounding, judgment and fidelity lenses.
 - [Moving message journey](message-journey/ade-message-journey.html): playable
-  source-backed draft with step controls and ownership view; no runtime change.
+  source-backed draft with six paced chapters, Forward/Back and a detailed
+  ownership/branch view; no runtime change.
 - [Journey source and review guide](message-journey/README.md): interfig-compatible
   layout/edges/steps, rendering sources and branch/status evidence limits.
 - [Inventory source](inventory.json): the single source for names, ownership,
