@@ -13,6 +13,8 @@ product contract, implementation authorization or behavioral acceptance result.
 - [Readable inventory](inventory.md): generated reference for all registered pieces.
 - [Character assessment guide](character-assessment.md): PC-12's authored-intent
   boundary and character-relative grounding, judgment and fidelity lenses.
+- [Message journey proposal](message-journey/README.md): source-backed interfig
+  layout/edges/steps for review before rendering; no runtime change or adoption.
 - [Inventory source](inventory.json): the single source for names, ownership,
   implementation scope, evidence limits, records and flow connections.
 - [ADR 0061](../../adr/0061-capability-responsibility-map.md): vocabulary and the

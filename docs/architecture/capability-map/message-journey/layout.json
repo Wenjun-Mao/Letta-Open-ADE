@@ -1,0 +1,131 @@
+{
+  "id": "ade-journey", "direction": "column", "gap": 28, "align": "start",
+  "children": [
+    {
+      "id": "ownership", "direction": "row", "gap": 28, "align": "start",
+      "children": [
+        {
+          "id": "interface", "label": "L1 - Interface", "direction": "column", "gap": 20,
+          "children": [
+            {
+              "id": "conversation-ui", "label": "L2 - Conversation UI", "direction": "column",
+              "children": [
+                {"id": "chat", "label": "Conversation workspace", "sub": "L3 - UI-01 - Send / accepted / final outcome [Implemented]", "width": 205, "lines": 3},
+                {"id": "lineage", "label": "Memory and lineage display", "sub": "L3 - UI-02 - Committed state [Implemented]", "width": 205}
+              ]
+            },
+            {
+              "id": "inspection-ui", "label": "L2 - Inspection & Evaluation UI", "direction": "column",
+              "children": [
+                {"id": "activity", "label": "Turn activity inspection", "sub": "L3 - UI-03 - Public retained metadata; incomplete [Implemented]", "width": 205},
+                {"id": "private-artifacts", "label": "Private evaluation artifacts", "sub": "L3 - UI-04 - Restricted capture, not a new public UI [Experimental]", "width": 205}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "character", "label": "L1 - Character", "direction": "column", "gap": 20,
+          "children": [
+            {
+              "id": "persona-definition", "label": "L2 - Persona Definition", "direction": "column",
+              "children": [
+                {"id": "author", "label": "Prompt and persona authoring", "sub": "L3 - CHAR-01 - Pre-turn prerequisite, not every message [Implemented]", "width": 220},
+                {"id": "binding", "label": "Immutable definition binding", "sub": "L3 - CHAR-02 - Read the conversation's existing version [Implemented]", "width": 220}
+              ]
+            },
+            {
+              "id": "conversation-behavior", "label": "L2 - Conversation Behavior", "direction": "column",
+              "children": [
+                {"id": "behavior", "label": "Interpret; choose and express", "sub": "L3 - CHAR-03 + CHAR-04 - Shared generation, no internal handoff [Partial]", "width": 220, "lines": 3},
+                {"id": "tools", "label": "Curated tool choice and result use", "sub": "L3 - CHAR-05 - Optional within the finite generation loop [Implemented]", "width": 220}
+              ]
+            },
+            {
+              "id": "character-artifacts", "label": "Artifacts, not L3 modules", "direction": "column",
+              "children": [
+                {"id": "definitions", "label": "Definition snapshots", "sub": "REC-DEFINITION - Immutable persona / prompt / deployment / policy [Record]", "shape": "store", "width": 220},
+                {"id": "candidate", "label": "Candidate reply", "sub": "Not persisted or delivered yet [Artifact]", "width": 220, "lines": 2}
+              ]
+            }
+          ]
+        },
+        {
+          "id": "memory", "label": "L1 - Memory", "direction": "column", "gap": 24,
+          "children": [
+            {
+              "id": "memory-subsystems", "direction": "row", "gap": 18, "align": "start",
+              "children": [
+                {
+                  "id": "recall-context", "label": "L2 - Recall & Context", "direction": "column",
+                  "children": [
+                    {"id": "scope", "label": "Scope and eligibility", "sub": "L3 - MEM-01 - Subject facts; history adds character root [Partial]", "width": 185},
+                    {"id": "search", "label": "Candidate search", "sub": "L3 - MEM-02 - Facts implemented; history experimental [Partial]", "width": 185, "lines": 2},
+                    {"id": "selection", "label": "Evidence selection", "sub": "L3 - MEM-03 - Bounded history selectors [Experimental]; joint selection [Proposed]", "width": 185},
+                    {"id": "delivery", "label": "Context delivery", "sub": "L3 - MEM-04 - Fit and bind actual consumer inputs [Partial]", "width": 185, "lines": 3}
+                  ]
+                },
+                {
+                  "id": "retention-updates", "label": "L2 - Retention & Updates", "direction": "column",
+                  "children": [
+                    {"id": "capture", "label": "Source capture", "sub": "L3 - MEM-05 - User at acceptance; assistant at finalization [Implemented]", "width": 185},
+                    {"id": "review", "label": "Memory update review", "sub": "L3 - MEM-06 - Typed path; natural variants experimental [Partial]", "width": 185, "lines": 3},
+                    {"id": "commit", "label": "Validation and commit", "sub": "L3 - MEM-07 - Runtime-owned atomic finalization [Implemented]", "width": 185, "lines": 3}
+                  ]
+                },
+                {
+                  "id": "organization-maintenance", "label": "L2 - Organization & Maintenance", "direction": "column",
+                  "children": [
+                    {"id": "embedding", "label": "Index maintenance", "sub": "L3 - MEM-08 - Prepare vectors before commit [Implemented]", "width": 185},
+                    {"id": "compact", "label": "Conversation compaction", "sub": "L3 - MEM-09 - Conditional preparation before generation [Implemented]", "width": 185},
+                    {"id": "views", "label": "Additional derived views", "sub": "L3 - MEM-10 - No implemented flow [Deferred]", "width": 185}
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "memory-records", "label": "Stored records, not processing modules - ADE PostgreSQL", "direction": "column",
+              "children": [
+                {
+                  "id": "memory-records-top", "direction": "row", "gap": 20,
+                  "children": [
+                    {"id": "dialogue", "label": "Original dialogue", "sub": "REC-DIALOGUE - What was said, not automatic fact acceptance [Record]", "shape": "store", "width": 240, "lines": 2},
+                    {"id": "facts", "label": "Facts and revisions", "sub": "REC-FACTS - Subject state, sources and lifecycle [Record]", "shape": "store", "width": 240}
+                  ]
+                },
+                {
+                  "id": "memory-records-bottom", "direction": "row", "gap": 20,
+                  "children": [
+                    {"id": "summaries", "label": "Conversation summaries", "sub": "REC-SUMMARY - Source-linked working context, not factual authority [Record]", "shape": "store", "width": 240},
+                    {"id": "index", "label": "Fact search representations", "sub": "REC-INDEX - Revision / embedding-space bound [Record]", "shape": "store", "width": 240}
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "external-tools", "label": "L1 - External Tools [Deferred]", "direction": "column",
+          "children": [
+            {
+              "id": "external-actions", "label": "L2 - External Information & Actions", "direction": "column",
+              "children": [
+                {"id": "external", "label": "External information and actions", "sub": "L3 - EXT-01 - Not internal memory search; no implemented flow [Deferred]", "width": 185}
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "support", "label": "Supporting runtime / model access / storage - Not another L1 domain", "direction": "row", "gap": 22, "align": "start",
+      "children": [
+        {"id": "accept", "label": "Accept turn", "sub": "SUP-01 - Gates, idempotency, input transaction [Implemented]", "width": 210},
+        {"id": "attempt", "label": "Claim and execute attempt", "sub": "SUP-01 - Lease, snapshot, deadline, policy binding [Implemented]", "width": 210},
+        {"id": "dispatch", "label": "Bind actual conversation request", "sub": "SUP-01 - Persona, context, tools, input capacity [Implemented]", "width": 210},
+        {"id": "router", "label": "Model Router", "sub": "SUP-03 - Catalog / generation / review / embeddings [Implemented]", "width": 210},
+        {"id": "outcome", "label": "Run control and outcomes", "sub": "SUP-01 - Retry, failure, cancellation, committed success [Implemented]", "width": 210},
+        {"id": "runs", "label": "Runs, attempts and events", "sub": "REC-RUNS - Persistent observed metadata; completeness varies [Record]", "shape": "store", "width": 210}
+      ]
+    }
+  ]
+}

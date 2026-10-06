@@ -1,0 +1,127 @@
+{
+  "review_status": "Proposed presentation specification; awaiting review, not an architecture adoption",
+  "reviewed_at": "2026-10-06",
+  "ade_source_baseline": "125082447c2c5f5ada7a2c5ed88be41bb8fba4bf",
+  "reference": {
+    "repository": "https://github.com/vectorize-io/hindsight",
+    "revision": "9269b88417ed263e5a8350f2e416ca2b322756b1",
+    "files_inspected": ["hindsight-interfig/figures/what-hindsight-does.ts", "hindsight-interfig/src/index.tsx", "hindsight-interfig/src/model.ts", "hindsight-interfig/src/geometry.ts", "hindsight-interfig/README.md"],
+    "reuse": "Figure/group/node/edge/beat presentation contract only; no Hindsight architecture, code vendoring or dependency installation",
+    "license": "Repository MIT, Copyright 2025 Vectorize AI Inc.; retain attribution if renderer code is later copied/adapted"
+  },
+  "presentation": {
+    "title": "ADE - Journey of a message (review specification)",
+    "source": "docs/architecture/capability-map/message-journey",
+    "theme": {"accent": "#1364d6", "fg": "#172e46", "muted": "#52667e", "bg": "#f8fbff", "surface": "#ffffff", "border": "#b9cce0", "font": "'IBM Plex Sans', sans-serif"},
+    "speed": 2200,
+    "autoplay": false
+  },
+  "step_modes": ["current", "current", "current", "experimental", "experimental", "current", "unimplemented"],
+  "node_bindings": {
+    "chat": ["UI-01"], "lineage": ["UI-02"], "activity": ["UI-03"], "private-artifacts": ["UI-04"],
+    "author": ["CHAR-01"], "binding": ["CHAR-02"], "behavior": ["CHAR-03", "CHAR-04"], "tools": ["CHAR-05"],
+    "definitions": ["REC-DEFINITION"], "candidate": [],
+    "scope": ["MEM-01"], "search": ["MEM-02"], "selection": ["MEM-03"], "delivery": ["MEM-04"],
+    "capture": ["MEM-05"], "review": ["MEM-06"], "commit": ["MEM-07"], "embedding": ["MEM-08"], "compact": ["MEM-09"], "views": ["MEM-10"],
+    "dialogue": ["REC-DIALOGUE"], "facts": ["REC-FACTS"], "summaries": ["REC-SUMMARY"], "index": ["REC-INDEX"],
+    "external": ["EXT-01"], "accept": ["SUP-01"], "attempt": ["SUP-01"], "dispatch": ["SUP-01"], "router": ["SUP-03"], "outcome": ["SUP-01"], "runs": ["REC-RUNS"]
+  },
+  "subsystem_groups": {
+    "persona-definition": "Persona Definition", "conversation-behavior": "Conversation Behavior",
+    "recall-context": "Recall & Context", "retention-updates": "Retention & Updates", "organization-maintenance": "Organization & Maintenance",
+    "conversation-ui": "Conversation UI", "inspection-ui": "Inspection & Evaluation UI", "external-actions": "External Information & Actions"
+  },
+  "claims": [
+    {
+      "name": "UI request and persisted refresh", "mode": "current",
+      "edges": ["submit", "accepted-receipt", "refresh-ui", "lineage-state", "cancel-request"],
+      "condition": "UI session is current; accepted receipt and terminal refresh are different moments; cancellation outcome is fenced",
+      "pcs": ["PC-01", "PC-07", "PC-08"],
+      "sources": [{"path": "web:agent-studio/use-agent-studio.ts", "anchor": "async function sendMessage()"}, {"path": "web:agent-studio/use-agent-studio.ts", "anchor": "const monitorRun ="}, {"path": "web:agent-studio/use-agent-studio.ts", "anchor": "terminalRunRef.current = runId"}]
+    },
+    {
+      "name": "New-run acceptance transaction", "mode": "current",
+      "edges": ["accept-catalog-request", "accept-catalog-response", "accepted-source", "save-user", "save-accepted-run", "preaccept-rejection"],
+      "condition": "New-run success passes readiness, input, policy, busy/archive and idempotency gates. Replay returns an existing run",
+      "pcs": ["PC-04", "PC-08", "PC-09"],
+      "sources": [{"path": "runtime:run_service.py", "anchor": "async def accept_turn("}]
+    },
+    {
+      "name": "Worker coordination and coherent bound state", "mode": "current",
+      "edges": ["claim-run", "definition-read", "bound-definition", "read-dialogue", "read-summary", "read-facts", "attempt-catalog-request", "attempt-catalog-response", "eligible-scope"],
+      "condition": "Owned worker lease; accepted subject generation; existing immutable conversation definition; executable bound policy",
+      "pcs": ["PC-02", "PC-04", "PC-08", "PC-09"],
+      "sources": [{"path": "runtime:worker.py", "anchor": "async def _process_claim("}, {"path": "runtime:turn_memory_snapshot.py", "anchor": "async def load_turn_state("}, {"path": "runtime:turn_execution.py", "anchor": "async def execute("}]
+    },
+    {
+      "name": "Automatic and tool-invoked fact access", "mode": "current",
+      "edges": ["fact-query", "query-embedding-request", "query-embedding-response", "fact-search-data", "fact-results", "tool-search", "tool-result"],
+      "condition": "Automatic search follows needs_selective_retrieval; tool search requires an enabled, validated call. Subject generation and embedding space are checked",
+      "pcs": ["PC-01", "PC-02", "PC-08"],
+      "sources": [{"path": "runtime:turn_retrieval.py", "anchor": "async def select_automatic_facts("}, {"path": "runtime:turn_retrieval.py", "anchor": "def search_memory_handler("}, {"path": "runtime:turn_memory_snapshot.py", "anchor": "async def search_turn_memory("}, {"path": "runtime:turn_context_selection.py", "anchor": "def needs_selective_retrieval("}]
+    },
+    {
+      "name": "Context construction and conversation execution", "mode": "current",
+      "edges": ["base-context", "delivered-request", "generation-input", "generation-request", "generation-response", "candidate-reply", "tool-call", "tool-followup"],
+      "condition": "Policy-specific local/fact context capacity; serialized per-request overflow checks only where input_token_limit is passed (currently natural variants). Enabled finite tool loop; behavior quality remains partial",
+      "pcs": ["PC-01", "PC-08", "PC-09", "PC-11", "PC-12"],
+      "sources": [{"path": "runtime:turn_context_selection.py", "anchor": "def select_turn_context("}, {"path": "runtime:executor.py", "anchor": "class ConversationExecutor:"}, {"path": "runtime:executor.py", "anchor": "def conversation_request("}, {"path": "runtime:turn_execution.py", "anchor": "executor_result, built_context = await execute_generation_with_history("}]
+    },
+    {
+      "name": "Reviewer and prepared fact representations", "mode": "current",
+      "edges": ["typed-review-input", "review-request", "review-response", "index-input", "fact-embedding-request", "fact-embedding-response"],
+      "condition": "Typed input excludes candidate reply; natural variants have their own experimental inputs. Provider embeddings only for value-bearing operations",
+      "pcs": ["PC-05", "PC-07", "PC-08", "PC-09"],
+      "sources": [{"path": "runtime:turn_execution.py", "anchor": "reviewer_result = await reviewer.review("}, {"path": "runtime:reviewer.py", "anchor": "class MemoryReviewer:"}, {"path": "runtime:turn_embedding_results.py", "anchor": "async def embed_review_operations("}, {"path": "runtime:embeddings.py", "anchor": "if not inputs:"}]
+    },
+    {
+      "name": "Atomic success finalization", "mode": "current",
+      "edges": ["proposed-changes", "prepared-index", "pending-reply", "commit-facts", "commit-index", "commit-dialogue", "commit-summary", "commit-run", "committed-outcome", "pending-summary"],
+      "condition": "Cancellation/lease/version/generation/source guards pass. No-op reviews write no fact/index changes; summary only when prepared. Writes share one transaction",
+      "pcs": ["PC-05", "PC-07", "PC-08", "PC-09"],
+      "sources": [{"path": "runtime:worker_finalization.py", "anchor": "async def commit_success("}, {"path": "runtime:memory_commit.py", "anchor": "async def commit_memory_review("}, {"path": "runtime:natural_memory_commit.py", "anchor": "async def commit_natural_memory_review("}]
+    },
+    {
+      "name": "Conditional pre-generation compaction", "mode": "current",
+      "edges": ["compact-input", "compaction-request", "compaction-response", "summary-context"],
+      "condition": "An eligible plan exists; natural B skips; A/A0 may withhold compaction by fit condition. Proposal persists only at success",
+      "pcs": ["PC-05", "PC-08", "PC-09"],
+      "sources": [{"path": "runtime:turn_compaction.py", "anchor": "async def compact_turn("}, {"path": "runtime:executor.py", "anchor": "async def compact("}, {"path": "runtime:turn_execution.py", "anchor": "compaction = await compact_turn("}]
+    },
+    {
+      "name": "Experimental natural-review input", "mode": "experimental",
+      "edges": ["natural-review-input", "reference-reply"],
+      "condition": "Existing development-only natural policy binding; variant-specific source bundle; candidate is reference only, not authority",
+      "pcs": ["PC-05", "PC-09", "PC-11"],
+      "sources": [{"path": "runtime:turn_execution.py", "anchor": "if natural_mode:"}, {"path": "runtime:turn_execution.py", "anchor": "candidate_reply=executor_result.assistant_text"}, {"path": "runtime:natural_memory_reviewer.py", "anchor": "async def execute_natural_review("}]
+    },
+    {
+      "name": "Experimental historical recovery and H reuse", "mode": "experimental",
+      "edges": ["history-corpus", "history-query", "history-candidates", "history-admission", "historical-review"],
+      "condition": "Development + evaluation purpose + exact history policy and automatic_history arm/configuration; bounded recipes; source validation before exposure and at commit",
+      "pcs": ["PC-02", "PC-03", "PC-04", "PC-05", "PC-10", "PC-11"],
+      "sources": [{"path": "runtime:persistence/history.py", "anchor": "async def read_history_corpus("}, {"path": "runtime:turn_history_setup.py", "anchor": "async def prepare_history_turn("}, {"path": "runtime:history_attempt.py", "anchor": "async def prepare("}, {"path": "runtime:history_admission.py", "anchor": "def admit_history("}, {"path": "runtime:worker_finalization.py", "anchor": "await validate_history_at_commit("}, {"path": "runtime:turn_execution.py", "anchor": "History probe requires its evaluation-only policy and arm binding"}]
+    },
+    {
+      "name": "Public metadata versus private observations", "mode": "current",
+      "edges": ["activity-state"],
+      "condition": "Retained public activity is available; incompleteness must remain visible. It is not private full-state/packet capture",
+      "pcs": ["PC-08", "PC-09", "PC-12"],
+      "sources": [{"path": "runtime:turn_activity.py", "anchor": "def conversation_activity("}, {"path": "web:agent-studio/turn-activity-view.tsx", "anchor": "TurnActivityView"}]
+    },
+    {
+      "name": "Restricted experimental capture", "mode": "experimental",
+      "edges": ["private-capture"],
+      "condition": "Capture explicitly enabled in allowed development/evaluation/local-database context; failures do not alter turn outcome; truncated/unavailable is not observed-empty",
+      "pcs": ["PC-08", "PC-09", "PC-12"],
+      "sources": [{"path": "runtime:natural_attempt_evidence.py", "anchor": "def capture_allowed("}, {"path": "runtime:executor.py", "anchor": "if observe_request is not None:"}]
+    },
+    {
+      "name": "Retry and non-success terminal handling", "mode": "current",
+      "edges": ["attempt-failure", "retry-attempt", "terminal-record"],
+      "condition": "Retryable execution errors only, explicit remaining budget; commit_success is outside retry loop. This worker cannot terminally commit after lease loss",
+      "pcs": ["PC-07", "PC-08", "PC-09"],
+      "sources": [{"path": "runtime:worker.py", "anchor": "result = await execute_with_retries("}, {"path": "runtime:retry.py", "anchor": "def is_retryable("}, {"path": "runtime:worker_finalization.py", "anchor": "async def commit_cancellation("}, {"path": "runtime:worker_finalization.py", "anchor": "async def commit_failure("}]
+    }
+  ]
+}

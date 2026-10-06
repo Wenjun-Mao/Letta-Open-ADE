@@ -1,0 +1,133 @@
+[
+  {
+    "label": "1 - Current message", "caption": "Illustrative typed-policy success: existing persona binding, automatic fact search, no new compaction or tool call, and value-bearing review operations. Source-backed mechanics, not a live trace or release qualification.",
+    "flow": [
+      {"light": ["author", "binding"], "say": "Before this message: the persona was authored and the conversation bound to an immutable version. Neither is re-authored each turn."},
+      {"edges": {"edge": "submit", "data": "current user text"}, "show": {"chat": [{"tag": "ILLUSTRATIVE", "text": "The slides are finished, but I haven't rehearsed."}]}, "say": "The UI submits ordinary dialogue, an idempotency key and explicit execution limits. No storage-command wording is required."},
+      {"edges": "accept-catalog-request", "say": "Acceptance checks conversation/subject state, executable policy, provider identity, input capacity and worker readiness. Rejection and idempotent replay are alternatives, not this new-run path."},
+      {"edges": "accept-catalog-response"},
+      {"edges": "accepted-source", "say": "The acceptance transaction binds the original user message to the new run."},
+      {"edges": ["save-user", "save-accepted-run"], "show": {"dialogue": [{"tag": "USER", "text": "Original user text + attribution"}], "runs": [{"tag": "PENDING", "text": "Accepted run + lease + events"}]}, "say": "One acceptance transaction persists the user message, pending run, lease and acceptance events. These grouped arrows mean atomic visibility, not parallel SQL."},
+      {"edges": "accepted-receipt", "say": "The UI receives a run ID and starts monitoring. Accepted is not a generated or committed assistant reply."},
+      {"edges": "claim-run", "say": "A worker claims the queued run and starts a leased, deadline-bound attempt."},
+      {"edges": "definition-read"},
+      {"edges": "bound-definition", "say": "Read the conversation's existing immutable persona, prompt, deployment and memory-policy binding."},
+      {"edges": "read-dialogue"},
+      {"edges": "read-summary"},
+      {"edges": "read-facts", "say": "Local messages, the latest summary or none, and subject facts/entities are read in one coherent repeatable-read snapshot. No general historical recall is implied."},
+      {"edges": "attempt-catalog-request"},
+      {"edges": "attempt-catalog-response", "say": "The attempt revalidates policy/deployment identities and mandatory input capacity before model work."},
+      {"light": ["compact"], "say": "Compaction eligibility is considered here, before generation. This example needs no new summary; tab 2 shows the conditional branch."},
+      {"edges": "eligible-scope", "say": "The workspace subject determines fact ownership. Historical exchanges require additional same-character scope and are not part of this typed path."},
+      {"edges": "fact-query"},
+      {"edges": "query-embedding-request"},
+      {"edges": "query-embedding-response"},
+      {"edges": "fact-search-data", "show": {"search": [{"tag": "FACTS", "text": "Subject-bound, current-revision matches"}]}, "say": "Automatic fact search uses a query vector and matching embedding space, checking accepted memory generation. The typed path performs this search; some natural variants can use a fitting full snapshot instead."},
+      {"edges": "base-context"},
+      {"edges": "fact-results", "say": "Context construction combines mandatory input, local messages, working summary and fact context. This is not the experimental historical Evidence Selection module."},
+      {"edges": "delivered-request", "show": {"delivery": [{"tag": "CONTEXT", "text": "Persona + current turn + local dialogue + scoped facts", "meta": "Summary if present"}]}, "say": "Runtime binds the actual serialized consumer request. Fitting mechanically does not prove the evidence is semantically sufficient."},
+      {"edges": "generation-input"},
+      {"edges": "generation-request", "say": "CHAR-03 and CHAR-04 share generation: interpretation, conversational judgment and character expression are responsibilities, not emitted intermediate stages."},
+      {"edges": "generation-response"},
+      {"edges": "candidate-reply", "show": {"candidate": [{"tag": "PENDING", "text": "Illustrative candidate text; not yet delivered"}]}, "say": "A model response becomes a candidate reply. Grounding, judgment and fidelity are assessment lenses, not three additional calls."},
+      {"edges": "typed-review-input", "say": "After generation, the typed reviewer receives the current user, up to eight prior user messages, active facts and entities. It does NOT receive the candidate reply."},
+      {"edges": "review-request"},
+      {"edges": "review-response", "show": {"review": [{"tag": "PROPOSAL", "text": "Operations or no change; not persisted"}]}, "say": "The reviewer interprets factual meaning. ADE structurally prepares the proposal; a valid source binding is not semantic proof."},
+      {"edges": "index-input"},
+      {"edges": "fact-embedding-request"},
+      {"edges": "fact-embedding-response", "say": "This example has value-bearing operations, so their fact representations are prepared before finalization. A no-change/value-less review does not require a fact-embedding provider call."},
+      {"edges": "proposed-changes"},
+      {"edges": "prepared-index"},
+      {"edges": "pending-reply", "say": "Runtime finalization locks and rechecks cancellation, lease, conversation version, memory generation and relevant source bindings before writing the success bundle."},
+      {"edges": ["commit-facts", "commit-index", "commit-dialogue", "commit-run"], "show": {"commit": [{"tag": "ATOMIC", "text": "Assistant + permitted state + terminal success"}], "dialogue": [{"tag": "COMMITTED", "text": "User and assistant with run outcome"}], "runs": [{"tag": "SUCCEEDED", "text": "Events + released lease"}]}, "say": "One success transaction makes permitted facts, representations, assistant text and terminal metadata visible together. No new summary was prepared in this example. Grouped arrows are not parallel execution."},
+      {"edges": "committed-outcome"},
+      {"edges": "refresh-ui", "say": "Events and status polling prompt the UI to reload persisted session state. The candidate is not streamed directly to the user by this path."},
+      {"edges": "lineage-state"},
+      {"edges": "activity-state", "say": "The UI presents the reply, committed lineage and retained activity metadata. Activity can arrive during the run too; it is not a complete packet trace or hidden reasoning."}
+    ]
+  },
+  {
+    "label": "2 - Compaction (conditional)", "caption": "Implemented branch inside the attempt, BEFORE generation. Show only when a compaction plan is eligible under the bound policy; this is not a post-reply background worker.",
+    "flow": [
+      {"edges": "compact-input", "say": "Local context pressure can produce a plan over older messages and the previous summary. Natural B bypasses this branch; A/A0 have additional fit conditions."},
+      {"edges": "compaction-request"},
+      {"edges": "compaction-response", "show": {"compact": [{"tag": "PREPARED", "text": "Source-linked summary proposal"}]}, "say": "The model creates working summary content, not independently authoritative facts."},
+      {"edges": "summary-context", "say": "The attempt uses the prepared summary while constructing generation context. This does not persist the summary yet."},
+      {"light": ["behavior", "review", "embedding"], "say": "Generation, review and any required embeddings proceed as in tab 1. This focused branch omits those repeated beats, not those runtime steps."},
+      {"edges": "pending-summary"},
+      {"edges": ["commit-facts", "commit-index", "commit-dialogue", "commit-summary", "commit-run"], "say": "On a successful value-bearing-review example, the summary joins the same assistant/fact/index/run transaction. On failure, no new summary from this attempt is committed."}
+    ]
+  },
+  {
+    "label": "3 - Memory tool (conditional)", "caption": "Implemented finite conversation loop, only if search_memory is enabled and the model calls it. Internal Memory access, not the deferred External Tools domain.",
+    "flow": [
+      {"edges": "generation-request"},
+      {"edges": "generation-response", "say": "A conversation completion may request an enabled curated tool instead of final text. This is not guaranteed or triggered by a phrase rule."},
+      {"edges": "tool-call"},
+      {"edges": "tool-search", "say": "Validate tool name and arguments, then execute subject/generation-bound fact search. The model chooses; Memory owns search."},
+      {"edges": "query-embedding-request"},
+      {"edges": "query-embedding-response"},
+      {"edges": "fact-search-data"},
+      {"edges": "tool-result", "show": {"tools": [{"tag": "RESULT", "text": "Actual tool result, including empty/error status"}]}},
+      {"edges": "tool-followup", "say": "Append the actual tool result and bind the next conversation request. Per-request serialized overflow checks run only when the caller supplies input_token_limit, currently on natural variants; finite tool/request limits still apply to typed execution."},
+      {"edges": "generation-input"},
+      {"edges": "generation-request"},
+      {"edges": "generation-response"},
+      {"edges": "candidate-reply", "say": "Generation can return candidate text or request another bounded tool iteration. The candidate still proceeds through review and atomic finalization; finite budgets can also terminate the run."}
+    ]
+  },
+  {
+    "label": "4 - Natural review [Experimental]", "caption": "Existing development-only natural-memory variants, not the typed-policy path or a release qualification. This tour starts after generation and shows a different reviewer INPUT contract, not another reviewer layered on top.",
+    "flow": [
+      {"edges": "natural-review-input", "say": "EXPERIMENTAL: the bound variant supplies the current user anchor, original source messages, lifecycle facts and entities; exact context strategy varies by variant."},
+      {"edges": "reference-reply", "show": {"review": [{"tag": "REFERENCE", "text": "Candidate reply is not factual authority"}]}, "say": "EXPERIMENTAL: only this natural path supplies the candidate reply as reference. It must not silently turn invented user/shared history into accepted facts."},
+      {"edges": "review-request"},
+      {"edges": "review-response", "say": "EXPERIMENTAL: use the existing reviewer and structural policy preparation, then the same embedding/finalization boundaries. Story admission/correction mechanics remain open under PC-11."},
+      {"light": ["embedding", "commit"], "say": "The remaining success mechanics reuse tab 1; this tour does not imply a second review call or adoption of a new policy."}
+    ]
+  },
+  {
+    "label": "5 - History [Experimental]", "caption": "Existing automatic_history evaluation arm only, under development policy/configuration and source guards. This tour also illustrates optional restricted capture when configured. Not general historical recall or a new episode store.",
+    "flow": [
+      {"edges": "history-corpus", "say": "EXPERIMENTAL: read bounded completed original exchanges for this workspace subject and character root, including eligible archived/versioned chats. Other characters' shared experiences are excluded."},
+      {"edges": "history-query", "say": "EXPERIMENTAL: use the trial's fixed ranking recipe, not a universal production selector. Some recipes involve guarded embedding/ranking requests; their internals are collapsed here."},
+      {"edges": "history-candidates", "show": {"selection": [{"tag": "CANDIDATES", "text": "Bounded original exchanges; qualifications may be missing"}]}},
+      {"edges": "history-admission", "show": {"delivery": [{"tag": "H", "text": "Greedily admitted original exchanges", "meta": "Current experiment, not ADR 0060"}]}, "say": "EXPERIMENTAL: fit a fixed historical packet against actual generation AND reviewer capacity. Current admission can omit candidate exchanges; joint/neighborhood selection and whole-selection admission are not implemented."},
+      {"edges": "delivered-request", "say": "EXPERIMENTAL: revalidate source eligibility before relevant dispatches. Before exposure, unavailable/purged history may be omitted and rebuilt; after exposure, failed revalidation fails the attempt rather than silently substituting a new H."},
+      {"edges": "generation-input"},
+      {"edges": "private-capture", "show": {"private-artifacts": [{"tag": "RESTRICTED", "text": "Actual boundary artifacts, if capture is enabled", "meta": "Can be unavailable or truncated"}]}, "say": "EXPERIMENTAL optional observation side channel at dispatch: configured capture can retain actual requests and bounded state. Not a new model phase, public activity data or hidden reasoning; observation failure must not alter the turn outcome."},
+      {"edges": "generation-request"},
+      {"edges": "generation-response"},
+      {"edges": "candidate-reply"},
+      {"edges": "natural-review-input"},
+      {"edges": "historical-review", "say": "EXPERIMENTAL: the reviewer receives the same admitted historical H, along with its own current-user/source/lifecycle input bundle; generation and review are not otherwise identical requests."},
+      {"edges": "reference-reply"},
+      {"edges": "review-request"},
+      {"edges": "review-response"},
+      {"light": ["embedding", "commit"], "say": "EXPERIMENTAL: before the reused finalization path commits, admitted historical exchanges are revalidated again. Source integrity is not evidence sufficiency or semantic acceptance."}
+    ]
+  },
+  {
+    "label": "6 - Failure / retry", "caption": "Alternative cases, NOT one sequential attempt: rejected request; retryable attempt failure; terminal failure; cancellation race. Lease loss is a separate non-commit outcome for this worker.",
+    "flow": [
+      {"edges": "preaccept-rejection", "say": "CASE A: busy/archived/not-ready/invalid requests can be rejected before a new acceptance transaction. Idempotent replay returns the existing run, not another user message."},
+      {"edges": "attempt-failure", "say": "CASE B: an accepted run can fail during an attempt. Retry applies only to retryable execution errors with remaining explicit budget; not every failure retries."},
+      {"edges": "retry-attempt", "say": "CASE B continued: schedule bounded backoff, then another attempt of the SAME accepted run. Do not re-accept or duplicate the user message."},
+      {"light": ["outcome"], "say": "CASE C, separate from that retry illustration: nonretryable/exhausted attempt failure, or failed success finalization, follows terminal handling. Finalization itself is outside the execution retry loop."},
+      {"edges": "terminal-record", "say": "CASE C continued: persist terminal failure metadata and release the lease when still owned. The already-accepted user message remains; this attempt commits no assistant/fact/summary success bundle."},
+      {"edges": "refresh-ui"},
+      {"edges": "cancel-request", "say": "CASE D, a separate run: cancellation is a request. The locked finalization fence decides whether cancellation or success won; do not promise that pressing Cancel always prevents a commit."},
+      {"edges": "terminal-record", "say": "CASE D continued, if cancellation wins: persist cancellation without the success bundle. If this worker loses the lease, it must not terminally commit; another owner handles recovery."},
+      {"edges": "refresh-ui"}
+    ]
+  },
+  {
+    "label": "7 - Not implemented", "caption": "Design gaps only. No packets or connecting edges here: a placeholder is not an executed module, approved extension or complete product pipeline.",
+    "flow": [
+      {"light": ["selection", "delivery"], "say": "PROPOSED: joint/neighborhood source selection and ADR 0060's whole-selection admission. Existing history experiments do not implement these contracts."},
+      {"light": ["views"], "say": "DEFERRED: additional derived memory views. Existing conversation compaction is already implemented and must not be mistaken for this placeholder."},
+      {"light": ["external"], "say": "DEFERRED: external information/actions. Internal memory search and synthetic evaluation tools do not constitute an external-tool platform."},
+      {"light": ["behavior", "review"], "say": "OPEN: general long-run character continuity, creative story admission/correction, and semantic reliability. Drawing a source-backed route does not claim these behaviors are solved."}
+    ]
+  }
+]
