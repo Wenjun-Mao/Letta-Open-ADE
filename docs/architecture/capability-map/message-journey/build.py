@@ -14,6 +14,7 @@ OUTPUT = HERE / "ade-message-journey.html"
 ASSETS = {
     "__STYLE__": "player.css",
     "__MODEL__": "flow-model.js",
+    "__LAYOUT__": "flow-layout.js",
     "__VIEW__": "flow-view.js",
     "__PLAYER__": "player.js",
 }
@@ -51,18 +52,19 @@ def standalone(content: str) -> str:
 <style>
 :root {
   color-scheme: light dark;
-  --background: light-dark(#f8fbff, #111923); --foreground: light-dark(#172e46, #e3ecf6);
-  --card: light-dark(#ffffff, #1c2938); --muted: light-dark(#e3eaf2, #263648);
-  --muted-foreground: light-dark(#52667e, #b7c9db); --border: light-dark(#b9cce0, #41556b);
-  --primary: light-dark(#172e46, #e3ecf6); --primary-foreground: light-dark(#ffffff, #111923);
-  --viz-series-1: light-dark(#1364d6, #6eb1ff); --ring: var(--viz-series-1);
+  --background: light-dark(#ffffff, #111418); --foreground: light-dark(#111418, #edf2f7);
+  --card: light-dark(#ffffff, #1c232e); --muted: light-dark(#f5f7fa, #18212d);
+  --muted-foreground: light-dark(#596575, #acb7c8); --border: light-dark(#ccd5e1, #3d4b60);
+  --primary: light-dark(#111418, #edf2f7); --primary-foreground: light-dark(#ffffff, #111418);
+  --viz-series-1: light-dark(#0074d9, #69b3ff); --ring: var(--viz-series-1);
+  --journey-on-active: light-dark(#ffffff, #111418);
 }
 body { margin: 0; padding: 24px; background: var(--background); color: var(--foreground); font: 14px/1.5 "Avenir Next", sans-serif; }
-main { max-width: 1720px; margin: auto; }
+main { max-width: 1920px; margin: auto; }
 .text-small { font-size: 12px; }.text-muted { color: var(--muted-foreground); }
 .tabular-nums { font-variant-numeric: tabular-nums; }
 .btn, .form-select { font: inherit; padding: 8px 12px; color: var(--foreground); background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
-.btn-primary, button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); }
+.btn-primary { background: var(--primary); color: var(--primary-foreground); }
 button:disabled { opacity: .55; }button { cursor: pointer; }
 button:focus-visible, select:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
 @media(max-width:600px) { body { padding: 14px; } }

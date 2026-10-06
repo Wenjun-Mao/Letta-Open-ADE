@@ -10,8 +10,12 @@ behavioral acceptance result, deployment audit or new experiment authorization.
 ## Read In This Order
 
 Open [the moving chart](ade-message-journey.html), press **Play**, and use
-**Previous/Next** to examine one step at a time. **Whole architecture** exposes
-all ownership frames; the default focused view follows the current transfer.
+**Previous/Next** to examine one step at a time. The default **whole architecture**
+view keeps all ownership frames and card positions fixed throughout playback.
+**Follow this step** switches to the current endpoints. In the full-page player,
+**Full screen** expands the chart when the browser supports native fullscreen;
+Escape exits without resetting the flow. The seven flow buttons sit under the
+canvas, with an active progress underline, narration and manual navigation.
 Tour selection resets to paused; Replay plays only the selected tour and stops
 at its end. With reduced motion, use manual stepping instead.
 
@@ -159,25 +163,54 @@ using its MIT edge-routing algorithm and no new product dependency. The referenc
 package is private; no published npm package is assumed. Reference export is
 `npm run svg -- <spec.json> <output.svg>` within its own package; this repository
 does not vendor that exporter. The editable presentation sources are
-`flow-model.js` (routing/layout), `flow-view.js` (drawing), `player.js` (finite
+`flow-model.js` (routing), `flow-layout.js` (fixed content sizing),
+`flow-view.js` (drawing), `player.js` (finite
 playback), `player.css` and `player-template.html`. `build.py` embeds the validated
 specification and sources into one offline HTML file and optionally an inline
 conversation fragment. [Third-party notices](THIRD_PARTY_NOTICES.md) are embedded.
 
-The root cause of packet/text overlap in the first atomic-write drawing was
-upstream cubic routing without obstacle avoidance, not ADE dataflow. Obstructed
-active edges now use a tested card-aware Manhattan fallback; clear curves retain
-the upstream mechanism. Focused projections preserve ownership while showing
-only current endpoints/highlights. Full-map card sizes are fixed against all
-payloads, preventing layout jumps. Narrow focused layouts stack; large whole maps
-scroll without shrinking labels in the standalone version. The inline version
-reflows the same groups to its measured width, without an internal scroll pane.
-Both preserve text sizes rather than scaling a fixed canvas. During standalone
-focused playback the viewport follows the packet/atomic-write group center.
+### Reference-Style Revision, 2026-10-06
+
+The first player's focused default, upper toolbar and unfilled process cards
+made it a step inspector rather than the requested Hindsight-style moving map.
+The presentation now follows the inspected `src/index.tsx` more closely: dotted
+canvas, softly filled nested frames, centered process/store labels, fixed inset
+data cards with dashed borders, blue cumulative trails, glowing packets,
+traveling data chips, arrow labels, and a quiet bottom control track. This is
+still an SVG/DOM adaptation, **not** a claim that we use the original React
+component unchanged or achieved browser pixel parity. No `layout` ownership,
+edge identity or narrated runtime beat was changed by this styling revision.
+
+Visible subtitles retain capability/record IDs and every status qualifier. Full
+source descriptions and flow conditions remain in the expandable **Flow
+conditions and module details** section and accessible SVG titles. Payload
+metadata is rendered too, including qualifications such as "Summary if present."
+Card sizes account for the largest content and metadata across every tour;
+showing a payload does not move its endpoints. Old saved preview state is ignored
+on this presentation revision so it cannot restore the previous focused default.
+
+The root cause of packet/text overlap was upstream routing without obstacle
+avoidance, not ADE dataflow. Obstructed edges now use a tested, rounded
+card-and-heading-aware visibility-grid route; clear curves retain the upstream mechanism.
+Routing includes quiet edges when assigning ports, so labels/payloads and beat
+changes cannot move a connection. Arrow labels appear only where they fit clear
+of cards and canvas edges; the full connection remains in the details readout.
+Traveling data chips hide when they would cover a card. Endpoints are returned
+exactly, avoiding floating-point arrival drift after arc-length interpolation.
+
+The standalone player keeps the wide reference-style topology, scales to fit
+down to 75%, and scrolls horizontally below that. It no longer uses a short
+vertically clipped viewport or automatic panning. The inline preview instead
+reflows groups to its measured width, with no internal scroll pane or font
+scaling; it cannot reproduce the same desktop proportions at chat width. Both
+are driven by the same reviewed ADE specification. Fullscreen is a full-page
+presentation feature, not a host-required dependency.
 
 Offline DOM tests cover desktop/mobile standalone and 736/320px inline widths,
 all tours/views, moving packet
-positions, pause/replay, end-of-tour stopping, reduced motion and obstacle routing.
+positions, pause/replay, end-of-tour stopping, reduced motion, fixed geometry,
+status/metadata preservation, bottom controls, mock native fullscreen, and
+obstacle routing.
 Native SVG raster snapshots were visually inspected for the send and atomic-write
 scenes plus the complete map. These are **not real browser-engine screenshots**:
 browser pixel layout, host integration and assistive-technology behavior remain

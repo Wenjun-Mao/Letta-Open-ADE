@@ -65,6 +65,8 @@
 
   function pointAt(curve, fraction) {
     const t = Math.max(0, Math.min(1, fraction)), s = 1 - t;
+    if (t === 0) return {...curve.start};
+    if (t === 1) return {...curve.end};
     if (curve.polyline) {
       let distance = t * curve.length;
       for (let index = 1; index < curve.polyline.length; index += 1) {
@@ -87,13 +89,38 @@
       && point.y > rect.y - padding && point.y < rect.y + rect.h + padding;
   }
 
+  function roundedPath(points) {
+    const samples = [points[0]], commands = [`M ${points[0].x} ${points[0].y}`];
+    for (let index = 1; index < points.length - 1; index += 1) {
+      const before = points[index - 1], corner = points[index], after = points[index + 1];
+      const incoming = Math.hypot(corner.x - before.x, corner.y - before.y);
+      const outgoing = Math.hypot(after.x - corner.x, after.y - corner.y);
+      const radius = Math.min(8, incoming / 2, outgoing / 2);
+      const enter = {x: corner.x + (before.x - corner.x) * radius / incoming,
+        y: corner.y + (before.y - corner.y) * radius / incoming};
+      const leave = {x: corner.x + (after.x - corner.x) * radius / outgoing,
+        y: corner.y + (after.y - corner.y) * radius / outgoing};
+      commands.push(`L ${enter.x} ${enter.y} Q ${corner.x} ${corner.y} ${leave.x} ${leave.y}`);
+      samples.push(enter);
+      for (let part = 1; part <= 12; part += 1) {
+        const t = part / 12, s = 1 - t;
+        samples.push({x: s * s * enter.x + 2 * s * t * corner.x + t * t * leave.x,
+          y: s * s * enter.y + 2 * s * t * corner.y + t * t * leave.y});
+      }
+    }
+    samples.push(points.at(-1)); commands.push(`L ${points.at(-1).x} ${points.at(-1).y}`);
+    const length = samples.slice(1).reduce((sum, point, index) => sum + Math.hypot(point.x - samples[index].x, point.y - samples[index].y), 0);
+    return {polyline: samples, length, d: commands.join(' ')};
+  }
+
   // Interfig's simple curves may cross cards. Only obstructed active transfers
-  // use a Manhattan visibility grid, keeping packets out of unrelated labels.
+  // use a rounded visibility-grid route, keeping packets out of unrelated labels.
   function avoidCards(curve, rects) {
     const obstacles = Object.values(rects);
+    const clearance = rect => rect.text ? 1 : 6;
     const intervening = Object.entries(rects).filter(([id]) => id !== curve.from && id !== curve.to).map(([, rect]) => rect);
     const obstructed = Array.from({length: 81}, (_, index) => pointAt(curve, index / 80))
-      .some(point => intervening.some(rect => inside(point, rect, 6)));
+      .some(point => intervening.some(rect => inside(point, rect, clearance(rect))));
     if (!obstructed) return curve;
     const offset = (point, side) => ({
       x: point.x + (side === 'l' ? -12 : side === 'r' ? 12 : 0),
@@ -109,10 +136,11 @@
     const begin = key(xs.indexOf(start.x), ys.indexOf(start.y)), finish = key(xs.indexOf(end.x), ys.indexOf(end.y));
     const costs = new Map([[begin, 0]]), previous = new Map(), open = new Set([begin]);
     const clear = (a, b) => !obstacles.some(rect => {
-      if (a.x === b.x) return a.x > rect.x - 6 && a.x < rect.x + rect.w + 6
-        && Math.max(a.y, b.y) > rect.y - 6 && Math.min(a.y, b.y) < rect.y + rect.h + 6;
-      return a.y > rect.y - 6 && a.y < rect.y + rect.h + 6
-        && Math.max(a.x, b.x) > rect.x - 6 && Math.min(a.x, b.x) < rect.x + rect.w + 6;
+      const padding = clearance(rect);
+      if (a.x === b.x) return a.x > rect.x - padding && a.x < rect.x + rect.w + padding
+        && Math.max(a.y, b.y) > rect.y - padding && Math.min(a.y, b.y) < rect.y + rect.h + padding;
+      return a.y > rect.y - padding && a.y < rect.y + rect.h + padding
+        && Math.max(a.x, b.x) > rect.x - padding && Math.min(a.x, b.x) < rect.x + rect.w + padding;
     });
     const estimate = identity => { const p = point(identity); return costs.get(identity) + Math.abs(p.x - end.x) + Math.abs(p.y - end.y); };
     while (open.size) {
@@ -139,8 +167,7 @@
       const before = points[index - 1], after = points[index + 1];
       return !before || !after || !(before.x === p.x && p.x === after.x || before.y === p.y && p.y === after.y);
     });
-    const length = polyline.slice(1).reduce((sum, p, index) => sum + Math.hypot(p.x - polyline[index].x, p.y - polyline[index].y), 0);
-    return {...curve, polyline, length, d: polyline.map((p, index) => `${index ? 'L' : 'M'} ${p.x} ${p.y}`).join(' ')};
+    return {...curve, ...roundedPath(polyline)};
   }
 
   function beatHops(beat) {
@@ -179,74 +206,5 @@
     return step.flow.slice(0, index + 1).findLast(beat => beat.say)?.say || step.caption || '';
   }
 
-  // Fixed maximum card sizes prevent payload arrival from moving packet endpoints.
-  function cardSizes(steps) {
-    const sizes = new Map();
-    for (const beat of steps.flatMap(step => step.flow)) {
-      for (const [id, content] of Object.entries(beat.show || {})) {
-        const rows = Array.isArray(content) ? content : [{text: content}];
-        const count = rows.reduce((total, row) => total + wrap(row.text, 29).length + 1, 0);
-        sizes.set(id, Math.max(sizes.get(id) || 0, count * 16 + 18));
-      }
-    }
-    return sizes;
-  }
-
-  function layout(group, steps, narrow = false, maximumWidth = Infinity) {
-    const sizes = cardSizes(steps), rects = {}, frames = [], cards = [];
-    function measure(item, available) {
-      if (!item.children) {
-        const width = Math.max(150, Math.min(Math.max(225, item.width || 225), available));
-        const label = wrap(item.label, Math.floor((width - 28) / 7));
-        const sub = wrap(item.sub || '', Math.floor((width - 28) / 6.3));
-        const height = 25 + label.length * 18 + sub.length * 16 + (sizes.get(item.id) || 0) + 12
-          + (item.shape === 'store' ? 18 : 0);
-        return {item, w: width, h: height, label, sub};
-      }
-      const framed = Boolean(item.label);
-      const direction = narrow ? 'column' : item.direction || 'column';
-      const gap = Math.max(18, item.gap || 18), padding = framed ? 18 : 0;
-      const inner = available - padding * 2;
-      const children = item.children.map(child => measure(child, inner));
-      const row = direction === 'row';
-      const rows = [];
-      for (const child of children) {
-        let line = rows.at(-1);
-        if (!line || !row || line.w + gap + child.w > inner) {
-          line = {children: [], w: 0, h: 0}; rows.push(line);
-        }
-        line.w += child.w + (line.children.length ? gap : 0);
-        line.h = Math.max(line.h, child.h); line.children.push(child);
-      }
-      const w = Math.max(0, ...rows.map(line => line.w)) + padding * 2;
-      const title = framed ? wrap(item.label, Math.max(15, Math.min(70, Math.floor((w - padding * 2) / 6.8)))) : [];
-      const heading = title.length ? title.length * 18 + 22 : 0;
-      const h = rows.reduce((sum, line) => sum + line.h, 0)
-        + gap * Math.max(0, rows.length - 1) + padding * 2 + heading;
-      return {item, children, rows, w, h, direction, padding, heading, gap, title};
-    }
-    function place(plan, x, y) {
-      if (!plan.children) {
-        const rect = {x, y, w: plan.w, h: plan.h};
-        rects[plan.item.id] = rect;
-        cards.push({...plan, ...rect});
-        return;
-      }
-      if (plan.item.label) frames.push({...plan, x, y});
-      let dy = y + plan.padding + plan.heading;
-      for (const row of plan.rows) {
-        let dx = x + plan.padding;
-        for (const child of row.children) {
-          place(child, dx, dy); dx += child.w + plan.gap;
-        }
-        dy += row.h + plan.gap;
-      }
-    }
-    const margin = Number.isFinite(maximumWidth) ? 14 : 62;
-    const measured = measure(group, maximumWidth - margin * 2);
-    place(measured, margin, 62);
-    return {w: measured.w + margin * 2, h: measured.h + 124, rects, frames, cards};
-  }
-
-  global.AdeFlowModel = {route, pointAt, avoidCards, beatHops, flatten, wrap, project, accumulated, narration, layout};
+  global.AdeFlowModel = {route, pointAt, avoidCards, beatHops, flatten, wrap, project, accumulated, narration};
 })(globalThis);

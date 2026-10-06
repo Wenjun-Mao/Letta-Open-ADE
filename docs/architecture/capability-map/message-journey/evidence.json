@@ -12,7 +12,7 @@
   "presentation": {
     "title": "ADE - Journey of a message (review specification)",
     "source": "docs/architecture/capability-map/message-journey",
-    "theme": {"accent": "#1364d6", "fg": "#172e46", "muted": "#52667e", "bg": "#f8fbff", "surface": "#ffffff", "border": "#b9cce0", "font": "'IBM Plex Sans', sans-serif"},
+    "theme": {"accent": "#0074d9", "fg": "#111418", "muted": "#596575", "bg": "#ffffff", "surface": "#f5f7fa", "border": "#ccd5e1", "font": "'Avenir Next', sans-serif"},
     "speed": 2200,
     "autoplay": false
   },

@@ -9,11 +9,15 @@ The local renderer uses interfig's group/node/edge/step schema and presentation
 ideas from `src/index.tsx`: sequential beats, cumulative content, content-sized
 cards, moving packets, narration and independent tours. It is a small standalone
 SVG/DOM adaptation, not a vendored React renderer or ADE runtime dependency.
+Styling also adapts the dotted canvas, nested surfaces, inset data cards, blue
+trails/glows, arrow/data chips and lower playback track from `src/index.tsx`.
 Controls add manual stepping and stop at the end instead of cycling into another
-tour. The focused view projects the same inventory layout to current endpoints;
-the whole-architecture view retains all ownership frames and records.
-The ADE presentation adds a card-aware Manhattan fallback for obstructed active
-transfers; otherwise it retains the adapted upstream cubic routing.
+tour. The default whole-architecture view retains all ownership frames and
+records; the optional focused view projects current endpoints. Full-page native
+fullscreen preserves the selected beat. The ADE presentation adds a rounded
+card-aware visibility-grid fallback for obstructed transfers; otherwise it
+retains the adapted upstream cubic routing. Inline layout reflows rather than
+using the full-page fitting/scroll behavior.
 
 No Hindsight product architecture or figure data is included. All ADE content is
 from the source-backed local specification. This notice is distributed beside

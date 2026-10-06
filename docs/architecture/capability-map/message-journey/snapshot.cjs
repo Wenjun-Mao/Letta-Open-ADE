@@ -8,8 +8,9 @@ const sharp = webRequire('sharp');
 const output = path.resolve(process.argv[2] || path.join(__dirname, '.preview'));
 fs.mkdirSync(output, {recursive: true});
 const palette = {
-  '--foreground': '#172e46', '--muted-foreground': '#52667e', '--border': '#b9cce0',
-  '--card': '#ffffff', '--background': '#f8fbff', '--journey-active': '#1364d6',
+  '--foreground': '#111418', '--muted-foreground': '#596575', '--border': '#ccd5e1',
+  '--card': '#ffffff', '--background': '#ffffff', '--journey-active': '#0074d9',
+  '--journey-surface': '#f5f7fa', '--journey-on-active': '#ffffff',
 };
 
 async function snapshot(name, width, beat, whole) {
@@ -25,20 +26,23 @@ async function snapshot(name, width, beat, whole) {
   });
   const root = dom.window.document.getElementById('ade-moving-message');
   for (let index = 0; index < beat; index += 1) root.querySelector('[data-next]').click();
-  if (whole) root.querySelector('[data-whole]').click();
-  const svg = root.querySelector('svg');
+  if ((root.querySelector('[data-viewport]').dataset.view === 'whole') !== whole) root.querySelector('[data-whole]').click();
+  const svg = root.querySelector('.journey-drawing');
+  const dimensions = svg.getAttribute('viewBox').split(' ').map(Number);
+  svg.setAttribute('width', dimensions[2]); svg.setAttribute('height', dimensions[3]);
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   svg.id = 'ade-moving-message';
   let css = fs.readFileSync(path.join(__dirname, 'player.css'), 'utf8');
   for (const [token, value] of Object.entries(palette)) css = css.replaceAll(`var(${token})`, value);
-  css = css.replaceAll('color-mix(in srgb, #1364d6 8%, #ffffff)', '#eef5ff')
-    .replaceAll('color-mix(in srgb, #1364d6 18%, transparent)', '#c9def9')
-    .replaceAll('color-mix(in srgb, #f8fbff 90%, transparent)', '#f8fbff');
+  css = css.replaceAll('color-mix(in srgb, #0074d9 8%, #ffffff)', '#eaf4fc')
+    .replaceAll('color-mix(in srgb, #0074d9 15%, #ffffff)', '#d9eafb')
+    .replaceAll('color-mix(in srgb, #0074d9 18%, transparent)', '#c9def9')
+    .replaceAll('color-mix(in srgb, #0074d9 35%, transparent)', '#aaccec');
   const style = dom.window.document.createElementNS('http://www.w3.org/2000/svg', 'style');
   style.textContent = css; svg.prepend(style);
   const serialized = svg.outerHTML;
   fs.writeFileSync(path.join(output, `${name}.svg`), serialized);
-  await sharp(Buffer.from(serialized)).flatten({background: '#f8fbff'}).png().toFile(path.join(output, `${name}.png`));
+  await sharp(Buffer.from(serialized)).flatten({background: '#ffffff'}).png().toFile(path.join(output, `${name}.png`));
   console.log(`${name}: ${svg.getAttribute('viewBox')}`);
   dom.window.close();
 }
@@ -47,6 +51,7 @@ async function main() {
   await snapshot('send-desktop', 1440, 1, false);
   await snapshot('send-mobile', 375, 1, false);
   await snapshot('atomic-commit', 1440, 37, false);
-  await snapshot('whole-architecture', 1440, 37, true);
+  await snapshot('whole-architecture', 1440, 23, true);
+  await snapshot('whole-send', 1440, 1, true);
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

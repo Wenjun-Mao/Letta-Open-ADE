@@ -5,18 +5,19 @@
 <style>
 :root {
   color-scheme: light dark;
-  --background: light-dark(#f8fbff, #111923); --foreground: light-dark(#172e46, #e3ecf6);
-  --card: light-dark(#ffffff, #1c2938); --muted: light-dark(#e3eaf2, #263648);
-  --muted-foreground: light-dark(#52667e, #b7c9db); --border: light-dark(#b9cce0, #41556b);
-  --primary: light-dark(#172e46, #e3ecf6); --primary-foreground: light-dark(#ffffff, #111923);
-  --viz-series-1: light-dark(#1364d6, #6eb1ff); --ring: var(--viz-series-1);
+  --background: light-dark(#ffffff, #111418); --foreground: light-dark(#111418, #edf2f7);
+  --card: light-dark(#ffffff, #1c232e); --muted: light-dark(#f5f7fa, #18212d);
+  --muted-foreground: light-dark(#596575, #acb7c8); --border: light-dark(#ccd5e1, #3d4b60);
+  --primary: light-dark(#111418, #edf2f7); --primary-foreground: light-dark(#ffffff, #111418);
+  --viz-series-1: light-dark(#0074d9, #69b3ff); --ring: var(--viz-series-1);
+  --journey-on-active: light-dark(#ffffff, #111418);
 }
 body { margin: 0; padding: 24px; background: var(--background); color: var(--foreground); font: 14px/1.5 "Avenir Next", sans-serif; }
-main { max-width: 1720px; margin: auto; }
+main { max-width: 1920px; margin: auto; }
 .text-small { font-size: 12px; }.text-muted { color: var(--muted-foreground); }
 .tabular-nums { font-variant-numeric: tabular-nums; }
 .btn, .form-select { font: inherit; padding: 8px 12px; color: var(--foreground); background: var(--card); border: 1px solid var(--border); border-radius: 8px; }
-.btn-primary, button[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); }
+.btn-primary { background: var(--primary); color: var(--primary-foreground); }
 button:disabled { opacity: .55; }button { cursor: pointer; }
 button:focus-visible, select:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
 @media(max-width:600px) { body { padding: 14px; } }
@@ -32,11 +33,15 @@ The local renderer uses interfig's group/node/edge/step schema and presentation
 ideas from `src/index.tsx`: sequential beats, cumulative content, content-sized
 cards, moving packets, narration and independent tours. It is a small standalone
 SVG/DOM adaptation, not a vendored React renderer or ADE runtime dependency.
+Styling also adapts the dotted canvas, nested surfaces, inset data cards, blue
+trails/glows, arrow/data chips and lower playback track from `src/index.tsx`.
 Controls add manual stepping and stop at the end instead of cycling into another
-tour. The focused view projects the same inventory layout to current endpoints;
-the whole-architecture view retains all ownership frames and records.
-The ADE presentation adds a card-aware Manhattan fallback for obstructed active
-transfers; otherwise it retains the adapted upstream cubic routing.
+tour. The default whole-architecture view retains all ownership frames and
+records; the optional focused view projects current endpoints. Full-page native
+fullscreen preserves the selected beat. The ADE presentation adds a rounded
+card-aware visibility-grid fallback for obstructed transfers; otherwise it
+retains the adapted upstream cubic routing. Inline layout reflows rather than
+using the full-page fitting/scroll behavior.
 
 No Hindsight product architecture or figure data is included. All ADE content is
 from the source-backed local specification. This notice is distributed beside
@@ -72,79 +77,112 @@ SOFTWARE.
     <h2>Journey of a message</h2>
     <span class="text-small text-muted">Illustrative ADE flow, not a live trace</span>
   </div>
-  <div class="journey-domains text-small" aria-label="Capability domains">
-    <span>L1 Character</span><span>L1 Memory</span><span>L1 Interface</span><span>L1 External Tools: deferred</span>
+  <div class="journey-figure">
+    <div class="journey-canvas">
+      <button class="btn" type="button" data-fullscreen aria-label="Open chart full screen" hidden>Full screen</button>
+      <div class="journey-viewport" data-viewport aria-label="Animated architecture diagram"></div>
+    </div>
+    <div class="journey-playback">
+      <div class="journey-controls viz-controls">
+        <button class="btn" type="button" data-play aria-pressed="false">Play</button>
+        <div class="journey-tours" data-tours role="group" aria-label="Choose a flow"></div>
+        <button class="btn" type="button" data-speed aria-label="Playback speed 1x">1x</button>
+      </div>
+      <output class="journey-narration" data-narration aria-live="polite"></output>
+      <div class="journey-stepping viz-controls">
+        <button class="btn btn-ghost" type="button" data-previous>Previous</button>
+        <output class="tabular-nums text-small" data-count></output>
+        <button class="btn btn-ghost" type="button" data-next>Next</button>
+        <button class="btn btn-ghost" type="button" data-replay>Replay</button>
+        <button class="btn btn-ghost" type="button" data-whole aria-pressed="true">Follow this step</button>
+      </div>
+      <div class="journey-progress" data-progress role="progressbar" aria-label="Tour step" aria-valuemin="1" aria-valuenow="1" aria-valuemax="1"><div></div></div>
+    </div>
   </div>
-  <div class="journey-controls viz-controls">
-    <label class="form-label">Tour <select class="form-select" data-tour aria-label="Select message journey tour"></select></label>
-    <button class="btn btn-primary" type="button" data-play aria-pressed="false">Play</button>
-    <button class="btn" type="button" data-previous>Previous</button>
-    <button class="btn" type="button" data-next>Next</button>
-    <button class="btn" type="button" data-replay>Replay</button>
-    <button class="btn" type="button" data-speed aria-label="Playback speed 1x">1x</button>
-    <button class="btn" type="button" data-whole aria-pressed="false">Whole architecture</button>
-  </div>
-  <output class="journey-caption text-small" data-caption></output>
-  <div class="journey-viewport" data-viewport aria-label="Animated architecture diagram"></div>
-  <div class="journey-readout">
-    <output class="tabular-nums text-small" data-count></output>
-    <div class="journey-progress" data-progress role="progressbar" aria-label="Tour step" aria-valuemin="1" aria-valuenow="1" aria-valuemax="1"><div></div></div>
-  </div>
-  <output class="journey-narration" data-narration aria-live="polite"></output>
-  <output class="journey-connections text-small" data-connections></output>
+  <details class="journey-details text-small">
+    <summary>Flow conditions and module details</summary>
+    <output class="journey-caption" data-caption></output>
+    <output class="journey-connections" data-connections></output>
+    <dl data-module-details></dl>
+  </details>
   <div class="journey-foot text-small">
     <span>L1/L2/L3: ownership, not execution order. Cylinders: persisted records.</span>
     <span>Presentation adapted from Vectorize interfig (MIT).</span>
   </div>
-  <script type="application/json" data-figure>{"title":"ADE - Journey of a message (review specification)","source":"docs/architecture/capability-map/message-journey","props":{"layout":{"id":"ade-journey","direction":"column","gap":28,"align":"start","children":[{"id":"ownership","direction":"row","gap":28,"align":"start","children":[{"id":"interface","label":"L1 - Interface","direction":"column","gap":20,"children":[{"id":"conversation-ui","label":"L2 - Conversation UI","direction":"column","children":[{"id":"chat","label":"Conversation workspace","sub":"L3 - UI-01 - Send / accepted / final outcome [Implemented]","width":205,"lines":3},{"id":"lineage","label":"Memory and lineage display","sub":"L3 - UI-02 - Committed state [Implemented]","width":205}]},{"id":"inspection-ui","label":"L2 - Inspection \u0026 Evaluation UI","direction":"column","children":[{"id":"activity","label":"Turn activity inspection","sub":"L3 - UI-03 - Public retained metadata; incomplete [Implemented]","width":205},{"id":"private-artifacts","label":"Private evaluation artifacts","sub":"L3 - UI-04 - Restricted capture, not a new public UI [Experimental]","width":205}]}]},{"id":"character","label":"L1 - Character","direction":"column","gap":20,"children":[{"id":"persona-definition","label":"L2 - Persona Definition","direction":"column","children":[{"id":"author","label":"Prompt and persona authoring","sub":"L3 - CHAR-01 - Pre-turn prerequisite, not every message [Implemented]","width":220},{"id":"binding","label":"Immutable definition binding","sub":"L3 - CHAR-02 - Read the conversation's existing version [Implemented]","width":220}]},{"id":"conversation-behavior","label":"L2 - Conversation Behavior","direction":"column","children":[{"id":"behavior","label":"Interpret; choose and express","sub":"L3 - CHAR-03 + CHAR-04 - Shared generation, no internal handoff [Partial]","width":220,"lines":3},{"id":"tools","label":"Curated tool choice and result use","sub":"L3 - CHAR-05 - Optional within the finite generation loop [Implemented]","width":220}]},{"id":"character-artifacts","label":"Artifacts, not L3 modules","direction":"column","children":[{"id":"definitions","label":"Definition snapshots","sub":"REC-DEFINITION - Immutable persona / prompt / deployment / policy [Record]","shape":"store","width":220},{"id":"candidate","label":"Candidate reply","sub":"Not persisted or delivered yet [Artifact]","width":220,"lines":2}]}]},{"id":"memory","label":"L1 - Memory","direction":"column","gap":24,"children":[{"id":"memory-subsystems","direction":"row","gap":18,"align":"start","children":[{"id":"recall-context","label":"L2 - Recall \u0026 Context","direction":"column","children":[{"id":"scope","label":"Scope and eligibility","sub":"L3 - MEM-01 - Subject facts; history adds character root [Partial]","width":185},{"id":"search","label":"Candidate search","sub":"L3 - MEM-02 - Facts implemented; history experimental [Partial]","width":185,"lines":2},{"id":"selection","label":"Evidence selection","sub":"L3 - MEM-03 - Bounded history selectors [Experimental]; joint selection [Proposed]","width":185},{"id":"delivery","label":"Context delivery","sub":"L3 - MEM-04 - Fit and bind actual consumer inputs [Partial]","width":185,"lines":3}]},{"id":"retention-updates","label":"L2 - Retention \u0026 Updates","direction":"column","children":[{"id":"capture","label":"Source capture","sub":"L3 - MEM-05 - User at acceptance; assistant at finalization [Implemented]","width":185},{"id":"review","label":"Memory update review","sub":"L3 - MEM-06 - Typed path; natural variants experimental [Partial]","width":185,"lines":3},{"id":"commit","label":"Validation and commit","sub":"L3 - MEM-07 - Runtime-owned atomic finalization [Implemented]","width":185,"lines":3}]},{"id":"organization-maintenance","label":"L2 - Organization \u0026 Maintenance","direction":"column","children":[{"id":"embedding","label":"Index maintenance","sub":"L3 - MEM-08 - Prepare vectors before commit [Implemented]","width":185},{"id":"compact","label":"Conversation compaction","sub":"L3 - MEM-09 - Conditional preparation before generation [Implemented]","width":185},{"id":"views","label":"Additional derived views","sub":"L3 - MEM-10 - No implemented flow [Deferred]","width":185}]}]},{"id":"memory-records","label":"Stored records, not processing modules - ADE PostgreSQL","direction":"column","children":[{"id":"memory-records-top","direction":"row","gap":20,"children":[{"id":"dialogue","label":"Original dialogue","sub":"REC-DIALOGUE - What was said, not automatic fact acceptance [Record]","shape":"store","width":240,"lines":2},{"id":"facts","label":"Facts and revisions","sub":"REC-FACTS - Subject state, sources and lifecycle [Record]","shape":"store","width":240}]},{"id":"memory-records-bottom","direction":"row","gap":20,"children":[{"id":"summaries","label":"Conversation summaries","sub":"REC-SUMMARY - Source-linked working context, not factual authority [Record]","shape":"store","width":240},{"id":"index","label":"Fact search representations","sub":"REC-INDEX - Revision / embedding-space bound [Record]","shape":"store","width":240}]}]}]},{"id":"external-tools","label":"L1 - External Tools [Deferred]","direction":"column","children":[{"id":"external-actions","label":"L2 - External Information \u0026 Actions","direction":"column","children":[{"id":"external","label":"External information and actions","sub":"L3 - EXT-01 - Not internal memory search; no implemented flow [Deferred]","width":185}]}]}]},{"id":"support","label":"Supporting runtime / model access / storage - Not another L1 domain","direction":"row","gap":22,"align":"start","children":[{"id":"accept","label":"Accept turn","sub":"SUP-01 - Gates, idempotency, input transaction [Implemented]","width":210},{"id":"attempt","label":"Claim and execute attempt","sub":"SUP-01 - Lease, snapshot, deadline, policy binding [Implemented]","width":210},{"id":"dispatch","label":"Bind actual conversation request","sub":"SUP-01 - Persona, context, tools, input capacity [Implemented]","width":210},{"id":"router","label":"Model Router","sub":"SUP-03 - Catalog / generation / review / embeddings [Implemented]","width":210},{"id":"outcome","label":"Run control and outcomes","sub":"SUP-01 - Retry, failure, cancellation, committed success [Implemented]","width":210},{"id":"runs","label":"Runs, attempts and events","sub":"REC-RUNS - Persistent observed metadata; completeness varies [Record]","shape":"store","width":210}]}]},"edges":[{"id":"submit","from":"chat","to":"accept","label":"acceptTurn(text, idempotency, limits)","quiet":true},{"id":"accept-catalog-request","from":"accept","to":"router","label":"catalog / binding validation","quiet":true},{"id":"accept-catalog-response","from":"router","to":"accept","label":"catalog identities","quiet":true},{"id":"accepted-source","from":"accept","to":"capture","label":"original user + run attribution","quiet":true},{"id":"save-user","from":"capture","to":"dialogue","label":"acceptance transaction: user","quiet":true},{"id":"save-accepted-run","from":"accept","to":"runs","label":"same acceptance transaction: pending run / lease / events","quiet":true},{"id":"accepted-receipt","from":"accept","to":"chat","label":"accepted run ID, not a reply","quiet":true},{"id":"claim-run","from":"accept","to":"attempt","label":"queued run claimed by worker","quiet":true},{"id":"definition-read","from":"definitions","to":"binding","label":"existing immutable version","quiet":true},{"id":"bound-definition","from":"binding","to":"attempt","label":"persona / prompt / deployments / policy","quiet":true},{"id":"read-dialogue","from":"dialogue","to":"attempt","label":"local messages in repeatable-read snapshot","quiet":true},{"id":"read-summary","from":"summaries","to":"attempt","label":"latest local summary or none","quiet":true},{"id":"read-facts","from":"facts","to":"attempt","label":"subject facts / entities / accepted generation","quiet":true},{"id":"attempt-catalog-request","from":"attempt","to":"router","label":"attempt catalog / policy validation","quiet":true},{"id":"attempt-catalog-response","from":"router","to":"attempt","label":"execution profiles","quiet":true},{"id":"eligible-scope","from":"attempt","to":"scope","label":"bound subject, purpose, current input","quiet":true},{"id":"fact-query","from":"scope","to":"search","label":"automatic fact query, when required"},{"id":"query-embedding-request","from":"search","to":"router","label":"query embedding","quiet":true},{"id":"query-embedding-response","from":"router","to":"search","label":"query vector","quiet":true},{"id":"fact-search-data","from":"index","to":"search","label":"current scoped fact matches","quiet":true},{"id":"base-context","from":"scope","to":"delivery","label":"local dialogue / summary / eligible fact state","around":"above","quiet":true},{"id":"fact-results","from":"search","to":"delivery","label":"retrieved fact records","quiet":true},{"id":"delivered-request","from":"delivery","to":"dispatch","label":"built context, not proof of semantic sufficiency","quiet":true},{"id":"generation-input","from":"dispatch","to":"behavior","label":"actual persona + evidence + current turn + tools","quiet":true},{"id":"generation-request","from":"behavior","to":"router","label":"conversation completion","quiet":true},{"id":"generation-response","from":"router","to":"behavior","label":"model text or tool call","quiet":true},{"id":"candidate-reply","from":"behavior","to":"candidate","label":"candidate text, not committed","quiet":true},{"id":"typed-review-input","from":"attempt","to":"review","label":"typed: current user + last eight prior user messages + facts / entities","quiet":true},{"id":"review-request","from":"review","to":"router","label":"bound reviewer request","quiet":true},{"id":"review-response","from":"router","to":"review","label":"proposed operations / no change","quiet":true},{"id":"index-input","from":"review","to":"embedding","label":"structurally prepared value-bearing operations","quiet":true},{"id":"fact-embedding-request","from":"embedding","to":"router","label":"only new value-bearing fact documents","quiet":true},{"id":"fact-embedding-response","from":"router","to":"embedding","label":"prepared vectors / dimensions","quiet":true},{"id":"proposed-changes","from":"review","to":"commit","label":"review decision; meaning remains reviewer's responsibility"},{"id":"prepared-index","from":"embedding","to":"commit","label":"revision / space-bound vectors","quiet":true},{"id":"pending-reply","from":"candidate","to":"commit","label":"pending assistant text","quiet":true},{"id":"commit-facts","from":"commit","to":"facts","label":"success transaction: permitted changes","quiet":true},{"id":"commit-index","from":"commit","to":"index","label":"same transaction: fact representations","quiet":true},{"id":"commit-dialogue","from":"commit","to":"dialogue","label":"same transaction: assistant message","quiet":true},{"id":"commit-summary","from":"commit","to":"summaries","label":"same transaction: new summary, if prepared","quiet":true},{"id":"commit-run","from":"commit","to":"runs","label":"same transaction: success / events / lease release","quiet":true},{"id":"committed-outcome","from":"commit","to":"outcome","label":"after successful transaction","quiet":true},{"id":"refresh-ui","from":"outcome","to":"chat","label":"events + polling; reload persisted session","quiet":true},{"id":"lineage-state","from":"facts","to":"lineage","label":"refreshed persisted facts / lineage","quiet":true},{"id":"activity-state","from":"runs","to":"activity","label":"retained public activity metadata","quiet":true},{"id":"compact-input","from":"attempt","to":"compact","label":"eligible older local messages / previous summary","quiet":true},{"id":"compaction-request","from":"compact","to":"router","label":"conditional compaction completion","quiet":true},{"id":"compaction-response","from":"router","to":"compact","label":"prepared source-linked summary","quiet":true},{"id":"summary-context","from":"compact","to":"delivery","label":"working summary before generation","quiet":true},{"id":"pending-summary","from":"compact","to":"commit","label":"summary proposal held until success","quiet":true},{"id":"tool-call","from":"behavior","to":"tools","label":"optional model-issued call","quiet":true},{"id":"tool-search","from":"tools","to":"search","label":"validated internal search_memory arguments","quiet":true},{"id":"tool-result","from":"search","to":"tools","label":"actual fact result / empty / error","quiet":true},{"id":"tool-followup","from":"tools","to":"dispatch","label":"append tool result; bind next conversation request","around":"below","quiet":true},{"id":"history-corpus","from":"dialogue","to":"scope","label":"EXPERIMENTAL: scoped completed exchanges incl. archived","quiet":true},{"id":"history-query","from":"scope","to":"search","label":"EXPERIMENTAL: bound history arm / ranking recipe","quiet":true},{"id":"history-candidates","from":"search","to":"selection","label":"EXPERIMENTAL: bounded original-exchange candidates","quiet":true},{"id":"history-admission","from":"selection","to":"delivery","label":"EXPERIMENTAL: greedy H admission; not ADR 0060","quiet":true},{"id":"natural-review-input","from":"attempt","to":"review","label":"EXPERIMENTAL: current user / supplied originals / lifecycle state","quiet":true},{"id":"historical-review","from":"delivery","to":"review","label":"EXPERIMENTAL: same admitted historical H","quiet":true},{"id":"reference-reply","from":"candidate","to":"review","label":"EXPERIMENTAL: candidate reply as reference only","quiet":true},{"id":"private-capture","from":"dispatch","to":"private-artifacts","label":"EXPERIMENTAL: configured restricted capture, with limits","quiet":true},{"id":"attempt-failure","from":"attempt","to":"outcome","label":"attempt exception / cancellation control","quiet":true},{"id":"retry-attempt","from":"outcome","to":"attempt","label":"retryable error + remaining explicit budget","around":"above","quiet":true},{"id":"terminal-record","from":"outcome","to":"runs","label":"failed / cancelled metadata; no assistant-memory success bundle","quiet":true},{"id":"cancel-request","from":"chat","to":"outcome","label":"request cancellation; finalization fence decides outcome","quiet":true},{"id":"preaccept-rejection","from":"accept","to":"chat","label":"rejected before a new run is accepted","quiet":true}],"steps":[{"label":"1 - Current message","caption":"Illustrative typed-policy success: existing persona binding, automatic fact search, no new compaction or tool call, and value-bearing review operations. Source-backed mechanics, not a live trace or release qualification.","flow":[{"light":["author","binding"],"say":"Before this message: the persona was authored and the conversation bound to an immutable version. Neither is re-authored each turn."},{"edges":{"edge":"submit","data":"current user text"},"show":{"chat":[{"tag":"ILLUSTRATIVE","text":"The slides are finished, but I haven't rehearsed."}]},"say":"The UI submits ordinary dialogue, an idempotency key and explicit execution limits. No storage-command wording is required."},{"edges":"accept-catalog-request","say":"Acceptance checks conversation/subject state, executable policy, provider identity, input capacity and worker readiness. Rejection and idempotent replay are alternatives, not this new-run path."},{"edges":"accept-catalog-response"},{"edges":"accepted-source","say":"The acceptance transaction binds the original user message to the new run."},{"edges":["save-user","save-accepted-run"],"show":{"dialogue":[{"tag":"USER","text":"Original user text + attribution"}],"runs":[{"tag":"PENDING","text":"Accepted run + lease + events"}]},"say":"One acceptance transaction persists the user message, pending run, lease and acceptance events. These grouped arrows mean atomic visibility, not parallel SQL."},{"edges":"accepted-receipt","say":"The UI receives a run ID and starts monitoring. Accepted is not a generated or committed assistant reply."},{"edges":"claim-run","say":"A worker claims the queued run and starts a leased, deadline-bound attempt."},{"edges":"definition-read"},{"edges":"bound-definition","say":"Read the conversation's existing immutable persona, prompt, deployment and memory-policy binding."},{"edges":"read-dialogue"},{"edges":"read-summary"},{"edges":"read-facts","say":"Local messages, the latest summary or none, and subject facts/entities are read in one coherent repeatable-read snapshot. No general historical recall is implied."},{"edges":"attempt-catalog-request"},{"edges":"attempt-catalog-response","say":"The attempt revalidates policy/deployment identities and mandatory input capacity before model work."},{"light":["compact"],"say":"Compaction eligibility is considered here, before generation. This example needs no new summary; tab 2 shows the conditional branch."},{"edges":"eligible-scope","say":"The workspace subject determines fact ownership. Historical exchanges require additional same-character scope and are not part of this typed path."},{"edges":"fact-query"},{"edges":"query-embedding-request"},{"edges":"query-embedding-response"},{"edges":"fact-search-data","show":{"search":[{"tag":"FACTS","text":"Subject-bound, current-revision matches"}]},"say":"Automatic fact search uses a query vector and matching embedding space, checking accepted memory generation. The typed path performs this search; some natural variants can use a fitting full snapshot instead."},{"edges":"base-context"},{"edges":"fact-results","say":"Context construction combines mandatory input, local messages, working summary and fact context. This is not the experimental historical Evidence Selection module."},{"edges":"delivered-request","show":{"delivery":[{"tag":"CONTEXT","text":"Persona + current turn + local dialogue + scoped facts","meta":"Summary if present"}]},"say":"Runtime binds the actual serialized consumer request. Fitting mechanically does not prove the evidence is semantically sufficient."},{"edges":"generation-input"},{"edges":"generation-request","say":"CHAR-03 and CHAR-04 share generation: interpretation, conversational judgment and character expression are responsibilities, not emitted intermediate stages."},{"edges":"generation-response"},{"edges":"candidate-reply","show":{"candidate":[{"tag":"PENDING","text":"Illustrative candidate text; not yet delivered"}]},"say":"A model response becomes a candidate reply. Grounding, judgment and fidelity are assessment lenses, not three additional calls."},{"edges":"typed-review-input","say":"After generation, the typed reviewer receives the current user, up to eight prior user messages, active facts and entities. It does NOT receive the candidate reply."},{"edges":"review-request"},{"edges":"review-response","show":{"review":[{"tag":"PROPOSAL","text":"Operations or no change; not persisted"}]},"say":"The reviewer interprets factual meaning. ADE structurally prepares the proposal; a valid source binding is not semantic proof."},{"edges":"index-input"},{"edges":"fact-embedding-request"},{"edges":"fact-embedding-response","say":"This example has value-bearing operations, so their fact representations are prepared before finalization. A no-change/value-less review does not require a fact-embedding provider call."},{"edges":"proposed-changes"},{"edges":"prepared-index"},{"edges":"pending-reply","say":"Runtime finalization locks and rechecks cancellation, lease, conversation version, memory generation and relevant source bindings before writing the success bundle."},{"edges":["commit-facts","commit-index","commit-dialogue","commit-run"],"show":{"commit":[{"tag":"ATOMIC","text":"Assistant + permitted state + terminal success"}],"dialogue":[{"tag":"COMMITTED","text":"User and assistant with run outcome"}],"runs":[{"tag":"SUCCEEDED","text":"Events + released lease"}]},"say":"One success transaction makes permitted facts, representations, assistant text and terminal metadata visible together. No new summary was prepared in this example. Grouped arrows are not parallel execution."},{"edges":"committed-outcome"},{"edges":"refresh-ui","say":"Events and status polling prompt the UI to reload persisted session state. The candidate is not streamed directly to the user by this path."},{"edges":"lineage-state"},{"edges":"activity-state","say":"The UI presents the reply, committed lineage and retained activity metadata. Activity can arrive during the run too; it is not a complete packet trace or hidden reasoning."}]},{"label":"2 - Compaction (conditional)","caption":"Implemented branch inside the attempt, BEFORE generation. Show only when a compaction plan is eligible under the bound policy; this is not a post-reply background worker.","flow":[{"edges":"compact-input","say":"Local context pressure can produce a plan over older messages and the previous summary. Natural B bypasses this branch; A/A0 have additional fit conditions."},{"edges":"compaction-request"},{"edges":"compaction-response","show":{"compact":[{"tag":"PREPARED","text":"Source-linked summary proposal"}]},"say":"The model creates working summary content, not independently authoritative facts."},{"edges":"summary-context","say":"The attempt uses the prepared summary while constructing generation context. This does not persist the summary yet."},{"light":["behavior","review","embedding"],"say":"Generation, review and any required embeddings proceed as in tab 1. This focused branch omits those repeated beats, not those runtime steps."},{"edges":"pending-summary"},{"edges":["commit-facts","commit-index","commit-dialogue","commit-summary","commit-run"],"say":"On a successful value-bearing-review example, the summary joins the same assistant/fact/index/run transaction. On failure, no new summary from this attempt is committed."}]},{"label":"3 - Memory tool (conditional)","caption":"Implemented finite conversation loop, only if search_memory is enabled and the model calls it. Internal Memory access, not the deferred External Tools domain.","flow":[{"edges":"generation-request"},{"edges":"generation-response","say":"A conversation completion may request an enabled curated tool instead of final text. This is not guaranteed or triggered by a phrase rule."},{"edges":"tool-call"},{"edges":"tool-search","say":"Validate tool name and arguments, then execute subject/generation-bound fact search. The model chooses; Memory owns search."},{"edges":"query-embedding-request"},{"edges":"query-embedding-response"},{"edges":"fact-search-data"},{"edges":"tool-result","show":{"tools":[{"tag":"RESULT","text":"Actual tool result, including empty/error status"}]}},{"edges":"tool-followup","say":"Append the actual tool result and bind the next conversation request. Per-request serialized overflow checks run only when the caller supplies input_token_limit, currently on natural variants; finite tool/request limits still apply to typed execution."},{"edges":"generation-input"},{"edges":"generation-request"},{"edges":"generation-response"},{"edges":"candidate-reply","say":"Generation can return candidate text or request another bounded tool iteration. The candidate still proceeds through review and atomic finalization; finite budgets can also terminate the run."}]},{"label":"4 - Natural review [Experimental]","caption":"Existing development-only natural-memory variants, not the typed-policy path or a release qualification. This tour starts after generation and shows a different reviewer INPUT contract, not another reviewer layered on top.","flow":[{"edges":"natural-review-input","say":"EXPERIMENTAL: the bound variant supplies the current user anchor, original source messages, lifecycle facts and entities; exact context strategy varies by variant."},{"edges":"reference-reply","show":{"review":[{"tag":"REFERENCE","text":"Candidate reply is not factual authority"}]},"say":"EXPERIMENTAL: only this natural path supplies the candidate reply as reference. It must not silently turn invented user/shared history into accepted facts."},{"edges":"review-request"},{"edges":"review-response","say":"EXPERIMENTAL: use the existing reviewer and structural policy preparation, then the same embedding/finalization boundaries. Story admission/correction mechanics remain open under PC-11."},{"light":["embedding","commit"],"say":"The remaining success mechanics reuse tab 1; this tour does not imply a second review call or adoption of a new policy."}]},{"label":"5 - History [Experimental]","caption":"Existing automatic_history evaluation arm only, under development policy/configuration and source guards. This tour also illustrates optional restricted capture when configured. Not general historical recall or a new episode store.","flow":[{"edges":"history-corpus","say":"EXPERIMENTAL: read bounded completed original exchanges for this workspace subject and character root, including eligible archived/versioned chats. Other characters' shared experiences are excluded."},{"edges":"history-query","say":"EXPERIMENTAL: use the trial's fixed ranking recipe, not a universal production selector. Some recipes involve guarded embedding/ranking requests; their internals are collapsed here."},{"edges":"history-candidates","show":{"selection":[{"tag":"CANDIDATES","text":"Bounded original exchanges; qualifications may be missing"}]}},{"edges":"history-admission","show":{"delivery":[{"tag":"H","text":"Greedily admitted original exchanges","meta":"Current experiment, not ADR 0060"}]},"say":"EXPERIMENTAL: fit a fixed historical packet against actual generation AND reviewer capacity. Current admission can omit candidate exchanges; joint/neighborhood selection and whole-selection admission are not implemented."},{"edges":"delivered-request","say":"EXPERIMENTAL: revalidate source eligibility before relevant dispatches. Before exposure, unavailable/purged history may be omitted and rebuilt; after exposure, failed revalidation fails the attempt rather than silently substituting a new H."},{"edges":"generation-input"},{"edges":"private-capture","show":{"private-artifacts":[{"tag":"RESTRICTED","text":"Actual boundary artifacts, if capture is enabled","meta":"Can be unavailable or truncated"}]},"say":"EXPERIMENTAL optional observation side channel at dispatch: configured capture can retain actual requests and bounded state. Not a new model phase, public activity data or hidden reasoning; observation failure must not alter the turn outcome."},{"edges":"generation-request"},{"edges":"generation-response"},{"edges":"candidate-reply"},{"edges":"natural-review-input"},{"edges":"historical-review","say":"EXPERIMENTAL: the reviewer receives the same admitted historical H, along with its own current-user/source/lifecycle input bundle; generation and review are not otherwise identical requests."},{"edges":"reference-reply"},{"edges":"review-request"},{"edges":"review-response"},{"light":["embedding","commit"],"say":"EXPERIMENTAL: before the reused finalization path commits, admitted historical exchanges are revalidated again. Source integrity is not evidence sufficiency or semantic acceptance."}]},{"label":"6 - Failure / retry","caption":"Alternative cases, NOT one sequential attempt: rejected request; retryable attempt failure; terminal failure; cancellation race. Lease loss is a separate non-commit outcome for this worker.","flow":[{"edges":"preaccept-rejection","say":"CASE A: busy/archived/not-ready/invalid requests can be rejected before a new acceptance transaction. Idempotent replay returns the existing run, not another user message."},{"edges":"attempt-failure","say":"CASE B: an accepted run can fail during an attempt. Retry applies only to retryable execution errors with remaining explicit budget; not every failure retries."},{"edges":"retry-attempt","say":"CASE B continued: schedule bounded backoff, then another attempt of the SAME accepted run. Do not re-accept or duplicate the user message."},{"light":["outcome"],"say":"CASE C, separate from that retry illustration: nonretryable/exhausted attempt failure, or failed success finalization, follows terminal handling. Finalization itself is outside the execution retry loop."},{"edges":"terminal-record","say":"CASE C continued: persist terminal failure metadata and release the lease when still owned. The already-accepted user message remains; this attempt commits no assistant/fact/summary success bundle."},{"edges":"refresh-ui"},{"edges":"cancel-request","say":"CASE D, a separate run: cancellation is a request. The locked finalization fence decides whether cancellation or success won; do not promise that pressing Cancel always prevents a commit."},{"edges":"terminal-record","say":"CASE D continued, if cancellation wins: persist cancellation without the success bundle. If this worker loses the lease, it must not terminally commit; another owner handles recovery."},{"edges":"refresh-ui"}]},{"label":"7 - Not implemented","caption":"Design gaps only. No packets or connecting edges here: a placeholder is not an executed module, approved extension or complete product pipeline.","flow":[{"light":["selection","delivery"],"say":"PROPOSED: joint/neighborhood source selection and ADR 0060's whole-selection admission. Existing history experiments do not implement these contracts."},{"light":["views"],"say":"DEFERRED: additional derived memory views. Existing conversation compaction is already implemented and must not be mistaken for this placeholder."},{"light":["external"],"say":"DEFERRED: external information/actions. Internal memory search and synthetic evaluation tools do not constitute an external-tool platform."},{"light":["behavior","review"],"say":"OPEN: general long-run character continuity, creative story admission/correction, and semantic reliability. Drawing a source-backed route does not claim these behaviors are solved."}]}],"theme":{"accent":"#1364d6","fg":"#172e46","muted":"#52667e","bg":"#f8fbff","surface":"#ffffff","border":"#b9cce0","font":"'IBM Plex Sans', sans-serif"},"speed":2200,"autoplay":false}}</script>
+  <script type="application/json" data-figure>{"title":"ADE - Journey of a message (review specification)","source":"docs/architecture/capability-map/message-journey","props":{"layout":{"id":"ade-journey","direction":"column","gap":28,"align":"start","children":[{"id":"ownership","direction":"row","gap":28,"align":"start","children":[{"id":"interface","label":"L1 - Interface","direction":"column","gap":20,"children":[{"id":"conversation-ui","label":"L2 - Conversation UI","direction":"column","children":[{"id":"chat","label":"Conversation workspace","sub":"L3 - UI-01 - Send / accepted / final outcome [Implemented]","width":205,"lines":3},{"id":"lineage","label":"Memory and lineage display","sub":"L3 - UI-02 - Committed state [Implemented]","width":205}]},{"id":"inspection-ui","label":"L2 - Inspection \u0026 Evaluation UI","direction":"column","children":[{"id":"activity","label":"Turn activity inspection","sub":"L3 - UI-03 - Public retained metadata; incomplete [Implemented]","width":205},{"id":"private-artifacts","label":"Private evaluation artifacts","sub":"L3 - UI-04 - Restricted capture, not a new public UI [Experimental]","width":205}]}]},{"id":"character","label":"L1 - Character","direction":"column","gap":20,"children":[{"id":"persona-definition","label":"L2 - Persona Definition","direction":"column","children":[{"id":"author","label":"Prompt and persona authoring","sub":"L3 - CHAR-01 - Pre-turn prerequisite, not every message [Implemented]","width":220},{"id":"binding","label":"Immutable definition binding","sub":"L3 - CHAR-02 - Read the conversation's existing version [Implemented]","width":220}]},{"id":"conversation-behavior","label":"L2 - Conversation Behavior","direction":"column","children":[{"id":"behavior","label":"Interpret; choose and express","sub":"L3 - CHAR-03 + CHAR-04 - Shared generation, no internal handoff [Partial]","width":220,"lines":3},{"id":"tools","label":"Curated tool choice and result use","sub":"L3 - CHAR-05 - Optional within the finite generation loop [Implemented]","width":220}]},{"id":"character-artifacts","label":"Artifacts, not L3 modules","direction":"column","children":[{"id":"definitions","label":"Definition snapshots","sub":"REC-DEFINITION - Immutable persona / prompt / deployment / policy [Record]","shape":"store","width":220},{"id":"candidate","label":"Candidate reply","sub":"Not persisted or delivered yet [Artifact]","width":220,"lines":2}]}]},{"id":"memory","label":"L1 - Memory","direction":"column","gap":24,"children":[{"id":"memory-subsystems","direction":"row","gap":18,"align":"start","children":[{"id":"recall-context","label":"L2 - Recall \u0026 Context","direction":"column","children":[{"id":"scope","label":"Scope and eligibility","sub":"L3 - MEM-01 - Subject facts; history adds character root [Partial]","width":185},{"id":"search","label":"Candidate search","sub":"L3 - MEM-02 - Facts implemented; history experimental [Partial]","width":185,"lines":2},{"id":"selection","label":"Evidence selection","sub":"L3 - MEM-03 - Bounded history selectors [Experimental]; joint selection [Proposed]","width":185},{"id":"delivery","label":"Context delivery","sub":"L3 - MEM-04 - Fit and bind actual consumer inputs [Partial]","width":185,"lines":3}]},{"id":"retention-updates","label":"L2 - Retention \u0026 Updates","direction":"column","children":[{"id":"capture","label":"Source capture","sub":"L3 - MEM-05 - User at acceptance; assistant at finalization [Implemented]","width":185},{"id":"review","label":"Memory update review","sub":"L3 - MEM-06 - Typed path; natural variants experimental [Partial]","width":185,"lines":3},{"id":"commit","label":"Validation and commit","sub":"L3 - MEM-07 - Runtime-owned atomic finalization [Implemented]","width":185,"lines":3}]},{"id":"organization-maintenance","label":"L2 - Organization \u0026 Maintenance","direction":"column","children":[{"id":"embedding","label":"Index maintenance","sub":"L3 - MEM-08 - Prepare vectors before commit [Implemented]","width":185},{"id":"compact","label":"Conversation compaction","sub":"L3 - MEM-09 - Conditional preparation before generation [Implemented]","width":185},{"id":"views","label":"Additional derived views","sub":"L3 - MEM-10 - No implemented flow [Deferred]","width":185}]}]},{"id":"memory-records","label":"Stored records, not processing modules - ADE PostgreSQL","direction":"column","children":[{"id":"memory-records-top","direction":"row","gap":20,"children":[{"id":"dialogue","label":"Original dialogue","sub":"REC-DIALOGUE - What was said, not automatic fact acceptance [Record]","shape":"store","width":240,"lines":2},{"id":"facts","label":"Facts and revisions","sub":"REC-FACTS - Subject state, sources and lifecycle [Record]","shape":"store","width":240}]},{"id":"memory-records-bottom","direction":"row","gap":20,"children":[{"id":"summaries","label":"Conversation summaries","sub":"REC-SUMMARY - Source-linked working context, not factual authority [Record]","shape":"store","width":240},{"id":"index","label":"Fact search representations","sub":"REC-INDEX - Revision / embedding-space bound [Record]","shape":"store","width":240}]}]}]},{"id":"external-tools","label":"L1 - External Tools [Deferred]","direction":"column","children":[{"id":"external-actions","label":"L2 - External Information \u0026 Actions","direction":"column","children":[{"id":"external","label":"External information and actions","sub":"L3 - EXT-01 - Not internal memory search; no implemented flow [Deferred]","width":185}]}]}]},{"id":"support","label":"Supporting runtime / model access / storage - Not another L1 domain","direction":"row","gap":22,"align":"start","children":[{"id":"accept","label":"Accept turn","sub":"SUP-01 - Gates, idempotency, input transaction [Implemented]","width":210},{"id":"attempt","label":"Claim and execute attempt","sub":"SUP-01 - Lease, snapshot, deadline, policy binding [Implemented]","width":210},{"id":"dispatch","label":"Bind actual conversation request","sub":"SUP-01 - Persona, context, tools, input capacity [Implemented]","width":210},{"id":"router","label":"Model Router","sub":"SUP-03 - Catalog / generation / review / embeddings [Implemented]","width":210},{"id":"outcome","label":"Run control and outcomes","sub":"SUP-01 - Retry, failure, cancellation, committed success [Implemented]","width":210},{"id":"runs","label":"Runs, attempts and events","sub":"REC-RUNS - Persistent observed metadata; completeness varies [Record]","shape":"store","width":210}]}]},"edges":[{"id":"submit","from":"chat","to":"accept","label":"acceptTurn(text, idempotency, limits)","quiet":true},{"id":"accept-catalog-request","from":"accept","to":"router","label":"catalog / binding validation","quiet":true},{"id":"accept-catalog-response","from":"router","to":"accept","label":"catalog identities","quiet":true},{"id":"accepted-source","from":"accept","to":"capture","label":"original user + run attribution","quiet":true},{"id":"save-user","from":"capture","to":"dialogue","label":"acceptance transaction: user","quiet":true},{"id":"save-accepted-run","from":"accept","to":"runs","label":"same acceptance transaction: pending run / lease / events","quiet":true},{"id":"accepted-receipt","from":"accept","to":"chat","label":"accepted run ID, not a reply","quiet":true},{"id":"claim-run","from":"accept","to":"attempt","label":"queued run claimed by worker","quiet":true},{"id":"definition-read","from":"definitions","to":"binding","label":"existing immutable version","quiet":true},{"id":"bound-definition","from":"binding","to":"attempt","label":"persona / prompt / deployments / policy","quiet":true},{"id":"read-dialogue","from":"dialogue","to":"attempt","label":"local messages in repeatable-read snapshot","quiet":true},{"id":"read-summary","from":"summaries","to":"attempt","label":"latest local summary or none","quiet":true},{"id":"read-facts","from":"facts","to":"attempt","label":"subject facts / entities / accepted generation","quiet":true},{"id":"attempt-catalog-request","from":"attempt","to":"router","label":"attempt catalog / policy validation","quiet":true},{"id":"attempt-catalog-response","from":"router","to":"attempt","label":"execution profiles","quiet":true},{"id":"eligible-scope","from":"attempt","to":"scope","label":"bound subject, purpose, current input","quiet":true},{"id":"fact-query","from":"scope","to":"search","label":"automatic fact query, when required"},{"id":"query-embedding-request","from":"search","to":"router","label":"query embedding","quiet":true},{"id":"query-embedding-response","from":"router","to":"search","label":"query vector","quiet":true},{"id":"fact-search-data","from":"index","to":"search","label":"current scoped fact matches","quiet":true},{"id":"base-context","from":"scope","to":"delivery","label":"local dialogue / summary / eligible fact state","around":"above","quiet":true},{"id":"fact-results","from":"search","to":"delivery","label":"retrieved fact records","quiet":true},{"id":"delivered-request","from":"delivery","to":"dispatch","label":"built context, not proof of semantic sufficiency","quiet":true},{"id":"generation-input","from":"dispatch","to":"behavior","label":"actual persona + evidence + current turn + tools","quiet":true},{"id":"generation-request","from":"behavior","to":"router","label":"conversation completion","quiet":true},{"id":"generation-response","from":"router","to":"behavior","label":"model text or tool call","quiet":true},{"id":"candidate-reply","from":"behavior","to":"candidate","label":"candidate text, not committed","quiet":true},{"id":"typed-review-input","from":"attempt","to":"review","label":"typed: current user + last eight prior user messages + facts / entities","quiet":true},{"id":"review-request","from":"review","to":"router","label":"bound reviewer request","quiet":true},{"id":"review-response","from":"router","to":"review","label":"proposed operations / no change","quiet":true},{"id":"index-input","from":"review","to":"embedding","label":"structurally prepared value-bearing operations","quiet":true},{"id":"fact-embedding-request","from":"embedding","to":"router","label":"only new value-bearing fact documents","quiet":true},{"id":"fact-embedding-response","from":"router","to":"embedding","label":"prepared vectors / dimensions","quiet":true},{"id":"proposed-changes","from":"review","to":"commit","label":"review decision; meaning remains reviewer's responsibility"},{"id":"prepared-index","from":"embedding","to":"commit","label":"revision / space-bound vectors","quiet":true},{"id":"pending-reply","from":"candidate","to":"commit","label":"pending assistant text","quiet":true},{"id":"commit-facts","from":"commit","to":"facts","label":"success transaction: permitted changes","quiet":true},{"id":"commit-index","from":"commit","to":"index","label":"same transaction: fact representations","quiet":true},{"id":"commit-dialogue","from":"commit","to":"dialogue","label":"same transaction: assistant message","quiet":true},{"id":"commit-summary","from":"commit","to":"summaries","label":"same transaction: new summary, if prepared","quiet":true},{"id":"commit-run","from":"commit","to":"runs","label":"same transaction: success / events / lease release","quiet":true},{"id":"committed-outcome","from":"commit","to":"outcome","label":"after successful transaction","quiet":true},{"id":"refresh-ui","from":"outcome","to":"chat","label":"events + polling; reload persisted session","quiet":true},{"id":"lineage-state","from":"facts","to":"lineage","label":"refreshed persisted facts / lineage","quiet":true},{"id":"activity-state","from":"runs","to":"activity","label":"retained public activity metadata","quiet":true},{"id":"compact-input","from":"attempt","to":"compact","label":"eligible older local messages / previous summary","quiet":true},{"id":"compaction-request","from":"compact","to":"router","label":"conditional compaction completion","quiet":true},{"id":"compaction-response","from":"router","to":"compact","label":"prepared source-linked summary","quiet":true},{"id":"summary-context","from":"compact","to":"delivery","label":"working summary before generation","quiet":true},{"id":"pending-summary","from":"compact","to":"commit","label":"summary proposal held until success","quiet":true},{"id":"tool-call","from":"behavior","to":"tools","label":"optional model-issued call","quiet":true},{"id":"tool-search","from":"tools","to":"search","label":"validated internal search_memory arguments","quiet":true},{"id":"tool-result","from":"search","to":"tools","label":"actual fact result / empty / error","quiet":true},{"id":"tool-followup","from":"tools","to":"dispatch","label":"append tool result; bind next conversation request","around":"below","quiet":true},{"id":"history-corpus","from":"dialogue","to":"scope","label":"EXPERIMENTAL: scoped completed exchanges incl. archived","quiet":true},{"id":"history-query","from":"scope","to":"search","label":"EXPERIMENTAL: bound history arm / ranking recipe","quiet":true},{"id":"history-candidates","from":"search","to":"selection","label":"EXPERIMENTAL: bounded original-exchange candidates","quiet":true},{"id":"history-admission","from":"selection","to":"delivery","label":"EXPERIMENTAL: greedy H admission; not ADR 0060","quiet":true},{"id":"natural-review-input","from":"attempt","to":"review","label":"EXPERIMENTAL: current user / supplied originals / lifecycle state","quiet":true},{"id":"historical-review","from":"delivery","to":"review","label":"EXPERIMENTAL: same admitted historical H","quiet":true},{"id":"reference-reply","from":"candidate","to":"review","label":"EXPERIMENTAL: candidate reply as reference only","quiet":true},{"id":"private-capture","from":"dispatch","to":"private-artifacts","label":"EXPERIMENTAL: configured restricted capture, with limits","quiet":true},{"id":"attempt-failure","from":"attempt","to":"outcome","label":"attempt exception / cancellation control","quiet":true},{"id":"retry-attempt","from":"outcome","to":"attempt","label":"retryable error + remaining explicit budget","around":"above","quiet":true},{"id":"terminal-record","from":"outcome","to":"runs","label":"failed / cancelled metadata; no assistant-memory success bundle","quiet":true},{"id":"cancel-request","from":"chat","to":"outcome","label":"request cancellation; finalization fence decides outcome","quiet":true},{"id":"preaccept-rejection","from":"accept","to":"chat","label":"rejected before a new run is accepted","quiet":true}],"steps":[{"label":"1 - Current message","caption":"Illustrative typed-policy success: existing persona binding, automatic fact search, no new compaction or tool call, and value-bearing review operations. Source-backed mechanics, not a live trace or release qualification.","flow":[{"light":["author","binding"],"say":"Before this message: the persona was authored and the conversation bound to an immutable version. Neither is re-authored each turn."},{"edges":{"edge":"submit","data":"current user text"},"show":{"chat":[{"tag":"ILLUSTRATIVE","text":"The slides are finished, but I haven't rehearsed."}]},"say":"The UI submits ordinary dialogue, an idempotency key and explicit execution limits. No storage-command wording is required."},{"edges":"accept-catalog-request","say":"Acceptance checks conversation/subject state, executable policy, provider identity, input capacity and worker readiness. Rejection and idempotent replay are alternatives, not this new-run path."},{"edges":"accept-catalog-response"},{"edges":"accepted-source","say":"The acceptance transaction binds the original user message to the new run."},{"edges":["save-user","save-accepted-run"],"show":{"dialogue":[{"tag":"USER","text":"Original user text + attribution"}],"runs":[{"tag":"PENDING","text":"Accepted run + lease + events"}]},"say":"One acceptance transaction persists the user message, pending run, lease and acceptance events. These grouped arrows mean atomic visibility, not parallel SQL."},{"edges":"accepted-receipt","say":"The UI receives a run ID and starts monitoring. Accepted is not a generated or committed assistant reply."},{"edges":"claim-run","say":"A worker claims the queued run and starts a leased, deadline-bound attempt."},{"edges":"definition-read"},{"edges":"bound-definition","say":"Read the conversation's existing immutable persona, prompt, deployment and memory-policy binding."},{"edges":"read-dialogue"},{"edges":"read-summary"},{"edges":"read-facts","say":"Local messages, the latest summary or none, and subject facts/entities are read in one coherent repeatable-read snapshot. No general historical recall is implied."},{"edges":"attempt-catalog-request"},{"edges":"attempt-catalog-response","say":"The attempt revalidates policy/deployment identities and mandatory input capacity before model work."},{"light":["compact"],"say":"Compaction eligibility is considered here, before generation. This example needs no new summary; tab 2 shows the conditional branch."},{"edges":"eligible-scope","say":"The workspace subject determines fact ownership. Historical exchanges require additional same-character scope and are not part of this typed path."},{"edges":"fact-query"},{"edges":"query-embedding-request"},{"edges":"query-embedding-response"},{"edges":"fact-search-data","show":{"search":[{"tag":"FACTS","text":"Subject-bound, current-revision matches"}]},"say":"Automatic fact search uses a query vector and matching embedding space, checking accepted memory generation. The typed path performs this search; some natural variants can use a fitting full snapshot instead."},{"edges":"base-context"},{"edges":"fact-results","say":"Context construction combines mandatory input, local messages, working summary and fact context. This is not the experimental historical Evidence Selection module."},{"edges":"delivered-request","show":{"delivery":[{"tag":"CONTEXT","text":"Persona + current turn + local dialogue + scoped facts","meta":"Summary if present"}]},"say":"Runtime binds the actual serialized consumer request. Fitting mechanically does not prove the evidence is semantically sufficient."},{"edges":"generation-input"},{"edges":"generation-request","say":"CHAR-03 and CHAR-04 share generation: interpretation, conversational judgment and character expression are responsibilities, not emitted intermediate stages."},{"edges":"generation-response"},{"edges":"candidate-reply","show":{"candidate":[{"tag":"PENDING","text":"Illustrative candidate text; not yet delivered"}]},"say":"A model response becomes a candidate reply. Grounding, judgment and fidelity are assessment lenses, not three additional calls."},{"edges":"typed-review-input","say":"After generation, the typed reviewer receives the current user, up to eight prior user messages, active facts and entities. It does NOT receive the candidate reply."},{"edges":"review-request"},{"edges":"review-response","show":{"review":[{"tag":"PROPOSAL","text":"Operations or no change; not persisted"}]},"say":"The reviewer interprets factual meaning. ADE structurally prepares the proposal; a valid source binding is not semantic proof."},{"edges":"index-input"},{"edges":"fact-embedding-request"},{"edges":"fact-embedding-response","say":"This example has value-bearing operations, so their fact representations are prepared before finalization. A no-change/value-less review does not require a fact-embedding provider call."},{"edges":"proposed-changes"},{"edges":"prepared-index"},{"edges":"pending-reply","say":"Runtime finalization locks and rechecks cancellation, lease, conversation version, memory generation and relevant source bindings before writing the success bundle."},{"edges":["commit-facts","commit-index","commit-dialogue","commit-run"],"show":{"commit":[{"tag":"ATOMIC","text":"Assistant + permitted state + terminal success"}],"dialogue":[{"tag":"COMMITTED","text":"User and assistant with run outcome"}],"runs":[{"tag":"SUCCEEDED","text":"Events + released lease"}]},"say":"One success transaction makes permitted facts, representations, assistant text and terminal metadata visible together. No new summary was prepared in this example. Grouped arrows are not parallel execution."},{"edges":"committed-outcome"},{"edges":"refresh-ui","say":"Events and status polling prompt the UI to reload persisted session state. The candidate is not streamed directly to the user by this path."},{"edges":"lineage-state"},{"edges":"activity-state","say":"The UI presents the reply, committed lineage and retained activity metadata. Activity can arrive during the run too; it is not a complete packet trace or hidden reasoning."}]},{"label":"2 - Compaction (conditional)","caption":"Implemented branch inside the attempt, BEFORE generation. Show only when a compaction plan is eligible under the bound policy; this is not a post-reply background worker.","flow":[{"edges":"compact-input","say":"Local context pressure can produce a plan over older messages and the previous summary. Natural B bypasses this branch; A/A0 have additional fit conditions."},{"edges":"compaction-request"},{"edges":"compaction-response","show":{"compact":[{"tag":"PREPARED","text":"Source-linked summary proposal"}]},"say":"The model creates working summary content, not independently authoritative facts."},{"edges":"summary-context","say":"The attempt uses the prepared summary while constructing generation context. This does not persist the summary yet."},{"light":["behavior","review","embedding"],"say":"Generation, review and any required embeddings proceed as in tab 1. This focused branch omits those repeated beats, not those runtime steps."},{"edges":"pending-summary"},{"edges":["commit-facts","commit-index","commit-dialogue","commit-summary","commit-run"],"say":"On a successful value-bearing-review example, the summary joins the same assistant/fact/index/run transaction. On failure, no new summary from this attempt is committed."}]},{"label":"3 - Memory tool (conditional)","caption":"Implemented finite conversation loop, only if search_memory is enabled and the model calls it. Internal Memory access, not the deferred External Tools domain.","flow":[{"edges":"generation-request"},{"edges":"generation-response","say":"A conversation completion may request an enabled curated tool instead of final text. This is not guaranteed or triggered by a phrase rule."},{"edges":"tool-call"},{"edges":"tool-search","say":"Validate tool name and arguments, then execute subject/generation-bound fact search. The model chooses; Memory owns search."},{"edges":"query-embedding-request"},{"edges":"query-embedding-response"},{"edges":"fact-search-data"},{"edges":"tool-result","show":{"tools":[{"tag":"RESULT","text":"Actual tool result, including empty/error status"}]}},{"edges":"tool-followup","say":"Append the actual tool result and bind the next conversation request. Per-request serialized overflow checks run only when the caller supplies input_token_limit, currently on natural variants; finite tool/request limits still apply to typed execution."},{"edges":"generation-input"},{"edges":"generation-request"},{"edges":"generation-response"},{"edges":"candidate-reply","say":"Generation can return candidate text or request another bounded tool iteration. The candidate still proceeds through review and atomic finalization; finite budgets can also terminate the run."}]},{"label":"4 - Natural review [Experimental]","caption":"Existing development-only natural-memory variants, not the typed-policy path or a release qualification. This tour starts after generation and shows a different reviewer INPUT contract, not another reviewer layered on top.","flow":[{"edges":"natural-review-input","say":"EXPERIMENTAL: the bound variant supplies the current user anchor, original source messages, lifecycle facts and entities; exact context strategy varies by variant."},{"edges":"reference-reply","show":{"review":[{"tag":"REFERENCE","text":"Candidate reply is not factual authority"}]},"say":"EXPERIMENTAL: only this natural path supplies the candidate reply as reference. It must not silently turn invented user/shared history into accepted facts."},{"edges":"review-request"},{"edges":"review-response","say":"EXPERIMENTAL: use the existing reviewer and structural policy preparation, then the same embedding/finalization boundaries. Story admission/correction mechanics remain open under PC-11."},{"light":["embedding","commit"],"say":"The remaining success mechanics reuse tab 1; this tour does not imply a second review call or adoption of a new policy."}]},{"label":"5 - History [Experimental]","caption":"Existing automatic_history evaluation arm only, under development policy/configuration and source guards. This tour also illustrates optional restricted capture when configured. Not general historical recall or a new episode store.","flow":[{"edges":"history-corpus","say":"EXPERIMENTAL: read bounded completed original exchanges for this workspace subject and character root, including eligible archived/versioned chats. Other characters' shared experiences are excluded."},{"edges":"history-query","say":"EXPERIMENTAL: use the trial's fixed ranking recipe, not a universal production selector. Some recipes involve guarded embedding/ranking requests; their internals are collapsed here."},{"edges":"history-candidates","show":{"selection":[{"tag":"CANDIDATES","text":"Bounded original exchanges; qualifications may be missing"}]}},{"edges":"history-admission","show":{"delivery":[{"tag":"H","text":"Greedily admitted original exchanges","meta":"Current experiment, not ADR 0060"}]},"say":"EXPERIMENTAL: fit a fixed historical packet against actual generation AND reviewer capacity. Current admission can omit candidate exchanges; joint/neighborhood selection and whole-selection admission are not implemented."},{"edges":"delivered-request","say":"EXPERIMENTAL: revalidate source eligibility before relevant dispatches. Before exposure, unavailable/purged history may be omitted and rebuilt; after exposure, failed revalidation fails the attempt rather than silently substituting a new H."},{"edges":"generation-input"},{"edges":"private-capture","show":{"private-artifacts":[{"tag":"RESTRICTED","text":"Actual boundary artifacts, if capture is enabled","meta":"Can be unavailable or truncated"}]},"say":"EXPERIMENTAL optional observation side channel at dispatch: configured capture can retain actual requests and bounded state. Not a new model phase, public activity data or hidden reasoning; observation failure must not alter the turn outcome."},{"edges":"generation-request"},{"edges":"generation-response"},{"edges":"candidate-reply"},{"edges":"natural-review-input"},{"edges":"historical-review","say":"EXPERIMENTAL: the reviewer receives the same admitted historical H, along with its own current-user/source/lifecycle input bundle; generation and review are not otherwise identical requests."},{"edges":"reference-reply"},{"edges":"review-request"},{"edges":"review-response"},{"light":["embedding","commit"],"say":"EXPERIMENTAL: before the reused finalization path commits, admitted historical exchanges are revalidated again. Source integrity is not evidence sufficiency or semantic acceptance."}]},{"label":"6 - Failure / retry","caption":"Alternative cases, NOT one sequential attempt: rejected request; retryable attempt failure; terminal failure; cancellation race. Lease loss is a separate non-commit outcome for this worker.","flow":[{"edges":"preaccept-rejection","say":"CASE A: busy/archived/not-ready/invalid requests can be rejected before a new acceptance transaction. Idempotent replay returns the existing run, not another user message."},{"edges":"attempt-failure","say":"CASE B: an accepted run can fail during an attempt. Retry applies only to retryable execution errors with remaining explicit budget; not every failure retries."},{"edges":"retry-attempt","say":"CASE B continued: schedule bounded backoff, then another attempt of the SAME accepted run. Do not re-accept or duplicate the user message."},{"light":["outcome"],"say":"CASE C, separate from that retry illustration: nonretryable/exhausted attempt failure, or failed success finalization, follows terminal handling. Finalization itself is outside the execution retry loop."},{"edges":"terminal-record","say":"CASE C continued: persist terminal failure metadata and release the lease when still owned. The already-accepted user message remains; this attempt commits no assistant/fact/summary success bundle."},{"edges":"refresh-ui"},{"edges":"cancel-request","say":"CASE D, a separate run: cancellation is a request. The locked finalization fence decides whether cancellation or success won; do not promise that pressing Cancel always prevents a commit."},{"edges":"terminal-record","say":"CASE D continued, if cancellation wins: persist cancellation without the success bundle. If this worker loses the lease, it must not terminally commit; another owner handles recovery."},{"edges":"refresh-ui"}]},{"label":"7 - Not implemented","caption":"Design gaps only. No packets or connecting edges here: a placeholder is not an executed module, approved extension or complete product pipeline.","flow":[{"light":["selection","delivery"],"say":"PROPOSED: joint/neighborhood source selection and ADR 0060's whole-selection admission. Existing history experiments do not implement these contracts."},{"light":["views"],"say":"DEFERRED: additional derived memory views. Existing conversation compaction is already implemented and must not be mistaken for this placeholder."},{"light":["external"],"say":"DEFERRED: external information/actions. Internal memory search and synthetic evaluation tools do not constitute an external-tool platform."},{"light":["behavior","review"],"say":"OPEN: general long-run character continuity, creative story admission/correction, and semantic reliability. Drawing a source-backed route does not claim these behaviors are solved."}]}],"theme":{"accent":"#0074d9","fg":"#111418","muted":"#596575","bg":"#ffffff","surface":"#f5f7fa","border":"#ccd5e1","font":"'Avenir Next', sans-serif"},"speed":2200,"autoplay":false}}</script>
 </section>
 <style>#ade-moving-message {
   color: var(--foreground);
-  font-family: "IBM Plex Sans", "Avenir Next", sans-serif;
+  font-family: "Avenir Next", "IBM Plex Sans", sans-serif;
   --journey-active: var(--viz-series-1);
+  --journey-surface: var(--muted);
+  --journey-on-active: var(--primary-foreground);
 }
 #ade-moving-message *, #ade-moving-message *::before, #ade-moving-message *::after { box-sizing: border-box; }
-#ade-moving-message .journey-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+#ade-moving-message .journey-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 16px; }
 #ade-moving-message h2 { margin: 0; font-weight: 500; }
-#ade-moving-message .journey-domains { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted-foreground); }
-#ade-moving-message .journey-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 16px 0 10px; }
-#ade-moving-message .journey-controls label { display: flex; align-items: center; gap: 8px; }
-#ade-moving-message .journey-controls select { min-width: 0; max-width: 100%; }
-#ade-moving-message .journey-caption { display: block; color: var(--muted-foreground); margin-bottom: 10px; }
+#ade-moving-message .journey-canvas { position: relative; }
 #ade-moving-message .journey-viewport { width: 100%; }
-#ade-moving-message[data-standalone] .journey-viewport {
-  overflow: auto; max-height: 640px; scrollbar-gutter: stable;
-  background: radial-gradient(circle, color-mix(in srgb, var(--border) 65%, transparent) 1px, transparent 1px);
-  background-size: 18px 18px;
-}
 #ade-moving-message .journey-drawing { display: block; margin: auto; overflow: visible; }
-#ade-moving-message .ownership-frame { fill: none; stroke: var(--border); stroke-width: 1; }
-#ade-moving-message .domain-frame { fill: color-mix(in srgb, var(--background) 90%, transparent); }
-#ade-moving-message .frame-title { fill: var(--foreground); font-size: 12px; font-weight: 500; }
+#ade-moving-message .ownership-frame { fill: var(--journey-surface); stroke: var(--border); stroke-width: 1; }
+#ade-moving-message .deferred-frame { stroke-dasharray: 5 4; }
+#ade-moving-message .frame-title { fill: var(--muted-foreground); font-size: 12px; font-weight: 500; letter-spacing: .04em; }
 #ade-moving-message .node-surface { fill: var(--card); stroke: var(--border); stroke-width: 1; }
-#ade-moving-message .store-rim { fill: none; stroke: var(--border); stroke-width: 1; }
-#ade-moving-message .is-active .node-surface { fill: color-mix(in srgb, var(--journey-active) 8%, var(--card)); stroke: var(--journey-active); }
+#ade-moving-message .store-rim { fill: var(--card); stroke: var(--border); stroke-width: 1; }
+#ade-moving-message .is-active .node-surface, #ade-moving-message .is-active .store-rim { stroke: var(--journey-active); }
+#ade-moving-message .is-active .node-surface { filter: drop-shadow(0 0 2px color-mix(in srgb, var(--journey-active) 35%, transparent)); }
 #ade-moving-message .is-deferred .node-surface { stroke-dasharray: 5 4; }
-#ade-moving-message .node-label { fill: var(--foreground); font-size: 12px; font-weight: 500; }
-#ade-moving-message .node-sub { fill: var(--muted-foreground); font-size: 11px; font-weight: 400; }
-#ade-moving-message .payload-tag { fill: var(--foreground); font-size: 11px; font-weight: 500; }
-#ade-moving-message .payload-text { fill: var(--foreground); font-size: 11px; font-weight: 400; }
-#ade-moving-message .connection { fill: none; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
-#ade-moving-message .active-connection { stroke: var(--journey-active); }
-#ade-moving-message .trail-connection { stroke: var(--border); }
+#ade-moving-message .node-label { fill: var(--foreground); font-size: 14px; font-weight: 500; }
+#ade-moving-message .node-sub { fill: var(--muted-foreground); font-size: 12px; font-weight: 400; }
+#ade-moving-message .payload-surface { fill: var(--journey-surface); stroke: var(--border); stroke-width: .8; stroke-dasharray: 2 2; }
+#ade-moving-message .is-filled .payload-surface { fill: color-mix(in srgb, var(--journey-active) 8%, var(--card)); stroke: var(--journey-active); }
+#ade-moving-message .payload-badge { fill: color-mix(in srgb, var(--journey-active) 15%, var(--card)); }
+#ade-moving-message .payload-tag { fill: var(--journey-active); font-size: 11px; font-weight: 500; }
+#ade-moving-message .payload-text { fill: var(--foreground); font-size: 12px; font-weight: 400; }
+#ade-moving-message .payload-meta, #ade-moving-message .is-empty .payload-text { fill: var(--muted-foreground); font-size: 12px; font-weight: 400; }
+#ade-moving-message .is-mono { font-family: "IBM Plex Mono", "SFMono-Regular", monospace; }
+#ade-moving-message .connection { fill: none; stroke-linejoin: round; stroke-linecap: round; }
+#ade-moving-message .active-connection { stroke: var(--journey-active); stroke-width: 3; }
+#ade-moving-message .trail-connection { stroke: var(--muted-foreground); stroke-width: 1.5; opacity: .35; }
 #ade-moving-message .active-arrow, #ade-moving-message .packet-core { fill: var(--journey-active); }
-#ade-moving-message .trail-arrow { fill: var(--border); }
+#ade-moving-message .trail-arrow { fill: var(--muted-foreground); }
 #ade-moving-message .packet-halo { fill: color-mix(in srgb, var(--journey-active) 18%, transparent); }
-#ade-moving-message .journey-readout { display: flex; align-items: center; gap: 16px; margin-top: 12px; }
-#ade-moving-message .journey-progress { flex: 1; height: 3px; background: var(--muted); }
+#ade-moving-message .edge-label rect, #ade-moving-message .packet-data rect { fill: var(--journey-active); }
+#ade-moving-message .edge-label-text { fill: var(--journey-on-active); font-size: 11px; font-weight: 400; font-family: "IBM Plex Mono", "SFMono-Regular", monospace; }
+#ade-moving-message .journey-playback { padding-top: 16px; }
+#ade-moving-message .journey-controls, #ade-moving-message .journey-stepping { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
+#ade-moving-message .journey-tours { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; }
+#ade-moving-message .journey-tour { position: relative; }
+#ade-moving-message .tour-progress { position: absolute; inset: auto 0 0; height: 2px; background: var(--journey-active); transform: scaleX(0); transform-origin: left; }
+#ade-moving-message .journey-narration { display: block; text-align: center; color: var(--muted-foreground); margin: 14px auto; max-width: 740px; min-height: 3em; }
+#ade-moving-message .journey-progress { height: 2px; background: var(--journey-surface); margin-top: 14px; }
 #ade-moving-message .journey-progress > div { height: 100%; background: var(--journey-active); }
-#ade-moving-message .journey-narration { display: block; margin: 12px 0; min-height: 3em; }
-#ade-moving-message .journey-connections { display: block; color: var(--muted-foreground); }
+#ade-moving-message .journey-details { margin-top: 16px; color: var(--muted-foreground); }
+#ade-moving-message .journey-caption, #ade-moving-message .journey-connections { display: block; margin-top: 10px; }
+#ade-moving-message .journey-details dl { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(0, 3fr); gap: 6px 18px; }
+#ade-moving-message .journey-details dt { color: var(--foreground); }
+#ade-moving-message .journey-details dd { margin: 0; }
 #ade-moving-message .journey-foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 14px; color: var(--muted-foreground); }
+
+/* The full-page player follows interfig's framed canvas and quiet control track.
+   The conversation preview keeps host utilities and reflows instead of zooming. */
+#ade-moving-message[data-standalone] .journey-figure { border: 1px solid var(--border); border-radius: 16px; background: var(--card); overflow: hidden; }
+#ade-moving-message[data-standalone] .journey-canvas { border-bottom: 1px solid var(--border); padding: 12px; background: radial-gradient(circle, color-mix(in srgb, var(--foreground) 16%, transparent) 1px, transparent 1.2px); background-size: 14px 14px; }
+#ade-moving-message[data-standalone] .journey-viewport { overflow-x: auto; }
+#ade-moving-message[data-standalone] .journey-playback { padding: 16px 18px 12px; }
+#ade-moving-message[data-standalone] .journey-tours { padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: var(--journey-surface); }
+#ade-moving-message[data-standalone] .journey-tour { padding: 6px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--muted-foreground); font: 12px/1.4 "IBM Plex Mono", "SFMono-Regular", monospace; }
+#ade-moving-message[data-standalone] .journey-tour[aria-pressed="true"] { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px color-mix(in srgb, var(--foreground) 8%, transparent); }
+#ade-moving-message[data-standalone] [data-play], #ade-moving-message[data-standalone] [data-speed] { border-radius: 999px; padding: 7px 10px; font-size: 12px; }
+#ade-moving-message[data-standalone] .journey-stepping button { padding: 3px 7px; border: 0; background: transparent; color: var(--muted-foreground); font-size: 12px; }
+#ade-moving-message[data-standalone] [data-fullscreen] { position: absolute; right: 10px; top: 10px; z-index: 1; padding: 6px 10px; border-radius: 999px; font-size: 12px; }
+#ade-moving-message:fullscreen { background: var(--background); width: 100%; height: 100%; overflow: auto; padding: 24px; }
+#ade-moving-message:not([data-standalone]) [data-fullscreen] { display: none; }
 @media (max-width: 600px) {
-  #ade-moving-message .journey-controls label { flex-basis: 100%; }
-  #ade-moving-message .journey-controls select { flex: 1; }
-  #ade-moving-message[data-standalone] .journey-viewport { max-height: 520px; }
+  #ade-moving-message .journey-details dl { grid-template-columns: minmax(0, 1fr); }
+  #ade-moving-message .journey-details dd { margin-bottom: 10px; }
+  #ade-moving-message[data-standalone] .journey-tours { flex-basis: 100%; order: 1; }
+  #ade-moving-message[data-standalone] .journey-canvas { padding: 6px; }
 }
 @media (prefers-reduced-motion: reduce) {
   #ade-moving-message *, #ade-moving-message *::before, #ade-moving-message *::after { animation: none; transition: none; }
@@ -217,6 +255,8 @@ SOFTWARE.
 
   function pointAt(curve, fraction) {
     const t = Math.max(0, Math.min(1, fraction)), s = 1 - t;
+    if (t === 0) return {...curve.start};
+    if (t === 1) return {...curve.end};
     if (curve.polyline) {
       let distance = t * curve.length;
       for (let index = 1; index < curve.polyline.length; index += 1) {
@@ -239,13 +279,38 @@ SOFTWARE.
       && point.y > rect.y - padding && point.y < rect.y + rect.h + padding;
   }
 
+  function roundedPath(points) {
+    const samples = [points[0]], commands = [`M ${points[0].x} ${points[0].y}`];
+    for (let index = 1; index < points.length - 1; index += 1) {
+      const before = points[index - 1], corner = points[index], after = points[index + 1];
+      const incoming = Math.hypot(corner.x - before.x, corner.y - before.y);
+      const outgoing = Math.hypot(after.x - corner.x, after.y - corner.y);
+      const radius = Math.min(8, incoming / 2, outgoing / 2);
+      const enter = {x: corner.x + (before.x - corner.x) * radius / incoming,
+        y: corner.y + (before.y - corner.y) * radius / incoming};
+      const leave = {x: corner.x + (after.x - corner.x) * radius / outgoing,
+        y: corner.y + (after.y - corner.y) * radius / outgoing};
+      commands.push(`L ${enter.x} ${enter.y} Q ${corner.x} ${corner.y} ${leave.x} ${leave.y}`);
+      samples.push(enter);
+      for (let part = 1; part <= 12; part += 1) {
+        const t = part / 12, s = 1 - t;
+        samples.push({x: s * s * enter.x + 2 * s * t * corner.x + t * t * leave.x,
+          y: s * s * enter.y + 2 * s * t * corner.y + t * t * leave.y});
+      }
+    }
+    samples.push(points.at(-1)); commands.push(`L ${points.at(-1).x} ${points.at(-1).y}`);
+    const length = samples.slice(1).reduce((sum, point, index) => sum + Math.hypot(point.x - samples[index].x, point.y - samples[index].y), 0);
+    return {polyline: samples, length, d: commands.join(' ')};
+  }
+
   // Interfig's simple curves may cross cards. Only obstructed active transfers
-  // use a Manhattan visibility grid, keeping packets out of unrelated labels.
+  // use a rounded visibility-grid route, keeping packets out of unrelated labels.
   function avoidCards(curve, rects) {
     const obstacles = Object.values(rects);
+    const clearance = rect => rect.text ? 1 : 6;
     const intervening = Object.entries(rects).filter(([id]) => id !== curve.from && id !== curve.to).map(([, rect]) => rect);
     const obstructed = Array.from({length: 81}, (_, index) => pointAt(curve, index / 80))
-      .some(point => intervening.some(rect => inside(point, rect, 6)));
+      .some(point => intervening.some(rect => inside(point, rect, clearance(rect))));
     if (!obstructed) return curve;
     const offset = (point, side) => ({
       x: point.x + (side === 'l' ? -12 : side === 'r' ? 12 : 0),
@@ -261,10 +326,11 @@ SOFTWARE.
     const begin = key(xs.indexOf(start.x), ys.indexOf(start.y)), finish = key(xs.indexOf(end.x), ys.indexOf(end.y));
     const costs = new Map([[begin, 0]]), previous = new Map(), open = new Set([begin]);
     const clear = (a, b) => !obstacles.some(rect => {
-      if (a.x === b.x) return a.x > rect.x - 6 && a.x < rect.x + rect.w + 6
-        && Math.max(a.y, b.y) > rect.y - 6 && Math.min(a.y, b.y) < rect.y + rect.h + 6;
-      return a.y > rect.y - 6 && a.y < rect.y + rect.h + 6
-        && Math.max(a.x, b.x) > rect.x - 6 && Math.min(a.x, b.x) < rect.x + rect.w + 6;
+      const padding = clearance(rect);
+      if (a.x === b.x) return a.x > rect.x - padding && a.x < rect.x + rect.w + padding
+        && Math.max(a.y, b.y) > rect.y - padding && Math.min(a.y, b.y) < rect.y + rect.h + padding;
+      return a.y > rect.y - padding && a.y < rect.y + rect.h + padding
+        && Math.max(a.x, b.x) > rect.x - padding && Math.min(a.x, b.x) < rect.x + rect.w + padding;
     });
     const estimate = identity => { const p = point(identity); return costs.get(identity) + Math.abs(p.x - end.x) + Math.abs(p.y - end.y); };
     while (open.size) {
@@ -291,8 +357,7 @@ SOFTWARE.
       const before = points[index - 1], after = points[index + 1];
       return !before || !after || !(before.x === p.x && p.x === after.x || before.y === p.y && p.y === after.y);
     });
-    const length = polyline.slice(1).reduce((sum, p, index) => sum + Math.hypot(p.x - polyline[index].x, p.y - polyline[index].y), 0);
-    return {...curve, polyline, length, d: polyline.map((p, index) => `${index ? 'L' : 'M'} ${p.x} ${p.y}`).join(' ')};
+    return {...curve, ...roundedPath(polyline)};
   }
 
   function beatHops(beat) {
@@ -331,82 +396,109 @@ SOFTWARE.
     return step.flow.slice(0, index + 1).findLast(beat => beat.say)?.say || step.caption || '';
   }
 
-  // Fixed maximum card sizes prevent payload arrival from moving packet endpoints.
-  function cardSizes(steps) {
-    const sizes = new Map();
-    for (const beat of steps.flatMap(step => step.flow)) {
-      for (const [id, content] of Object.entries(beat.show || {})) {
-        const rows = Array.isArray(content) ? content : [{text: content}];
-        const count = rows.reduce((total, row) => total + wrap(row.text, 29).length + 1, 0);
-        sizes.set(id, Math.max(sizes.get(id) || 0, count * 16 + 18));
-      }
-    }
-    return sizes;
+  global.AdeFlowModel = {route, pointAt, avoidCards, beatHops, flatten, wrap, project, accumulated, narration};
+})(globalThis);
+</script>
+<script>/* Presentation sizing follows interfig's fixed, maximum-content card approach. */
+(function (global) {
+  'use strict';
+  const model = global.AdeFlowModel;
+
+  function subtitle(item) {
+    const identity = (item.sub || '').match(/^(?:L3 - )?(?:[A-Z]+-[A-Z0-9]+)(?: \+ [A-Z]+-[A-Z0-9]+)?/);
+    const statuses = [...(item.sub || '').matchAll(/\[([^\]]+)\]/g)].map(match => match[1]);
+    return [identity?.[0], statuses.join(' / ')].filter(Boolean).join(' | ');
+  }
+
+  function rows(content, width) {
+    const values = Array.isArray(content) ? content : [{text: content ?? '-', muted: content == null}];
+    const capacity = Math.max(14, Math.floor((width - 20) / 6.7));
+    return values.map(row => ({...row, lines: model.wrap(row.text, capacity),
+      metadata: row.meta == null ? [] : model.wrap(row.meta, capacity),
+    }));
+  }
+
+  function payloadHeight(content, width) {
+    return rows(content, width).reduce((sum, row) => sum + (row.tag ? 18 : 0)
+      + (row.lines.length + row.metadata.length) * 16 + 5, 12);
   }
 
   function layout(group, steps, narrow = false, maximumWidth = Infinity) {
-    const sizes = cardSizes(steps), rects = {}, frames = [], cards = [];
+    const contents = new Map();
+    for (const beat of steps.flatMap(step => step.flow)) {
+      for (const [id, content] of Object.entries(beat.show || {})) {
+        if (!contents.has(id)) contents.set(id, []);
+        contents.get(id).push(content);
+      }
+    }
+    const rects = {}, frames = [], cards = [];
     function measure(item, available) {
       if (!item.children) {
-        const width = Math.max(150, Math.min(Math.max(225, item.width || 225), available));
-        const label = wrap(item.label, Math.floor((width - 28) / 7));
-        const sub = wrap(item.sub || '', Math.floor((width - 28) / 6.3));
-        const height = 25 + label.length * 18 + sub.length * 16 + (sizes.get(item.id) || 0) + 12
-          + (item.shape === 'store' ? 18 : 0);
-        return {item, w: width, h: height, label, sub};
+        const w = Math.max(148, Math.min(item.shape === 'store' ? 220 : 195, available));
+        const label = model.wrap(item.label, Math.floor((w - 24) / 7));
+        const sub = model.wrap(subtitle(item), Math.floor((w - 24) / 6.4));
+        const payload = contents.has(item.id) ? Math.max((item.lines || 1) * 16 + 12,
+          ...contents.get(item.id).map(content => payloadHeight(content, w - 20))) : 0;
+        const top = item.shape === 'store' ? 36 : 22;
+        const payloadY = top + label.length * 18 + sub.length * 16 + 10;
+        const h = payloadY + payload + (payload ? 12 : 4);
+        return {item, w, h, label, sub, payload, payloadY};
       }
-      const framed = Boolean(item.label);
+      const framed = Boolean(item.label), padding = framed ? 18 : 0;
       const direction = narrow ? 'column' : item.direction || 'column';
-      const gap = Math.max(18, item.gap || 18), padding = framed ? 18 : 0;
+      const gap = item.id === 'ownership' ? 36 : Math.max(18, item.gap || 22);
       const inner = available - padding * 2;
       const children = item.children.map(child => measure(child, inner));
-      const row = direction === 'row';
-      const rows = [];
+      const lines = [];
       for (const child of children) {
-        let line = rows.at(-1);
-        if (!line || !row || line.w + gap + child.w > inner) {
-          line = {children: [], w: 0, h: 0}; rows.push(line);
+        let line = lines.at(-1);
+        if (!line || direction !== 'row' || line.w + gap + child.w > inner) {
+          line = {children: [], w: 0, h: 0}; lines.push(line);
         }
         line.w += child.w + (line.children.length ? gap : 0);
         line.h = Math.max(line.h, child.h); line.children.push(child);
       }
-      const w = Math.max(0, ...rows.map(line => line.w)) + padding * 2;
-      const title = framed ? wrap(item.label, Math.max(15, Math.min(70, Math.floor((w - padding * 2) / 6.8)))) : [];
-      const heading = title.length ? title.length * 18 + 22 : 0;
-      const h = rows.reduce((sum, line) => sum + line.h, 0)
-        + gap * Math.max(0, rows.length - 1) + padding * 2 + heading;
-      return {item, children, rows, w, h, direction, padding, heading, gap, title};
+      const w = Math.max(0, ...lines.map(line => line.w)) + padding * 2;
+      const title = framed ? model.wrap(item.label.toUpperCase(), Math.max(16,
+        Math.floor((w - padding * 2) / 6.8))) : [];
+      const heading = title.length ? title.length * 18 + 12 : 0;
+      const h = lines.reduce((sum, line) => sum + line.h, 0)
+        + gap * Math.max(0, lines.length - 1) + padding * 2 + heading;
+      return {item, children, lines, w, h, padding, heading, gap, title};
     }
     function place(plan, x, y) {
       if (!plan.children) {
         const rect = {x, y, w: plan.w, h: plan.h};
-        rects[plan.item.id] = rect;
-        cards.push({...plan, ...rect});
-        return;
+        rects[plan.item.id] = rect; cards.push({...plan, ...rect}); return;
       }
       if (plan.item.label) frames.push({...plan, x, y});
       let dy = y + plan.padding + plan.heading;
-      for (const row of plan.rows) {
+      for (const line of plan.lines) {
         let dx = x + plan.padding;
-        for (const child of row.children) {
+        for (const child of line.children) {
           place(child, dx, dy); dx += child.w + plan.gap;
         }
-        dy += row.h + plan.gap;
+        dy += line.h + plan.gap;
       }
     }
-    const margin = Number.isFinite(maximumWidth) ? 14 : 62;
+    const margin = Number.isFinite(maximumWidth) ? 14 : 58;
     const measured = measure(group, maximumWidth - margin * 2);
-    place(measured, margin, 62);
-    return {w: measured.w + margin * 2, h: measured.h + 124, rects, frames, cards};
+    place(measured, margin, 58);
+    const headings = Object.fromEntries(frames.map(frame => [`@heading:${frame.item.id}`, {
+      x: frame.x + 18, y: frame.y + 18,
+      w: Math.min(frame.w - 36, Math.max(...frame.title.map(line => line.length)) * 6.8),
+      h: 14 + (frame.title.length - 1) * 18, text: true,
+    }]));
+    return {w: measured.w + margin * 2, h: measured.h + 116, rects, frames, cards, obstacles: {...rects, ...headings}};
   }
-
-  global.AdeFlowModel = {route, pointAt, avoidCards, beatHops, flatten, wrap, project, accumulated, narration, layout};
+  global.AdeFlowLayout = {layout, rows, subtitle};
 })(globalThis);
 </script>
-<script>(function (global) {
+<script>/* SVG/DOM presentation adapted from interfig. See THIRD_PARTY_NOTICES.md. */
+(function (global) {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg';
-  const model = global.AdeFlowModel;
+  const model = global.AdeFlowModel, layout = global.AdeFlowLayout;
 
   function element(tag, attributes = {}, text) {
     const node = document.createElementNS(NS, tag);
@@ -415,135 +507,167 @@ SOFTWARE.
     return node;
   }
 
-  function textLines(parent, lines, x, y, className, height = 16) {
-    const text = element('text', {x, y, class: className});
+  function textLines(parent, lines, x, y, className, height = 16, centered = false) {
+    const text = element('text', {x, y, class: className, 'text-anchor': centered ? 'middle' : 'start'});
     lines.forEach((line, index) => text.appendChild(element('tspan', {x, dy: index ? height : 0}, line)));
     parent.appendChild(text);
   }
 
+  function drawCard(card, content, active, current) {
+    const {x, y, w, h, item} = card;
+    const group = element('g', {
+      'data-node': item.id,
+      class: `flow-node${active ? ' is-active' : ''}${current ? ' is-current' : ''}${item.sub.includes('[Deferred]') ? ' is-deferred' : ''}`,
+    });
+    group.appendChild(element('title', {}, `${item.label}. ${item.sub}`));
+    if (item.shape === 'store') {
+      group.appendChild(element('path', {
+        d: `M ${x} ${y + 12} C ${x} ${y - 4}, ${x + w} ${y - 4}, ${x + w} ${y + 12} L ${x + w} ${y + h - 12} C ${x + w} ${y + h + 4}, ${x} ${y + h + 4}, ${x} ${y + h - 12} Z`,
+        class: 'node-surface',
+      }));
+      group.appendChild(element('ellipse', {cx: x + w / 2, cy: y + 12, rx: w / 2, ry: 12, class: 'store-rim'}));
+    } else group.appendChild(element('rect', {x, y, width: w, height: h, rx: 10, class: 'node-surface'}));
+    const labelY = y + (item.shape === 'store' ? 40 : 25);
+    textLines(group, card.label, x + w / 2, labelY, 'node-label', 18, true);
+    textLines(group, card.sub, x + w / 2, labelY + card.label.length * 18 + 2, 'node-sub', 16, true);
+    if (card.payload) {
+      const insetY = y + card.payloadY;
+      const inset = element('g', {class: `payload${content == null ? ' is-empty' : ' is-filled'}`, 'data-payload': item.id});
+      inset.appendChild(element('rect', {x: x + 10, y: insetY, width: w - 20, height: card.payload, rx: 6, class: 'payload-surface'}));
+      let lineY = insetY + 20;
+      for (const row of layout.rows(content, w - 20)) {
+        if (row.tag) {
+          const tagWidth = Math.min(w - 40, row.tag.length * 6.6 + 10);
+          inset.appendChild(element('rect', {x: x + 18, y: lineY - 12, width: tagWidth, height: 16, rx: 4, class: 'payload-badge'}));
+          textLines(inset, [row.tag], x + 23, lineY, 'payload-tag'); lineY += 18;
+        }
+        textLines(inset, row.lines, x + 18, lineY, `payload-text${row.mono ? ' is-mono' : ''}`);
+        lineY += row.lines.length * 16;
+        if (row.metadata.length) {
+          textLines(inset, row.metadata, x + 18, lineY, 'payload-meta'); lineY += row.metadata.length * 16;
+        }
+        lineY += 5;
+      }
+      group.appendChild(inset);
+    }
+    return group;
+  }
+
+  function edgeLabel(curve, label, plan, taken) {
+    const lines = model.wrap(label, 34), w = Math.min(258, Math.max(...lines.map(line => line.length)) * 6.7 + 16);
+    const h = lines.length * 16 + 6;
+    for (const fraction of [0.5, 0.3, 0.7, 0.2, 0.8]) {
+      const p = model.pointAt(curve, fraction), box = {x: p.x - w / 2, y: p.y - h / 2, w, h};
+      if (box.x < 4 || box.y < 4 || box.x + w > plan.w - 4 || box.y + h > plan.h - 4) continue;
+      const overlap = other => box.x < other.x + other.w && box.x + w > other.x && box.y < other.y + other.h && box.y + h > other.y;
+      if ([...Object.values(plan.obstacles), ...taken].some(overlap)) continue;
+      taken.push(box);
+      const group = element('g', {class: 'edge-label', 'data-edge-label': curve.id});
+      group.appendChild(element('rect', {x: box.x, y: box.y, width: w, height: h, rx: 9}));
+      textLines(group, lines, p.x, box.y + 15, 'edge-label-text', 16, true);
+      return group;
+    }
+    return null;
+  }
+
   function create(root, figure) {
     const viewport = root.querySelector('[data-viewport]');
-    const standalone = root.hasAttribute('data-standalone');
+    const standalone = root.hasAttribute('data-standalone'), data = figure.props;
     if (standalone) viewport.tabIndex = 0;
-    const data = figure.props;
     const nodes = new Map(model.flatten(data.layout).map(node => [node.id, node]));
     const edgeMap = new Map(data.edges.map(edge => [edge.id, edge]));
-    let packets = [], curves = new Map(), follow = false, bounds;
+    let packets = [], curves = new Map(), cacheKey = '', plan, routes;
 
     function render(state) {
       const step = data.steps[state.tour], beat = step.flow[state.beat];
       const hops = model.beatHops(beat), activeEdges = hops.map(hop => edgeMap.get(hop.edge));
       const wanted = new Set([...(beat.light || []), ...activeEdges.flatMap(edge => [edge.from, edge.to])]);
-      const projection = state.whole ? data.layout : model.project(data.layout, wanted);
-      const narrow = viewport.clientWidth < 600 && !(standalone && state.whole);
-      const maximumWidth = standalone && state.whole ? Infinity : Math.max(296, viewport.clientWidth);
-      const plan = model.layout(projection, data.steps, narrow, maximumWidth);
-      bounds = plan; follow = standalone && state.playing && !state.whole;
+      const key = `${state.whole}:${state.whole ? '' : [...wanted].sort().join(',')}:${viewport.clientWidth}`;
+      if (key !== cacheKey) {
+        const projection = state.whole ? data.layout : model.project(data.layout, wanted);
+        const unbounded = standalone && state.whole;
+        plan = layout.layout(projection, data.steps, !unbounded && viewport.clientWidth < 600,
+          unbounded ? Infinity : Math.max(296, viewport.clientWidth));
+        // All ports and fallback routes are stable across beats, including quiet edges.
+        routes = model.route(data.edges, plan.rects).map(curve => model.avoidCards(curve, plan.obstacles));
+        cacheKey = key;
+      }
+      const scale = standalone && state.whole ? Math.max(0.75, Math.min(1, viewport.clientWidth / plan.w)) : 1;
       const svg = element('svg', {
-        viewBox: `0 0 ${plan.w} ${plan.h}`, width: plan.w, height: plan.h,
+        viewBox: `0 0 ${plan.w} ${plan.h}`, width: plan.w * scale, height: plan.h * scale,
         class: 'journey-drawing', role: 'img', 'aria-label': `${step.label}, step ${state.beat + 1}`,
       });
       svg.appendChild(element('title', {}, `${figure.title} - ${step.label}`));
       svg.appendChild(element('desc', {}, model.narration(step, state.beat)));
       const defs = element('defs');
       for (const [id, className] of [['journey-arrow', 'active-arrow'], ['journey-trail-arrow', 'trail-arrow']]) {
-        const marker = element('marker', {id, markerWidth: 8, markerHeight: 8, refX: 7, refY: 4, orient: 'auto'});
-        marker.appendChild(element('path', {d: 'M 0 0 L 8 4 L 0 8 Z', class: className}));
-        defs.appendChild(marker);
+        const marker = element('marker', {id, markerWidth: 5, markerHeight: 5, refX: 9, refY: 5, viewBox: '0 0 10 10', orient: 'auto'});
+        marker.appendChild(element('path', {d: 'M 0 1 L 9 5 L 0 9 Z', class: className})); defs.appendChild(marker);
       }
       svg.appendChild(defs);
       for (const frame of plan.frames) {
         const group = element('g', {'data-group': frame.item.id});
-        group.appendChild(element('rect', {
-          x: frame.x, y: frame.y, width: frame.w, height: frame.h, rx: 14,
-          class: `ownership-frame ${frame.item.label.startsWith('L1') ? 'domain-frame' : ''}`,
-        }));
-        textLines(group, frame.title, frame.x + 18, frame.y + 32, 'frame-title', 18);
-        svg.appendChild(group);
+        group.appendChild(element('rect', {x: frame.x, y: frame.y, width: frame.w, height: frame.h, rx: 14,
+          class: `ownership-frame${frame.item.label.includes('[Deferred]') ? ' deferred-frame' : ''}`}));
+        textLines(group, frame.title, frame.x + 18, frame.y + 29, 'frame-title', 18); svg.appendChild(group);
       }
-      const trail = new Set(step.flow.slice(0, state.beat).flatMap(item => model.beatHops(item).map(hop => hop.edge)));
-      const visible = state.whole ? data.edges.filter(edge => !edge.quiet || trail.has(edge.id) || hops.some(hop => hop.edge === edge.id)) : activeEdges;
-      const activeIds = new Set(hops.map(hop => hop.edge));
-      const routed = model.route(visible, plan.rects).map(curve => activeIds.has(curve.id) ? model.avoidCards(curve, plan.rects) : curve);
-      curves = new Map(routed.map(curve => [curve.id, curve]));
-      for (const curve of routed) {
-        const active = hops.some(hop => hop.edge === curve.id);
-        svg.appendChild(element('path', {
-          d: curve.d, class: active ? 'connection active-connection' : 'connection trail-connection',
-          'marker-end': `url(#${active ? 'journey-arrow' : 'journey-trail-arrow'})`,
-          'data-edge': curve.id,
-        }));
+      const trail = new Set(step.flow.slice(0, state.beat + 1).flatMap(item => model.beatHops(item).map(hop => hop.edge)));
+      const lit = new Set([...wanted, ...Object.keys(model.accumulated(step, state.beat)), ...(step.nodes || [])]);
+      for (const id of trail) { const edge = edgeMap.get(id); lit.add(edge.from).add(edge.to); }
+      const visible = routes.filter(curve => state.whole ? !curve.quiet || trail.has(curve.id) : hops.some(hop => hop.edge === curve.id));
+      curves = new Map(visible.map(curve => [curve.id, curve]));
+      for (const curve of visible) {
+        const active = trail.has(curve.id);
+        svg.appendChild(element('path', {d: curve.d,
+          class: `connection ${active ? 'active-connection' : 'trail-connection'}`,
+          'marker-end': `url(#${active ? 'journey-arrow' : 'journey-trail-arrow'})`, 'data-edge': curve.id}));
       }
       const shown = model.accumulated(step, state.beat);
-      for (const card of plan.cards) {
-        const active = wanted.has(card.item.id);
-        const deferred = card.item.sub.includes('[Deferred]');
-        const group = element('g', {
-          'data-node': card.item.id, class: `flow-node${active ? ' is-active' : ''}${deferred ? ' is-deferred' : ''}`,
-        });
-        group.appendChild(element('title', {}, `${card.item.label}. ${card.item.sub}`));
-        if (card.item.shape === 'store') {
-          const {x, y, w, h} = card;
-          group.appendChild(element('path', {
-            d: `M ${x} ${y + 12} C ${x} ${y - 4}, ${x + w} ${y - 4}, ${x + w} ${y + 12} L ${x + w} ${y + h - 12} C ${x + w} ${y + h + 4}, ${x} ${y + h + 4}, ${x} ${y + h - 12} Z`,
-            class: 'node-surface',
-          }));
-          group.appendChild(element('path', {
-            d: `M ${x} ${y + 12} C ${x} ${y + 28}, ${x + w} ${y + 28}, ${x + w} ${y + 12}`,
-            class: 'store-rim',
-          }));
-        } else group.appendChild(element('rect', {
-          x: card.x, y: card.y, width: card.w, height: card.h, rx: 10, class: 'node-surface',
-        }));
-        let y = card.y + (card.item.shape === 'store' ? 42 : 28);
-        textLines(group, card.label, card.x + 14, y, 'node-label', 18);
-        y += card.label.length * 18 + 6;
-        textLines(group, card.sub, card.x + 14, y, 'node-sub', 16);
-        y += card.sub.length * 16 + 10;
-        if (shown[card.item.id] != null) {
-          const rows = Array.isArray(shown[card.item.id]) ? shown[card.item.id] : [{text: shown[card.item.id]}];
-          for (const row of rows) {
-            if (row.tag) {
-              textLines(group, [row.tag], card.x + 14, y, 'payload-tag'); y += 16;
-            }
-            const lines = model.wrap(row.text, 29);
-            textLines(group, lines, card.x + 14, y, 'payload-text');
-            y += lines.length * 16;
-          }
-        }
-        svg.appendChild(group);
+      for (const card of plan.cards) svg.appendChild(drawCard(card, shown[card.item.id], lit.has(card.item.id), wanted.has(card.item.id)));
+      const taken = [];
+      for (const hop of hops) {
+        const curve = curves.get(hop.edge);
+        if (!curve) continue;
+        const label = edgeLabel(curve, edgeMap.get(hop.edge).label, plan, taken);
+        if (label) svg.appendChild(label);
       }
       packets = hops.map(hop => {
         const packet = element('g', {'data-packet': hop.edge, class: 'message-packet'});
-        packet.appendChild(element('circle', {r: 9, class: 'packet-halo'}));
-        packet.appendChild(element('circle', {r: 4, class: 'packet-core'}));
-        svg.appendChild(packet);
-        return {packet, hop};
+        packet.appendChild(element('circle', {r: 10, class: 'packet-halo'}));
+        packet.appendChild(element('circle', {r: 4.5, class: 'packet-core'}));
+        let chip, chipWidth, chipHeight;
+        if (hop.data != null) {
+          chip = element('g', {class: 'packet-data', 'data-packet-data': hop.edge});
+          const lines = model.wrap(hop.data, 26), w = Math.max(...lines.map(line => line.length)) * 6.7 + 16;
+          chipWidth = w; chipHeight = lines.length * 16 + 8;
+          chip.appendChild(element('rect', {x: -w / 2, y: -lines.length * 16 - 18, width: w, height: lines.length * 16 + 8, rx: 6}));
+          textLines(chip, lines, 0, -lines.length * 16 - 3, 'edge-label-text', 16, true);
+          packet.appendChild(chip);
+        }
+        svg.appendChild(packet); return {packet, hop, chip, chipWidth, chipHeight};
       });
-      viewport.replaceChildren(svg);
-      viewport.dataset.view = state.whole ? 'whole' : 'message';
-      root.querySelector('[data-connections]').textContent = activeEdges.map(edge => {
-        const label = nodes.get(edge.from).label, target = nodes.get(edge.to).label;
-        return `${label} -> ${target}: ${edge.label}`;
-      }).join(' | ') || 'No transfer in this step';
+      viewport.replaceChildren(svg); viewport.dataset.view = state.whole ? 'whole' : 'message';
+      root.querySelector('[data-connections]').textContent = activeEdges.map(edge =>
+        `${nodes.get(edge.from).label} -> ${nodes.get(edge.to).label}: ${edge.label}`).join(' | ') || 'No transfer in this step';
       position(state.playing ? 0 : 0.5);
       return {width: plan.w, height: plan.h};
     }
 
     function position(fraction) {
       const eased = fraction < 0.5 ? 2 * fraction * fraction : 1 - (-2 * fraction + 2) ** 2 / 2;
-      const positions = [];
-      for (const {packet, hop} of packets) {
+      for (const {packet, hop, chip, chipWidth, chipHeight} of packets) {
         const curve = curves.get(hop.edge);
         if (!curve) continue;
         const point = model.pointAt(curve, hop.back ? 1 - eased : eased);
         packet.setAttribute('transform', `translate(${point.x} ${point.y})`);
-        positions.push(point);
-      }
-      if (follow && positions.length && viewport.clientHeight > 0) {
-        const center = positions.reduce((sum, point) => ({x: sum.x + point.x / positions.length, y: sum.y + point.y / positions.length}), {x: 0, y: 0});
-        viewport.scrollTop = Math.max(0, Math.min(bounds.h - viewport.clientHeight, center.y - viewport.clientHeight / 2));
-        viewport.scrollLeft = Math.max(0, Math.min(bounds.w - viewport.clientWidth, center.x - viewport.clientWidth / 2));
+        if (chip) {
+          const x = Math.max(chipWidth / 2 + 4, Math.min(plan.w - chipWidth / 2 - 4, point.x));
+          const box = {x: x - chipWidth / 2, y: point.y - chipHeight - 10, w: chipWidth, h: chipHeight};
+          const obstructed = Object.values(plan.obstacles).some(rect => box.x < rect.x + rect.w
+            && box.x + box.w > rect.x && box.y < rect.y + rect.h && box.y + box.h > rect.y);
+          chip.setAttribute('transform', `translate(${x - point.x} 0)`);
+          chip.style.opacity = fraction > 0.12 && fraction < 0.88 && box.y >= 0 && !obstructed ? '1' : '0';
+        }
       }
     }
     return {render, position};
@@ -557,9 +681,9 @@ SOFTWARE.
   const figure = JSON.parse(root.querySelector('[data-figure]').textContent);
   const steps = figure.props.steps, model = globalThis.AdeFlowModel;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-  const state = {tour: 0, beat: 0, playing: false, whole: false, rate: 1, elapsed: 0};
+  const state = {tour: 0, beat: 0, playing: false, whole: true, rate: 1, elapsed: 0};
   const view = globalThis.AdeFlowView.create(root, figure);
-  const tour = root.querySelector('[data-tour]');
+  const tours = root.querySelector('[data-tours]');
   const play = root.querySelector('[data-play]');
   const previous = root.querySelector('[data-previous]');
   const next = root.querySelector('[data-next]');
@@ -570,32 +694,47 @@ SOFTWARE.
   const progress = root.querySelector('[data-progress]');
   const caption = root.querySelector('[data-caption]');
   const narration = root.querySelector('[data-narration]');
+  const fullscreen = root.querySelector('[data-fullscreen]');
   let frame = 0, lastTime = null;
-  steps.forEach((step, index) => {
-    const option = document.createElement('option');
-    option.value = String(index); option.textContent = step.label; tour.appendChild(option);
+  const tourButtons = steps.map((step, index) => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'btn journey-tour';
+    button.dataset.tourIndex = String(index);
+    button.textContent = step.label.replace(/^\d+ - /, '');
+    button.setAttribute('aria-label', step.label);
+    const line = document.createElement('span');
+    line.className = 'tour-progress'; line.setAttribute('aria-hidden', 'true'); button.appendChild(line);
+    button.addEventListener('click', () => { state.tour = index; jump(0); });
+    tours.appendChild(button); return button;
+  });
+  const moduleDetails = root.querySelector('[data-module-details]');
+  model.flatten(figure.props.layout).forEach(node => {
+    const label = document.createElement('dt'), description = document.createElement('dd');
+    label.textContent = node.label; description.textContent = node.sub;
+    moduleDetails.append(label, description);
   });
 
   function restore(saved) {
     const selected = saved?.privateContent;
-    if (!selected || !Number.isInteger(selected.tour) || !steps[selected.tour]) return;
+    if (selected?.presentation !== 2 || !Number.isInteger(selected.tour) || !steps[selected.tour]) return false;
     state.tour = selected.tour;
     state.beat = Number.isInteger(selected.beat)
       ? Math.max(0, Math.min(steps[state.tour].flow.length - 1, selected.beat)) : 0;
-    state.whole = Boolean(selected.whole);
+    state.whole = typeof selected.whole === 'boolean' ? selected.whole : true;
     state.playing = false; state.elapsed = 0;
+    return true;
   }
   function save() {
     if (!window.openai?.setWidgetState) return;
     window.openai.setWidgetState({
       modelContent: {tour: steps[state.tour].label, step: state.beat + 1},
-      privateContent: {tour: state.tour, beat: state.beat, whole: state.whole},
+      privateContent: {presentation: 2, tour: state.tour, beat: state.beat, whole: state.whole},
     }).catch(() => {});
   }
 
   function paint() {
     const selected = steps[state.tour];
-    tour.value = String(state.tour);
+    tourButtons.forEach((button, index) => button.setAttribute('aria-pressed', String(index === state.tour)));
     caption.textContent = selected.caption;
     narration.textContent = model.narration(selected, state.beat);
     count.textContent = `Step ${state.beat + 1} of ${selected.flow.length}`;
@@ -613,21 +752,28 @@ SOFTWARE.
     root.dataset.beat = String(state.beat);
     root.dataset.playing = String(state.playing);
     view.render(state);
+    updateProgress();
     view.position(state.playing || state.elapsed ? Math.min(1, state.elapsed / ((selected.flow[state.beat].ms || figure.props.speed) * 0.8)) : 0.5);
   }
   function stopFrame() {
     if (frame) cancelAnimationFrame(frame);
     frame = 0; lastTime = null;
   }
+  function updateProgress(fraction = Math.min(1, state.elapsed / (steps[state.tour].flow[state.beat].ms || figure.props.speed))) {
+    tourButtons.forEach((button, index) => {
+      button.lastElementChild.style.transform = `scaleX(${index === state.tour ? (state.beat + fraction) / steps[state.tour].flow.length : 0})`;
+    });
+  }
   function tick(time) {
     if (!state.playing || reduced.matches) { stopFrame(); return; }
     if (lastTime != null) state.elapsed += Math.min(200, time - lastTime) * state.rate;
     lastTime = time;
     const duration = steps[state.tour].flow[state.beat].ms || figure.props.speed;
+    updateProgress(Math.min(1, state.elapsed / duration));
     view.position(Math.min(1, state.elapsed / (duration * 0.8)));
     if (state.elapsed >= duration) {
       if (state.beat === steps[state.tour].flow.length - 1) {
-        state.playing = false; state.elapsed = duration; stopFrame(); paint(); save(); return;
+        state.playing = false; state.elapsed = duration; stopFrame(); paint(); updateProgress(1); save(); return;
       }
       state.beat += 1; state.elapsed = 0; paint();
     }
@@ -641,9 +787,6 @@ SOFTWARE.
     state.beat = beat; state.elapsed = 0; state.playing = false;
     stopFrame(); paint(); save();
   }
-  tour.addEventListener('change', () => {
-    state.tour = Number(tour.value); jump(0);
-  });
   play.addEventListener('click', () => {
     if (reduced.matches) return;
     state.playing = !state.playing;
@@ -676,8 +819,23 @@ SOFTWARE.
     if (reduced.matches) { state.playing = false; stopFrame(); }
     paint();
   });
+  fullscreen.hidden = !root.hasAttribute('data-standalone') || !root.requestFullscreen;
+  fullscreen.addEventListener('click', async () => {
+    try {
+      if (document.fullscreenElement === root) await document.exitFullscreen();
+      else await root.requestFullscreen();
+    } catch {
+      narration.textContent = 'Full screen is unavailable here; the chart remains playable.';
+    }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    fullscreen.textContent = document.fullscreenElement === root ? 'Exit full screen' : 'Full screen';
+    fullscreen.setAttribute('aria-label', fullscreen.textContent);
+    paint();
+  });
   window.addEventListener('openai:set_globals', event => {
-    restore(event.detail?.globals?.widgetState); stopFrame(); paint();
+    if (!restore(event.detail?.globals?.widgetState)) return;
+    stopFrame(); paint();
   });
   restore(window.openai?.widgetState);
   paint();
