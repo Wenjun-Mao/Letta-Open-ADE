@@ -344,6 +344,16 @@ view displayed, not acceptance of this updated version.
 
 ## Offline Checks
 
+Acceptance routing refinement, 2026-10-07: independent shortest detours put
+`accepted-source` and `save-accepted-run` on opposite sides of the worker card,
+visually bracketing it. Both now use interfig's existing `around: "below"` hint
+in `edges.json`. This is presentation geometry only: endpoints, ownership,
+transaction grouping and source beat order are unchanged. Switching the hint to
+`"above"` is a small authoring edit; obstacle avoidance still protects cards and
+headings at wrapped/narrow widths. A wide-layout guard checks both paths below
+the worker, canvas containment and stable geometry throughout playback;
+`acceptance-wide` adds a native SVG snapshot, not browser qualification.
+
 From the repository root:
 
 ```sh

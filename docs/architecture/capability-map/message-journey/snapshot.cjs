@@ -63,6 +63,7 @@ async function main() {
   await snapshot('atomic-commit', 1440, 37, false);
   await snapshot('whole-architecture', 1440, 23, true);
   await snapshot('whole-send', 1440, 1, true);
+  await snapshot('acceptance-wide', 1920, 0, false, 0, 999);
   for (let chapter = 0; chapter < 6; chapter += 1) {
     await snapshot(`guide-${chapter + 1}`, 1440, 0, false, chapter);
     await snapshot(`example-complete-${chapter + 1}`, 1440, 0, false, chapter, 999);

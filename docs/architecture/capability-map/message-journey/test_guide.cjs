@@ -22,6 +22,37 @@ test('default is a paused six-chapter guide, not the full map', () => {
   app.dom.window.close();
 });
 
+test('wide acceptance detours pass below the worker instead of bracketing it', () => {
+  const app = guided(1920);
+  const figure = JSON.parse(app.find('figure').textContent);
+  const model = app.dom.window.AdeFlowModel, guide = app.dom.window.AdeJourneyGuide;
+  const example = app.dom.window.AdeJourneyExample.create(JSON.parse(app.find('example-data').textContent));
+  const step = example.decorate(guide.build(figure)).props.steps[0];
+  const plan = app.dom.window.AdeFlowLayout.layout(guide.layout(figure.props.layout, step.nodes), [step], false, 1920);
+  const worker = plan.rects.attempt;
+  const detours = ['accepted-source', 'save-accepted-run'];
+  const curves = model.route(figure.props.edges, plan.rects)
+    .map(curve => model.avoidCards(curve, plan.obstacles));
+  for (const id of detours) {
+    const curve = curves.find(item => item.id === id);
+    assert.equal(curve.around, 'below');
+    let passesWorker = false;
+    for (let sample = 0; sample <= 200; sample += 1) {
+      const point = model.pointAt(curve, sample / 200);
+      assert.ok(point.x >= 0 && point.x <= plan.w && point.y >= 0 && point.y <= plan.h);
+      if (point.x >= worker.x && point.x <= worker.x + worker.w) {
+        passesWorker = true;
+        assert.ok(point.y >= worker.y + worker.h + 6, `${id} must pass below the worker`);
+      }
+    }
+    assert.ok(passesWorker);
+  }
+  const paths = detours.map(id => app.find('viewport').querySelector(`[data-edge="${id}"]`).getAttribute('d'));
+  app.find('play').click(); app.advance(15000);
+  assert.deepEqual(detours.map(id => app.find('viewport').querySelector(`[data-edge="${id}"]`).getAttribute('d')), paths);
+  app.dom.window.close();
+});
+
 test('Forward and Back visit chapters in order and always stop playback', () => {
   const app = guided();
   const labels = ['Accept message', 'Assemble context', 'Generate candidate', 'Review updates', 'Validate and commit', 'Display reply'];
