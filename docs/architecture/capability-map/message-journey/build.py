@@ -16,19 +16,26 @@ ASSETS = {
     "__MODEL__": "flow-model.js",
     "__LAYOUT__": "flow-layout.js",
     "__GUIDE__": "guide.js",
+    "__EXAMPLES__": "examples.js",
     "__VIEW__": "flow-view.js",
     "__PLAYER__": "player.js",
 }
 
 
-def fragment(figure: dict) -> str:
-    source = (HERE / "player-template.html").read_text()
-    encoded = json.dumps(figure, ensure_ascii=True, separators=(",", ":"))
-    encoded = (
+def embedded_json(value: dict) -> str:
+    encoded = json.dumps(value, ensure_ascii=True, separators=(",", ":"))
+    return (
         encoded.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     )
+
+
+def fragment(figure: dict, example: dict | None = None) -> str:
+    source = (HERE / "player-template.html").read_text()
+    if example is None:
+        example = json.loads((HERE / "example.json").read_text())
     replacements = {
-        "__FIGURE__": encoded,
+        "__FIGURE__": embedded_json(figure),
+        "__EXAMPLE_DATA__": embedded_json(example),
         **{key: (HERE / name).read_text() for key, name in ASSETS.items()},
     }
     for marker, content in replacements.items():

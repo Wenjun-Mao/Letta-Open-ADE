@@ -103,11 +103,11 @@ test('chapters partition the current tour; every guided hop keeps exact source i
 test('hidden provider-return beats still update visible source-backed data cards', () => {
   const app = guided();
   app.root.querySelector('[data-chapter-index="3"]').click();
-  assert.ok(app.find('viewport').querySelector('[data-node="review"] .payload.is-empty'));
+  assert.match(app.find('viewport').querySelector('[data-node="review"] .payload-tag').textContent, /TYPED INPUT/);
   app.find('play').click(); app.advance(2300); app.find('play').click();
   const proposal = [...app.find('viewport').querySelectorAll('[data-node="review"] .payload-text tspan')]
     .map(line => line.textContent).join(' ');
-  assert.equal(proposal, 'Operations or no change; not persisted');
+  assert.equal(proposal, 'correct f-location-demo -> Toronto');
   app.root.querySelector('[data-chapter-index="5"]').click();
   assert.match(app.find('viewport').querySelector('[data-node="runs"] .payload-tag').textContent, /SUCCEEDED/);
   app.dom.window.close();
@@ -232,11 +232,12 @@ test('every guide route avoids unrelated cards and ownership headers at wide and
   const app = guided();
   const figure = JSON.parse(app.find('figure').textContent);
   const guide = app.dom.window.AdeJourneyGuide, model = app.dom.window.AdeFlowModel;
-  const projected = guide.build(figure);
+  const fixture = JSON.parse(app.find('example-data').textContent);
+  const projected = app.dom.window.AdeJourneyExample.create(fixture).decorate(guide.build(figure));
   for (const width of [320, 736, 1440]) {
     for (const step of projected.props.steps) {
       const group = guide.layout(figure.props.layout, step.nodes);
-      const plan = app.dom.window.AdeFlowLayout.layout(group, projected.props.steps, width < 600, width);
+      const plan = app.dom.window.AdeFlowLayout.layout(group, [step], width < 600, width);
       for (const original of model.route(figure.props.edges, plan.rects)) {
         const curve = model.avoidCards(original, plan.obstacles);
         const others = Object.entries(plan.obstacles).filter(([id]) => id !== curve.from && id !== curve.to);

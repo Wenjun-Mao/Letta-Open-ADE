@@ -1,0 +1,38 @@
+{
+  "status": "fictional",
+  "caption": "Fictional example: Alex and Rowan. Not a live trace, measured model output, or API JSON.",
+  "subject": "Alex",
+  "subject_id": "subject-demo",
+  "run_id": "r-demo",
+  "persona": {
+    "name": "Rowan",
+    "version": "v3",
+    "intent": "Warm and direct; prefers concrete help."
+  },
+  "previous_user": {
+    "id": "u-prev-demo",
+    "content": "My presentation is tomorrow."
+  },
+  "current_user": {
+    "id": "u-demo",
+    "content": "I've moved to Toronto. My slides are finished, but I haven't rehearsed."
+  },
+  "existing_fact": {
+    "fact_id": "f-location-demo",
+    "fact_type": "person.current_location",
+    "value": "Ottawa",
+    "version": 1
+  },
+  "candidate_reply": "The slides can wait. Read me your opening; we'll tighten the first two sentences.",
+  "review_decision": {
+    "proposals": [
+      {
+        "operation": "correct",
+        "fact_id": "f-location-demo",
+        "expected_version": 1,
+        "value": "Toronto",
+        "evidence_quote": "I've moved to Toronto."
+      }
+    ]
+  }
+}

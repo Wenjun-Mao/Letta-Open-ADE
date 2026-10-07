@@ -30,3 +30,12 @@ def test_figure_strings_cannot_break_out_of_data_script():
     fragment = builder["fragment"](figure)
     assert "</script><script>alert(1)" not in fragment
     assert "\\u003c/script" in fragment
+
+
+def test_example_strings_are_escaped_independently_of_the_source_figure():
+    figure, _, _ = builder["review"]["load"]()
+    fragment = builder["fragment"](
+        figure, {"caption": "</script><script>alert(2)</script>"}
+    )
+    assert "</script><script>alert(2)" not in fragment
+    assert "\\u003c/script" in fragment

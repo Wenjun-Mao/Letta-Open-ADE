@@ -92,7 +92,7 @@
         const projection = state.guide ? global.AdeJourneyGuide.layout(data.layout, step.nodes)
           : state.whole ? data.layout : model.project(data.layout, included);
         const unbounded = standalone && state.whole;
-        plan = layout.layout(projection, data.steps, !unbounded && viewport.clientWidth < 600,
+        plan = layout.layout(projection, state.guide ? [step] : data.steps, !unbounded && viewport.clientWidth < 600,
           unbounded ? Infinity : Math.max(296, viewport.clientWidth));
         // All ports and fallback routes are stable across beats, including quiet edges.
         routes = model.route(data.edges, plan.rects).map(curve => model.avoidCards(curve, plan.obstacles));
@@ -101,7 +101,7 @@
       const scale = standalone && state.whole ? Math.max(0.75, Math.min(1, viewport.clientWidth / plan.w)) : 1;
       const svg = element('svg', {
         viewBox: `0 0 ${plan.w} ${plan.h}`, width: plan.w * scale, height: plan.h * scale,
-        class: 'journey-drawing', role: 'img', 'aria-label': `${step.label}, step ${state.beat + 1}`,
+        class: 'journey-drawing', role: 'img', 'aria-label': `${step.label}, step ${state.beat + 1}${state.guide ? ', fictional worked example' : ''}`,
       });
       svg.appendChild(element('title', {}, `${figure.title} - ${step.label}`));
       svg.appendChild(element('desc', {}, model.narration(step, state.beat)));

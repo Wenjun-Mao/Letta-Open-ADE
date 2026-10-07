@@ -11,6 +11,17 @@
       <div class="journey-viewport" data-viewport aria-label="Animated architecture diagram"></div>
     </div>
     <div class="journey-playback">
+      <section class="journey-example" data-example aria-label="Fictional worked example">
+        <div class="example-heading">
+          <strong>Worked example</strong>
+          <span class="text-small text-muted" data-example-caption></span>
+        </div>
+        <div class="example-comparison">
+          <div><strong>Input</strong><dl data-example-input></dl></div>
+          <div><strong>Output preview</strong><dl data-example-output></dl></div>
+        </div>
+        <p class="text-small text-muted" data-example-note></p>
+      </section>
       <div class="journey-controls viz-controls">
         <button class="btn" type="button" data-play aria-pressed="false">Play chapter</button>
         <div class="journey-tours" data-chapters role="group" aria-label="Choose a reading chapter"></div>
@@ -44,10 +55,12 @@
     <span>Presentation adapted from Vectorize interfig (MIT).</span>
   </div>
   <script type="application/json" data-figure>__FIGURE__</script>
+  <script type="application/json" data-example-data>__EXAMPLE_DATA__</script>
 </section>
 <style>__STYLE__</style>
 <script>__MODEL__</script>
 <script>__LAYOUT__</script>
 <script>__GUIDE__</script>
+<script>__EXAMPLES__</script>
 <script>__VIEW__</script>
 <script>__PLAYER__</script>

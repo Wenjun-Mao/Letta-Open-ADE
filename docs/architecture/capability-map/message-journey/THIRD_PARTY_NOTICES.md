@@ -23,9 +23,11 @@ card-aware visibility-grid fallback for obstructed transfers; otherwise it
 retains the adapted upstream cubic routing. Inline layout reflows rather than
 using the full-page fitting/scroll behavior.
 
-No Hindsight product architecture or figure data is included. All ADE content is
-from the source-backed local specification. This notice is distributed beside
-the editable sources and embedded in both generated presentations.
+No Hindsight product architecture or figure data is included. ADE responsibilities
+and transfers come from the source-backed local specification. A separate,
+explicitly fictional fixture supplies the guide's worked-example values, not
+runtime evidence. This notice is distributed beside the editable sources and
+embedded in both generated presentations.
 
 ## Upstream MIT License
 

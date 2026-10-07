@@ -4,7 +4,9 @@
   const figure = JSON.parse(root.querySelector('[data-figure]').textContent);
   const steps = figure.props.steps, model = globalThis.AdeFlowModel;
   const guide = globalThis.AdeJourneyGuide;
-  const guidedFigure = guide.build(figure);
+  const examples = globalThis.AdeJourneyExample;
+  const example = examples.create(JSON.parse(root.querySelector('[data-example-data]').textContent));
+  const guidedFigure = example.decorate(guide.build(figure));
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   const state = {guide: true, chapter: 0, tour: 0, beat: 0, playing: false, whole: true, rate: 1, elapsed: 0};
   const view = globalThis.AdeFlowView.create(root, figure);
@@ -89,7 +91,9 @@
     narration.textContent = state.guide ? guide.chapters[state.chapter].say : model.narration(step, state.beat);
     chapterTitle.textContent = state.guide ? `${state.chapter + 1}. ${step.label}` : step.label.replace(/^\d+ - /, '');
     root.querySelector('[data-view-scope]').textContent = state.guide
-      ? 'Guided view: selected transfers. Provider mechanics and full atomic writes remain in the detailed map.' : '';
+      ? 'Guided worked example: fictional values, selected transfers. Provider mechanics and full atomic writes remain in the detailed map.'
+      : 'Detailed reference map. Return to Guided journey for the fictional worked example.';
+    examples.render(root, example, state.guide ? state.chapter : null);
     count.textContent = state.guide ? `Chapter ${state.chapter + 1} of ${guide.chapters.length}` : `Step ${state.beat + 1} of ${step.flow.length}`;
     const total = state.guide ? guide.chapters.length : step.flow.length;
     const current = state.guide ? state.chapter + 1 : state.beat + 1;

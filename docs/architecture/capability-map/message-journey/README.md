@@ -16,6 +16,13 @@ chapter at a time and stays paused. **Play chapter** animates only the selected
 chapter and stops at its end; it never automatically advances to the next chapter.
 The chapter buttons jump directly to a chapter, paused.
 
+The guide carries one explicitly **fictional worked example** through all six
+chapters. Literal values replace generic payload descriptions; **Input / Output
+preview** lets you inspect a chapter without playing it. The output preview is
+the chapter's possible result, not the current animated state. The diagram's
+values change at their original source beats. See the worked-example revision
+below for the illustration's scope and verification limits.
+
 **Show detailed map** opens the existing full map at the current source beat.
 Here Forward/Back moves one detailed beat; **Follow this step** shows only its
 endpoints. **Guided journey** returns to the corresponding chapter of the main
@@ -177,7 +184,8 @@ package is private; no published npm package is assumed. Reference export is
 does not vendor that exporter. The editable presentation sources are
 `flow-model.js` (routing), `flow-layout.js` (fixed content sizing),
 `flow-view.js` (drawing), `player.js` (finite
-playback), `guide.js` (source-backed reading projections), `player.css` and
+playback), `guide.js` (source-backed reading projections), `examples.js` and
+`example.json` (fictional teaching values), `player.css` and
 `player-template.html`. `build.py` embeds the validated
 specification and sources into one offline HTML file and optionally an inline
 conversation fragment. [Third-party notices](THIRD_PARTY_NOTICES.md) are embedded.
@@ -246,6 +254,8 @@ range, preserves their order and records each displayed beat's source identity.
 Visible data cards carry the source's accumulated state at that exact beat,
 including responses from omitted provider mechanics; hiding a transfer does not
 erase its returned data or advance a result before it exists in the source tour.
+The worked-example revision below decorates only the guide's illustrative values
+at these same source beats.
 It never invents a shortcut arrow for omitted provider work. The original
 layout/edges/steps/evidence and all 31 details remain available unchanged.
 
@@ -277,6 +287,61 @@ motion, unobstructed routing and width-fitting without text scaling. Native SVG
 snapshots cover every chapter and a narrow projection; real-browser pixels and
 assistive-technology behavior remain unverified.
 
+### Worked Example Revision, 2026-10-07
+
+The guide reduced structural overload but still showed labels such as "original
+text + attribution" and "proposed operations." Those descriptions did not show
+what a message becomes. This is a presentation-data problem, not missing ADE
+processing. `example.json` and `examples.js` supply a single authored teaching
+fixture without modifying the layout/edge/step/evidence source specification or
+runtime. The generic detailed/conditional/experimental maps remain reference
+views rather than inheriting this fictional success case.
+
+Fictional user Alex says, "I've moved to Toronto. My slides are finished, but I
+haven't rehearsed." The existing local chat says the presentation is tomorrow;
+the stored location is Ottawa v1. Fictional Rowan v3 is warm and direct and
+prefers concrete help. This is **not Xiaotang's actual persona**, a new saved
+definition or a measured character response (PC-04/12). The illustration shows
+an accepted user/run, selected context, one possible candidate reply, a typed
+location correction with the exact current-user quote, a prepared representation,
+atomic success and the same reply reloaded by the UI (PC-01/02/05/08/09).
+
+Only `show` values in a derived guided view are decorated. Node membership,
+ownership/status labels, edge identities/direction, source beat identities,
+ordering and timing remain source-backed. The source projection itself remains
+unchanged. The timeline's identities are tested against the original transfers.
+Candidate text appears after generation; the typed reviewer receives user/fact
+input, never the candidate. The proposal appears on review return, a vector only
+after representation preparation, and reply/fact/success state changes at the
+atomic commit beat. UI reply text changes at the persisted refresh beat, not at
+candidate generation. No new summary, history recovery, hidden reasoning, numeric
+embedding, privacy policy or additional module/call is illustrated.
+
+The Input / Output preview is a teaching view of the **whole chapter**, available
+while paused, not early runtime visibility. It is explicitly fictional; proposal
+and success previews are neither provider observations nor model-quality gold
+standards. Success assumes guards pass. Structural schema/source checks establish
+fixture compatibility, not reliable interpretation (PC-05/12). The proposal uses
+the current registry's `person.current_location` and existing `correct` schema;
+synthetic IDs and readable payloads are not public API JSON. No actual records,
+provider requests or persona updates are created.
+
+Adding more panels or a second pipeline was rejected: examples reuse existing
+inset cards plus one compact, width-reflowing input/output pair. Guided cards now
+reserve the largest content **within that chapter**, avoiding empty space for
+later chapters' longer values while preserving geometry throughout playback.
+The complete reference map still sizes across all its tours. Back/Forward,
+chapter end-stops, reduced motion and paused view/state restoration are unchanged.
+
+Guardrails verify immutable source structure, every chapter's paused preview,
+phase visibility, consistent candidate/committed/displayed wording, exact quote
+binding, typed proposal schema, inset sizing, obstacle routing, inert data and
+absence of fictional overlays on experimental paths. Native SVG snapshots cover
+chapter starts/results and narrow layouts. These are not browser screenshots;
+real-browser page layout, host integration and assistive technology remain
+unqualified. The user's supplied Safari screenshot confirms the prior guided
+view displayed, not acceptance of this updated version.
+
 ## Offline Checks
 
 From the repository root:
@@ -290,6 +355,8 @@ uv run --locked python docs/architecture/capability-map/message-journey/build.py
 uv run --locked python -m pytest docs/architecture/capability-map/message-journey/test_build.py -q
 node --test docs/architecture/capability-map/message-journey/test_player.cjs
 node --test docs/architecture/capability-map/message-journey/test_guide.cjs
+node --test docs/architecture/capability-map/message-journey/test_examples.cjs
+uv run --locked python -m pytest docs/architecture/capability-map/message-journey/test_example.py -q
 node docs/architecture/capability-map/message-journey/snapshot.cjs
 ```
 
