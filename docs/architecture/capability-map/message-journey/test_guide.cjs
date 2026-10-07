@@ -167,7 +167,7 @@ test('hidden provider-return beats still update visible source-backed data cards
   app.find('play').click(); app.advance(2300); app.find('play').click();
   const proposal = [...app.find('viewport').querySelectorAll('[data-node="review"] .payload-text tspan')]
     .map(line => line.textContent).join(' ');
-  assert.equal(proposal, 'correct f-location-demo -> Toronto');
+  assert.equal(proposal, 'Correct fact ID: f-location-demo -> Toronto');
   app.root.querySelector('[data-chapter-index="5"]').click();
   assert.match(app.find('viewport').querySelector('[data-node="runs"] .payload-tag').textContent, /SUCCEEDED/);
   app.dom.window.close();

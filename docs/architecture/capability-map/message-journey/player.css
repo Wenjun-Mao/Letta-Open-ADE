@@ -43,12 +43,18 @@
 #ade-moving-message .journey-playback { padding-top: 16px; }
 #ade-moving-message .journey-example { max-width: 1000px; margin: 0 auto 20px; }
 #ade-moving-message .example-heading { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 12px; }
+#ade-moving-message .example-action-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; margin-bottom: 12px; }
+#ade-moving-message .example-action-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 #ade-moving-message .journey-example strong { font-weight: 500; }
 #ade-moving-message .example-comparison { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 24px; }
 #ade-moving-message .example-comparison dl { margin: 8px 0 0; }
 #ade-moving-message .example-comparison dt { color: var(--muted-foreground); }
 #ade-moving-message .example-comparison dd { margin: 2px 0 10px; overflow-wrap: anywhere; }
 #ade-moving-message [data-example-note] { margin: 10px 0 0; }
+#ade-moving-message .example-identifiers { margin-top: 10px; }
+#ade-moving-message .example-identifiers dl { margin-bottom: 0; }
+#ade-moving-message .example-identifiers dt { color: var(--muted-foreground); }
+#ade-moving-message .example-identifiers dd { margin: 2px 0 8px; overflow-wrap: anywhere; }
 #ade-moving-message .journey-controls, #ade-moving-message .journey-stepping { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
 #ade-moving-message .journey-tours { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; }
 #ade-moving-message .journey-tour { position: relative; }

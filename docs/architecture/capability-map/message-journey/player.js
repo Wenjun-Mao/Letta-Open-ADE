@@ -26,6 +26,8 @@
   const detail = root.querySelector('[data-detail]');
   const chapterTitle = root.querySelector('[data-chapter-title]');
   const chapters = root.querySelector('[data-chapters]');
+  const actionPrevious = root.querySelector('[data-action-previous]');
+  const actionNext = root.querySelector('[data-action-next]');
   let frame = 0, lastTime = null;
   const selected = () => state.guide ? guidedFigure.props.steps[state.chapter] : steps[state.tour];
   const currentView = () => state.guide ? guidedView : view;
@@ -77,7 +79,8 @@
     if (!window.openai?.setWidgetState) return;
     window.openai.setWidgetState({
       modelContent: {view: state.guide ? 'guided' : 'detailed',
-        tour: selected().label, step: state.guide ? state.chapter + 1 : state.beat + 1},
+        tour: selected().label, step: state.guide ? state.chapter + 1 : state.beat + 1,
+        ...(state.guide ? {action: state.beat + 1} : {})},
       privateContent: {presentation: 3, guide: state.guide, chapter: state.chapter,
         tour: state.tour, beat: state.beat, whole: state.whole},
     }).catch(() => {});
@@ -93,7 +96,10 @@
     root.querySelector('[data-view-scope]').textContent = state.guide
       ? 'Guided worked example: fictional values, selected transfers. Provider mechanics and full atomic writes remain in the detailed map.'
       : 'Detailed reference map. Return to Guided journey for the fictional worked example.';
-    examples.render(root, example, state.guide ? state.chapter : null);
+    examples.render(root, example, state.guide ? state.chapter : null, step.flow[state.beat]);
+    actionPrevious.disabled = state.beat === 0;
+    actionNext.disabled = state.beat === step.flow.length - 1;
+    root.querySelector('[data-action-count]').textContent = `Action ${state.beat + 1} of ${step.flow.length}`;
     count.textContent = state.guide ? `Chapter ${state.chapter + 1} of ${guide.chapters.length}` : `Step ${state.beat + 1} of ${step.flow.length}`;
     const total = state.guide ? guide.chapters.length : step.flow.length;
     const current = state.guide ? state.chapter + 1 : state.beat + 1;
@@ -177,6 +183,12 @@
   }
   previous.addEventListener('click', () => move(-1));
   next.addEventListener('click', () => move(1));
+  actionPrevious.addEventListener('click', () => {
+    if (state.guide) jump(Math.max(0, state.beat - 1));
+  });
+  actionNext.addEventListener('click', () => {
+    if (state.guide) jump(Math.min(selected().flow.length - 1, state.beat + 1));
+  });
   replay.addEventListener('click', () => {
     state.beat = 0; state.elapsed = 0; state.playing = !reduced.matches;
     paint(); startFrame(); save();

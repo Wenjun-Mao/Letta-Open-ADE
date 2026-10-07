@@ -67,6 +67,9 @@ async function main() {
   await snapshot('whole-send', 1440, 1, true);
   for (let tour = 0; tour < 7; tour += 1) await snapshot(`detail-flow-${tour + 1}`, 1920, 999, true, undefined, undefined, tour);
   await snapshot('acceptance-wide', 1920, 0, false, 0, 999);
+  await snapshot('capture-message-wide', 1920, 0, false, 0, 1);
+  await snapshot('capture-message-mobile', 320, 0, false, 0, 1);
+  await snapshot('save-message-and-run', 1440, 0, false, 0, 2);
   for (let chapter = 0; chapter < 6; chapter += 1) {
     await snapshot(`guide-${chapter + 1}`, 1440, 0, false, chapter);
     await snapshot(`example-complete-${chapter + 1}`, 1440, 0, false, chapter, 999);

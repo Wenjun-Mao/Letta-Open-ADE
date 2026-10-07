@@ -17,11 +17,12 @@ chapter and stops at its end; it never automatically advances to the next chapte
 The chapter buttons jump directly to a chapter, paused.
 
 The guide carries one explicitly **fictional worked example** through all six
-chapters. Literal values replace generic payload descriptions; **Input / Output
-preview** lets you inspect a chapter without playing it. The output preview is
-the chapter's possible result, not the current animated state. The diagram's
-values change at their original source beats. See the worked-example revision
-below for the illustration's scope and verification limits.
+chapters. Its **Input / After this action** example follows the highlighted
+transfer. **Previous action / Next action** inspects each arrow while paused,
+without leaving the chapter. Message ID and Run ID are labeled and explained;
+neither identifies the person. Values change at their original source beats.
+See [action-level examples](action-examples.md) for the presentation contract
+and the worked-example revision below for the scenario's evidence limits.
 
 **Show detailed map** opens the existing full map at the current source beat.
 Here Forward/Back moves one detailed beat; **Follow this step** shows only its
@@ -322,21 +323,20 @@ atomic commit beat. UI reply text changes at the persisted refresh beat, not at
 candidate generation. No new summary, history recovery, hidden reasoning, numeric
 embedding, privacy policy or additional module/call is illustrated.
 
-The Input / Output preview is a teaching view of the **whole chapter**, available
-while paused, not early runtime visibility. It is explicitly fictional; proposal
-and success previews are neither provider observations nor model-quality gold
-standards. Success assumes guards pass. Structural schema/source checks establish
-fixture compatibility, not reliable interpretation (PC-05/12). The proposal uses
-the current registry's `person.current_location` and existing `correct` schema;
-synthetic IDs and readable payloads are not public API JSON. No actual records,
-provider requests or persona updates are created.
+The initial whole-chapter Input / Output preview was superseded by
+[action-level examples](action-examples.md) on 2026-10-07. Both are explicitly
+fictional: success assumes guards pass, not reliable interpretation (PC-05/12).
+The proposal uses the current `person.current_location` registry and `correct`
+schema; synthetic IDs and readable payloads are not public API JSON. No actual
+records, provider requests or persona updates are created.
 
 Adding more panels or a second pipeline was rejected: examples reuse existing
 inset cards plus one compact, width-reflowing input/output pair. Guided cards now
 reserve the largest content **within that chapter**, avoiding empty space for
 later chapters' longer values while preserving geometry throughout playback.
-The complete reference map still sizes across all its tours. Back/Forward,
-chapter end-stops, reduced motion and paused view/state restoration are unchanged.
+The complete reference map still sizes across all its tours. Chapter Back/Forward,
+end-stops and paused restoration are unchanged; added action controls also work
+with reduced motion.
 
 Guardrails verify immutable source structure, every chapter's paused preview,
 phase visibility, consistent candidate/committed/displayed wording, exact quote
