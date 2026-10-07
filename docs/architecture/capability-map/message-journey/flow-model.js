@@ -10,11 +10,18 @@
       const a = rects[edge.from], b = rects[edge.to];
       if (!a || !b) continue;
       const stacked = a.x < b.x + b.w && b.x < a.x + a.w;
-      const [sa, sb] = edge.around
-        ? edge.around === 'above' ? ['t', 't'] : ['b', 'b']
+      const aligned = a.y < b.y + b.h && b.y < a.y + a.h;
+      const gapLeft = Math.min(a.x + a.w, b.x + b.w), gapRight = Math.max(a.x, b.x);
+      const skipsCard = !stacked && aligned && Object.entries(rects).some(([id, rect]) =>
+        id !== edge.from && id !== edge.to && rect.x < gapRight && rect.x + rect.w > gapLeft
+        && rect.y < Math.min(a.y + a.h, b.y + b.h) && rect.y + rect.h > Math.max(a.y, b.y));
+      // Horizontal bypasses share the lower side; direct links and authored return loops keep their ports.
+      const around = edge.around || (skipsCard ? 'below' : undefined);
+      const [sa, sb] = around
+        ? around === 'above' ? ['t', 't'] : ['b', 'b']
         : stacked ? a.y < b.y ? ['b', 't'] : ['t', 'b']
           : a.x < b.x ? ['r', 'l'] : ['l', 'r'];
-      picks.push({...edge, a, b, sa, sb});
+      picks.push({...edge, around, a, b, sa, sb});
     }
     const ends = new Map(), anchors = new Map();
     for (const pick of picks) {

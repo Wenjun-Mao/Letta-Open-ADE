@@ -216,12 +216,12 @@ Evidence limit: No generic external tool platform is proposed. Memory search is 
 Known gap: A concrete capability and execution/authority contract are required before expansion.
 Next isolated check: Reopen for a named user need, not because this placeholder exists.
 
-## Supporting Register
+## Platform Support / Supporting Register
 
-This register is outside the four-domain L1/L2/L3 capability hierarchy.
+Cross-cutting platform responsibilities with their existing owners.
 
 ### SUP-01: Turn orchestration and worker
-Owner: **Supporting Register / Runtime Coordination**. Implementation: **implemented**.
+Owner: **Platform Support / Supporting Register / Runtime Coordination**. Implementation: **implemented**.
 Input: Accepted run, deadline, lease and immutable bindings. Output: One coordinated attempt, tools/review, cancellation/retry and final outcome.
 Code: [turn_execution.py](../../../services/ade-api/src/ade_api/features/agent_runtime/turn_execution.py), [worker.py](../../../services/ade-api/src/ade_api/features/agent_runtime/worker.py), [run_service.py](../../../services/ade-api/src/ade_api/features/agent_runtime/run_service.py), [retry.py](../../../services/ade-api/src/ade_api/features/agent_runtime/retry.py) Tests: [test_worker.py](../../../services/ade-api/tests/agent_runtime/test_worker.py), [test_retry.py](../../../services/ade-api/tests/agent_runtime/test_retry.py)
 Evidence limit: Owns sequencing and atomic finalization; capability boxes are not independent post-reply hooks (PC-08/09).
@@ -229,7 +229,7 @@ Known gap: The chart is not a deployment or retry-policy change.
 Next isolated check: Trace acceptance through failure/cancellation/success with existing receipts.
 
 ### SUP-02: PostgreSQL and migrations
-Owner: **Supporting Register / State & Storage**. Implementation: **implemented**.
+Owner: **Platform Support / Supporting Register / State & Storage**. Implementation: **implemented**.
 Input: Transactions, schema migrations and locked identities. Output: Native state, revisions, summaries, runs and events.
 Code: [metadata.py](../../../services/ade-api/src/ade_api/features/agent_runtime/persistence/metadata.py), [database.py](../../../services/ade-api/src/ade_api/features/agent_runtime/persistence/database.py), [migrations](../../../services/ade-api/migrations) Tests: [test_metadata.py](../../../services/ade-api/tests/agent_runtime/persistence/test_metadata.py), [test_postgres_migration.py](../../../services/ade-api/tests/agent_runtime/persistence/test_postgres_migration.py)
 Evidence limit: PostgreSQL is native state authority; persona authoring SQLite is separate from immutable runtime snapshots.
@@ -237,7 +237,7 @@ Known gap: Storage correctness is not semantic memory correctness.
 Next isolated check: Verify schema and transaction invariants using isolated database tests.
 
 ### SUP-03: Model Router and catalog adapters
-Owner: **Supporting Register / Model Access**. Implementation: **implemented**.
+Owner: **Platform Support / Supporting Register / Model Access**. Implementation: **implemented**.
 Input: Canonical route, capability profile and request. Output: One-attempt provider response or explicit failure.
 Code: [forwarding.py](../../../services/model-router/src/model_router/forwarding.py), [profiles.py](../../../services/model-router/src/model_router/profiles.py), [router_transport.py](../../../services/ade-api/src/ade_api/features/agent_runtime/router_transport.py), [README.md](../../../services/ade-api/src/ade_api/features/model_catalog/README.md) Tests: [test_app.py](../../../services/model-router/tests/test_app.py), [test_profiles.py](../../../services/model-router/tests/test_profiles.py)
 Evidence limit: Router owns identity/discovery/forwarding; ADE owns turn retry and product behavior.
@@ -245,7 +245,7 @@ Known gap: Provider availability does not qualify persona or memory behavior.
 Next isolated check: Verify request/profile identity independently of product scoring.
 
 ### SUP-04: Evaluation workflows and fixtures
-Owner: **Supporting Register / Evaluation**. Implementation: **implemented**.
+Owner: **Platform Support / Supporting Register / Evaluation**. Implementation: **implemented**.
 Input: Tracked fixtures, explicit environment binding and any separately authorized run. Output: Offline checks, diagnostic artifacts or exact qualification evidence.
 Code: [README.md](../../../workflows/evals/character_memory_dev/README.md), [README.md](../../../workflows/evals/character_memory_dev/story_continuity/README.md), [README.md](../../../workflows/evals/chat_memory_eval/README.md), [README.md](../../../workflows/evals/agent_runtime_acceptance/README.md), [evaluation_tools.py](../../../services/ade-api/src/ade_api/features/agent_runtime/evaluation_tools.py) Tests: [tests](../../../workflows/evals/character_memory_dev/tests), [test_postgres_native_story_runner.py](../../../services/ade-api/tests/agent_runtime/persistence/test_postgres_native_story_runner.py)
 Evidence limit: Offline, private replay, live diagnosis and release gates remain distinct. This map launches none of them.
@@ -253,7 +253,7 @@ Known gap: Reuse of named public memory benchmarks has not yet been mapped to th
 Next isolated check: Map reusable tasks to subsystem measures; keep only uncovered ADE regression cases.
 
 ### SUP-05: Dispatch and source observations
-Owner: **Supporting Register / Observability**. Implementation: **implemented**.
+Owner: **Platform Support / Supporting Register / Observability**. Implementation: **implemented**.
 Input: Actual boundary events and bounded evaluation capture. Output: Counts, completeness, hashes, omission receipts and before/after state.
 Code: [provider_tracing.py](../../../services/ade-api/src/ade_api/features/agent_runtime/provider_tracing.py), [request_counts.py](../../../services/ade-api/src/ade_api/features/agent_runtime/request_counts.py), [history_observations.py](../../../services/ade-api/src/ade_api/features/agent_runtime/history_observations.py), [evaluation_observations.py](../../../services/ade-api/src/ade_api/features/agent_runtime/persistence/evaluation_observations.py) Tests: [test_provider_tracing.py](../../../services/ade-api/tests/agent_runtime/test_provider_tracing.py), [test_request_counts.py](../../../services/ade-api/tests/agent_runtime/test_request_counts.py), [test_history_observations.py](../../../services/ade-api/tests/agent_runtime/test_history_observations.py)
 Evidence limit: Public metadata and restricted full-state capture have different access and completeness contracts; neither exposes private model reasoning.
@@ -261,7 +261,7 @@ Known gap: Observed availability cannot identify which source caused a reply.
 Next isolated check: Distinguish unavailable, truncated and observed-empty boundary artifacts.
 
 ### SUP-06: Release gates, smoke and recovery
-Owner: **Supporting Register / Release & Operations**. Implementation: **implemented**.
+Owner: **Platform Support / Supporting Register / Release & Operations**. Implementation: **implemented**.
 Input: Exact source/build/policy identity and approved evidence. Output: Release decision, operational checks and documented rollback.
 Code: [release_policy.py](../../../services/ade-api/src/ade_api/features/agent_runtime/release_policy.py), [check_agent_studio_release_gate.py](../../../scripts/check_agent_studio_release_gate.py), [ade_api_e2e_check.py](../../../workflows/smoke/ade_api_e2e_check.py), [agent-studio-release.md](../../../docs/operations/agent-studio-release.md) Tests: [test_release_evidence.py](../../../services/ade-api/tests/agent_runtime/test_release_evidence.py), [test_agent_studio_release_scripts.py](../../../scripts/tests/test_agent_studio_release_scripts.py)
 Evidence limit: Gate machinery exists; this inventory neither checks live deployment nor qualifies changed policies.
@@ -269,7 +269,7 @@ Known gap: Historical qualification cannot be inherited by new source/policy has
 Next isolated check: Audit exact ledger bindings only when a release decision is requested.
 
 ### SUP-07: App composition and authentication
-Owner: **Supporting Register / Application Boundary**. Implementation: **implemented**.
+Owner: **Platform Support / Supporting Register / Application Boundary**. Implementation: **implemented**.
 Input: Same-origin requests and server-side configuration/credentials. Output: Composed product API and authenticated feature access.
 Code: [app.py](../../../services/ade-api/src/ade_api/platform/app.py), [auth.py](../../../services/ade-api/src/ade_api/platform/auth.py) Tests: [test_native_app.py](../../../services/ade-api/tests/agent_runtime/test_native_app.py)
 Evidence limit: Application wiring and credential handling retain their existing platform owner.
@@ -277,19 +277,19 @@ Known gap: Not every infrastructure concern is a Character or Memory module.
 Next isolated check: Keep public feature contracts and server-only credentials at their existing boundaries.
 
 ### SUP-08: Reviewed task schemas
-Owner: **Supporting Register / Schema Content**. Implementation: **implemented**.
+Owner: **Platform Support / Supporting Register / Schema Content**. Implementation: **implemented**.
 Input: Reviewed schema edits and Label Lab selection. Output: Validated task schemas through Schema Center's public contract.
 Code: [registry.py](../../../services/ade-api/src/ade_api/features/schema_center/registry.py), [label-schemas](../../../content/label-schemas) Tests: [test_api.py](../../../services/ade-api/src/ade_api/features/schema_center/tests/test_api.py), [test_registry.py](../../../services/ade-api/src/ade_api/features/schema_center/tests/test_registry.py)
 Evidence limit: Schema Center and its content registry exist; task-label schemas are not Memory facts.
 Known gap: Task schema evolution must not silently change native memory contracts.
 Next isolated check: Trace schema identity through the owning task instead of the character-memory pipeline.
 
-## Adjacent Features
+## Independent Labs / Adjacent Features
 
-This register is outside the four-domain L1/L2/L3 capability hierarchy.
+Independent Comment and Label labs with their existing owners.
 
 ### ADJ-01: Comment Lab
-Owner: **Adjacent Features / Independent Labs**. Implementation: **implemented**.
+Owner: **Independent Labs / Adjacent Features / Independent Labs**. Implementation: **implemented**.
 Input: Task-specific comment, persona and model options. Output: Router-backed comment result under the lab contract.
 Code: [README.md](../../../services/ade-api/src/ade_api/features/comment_lab/README.md), [README.md](../../../apps/ade-web/src/features/comment-lab/README.md) Tests: [test_request_response_mappers.py](../../../services/ade-api/src/ade_api/features/comment_lab/tests/test_request_response_mappers.py)
 Evidence limit: Independent existing feature, not silently reassigned to the character-memory runtime.
@@ -297,7 +297,7 @@ Known gap: This inventory does not re-evaluate its task behavior.
 Next isolated check: Use its owning workflow if Comment Lab work is requested.
 
 ### ADJ-02: Label Lab
-Owner: **Adjacent Features / Independent Labs**. Implementation: **implemented**.
+Owner: **Independent Labs / Adjacent Features / Independent Labs**. Implementation: **implemented**.
 Input: Task text, selected schema and model options. Output: Validated labeling result under the lab contract.
 Code: [README.md](../../../services/ade-api/src/ade_api/features/label_lab/README.md), [README.md](../../../apps/ade-web/src/features/label-lab/README.md) Tests: [test_service.py](../../../services/ade-api/src/ade_api/features/label_lab/tests/test_service.py)
 Evidence limit: Independent existing feature using Schema Center and Model Catalog; not character conversational behavior.

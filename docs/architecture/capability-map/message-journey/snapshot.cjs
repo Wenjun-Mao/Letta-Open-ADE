@@ -13,7 +13,7 @@ const palette = {
   '--journey-surface': '#f5f7fa', '--journey-on-active': '#ffffff',
 };
 
-async function snapshot(name, width, beat, whole, chapter, guideBeat) {
+async function snapshot(name, width, beat, whole, chapter, guideBeat, tour = 0) {
   const dom = new JSDOM(fs.readFileSync(path.join(__dirname, 'ade-message-journey.html'), 'utf8'), {
     runScripts: 'dangerously',
     beforeParse(window) {
@@ -26,8 +26,10 @@ async function snapshot(name, width, beat, whole, chapter, guideBeat) {
   });
   const root = dom.window.document.getElementById('ade-moving-message');
   if (chapter == null) {
-    root.querySelector('[data-tour-index="0"]').click();
-    for (let index = 0; index < beat; index += 1) root.querySelector('[data-next]').click();
+    root.querySelector(`[data-tour-index="${tour}"]`).click();
+    const figure = JSON.parse(root.querySelector('[data-figure]').textContent);
+    const last = Math.min(beat, figure.props.steps[tour].flow.length - 1);
+    for (let index = 0; index < last; index += 1) root.querySelector('[data-next]').click();
     if ((root.querySelector('[data-viewport]').dataset.view === 'whole') !== whole) root.querySelector('[data-whole]').click();
   } else {
     root.querySelector(`[data-chapter-index="${chapter}"]`).click();
@@ -63,6 +65,7 @@ async function main() {
   await snapshot('atomic-commit', 1440, 37, false);
   await snapshot('whole-architecture', 1440, 23, true);
   await snapshot('whole-send', 1440, 1, true);
+  for (let tour = 0; tour < 7; tour += 1) await snapshot(`detail-flow-${tour + 1}`, 1920, 999, true, undefined, undefined, tour);
   await snapshot('acceptance-wide', 1920, 0, false, 0, 999);
   for (let chapter = 0; chapter < 6; chapter += 1) {
     await snapshot(`guide-${chapter + 1}`, 1440, 0, false, chapter);

@@ -47,6 +47,28 @@ def test_static_overview_has_every_piece_and_only_declared_edges(inventory):
             assert (node.get("data-from"), node.get("data-to")) in edges
 
 
+def test_static_and_browser_views_name_support_and_records_positively(inventory):
+    tree = ElementTree.fromstring(renderer["render_svg"](inventory))
+    text = " ".join(tree.itertext())
+    assert "Platform support / Runtime, storage, model access" in text
+    assert "Persisted memory records / ADE PostgreSQL" in text
+    for item in inventory["entries"]:
+        if item["domain"] == "support":
+            assert f"{item['id']} / {item['subsystem']}" in text
+    html = renderer["render_html"](inventory, (HERE / "template.html").read_text())
+    assert "__FLOW_MODEL__" not in html
+    assert "globalThis.AdeFlowModel" in html
+    assert "Copyright (c) 2025 Vectorize AI Inc." in html
+    assert "outside L1-L3 capability containment" not in html
+
+
+@pytest.mark.parametrize("marker", ["", "__FLOW_MODEL____FLOW_MODEL__"])
+def test_missing_or_duplicate_routing_marker_fails(inventory, marker):
+    template = (HERE / "template.html").read_text().replace("__FLOW_MODEL__", marker)
+    with pytest.raises(ValueError, match="one routing marker"):
+        renderer["render_html"](inventory, template)
+
+
 def test_character_refinement_preserves_existing_topology(inventory):
     character = next(item for item in inventory["domains"] if item["id"] == "character")
     assert character["subsystems"] == ["Persona Definition", "Conversation Behavior"]

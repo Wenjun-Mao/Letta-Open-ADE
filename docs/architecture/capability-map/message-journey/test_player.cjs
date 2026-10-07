@@ -188,12 +188,37 @@ test('routing has directed endpoints, deterministic ports and exact cubic endpoi
   app.dom.window.close();
 });
 
+test('horizontal bypasses use one lower side while adjacent links and authored returns remain distinct', () => {
+  const app = player();
+  const model = app.dom.window.AdeFlowModel;
+  const rects = {a: {x: 20, y: 80, w: 100, h: 60},
+    middle: {x: 180, y: 80, w: 100, h: 60},
+    b: {x: 340, y: 80, w: 100, h: 60}, c: {x: 500, y: 80, w: 100, h: 60}};
+  const edges = [{id: 'direct', from: 'a', to: 'middle'},
+    {id: 'first', from: 'a', to: 'b'}, {id: 'second', from: 'a', to: 'c'},
+    {id: 'return', from: 'c', to: 'a', around: 'above'}];
+  const original = JSON.stringify(edges);
+  const curves = model.route(edges, rects);
+  assert.equal(JSON.stringify(edges), original);
+  assert.equal(curves[0].sa, 'r'); assert.equal(curves[0].sb, 'l');
+  for (const curve of curves.slice(1, 3)) {
+    assert.equal(curve.around, 'below');
+    assert.equal(curve.sa, 'b'); assert.equal(curve.sb, 'b');
+    for (let sample = 0; sample <= 200; sample += 1) {
+      const p = model.pointAt(model.avoidCards(curve, rects), sample / 200);
+      if (p.x >= rects.middle.x && p.x <= rects.middle.x + rects.middle.w) assert.ok(p.y > 146);
+    }
+  }
+  assert.equal(curves[3].sa, 't'); assert.equal(curves[3].sb, 't');
+  app.dom.window.close();
+});
+
 test('obstructed packet routes avoid intervening cards without changing endpoint identity', () => {
   const app = player();
   const model = app.dom.window.AdeFlowModel;
   const rects = {
     a: {x: 50, y: 20, w: 100, h: 60}, b: {x: 350, y: 20, w: 100, h: 60},
-    middle: {x: 220, y: 0, w: 100, h: 100},
+    middle: {x: 220, y: 0, w: 100, h: 180},
   };
   const [curve] = model.route([{id: 'one', from: 'a', to: 'b'}], rects);
   const routed = model.avoidCards(curve, rects);

@@ -71,11 +71,12 @@
       const {item, parents} = entries.get(id);
       const domain = parents.find(parent => parent.label?.startsWith('L1 - '));
       const subsystem = parents.find(parent => parent.label?.startsWith('L2 - '));
+      const support = parents.find(parent => ['runtime-coordination', 'model-access'].includes(parent.id));
       const artifact = item.sub.includes('[Artifact]');
-      const key = item.shape === 'store' ? 'guide-records' : artifact ? 'guide-artifacts' : subsystem?.id || 'guide-support';
-      const label = item.shape === 'store' ? 'Records - ADE PostgreSQL (not modules)'
-        : artifact ? 'Artifacts (not modules)'
-          : subsystem ? `${domain.label} / ${subsystem.label}` : 'Supporting runtime (not L1)';
+      const key = item.shape === 'store' ? 'guide-records' : artifact ? 'guide-artifacts' : subsystem?.id || support.id;
+      const label = item.shape === 'store' ? 'Persisted records / ADE PostgreSQL'
+        : artifact ? 'Transient outputs'
+          : subsystem ? `${domain.label} / ${subsystem.label}` : support.label;
       // One combined ownership header replaces nested frames, not the underlying hierarchy.
       if (!groups.has(key)) groups.set(key, {id: key, label, direction: 'row', gap: 22, children: []});
       groups.get(key).children.push(item);

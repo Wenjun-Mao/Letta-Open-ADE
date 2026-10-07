@@ -138,6 +138,14 @@ def validate(figure: dict, evidence: dict, inventory: dict) -> dict[str, int]:
                         entry["subsystem"] in owners,
                         f"Subsystem ownership drift: {reference}",
                     )
+                elif entry["domain"] == "support":
+                    require(
+                        any(
+                            groups[parent].get("label") == entry["subsystem"]
+                            for parent in ancestors[identity]
+                        ),
+                        f"Supporting responsibility identity drift: {reference}",
+                    )
             else:
                 require(
                     nodes[identity].get("shape") == "store",

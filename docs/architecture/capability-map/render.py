@@ -101,7 +101,15 @@ def render_html(data: dict, template: str) -> str:
     encoded = (
         encoded.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     )
-    return template.replace(MARKER, encoded)
+    routing_marker = "__FLOW_MODEL__"
+    if template.count(routing_marker) != 1:
+        raise ValueError("Template must have one routing marker")
+    journey = HERE / "message-journey"
+    notice = (journey / "THIRD_PARTY_NOTICES.md").read_text()
+    routing = (journey / "flow-model.js").read_text()
+    return template.replace(MARKER, encoded).replace(
+        routing_marker, f"/*\n{notice}\n*/\n{routing}"
+    )
 
 
 def source_links(references: list[str], data: dict) -> str:
@@ -115,7 +123,12 @@ def source_links(references: list[str], data: dict) -> str:
 
 def render_markdown(data: dict) -> str:
     domains = {item["id"]: item["name"] for item in data["domains"]}
-    domains.update({"support": "Supporting Register", "adjacent": "Adjacent Features"})
+    domains.update(
+        {
+            "support": "Platform Support / Supporting Register",
+            "adjacent": "Independent Labs / Adjacent Features",
+        }
+    )
     lines = [
         "# ADE Capability Inventory",
         "",
@@ -133,7 +146,9 @@ def render_markdown(data: dict) -> str:
             lines.extend(
                 [
                     "",
-                    "This register is outside the four-domain L1/L2/L3 capability hierarchy.",
+                    "Cross-cutting platform responsibilities with their existing owners."
+                    if domain_id == "support"
+                    else "Independent Comment and Label labs with their existing owners.",
                 ]
             )
         for entry in data["entries"]:

@@ -35,6 +35,11 @@ def render_svg(data: dict) -> str:
         level = (
             "L3 / " if item.get("domain") in {d["id"] for d in data["domains"]} else ""
         )
+        identity = level + id_
+        if item.get("domain") in {"support", "adjacent"}:
+            identity += " / " + item["subsystem"]
+        elif stored:
+            identity += " / Persisted record"
         nodes[id_] = (x, y, width, height)
         dashed = ' stroke-dasharray="7 5"' if status == "deferred" else ""
         foreground.append(
@@ -46,7 +51,7 @@ def render_svg(data: dict) -> str:
         text(
             x + 15,
             y + (20 if compact else 24),
-            level + id_,
+            identity,
             11 if compact else 13,
             "#597086",
         )
@@ -136,7 +141,7 @@ def render_svg(data: dict) -> str:
     text(
         516,
         484,
-        "Stored records / not processing modules",
+        "Persisted memory records / ADE PostgreSQL",
         21,
         bold=True,
     )
@@ -169,7 +174,7 @@ def render_svg(data: dict) -> str:
         1710,
         2160,
         240,
-        "Supporting register / shared machinery, outside the four capability domains",
+        "Platform support / Runtime, storage, model access, evaluation and operations",
         fill="#f0f4f7",
     )
     support = [item["id"] for item in data["entries"] if item["domain"] == "support"]
@@ -180,11 +185,11 @@ def render_svg(data: dict) -> str:
         1980,
         1400,
         165,
-        "Adjacent features / retain their existing owners",
+        "Independent labs / Comment Lab and Label Lab",
         fill="#f6f8fb",
     )
     row(["ADJ-01", "ADJ-02"], 62, 2040, 1356, 85)
-    panel(1470, 1980, 730, 165, "Stored operational records", fill="#eef3f8")
+    panel(1470, 1980, 730, 165, "Persisted operational records", fill="#eef3f8")
     node("REC-RUNS", 1492, 2040, 686, 85)
 
     recall, retain = data["flows"][:2]

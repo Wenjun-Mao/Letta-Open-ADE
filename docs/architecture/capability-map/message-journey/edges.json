@@ -19,7 +19,7 @@
   {"id": "query-embedding-request", "from": "search", "to": "router", "label": "query embedding", "quiet": true},
   {"id": "query-embedding-response", "from": "router", "to": "search", "label": "query vector", "quiet": true},
   {"id": "fact-search-data", "from": "index", "to": "search", "label": "current scoped fact matches", "quiet": true},
-  {"id": "base-context", "from": "scope", "to": "delivery", "label": "local dialogue / summary / eligible fact state", "around": "above", "quiet": true},
+  {"id": "base-context", "from": "scope", "to": "delivery", "label": "local dialogue / summary / eligible fact state", "around": "below", "quiet": true},
   {"id": "fact-results", "from": "search", "to": "delivery", "label": "retrieved fact records", "quiet": true},
   {"id": "delivered-request", "from": "delivery", "to": "dispatch", "label": "built context, not proof of semantic sufficiency", "quiet": true},
   {"id": "generation-input", "from": "dispatch", "to": "behavior", "label": "actual persona + evidence + current turn + tools", "quiet": true},

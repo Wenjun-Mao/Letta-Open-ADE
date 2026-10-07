@@ -23,6 +23,11 @@ card-aware visibility-grid fallback for obstructed transfers; otherwise it
 retains the adapted upstream cubic routing. Inline layout reflows rather than
 using the full-page fitting/scroll behavior.
 
+The connected capability-map HTML also embeds this routing implementation and
+notice. Horizontal bypasses prefer a lower corridor in both renderers; explicit
+author hints and direct links retain their distinct routing. Support and data
+frames use positive responsibility/type identities from ADE's inventory.
+
 No Hindsight product architecture or figure data is included. ADE responsibilities
 and transfers come from the source-backed local specification. A separate,
 explicitly fictional fixture supplies the guide's worked-example values, not

@@ -87,6 +87,11 @@ and supporting runtime boxes are not assigned fictional L3 capability depth.
 
 ## Ownership And Representation
 
+[Chart readability](../presentation.md) defines positive identity headers and
+consistent bypass placement across all views. Runtime Coordination and Model
+Access have separate named support frames; records and transient outputs remain
+distinct without invented L1/L2/L3 depth.
+
 | Frame | Included responsibility |
 | --- | --- |
 | L1 Character / L2 Persona Definition | CHAR-01 authored intent and CHAR-02 existing immutable binding; authoring is a pre-turn prerequisite. |

@@ -51,6 +51,18 @@ def test_module_cannot_move_to_another_subsystem(specification):
         review["validate"](figure, evidence, inventory)
 
 
+def test_support_frames_must_name_the_registered_responsibility(specification):
+    figure, evidence, inventory = specification
+    support = next(
+        item
+        for item in figure["props"]["layout"]["children"]
+        if item["id"] == "support"
+    )
+    support["children"][0]["label"] = "Not L1"
+    with pytest.raises(ValueError, match="Supporting responsibility identity drift"):
+        review["validate"](figure, evidence, inventory)
+
+
 def test_experimental_edge_cannot_leak_into_current_tour(specification):
     figure, evidence, inventory = specification
     figure["props"]["steps"][0]["flow"].append({"edges": "reference-reply"})

@@ -42,6 +42,7 @@ main{max-width:1800px;margin:0 auto;padding:28px}h1,h2,h3,p{margin:0}h1{font-siz
 <footer id="footer"></footer>
 </main>
 <script type="application/json" id="inventory-data">__INVENTORY_DATA__</script>
+<script>__FLOW_MODEL__</script>
 <script>
 const data=JSON.parse(document.getElementById("inventory-data").textContent);
 const all=[...data.entries,...data.records],byId=new Map(all.map(x=>[x.id,x]));
@@ -53,22 +54,22 @@ function node(item,record=false){
   const button=el("button",`node${record?" record":""}`);button.type="button";button.id=item.id;
   button.dataset.status=item.status||"record";button.setAttribute("aria-pressed","false");
   const level=item.domain&&!["support","adjacent"].includes(item.domain)?"L3 / ":"";
-  append(button,el("small","node-id",`${level}${item.id}`),el("strong","",item.name),el("small","",record?"Stored record, not processing":item.subsystem));
+  append(button,el("small","node-id",`${level}${item.id}`),el("strong","",item.name),el("small","",record?"Persisted record / ADE PostgreSQL":item.subsystem));
   if(item.status)button.appendChild(el("span",`badge ${item.status}`,item.status));
   button.addEventListener("click",()=>{selectedId=item.id;updateSelection();});return button;
 }
 function buildDomain(domain){
-  const section=document.getElementById(domain.id),title=el("div","domain-title");
+  const section=document.getElementById(domain.id),title=el("div","domain-title routing-heading");
   append(title,el("h2","",`L1 / ${domain.name}`),el("small","",domain.role));section.appendChild(title);
   for(const subsystem of domain.subsystems){
-    const group=el("section","subsystem");group.appendChild(el("h3","",`L2 / ${subsystem}`));
+    const group=el("section","subsystem");group.appendChild(el("h3","routing-heading",`L2 / ${subsystem}`));
     let gridClass="module-grid";
     if(domain.id==="memory")gridClass+=subsystem==="Recall & Context"?" recall-grid":subsystem==="Retention & Updates"?" retention-grid":" organization-grid";
     const grid=el("div",gridClass);
     data.entries.filter(x=>x.domain===domain.id&&x.subsystem===subsystem).forEach(x=>grid.appendChild(node(x)));
     group.appendChild(grid);section.appendChild(group);
     if(domain.id==="memory"&&subsystem==="Recall & Context"){
-      const store=el("section","records");store.appendChild(el("h3","","Stored records / not L3 processing modules"));
+      const store=el("section","records");store.appendChild(el("h3","routing-heading","Persisted memory records / ADE PostgreSQL"));
       const rows=el("div","records-grid");data.records.filter(x=>!["REC-DEFINITION","REC-RUNS"].includes(x.id)).forEach(x=>rows.appendChild(node(x,true)));store.appendChild(rows);section.appendChild(store);
     }
     if(domain.id==="character"&&subsystem==="Persona Definition"){
@@ -79,8 +80,8 @@ function buildDomain(domain){
   section.appendChild(el("p","caption",caption));
 }
 data.domains.forEach(buildDomain);
-for(const [id,title,caption] of [["support","Supporting register / outside L1-L3 capability containment","Shared machinery retains its existing owner; it is not a fifth capability domain."],["adjacent","Adjacent ADE features","Independent labs are included without being reassigned to the character-memory loop."]]){
-  const section=document.getElementById(id);append(section,el("h2","",title),el("p","caption",caption));
+for(const [id,title,caption] of [["support","Platform support / Supporting register","Runtime coordination, state and storage, model access, evaluation, observability, operations, application wiring and schema content."],["adjacent","Independent labs / Adjacent features","Comment Lab and Label Lab retain their existing owners."]]){
+  const section=document.getElementById(id);append(section,el("h2","routing-heading",title),el("p","caption",caption));
   const grid=el("div","module-grid");data.entries.filter(x=>x.domain===id).forEach(x=>grid.appendChild(node(x)));section.appendChild(grid);
   if(id==="support"){const store=el("section","records");store.appendChild(node(byId.get("REC-RUNS"),true));section.appendChild(store);}
 }
@@ -94,7 +95,7 @@ function updateSelection(){
   document.querySelectorAll(".node").forEach(button=>{const yes=button.id===selectedId;button.classList.toggle("selected",yes);button.setAttribute("aria-pressed",String(yes));});
   details.appendChild(el("h2","",`${item.id} / ${item.name}`));
   const domain=data.domains.find(x=>x.id===item.domain);
-  details.appendChild(el("p","owner",domain?`${domain.name} / ${item.subsystem} / ${item.name}`:item.domain?`${item.domain} register / ${item.subsystem}`:"Stored record family, not a module"));
+  details.appendChild(el("p","owner",domain?`${domain.name} / ${item.subsystem} / ${item.name}`:item.domain?`${item.domain==="support"?"Platform support":"Independent labs"} / ${item.subsystem}`:"Persisted record / ADE PostgreSQL"));
   if(item.status){
     sectionDetail("Implementation",item.status);sectionDetail("Input and output",`${item.input} -> ${item.output}`);
     sectionDetail("Evidence and limits",item.evidence);sectionDetail("Known gap",item.gap);sectionDetail("Next isolated check",item.next_check);
@@ -111,22 +112,15 @@ function drawConnections(){
   const defs=document.createElementNS(ns,"defs"),marker=document.createElementNS(ns,"marker");
   Object.entries({id:"arrow",viewBox:"0 0 10 10",refX:"9",refY:"5",markerWidth:"7",markerHeight:"7",orient:"auto-start-reverse"}).forEach(([k,v])=>marker.setAttribute(k,v));
   const tip=document.createElementNS(ns,"path");tip.setAttribute("d","M 0 0 L 10 5 L 0 10 z");tip.style.fill=color;tip.style.stroke="none";tip.style.opacity="1";marker.appendChild(tip);defs.appendChild(marker);svg.appendChild(defs);
-  function rect(element){const r=element.getBoundingClientRect();return{left:r.left-box.left,right:r.right-box.left,top:r.top-box.top,bottom:r.bottom-box.top,cx:r.left+r.width/2-box.left,cy:r.top+r.height/2-box.top};}
-  for(const [index,[from,to,label]] of activeFlow.edges.entries()){
-    const source=document.getElementById(from),target=document.getElementById(to),a=rect(source),b=rect(target);
-    const ag=source.closest(".subsystem,.records,.support,.domain"),bg=target.closest(".subsystem,.records,.support,.domain"),ar=rect(ag);
-    const ad=source.closest(".domain,.support"),bd=target.closest(".domain,.support"),dr=rect(ad);
-    let points;
-    if(ag===bg&&Math.abs(a.top-b.top)<8&&a.right<b.left){points=[[a.right,a.cy],[b.left,b.cy]];}
-    else if(ag===bg&&a.bottom<b.top){const mid=(a.bottom+b.top)/2;points=[[a.cx,a.bottom],[a.cx,mid],[b.cx,mid],[b.cx,b.top]];}
-    else if(ad?.id==="memory"&&bd?.id==="character"){const lane=dr.left-10;points=[[a.cx,a.bottom],[a.cx,ar.bottom+7],[lane,ar.bottom+7],[lane,b.cy],[b.right,b.cy]];}
-    else if(ad?.id==="character"&&bd?.id==="memory"){const lane=dr.right+10;points=[[a.right,a.cy],[lane,a.cy],[lane,b.top-7],[b.cx,b.top-7],[b.cx,b.top]];}
-    else{
-      const lane=Math.max(dr.right,rect(bd).right)+7+(index%3)*3;
-      points=[[a.cx,a.top],[a.cx,a.top-7],[lane,a.top-7],[lane,b.bottom+7],[b.cx,b.bottom+7],[b.cx,b.bottom]];
-    }
-    const path=document.createElementNS(ns,"path");path.setAttribute("d",points.map(([x,y],i)=>`${i?"L":"M"} ${x} ${y}`).join(" "));
-    path.dataset.edge=`${from}:${to}`;const title=document.createElementNS(ns,"title");title.textContent=`${from} -> ${to}: ${label}`;path.appendChild(title);
+  function rect(element){const r=element.getBoundingClientRect();return{x:r.left-box.left,y:r.top-box.top,w:r.width,h:r.height};}
+  const rects=Object.fromEntries(all.map(item=>[item.id,rect(document.getElementById(item.id))]));
+  const headings=Object.fromEntries([...document.querySelectorAll(".routing-heading")].map((item,index)=>[`@heading:${index}`,{...rect(item),text:true}]));
+  const edges=activeFlow.edges.map(([from,to,label])=>({id:`${from}:${to}`,from,to,label}));
+  const model=globalThis.AdeFlowModel;
+  for(const original of model.route(edges,rects)){
+    const curve=model.avoidCards(original,{...rects,...headings});
+    const path=document.createElementNS(ns,"path");path.setAttribute("d",curve.d);
+    path.dataset.edge=curve.id;const title=document.createElementNS(ns,"title");title.textContent=`${curve.from} -> ${curve.to}: ${curve.label}`;path.appendChild(title);
     path.style.stroke=color;path.setAttribute("marker-end","url(#arrow)");svg.appendChild(path);
   }
 }

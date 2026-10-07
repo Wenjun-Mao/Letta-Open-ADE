@@ -41,13 +41,13 @@ class Element {
     }
     return null;
   }
-  getBoundingClientRect() { return {left: 0, top: 0, right: 1600, bottom: 2000, width: 1600, height: 2000}; }
+  getBoundingClientRect() { return this.bounds || {left: 0, top: 0, right: 1600, bottom: 2000, width: 1600, height: 2000}; }
 }
 
 function loadMap(width) {
   const html = fs.readFileSync(path.join(__dirname, 'ade-capability-map.html'), 'utf8');
   const data = JSON.parse(html.match(/<script type="application\/json" id="inventory-data">([\s\S]*?)<\/script>/)[1]);
-  const code = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+  const code = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => match[1]).join('\n');
   const document = {
     createElement: tag => new Element(tag, document),
     createElementNS: (_, tag) => new Element(tag, document),
@@ -80,7 +80,7 @@ function loadMap(width) {
     ResizeObserver: class { constructor(callback) { this.callback = callback; } observe() { this.callback(); } },
   });
   new vm.Script(code, {filename: 'ade-capability-map.html'}).runInContext(context);
-  return {document, data};
+  return {document, data, model: context.AdeFlowModel};
 }
 
 for (const width of [1600, 375]) {
@@ -116,3 +116,41 @@ for (const width of [1600, 375]) {
     }
   });
 }
+
+test('connected map names positive identities and uses the shared routes for every flow', () => {
+  const {document, data, model} = loadMap(1600);
+  const bounds = (left, top, width, height) => ({left, top, width, height, right: left + width, bottom: top + height});
+  document.getElementById('drawing').bounds = bounds(0, 0, 900, 2500);
+  document.querySelectorAll('.node').forEach((node, index) => {
+    node.bounds = bounds(40 + index % 4 * 210, 70 + Math.floor(index / 4) * 200, 160, 130);
+  });
+  const headings = document.querySelectorAll('.routing-heading');
+  headings.forEach(item => { item.bounds = bounds(20, 20, 860, 20); });
+  assert.match(document.getElementById('support').textContent, /Platform support.*Runtime Coordination/);
+  assert.doesNotMatch(document.getElementById('support').textContent, /outside L1-L3/);
+  document.getElementById('SUP-01').click();
+  assert.match(document.getElementById('details').textContent, /Platform support \/ Runtime Coordination/);
+  document.getElementById('REC-RUNS').click();
+  assert.match(document.getElementById('details').textContent, /Persisted record \/ ADE PostgreSQL/);
+
+  const rect = element => { const b = element.getBoundingClientRect(); return {x: b.left, y: b.top, w: b.width, h: b.height}; };
+  const rects = Object.fromEntries([...data.entries, ...data.records].map(item => [item.id, rect(document.getElementById(item.id))]));
+  const obstacles = {...rects, ...Object.fromEntries(headings.map((item, index) => [`@heading:${index}`, {...rect(item), text: true}]))};
+  for (const flow of data.flows) {
+    document.querySelectorAll('.flow-button').find(item => item.dataset.flow === flow.id).click();
+    const edges = flow.edges.map(([from, to, label]) => ({id: `${from}:${to}`, from, to, label}));
+    const paths = document.getElementById('connections').children.filter(item => item.dataset.edge);
+    for (const original of model.route(edges, rects)) {
+      const curve = model.avoidCards(original, obstacles);
+      assert.equal(paths.find(item => item.dataset.edge === curve.id).getAttribute('d'), curve.d);
+      for (let sample = 0; sample <= 200; sample += 1) {
+        const p = model.pointAt(curve, sample / 200);
+        for (const [id, obstacle] of Object.entries(obstacles)) {
+          if (id === curve.from || id === curve.to) continue;
+          assert.equal(p.x > obstacle.x && p.x < obstacle.x + obstacle.w && p.y > obstacle.y && p.y < obstacle.y + obstacle.h,
+            false, `${flow.id}: ${curve.id} crosses ${id}`);
+        }
+      }
+    }
+  }
+});

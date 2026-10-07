@@ -41,7 +41,7 @@
               ]
             },
             {
-              "id": "character-artifacts", "label": "Artifacts, not L3 modules", "direction": "column",
+              "id": "character-artifacts", "label": "Character records and outputs", "direction": "column",
               "children": [
                 {"id": "definitions", "label": "Definition snapshots", "sub": "REC-DEFINITION - Immutable persona / prompt / deployment / policy [Record]", "shape": "store", "width": 220},
                 {"id": "candidate", "label": "Candidate reply", "sub": "Not persisted or delivered yet [Artifact]", "width": 220, "lines": 2}
@@ -83,7 +83,7 @@
               ]
             },
             {
-              "id": "memory-records", "label": "Stored records, not processing modules - ADE PostgreSQL", "direction": "column",
+              "id": "memory-records", "label": "Persisted memory records / ADE PostgreSQL", "direction": "column",
               "children": [
                 {
                   "id": "memory-records-top", "direction": "row", "gap": 20,
@@ -117,14 +117,29 @@
       ]
     },
     {
-      "id": "support", "label": "Supporting runtime / model access / storage - Not another L1 domain", "direction": "row", "gap": 22, "align": "start",
+      "id": "support", "label": "Supporting register / Platform responsibilities", "direction": "row", "gap": 22, "align": "start",
       "children": [
-        {"id": "accept", "label": "Accept turn", "sub": "SUP-01 - Gates, idempotency, input transaction [Implemented]", "width": 210},
-        {"id": "attempt", "label": "Claim and execute attempt", "sub": "SUP-01 - Lease, snapshot, deadline, policy binding [Implemented]", "width": 210},
-        {"id": "dispatch", "label": "Bind actual conversation request", "sub": "SUP-01 - Persona, context, tools, input capacity [Implemented]", "width": 210},
-        {"id": "router", "label": "Model Router", "sub": "SUP-03 - Catalog / generation / review / embeddings [Implemented]", "width": 210},
-        {"id": "outcome", "label": "Run control and outcomes", "sub": "SUP-01 - Retry, failure, cancellation, committed success [Implemented]", "width": 210},
-        {"id": "runs", "label": "Runs, attempts and events", "sub": "REC-RUNS - Persistent observed metadata; completeness varies [Record]", "shape": "store", "width": 210}
+        {
+          "id": "runtime-coordination", "label": "Runtime Coordination", "direction": "row", "gap": 22,
+          "children": [
+            {"id": "accept", "label": "Accept turn", "sub": "SUP-01 - Gates, idempotency, input transaction [Implemented]", "width": 210},
+            {"id": "attempt", "label": "Claim and execute attempt", "sub": "SUP-01 - Lease, snapshot, deadline, policy binding [Implemented]", "width": 210},
+            {"id": "dispatch", "label": "Bind actual conversation request", "sub": "SUP-01 - Persona, context, tools, input capacity [Implemented]", "width": 210},
+            {"id": "outcome", "label": "Run control and outcomes", "sub": "SUP-01 - Retry, failure, cancellation, committed success [Implemented]", "width": 210}
+          ]
+        },
+        {
+          "id": "model-access", "label": "Model Access", "direction": "column",
+          "children": [
+            {"id": "router", "label": "Model Router", "sub": "SUP-03 - Catalog / generation / review / embeddings [Implemented]", "width": 210}
+          ]
+        },
+        {
+          "id": "operational-records", "label": "Persisted operational records / ADE PostgreSQL", "direction": "column",
+          "children": [
+            {"id": "runs", "label": "Runs, attempts and events", "sub": "REC-RUNS - Persistent observed metadata; completeness varies [Record]", "shape": "store", "width": 210}
+          ]
+        }
       ]
     }
   ]

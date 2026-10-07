@@ -20,6 +20,8 @@ product contract, implementation authorization or behavioral acceptance result.
   layout/edges/steps, rendering sources and branch/status evidence limits.
 - [Inventory source](inventory.json): the single source for names, ownership,
   implementation scope, evidence limits, records and flow connections.
+- [Chart readability](presentation.md): positive support/data identities and
+  consistent bypass placement across the moving, connected and static views.
 - [ADR 0061](../../adr/0061-capability-responsibility-map.md): vocabulary and the
   distinction between capability ownership and physical deployment.
 
@@ -95,6 +97,10 @@ views without writing. Neither view requests network or live data. Node's built-
 tests execute the embedded script against a simulated DOM to check flow controls,
 all selections and named connections at desktop/mobile widths; these are not a
 substitute for browser pixel-layout or assistive-technology qualification.
+
+The connected map embeds the journey's existing MIT-attributed routing code:
+horizontal bypasses prefer one lower side, while direct links and authored return
+loops stay distinct. The static overview retains its authored outer lanes.
 
 Open `ade-capability-map.html` locally. At desktop sizes ownership groups and flow
 arrows remain visible; at narrow sizes groups stack and named connections preserve

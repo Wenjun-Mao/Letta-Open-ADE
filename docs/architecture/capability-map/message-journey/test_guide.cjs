@@ -22,6 +22,35 @@ test('default is a paused six-chapter guide, not the full map', () => {
   app.dom.window.close();
 });
 
+test('all guide chapters and detailed tours expose positive support and data identities', () => {
+  const app = guided(1920);
+  const labels = () => [...app.find('viewport').querySelectorAll('.frame-title')].map(item => item.textContent);
+  for (let chapter = 0; chapter < 6; chapter += 1) {
+    app.root.querySelector(`[data-chapter-index="${chapter}"]`).click();
+    const headers = labels().join(' ');
+    assert.match(headers, /RUNTIME COORDINATION/);
+    assert.doesNotMatch(headers, /NOT L1|NOT MODULES|SUPPORTING RUNTIME/);
+    for (const id of ['accept', 'attempt', 'dispatch', 'outcome']) {
+      const node = app.find('viewport').querySelector(`[data-node="${id}"]`);
+      if (node) assert.equal(node.parentElement.querySelector('[data-group="runtime-coordination"]') != null, true);
+    }
+  }
+  app.find('detail').click();
+  for (let tour = 0; tour < 7; tour += 1) {
+    app.select(tour);
+    assert.match(labels().join(' '), /RUNTIME COORDINATION.*MODEL ACCESS.*PERSISTED OPERATIONAL RECORDS/);
+    assert.doesNotMatch(labels().join(' '), /NOT L1|NOT ANOTHER L1|NOT L3|NOT PROCESSING MODULES/);
+    app.find('whole').click();
+    const count = JSON.parse(app.find('figure').textContent).props.steps[tour].flow.length;
+    for (let beat = 0; beat < count; beat += 1) {
+      assert.doesNotMatch(labels().join(' '), /NOT L1|NOT MODULES|SUPPORTING RUNTIME/);
+      if (beat < count - 1) app.find('next').click();
+    }
+    app.find('whole').click();
+  }
+  app.dom.window.close();
+});
+
 test('wide acceptance detours pass below the worker instead of bracketing it', () => {
   const app = guided(1920);
   const figure = JSON.parse(app.find('figure').textContent);
@@ -153,7 +182,7 @@ test('guide preserves typed review exclusion, shared generation, and atomic comm
   const figure = JSON.parse(app.find('figure').textContent);
   const ownership = app.dom.window.AdeJourneyGuide.layout(figure.props.layout, ['dispatch', 'behavior', 'candidate']);
   assert.ok(ownership.children.find(group => group.id === 'guide-artifacts').children.some(node => node.id === 'candidate'));
-  assert.equal(ownership.children.find(group => group.id === 'guide-support').children.some(node => node.id === 'candidate'), false);
+  assert.equal(ownership.children.find(group => group.id === 'runtime-coordination').children.some(node => node.id === 'candidate'), false);
   assert.match(app.find('viewport').querySelector('[data-node="behavior"] .node-sub').textContent, /CHAR-03 \+ CHAR-04.*Partial/);
   app.find('next').click();
   assert.match(app.find('narration').textContent, /does NOT receive the candidate reply/);
