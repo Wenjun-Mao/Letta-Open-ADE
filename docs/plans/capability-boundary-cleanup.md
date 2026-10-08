@@ -1,6 +1,6 @@
 # ADE Capability Boundary Cleanup
 
-Status: Implementation in progress, revision 2, 2026-10-08; approved by the user.
+Status: Implemented and verified, revision 2, 2026-10-08; approved by the user.
 Implementation and the described disposable verification resources are authorized.
 This follows the completed
 [code-boundary audit](../architecture/capability-map/code-boundary-audit.md), rather
@@ -12,8 +12,8 @@ The sequence remains A1 -> A3 -> A2 -> A4.
 
 Source baseline: primary `main` at
 `49b98ede4d47885d3f89a6e0b600e246e2e7eb1e`, clean at planning entry.
-Relevant source, callers, fixtures and commands were rechecked for this plan;
-runtime tests were not rerun. Refresh this baseline when implementation starts.
+At planning, relevant source, callers, fixtures and commands were rechecked;
+runtime tests had not yet been rerun. Implementation evidence is recorded below.
 Review-integration baseline: `74e993a9b4d50cc367778392aab71937f5b541ff`, also clean;
 the intervening changes were documentation-only.
 Implementation baseline: clean primary `main` at
@@ -335,7 +335,7 @@ views were regenerated; static SVG and journey output remained identical.
 Verification: 19 map tests, three connected-map tests and journey `build.py
 --check` passed; the built HTML's changed details/retention labels were checked
 in Chromium using a task-owned loopback preview. Its only console error was the
-preview server's missing favicon. A4 remains pending.
+preview server's missing favicon. A4 was still pending at this checkpoint.
 
 The initial SQL baseline attempt used a task-owned database name that did not
 match the existing capture guard's `ade_*_test_<id>` contract and failed before
@@ -360,3 +360,56 @@ navigation and the journey's compaction source anchor now identify the new owner
 Fixture development corrected assumptions about composite primary keys and the
 accepted user's existing `message.committed` event; no runtime workaround or
 fault hook was added.
+
+A4 is complete: the local `use-run-monitor.ts` owns stream/poll handles, monitor
+identity, terminal deduplication/retry, completion sequencing and disposal. The
+controller retains its single displayed run/events state, selection/read epochs,
+acceptance/cancellation, evidence navigation and memory-action interpretation.
+Stable callbacks preserve monitor lifetime across edits and same-chat refreshes;
+readback checks both controller epochs and monitor ownership before updating state.
+No duplicated state, epoch system, scheduling change or new public hook contract
+was introduced. The controller decreased from 516 to 476 lines; the monitor is
+86 lines. Further splitting was not justified by this bounded seam.
+
+Seven additional controller tests use deferred responses and fake timers for
+stable edits, event deduplication/order, stream failure with polling recovery,
+terminal-fetch deduplication/failure/retry, late poll/stream after A -> B -> A,
+selection changes during terminal readback, null readback, matching memory
+confirmation, cancellation and unmount disposal. During extraction, a guard
+inside a deferred state updater incorrectly rejected a valid queued completion
+after disposal; checks now occur before scheduling, as the original controller
+did. A test fixture was corrected to stop reporting a running session after
+completion. Neither required a scheduling or product-behavior workaround.
+
+A4 verification: all 92 handwritten web tests (including 19 async controller
+tests), ESLint and the production build passed. A Chromium walk against the
+local build used intercepted synthetic API responses and an EventSource shim:
+send/receipt, citation navigation without monitor restart, A -> B disposal,
+return-to-A resumption, terminal readback of reply/facts and final disposal all
+passed. There were no browser errors; three CSS-preload warnings were observed.
+An initial browser assertion matched both collapsed and expanded fact text;
+the locator was made unambiguous, with no source change. Inventory and journey
+source anchors now identify the monitor; the built UI-01 details were inspected.
+
+Final combined checks: 119 offline runtime tests passed, covering changed seams,
+worker/events/finalization, app composition, run acceptance and retries. The eight
+SQL tests above remain the applicable packet/rollback/fencing evidence; no backend
+code changed afterward. Forty map/journey Python tests and 52 Node tests passed
+after the final source-home updates. Render/review/build consistency checks, Ruff,
+runtime imports, local documentation links and scoped whitespace checks passed.
+An import-check command initially used the nonexistent name `RunWorker`; it was
+corrected to the actual `AgentRuntimeWorker`, without a code change.
+
+All A1-A4 recommendations are implemented; K1 is retained. Historical audit
+evidence is linked, not rewritten. HTTP/UI schemas, prompt/persona content,
+policies, persistence repositories, product agreements and deployment remain
+unchanged. Test resources were task-owned and disposable; no live model calls,
+dependency download, deployment or other project's changes were performed.
+The owned PostgreSQL container, both local preview servers and the named browser
+session were removed/stopped after verification.
+
+Replaceability remains a later design discussion: `AttemptResult` is still a
+concrete runtime aggregate; exact serialized capacity admission and the curated
+generation/tool loop retain their existing owners; success still requires ADE's
+single fenced PostgreSQL transaction. This cleanup does not make Hindsight or
+`persona_generators` drop-in replacements or adopt a portable character schema.

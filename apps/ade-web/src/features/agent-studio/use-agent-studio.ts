@@ -20,12 +20,12 @@ import {
   listConversationRuns,
   listConversationActivity,
 } from "./api";
-import { openRunEventStream, TERMINAL_RUN_EVENT_TYPES } from "./event-stream";
 import { memoryActionDraft, memoryActionOutcome, type PendingMemoryAction } from "./memory-action";
 import { sessionDraftPayload } from "./session-draft";
 import { useResourceActions } from "./resource-actions";
 import { useDefinitionVersion } from "./use-definition-version";
 import { useMemoryRemoval, type PendingRemoval } from "./use-memory-removal";
+import { useRunMonitor, TERMINAL_RUN_STATUSES } from "./use-run-monitor";
 import {
   identityKey,
   isArchived,
@@ -45,8 +45,6 @@ import type {
   TurnActivity,
 } from "./types";
 
-const TERMINAL_RUN_STATUSES = new Set(["succeeded", "failed", "cancelled"]);
-
 function messageFrom(error: unknown): string {
   return error instanceof Error ? error.message : String(error || "Unexpected Agent Studio error.");
 }
@@ -61,9 +59,6 @@ export function useAgentStudio() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const conversationId = selectedConversationFromQuery(searchParams.get("conversation"));
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const terminalRunRef = useRef("");
   const selectedIdRef = useRef(conversationId);
   const selectionEpochRef = useRef(0);
   const subjectInspectEpochRef = useRef(0);
@@ -71,7 +66,6 @@ export function useAgentStudio() {
   const bindingSelectionRef = useRef<string | null>(null);
   const olderPageRef = useRef<{ conversationId: string; cursor: number } | null>(null);
   const evidenceTargetRef = useRef<MemoryEvidence | null>(null);
-  const activeMonitorRunRef = useRef<string | null>(null);
   const createAttemptRef = useRef<{ signature: string; idempotencyKey: string } | null>(null);
   const subjectBindingsRef = useRef<AgentStudioSession[]>([]);
 
@@ -109,15 +103,134 @@ export function useAgentStudio() {
   const [memoryAction, setMemoryAction] = useState<PendingMemoryAction | null>(null);
   const [removal, setRemoval] = useState<PendingRemoval | null>(null);
 
-  const stopMonitoring = useCallback(() => {
-    activeMonitorRunRef.current = null;
-    eventSourceRef.current?.close();
-    eventSourceRef.current = null;
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+  const refreshWorkspace = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [nextOptions, nextSessions, nextDefinitions, nextSubjects, allTrialSessions] = await Promise.all([
+        getAgentStudioOptions(),
+        listAgentStudioSessions(includeArchived),
+        listAgentStudioDefinitions(includeArchived),
+        listAgentStudioSubjects(includeArchived),
+        HISTORY_TRIAL && !includeArchived ? listAgentStudioSessions(true) : Promise.resolve(null),
+      ]);
+      subjectBindingsRef.current = allTrialSessions?.items || nextSessions.items;
+      setOptions(nextOptions);
+      setSessions(nextSessions.items);
+      setDefinitions(nextDefinitions.items);
+      setSubjects(nextSubjects.items);
+      setInspectedSubject((current) => current
+        ? nextSubjects.items.find((item) => item.id === current.id) || current
+        : null);
+      setTimeoutSeconds((current) => current || nextOptions.default_timeout_seconds);
+      setRetryCount((current) => current || nextOptions.default_retry_count);
+      setError("");
+    } catch (exc) {
+      setError(messageFrom(exc));
+    } finally {
+      setLoading(false);
+    }
+  }, [includeArchived]);
+
+  const definitionVersion = useDefinitionVersion({
+    session, definitions, refreshWorkspace, setDefinitionChoice, setBusy, setError,
+  });
+
+  const refreshSelected = useCallback(async (selectedId: string, ownerIsCurrent?: () => boolean) => {
+    if (ownerIsCurrent && !ownerIsCurrent()) return null;
+    const selectionEpoch = selectionEpochRef.current;
+    const readEpoch = ++readEpochRef.current;
+    olderPageRef.current = null;
+    try {
+      const nextSession = await getAgentStudioSession(selectedId);
+      const target = evidenceTargetRef.current?.conversation_id === selectedId ? evidenceTargetRef.current : null;
+      const [nextConversation, nextMemories, nextRuns, nextActivity] = await Promise.all([
+        getConversationState(selectedId, target ? target.message_sequence + 1 : undefined),
+        getSubjectMemories(nextSession.memory_subject.id),
+        listConversationRuns(selectedId),
+        listConversationActivity(selectedId),
+      ]);
+      if (selectionEpoch !== selectionEpochRef.current || readEpoch !== readEpochRef.current || selectedIdRef.current !== selectedId
+        || (ownerIsCurrent && !ownerIsCurrent())) return null;
+      if (target && !nextConversation.messages.some((entry) => entry.id === target.message_id && entry.sequence === target.message_sequence)) {
+        setEvidenceError("The cited message could not be verified in its original conversation.");
+        evidenceTargetRef.current = null;
+        return null;
+      }
+      setSession(nextSession);
+      setConversation(nextConversation);
+      setMemories(nextMemories);
+      setRuns(nextRuns.items);
+      setActivity(nextActivity.items);
+      setRun((current) => {
+        const latest = nextSession.latest_run;
+        if (current?.conversation_id !== selectedId) return latest;
+        if (!latest) return current;
+        if (current.id !== latest.id) return latest;
+        return TERMINAL_RUN_STATUSES.has(current.status) || !TERMINAL_RUN_STATUSES.has(latest.status) ? current : latest;
+      });
+      setSubjectRename(nextSession.memory_subject.display_name);
+      if (bindingSelectionRef.current !== selectedId) {
+        bindingSelectionRef.current = selectedId;
+        setSubjectChoice(nextSession.memory_subject.id);
+        setDefinitionChoice(nextSession.agent_definition.id);
+      }
+      if (target) {
+        setEvidenceMessageId(target.message_id);
+        setEvidenceError("");
+        evidenceTargetRef.current = null;
+        window.requestAnimationFrame(() => document.getElementById(`message-${target.message_id}`)?.scrollIntoView({ block: "center" }));
+      }
+      return nextMemories;
+    } catch (exc) {
+      if (selectionEpoch === selectionEpochRef.current && readEpoch === readEpochRef.current && selectedIdRef.current === selectedId
+        && (!ownerIsCurrent || ownerIsCurrent())) setError(messageFrom(exc));
+      return null;
     }
   }, []);
+
+  const { removeSavedFact, retryRemoval } = useMemoryRemoval({
+    session, inspectedSubject, memories, inspectedMemories, removal, setRemoval,
+    selectedIdRef, selectionEpochRef, subjectInspectEpochRef,
+    refreshSelected, setInspectedMemories, setBusy, setError,
+  });
+  const { setSessionArchived, setDefinitionArchived, setSubjectArchived, renameSubject } = useResourceActions({
+    session, subjectRename, refreshWorkspace, refreshSelected, setBusy, setError,
+  });
+
+  const bindMonitorSelection = useCallback((monitoredConversationId: string) => {
+    const epoch = selectionEpochRef.current;
+    return () => selectedIdRef.current === monitoredConversationId && selectionEpochRef.current === epoch;
+  }, []);
+
+  const recordEvent = useCallback((event: RunEvent, isCurrent: () => boolean) => {
+    if (!isCurrent()) return;
+    setEvents((current) => {
+      if (current.some((item) => item.id === event.id)) return current;
+      return [...current, event].sort((left, right) => left.sequence - right.sequence);
+    });
+  }, []);
+
+  const updateMonitoredRun = useCallback((nextRun: Run, nextEvents: RunEvent[], isCurrent: () => boolean) => {
+    if (!isCurrent()) return;
+    setRun(nextRun);
+    setEvents(nextEvents);
+  }, []);
+
+  const completeMonitoredRun = useCallback(async (nextRun: Run, nextEvents: RunEvent[], isCurrent: () => boolean) => {
+    if (!isCurrent()) return;
+    const refreshedMemories = await refreshSelected(nextRun.conversation_id, isCurrent);
+    if (!isCurrent()) return;
+    setMemoryAction((current) => {
+      if (!current || current.runId !== nextRun.id || current.conversationId !== nextRun.conversation_id) return current;
+      return { ...current, outcome: memoryActionOutcome(current, nextRun, nextEvents, refreshedMemories) };
+    });
+  }, [refreshSelected]);
+
+  const reportMonitorError = useCallback((exc: unknown) => setError(messageFrom(exc)), []);
+  const { monitorRun, stopMonitoring, isMonitoring } = useRunMonitor({
+    bindSelection: bindMonitorSelection, onEvent: recordEvent, onSnapshot: updateMonitoredRun,
+    onComplete: completeMonitoredRun, onWarning: setStreamWarning, onError: reportMonitorError,
+  });
 
   const selectConversation = useCallback((nextConversationId: string | null) => {
     if (nextConversationId === selectedIdRef.current) return;
@@ -168,157 +281,6 @@ export function useAgentStudio() {
     }
   }
 
-  const refreshWorkspace = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [nextOptions, nextSessions, nextDefinitions, nextSubjects, allTrialSessions] = await Promise.all([
-        getAgentStudioOptions(),
-        listAgentStudioSessions(includeArchived),
-        listAgentStudioDefinitions(includeArchived),
-        listAgentStudioSubjects(includeArchived),
-        HISTORY_TRIAL && !includeArchived ? listAgentStudioSessions(true) : Promise.resolve(null),
-      ]);
-      subjectBindingsRef.current = allTrialSessions?.items || nextSessions.items;
-      setOptions(nextOptions);
-      setSessions(nextSessions.items);
-      setDefinitions(nextDefinitions.items);
-      setSubjects(nextSubjects.items);
-      setInspectedSubject((current) => current
-        ? nextSubjects.items.find((item) => item.id === current.id) || current
-        : null);
-      setTimeoutSeconds((current) => current || nextOptions.default_timeout_seconds);
-      setRetryCount((current) => current || nextOptions.default_retry_count);
-      setError("");
-    } catch (exc) {
-      setError(messageFrom(exc));
-    } finally {
-      setLoading(false);
-    }
-  }, [includeArchived]);
-
-  const definitionVersion = useDefinitionVersion({
-    session, definitions, refreshWorkspace, setDefinitionChoice, setBusy, setError,
-  });
-
-  const refreshSelected = useCallback(async (selectedId: string) => {
-    const selectionEpoch = selectionEpochRef.current;
-    const readEpoch = ++readEpochRef.current;
-    olderPageRef.current = null;
-    try {
-      const nextSession = await getAgentStudioSession(selectedId);
-      const target = evidenceTargetRef.current?.conversation_id === selectedId ? evidenceTargetRef.current : null;
-      const [nextConversation, nextMemories, nextRuns, nextActivity] = await Promise.all([
-        getConversationState(selectedId, target ? target.message_sequence + 1 : undefined),
-        getSubjectMemories(nextSession.memory_subject.id),
-        listConversationRuns(selectedId),
-        listConversationActivity(selectedId),
-      ]);
-      if (selectionEpoch !== selectionEpochRef.current || readEpoch !== readEpochRef.current || selectedIdRef.current !== selectedId) return null;
-      if (target && !nextConversation.messages.some((entry) => entry.id === target.message_id && entry.sequence === target.message_sequence)) {
-        setEvidenceError("The cited message could not be verified in its original conversation.");
-        evidenceTargetRef.current = null;
-        return null;
-      }
-      setSession(nextSession);
-      setConversation(nextConversation);
-      setMemories(nextMemories);
-      setRuns(nextRuns.items);
-      setActivity(nextActivity.items);
-      setRun((current) => {
-        const latest = nextSession.latest_run;
-        if (current?.conversation_id !== selectedId) return latest;
-        if (!latest) return current;
-        if (current.id !== latest.id) return latest;
-        return TERMINAL_RUN_STATUSES.has(current.status) || !TERMINAL_RUN_STATUSES.has(latest.status) ? current : latest;
-      });
-      setSubjectRename(nextSession.memory_subject.display_name);
-      if (bindingSelectionRef.current !== selectedId) {
-        bindingSelectionRef.current = selectedId;
-        setSubjectChoice(nextSession.memory_subject.id);
-        setDefinitionChoice(nextSession.agent_definition.id);
-      }
-      if (target) {
-        setEvidenceMessageId(target.message_id);
-        setEvidenceError("");
-        evidenceTargetRef.current = null;
-        window.requestAnimationFrame(() => document.getElementById(`message-${target.message_id}`)?.scrollIntoView({ block: "center" }));
-      }
-      return nextMemories;
-    } catch (exc) {
-      if (selectionEpoch === selectionEpochRef.current && readEpoch === readEpochRef.current && selectedIdRef.current === selectedId) setError(messageFrom(exc));
-      return null;
-    }
-  }, []);
-
-  const { removeSavedFact, retryRemoval } = useMemoryRemoval({
-    session, inspectedSubject, memories, inspectedMemories, removal, setRemoval,
-    selectedIdRef, selectionEpochRef, subjectInspectEpochRef,
-    refreshSelected, setInspectedMemories, setBusy, setError,
-  });
-  const { setSessionArchived, setDefinitionArchived, setSubjectArchived, renameSubject } = useResourceActions({
-    session, subjectRename, refreshWorkspace, refreshSelected, setBusy, setError,
-  });
-
-  const finishRun = useCallback(async (runId: string, monitoredConversationId: string, monitoredEpoch: number) => {
-    const isCurrent = () => activeMonitorRunRef.current === runId
-      && selectedIdRef.current === monitoredConversationId
-      && selectionEpochRef.current === monitoredEpoch;
-    if (!isCurrent() || terminalRunRef.current === runId) return;
-    terminalRunRef.current = runId;
-    try {
-      const [nextRun, eventLog] = await Promise.all([getRun(runId), getRunEventLog(runId)]);
-      if (!isCurrent() || nextRun.conversation_id !== monitoredConversationId) return;
-      setRun(nextRun);
-      setEvents(eventLog.items);
-      const refreshedMemories = await refreshSelected(nextRun.conversation_id);
-      if (!isCurrent()) return;
-      setMemoryAction((current) => {
-        if (!current || current.runId !== runId || current.conversationId !== monitoredConversationId) return current;
-        return { ...current, outcome: memoryActionOutcome(current, nextRun, eventLog.items, refreshedMemories) };
-      });
-      stopMonitoring();
-      setStreamWarning("");
-    } catch (exc) {
-      if (isCurrent()) {
-        terminalRunRef.current = "";
-        setError(messageFrom(exc));
-      }
-    }
-  }, [refreshSelected, stopMonitoring]);
-
-  const recordEvent = useCallback((event: RunEvent) => {
-    setEvents((current) => {
-      if (current.some((item) => item.id === event.id)) return current;
-      return [...current, event].sort((left, right) => left.sequence - right.sequence);
-    });
-  }, []);
-
-  const monitorRun = useCallback((runId: string, monitoredConversationId: string) => {
-    stopMonitoring();
-    const monitoredEpoch = selectionEpochRef.current;
-    activeMonitorRunRef.current = runId;
-    const isCurrent = () => activeMonitorRunRef.current === runId
-      && selectedIdRef.current === monitoredConversationId
-      && selectionEpochRef.current === monitoredEpoch;
-    terminalRunRef.current = "";
-    setStreamWarning("");
-    eventSourceRef.current = openRunEventStream(runId, {
-      onEvent: (event) => { if (isCurrent()) recordEvent(event); },
-      onTerminal: () => { if (isCurrent()) void finishRun(runId, monitoredConversationId, monitoredEpoch); },
-      onError: () => { if (isCurrent()) setStreamWarning("Event stream reconnecting; status polling remains active."); },
-    });
-    pollRef.current = setInterval(() => {
-      void Promise.all([getRun(runId), getRunEventLog(runId)])
-        .then(([nextRun, eventLog]) => {
-          if (!isCurrent() || nextRun.conversation_id !== monitoredConversationId) return;
-          setRun(nextRun);
-          setEvents(eventLog.items);
-          if (TERMINAL_RUN_STATUSES.has(nextRun.status)) void finishRun(runId, monitoredConversationId, monitoredEpoch);
-        })
-        .catch((exc) => { if (isCurrent()) setError(messageFrom(exc)); });
-    }, 1500);
-  }, [finishRun, recordEvent, stopMonitoring]);
-
   useEffect(() => {
     void refreshWorkspace();
   }, [refreshWorkspace]);
@@ -349,12 +311,10 @@ export function useAgentStudio() {
   useEffect(() => {
     const latest = session?.latest_run;
     if (conversationId && session?.conversation.id === conversationId && latest
-      && !TERMINAL_RUN_STATUSES.has(latest.status) && activeMonitorRunRef.current !== latest.id) {
+      && !TERMINAL_RUN_STATUSES.has(latest.status) && !isMonitoring(latest.id)) {
       monitorRun(latest.id, conversationId);
     }
-  }, [conversationId, session?.conversation.id, session?.latest_run, monitorRun]);
-
-  useEffect(() => () => stopMonitoring(), [stopMonitoring]);
+  }, [conversationId, session?.conversation.id, session?.latest_run, isMonitoring, monitorRun]);
 
   async function createSession() {
     try {
@@ -473,7 +433,7 @@ export function useAgentStudio() {
       evidenceTargetRef.current = null;
       setEvidenceMessageId("");
       await refreshSelected(selectedId);
-      if (isCurrent() && activeMonitorRunRef.current !== accepted.run_id) monitorRun(accepted.run_id, selectedId);
+      if (isCurrent() && !isMonitoring(accepted.run_id)) monitorRun(accepted.run_id, selectedId);
     } catch (exc) {
       if (isCurrent()) {
         setMessage(content);

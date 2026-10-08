@@ -15,9 +15,9 @@ product contract, implementation authorization or behavioral acceptance result.
   boundary and character-relative grounding, judgment and fidelity lenses.
 - [Code-boundary audit](code-boundary-audit.md): current responsibility/source/test
   mapping and selective modularization recommendations; not refactor approval.
-- [Cleanup plan](../../plans/capability-boundary-cleanup.md): proposed audit-driven
-  changes that clarify ownership while leaving Character/Memory replacement open;
-  not implementation approval or a new domain protocol.
+- [Cleanup plan and execution record](../../plans/capability-boundary-cleanup.md):
+  completed A1-A4 ownership clarifications/extractions and their verification;
+  Character/Memory replacement remains open, without a new domain protocol.
 - [Moving message journey](message-journey/ade-message-journey.html): playable
   source-backed draft with six paced chapters, fictional worked examples,
   Forward/Back and a detailed ownership/branch view; no runtime change.

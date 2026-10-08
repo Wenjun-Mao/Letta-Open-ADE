@@ -59,6 +59,11 @@ arguments cannot choose another subject.
 - `evaluation_sessions.py` provisions and cleans isolated `purpose=evaluation`
   resources for maintained workflows.
 
+Browser coordination remains outside this package: Agent Studio's
+`use-agent-studio.ts` owns displayed state and selection/read epochs;
+`use-run-monitor.ts` owns stream/poll lifecycle and guarded completion. Neither
+owns generation or persistence; terminal display reloads ADE's retained state.
+
 ## Private Evaluation Capture
 
 `ADE_NATURAL_MEMORY_CAPTURE=1` remains restricted to development, evaluation

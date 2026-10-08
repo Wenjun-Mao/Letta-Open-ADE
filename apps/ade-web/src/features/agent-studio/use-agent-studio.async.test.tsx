@@ -120,6 +120,7 @@ beforeEach(() => {
 });
 afterEach(async () => {
   await act(async () => root.unmount());
+  vi.useRealTimers();
   container.remove();
   vi.unstubAllGlobals();
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = false;
@@ -244,6 +245,140 @@ describe("Agent Studio async ownership", () => {
     await act(async () => { controller.selectConversation("A"); });
     await render();
     expect(streams.calls.map((call) => call.runId)).toEqual(["run-A", "run-A"]);
+  });
+
+  it("keeps monitoring through ordinary edits and stream failure, then recovers through polling", async () => {
+    vi.useFakeTimers();
+    api.getAgentStudioSession.mockImplementation(async (id: string) => session(id, run("succeeded")))
+      .mockResolvedValueOnce(session("A", run("running")));
+    await render();
+    const closed = streams.close.mock.calls.length;
+    await act(async () => { controller.setMessage("draft"); controller.setTimeoutSeconds(90); });
+    await render();
+    expect(controller.message).toBe("draft");
+    expect(streams.calls).toHaveLength(1);
+    expect(streams.close).toHaveBeenCalledTimes(closed);
+    await act(async () => {
+      const handlers = streams.calls[0].handlers;
+      handlers.onEvent({ ...terminalEvent, id: "event-2", sequence: 2, type: "run.started" });
+      handlers.onEvent({ ...terminalEvent, type: "run.accepted" });
+      handlers.onEvent({ ...terminalEvent, type: "run.accepted" });
+    });
+    expect(controller.events.map((event) => event.sequence)).toEqual([1, 2]);
+    await act(async () => { streams.calls[0].handlers.onError(); });
+    expect(controller.streamWarning).toContain("polling remains active");
+    await act(async () => { await vi.advanceTimersByTimeAsync(1500); });
+    expect(controller.run?.status).toBe("succeeded");
+    expect(controller.streamWarning).toBe("");
+    expect(streams.close).toHaveBeenCalledTimes(closed + 1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("deduplicates terminal fetches and allows a later retry after a fetch failure", async () => {
+    const result = deferred<Run>();
+    api.getAgentStudioSession.mockImplementation(async (id: string) => session(id, run("running")));
+    api.getRun.mockReturnValueOnce(result.promise);
+    await render();
+    const handlers = streams.calls[0].handlers;
+    await act(async () => { handlers.onTerminal(terminalEvent); handlers.onTerminal(terminalEvent); });
+    expect(api.getRun).toHaveBeenCalledTimes(1);
+    expect(api.getRunEventLog).toHaveBeenCalledTimes(1);
+    await act(async () => { result.reject(new Error("terminal read failed")); });
+    expect(controller.error).toBe("terminal read failed");
+    await act(async () => { handlers.onTerminal(terminalEvent); });
+    await flush();
+    expect(api.getRun).toHaveBeenCalledTimes(2);
+    expect(controller.run?.status).toBe("succeeded");
+  });
+
+  it("rejects an old poll and stream after A to B to A, even for the same run ID", async () => {
+    vi.useFakeTimers();
+    const oldPoll = deferred<Run>();
+    api.getAgentStudioSession.mockImplementation(async (id: string) => session(id, id === "A" ? run("running") : null));
+    api.getRun.mockReturnValueOnce(oldPoll.promise);
+    await render();
+    const old = streams.calls[0].handlers;
+    await act(async () => { await vi.advanceTimersByTimeAsync(1500); });
+    await act(async () => { controller.selectConversation("B"); });
+    await render();
+    await act(async () => { controller.selectConversation("A"); });
+    await render();
+    await act(async () => { oldPoll.resolve(run("failed")); old.onEvent(terminalEvent); old.onError(); old.onTerminal(terminalEvent); });
+    expect(streams.calls).toHaveLength(2);
+    expect(controller.run?.status).toBe("running");
+    expect(controller.events).toEqual([]);
+    expect(controller.streamWarning).toBe("");
+    expect(api.getRun).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects terminal readback after selecting another conversation during completion", async () => {
+    const completionRead = deferred<AgentStudioSession>();
+    api.getAgentStudioSession.mockImplementation(async (id: string) => session(id, id === "A" ? run("running") : null));
+    await render();
+    api.getAgentStudioSession.mockReturnValueOnce(completionRead.promise);
+    await act(async () => { streams.calls[0].handlers.onTerminal(terminalEvent); });
+    expect(api.getAgentStudioSession).toHaveBeenCalledTimes(2);
+    await act(async () => { controller.selectConversation("B"); });
+    await render();
+    await act(async () => { completionRead.resolve(session("A", run("succeeded"))); });
+    await flush();
+    expect(controller.session?.conversation.id).toBe("B");
+    expect(controller.memories?.subject_id).toBe("subject-B");
+    expect(controller.run).toBeNull();
+    expect(controller.memoryAction).toBeNull();
+  });
+
+  it("does not confirm memory persistence when terminal selected readback returns null", async () => {
+    api.acceptTurn.mockResolvedValue({ run_id: "run-A", status: "pending" });
+    api.getRun.mockResolvedValue(run("running"));
+    await render();
+    await act(async () => { controller.prepareMemoryAction("fact-1", 1, "correct"); });
+    await act(async () => { await controller.sendMessage(); });
+    expect(controller.memoryAction?.runId).toBe("run-A");
+    api.getRun.mockResolvedValue(run("succeeded"));
+    api.getRunEventLog.mockResolvedValue({ items: [{ ...terminalEvent, type: "memory.committed",
+      payload: { fact_id: "fact-1", fact_version: 2, operation: "revise" } }], total: 1 });
+    api.getAgentStudioSession.mockRejectedValueOnce(new Error("selected readback unavailable"));
+    await act(async () => { streams.calls[0].handlers.onTerminal(terminalEvent); });
+    await flush();
+    expect(controller.error).toBe("selected readback unavailable");
+    expect(controller.memoryAction?.outcome).toBe("No matching committed revision was verified. Saved information was not confirmed changed.");
+  });
+
+  it("keeps cancellation in the controller and disposes polling and streaming on unmount", async () => {
+    vi.useFakeTimers();
+    api.getAgentStudioSession.mockImplementation(async (id: string) => session(id, run("running")));
+    api.cancelRun.mockResolvedValue(run("cancelled"));
+    await render();
+    await act(async () => { await controller.cancelActiveRun(); });
+    expect(controller.run?.status).toBe("cancelled");
+    expect(api.cancelRun).toHaveBeenCalledWith("run-A");
+    const closed = streams.close.mock.calls.length;
+    const old = streams.calls[0].handlers;
+    await act(async () => { root.render(<></>); });
+    expect(streams.close).toHaveBeenCalledTimes(closed + 1);
+    expect(vi.getTimerCount()).toBe(0);
+    await act(async () => { old.onTerminal(terminalEvent); await vi.advanceTimersByTimeAsync(3000); });
+    expect(api.getRun).not.toHaveBeenCalled();
+  });
+
+  it("confirms a memory action only with matching committed events and refreshed revisions", async () => {
+    api.acceptTurn.mockResolvedValue({ run_id: "run-A", status: "pending" });
+    api.getRun.mockResolvedValue(run("running"));
+    await render();
+    await act(async () => { controller.prepareMemoryAction("fact-1", 1, "correct"); });
+    await act(async () => { await controller.sendMessage(); });
+    api.getRun.mockResolvedValue(run("succeeded"));
+    api.getRunEventLog.mockResolvedValue({ items: [{ ...terminalEvent, type: "memory.committed",
+      payload: { fact_id: "fact-1", fact_version: 2, operation: "revise" } }], total: 1 });
+    const refreshed = memory(2);
+    refreshed.facts[0].revisions = [{ id: "revision-2", operation: "revise", fact_version: 2,
+      value: "tea", run_id: "run-A", action_id: null, predecessor_revision_ids: [], evidence: [],
+      created_at: terminalEvent.occurred_at }];
+    api.getSubjectMemories.mockResolvedValue(refreshed);
+    await act(async () => { streams.calls[0].handlers.onTerminal(terminalEvent); });
+    await flush();
+    expect(controller.memoryAction?.outcome).toBe("Matching memory revision committed. Check the refreshed fact history below.");
   });
 
   it("ignores an error from an obsolete same-conversation read", async () => {

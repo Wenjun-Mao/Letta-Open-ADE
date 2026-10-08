@@ -377,8 +377,11 @@ one executor-construction anchor correction was verified and applied.
 
 The approved [cleanup plan](../../plans/capability-boundary-cleanup.md#execution-record)
 records subsequent changes and verification. A1's import owner and A3's policy
-descriptions have been clarified; this audit's original findings, baseline and
-counts remain historical. Later extraction dispositions are tracked in the plan.
+descriptions have been clarified. A2 moved compaction dispatch into
+`compaction_executor.py`; A4 moved browser stream/poll lifecycle into
+`use-run-monitor.ts`, retaining controller-owned displayed state and epochs.
+K1's runtime/transaction owners remain intact. This audit's original findings,
+baseline, line references and counts remain historical.
 
 ## 7. Review Gate
 

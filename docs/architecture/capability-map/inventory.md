@@ -137,8 +137,8 @@ Next isolated check: Reopen only after measured search/context gaps justify its 
 ### UI-01: Conversation workspace
 Owner: **Interface / Conversation UI**. Implementation: **implemented**.
 Input: User messages, selections and run events. Output: Session lifecycle, replies, cancellation and state refresh.
-Code: [agent-studio-view.tsx](../../../apps/ade-web/src/features/agent-studio/agent-studio-view.tsx), [use-agent-studio.ts](../../../apps/ade-web/src/features/agent-studio/use-agent-studio.ts) Tests: [agent-studio-view.test.tsx](../../../apps/ade-web/src/features/agent-studio/agent-studio-view.test.tsx), [use-agent-studio.async.test.tsx](../../../apps/ade-web/src/features/agent-studio/use-agent-studio.async.test.tsx)
-Evidence limit: Browser owns presentation; providers are accessed only behind ADE API.
+Code: [agent-studio-view.tsx](../../../apps/ade-web/src/features/agent-studio/agent-studio-view.tsx), [use-agent-studio.ts](../../../apps/ade-web/src/features/agent-studio/use-agent-studio.ts), [use-run-monitor.ts](../../../apps/ade-web/src/features/agent-studio/use-run-monitor.ts) Tests: [agent-studio-view.test.tsx](../../../apps/ade-web/src/features/agent-studio/agent-studio-view.test.tsx), [use-agent-studio.async.test.tsx](../../../apps/ade-web/src/features/agent-studio/use-agent-studio.async.test.tsx)
+Evidence limit: Browser owns presentation; providers are accessed only behind ADE API. The controller owns displayed state and selection/read epochs; its local monitor owns stream/poll lifecycle and guarded completion.
 Known gap: A working UI is not evidence of personality or historical-recall quality.
 Next isolated check: Follow one immutable version/subject selection through an asynchronous turn.
 

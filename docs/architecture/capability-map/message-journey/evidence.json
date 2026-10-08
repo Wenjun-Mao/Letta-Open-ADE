@@ -37,7 +37,7 @@
       "edges": ["submit", "accepted-receipt", "refresh-ui", "lineage-state", "cancel-request"],
       "condition": "UI session is current; accepted receipt and terminal refresh are different moments; cancellation outcome is fenced",
       "pcs": ["PC-01", "PC-07", "PC-08"],
-      "sources": [{"path": "web:agent-studio/use-agent-studio.ts", "anchor": "async function sendMessage()"}, {"path": "web:agent-studio/use-agent-studio.ts", "anchor": "const monitorRun ="}, {"path": "web:agent-studio/use-agent-studio.ts", "anchor": "terminalRunRef.current = runId"}]
+      "sources": [{"path": "web:agent-studio/use-agent-studio.ts", "anchor": "async function sendMessage()"}, {"path": "web:agent-studio/use-run-monitor.ts", "anchor": "const monitorRun ="}, {"path": "web:agent-studio/use-run-monitor.ts", "anchor": "terminalRunRef.current = runId"}]
     },
     {
       "name": "New-run acceptance transaction", "mode": "current",
