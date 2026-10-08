@@ -13,6 +13,8 @@ product contract, implementation authorization or behavioral acceptance result.
 - [Readable inventory](inventory.md): generated reference for all registered pieces.
 - [Character assessment guide](character-assessment.md): PC-12's authored-intent
   boundary and character-relative grounding, judgment and fidelity lenses.
+- [Code-boundary audit](code-boundary-audit.md): current responsibility/source/test
+  mapping and selective modularization recommendations; not refactor approval.
 - [Moving message journey](message-journey/ade-message-journey.html): playable
   source-backed draft with six paced chapters, fictional worked examples,
   Forward/Back and a detailed ownership/branch view; no runtime change.

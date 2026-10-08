@@ -1,8 +1,9 @@
 # ADE Capability-To-Code Boundary Audit
 
-Status: Draft for review, 2026-10-08. Planning only; the audit and any subsequent
-code reorganization require separate approval. No product behavior changes are
-proposed here.
+Status: Audit completed, 2026-10-08; report awaiting user review. The user invoked
+Relay direct and requested implementation of this audit plan. Any subsequent code
+reorganization still requires separate approval; no product behavior changes are
+proposed here. See the [audit report](../architecture/capability-map/code-boundary-audit.md).
 
 Planning baseline: primary `main` checkout at
 `2bfb390a329f2510a141690407829f4c340c2279`, clean before this document.
@@ -204,7 +205,7 @@ Existing chart tests and offline mechanics are not semantic or release qualifica
 | Action | Authority |
 | --- | --- |
 | Save/review this plan; scoped verified documentation commit and normal push | Granted for this planning iteration under current repository conventions. |
-| Execute the source-reading audit and create its report | Awaiting approval of this plan. Once approved, perform the covered audit serially on retained `main` without repeated checkpoint approvals. |
+| Execute the source-reading audit and create its report | Granted by the user's 2026-10-08 request. Perform covered work on retained `main`; read-only native sidecar inspection follows the explicitly invoked Relay direct skill, with one report writer. |
 | Change production files, imports, prompts, schemas, policies, APIs, or persistence semantics | Not authorized; requires review and approval of a specific follow-up scope. |
 | New tasks/worktrees, dependency installation, live tests, migrations, service restarts, deployment, or external-account use | Not authorized by this plan. |
 
@@ -213,3 +214,15 @@ work or a contract change, explain the dependency and request a scope decision.
 No operational rollback is needed for documentation-only work; any later refactor
 must define its own verification and rollback before execution. Do not use an old
 refactor plan as permission to resume historical work.
+
+## Execution Record
+
+Executed on retained primary `main` at
+`0ec2088ece4bc3b7f539bd56e457a5b69ea02245`, clean at entry. One writer integrated
+two read-only native inspections into the linked report: ownership, actual flow,
+94-file runtime reverse register, import/reference checks, and selective findings.
+All 166 inventory code/test references resolved. Seven focused fixture-only test
+files yielded 65 passes; database/browser/live qualification was not run.
+Only this plan, the report and its README link changed. Production code, canonical
+inventory/charts, product contracts and deployment state remain unchanged.
+No refactor candidate is adopted; review proceeds L1/L2, protected flow, then findings.
