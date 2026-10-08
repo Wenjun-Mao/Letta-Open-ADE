@@ -345,3 +345,68 @@ def natural_worker_support():
         ready_worker=_ReadyWorker,
         transport=_SyntheticNaturalTransport,
     )
+
+
+@pytest.fixture
+def compaction_packet_runtime(natural_worker_support):
+    from types import SimpleNamespace
+
+    from ade_api.features.agent_runtime.agent_studio_sessions import (
+        PurposeSessionService,
+    )
+    from ade_api.features.agent_runtime.database_boundary import RuntimeDatabase
+    from ade_api.features.agent_runtime.persistence.database import (
+        create_persistence_engine,
+    )
+    from ade_api.features.agent_runtime.run_service import RunService
+    from ade_api.features.agent_runtime.worker import AgentRuntimeWorker
+    from ade_api.platform.settings import AdeApiSettings
+    from workflows.evals.character_memory_dev.natural_packet_support import (
+        SummaryTransport,
+    )
+
+    def build(database_url, *, transport_type=SummaryTransport):
+        engine = create_persistence_engine(database_url)
+        settings = AdeApiSettings(
+            _env_file=None,
+            agent_runtime_mode="development",
+            agent_runtime_enabled=True,
+            database_url=database_url,
+            agent_runtime_worker_id="natural-compaction-packet-test",
+        )
+        catalog = natural_worker_support.catalog()
+        transport = transport_type(catalog)
+        base_definitions = natural_worker_support.definitions(catalog)
+
+        class PacketDefinitions:
+            async def prepare(self, request, *, purpose):
+                prepared = await base_definitions.prepare(request, purpose=purpose)
+                prepared["memory_policy_version"] = (
+                    "natural-user-assertions-v4-"
+                    + request.definition_key.rsplit("_", 1)[-1]
+                )
+                prepared["tool_names"] = list(request.tool_names)
+                return prepared
+
+        database = RuntimeDatabase(engine)
+        return SimpleNamespace(
+            engine=engine,
+            transport=transport,
+            sessions=PurposeSessionService(
+                database=database,
+                definitions=PacketDefinitions(),
+                purpose="evaluation",
+                session_namespace="natural-compaction-packet-test",
+            ),
+            service=RunService(
+                database=database,
+                settings=settings,
+                router_transport=transport,
+                worker_health=natural_worker_support.ready_worker(),
+            ),
+            worker=AgentRuntimeWorker(
+                engine=engine, settings=settings, transport=transport
+            ),
+        )
+
+    return build

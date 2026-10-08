@@ -335,9 +335,28 @@ views were regenerated; static SVG and journey output remained identical.
 Verification: 19 map tests, three connected-map tests and journey `build.py
 --check` passed; the built HTML's changed details/retention labels were checked
 in Chromium using a task-owned loopback preview. Its only console error was the
-preview server's missing favicon. A2 and A4 remain pending.
+preview server's missing favicon. A4 remains pending.
 
 The initial SQL baseline attempt used a task-owned database name that did not
 match the existing capture guard's `ade_*_test_<id>` contract and failed before
 provider work. A fresh correctly named database passed the existing real-worker
 compaction packet test (one test). Existing guard/runtime code was unchanged.
+
+A2 is complete: `CompactionExecutor` owns the existing dispatch protocol;
+`ConversationExecutor` retains generation/tools, and `model_response.py` shares
+only the unchanged envelope/usage mechanics. The old method and incidental
+`ModelCompaction` import were removed from consumers. Two independent adapter
+fixtures were run before extraction and remain passing afterward; parser,
+token-limit, observer and continuation-field checks cover the moved behavior.
+The packet and rollback tests share the existing synthetic real-worker setup.
+The late fault verifies staged summary/source, assistant and indexed-memory
+writes, followed by fresh unchanged state and preserved user acceptance.
+
+A2 verification: focused offline groups of 84 and 66 tests passed; eight
+PostgreSQL packet/rollback/fencing/lock-order tests passed in an owned migrated
+pgvector database. Forty map/journey Python tests and 52 Node tests passed;
+render/review/build checks and Ruff passed. Inventory, runtime README, codebase
+navigation and the journey's compaction source anchor now identify the new owner.
+Fixture development corrected assumptions about composite primary keys and the
+accepted user's existing `message.committed` event; no runtime workaround or
+fault hook was added.

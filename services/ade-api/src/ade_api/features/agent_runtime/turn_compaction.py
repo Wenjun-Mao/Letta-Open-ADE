@@ -11,7 +11,8 @@ from .natural_context import full_lifecycle_snapshot_fits
 
 if TYPE_CHECKING:
     from .context import ContextBudget
-    from .executor import ConversationExecutor, ModelCompaction
+    from .compaction import ModelCompaction
+    from .compaction_executor import CompactionExecutor
     from .natural_attempt_evidence import NaturalAttemptEvidence
 
 
@@ -22,7 +23,7 @@ async def compact_turn(
     current_user: dict[str, Any],
     natural_variant: str | None,
     budget: ContextBudget,
-    executor: ConversationExecutor,
+    executor: CompactionExecutor,
     deployment: dict[str, Any],
     deadline: float,
     evidence: NaturalAttemptEvidence | None,

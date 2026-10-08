@@ -48,6 +48,11 @@ arguments cannot choose another subject.
   memory-review work for one ADE-owned attempt.
 - `turn_result.py` owns the internal `AttemptResult` shared by execution and
   worker collaborators; consumers import it directly from this module.
+- `executor.py` owns conversation generation and its finite curated-tool loop.
+  `compaction_executor.py` dispatches the existing summary protocol using the
+  conversation's deployment/adapter. Planning and provenance stay in
+  `compaction.py`; eligibility and deadline policy stay in `turn_compaction.py`.
+  `model_response.py` shares only response-envelope and integer-usage mechanics.
 - `worker.py` and `worker_*` own leases, cancellation, events, and finalization.
 - `memory_policy.py` validates proposals; `persistence/` owns SQLAlchemy Core
   repositories and Alembic remains the only schema creation path.

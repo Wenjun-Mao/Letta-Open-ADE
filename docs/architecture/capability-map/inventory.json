@@ -85,7 +85,7 @@
       "gap": "Fresh/current representations still need retrieval-quality assessment.", "next_check": "Verify obsolete revisions and incompatible embedding spaces cannot surface as current facts."},
     {"id": "MEM-09", "domain": "memory", "subsystem": "Organization & Maintenance", "name": "Conversation compaction", "status": "implemented",
       "input": "Older local messages and current context pressure", "output": "Source-linked versioned summary proposal and working context",
-      "code": ["runtime:turn_compaction.py", "runtime:compaction.py", "runtime:executor.py", "runtime:worker_finalization.py"], "tests": ["tests:test_compaction.py", "tests:persistence/test_postgres_natural_compaction_packets.py"],
+      "code": ["runtime:turn_compaction.py", "runtime:compaction.py", "runtime:compaction_executor.py", "runtime:model_response.py", "runtime:worker_finalization.py"], "tests": ["tests:test_compaction.py", "tests:test_compaction_executor.py", "tests:test_model_response.py", "tests:persistence/test_postgres_natural_compaction_packets.py", "tests:persistence/test_postgres_compaction_rollback.py"],
       "evidence": "Existing compaction is not a future optional addition. Its summary proposal is prepared before generation and finalized with the turn.",
       "gap": "A summary is not independent factual authority or proof of source-level recall.", "next_check": "Compare source qualifiers with supplied summaries and count meaningful omissions."},
     {"id": "MEM-10", "domain": "memory", "subsystem": "Organization & Maintenance", "name": "Additional derived views", "status": "deferred",

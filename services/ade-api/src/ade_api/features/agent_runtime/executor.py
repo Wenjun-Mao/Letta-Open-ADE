@@ -5,20 +5,9 @@ from collections.abc import Awaitable, Callable, Collection, Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from .compaction import (
-    COMPACTION_RESPONSE_SCHEMA,
-    COMPACTION_SYSTEM,
-    CompactionPlan,
-    ModelCompaction,
-    compaction_content_sha256,
-    compaction_input_sha256,
-    compaction_model_input_json,
-    compaction_policy_sha256,
-    compaction_prompt_sha256,
-    parse_compaction_response,
-)
 from .context import estimate_tokens
 from .errors import RuntimeValidationError
+from .model_response import first_choice, merge_usage
 from .provider_tracing import safe_provider_request_id
 from .router_transport import RouterTransport
 from .tool_policy import TOOL_USE_POLICY, ToolRequirement
@@ -181,10 +170,10 @@ class ConversationExecutor:
             response = await self.transport.chat_completion(
                 payload, timeout_seconds=timeout_seconds
             )
-            _merge_usage(total_usage, response.get("usage"))
+            merge_usage(total_usage, response.get("usage"))
             request_id = safe_provider_request_id(response.get("id"))
             request_ids.append(request_id)
-            message, finish_reason = _first_choice(response)
+            message, finish_reason = first_choice(response)
             tool_calls = message.get("tool_calls")
             if isinstance(tool_calls, list) and tool_calls:
                 if not enabled_tools:
@@ -270,88 +259,6 @@ class ConversationExecutor:
         raise RuntimeValidationError(
             "Conversation model exceeded its tool-step budget",
             detail_code="conversation_tool_step_budget_exceeded",
-        )
-
-    async def compact(
-        self,
-        *,
-        model_key: str,
-        model_fingerprint: str,
-        plan: CompactionPlan,
-        timeout_seconds: float,
-        max_output_tokens: int,
-        summary_token_budget: int,
-        observe_request: Callable[[dict[str, Any]], None] | None = None,
-    ) -> ModelCompaction:
-        compaction_system = COMPACTION_SYSTEM
-        if self.provider_adapter == "deepseek_openai":
-            compaction_system += (
-                "\nReturn a JSON object matching this schema: "
-                f"{json.dumps(COMPACTION_RESPONSE_SCHEMA, ensure_ascii=False)}"
-                '\nExample JSON: {"summary":"A concise factual summary."}'
-            )
-        payload = {
-            "model": model_key,
-            "messages": [
-                {"role": "system", "content": compaction_system},
-                {"role": "user", "content": compaction_model_input_json(plan)},
-            ],
-            "max_tokens": max(
-                256,
-                min(
-                    max_output_tokens,
-                    4096 if self.provider_adapter == "deepseek_openai" else 1024,
-                ),
-            ),
-            "stream": False,
-        }
-        if self.provider_adapter == "deepseek_openai":
-            payload.update(
-                {
-                    "thinking": {"type": "enabled"},
-                    "reasoning_effort": "high",
-                    "response_format": {"type": "json_object"},
-                }
-            )
-        else:
-            payload.update(
-                {
-                    "temperature": 0,
-                    "response_format": {
-                        "type": "json_schema",
-                        "json_schema": {
-                            "name": "ade_conversation_compaction",
-                            "strict": True,
-                            "schema": COMPACTION_RESPONSE_SCHEMA,
-                        },
-                    },
-                    "chat_template_kwargs": {"enable_thinking": False},
-                }
-            )
-        if observe_request is not None:
-            observe_request(payload)
-        response = await self.transport.chat_completion(
-            payload, timeout_seconds=timeout_seconds
-        )
-        message, _ = _first_choice(response)
-        content = parse_compaction_response(
-            str(message.get("content", "") or "").strip(),
-            summary_token_budget=summary_token_budget,
-        )
-        usage: dict[str, int] = {}
-        _merge_usage(usage, response.get("usage"))
-        provider_request_id = safe_provider_request_id(response.get("id"))
-        return ModelCompaction(
-            plan=plan,
-            content=content,
-            model_key=model_key,
-            model_fingerprint=model_fingerprint,
-            provider_request_id=provider_request_id,
-            content_sha256=compaction_content_sha256(content),
-            prompt_sha256=compaction_prompt_sha256(compaction_system),
-            input_sha256=compaction_input_sha256(plan),
-            policy_sha256=compaction_policy_sha256(compaction_system),
-            usage=usage,
         )
 
 
@@ -502,23 +409,6 @@ def _with_tool_policy(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return working
 
 
-def _first_choice(response: dict[str, Any]) -> tuple[dict[str, Any], str]:
-    choices = response.get("choices")
-    if not isinstance(choices, list) or not choices or not isinstance(choices[0], dict):
-        raise RuntimeValidationError(
-            "Model response did not contain a choice",
-            detail_code="model_response_choice_missing",
-        )
-    choice = choices[0]
-    message = choice.get("message")
-    if not isinstance(message, dict):
-        raise RuntimeValidationError(
-            "Model response choice did not contain a message",
-            detail_code="model_response_message_missing",
-        )
-    return dict(message), str(choice.get("finish_reason", "") or "")
-
-
 def _parse_tool_call(
     raw_call: object, enabled_tools: Mapping[str, CuratedTool]
 ) -> tuple[str, str, dict[str, Any]]:
@@ -558,11 +448,3 @@ def _parse_tool_call(
             detail_code="conversation_tool_arguments_not_object",
         )
     return call_id, name, arguments
-
-
-def _merge_usage(total: dict[str, int], raw_usage: object) -> None:
-    if not isinstance(raw_usage, dict):
-        return
-    for key, value in raw_usage.items():
-        if isinstance(value, int) and not isinstance(value, bool):
-            total[str(key)] = total.get(str(key), 0) + value

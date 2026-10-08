@@ -21,6 +21,7 @@ from .embeddings import (
 from .deployments import validate_definition_execution
 from .errors import RuntimeValidationError
 from .evaluation_tools import evaluation_tool_registry
+from .compaction_executor import CompactionExecutor
 from .executor import ConversationExecutor, curated_tools
 from .history_admission import HistoryProbe
 from .history_attempt import HistoryAttempt, execute_generation_with_history
@@ -161,7 +162,7 @@ class TurnExecution:
             ),
             provider_adapter=conversation_adapter,
         )
-        compaction_executor = ConversationExecutor(
+        compaction_executor = CompactionExecutor(
             trace.transport(
                 self.transport,
                 stage="compaction",

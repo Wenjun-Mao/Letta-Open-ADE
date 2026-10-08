@@ -10,7 +10,7 @@ from ade_api.features.agent_runtime.compaction import (
     plan_compaction,
 )
 from ade_api.features.agent_runtime.errors import RuntimeValidationError
-from ade_api.features.agent_runtime.executor import ConversationExecutor
+from ade_api.features.agent_runtime.compaction_executor import CompactionExecutor
 
 
 class _Transport:
@@ -64,7 +64,7 @@ def test_compaction_summarizes_an_omitted_contiguous_history_prefix() -> None:
 
     transport = _Transport()
     result = asyncio.run(
-        ConversationExecutor(transport).compact(
+        CompactionExecutor(transport).compact(
             model_key="source::model",
             model_fingerprint="f" * 64,
             plan=plan,
@@ -113,7 +113,7 @@ def test_deepseek_compaction_uses_json_object_and_hashes_the_actual_prompt() -> 
     assert plan is not None
     transport = _Transport()
     result = asyncio.run(
-        ConversationExecutor(transport, provider_adapter="deepseek_openai").compact(
+        CompactionExecutor(transport, provider_adapter="deepseek_openai").compact(
             model_key="deepseek::deepseek-flash",
             model_fingerprint="f" * 64,
             plan=plan,

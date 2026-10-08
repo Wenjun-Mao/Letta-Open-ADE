@@ -15,28 +15,19 @@ import pytest
 from sqlalchemy import select
 
 import ade_api.features.agent_runtime.natural_attempt_evidence as evidence_module
-from ade_api.features.agent_runtime.agent_studio_sessions import PurposeSessionService
 from ade_api.features.agent_runtime.contracts import (
     AcceptTurnRequest,
     CreateAgentDefinitionRequest,
     CreateAgentStudioSessionRequest,
     CreateMemorySubjectRequest,
 )
-from ade_api.features.agent_runtime.database_boundary import RuntimeDatabase
-from ade_api.features.agent_runtime.persistence.database import (
-    create_persistence_engine,
-)
 from ade_api.features.agent_runtime.persistence.metadata import (
     conversation_summaries,
     runs,
     summary_sources,
 )
-from ade_api.features.agent_runtime.run_service import RunService
-from ade_api.features.agent_runtime.worker import AgentRuntimeWorker
-from ade_api.platform.settings import AdeApiSettings
 
 from workflows.evals.character_memory_dev.natural_packet_support import (
-    SummaryTransport,
     seed_complete_history,
 )
 
@@ -48,7 +39,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_paired_generated_summary_preserves_boundary_and_serialized_requests(
-    tmp_path, monkeypatch, natural_worker_support
+    tmp_path, monkeypatch, compaction_packet_runtime
 ) -> None:
     assert DATABASE_URL is not None
     monkeypatch.setenv("ADE_NATURAL_MEMORY_CAPTURE", "1")
@@ -57,43 +48,9 @@ def test_paired_generated_summary_preserves_boundary_and_serialized_requests(
     monkeypatch.setattr(evidence_module, "ARTIFACT_ROOT", tmp_path / "artifacts")
 
     async def scenario():
-        engine = create_persistence_engine(DATABASE_URL)
-        settings = AdeApiSettings(
-            _env_file=None,
-            agent_runtime_mode="development",
-            agent_runtime_enabled=True,
-            database_url=DATABASE_URL,
-            agent_runtime_worker_id="natural-compaction-packet-test",
-        )
-        catalog = natural_worker_support.catalog()
-        transport = SummaryTransport(catalog)
-        base_definitions = natural_worker_support.definitions(catalog)
-
-        class PacketDefinitions:
-            async def prepare(self, request, *, purpose):
-                prepared = await base_definitions.prepare(request, purpose=purpose)
-                prepared["memory_policy_version"] = (
-                    "natural-user-assertions-v4-"
-                    + request.definition_key.rsplit("_", 1)[-1]
-                )
-                prepared["tool_names"] = list(request.tool_names)
-                return prepared
-
-        sessions = PurposeSessionService(
-            database=RuntimeDatabase(engine),
-            definitions=PacketDefinitions(),
-            purpose="evaluation",
-            session_namespace="natural-compaction-packet-test",
-        )
-        service = RunService(
-            database=RuntimeDatabase(engine),
-            settings=settings,
-            router_transport=transport,
-            worker_health=natural_worker_support.ready_worker(),
-        )
-        worker = AgentRuntimeWorker(
-            engine=engine, settings=settings, transport=transport
-        )
+        runtime = compaction_packet_runtime(DATABASE_URL)
+        engine = runtime.engine
+        sessions, service, worker = runtime.sessions, runtime.service, runtime.worker
         async with engine.connect() as connection:
             assert (
                 not (

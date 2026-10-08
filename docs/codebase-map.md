@@ -46,6 +46,7 @@ Browser -> apps/ade-web -> services/ade-api -> PostgreSQL and Model Router
 | Tune model capabilities or sampling | `config/model-router/model-profiles.json` |
 | Change provider forwarding | `services/model-router/src/model_router/` |
 | Change Agent Studio memory or run behavior | `features/agent_runtime/` and its local README |
+| Change conversation generation or summary dispatch | Runtime `executor.py` or `compaction_executor.py`; eligibility stays in `turn_compaction.py` |
 | Change Comment or Label generation | The owning lab feature |
 | Change prompt/persona behavior | Prompt Center and `content/prompts/` or `content/personas/` |
 | Change a label schema | Schema Center and `content/label-schemas/` |

@@ -86,7 +86,7 @@
       "edges": ["compact-input", "compaction-request", "compaction-response", "summary-context"],
       "condition": "An eligible plan exists; natural B skips; A/A0 may withhold compaction by fit condition. Proposal persists only at success",
       "pcs": ["PC-05", "PC-08", "PC-09"],
-      "sources": [{"path": "runtime:turn_compaction.py", "anchor": "async def compact_turn("}, {"path": "runtime:executor.py", "anchor": "async def compact("}, {"path": "runtime:turn_execution.py", "anchor": "compaction = await compact_turn("}]
+      "sources": [{"path": "runtime:turn_compaction.py", "anchor": "async def compact_turn("}, {"path": "runtime:compaction_executor.py", "anchor": "async def compact("}, {"path": "runtime:turn_execution.py", "anchor": "compaction = await compact_turn("}]
     },
     {
       "name": "Experimental natural-review input", "mode": "experimental",
