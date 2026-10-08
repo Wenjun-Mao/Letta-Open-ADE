@@ -12,7 +12,7 @@ See the [entrypoint](README.md) for status definitions and authority boundaries.
 
 ### CHAR-01: Prompt and persona authoring
 Owner: **Character / Persona Definition**. Implementation: **implemented**.
-Input: Reviewed character-specific prompt/persona edits. Output: Versioned authored characterization including behavioral tendencies; no model invocation.
+Input: Reviewed character-specific prompt/persona edits. Output: Active authored characterization including behavioral tendencies; edits update active content, with immutable execution versions created by CHAR-02.
 Code: [registry.py](../../../services/ade-api/src/ade_api/features/prompt_center/registry.py), [sqlite.py](../../../services/ade-api/src/ade_api/features/prompt_center/personas/sqlite.py), [personas.jsonl](../../../content/personas/personas.jsonl) Tests: [test_content_identity.py](../../../services/ade-api/src/ade_api/features/prompt_center/tests/test_content_identity.py), [test_persona_registry.py](../../../services/ade-api/src/ade_api/features/prompt_center/tests/test_persona_registry.py)
 Evidence limit: Content ownership and identity tests exist; characterization quality is a separate judgment.
 Known gap: A stored persona is not proof that models enact it consistently; ADE-wide rules are not personality attributes.
@@ -20,7 +20,7 @@ Next isolated check: Review coherent, distinguishable authored intent and charac
 
 ### CHAR-02: Immutable definition binding
 Owner: **Character / Persona Definition**. Implementation: **implemented**.
-Input: Content, deployment/policy snapshot, subject and selected version. Output: Conversation bound to an immutable definition version.
+Input: Active prompt/persona content and deployment/tool/policy configuration for snapshot creation; selected immutable version and subject for conversation binding. Output: Immutable definition snapshot and conversation binding; later active edits do not change an existing conversation's version.
 Code: [definition_service.py](../../../services/ade-api/src/ade_api/features/agent_runtime/definition_service.py), [definitions.py](../../../services/ade-api/src/ade_api/features/agent_runtime/persistence/definitions.py), [history_trial_api.py](../../../services/ade-api/src/ade_api/features/agent_runtime/history_trial_api.py) Tests: [test_resource_service.py](../../../services/ade-api/tests/agent_runtime/test_resource_service.py), [test_agent_studio_postgres.py](../../../services/ade-api/tests/agent_runtime/persistence/test_agent_studio_postgres.py)
 Evidence limit: Definition/conversation mechanics and isolated version journeys are documented; ordinary version changes keep the character root (PC-03/04).
 Known gap: Version-binding mechanics do not qualify cross-version story continuity.
@@ -78,9 +78,9 @@ Next isolated check: Map existing benchmark tasks to this boundary before adding
 
 ### MEM-04: Context delivery
 Owner: **Memory / Recall & Context**. Implementation: **partial**.
-Input: Selected records, mandatory context, budgets and source bindings. Output: Actual serialized consumer requests with attributed admitted evidence.
+Input: Policy-specific facts, recent dialogue, optional summary and selected historical records, with consumer budgets and source bindings. Output: Attributed evidence fitted into actual generation/reviewer inputs; runtime separately composes bound characterization and ADE-wide requirements.
 Code: [natural_context.py](../../../services/ade-api/src/ade_api/features/agent_runtime/natural_context.py), [history_admission.py](../../../services/ade-api/src/ade_api/features/agent_runtime/history_admission.py), [history_attempt.py](../../../services/ade-api/src/ade_api/features/agent_runtime/history_attempt.py), [turn_context_selection.py](../../../services/ade-api/src/ade_api/features/agent_runtime/turn_context_selection.py) Tests: [test_natural_context.py](../../../services/ade-api/tests/agent_runtime/test_natural_context.py), [test_history_admission.py](../../../services/ade-api/tests/agent_runtime/test_history_admission.py), [test_story_offline_capacity.py](../../../services/ade-api/tests/agent_runtime/test_story_offline_capacity.py)
-Evidence limit: Current admission is greedy; history probes bind supplied H. Exact whole-selection admission remains proposed in ADR 0060.
+Evidence limit: Typed, natural and historical consumers receive different evidence. Current history admission is greedy; history probes bind supplied H. Exact whole-selection admission remains proposed in ADR 0060. See the audit's policy-specific input table.
 Known gap: Joint selections need a reviewed preservation contract; construction success does not prove semantic sufficiency.
 Next isolated check: Compare selected IDs with actual generation/reviewer H, fit outcomes and source-loss receipts.
 
@@ -94,9 +94,9 @@ Next isolated check: Trace accepted, cancelled, failed and completed turns witho
 
 ### MEM-06: Memory update review
 Owner: **Memory / Retention & Updates**. Implementation: **partial**.
-Input: Current user anchor, supplied references, fact state and reference-only candidate reply. Output: Supported proposed factual changes or no change.
+Input: Typed: current user, up to eight prior user messages, active facts and entities; no candidate reply. Natural variants: policy-specific originals/lifecycle state plus reference-only candidate. Historical H is supplied only by the bound experimental history path.. Output: Supported proposed factual changes or no change.
 Code: [reviewer.py](../../../services/ade-api/src/ade_api/features/agent_runtime/reviewer.py), [natural_memory_reviewer.py](../../../services/ade-api/src/ade_api/features/agent_runtime/natural_memory_reviewer.py), [natural_memory_review.py](../../../services/ade-api/src/ade_api/features/agent_runtime/natural_memory_review.py) Tests: [test_natural_memory_reviewer.py](../../../services/ade-api/tests/agent_runtime/test_natural_memory_reviewer.py), [test_natural_review_r5_contract.py](../../../services/ade-api/tests/agent_runtime/test_natural_review_r5_contract.py)
-Evidence limit: Existing reviewer owns semantic interpretation (PC-05); natural variants are experimental. A valid citation is not semantic proof.
+Evidence limit: One bound-policy reviewer owns semantic interpretation (PC-05); natural variants replace typed review and remain experimental. See the audit's policy-specific input table. A valid citation is not semantic proof.
 Known gap: Scope omissions, unsupported targets and output exhaustion remain observed limitations.
 Next isolated check: Score false/missed updates and unjustified clarification against source-grounded expectations.
 

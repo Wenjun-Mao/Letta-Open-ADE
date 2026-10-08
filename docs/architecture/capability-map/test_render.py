@@ -89,6 +89,18 @@ def test_duplicate_id_fails(inventory):
         renderer["validate"](inventory)
 
 
+def test_policy_inputs_and_authoring_are_explicit(inventory):
+    entries = {item["id"]: item for item in inventory["entries"]}
+    assert "edits update active content" in entries["CHAR-01"]["output"]
+    assert "later active edits do not change" in entries["CHAR-02"]["output"]
+    assert "runtime separately composes" in entries["MEM-04"]["output"]
+    assert "no candidate reply" in entries["MEM-06"]["input"]
+    assert "Historical H" in entries["MEM-06"]["input"]
+    flow = next(item for item in inventory["flows"] if item["id"] == "retain")
+    assert "compaction before generating" in flow["steps"][1]
+    assert ["CHAR-04", "MEM-06", "natural policy only: reference-only reply"] in flow["edges"]
+
+
 @pytest.mark.parametrize(
     "field,value",
     [("domain", "new-domain"), ("subsystem", "Unknown"), ("status", "released")],

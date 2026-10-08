@@ -327,4 +327,17 @@ A1 is complete: the four consumers import directly from `turn_result.py`, the
 runtime README/inventory identify that owner, and four import-owner assertions
 protect the seam. Verification: 25 worker/event/finalization/app tests, 18 map
 tests and three connected-map tests passed; changed Python files passed Ruff.
-A3, A2 and A4 remain pending.
+A3 is complete: CHAR-01/02 distinguish active edits from immutable bindings,
+MEM-04 describes policy-specific evidence and runtime composition, and MEM-06
+and the retention connection distinguish natural from typed review. Eligible
+compaction now precedes generation in the flow prose. The readable and connected
+views were regenerated; static SVG and journey output remained identical.
+Verification: 19 map tests, three connected-map tests and journey `build.py
+--check` passed; the built HTML's changed details/retention labels were checked
+in Chromium using a task-owned loopback preview. Its only console error was the
+preview server's missing favicon. A2 and A4 remain pending.
+
+The initial SQL baseline attempt used a task-owned database name that did not
+match the existing capture guard's `ade_*_test_<id>` contract and failed before
+provider work. A fresh correctly named database passed the existing real-worker
+compaction packet test (one test). Existing guard/runtime code was unchanged.

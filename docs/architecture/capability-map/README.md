@@ -68,6 +68,11 @@ separate input/sufficiency checks and uncertainty in diagnostic conclusions.
 The map clarifies agreed intent; it changes no runtime behavior or qualification.
 
 - Original dialogue records what was said, not automatic fact acceptance.
+- CHAR-01 edits active authored content; CHAR-02 creates immutable execution
+  snapshots and binds conversations. See the audit's
+  [policy-specific input table](code-boundary-audit.md#2-actual-message-flow-and-protected-boundaries)
+  for typed, natural and historical context/reviewer boundaries. The moving
+  journey already distinguishes these paths; the aggregate inventory does too.
 - CHAR-03/04 share the existing generation call, not two agents or a style rewriter.
 - Memory owns recovery/review responsibilities; runtime binds actual consumer
   requests and coordinates the complete turn.

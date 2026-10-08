@@ -373,6 +373,13 @@ unique source/test references; generated views were not modified. Independent
 read-only review checked structural counts/register/qualification wording; its
 one executor-construction anchor correction was verified and applied.
 
+## Implementation Follow-Up
+
+The approved [cleanup plan](../../plans/capability-boundary-cleanup.md#execution-record)
+records subsequent changes and verification. A1's import owner and A3's policy
+descriptions have been clarified; this audit's original findings, baseline and
+counts remain historical. Later extraction dispositions are tracked in the plan.
+
 ## 7. Review Gate
 
 Discuss section 1 first, then section 2, then the module map/findings. Decide
