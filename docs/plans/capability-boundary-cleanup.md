@@ -1,15 +1,20 @@
 # ADE Capability Boundary Cleanup
 
-Status: Proposed implementation plan, 2026-10-08; awaiting user review.
+Status: Proposed implementation plan, revision 2, 2026-10-08; awaiting user review.
 Planning is authorized; production edits, refactoring and test-service startup
 have not started. This follows the completed
 [code-boundary audit](../architecture/capability-map/code-boundary-audit.md), rather
 than reopening its discovery work or replacing its historical evidence.
+The [consultation assessment](../findings/capability-boundary-consultation/assessment.md)
+records source-checked refinements from two preserved reports, not implementation
+approval. The sequence remains A1 -> A3 -> A2 -> A4.
 
 Source baseline: primary `main` at
 `49b98ede4d47885d3f89a6e0b600e246e2e7eb1e`, clean at planning entry.
 Relevant source, callers, fixtures and commands were rechecked for this plan;
 runtime tests were not rerun. Refresh this baseline when implementation starts.
+Review-integration baseline: `74e993a9b4d50cc367778392aab71937f5b541ff`, also clean;
+the intervening changes were documentation-only.
 
 ## Outcome And Approach
 
@@ -64,12 +69,12 @@ All are existing paths unless explicitly marked proposed.
 | --- | --- | --- |
 | Interface -> runtime | `web:api.ts` sends turn requests; runtime returns run receipts; events and persisted readback supply outcomes. | UI does not import a Memory/Character implementation or treat a receipt/candidate as a committed reply. Keep the same endpoints and hook surface. |
 | Persona Definition -> bound execution | Prompt Center authors active content; `runtime:definition_service.py` creates immutable snapshots used by the conversation. | Preserve authored intent versus contextual application. A snapshot also contains runtime configuration; it is not a portable persona schema. |
-| Memory -> Character | Context selection supplies persona/evidence through the actual request builder; optional memory-search results return through the curated tool loop. | Preserve source scope, qualifications, actual serialization and capacity checks. Do not force summary-only evidence or copy provider payloads into a new domain API. |
+| Memory -> Character, composed by runtime | Request assembly combines independently bound authored characterization, ADE-wide requirements and scoped Memory evidence using actual consumer serialization/capacity rules; memory-search results return through the curated tool loop. | Memory evidence delivery does not own persona authoring or the Character implementation. Preserve source qualifications; do not force summary-only evidence or invent a portable domain API. |
 | Character -> runtime | `runtime:executor.py` returns `ExecutorResult` after shared generation/tool execution. | Preserve joint interpretation, choice and expression. A future controller might supply guidance or own generation; this plan does not choose between them or assign future tool-loop ownership. |
 | Runtime -> Memory review | `runtime:turn_execution.py` supplies policy-specific inputs to one reviewer; review preparation returns validated proposed operations. | Typed review has no candidate reply; natural review receives it as reference, not factual authority. No second reviewer or new character-state admission policy. |
 | Execution -> finalization | `runtime:turn_result.py` owns `AttemptResult`, aggregating concrete generation, context, review, embedding and compaction results. | A1 makes imports explicit, not implementation-independent. Keep this internal coordination aggregate; do not promote it to a cross-domain or network protocol. |
 | Finalization -> persistence | Runtime owns the connection and full fenced success transaction; domain helpers use that connection. | Preserve one atomic outcome. A remote Memory store would require an explicit consistency/migration decision, not an adapter claimed to be equivalent. |
-| Supporting model access | Conversation, compaction, review and embeddings use traced Model Router transport. | Separate compaction protocol ownership without new dispatches or a parallel transport/client stack. |
+| Supporting model access | Conversation, compaction, review and embeddings use traced Model Router transport. Compaction currently uses the conversation deployment and provider adapter. | Separate compaction protocol ownership without a new model role, independent configuration, extra dispatches or a parallel transport/client stack. |
 
 Future replaceability means avoiding new hidden dependencies during this cleanup,
 not removing every current coupling. Exact request-capacity admission, concrete
@@ -105,7 +110,10 @@ transitive implementation dependencies have disappeared.
 Acceptance: no maintained consumer imports `AttemptResult` via execution; import
 and app-composition checks pass; worker/finalization/event behavior is unchanged.
 Add a focused import-owner regression assertion to the existing runtime tests,
-not a general architectural-lint framework. Keep this a small independent commit.
+not a general architectural-lint framework. Check the named consumer imports:
+importing the defining module already works, and execution may still expose the
+type because it uses it. Do not assert that attribute is absent from execution.
+Keep this a small independent commit.
 
 ### 2. Correct The Responsibility Descriptions (A3)
 
@@ -119,6 +127,8 @@ candidate reply. Identify that edge as natural-policy-only. Retain IDs, names,
 ownership, statuses and topology. Cross-link the audit's policy-specific table.
 Update the corresponding journey descriptions only where the same ambiguity
 appears; preserve the existing correct distinctions and illustrative examples.
+Also correct the retention step's wording to put eligible compaction before
+generation, and keep request composition distinct from Memory evidence ownership.
 
 Regenerate `map:inventory.md`, `ade-capability-map.html`, `ade-capability-map.svg`
 and any affected journey output from their authored sources, never by editing
@@ -151,15 +161,32 @@ home (`runtime:model_response.py`, proposed) and test their existing semantics.
 Do not copy them, make compaction import the conversation implementation, create a
 base executor/plugin framework, or move unrelated tools/request builders. Keep
 `initial_conversation_request` shared by admission and execution as today.
+Preserve copied response message fields required for tool continuation; the shared
+helper must not become a destructive normalizer or a dispatch-policy owner.
 
 Acceptance: generation/tool ownership no longer includes the compaction protocol;
-both provider-adapter branches serialize identical requests for fixed inputs.
+each provider-adapter branch preserves its own pre-cleanup request for fixed inputs,
+not an identical request across the two intentionally different branches.
 Preserve prompt/input/policy/content hashes, request IDs, usage, errors and existing
 observer behavior (do not normalize different exception semantics as cleanup).
-Preserve tracing stage, timeouts, A/A0 withholding, B disabling, pre-generation
-timing and success-only summary/source persistence. Offline fixture assertions
-must compare exact payloads/provenance and cover malformed responses/budget bounds.
-Synthetic PostgreSQL checks must exercise the real worker and atomic finalization.
+Preserve the conversation deployment/adapter, tracing stage, remaining timeout,
+A/A0 withholding, B disabling, pre-generation timing and success-only persistence.
+Use two fixed-input adapter fixtures with independently specified expected payloads
+and provenance, not hashes recomputed solely through production helpers. Add small
+parameterized checks for malformed envelopes/summary output, token floor/caps,
+usage filtering and observer exceptions. Do not multiply every case across policies.
+
+Extend the existing synthetic real-worker PostgreSQL fixture with one summary-bearing
+late transaction failure, after the real `create_compaction` has staged writes but
+before success commits. Confirm the injection point was reached; disable retries
+for this case. On fresh readback, require no new assistant, summary/source bundle,
+memory/index changes, conversation-version advance or success-event bundle from
+the failed attempt. Preserve prior state and the separately accepted user message;
+failure/attempt metadata may still be recorded. A pre-finalizer rejection alone
+cannot prove rollback of staged writes. Keep the existing success/fencing checks;
+do not add a second mandatory rejection campaign or a new production fault hook.
+Use the packet test's existing real construction/trace assertions instead of a
+duplicate elaborate mocked construction harness.
 
 ### 4. Give Run Monitoring One Focused UI Owner (A4)
 
@@ -168,12 +195,21 @@ with stream/poll lifecycle. No stale-update bug was established. Extract one
 cohesive monitor, not a hook for every diagram box or the whole controller at once.
 
 Use a local run-monitor hook/collaborator (`web:use-run-monitor.ts`, proposed) for
-stream/poll handles, active-run identity, terminal deduplication and guarded
-completion/readback. Keep conversation selection/read epochs authoritative in the
-existing controller; pass the required identity guard and selected-readback
-callback rather than inventing a second epoch system. Terminal handling must
-recheck ownership after awaits. Keep memory-action outcome interpretation with its
-existing UI owner through a narrow guarded completion callback.
+stream/poll handles, active monitor identity, terminal latch/deduplication, guarded
+completion sequencing and disposal. Keep the single displayed run/event state in
+the controller: acceptance, cancellation and selected refresh legitimately update
+it alongside guarded monitor notifications. Do not mirror that state in the hook.
+
+Only the controller advances selection/read epochs. Keep their invalidation scopes
+distinct: same-conversation read refresh does not end the monitoring lifetime;
+A -> B -> A does not revive callbacks from the first visit. Supply an ownership
+guard and selected-readback callback, not another epoch system. Both monitor and
+controller callbacks must recheck that guard before consequential mutations after
+their own awaits; checking only after an awaited callback returns is too late.
+The completion callback must not independently own the terminal latch or disposal.
+Keep memory-action interpretation in its existing owner: a `null` selected read
+is not confirmation of persistence, and confirmation still requires matching
+committed-event and refreshed-revision evidence.
 
 Leave workspace loading, draft/resource actions, pagination, evidence navigation,
 send/cancel policy and persona binding in their current owners. Preserve the public
@@ -185,16 +221,25 @@ and retain the controller instead of broadening to a state-management rewrite.
 
 Acceptance: selection A -> B rejects late acceptance, stream, poll and terminal
 callbacks; same-conversation evidence navigation keeps monitoring; revisiting a
-running conversation resumes it. Terminal refresh is deduplicated, stream failure
+running conversation resumes it. Preserve stable lifecycle callbacks, including
+`stopMonitoring`, so ordinary rerenders do not restart monitoring or retrigger
+the controller's selection-reset effect. Terminal refresh is deduplicated; a
+terminal-fetch failure clears its latch for a later retry as today. Stream failure
 retains polling, obsolete reads cannot override new state, and unmount/selection
-change closes owned resources. Drafts, edits, cancellation and memory-action
-outcomes retain their behavior. Run hook/view checks and a synthetic browser walk.
+change closes owned resources. Preserve drafts, edits, cancellation and memory
+outcomes. Use deferred responses/fake timers for races including A -> B -> A and
+changes during terminal completion; keep tests through `useAgentStudio`, not only
+the extracted hook. One synthetic browser walk checks wiring, not every race.
+Do not silently strengthen scheduling or swallowed-read-error semantics; separate
+an exposed pre-existing defect from an extraction regression before expanding scope.
 
 ### 5. Reconcile And Close The Cleanup
 
-Refresh affected source homes in the canonical inventory and the runtime README;
-update `docs/codebase-map.md` only where navigation changes. Link implemented
-dispositions from the historical audit, preserving its original evidence/counts.
+Refresh affected source homes with each implementation slice in the canonical
+inventory and runtime README; final reconciliation catches omissions rather than
+deferring known stale references. Update `docs/codebase-map.md` only where navigation
+changes. Link implemented dispositions from the historical audit, preserving its
+original evidence/counts.
 Record actual changes, checks, skips and unresolved replacement questions in this
 plan's execution record; do not create another capability registry or report suite.
 
@@ -219,12 +264,12 @@ scripts with installed dependencies; do not silently sync/install or run live pr
 
 | Slice | Existing checks and required additions |
 | --- | --- |
-| A1 | `tests:test_worker.py`, `test_worker_events.py`, `test_worker_finalization.py`, `test_run_service.py`, `test_retry.py`, `test_native_app.py`; direct contract-import assertion. |
-| A2 offline | `tests:test_compaction.py`, `test_executor.py`, `test_memory_policy_binding.py`, `test_natural_context.py`, `test_natural_evaluation_capacity.py`, `test_history_admission.py`, plus worker/finalization checks. Add exact compaction request/provenance/error and traced-construction coverage before extraction. |
-| A2 SQL | `tests:persistence/test_postgres_natural_compaction_packets.py`, `test_postgres_natural_worker_fencing.py`, `test_postgres_lock_order.py`; real persistence with synthetic providers, not semantic model evaluation. |
-| A4 | `npm --prefix apps/ade-web run test -- src/features/agent-studio`, then web lint/build; add missing late-poll, duplicate-terminal and cleanup assertions to focused async/monitor tests. Browser: switch conversations mid-run, evidence navigation, terminal readback, cancellation, stream/poll fallback with synthetic responses. |
-| A3 / map updates | `map:render.py --check`, `test_render.py`, `test_map.cjs`; journey `review.py`, `build.py --check`, `test_review.py`, `test_build.py`, `test_example.py`, `test_player.cjs`, `test_guide.cjs`, `test_examples.cjs`. Regenerate first where inputs changed. |
-| Final | Relevant focused checks together, changed Python files through Ruff/import checks, handwritten web suite/lint/build if changed, source/link/status consistency, scoped diff and `git diff --check`. |
+| A1 | Import/app composition and `tests:test_worker.py`, `test_worker_events.py`, `test_worker_finalization.py`, `test_native_app.py`; targeted consumer-import assertion. Defer broader unchanged runtime checks to the combined run. |
+| A2 offline | `tests:test_compaction.py`, `test_executor.py`, `test_memory_policy_binding.py`, `test_natural_context.py`, `test_natural_evaluation_capacity.py`, `test_history_admission.py`, plus worker/finalization checks. Add exact adapter request/provenance and small error/caller cases before extraction. |
+| A2 SQL | `tests:persistence/test_postgres_natural_compaction_packets.py` plus the one late-transaction rollback case above and existing `test_postgres_natural_worker_fencing.py`. `test_postgres_lock_order.py` is a useful available-environment regression, not a new extraction-specific gate or a substitute for the rollback case. |
+| A4 | `npm --prefix apps/ade-web run test -- src/features/agent-studio`, then web lint/build. Deterministic tests cover late poll/completion, duplicate terminal, fetch failure/retry, disposal and stable rerenders. One synthetic browser smoke covers actual wiring, selection, evidence navigation and terminal readback; do not manually repeat every race. |
+| A3 / map updates | `map:render.py --check`, `test_render.py`, `test_map.cjs`. Only if journey sources/generators or their output are affected: journey `review.py`, `build.py --check`, `test_review.py`, `test_build.py`, `test_example.py`, `test_player.cjs`, `test_guide.cjs`, `test_examples.cjs`. Regenerate changed views; inspect changed visible labels in built HTML, sharing the browser session where practical. |
+| Final | Relevant focused checks together plus `tests:test_run_service.py` and `test_retry.py`, changed Python files through Ruff/import checks, handwritten web suite/lint/build if changed, source/link/status consistency, scoped diff and `git diff --check`. Avoid duplicate broad runs without an intervening relevant change. |
 
 Follow the existing [disposable PostgreSQL recipe](../../workflows/evals/character_memory_dev/README.md)
 with a uniquely owned loopback database/container, existing migrations and no
@@ -263,6 +308,10 @@ under a refactor label. No new replacement architecture ADR is adopted by planni
 
 Planning only. A1-A4 are not implemented by this document. No runtime verification,
 disposable service, browser session, live experiment or deployment was started.
-Planning checks resolved 19 local Markdown links, 16 existing aliased source
+Initial planning checks resolved 19 local Markdown links, 16 existing aliased source
 references and 26 verification-script/test references across this plan and its
 README entry; the three proposed module paths are explicitly distinguished.
+Revision 2 incorporates the linked consultation assessment: explicit UI state and
+lifecycle ownership, runtime composition wording, exact per-adapter characterization,
+one compaction-bearing rollback check, and change-proportional verification. These
+are revised proposed obligations, not tests implemented or results reproduced.
