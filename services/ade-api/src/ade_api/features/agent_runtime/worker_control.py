@@ -15,7 +15,8 @@ from .events import append_run_event
 from .persistence.leases import ConversationLeaseRepository
 from .persistence.runs import RunRepository
 from .provider_tracing import AttemptTrace
-from .turn_execution import AttemptResult, TurnExecution
+from .turn_execution import TurnExecution
+from .turn_result import AttemptResult
 from .worker_claims import ClaimedRun
 from .worker_events import append_attempt_trace
 

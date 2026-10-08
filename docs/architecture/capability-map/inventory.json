@@ -145,7 +145,7 @@
       "gap": "A concrete capability and execution/authority contract are required before expansion.", "next_check": "Reopen for a named user need, not because this placeholder exists."},
     {"id": "SUP-01", "domain": "support", "subsystem": "Runtime Coordination", "name": "Turn orchestration and worker", "status": "implemented",
       "input": "Accepted run, deadline, lease and immutable bindings", "output": "One coordinated attempt, tools/review, cancellation/retry and final outcome",
-      "code": ["runtime:turn_execution.py", "runtime:worker.py", "runtime:run_service.py", "runtime:retry.py"], "tests": ["tests:test_worker.py", "tests:test_retry.py"],
+      "code": ["runtime:turn_execution.py", "runtime:turn_result.py", "runtime:worker.py", "runtime:run_service.py", "runtime:retry.py"], "tests": ["tests:test_worker.py", "tests:test_retry.py"],
       "evidence": "Owns sequencing and atomic finalization; capability boxes are not independent post-reply hooks (PC-08/09).",
       "gap": "The chart is not a deployment or retry-policy change.", "next_check": "Trace acceptance through failure/cancellation/success with existing receipts."},
     {"id": "SUP-02", "domain": "support", "subsystem": "State & Storage", "name": "PostgreSQL and migrations", "status": "implemented",

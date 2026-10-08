@@ -22,7 +22,7 @@ from .persistence.memory import MemoryRepository
 from .persistence.history_guard import validate_history_at_commit
 from .persistence.runs import RunRepository
 from .provider_tracing import AttemptTrace
-from .turn_execution import AttemptResult
+from .turn_result import AttemptResult
 from .worker_claims import ClaimedRun
 from .worker_control import (
     LeaseLost,

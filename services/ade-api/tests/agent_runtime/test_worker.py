@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import ast
 from contextlib import asynccontextmanager
+import importlib
+import inspect
 from types import SimpleNamespace
 
 import pytest
@@ -19,6 +22,20 @@ from ade_api.features.agent_runtime.worker_control import (
     StartedAttempt,
     WorkerDraining,
 )
+
+
+@pytest.mark.parametrize(
+    "name", ["worker", "worker_control", "worker_events", "worker_finalization"]
+)
+def test_worker_consumers_import_attempt_result_from_its_owner(name: str) -> None:
+    module = importlib.import_module(f"ade_api.features.agent_runtime.{name}")
+    imports = [
+        node.module
+        for node in ast.walk(ast.parse(inspect.getsource(module)))
+        if isinstance(node, ast.ImportFrom)
+        and any(alias.name == "AttemptResult" for alias in node.names)
+    ]
+    assert imports == ["turn_result"]
 
 
 class _Attempts:

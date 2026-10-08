@@ -19,7 +19,8 @@ from .natural_attempt_evidence import retain_attempt_evidence
 from .retry import execute_with_retries
 from .router_transport import RouterTransport
 from .router_transport import build_runtime_router_transport
-from .turn_execution import AttemptResult, TurnExecution
+from .turn_execution import TurnExecution
+from .turn_result import AttemptResult
 from .worker_claims import ClaimedRun, RunClaimer
 from .worker_control import (
     AttemptController,

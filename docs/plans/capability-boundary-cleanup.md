@@ -1,13 +1,14 @@
 # ADE Capability Boundary Cleanup
 
-Status: Proposed implementation plan, revision 2, 2026-10-08; awaiting user review.
-Planning is authorized; production edits, refactoring and test-service startup
-have not started. This follows the completed
+Status: Implementation in progress, revision 2, 2026-10-08; approved by the user.
+Implementation and the described disposable verification resources are authorized.
+This follows the completed
 [code-boundary audit](../architecture/capability-map/code-boundary-audit.md), rather
 than reopening its discovery work or replacing its historical evidence.
 The [consultation assessment](../findings/capability-boundary-consultation/assessment.md)
 records source-checked refinements from two preserved reports, not implementation
-approval. The sequence remains A1 -> A3 -> A2 -> A4.
+approval. The user's subsequent implementation instruction authorizes this plan.
+The sequence remains A1 -> A3 -> A2 -> A4.
 
 Source baseline: primary `main` at
 `49b98ede4d47885d3f89a6e0b600e246e2e7eb1e`, clean at planning entry.
@@ -15,6 +16,9 @@ Relevant source, callers, fixtures and commands were rechecked for this plan;
 runtime tests were not rerun. Refresh this baseline when implementation starts.
 Review-integration baseline: `74e993a9b4d50cc367778392aab71937f5b541ff`, also clean;
 the intervening changes were documentation-only.
+Implementation baseline: clean primary `main` at
+`cf9b5bae49414f164cf5b425b3a62740d1abe2ea`. Python/web dependencies and the
+cached pgvector PostgreSQL image are available. One writer uses this checkout.
 
 ## Outcome And Approach
 
@@ -289,9 +293,9 @@ retrieval sufficiency, production equivalence or new release qualification.
 | Action | Authority |
 | --- | --- |
 | Save/review this plan, README link, verified documentation commit and normal push | Granted for this planning iteration under current repository conventions. |
-| Implement slices 0-5 and focused regression tests | Proposed scope; requires implementation approval. Approval covers serial covered work without renewed per-slice approval requests. |
+| Implement slices 0-5 and focused regression tests | Granted by the user's implementation instruction, 2026-10-08; serial covered work needs no renewed per-slice approval. |
 | Disposable loopback PostgreSQL, existing migrations within that database, synthetic local preview/browser checks, cleanup of those owned resources | Included in the proposed implementation scope. Use installed/cached tooling only; no existing service restart, borrowed database or production migration. |
-| Commits and normal pushes of completed verified implementation slices | Already pre-approved publication policy; implementation itself is not yet authorized. |
+| Commits and normal pushes of completed verified implementation slices | Pre-approved publication policy and authorized implementation scope. |
 | Dependency installation/download, new task/worktree, remote services/accounts, live provider calls, deployment or changes outside this scope | Not authorized. Surface only an actual uncovered need or material design change. |
 
 Commit bounded verified slices independently so a source regression can be
@@ -306,8 +310,8 @@ under a refactor label. No new replacement architecture ADR is adopted by planni
 
 ## Execution Record
 
-Planning only. A1-A4 are not implemented by this document. No runtime verification,
-disposable service, browser session, live experiment or deployment was started.
+The initial planning and consultation iterations performed documentation/source
+checks only. Their historical checks are retained below.
 Initial planning checks resolved 19 local Markdown links, 16 existing aliased source
 references and 26 verification-script/test references across this plan and its
 README entry; the three proposed module paths are explicitly distinguished.
@@ -315,3 +319,12 @@ Revision 2 incorporates the linked consultation assessment: explicit UI state an
 lifecycle ownership, runtime composition wording, exact per-adapter characterization,
 one compaction-bearing rollback check, and change-proportional verification. These
 are revised proposed obligations, not tests implemented or results reproduced.
+
+Implementation baseline checks: 87 runtime tests, 35 Agent Studio tests and
+18 map tests passed using installed dependencies, offline Python execution and
+synthetic fixtures. FastAPI emitted its existing TestClient deprecation warning.
+A1 is complete: the four consumers import directly from `turn_result.py`, the
+runtime README/inventory identify that owner, and four import-owner assertions
+protect the seam. Verification: 25 worker/event/finalization/app tests, 18 map
+tests and three connected-map tests passed; changed Python files passed Ruff.
+A3, A2 and A4 remain pending.

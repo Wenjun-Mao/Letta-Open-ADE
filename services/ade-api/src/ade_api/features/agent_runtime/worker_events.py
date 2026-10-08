@@ -7,7 +7,7 @@ from .persistence.runs import RunRepository
 from .provider_tracing import AttemptTrace
 from .request_counts import dispatch_counts
 from .tool_policy import ToolRequirement
-from .turn_execution import AttemptResult
+from .turn_result import AttemptResult
 
 
 async def append_attempt_trace(
