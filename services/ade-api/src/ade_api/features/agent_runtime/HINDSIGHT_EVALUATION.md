@@ -29,7 +29,9 @@ changes the character tag within that bank (PC-02/03/04/10/11).
 
 For infrastructure readiness, `recall` performs the same strict scope admission
 and full reranking qualification as `run`, then writes the admitted memories and
-trace without constructing Model Router or Character generation:
+trace without constructing Model Router or Character generation. Its
+`hindsight.context.json` receipt keeps the admitted recall as a flat `memories`
+list; no Character-facing projection is applied:
 
 ```sh
 uv run --locked python -m ade_api.features.agent_runtime.hindsight_evaluation recall \
@@ -86,12 +88,19 @@ when not using that arm. Failed recall aborts, rather than substituting a contro
 Optional `excluded_memory_terms` are checked in both recalled fact text and
 context before any Character dispatch; this is used by q01 to fail closed if a
 private source origin crosses into either field despite its tags. Before
-Character composition, attached context is retained only when the structural
-`character:<root>` tags and any `metadata.character_root_id` identify exactly
-the active root. Matching tags or metadata can establish ownership when the
-other is absent. Unknown, mixed or conflicting ownership removes only the
-attached context; the admitted fact and its source attribution remain. The
-feature never parses freeform context to infer ownership.
+Character composition, memories are grouped by structural ownership. A memory
+whose `character:<root>` tags and optional `metadata.character_root_id` resolve
+to exactly the active root enters `same_character_history` unchanged; either
+matching source may establish ownership when the other is absent. A
+`kind:profile` memory without that exact ownership enters
+`shared_profile_facts` with its fact text, type, entities and occurred dates
+preserved, while attached context, character tags and source attribution fields
+are removed. These profile facts remain usable as subject facts, but do not
+establish that this character heard the user say them or participated in their
+source conversation. Unknown, malformed, foreign or conflicting ownership
+omits non-profile memories from Character context while retaining them in raw
+recall diagnostics. The feature never parses freeform context or fact text to
+infer ownership or rewrites profile text.
 
 Optional frozen settings and defaults: `timeout_seconds=120.0` and
 `recall_timeout_seconds=120.0` (positive, at most 180),
@@ -131,10 +140,13 @@ Receipts (directory 0700, files 0600, exclusive writes with fsync):
 
 - `input.json`, `binding.json`: frozen synthetic inputs, derived scope, pinned
   Hindsight identity and selected router model/profile fingerprint.
-- `<arm>.context.json`: projected memories actually supplied to Character,
-  recall status/path/payload, recall latency/count or explicitly identified
+- `<arm>.context.json` from `run`: `character_context` with the
+  `shared_profile_facts` and `same_character_history` lists actually supplied
+  to Character, plus scope and recall status/count or explicitly identified
   control status. Hindsight's original result projection remains in
-  `hindsight.recall.json` for diagnostics.
+  `hindsight.recall.json` for diagnostics. The recall-only readiness command
+  instead writes `hindsight.context.json` with the flat admitted `memories`
+  list described above; it does not run Character projection.
 - `hindsight.recall-request.json`: actual scope/payload captured before dispatch;
   capture failure prevents recall as well as Character generation.
 - `hindsight.recall-failure.json`: safe HTTP/transport failure metadata, without
