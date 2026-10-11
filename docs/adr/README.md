@@ -57,6 +57,7 @@ record's status notice before applying its original execution details.
 | [0058](0058-offline-packet-capacity-and-qualifications.md) | Approved D04-only eight-source offline capacity diagnostic and whole-packet qualification rubric; no runtime count change or provider calls. |
 | [0061](0061-capability-responsibility-map.md) | Domain/Subsystem/Module inventory, authored-characterization versus contextual-application boundary, and three overlapping response-assessment lenses; no new runtime phases or release qualification. |
 | [0062](0062-self-hosted-hindsight.md) | Self-hosted isolated OCI experiment on the current host, with an autonomous campaign instead of fixed replay approval gates; execution awaits the user's Goal-mode start, and production adoption/cutover remain excluded. |
+| [0063](0063-hindsight-character-evaluation-boundary.md) | Evaluation-only CLI owns strict scoped recall, frozen Character comparison arms and fail-closed durable captures; workflow owns ingestion/curation and qualification, with incumbent execution unchanged. |
 
 ## Historical, Retired, Or On Hold
 

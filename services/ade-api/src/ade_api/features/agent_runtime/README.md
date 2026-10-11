@@ -66,6 +66,12 @@ owns generation or persistence; terminal display reloads ADE's retained state.
 
 ## Private Evaluation Capture
 
+The isolated Hindsight experiment uses the separate feature-owned
+[`hindsight_evaluation` CLI](HINDSIGHT_EVALUATION.md) for scoped recall and exactly
+one tool-free Character generation per comparison arm. It constructs no native
+runtime persistence or worker and requires durable request/result captures.
+See [ADR 0063](../../../../../../docs/adr/0063-hindsight-character-evaluation-boundary.md).
+
 `ADE_NATURAL_MEMORY_CAPTURE=1` remains restricted to development, evaluation
 purpose and isolated loopback test databases. Capture-v1 fields are unchanged;
 the optional `private_observations` extension has named contract
