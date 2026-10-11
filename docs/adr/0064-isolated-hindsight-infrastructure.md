@@ -274,16 +274,17 @@ Static and synthetic checks do not replace actual OCI execution evidence.
 
 ### Public fact entity readback
 
-The candidate05 restart comparison exposed that `/memories/list` returns entity
-names as a comma-joined display string. The operator's before/after inspection
-found the selected fact identities, order, text, scope, metadata and lifecycle
-fields unchanged, while only the presentation order of that string differed.
-Hashing it made P4 reject a persisted-state readback for a non-semantic
-presentation change. The same public API's fact detail endpoint returns a
-structured array of entity names, so P4 now reads that endpoint for each frozen
-fact and hashes canonical JSON for the sorted names. It preserves multiplicity
-and commas in names, and rejects missing/malformed details or mismatched fact,
-source, state or text identity. Membership drift remains a readback failure.
+The candidate05 initial-retain-a recorded-versus-fresh-GET inspection showed
+that `/memories/list` returns entity names as a comma-joined display string. The
+inspection found the selected fact identities, order, text, scope, metadata and
+lifecycle fields unchanged, while only the presentation order of that string
+differed. The old hash projection would therefore falsely reject a P4 comparison
+for a non-semantic presentation change; no P4 restart comparison had run. The
+same public API's fact detail endpoint returns a structured array of entity
+names, so P4 now reads that endpoint for each frozen fact and hashes canonical
+JSON for the sorted names. It preserves multiplicity and commas in names, and
+rejects missing/malformed details or mismatched fact, source, state or text
+identity. Membership drift remains a readback failure.
 
 Do not split the display string on commas or omit the entity projection: splitting
 cannot preserve names containing commas, while omission would discard a real
