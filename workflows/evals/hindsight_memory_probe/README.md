@@ -532,8 +532,35 @@ No separate `pg_dump`, process-log rename, whole-project stop or `down -v` befor
 `finalize`. On stage failure the supervisor performs bounded cleanup and writes a
 fixed-code failure receipt; partial dump files remain private and are not
 published as a successful archive. Retained volumes/cache are not removed.
-Disposable restore project support is not implemented in this iteration; optional
-P4 restore remains unrun.
+
+After a completed finalization, the optional local restore qualification can run
+against the exact published archive. It admits one token-bound project and
+volume, pins the already-qualified PostgreSQL image by ID, disables networking,
+ports and host mounts, and runs only `pg_restore` plus exact read-only snapshot
+queries. It compares every canonical database row (including vectors and source
+lineage) and derives the frozen scope from restored rows. The source
+`scope_eligibility` file remains hash-bound control evidence; it is not treated
+as a PostgreSQL table or copied into the disposable database. A mismatch keeps
+failure evidence and the restore volume for inspection. A successful comparison
+removes only the exact registered restore container and volume after checking
+volume consumers.
+
+```sh
+python3 -m workflows.evals.hindsight_memory_probe.restore --state "$PROBE_STATE" start --timeout 900
+python3 -m workflows.evals.hindsight_memory_probe.restore --state "$PROBE_STATE" inspect
+# Resume only a registered, unambiguous operation; cleanup is also available as
+# an explicit operator action after a terminal result.
+python3 -m workflows.evals.hindsight_memory_probe.restore --state "$PROBE_STATE" resume
+# Request bounded emergency preemption; the detached controller stops its exact
+# registered process, records failure and preserves the disposable volume.
+python3 -m workflows.evals.hindsight_memory_probe.restore --state "$PROBE_STATE" stop
+python3 -m workflows.evals.hindsight_memory_probe.restore --state "$PROBE_STATE" cleanup
+```
+
+This proves logical persisted PostgreSQL state restore only. It does not qualify
+Hindsight API behavior, authentication, ranking, reranking, Character behavior,
+provider inference, or live deployment. The current campaign still requires its
+separate OCI execution and evidence review.
 
 No global stop/kill/prune or `down -v`. The finalizer stops exact recorded
 container IDs in stage order and retains volumes/cache. Pinned Hindsight's wrapper
@@ -541,7 +568,7 @@ needs30s for internal cleanup, so it receives35s Docker grace with45s subprocess
 wall; other services receive10s/20s. Forced-kill stop never qualifies clean
 persistence. Recheck original baseline and host safety in the final receipt.
 Remove temporary supervisor only after stopped readback; no daemon/automation
-remains. This initial guard supports **only the candidate project**. P4 separate
-restore projects require a subsequent explicit validated project/volume registry
-extension and dummy proof before launching; no implicit prefix/glob ownership.
-Unrun/failed restoration stays visible, never substituted by startup health.
+remains. A separate P4 restore project is admitted only by the sealed restore
+operation's exact project/config/image/volume identity and typed process-owner
+scope; project-name prefixes do not grant ownership. Unrun or failed restoration
+stays visible and is never substituted by startup health.

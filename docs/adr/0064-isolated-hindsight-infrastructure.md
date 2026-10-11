@@ -166,13 +166,36 @@ runner's completed proof binds the canonical selection hash and exact selection,
 before-snapshot and after-snapshot file hashes; host admission checks those
 bindings and campaign identities without reimplementing feature semantics.
 
-Optional disposable restore remains deferred. If implemented later, it needs an
-explicit exact project/volume/token/image/dump-result registry binding, mutually
-exclusive restore epoch, DB-only isolated execution, canonical snapshot/scope
-comparison, deliberate mismatch checks, and exact-ID/volume-consumer cleanup.
-The current P4 contract makes no claim of successful restoration, API auth,
-ranked retrieval, reranking or Character behavior. Offline tests establish local
-mechanics only; the campaign still needs actual OCI/P4 execution proof.
+### Optional disposable PostgreSQL restore qualification
+
+The optional local P4 restore is admitted only after ordered finalization has
+closed the candidate epoch and published its exact archive, canonical snapshot,
+and frozen selection. The sealed operation binds registry/epoch/finalization,
+image ID, release, archive and control-evidence hashes, plus one exact Compose
+project, container and named volume. A distinct typed process-owner scope
+authorizes the restore Compose launch; project-name prefixes grant no ownership
+and the main candidate lifecycle completion path is never inferred from a
+project string.
+
+Restore runs a single PostgreSQL service with no network, published ports or
+host mounts and bounded memory/CPU. The controller streams the immutable archive
+to `pg_restore`, captures canonical table rows and schema/extensions through an
+exact read-only SQL allowlist, then compares all rows and derives `any_strict`
+scope eligibility from restored top-level fact tags. The finalizer's
+`scope_eligibility` sidecar remains hash-validated control evidence rather than
+database state. Full rows retain vector values, source lineage and history. A
+mismatch preserves original and restored evidence and keeps the volume; success
+removes only the exact registered container and volume after consumer readback.
+An explicit stop intent preempts the detached controller at its next safety
+check, stops its registered child process, and preserves the disposable volume
+for review. An operation-scoped file lock makes admission/resume single-owner;
+the process child validates the typed scope before executing Compose. Rearm
+remains blocked until cleanup has completed successfully.
+
+This implements optional offline mechanics under PC-07/08/09/13. It proves only
+logical persisted PostgreSQL state restoration. It does not qualify API behavior,
+authentication, ranking, reranking, Character behavior or live deployment.
+Static and synthetic checks do not replace actual OCI execution evidence.
 
 ## Alternatives and consequences
 
@@ -193,5 +216,6 @@ neither ARM provider/extension/reranker acceptance nor OCI guard proof or semant
 qualification. The owning README contains exact operator commands and remaining
 P1/P2/P4 gates. Semantic replay and complete-trace pre-Character reranking
 admission remain separate from this infrastructure decision. Initial supervision
-and finalization own only the candidate project; disposable P4 restore support
-requires a later explicit registry extension and dummy qualification.
+finalization owns the candidate project; the optional restore has a separately
+sealed, exact project/volume lifecycle and remains an unrun campaign gate until
+fresh OCI evidence is reviewed.

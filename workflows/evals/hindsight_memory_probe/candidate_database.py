@@ -14,7 +14,7 @@ from .receipts import ReceiptStore
 
 SNAPSHOT_TABLES = (
     "banks", "documents", "chunks", "memory_units", "invalidated_memory_units",
-    "observation_sources", "observation_history", "entities", "unit_entities",
+    "observation_history", "entities", "unit_entities",
     "entity_cooccurrences", "memory_links",
 )
 

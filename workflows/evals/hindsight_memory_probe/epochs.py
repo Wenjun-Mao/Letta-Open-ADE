@@ -89,6 +89,14 @@ def append(
     now = time.time() if now is None else now
     if now >= WORK_CUTOFF:
         raise RuntimeError("hard_deadline_cannot_rearm")
+    restore_operation = directory / "restore-operation.json"
+    if restore_operation.is_file():
+        import json
+
+        operation = json.loads(restore_operation.read_text())
+        cleanup = directory / f"restore-{operation.get('token', '')}-cleanup.result.json"
+        if not cleanup.is_file() or json.loads(cleanup.read_text()).get("status") != "completed":
+            raise RuntimeError("rearm_blocked_by_disposable_restore")
     validate_allocations(allocations, sample)
     if list(directory.glob("epoch-[0-9][0-9][0-9][0-9].json")):
         previous = active(directory, registry)

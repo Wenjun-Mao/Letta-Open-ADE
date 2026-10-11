@@ -14,6 +14,7 @@ from pathlib import Path
 GIB = 1024**3
 PROJECT = "ade-hindsight-probe"
 SERVICES = {"db", "model-router", "hindsight", "runner"}
+CONTAINER_READER = None
 
 
 def command_json(arguments):
@@ -22,6 +23,8 @@ def command_json(arguments):
 
 
 def containers():
+    if CONTAINER_READER is not None:
+        return CONTAINER_READER()
     result = subprocess.run(
         ["docker", "ps", "-aq"], check=True, capture_output=True, timeout=5
     )

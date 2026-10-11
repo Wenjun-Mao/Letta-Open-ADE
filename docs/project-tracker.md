@@ -46,8 +46,9 @@ This iteration adds the guard-owned ordered P4 finalize admission/drain/stop,
 candidate-only canonical snapshot and binary archive publication, plus the
 public-HTTP frozen restart-readback helper. Offline mechanics do not qualify live
 P4; the remote campaign still uses the immutable previously staged release and
-must not adopt this in-progress source automatically. Optional disposable restore
-remains unimplemented and unrun. Model-cache qualification now downloads only the
+must not adopt this source automatically. Optional disposable PostgreSQL restore
+is now implemented as a local, isolated qualification path, but remains unrun on
+the OCI campaign. Model-cache qualification now downloads only the
 pinned runtime/license allowlist and streams SHA256 reads; the pinned weight size
 and hash are checked without claiming a duplicate framework weight exists. Launcher
 parsing now stops Compose option validation at the real run/exec service boundary
