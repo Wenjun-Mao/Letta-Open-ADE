@@ -170,6 +170,14 @@ failure the supervisor still performs bounded full cleanup; a failed partial
 archive is not reported as a successful dump. Final stopped/baseline/headroom
 readback occurs before the finalization receipt is written.
 
+Canonical table files are JSONL: both candidate and restored-database producers
+use the workflow's whitelist-checked `SELECT to_jsonb(row)::text ... ORDER BY`
+query. PostgreSQL `psql -At` emits one newline per returned row and zero bytes
+when a table has no rows. An aggregate-to-empty-string query instead emits a
+newline for that empty result, creating a malformed blank JSONL record. The
+consumer remains strict: it accepts an empty file as zero rows and rejects every
+blank or malformed record. Row content and lexical ordering are unchanged.
+
 The `restart_readback` helper uses only the public Hindsight HTTP API. Its frozen
 selection binds workspace/subject bank identity, one or more character-root
 scopes, source/curation/fact IDs, and original text, document content, retain

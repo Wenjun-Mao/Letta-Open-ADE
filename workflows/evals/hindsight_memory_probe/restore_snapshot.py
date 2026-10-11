@@ -7,7 +7,7 @@ import os
 import uuid
 from pathlib import Path
 
-from . import candidate_database
+from . import candidate_database, canonical_snapshot
 from .receipts import ReceiptStore
 
 
@@ -17,10 +17,7 @@ SCHEMA_SQL = ("SELECT jsonb_build_object('schemas',(SELECT COALESCE(jsonb_agg(js
 
 
 def table_query(table: str) -> str:
-    if table not in candidate_database.SNAPSHOT_TABLES:
-        raise RuntimeError("restore_snapshot_table_not_allowed")
-    return (f"SELECT COALESCE(string_agg(to_jsonb(t)::text, E'\\n' ORDER BY to_jsonb(t)::text), '') "
-            f"FROM public.{table} AS t")
+    return canonical_snapshot.table_query(table)
 
 
 def allowed_queries() -> set[str]:

@@ -9,14 +9,10 @@ import time
 import uuid
 from pathlib import Path
 
-from . import epochs, host_guard as host
+from . import canonical_snapshot, epochs, host_guard as host
 from .receipts import ReceiptStore
 
-SNAPSHOT_TABLES = (
-    "banks", "documents", "chunks", "memory_units", "invalidated_memory_units",
-    "observation_history", "entities", "unit_entities",
-    "entity_cooccurrences", "memory_links",
-)
+SNAPSHOT_TABLES = canonical_snapshot.SNAPSHOT_TABLES
 
 
 def db_container(directory: Path, registry: dict, admitted: dict) -> dict:
@@ -125,7 +121,7 @@ def snapshot_database(directory: Path, registry: dict, admitted: dict, store: Re
         raise RuntimeError("async_operations_not_drained_before_snapshot")
     paths = {}
     for table in SNAPSHOT_TABLES:
-        sql = f"SELECT COALESCE(string_agg(to_jsonb(t)::text, E'\\n' ORDER BY to_jsonb(t)::text), '') FROM public.{table} AS t"
+        sql = canonical_snapshot.table_query(table)
         target = root / f"{table}.jsonl"
         fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, "wb") as output:

@@ -76,6 +76,18 @@ def test_snapshot_file_tampering_fails_before_comparison(tmp_path):
         restore_compare.compare(before, tmp_path / "before", after, tmp_path / "after", selection)
 
 
+def test_blank_line_in_table_jsonl_remains_malformed(tmp_path):
+    content = b'{"id":"row-a"}\n\n{"id":"row-b"}\n'
+    (tmp_path / "banks.jsonl").write_bytes(content)
+    snapshot = {"tables": {"banks": {
+        "file": "banks.jsonl", "sha256": hashlib.sha256(content).hexdigest(),
+        "bytes": len(content),
+    }}}
+
+    with pytest.raises(RuntimeError, match="restore_table_snapshot_invalid"):
+        restore_compare._table_rows(snapshot, tmp_path)
+
+
 def test_compose_is_one_private_networkless_db_service(tmp_path):
     token = "d" * 32
     operation = {"token": token, "state_directory": str(tmp_path), "compose": restore_database.write_compose(
