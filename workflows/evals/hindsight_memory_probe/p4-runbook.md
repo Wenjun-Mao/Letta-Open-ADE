@@ -95,6 +95,9 @@ async operations, then records status counts (including failed and cancelled)
 before stopping runner and Hindsight. It records a private canonical
 snapshot of the pinned candidate database's schema/extensions, banks, documents,
 chunks, live/invalidated facts, observations, sources, history, entities and links.
+Its shared schema query omits only numeric `pg_temp_N` and `pg_toast_temp_N`
+namespaces; durable schema names/owners, extension names/versions, Alembic rows,
+and all canonical data tables are still compared exactly after restore.
 It then dumps only `hindsight_probe` from the positively identified candidate
 PostgreSQL container and named volume. Binary `pg_dump -Fc` stdout goes to a fresh
 exclusive `0600` file; stderr is separate. During long stages, the guard checks

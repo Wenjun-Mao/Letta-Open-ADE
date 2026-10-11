@@ -131,6 +131,28 @@ def test_vector_data_difference_is_a_table_mismatch(tmp_path):
     assert any(row["table"] in {"chunks", "memory_units"} for row in result["table_mismatches"])
 
 
+@pytest.mark.parametrize("field,changed", [
+    ("schemas", [{"name": "public", "owner": "changed-owner"}]),
+    ("extensions", [{"name": "vector", "version": "changed-version"}]),
+    ("alembic", [{"version_num": "changed-revision"}]),
+])
+def test_durable_schema_extension_and_migration_changes_remain_mismatches(
+        tmp_path, field, changed):
+    selection = _selection()
+    before_rows = _rows(selection)
+    after_rows = _rows(selection)
+    after_rows["schema_extensions"][0][field] = changed
+    before = _snapshot(tmp_path / "before", before_rows)
+    after = _snapshot(tmp_path / "after", after_rows)
+
+    result = restore_compare.compare(before, tmp_path / "before", after, tmp_path / "after", selection)
+
+    assert result["status"] == "mismatch"
+    assert result["table_mismatches"] == [{
+        "table": "schema_extensions", "before_rows": 1, "after_rows": 1,
+    }]
+
+
 def test_scope_mismatch_is_recorded_even_when_raw_rows_are_present(tmp_path):
     selection = _selection()
     before = _snapshot(tmp_path / "before", _rows(selection))

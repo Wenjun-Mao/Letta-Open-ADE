@@ -11,9 +11,7 @@ from . import candidate_database, canonical_snapshot
 from .receipts import ReceiptStore
 
 
-SCHEMA_SQL = ("SELECT jsonb_build_object('schemas',(SELECT COALESCE(jsonb_agg(jsonb_build_object('name',nspname,'owner',r.rolname) ORDER BY nspname),'[]'::jsonb) FROM pg_namespace n JOIN pg_roles r ON r.oid=nspowner),"
-              "'extensions',(SELECT COALESCE(jsonb_agg(jsonb_build_object('name',extname,'version',extversion) ORDER BY extname),'[]'::jsonb) FROM pg_extension),"
-              "'alembic',(SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY to_jsonb(a)::text),'[]'::jsonb) FROM public.alembic_version a))::text")
+SCHEMA_SQL = canonical_snapshot.SCHEMA_QUERY
 
 
 def table_query(table: str) -> str:

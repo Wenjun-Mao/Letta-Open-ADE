@@ -133,11 +133,10 @@ def snapshot_database(directory: Path, registry: dict, admitted: dict, store: Re
             output.flush()
             os.fsync(output.fileno())
         paths[table] = {"file": target.name, "sha256": sha256_file(target), "bytes": target.stat().st_size}
-    schema_sql = "SELECT jsonb_build_object('schemas',(SELECT COALESCE(jsonb_agg(jsonb_build_object('name',nspname,'owner',r.rolname) ORDER BY nspname),'[]'::jsonb) FROM pg_namespace n JOIN pg_roles r ON r.oid=n.nspowner),'extensions',(SELECT COALESCE(jsonb_agg(jsonb_build_object('name',extname,'version',extversion) ORDER BY extname),'[]'::jsonb) FROM pg_extension),'alembic',(SELECT COALESCE(jsonb_agg(to_jsonb(a) ORDER BY to_jsonb(a)::text),'[]'::jsonb) FROM public.alembic_version a))::text"
     schema_path = root / "schema-extensions.json"
     schema_fd = os.open(schema_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(schema_fd, "wb") as output:
-        output.write(psql_text(directory, registry, admitted, db, schema_sql, run_monitored).encode())
+        output.write(psql_text(directory, registry, admitted, db, canonical_snapshot.SCHEMA_QUERY, run_monitored).encode())
         output.flush()
         os.fsync(output.fileno())
     paths["schema_extensions"] = {"file": schema_path.name, "sha256": sha256_file(schema_path), "bytes": schema_path.stat().st_size}

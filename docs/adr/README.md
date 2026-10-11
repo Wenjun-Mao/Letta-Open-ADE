@@ -60,6 +60,7 @@ record's status notice before applying its original execution details.
 | [0063](0063-hindsight-character-evaluation-boundary.md) | Evaluation-only CLI owns strict scoped recall, frozen Character comparison arms and fail-closed durable captures; workflow owns ingestion/curation and qualification, with incumbent execution unchanged. |
 | [0064](0064-isolated-hindsight-infrastructure.md) | Offline isolated deployment, fail-closed actual-wire observation, detached deadline/safety guard, release-scoped P4 restart evidence and terminal process receipts; OCI/image/semantic qualification remains pending. |
 | [0065](0065-post-restore-snapshot-failure-recovery.md) | Registered child exit-mm handling and a separate, finite, exact-resource recovery path for the failed P4 post-restore snapshot; captured state remains failed evidence, not restore success. |
+| [0066](0066-canonical-persisted-schema-snapshots.md) | Shared P4 schema capture excludes only numeric PostgreSQL temporary namespaces; durable schema, owner, extension, migration and data drift remain exact mismatches. |
 
 ## Historical, Retired, Or On Hold
 

@@ -11,6 +11,16 @@ from workflows.evals.hindsight_memory_probe.receipts import ReceiptStore
 from workflows.evals.hindsight_memory_probe.restore_compare import _table_rows
 
 
+def test_schema_query_is_shared_and_filters_only_backend_temp_namespaces():
+    assert restore_snapshot.SCHEMA_SQL is canonical_snapshot.SCHEMA_QUERY
+    assert canonical_snapshot.SCHEMA_QUERY in restore_snapshot.allowed_queries()
+    assert "n.nspname !~ '^pg_(temp|toast_temp)_[0-9]+$'" in canonical_snapshot.SCHEMA_QUERY
+    assert "pg_namespace" in canonical_snapshot.SCHEMA_QUERY
+    assert "pg_extension" in canonical_snapshot.SCHEMA_QUERY
+    assert "public.alembic_version" in canonical_snapshot.SCHEMA_QUERY
+    assert "owner" in canonical_snapshot.SCHEMA_QUERY
+
+
 def test_table_query_whitelists_names_and_streams_ordered_rows():
     assert canonical_snapshot.table_query("banks") == (
         "SELECT to_jsonb(t)::text FROM public.banks AS t ORDER BY to_jsonb(t)::text")
@@ -62,7 +72,13 @@ def test_candidate_snapshot_uses_shared_query_and_preserves_empty_table(tmp_path
     store = ReceiptStore(tmp_path / "receipts")
     admitted = {"token": "a" * 32, "restart_selection": {"status": "absent"}}
     monkeypatch.setattr(candidate_database, "db_container", lambda *_: {"Id": "container", "Image": "image"})
-    monkeypatch.setattr(candidate_database, "psql_text", lambda *_args, **_kwargs: "hindsight_probe")
+    psql_queries = []
+
+    def psql_text(_directory, _registry, _admitted, _db, query, _run_monitored, **_kwargs):
+        psql_queries.append(query)
+        return "hindsight_probe"
+
+    monkeypatch.setattr(candidate_database, "psql_text", psql_text)
     monkeypatch.setattr(candidate_database, "operation_status_counts", lambda *_: {})
     monkeypatch.setattr(epochs, "active", lambda *_: {"sha256": "epoch", "index": 1})
     rows = b'{"a":1}\n{"b":2}\n'
@@ -80,6 +96,7 @@ def test_candidate_snapshot_uses_shared_query_and_preserves_empty_table(tmp_path
 
     assert queries == [canonical_snapshot.table_query(table)
                        for table in canonical_snapshot.SNAPSHOT_TABLES]
+    assert psql_queries == ["SELECT current_database()", canonical_snapshot.SCHEMA_QUERY]
     root = store.directory / "finalization" / admitted["token"]
     assert (root / result["tables"]["banks"]["file"]).read_bytes() == rows
     empty = root / result["tables"]["observation_history"]["file"]

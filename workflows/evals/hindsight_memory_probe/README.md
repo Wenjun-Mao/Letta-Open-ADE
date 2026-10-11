@@ -159,6 +159,12 @@ can return HTTP200 with zero-score candidates after a reranker timeout.
 
 ## Offline verification
 
+Canonical PostgreSQL snapshots share one schema query for candidate finalization
+and disposable restore readback. It omits only numeric `pg_temp_N` and
+`pg_toast_temp_N` namespaces, whose backend-local temporary objects do not
+survive restore. Stable schema names and owners, extension names and versions,
+Alembic rows, and the ten canonical data tables remain exact comparison inputs.
+
 ```sh
 uv run --locked pytest workflows/evals/hindsight_memory_probe/tests \
   services/ade-api/tests/agent_runtime/test_hindsight_evaluation.py \
