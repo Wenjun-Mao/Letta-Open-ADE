@@ -1,6 +1,6 @@
 # ADE Current Product Contract
 
-Updated: 2026-10-10. This is the single entrypoint for **current agreed product
+Updated: 2026-10-11. This is the single entrypoint for **current agreed product
 intent**, not a claim that every agreement is implemented or release-qualified.
 It consolidates existing decisions; it does not authorize implementation, live
 experiments, deployment, or a change to release evidence.
@@ -127,13 +127,20 @@ planned, not verified. The user clarified that the plan must cover deployment on
 the current 2-core/approximately 12 GB host without depending on that upgrade.
 This is the sizing target, not measured deployment or inference acceptance.
 The [setup plan](plans/hindsight-self-hosted-experiment.md) records this placement
-and proposes preparation through OCI deployment, bounded replay and shutdown.
+and preparation through OCI deployment, iterative replay, recovery and shutdown.
 
-This settles hosting direction and the experiment host, not model/provider routes,
-experiment scope or production adoption. Installation, service startup, live
-calls, migration and cutover are not authorized by this agreement. PC-05/08/09
-continue governing the incumbent; no runtime spending gate is added. See
-[ADR 0062](adr/0062-self-hosted-hindsight.md) for rationale and remaining choices.
+Clarification, 2026-10-11: expand this into an approximately ten-hour autonomous
+campaign, with the user starting Goal mode after the plan is settled. Routine
+diagnosis, repairs, configuration choices and justified retests must not require
+renewed approval or stop at an arbitrary replay/generation count. Preserve prior
+evidence, product expectations, resource safety and the experiment's isolation;
+the plan distinguishes routine decisions from genuine authority/risk changes.
+
+Execution is held until the user's explicit start against that plan; no live
+authority follows from planning alone. The plan defines the bounded operational
+authorization at activation, not production adoption, migration or cutover.
+PC-05/08/09 continue governing the incumbent; no runtime spending gate is added.
+See [ADR 0062](adr/0062-self-hosted-hindsight.md) for rationale and guardrails.
 
 ## Open Decisions, Not Agreements
 
@@ -157,8 +164,8 @@ continue governing the incumbent; no runtime spending gate is added. See
   isolation, with incumbent execution untouched. This is a revised recommendation,
   not user adoption or live-run authorization. Native extraction labels and small
   immutable source units are test candidates; no bank layout or delivery policy
-  is settled by the reports. Hosting is separately settled as self-hosted by
-  PC-13, without approving the experiment or its setup/model calls.
+  is settled by the reports. PC-13 separately records self-hosting and the
+  autonomous-campaign direction; setup/model calls await its explicit start gate.
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
   reviewer, reconciliation with corrected or removed facts, and failure behavior.
   PC-03's character boundary and PC-10's archive eligibility are settled;

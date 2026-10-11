@@ -73,13 +73,14 @@ persistence, embeddings, Qwen, or tool protocols. See the
   isolation, leaving incumbent execution unchanged. The user selected
   [self-hosting](adr/0062-self-hosted-hindsight.md) rather than Hindsight Cloud
   and an isolated first experiment on OCI rather than the Mac (PC-13). Review the
-  [end-to-end setup plan, revision 3](plans/hindsight-self-hosted-experiment.md),
-  covering offline preparation, deployment under `/mnt/projects/apps`, a bounded
-  replay and candidate-only shutdown. Target the current 2-core/approximately
+  [autonomous campaign plan, revision 4](plans/hindsight-self-hosted-experiment.md),
+  covering preparation, deployment under `/mnt/projects/apps`, evidence-led
+  repairs/retests, recovery and candidate-only shutdown. Target the current 2-core/approximately
   12 GB OCI host; the planned upgrade is optional headroom, not a prerequisite.
   Recheck actual capacity and existing-service health before execution.
-  Model/configuration choices, experiment scope, candidate setup and provider calls
-  remain unapproved; bank layout is a test hypothesis.
+  Await the user's Goal-mode start, then proceed within the plan's decision
+  envelope without routine milestone/replay approvals. No fixed replay count;
+  bank layouts remain hypotheses, not production adoption decisions.
 - Stabilize the native runtime through real product use and evidence-led fixes.
 - Improve task-specific evaluation where a concrete success contract exists.
 - Keep model aliases configurable so providers and underlying local models can

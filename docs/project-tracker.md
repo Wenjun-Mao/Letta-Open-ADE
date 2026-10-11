@@ -1,6 +1,6 @@
 # ADE Project Tracker
 
-Updated: 2026-10-10. Owner: this ADE task, using Relay for delegated reporting.
+Updated: 2026-10-11. Owner: this ADE task, using Relay for delegated reporting.
 Direction and milestone completion criteria live in the [roadmap](product-roadmap.md).
 
 ## Current Summary
@@ -15,13 +15,15 @@ test-workload cost reasons (PC-13), and required the first experiment to remain
 isolated from native memory. After read-only OCI inspection, the user selected
 that host instead of the Mac. The planned 4-core/24 GB upgrade is unverified and,
 as subsequently clarified, not a prerequisite. The
-[end-to-end plan, revision 3](plans/hindsight-self-hosted-experiment.md) targets the
-current 2-core/approximately 12 GB host, with offline preparation, isolated OCI
-deployment, bounded replay, restart readback and shutdown. Read-only directory and
+[autonomous campaign plan, revision 4](plans/hindsight-self-hosted-experiment.md)
+targets the current 2-core/approximately 12 GB host, with preparation, isolated
+deployment, evidence-led repairs/retests, recovery and shutdown. Read-only directory and
 Compose-label inspection supports `/mnt/projects/apps/ade-hindsight-probe`, with
-owned volumes under the existing Docker root. Review the proposed model routes,
-resource limits, semantic scope and P0-P4 execution authority next. Implementation,
-setup/provider calls and deployment are not authorized. No Hindsight
+owned volumes under the existing Docker root. The user requested roughly ten
+hours of autonomous progress and rejected arbitrary replay-count approval gates.
+Next: the user starts Goal mode against the plan, enabling its P0-P4 decision
+envelope; routine engineering choices then proceed without renewed approval.
+No goal/heartbeat or implementation was started during planning. No Hindsight
 installation, source isolation, provider inference or deployment has occurred.
 Older entries retain their historical scope and are not authority to resume new
 native memory feature work ahead of this review.

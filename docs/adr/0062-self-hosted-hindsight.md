@@ -2,7 +2,8 @@
 
 Status: Accepted hosting direction and OCI experiment placement, 2026-10-10,
 by explicit user direction.
-Not installation, model-call, integration or deployment authorization.
+Autonomous-campaign planning direction clarified 2026-10-11; execution waits for
+the user's explicit Goal-mode start against the linked plan, not this ADR alone.
 
 ## Problem
 
@@ -41,10 +42,26 @@ capacity and prove the candidate within measured limits; do not confuse this
 target with completed qualification. Keep the Mac as a development/browser client
 and existing OCI services untouched.
 
-Self-hosting selects who operates Hindsight, not where every model runs. Exact
-service configuration, extraction model, embeddings, reranking and model-access
-route remain to be selected. Model usage, compute, storage and operation still
-have costs; self-hosting is not a zero-cost or all-local-processing guarantee.
+Self-hosting selects who operates Hindsight, not where every model runs. The plan
+defines starting model routes and permitted evidence-backed experimental changes,
+not a production model decision. Model usage, compute, storage and operation
+still have costs; self-hosting is not a zero-cost or all-local-processing guarantee.
+
+### Autonomous Campaign Clarification, 2026-10-11
+
+The user requested an approximately ten-hour execution window and explicitly
+rejected fixed replay-count restrictions that could block routine progress.
+Use the plan's autonomy envelope: diagnose, repair, redeploy owned resources,
+adjust experimental configuration and rerun useful tests without repeated owner
+approval. Preserve failed evidence and unchanged product expectations; technical
+choices are reversible experiment decisions, not implicit production adoption.
+
+Reject both a fixed one-baseline/one-correction approval gate and unrestricted
+experimentation. Bound work by purpose, elapsed time, finite request mechanics,
+observed usage, host safety and explicit exclusions. Distinguish local repairable
+failures from genuine authority/risk changes. The plan carries the activation,
+OCI-side expiry, recovery and closeout requirements; do not start work or create
+an automation merely because this planning clarification was published.
 
 ## Alternatives
 
@@ -59,14 +76,16 @@ have costs; self-hosting is not a zero-cost or all-local-processing guarantee.
 
 ## Consequences And Guardrails
 
-Bounded experiment preparation should target a self-hosted candidate and retain
-the pinned upstream baseline unless explicitly revised. Service operation and
+Bounded experiment preparation starts from the pinned self-hosted baseline;
+justified compatible candidate repairs require fresh pins and relevant checks,
+not repeated permission to fix ordinary packaging/configuration failures. Service operation and
 eventual backup/recovery become project responsibilities, not Cloud features to
 assume. No service is installed or started by this documentation decision.
 
-The proposed disposable replay, bank layout, ingestion/delivery semantics,
-storage authority and Character integration still need their own scope and
-adoption decisions. The incumbent remains unchanged under PC-05/08/09; this
-does not amend its transaction contracts or authorize migration, dual writing,
-native isolation, provider runs or cutover. Observational request accounting
+Bank layout, ingestion/delivery semantics, storage authority and Character
+integration still need adoption decisions after experimental evidence. The
+incumbent remains unchanged under PC-05/08/09; this does not amend its transaction
+contracts or authorize migration, dual writing, native isolation or cutover.
+Provider runs fall only within the plan's subsequently activated campaign.
+Observational request accounting
 remains the PC-09 policy; no new runtime spending gate is introduced.
