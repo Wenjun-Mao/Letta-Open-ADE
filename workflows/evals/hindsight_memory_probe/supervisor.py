@@ -17,6 +17,8 @@ from pathlib import Path
 from . import host_guard as host
 from . import epochs
 from . import releases
+from . import lifecycle
+from . import quiescence
 from .receipts import ReceiptStore
 
 from .campaign_clock import STARTED, TARGET, DEADLINE, WORK_CUTOFF
@@ -123,8 +125,9 @@ def record(store, event, **fields):
 def stop_owned(directory, registry, store, reason):
     epoch = epochs.active(directory, registry)
     registry = epochs.effective_registry(directory, registry)
-    # Lock excludes a concurrent owned build/start registration during stop.
-    with lease(directory, "jobs.lock"):
+    quiescence.admit_stop(directory, epoch, reason)
+    # The durable barrier forbids new handshakes, even if a registration is still draining.
+    with quiescence.bounded_lease(directory, "jobs.lock", 60, required=False):
         for job in jobs(directory):
             host.stop_processes(job)
         # Give owned process trees a finite grace period; no broad process-group signal.
@@ -141,7 +144,8 @@ def stop_owned(directory, registry, store, reason):
                     except ProcessLookupError:
                         pass
         host.stop_containers(host.containers(), registry)
-        host.ensure_stopped(host.containers(), registry, jobs(directory))
+        stopped_items = host.containers()
+        host.ensure_stopped(stopped_items, registry, jobs(directory))
         record(store, "stopped", reason=reason)
         path = epochs.stopped_path(directory, epoch)
         if not path.exists():
@@ -151,6 +155,10 @@ def stop_owned(directory, registry, store, reason):
                     "reason": reason,
                     "time": time.time(),
                     "epoch_sha256": epoch["sha256"],
+                    "stopped_containers": [
+                        lifecycle.dormant_projection(c)
+                        for c in host.candidate_containers(stopped_items, registry)
+                    ],
                 },
             )
 
@@ -167,6 +175,12 @@ def readback(directory):
         "sample": host.host_sample(registry["release"]),
         "owned_containers": [host.baseline_projection(c) for c in candidates],
         "epoch": epochs.active(directory, registry),
+        "stopping": quiescence.stop_path(
+            directory, epochs.active(directory, registry)
+        ).exists(),
+        "lifecycle": lifecycle.classify(
+            directory, epochs.active(directory, registry), candidates, time.time()
+        ),
         "jobs": [
             {
                 "kind": j["kind"],
@@ -216,7 +230,6 @@ def run(directory, resume=False):
         store.write(f"{uuid.uuid4().hex}.controller.json", controller)
         owned_registry = epochs.effective_registry(directory, registry)
         reason, low_since = None, None
-        candidate_identity = {}
         try:
             while reason is None:
                 if (
@@ -226,8 +239,11 @@ def run(directory, resume=False):
                     raise RuntimeError("registry_changed")
                 now = time.time()
                 if (
-                    directory / f"epoch-{epoch['index']:04d}.pause-request.json"
-                ).exists():
+                    quiescence.stop_path(directory, epoch).exists()
+                    or (
+                        directory / f"epoch-{epoch['index']:04d}.pause-request.json"
+                    ).exists()
+                ):
                     reason = "planned_operator_pause"
                     break
                 if now >= WORK_CUTOFF:
@@ -243,26 +259,13 @@ def run(directory, resume=False):
                     low_since,
                     now,
                     epoch["allocations"],
+                    lifecycle.classify(
+                        directory,
+                        epoch,
+                        host.candidate_containers(items, owned_registry),
+                        now,
+                    ),
                 )
-                for container in host.candidate_containers(items, owned_registry):
-                    service = container["Config"]["Labels"][
-                        "com.docker.compose.service"
-                    ]
-                    if (
-                        service == "runner"
-                        or container["Config"]["Labels"].get(
-                            "com.docker.compose.oneoff"
-                        )
-                        == "True"
-                    ):
-                        continue
-                    identity = (container["Id"], container["State"]["StartedAt"])
-                    if (
-                        service in candidate_identity
-                        and candidate_identity[service] != identity
-                    ):
-                        reason = "candidate_identity_changed_without_rearm"
-                    candidate_identity[service] = identity
                 record(
                     store,
                     "sample",
@@ -312,6 +315,11 @@ def rearm_epoch(directory, reason, diagnosis, allocation_file=None, release=None
             )
             if reason_found:
                 raise RuntimeError("baseline_or_headroom_not_recovered")
+            dormant = lifecycle.verified_dormant(
+                directory,
+                epochs.active(directory, registry),
+                host.candidate_containers(items, owned_registry),
+            )
             allocations = (
                 json.loads(allocation_file.read_text())
                 if allocation_file
@@ -325,6 +333,7 @@ def rearm_epoch(directory, reason, diagnosis, allocation_file=None, release=None
                 reason,
                 diagnosis,
                 release=release or epochs.active(directory, registry)["release"],
+                dormant_containers=dormant,
             )
 
 
@@ -332,6 +341,7 @@ def request_pause(directory):
     registry = load_registry(directory)
     store = ReceiptStore(directory)
     epoch = epochs.active(directory, registry)
+    quiescence.admit_stop(directory, epoch, "operator_stop")
     try:
         with lease(directory):
             stop_owned(directory, registry, store, "operator_stop")

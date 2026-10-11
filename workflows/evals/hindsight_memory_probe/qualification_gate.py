@@ -25,6 +25,9 @@ def require_oci_proof(directory):
     evidence = proof.get("evidence_sha256")
     if not isinstance(evidence, dict) or not evidence:
         raise RuntimeError("oci_proof_evidence_required")
+    cancellation_name = proof.get("build_cancellation_receipt")
+    if cancellation_name not in evidence:
+        raise RuntimeError("actual_build_cancellation_receipt_required")
     for name, sha in evidence.items():
         path = proof_path.parent / name
         if (
@@ -34,3 +37,22 @@ def require_oci_proof(directory):
             raise RuntimeError("oci_proof_evidence_not_scoped")
         if hashlib.sha256(path.read_bytes()).hexdigest() != sha:
             raise RuntimeError("oci_proof_evidence_changed")
+
+    cancellation = json.loads((proof_path.parent / cancellation_name).read_text())
+    if (
+        cancellation.get("contract") != "ade-owned-buildkit-cancellation-v1"
+        or cancellation.get("outcome") != "daemon_cancelled"
+        or not cancellation.get("observed_sentinel")
+        or cancellation.get("no_sentinel_samples", 0) < 3
+    ):
+        raise RuntimeError("build_daemon_cancellation_unproven")
+    token = cancellation["job_token"]
+    job_file = proof_path.parent / f"job-{token}.json"
+    job = json.loads(job_file.read_text())
+    if (
+        job.get("kind") != "build-cancel"
+        or job.get("build_sentinel") != token
+        or hashlib.sha256(job_file.read_bytes()).hexdigest()
+        != cancellation["job_sha256"]
+    ):
+        raise RuntimeError("build_cancellation_registration_not_bound")

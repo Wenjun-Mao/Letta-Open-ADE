@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import uuid
 from pathlib import Path
 
 
@@ -18,12 +19,16 @@ class ReceiptStore:
         if directory.is_symlink() or directory.stat().st_mode & 0o077:
             raise CaptureFailure()
         self.directory = directory
-        self.failed = any(directory.glob("*.failure.json")) or any(
-            not (
-                directory
-                / (path.name.removesuffix(".incoming.json") + ".response.json")
-            ).is_file()
-            for path in directory.glob("*.incoming.json")
+        self.failed = (
+            any(directory.glob("*.failure.json"))
+            or any(directory.glob(".*.partial"))
+            or any(
+                not (
+                    directory
+                    / (path.name.removesuffix(".incoming.json") + ".response.json")
+                ).is_file()
+                for path in directory.glob("*.incoming.json")
+            )
         )
 
     def write(self, name: str, value: dict) -> None:
@@ -39,15 +44,17 @@ class ReceiptStore:
         if Path(name).name != name:
             raise CaptureFailure()
         try:
+            temporary = self.directory / f".{uuid.uuid4().hex}.partial"
             descriptor = os.open(
-                self.directory / name,
-                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
-                0o600,
+                temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600
             )
             with os.fdopen(descriptor, "wb") as stream:
                 stream.write(value)
                 stream.flush()
                 os.fsync(stream.fileno())
+            # Exclusive atomic publication prevents concurrent guard readers seeing partial JSON.
+            os.link(temporary, self.directory / name)
+            os.unlink(temporary)
             descriptor = os.open(self.directory, os.O_RDONLY | os.O_DIRECTORY)
             try:
                 os.fsync(descriptor)

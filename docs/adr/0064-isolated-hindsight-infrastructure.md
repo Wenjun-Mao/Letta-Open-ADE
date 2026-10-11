@@ -11,7 +11,11 @@ without spending controls or another product runtime (PC-09). A guessed outbound
 payload cannot prove shared adapter/profile serialization. Best-effort capture
 can silently lose evidence. SSH-connected expiry or a permanent stop latch cannot
 support the authorized autonomous campaign's disconnects, repairs and persistence
-restarts under one immutable hard cap.
+restarts under one immutable hard cap. Director review of `3f85405` found the
+guard incorrectly applied active exit/cap checks to intentionally stopped prior
+epochs: rearm succeeded, but controller/startup immediately stopped. The missing
+lifecycle admission contract belongs in the owning guard, not a broad ignore-exits
+exception.
 
 Source review found concrete default mismatches: a one-slot worker's default
 reserved consolidation slots exceed capacity; global embedding retries are not
@@ -51,12 +55,28 @@ A temporary detached Linux stdlib supervisor persists immutable start/target/har
 cap, baseline and initial owned release; flock prevents duplicates. Audited,
 append-only operating epochs allow diagnosis-backed rearm, measured allocation
 changes and admission of new verified clean SHA releases. Prior release paths
-remain explicitly owned for safe stop. Deadlines never extend; no implicit restore
+remain explicitly owned for safe stop. A stop receipt binds exact stopped Docker
+identities. Rearm admits only that proven readback as dormant, without applying
+new allocation or active-exit checks to those historical rows. Durable per-service
+startup admission precedes Compose dispatch; its detached reaper persists actual
+start identity immediately and fails early exits, before the five-second sample.
+Active identities/limits/exits remain strict across controller resume and changes.
+Unadmitted resurrection, missing active identity or incomplete startup fails closed. Deadlines never extend; no implicit restore
 project ownership is added. A 300-second cleanup margin blocks fresh work before
 the absolute hard cap. Positive container labels/release checks and unique
-PID-token/start/UID identity prevent broad kills or PID reuse. Registered owned
+PID-token/start/UID identity prevent broad kills or PID reuse. Durable stop
+admission precedes bounded registration drain, with final dispatch under an
+admission lock; stop never holds admission while waiting for registration.
+Atomic exclusive publication prevents partial job JSON, and unregistered gated
+children expire after20s. Lock contention does not skip owned cleanup. Selected
+Hindsight image shutdown receives35s Docker grace/45s wall, within the300s reserve;
+forced-kill cleanup is not clean persistence evidence. Registered owned
 processes include builds; source quotas alone do not bound BuildKit work. OCI
 sleep/disconnect and daemon-side build-cancellation proofs precede live operation.
+The build-only pinned sentinel uses an isolated context/unique experiment tag,
+with no extra Compose service or private/provider inputs. Positive RUN argv and
+post-deadline daemon/client readback bind a typed cancellation receipt to its
+registered job; a timed-out Docker client or boolean alone is insufficient.
 
 ## Alternatives and consequences
 
@@ -76,6 +96,8 @@ Static validation and synthetic tests guard the contract. Offline success is
 neither ARM build/extension/reranker acceptance nor OCI guard proof or semantic
 qualification. The owning README contains precise future operator commands and
 remaining P1/P2 gates. Semantic replay and complete-trace pre-Character reranking
-admission remain the subsequent serial assignment. Initial supervision is main
+admission remain the subsequent serial assignment. Exact ordered P4 dump-after-worker-stop finalization remains a later owned
+lifecycle operation; the current all-at-once stop and prior dump recipe do not
+qualify that ordering. Initial supervision is main
 project only; disposable P4 restore support requires explicit validated registry
 extension and dummy qualification before use.

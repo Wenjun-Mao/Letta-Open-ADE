@@ -62,10 +62,28 @@ def test_live_gate_requires_real_oci_proof_contract_and_current_evidence(
     evidence = state / "synthetic-unit-test-evidence.json"
     evidence.write_text("synthetic mechanics only")
     value = {key: True for key in gate.REQUIRED}
+    token = "a" * 32
+    job_file = state / f"job-{token}.json"
+    job_file.write_text(json.dumps({"kind": "build-cancel", "build_sentinel": token}))
+    cancellation = state / "synthetic-build-proof.json"
+    cancellation.write_text(
+        json.dumps(
+            {
+                "contract": "ade-owned-buildkit-cancellation-v1",
+                "outcome": "daemon_cancelled",
+                "observed_sentinel": [{"pid": 1}],
+                "no_sentinel_samples": 3,
+                "job_token": token,
+                "job_sha256": hashlib.sha256(job_file.read_bytes()).hexdigest(),
+            }
+        )
+    )
+    value["build_cancellation_receipt"] = cancellation.name
     value.update(
         hard_deadline=gate.DEADLINE,
         evidence_sha256={
-            evidence.name: hashlib.sha256(evidence.read_bytes()).hexdigest()
+            evidence.name: hashlib.sha256(evidence.read_bytes()).hexdigest(),
+            cancellation.name: hashlib.sha256(cancellation.read_bytes()).hexdigest(),
         },
     )
     proof = state / "oci-supervisor-proof.json"

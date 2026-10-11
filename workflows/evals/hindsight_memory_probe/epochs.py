@@ -84,6 +84,7 @@ def append(
     diagnosis=None,
     now=None,
     release=None,
+    dormant_containers=None,
 ):
     now = time.time() if now is None else now
     if now >= WORK_CUTOFF:
@@ -115,6 +116,7 @@ def append(
         releases.verify(selected_release)
     value = {
         "release": selected_release,
+        "dormant_containers": dormant_containers or [],
         "index": index,
         "registry_sha256": registry["registry_sha256"],
         "previous_sha256": previous_hash,

@@ -103,3 +103,41 @@ def test_launch_rejects_deadline_margin_and_unregistered_controller(
     monkeypatch.setattr(host, "identity_matches", lambda _: False)
     with pytest.raises(RuntimeError, match="detached_supervisor"):
         launch.launch(supervised, "dummy", 60, [])
+
+
+def test_build_cancellation_mode_uses_only_owned_pinned_fixture_and_unique_tag(
+    supervised, monkeypatch
+):
+    calls = []
+    monkeypatch.setattr(
+        host,
+        "proc_identity",
+        lambda _: {"pid": 123, "uid": 1000, "start_ticks": "42", "cmd_sha256": "test"},
+    )
+    monkeypatch.setattr(
+        launch.subprocess,
+        "Popen",
+        lambda args, **kw: calls.append((args, kw)) or SimpleNamespace(pid=123),
+    )
+    monkeypatch.setattr(launch.os, "write", lambda *_: 1)
+    assert launch.launch(supervised, "build-cancel", 90, []) == 123
+    command = json.loads(calls[0][0][4])
+    job = json.loads(next(supervised.glob("job-" + "?" * 32 + ".json")).read_text())
+    assert command[:2] == ["docker", "build"]
+    assert (
+        command[command.index("--tag") + 1]
+        == "ade-hindsight-probe-cancel:" + job["token"]
+    )
+    assert "--network" in command and command[command.index("--network") + 1] == "none"
+    assert command[-1] == str(
+        RELEASE / "workflows/evals/hindsight_memory_probe/docker/cancellation"
+    )
+    assert (
+        job["build_sentinel"] == job["token"]
+        and calls[0][1]["env"]["DOCKER_BUILDKIT"] == "1"
+    )
+
+
+def test_cancellation_fixture_cannot_be_extended_past_its_finite_sentinel(supervised):
+    with pytest.raises(RuntimeError, match="bounded_cancellation"):
+        launch.launch(supervised, "build-cancel", 121, [])

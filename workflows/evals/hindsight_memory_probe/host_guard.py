@@ -17,13 +17,13 @@ SERVICES = {"db", "model-router", "hindsight", "runner"}
 
 
 def command_json(arguments):
-    result = subprocess.run(arguments, check=True, capture_output=True, timeout=15)
+    result = subprocess.run(arguments, check=True, capture_output=True, timeout=5)
     return json.loads(result.stdout)
 
 
 def containers():
     result = subprocess.run(
-        ["docker", "ps", "-aq"], check=True, capture_output=True, timeout=15
+        ["docker", "ps", "-aq"], check=True, capture_output=True, timeout=5
     )
     ids = result.stdout.decode().split()
     return command_json(["docker", "inspect", *ids]) if ids else []
@@ -144,16 +144,24 @@ def stop_containers(items, registry):
             fresh = command_json(["docker", "inspect", candidate["Id"]])[0]
             if fresh["Id"] != candidate["Id"] or not owned(fresh, registry):
                 raise RuntimeError("container_ownership_changed")
+            grace, wall = (35, 45) if service == "hindsight" else (10, 20)
             subprocess.run(
-                ["docker", "stop", "--time", "10", candidate["Id"]],
+                ["docker", "stop", "--time", str(grace), candidate["Id"]],
                 check=True,
                 capture_output=True,
-                timeout=20,
+                timeout=wall,
             )
 
 
 def guard_reason(
-    registry, items, available, disk_free, low_since, now, allocations=None
+    registry,
+    items,
+    available,
+    disk_free,
+    low_since,
+    now,
+    allocations=None,
+    lifecycle_view=None,
 ):
     by_id = {c["Id"]: c for c in items}
     for original in registry["baseline"]:
@@ -161,7 +169,14 @@ def guard_reason(
         if current is None or baseline_projection(current) != original:
             return "baseline_identity_or_health_changed", low_since
     candidates = candidate_containers(items, registry)
+    if lifecycle_view and lifecycle_view["reason"]:
+        return lifecycle_view["reason"], low_since
     for candidate in candidates:
+        if (
+            lifecycle_view
+            and lifecycle_view["containers"].get(candidate["Id"]) == "dormant"
+        ):
+            continue
         state = candidate["State"]
         if allocations is not None:
             expected = allocations[

@@ -256,7 +256,8 @@ def test_rearm_requires_diagnosis_and_stopped_epoch(registry, monkeypatch):
     with pytest.raises(RuntimeError, match="stopped"):
         sup.rearm_epoch(directory, "dummy_complete", diagnosis)
     ReceiptStore(directory).write(
-        epochs.stopped_path(directory, epoch).name, {"reason": "dummy_job_deadline"}
+        epochs.stopped_path(directory, epoch).name,
+        {"reason": "dummy_job_deadline", "epoch_sha256": epoch["sha256"]},
     )
     next_epoch = sup.rearm_epoch(directory, "dummy_complete", diagnosis)
     assert next_epoch["index"] == 2 and next_epoch["previous_sha256"] == epoch["sha256"]
@@ -271,7 +272,8 @@ def test_rearm_allocation_is_audited_and_deadline_never_extended(registry, monke
     directory, value = registry
     epoch = epochs.active(directory, value)
     ReceiptStore(directory).write(
-        epochs.stopped_path(directory, epoch).name, {"reason": "pause"}
+        epochs.stopped_path(directory, epoch).name,
+        {"reason": "pause", "epoch_sha256": epoch["sha256"]},
     )
     diagnosis = directory / "diagnosis.json"
     diagnosis.write_text('{"cause":"measured_retune"}')
@@ -283,7 +285,8 @@ def test_rearm_allocation_is_audited_and_deadline_never_extended(registry, monke
     new = sup.rearm_epoch(directory, "measured_retune", diagnosis, changed)
     assert new["allocations"]["hindsight"]["memory"] == 5 * host.GIB
     ReceiptStore(directory).write(
-        epochs.stopped_path(directory, new).name, {"reason": "pause"}
+        epochs.stopped_path(directory, new).name,
+        {"reason": "pause", "epoch_sha256": new["sha256"]},
     )
     monkeypatch.setattr(sup.time, "time", lambda: sup.WORK_CUTOFF)
     with pytest.raises(RuntimeError, match="cannot_rearm"):
@@ -358,7 +361,8 @@ def test_diagnosed_new_clean_release_keeps_old_owned_containers_allowlisted(
     directory, value = registry
     previous = epochs.active(directory, value)
     ReceiptStore(directory).write(
-        epochs.stopped_path(directory, previous).name, {"reason": "repair"}
+        epochs.stopped_path(directory, previous).name,
+        {"reason": "repair", "epoch_sha256": previous["sha256"]},
     )
     diagnosis = directory / "repair.json"
     diagnosis.write_text('{"cause":"qualified_code_repair"}')
@@ -428,3 +432,16 @@ def test_shutdown_requires_stopped_readback_not_stop_command_acceptance(registry
     with pytest.raises(RuntimeError, match="shutdown_container"):
         host.ensure_stopped([container("owned", host.PROJECT)], value, [])
     host.ensure_stopped([container("owned", host.PROJECT, status="exited")], value, [])
+
+
+def test_pinned_hindsight_gets_compatible_bounded_grace(registry, monkeypatch):
+    _, value = registry
+    owned = container("owned-hindsight", host.PROJECT, service="hindsight")
+    calls = []
+    monkeypatch.setattr(host, "command_json", lambda _: [owned])
+    monkeypatch.setattr(
+        host.subprocess, "run", lambda args, **kw: calls.append((args, kw))
+    )
+    host.stop_containers([owned], value)
+    assert calls[0][0] == ["docker", "stop", "--time", "35", "owned-hindsight"]
+    assert calls[0][1]["timeout"] == 45

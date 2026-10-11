@@ -32,12 +32,17 @@ P0 infrastructure package is implemented in
 owned pinned Compose/configuration, actual-wire router observation, clean release
 export and temporary detached supervisor with audited rearm/allocation/release
 epochs ([ADR 0064](adr/0064-isolated-hindsight-infrastructure.md)). Offline
-configuration and fake mechanics checks are verified (199 focused tests, Ruff,
+configuration and fake mechanics checks are verified (219 focused tests, Ruff,
 Compose dummy validation and diff checks); pinned-image provider/DB/BGE
 qualification, OCI dummy disconnect/build-cancellation proof and P2 live startup
-remain unrun. Semantic corpus and replay driver are the next serial assignment.
+remain unrun. Follow-up review corrected epoch lifecycle admission, bounded
+stop/launch coordination and immediate startup readback; the executable owned
+BuildKit sentinel and typed proof gate are implemented but unrun on OCI.
+Semantic corpus, within-CLI recall/Character phase transition and copying the
+finished replay workflow/persona into the runner are the next serial assignment.
 Initial supervision owns only the candidate project; P4 disposable restore project
-registration remains a subsequent extension before restore work.
+registration and ordered dump-after-worker-stop finalization remain subsequent
+extensions before P4 acceptance.
 No Hindsight installation, provider inference or deployment has occurred yet.
 Older entries retain their historical scope and are not authority to resume new
 native memory feature work ahead of this review.

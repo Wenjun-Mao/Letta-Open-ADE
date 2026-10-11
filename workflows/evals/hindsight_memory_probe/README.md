@@ -37,7 +37,8 @@ work below15GiB, below1.5GiB for30s, on candidate OOM/restart/health/limit drift
 or any baseline container identity/start/image/status/health change. It samples
 host load/CPU/IO/memory pressure and cgroup-v2 peaks/events (null if unavailable).
 Runtime quotas never constrain Docker builds: register each serial build process,
-watch host headroom, and qualify BuildKit cancellation on OCI before live work.
+watch host headroom, and qualify BuildKit cancellation on OCI before live work using the
+[owned build-only sentinel procedure](BUILD_CANCELLATION.md).
 
 Required standalone API extension is exactly
 `hindsight_api.extensions.builtin.tenant:ApiKeyTenantExtension` with
@@ -95,7 +96,7 @@ and input count only. Streaming and reasoning/credential fields in request JSON
 are rejected. Capture failure prevents forwarding, latches qualification failure,
 and attempts a fixed-code failure receipt; if the filesystem itself is unavailable,
 a fixed stderr code and failed health/readback remain, never a claim of durable
-receipt success. Capture directory0700/files0600 use O_EXCL, fsync(file+directory).
+receipt success. Capture directory0700/files0600 use exclusive atomic link publication after fsync, then fsync(directory).
 `/probe/qualification` reports503 after failure. Keep all receipts; requalify a
 new output directory only after diagnosis. Phase intents are immutable, active
 phase atomic. Serial callers must annotate before startup/retain/consolidation/
@@ -182,8 +183,8 @@ client cancellation before treating builds as supervised. Do not proceed to live
 credentials if dummy expiry/disconnect/cancellation proof fails. Provider activation
 mechanically requires `private/receipts/supervisor/oci-supervisor-proof.json` with
 hard_deadline1791737365, boolean true `dummy_disconnect`, `dummy_expiry`,
-`resume_readback`, `build_daemon_cancelled`, `baseline_unchanged`, plus nonempty
-`evidence_sha256` mapping scoped receipt filenames to verified SHA256 hashes.
+`resume_readback`, `build_daemon_cancelled`, `baseline_unchanged`, plus `build_cancellation_receipt` naming the typed successful build-only
+proof and nonempty `evidence_sha256` mapping scoped receipt filenames to verified SHA256 hashes.
 Write this only after observing the real OCI proofs; synthetic offline tests are
 not qualification receipts. Hash/readback validation cannot interpret the truth
 of an operator's assertion; the subsequent live task must review the evidence.
@@ -194,10 +195,21 @@ cap (16:44:25Z) to reserve finite owned cleanup. Clock constants are immutable;
 resume/new source/allocations never move them. Stop only explicit IDs after project,
 service, release-path labels and fresh inspect checks. PIDs require start ticks,
 UID and unique inherited ownership token; no PID/group reuse or global kill.
-Lease/flock rejects duplicates. Baseline remains immutable across operating epochs.
+Lease/flock rejects duplicates. Durable stop admission precedes a bounded60s
+registration drain; launch rechecks epoch/stop/deadline under admission lock at
+its final execution handshake. Stop releases admission lock before waiting on
+registration, avoiding lock inversion. Atomic receipt publication prevents partial
+job JSON reads; a gated child expires after20s without a handshake. Even a held
+registration lease cannot skip cleanup of already owned work. Baseline remains immutable across operating epochs.
 A receipt-specified cause and fresh baseline/headroom proof are required to rearm;
 append-only epoch chain records allocations and explicitly admitted clean SHA
-releases, preserving ownership of old stopped candidate containers too.
+releases. Rearm admits only exact stopped identities captured by the preceding
+stop readback as dormant, including prior-release rows. No current cap check or
+exit exemption applies to an unproven stopped row. Before Compose startup, a
+service/epoch/deadline intent is durably registered; the detached reaper immediately
+binds actual Docker start identity and fails early exits/limit drift. Active IDs
+remain strict across resume, disappearance, exit and replacement. Dormant prior
+releases remain owned for cleanup, never silently counted as active allocations.
 
 ## P1 qualification and P2 start/inspect
 
@@ -294,7 +306,13 @@ private CP access key. Never print keys or pass them as CLI arguments. Confirm
 Tailscale container routing, dimension1024, query prefix and8192 untruncated
 served limit later, with a disposable readiness bank. Healthy API or partial
 rerank HTTP200 does not advance to P3. The semantic corpus/readiness driver is
-not included in this assignment.
+not included in this assignment. The next serial writer must copy the finished
+workflow and authored persona into the runner image and add a narrow replay
+entrypoint that invokes the documented feature CLI; the current runner contains
+only that CLI, without workflow source/persona. A single CLI run containing both
+scoped recall and Character generation needs an explicit phase transition at that
+boundary, rather than labelling recall embedding as Character. This remains the
+subsequent feature/workflow integration assignment.
 
 The runner service executes only the documented CLI:
 
@@ -353,7 +371,13 @@ The dump is an owned foreground operator operation: register it as a monitored
 `exec` via launcher for autonomous operation (launcher logs binary dump privately;
 rename that exclusive process log to the dump only after successful exit).
 No global stop/kill/prune or `down -v`. Guard stops runner/Hindsight first, then
-router/DB, retaining volumes/cache. Recheck original baseline and host safety.
+router/DB, retaining volumes/cache. Pinned Hindsight's wrapper needs30s for internal
+cleanup, so it receives35s Docker grace with45s subprocess wall; other services
+receive10s/20s. Observed exit/readback remains required. Forced-kill stop never
+qualifies clean persistence. The all-at-once stop currently cannot insert a dump
+between stopped runner/Hindsight and still-running router/DB. The dump-before-stop
+recipe above does **not** satisfy P4's exact finalization ordering; a later owned
+quiescence/teardown operation is required before P4 acceptance. Recheck original baseline and host safety.
 Remove temporary supervisor only after stopped readback; no daemon/automation
 remains. This initial guard supports **only the candidate project**. P4 separate
 restore projects require a subsequent explicit validated project/volume registry

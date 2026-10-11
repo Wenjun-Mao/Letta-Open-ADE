@@ -13,6 +13,8 @@ from pathlib import Path
 
 from . import host_guard as host
 from . import epochs
+from . import lifecycle
+from . import quiescence
 from .receipts import ReceiptStore
 from .supervisor import WORK_CUTOFF, jobs, lease, load_registry
 
@@ -47,6 +49,7 @@ def launch(state, kind, timeout, arguments):
     else:
         raise RuntimeError("supervisor_lease_not_held")
     with lease(state, "jobs.lock"):
+        quiescence.require_open(state, registry, epoch)
         owned_registry = epochs.effective_registry(state, registry)
         items = host.containers()
         candidates = host.candidate_containers(items, owned_registry)
@@ -58,6 +61,8 @@ def launch(state, kind, timeout, arguments):
             sample["disk_free"],
             None,
             now,
+            epoch["allocations"],
+            lifecycle.classify(state, epoch, candidates, now),
         )
         if reason or sample["memory_available"] < 1.5 * host.GIB:
             raise RuntimeError("unsafe_work_launch")
@@ -73,10 +78,44 @@ def launch(state, kind, timeout, arguments):
                     raise RuntimeError("prior_work_failed_requires_diagnosed_rearm")
         if any(host.tagged_processes(j["token"]) for j in jobs(state)):
             raise RuntimeError("serial_work_only")
+        token = uuid.uuid4().hex
         if kind == "dummy":
             if arguments:
                 raise RuntimeError("dummy_takes_no_command")
             command = [sys.executable, "-c", "import time; time.sleep(90)"]
+        elif kind == "build-cancel":
+            if arguments or timeout > 120 or now + 600 >= registry["hard_deadline"]:
+                raise RuntimeError("bounded_cancellation_fixture_required")
+            if any(c["State"]["Status"] == "running" for c in candidates):
+                raise RuntimeError("cancellation_probe_requires_candidate_stopped")
+            if (
+                sample["memory_available"]
+                < sum(c["memory"] for c in epoch["allocations"].values())
+                + 1.5 * host.GIB
+            ):
+                raise RuntimeError("insufficient_build_probe_headroom")
+            context = (
+                Path(epoch["release"])
+                / "workflows/evals/hindsight_memory_probe/docker/cancellation"
+            )
+            command = [
+                "docker",
+                "build",
+                "--platform",
+                "linux/arm64",
+                "--network",
+                "none",
+                "--progress",
+                "plain",
+                "--no-cache",
+                "--build-arg",
+                f"PROBE_CANCELLATION_TOKEN={token}",
+                "--tag",
+                f"ade-hindsight-probe-cancel:{token}",
+                "--file",
+                str(context / "Dockerfile"),
+                str(context),
+            ]
         else:
             if not arguments or arguments[0] not in OPERATIONS:
                 raise RuntimeError("owned_compose_operation_required")
@@ -160,7 +199,7 @@ def launch(state, kind, timeout, arguments):
                 str(release / "workflows/evals/hindsight_memory_probe/compose.yaml"),
                 *arguments,
             ]
-        token = uuid.uuid4().hex
+        startup = lifecycle.startup_services(arguments) if kind != "dummy" else []
         read_fd, write_fd = os.pipe()
         store = ReceiptStore(state)
         log = os.open(
@@ -183,6 +222,7 @@ def launch(state, kind, timeout, arguments):
                 **os.environ,
                 "ADE_PROBE_PROCESS_OWNER": token,
                 "COMPOSE_PARALLEL_LIMIT": "1",
+                **({"DOCKER_BUILDKIT": "1"} if kind == "build-cancel" else {}),
                 "PROBE_RELEASE_SHA": Path(epoch["release"]).name,
                 **{
                     f"PROBE_{name.upper().replace('-', '_')}_{key.upper()}": str(value)
@@ -204,6 +244,7 @@ def launch(state, kind, timeout, arguments):
                 f"job-{token}.json",
                 {
                     "kind": kind,
+                    "build_sentinel": token if kind == "build-cancel" else None,
                     "identity": identity,
                     "token": token,
                     "deadline": min(WORK_CUTOFF, now + timeout),
@@ -211,7 +252,17 @@ def launch(state, kind, timeout, arguments):
                     "epoch_sha256": epoch["sha256"],
                 },
             )
-            os.write(write_fd, b"1")
+            lifecycle.prepare(
+                state,
+                epoch,
+                candidates,
+                startup,
+                token,
+                min(WORK_CUTOFF, now + timeout),
+                now,
+            )
+            with quiescence.dispatch_admission(state, registry, epoch):
+                os.write(write_fd, b"1")
         finally:
             os.close(write_fd)
         # exec changes cmdline; capture stable start tick + current cmdline after handshake.
@@ -222,7 +273,9 @@ def launch(state, kind, timeout, arguments):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--state", type=Path, required=True)
-    parser.add_argument("--kind", choices=["build", "work", "dummy"], required=True)
+    parser.add_argument(
+        "--kind", choices=["build", "work", "dummy", "build-cancel"], required=True
+    )
     parser.add_argument("--timeout", type=int, required=True)
     parser.add_argument("arguments", nargs=argparse.REMAINDER)
     args = parser.parse_args()
