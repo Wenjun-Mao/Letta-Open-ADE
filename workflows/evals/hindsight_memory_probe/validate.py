@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 from pathlib import Path
+
+from .campaign_clock import activation_receipts_root
 
 PROJECT = "ade-hindsight-probe"
 ROOT = Path(__file__).resolve().parent
@@ -59,6 +62,7 @@ CRITICAL = {
 
 
 def validate(document, private_dir, release_sha, workflow_dir=ROOT, allocations=None):
+    receipts_root = activation_receipts_root(private_dir)
     assert document["name"] == PROJECT
     assert set(document["services"]) == set(CAPS)
     assert set(document.get("volumes", {})) == {"db-data", "model-cache"}
@@ -72,7 +76,7 @@ def validate(document, private_dir, release_sha, workflow_dir=ROOT, allocations=
     )
     allowed_binds = {
         str(workflow_dir / "docker/extensions.sql"),
-        str(private_dir / "receipts"),
+        str(receipts_root),
         str(workflow_dir / "qualification"),
     }
     for name, service in document["services"].items():
@@ -115,8 +119,8 @@ def validate(document, private_dir, release_sha, workflow_dir=ROOT, allocations=
                 ("/models", "model-cache"),
                 ("/probe", str(workflow_dir / "qualification")),
             },
-            "model-router": {("/receipts", str(private_dir / "receipts"))},
-            "runner": {("/receipts", str(private_dir / "receipts"))},
+            "model-router": {("/receipts", str(receipts_root))},
+            "runner": {("/receipts", str(receipts_root))},
         }
         assert {
             (m["target"], m["source"]) for m in service.get("volumes", [])
@@ -238,7 +242,7 @@ def validate(document, private_dir, release_sha, workflow_dir=ROOT, allocations=
     assert profile["deepseek::deepseek-flash"]["reasoning_effort_default"] == "high"
 
 
-def render(env_file):
+def render(env_file, receipts_root):
     result = subprocess.run(
         [
             "docker",
@@ -255,6 +259,7 @@ def render(env_file):
         ],
         capture_output=True,
         timeout=30,
+        env={**os.environ, "PROBE_RECEIPTS_DIR": str(receipts_root)},
     )
     if result.returncode:
         raise RuntimeError("compose_configuration_failed")
@@ -270,7 +275,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     try:
         validate(
-            render(args.env_file),
+            render(args.env_file, activation_receipts_root(args.private_dir)),
             args.private_dir,
             args.release_sha,
             allocations=json.loads(args.allocations.read_text())

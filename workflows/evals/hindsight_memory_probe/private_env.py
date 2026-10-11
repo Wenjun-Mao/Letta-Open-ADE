@@ -8,6 +8,7 @@ import secrets
 from pathlib import Path
 
 from .releases import PARENT
+from .campaign_clock import activation_receipts_root
 from .qualification_gate import require_oci_proof
 
 
@@ -19,7 +20,7 @@ def create(directory, sha, dummy_provider=False):
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     if directory.stat().st_mode & 0o077 or directory.is_symlink():
         raise RuntimeError("private_directory_permissions")
-    (directory / "receipts").mkdir(mode=0o700, exist_ok=True)
+    activation_receipts_root(directory).mkdir(mode=0o700, parents=True, exist_ok=True)
     if not dummy_provider:
         require_oci_proof(directory)
     provider_key = (

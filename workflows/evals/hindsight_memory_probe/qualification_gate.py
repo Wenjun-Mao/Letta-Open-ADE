@@ -4,7 +4,13 @@ import hashlib
 import json
 import time
 
-from .campaign_clock import DEADLINE, WORK_CUTOFF
+from .campaign_clock import (
+    ACTIVATION_ID,
+    DEADLINE,
+    WORK_CUTOFF,
+    activation_receipts_root,
+)
+from .supervisor import load_registry
 
 REQUIRED = {
     "dummy_disconnect",
@@ -16,8 +22,17 @@ REQUIRED = {
 
 
 def require_oci_proof(directory):
-    proof_path = directory / "receipts/supervisor/oci-supervisor-proof.json"
+    state = activation_receipts_root(directory) / "supervisor"
+    registry = load_registry(state)
+    proof_path = state / "oci-supervisor-proof.json"
+    if proof_path.is_symlink() or not proof_path.is_file():
+        raise RuntimeError("oci_supervisor_proof_path_invalid")
     proof = json.loads(proof_path.read_text())
+    if (
+        proof.get("activation_id") != ACTIVATION_ID
+        or proof.get("registry_sha256") != registry["registry_sha256"]
+    ):
+        raise RuntimeError("oci_proof_registry_binding_invalid")
     if proof["hard_deadline"] != DEADLINE or time.time() >= WORK_CUTOFF:
         raise RuntimeError("live_qualification_clock_invalid")
     if any(proof.get(key) is not True for key in REQUIRED):

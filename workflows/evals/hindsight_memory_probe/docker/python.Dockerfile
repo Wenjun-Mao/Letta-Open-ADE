@@ -20,6 +20,7 @@ COPY services/ade-api/ services/ade-api/
 COPY workflows/evals/hindsight_memory_probe/*.py workflows/evals/hindsight_memory_probe/
 COPY workflows/evals/hindsight_memory_probe/config/ workflows/evals/hindsight_memory_probe/config/
 COPY workflows/evals/hindsight_memory_probe/fixtures/campaign.json workflows/evals/hindsight_memory_probe/fixtures/campaign.json
+COPY workflows/evals/hindsight_memory_probe/fixtures/semantic-diagnostic-controls-v1.json workflows/evals/hindsight_memory_probe/fixtures/semantic-diagnostic-controls-v1.json
 COPY content/personas/personas.jsonl content/personas/personas.jsonl
 RUN uv sync --frozen --no-dev --package ade-api
 ENV PYTHONPATH=/app/services/ade-api/src:/app/packages/agent-runtime-eval-contracts/src:/app/packages/model-catalog-contracts/src:/app

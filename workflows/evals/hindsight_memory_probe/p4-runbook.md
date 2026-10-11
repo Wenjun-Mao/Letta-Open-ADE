@@ -1,6 +1,8 @@
 # P4 restart and recovery runbook
 
-Follow the [workflow entrypoint](README.md). These commands use the same private receipt root and selected clean release SHA.
+Follow the [workflow entrypoint](README.md). These commands use the revision-5
+activation receipt root and selected clean release SHA. Revision-4 receipts stay
+at their original paths and remain immutable.
 
 Revision-4 campaign closeout is complete. The final source passed same-volume
 restart readback, ordered candidate archive/shutdown, and the bounded logical
@@ -12,7 +14,7 @@ attempt handling and is not authorization to rerun the closed campaign.
 
 P4 restart evidence is a public-HTTP readback against a frozen selection. Create
 the release-scoped directory and prepare
-`$PROBE_PRIVATE/receipts/p4/$PROBE_SHA/restart-selection.json` from the completed replay and
+`$PROBE_RECEIPTS/p4/$PROBE_SHA/restart-selection.json` from the completed replay and
 curation receipts. It must identify each bank and source, the independently frozen
 original-text hash, Hindsight document content hash, retain-context hash, curation
 IDs, and each selected fact ID/text hash under `valid` or `invalidated`. Each bank
@@ -32,7 +34,7 @@ selection and readbacks must remain available in this namespace through P4
 admission and optional restore.
 
 ```sh
-install -d -m 700 "$PROBE_PRIVATE/receipts/p4/$PROBE_SHA"
+install -d -m 700 "$PROBE_RECEIPTS/p4/$PROBE_SHA"
 ```
 The readback helper issues only GETs; it does not ingest, curate, consolidate or
 call the Character feature.

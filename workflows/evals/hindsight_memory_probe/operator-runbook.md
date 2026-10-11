@@ -8,6 +8,14 @@ commands and does not itself authorize a new live campaign. See the
 [campaign finding](../../../docs/findings/hindsight-oci-campaign-2026-10-11.md)
 for verified closeout evidence and semantic limits.
 
+Revision 5 binds supervisor state and captures to
+`$PROBE_PRIVATE/activations/hindsight-semantic-follow-up-2026-10-11/receipts`.
+Reuse the retained `$PROBE_PRIVATE/secrets.env` and the existing
+`ade-hindsight-probe_db-data` and `ade-hindsight-probe_model-cache` volumes.
+Do not regenerate credentials, change the Compose project, or remove volumes.
+`launch` derives `PROBE_RECEIPTS_DIR` from the immutable registry; do not export
+an alternate receipt path when launching work.
+
 ## P1 qualification and P2 start/inspect
 
 After the dummy stop, write a private diagnosis (cause, evidence, correction,
@@ -21,11 +29,13 @@ python3 -m workflows.evals.hindsight_memory_probe.supervisor --state "$PROBE_STA
 nohup setsid python3 -m workflows.evals.hindsight_memory_probe.supervisor \
   --state "$PROBE_STATE" run </dev/null >"$PROBE_STATE/supervisor-epoch2.log" 2>&1 &
 chmod 600 "$PROBE_STATE/supervisor-epoch2.log"
-# Generate internal candidate keys, with synthetic provider key until qualification passes.
-python3 -m workflows.evals.hindsight_memory_probe.private_env \
-  --private-dir "$PROBE_PRIVATE" --release-sha "$PROBE_SHA" --dummy-provider
+# Revision 5 reuses retained secrets.env; verify its presence and mode without
+# printing or rewriting its contents.
+test -f "$PROBE_PRIVATE/secrets.env"
+test ! -L "$PROBE_PRIVATE/secrets.env"
+test "$(stat -c %a "$PROBE_PRIVATE/secrets.env")" = 600
 python3 -m workflows.evals.hindsight_memory_probe.phase \
-  --receipts "$PROBE_PRIVATE/receipts" --phase startup --operation-id image-qualification
+  --receipts "$PROBE_RECEIPTS" --phase startup --operation-id image-qualification
 ```
 
 Use one registered operation at a time; `inspect` until its token-tagged processes
@@ -85,7 +95,7 @@ python3 -m workflows.evals.hindsight_memory_probe.private_env \
 # The resolved-configuration validator and supervisor are stdlib; no uv/venv needed on OCI.
 ```
 
-For resolved config verification on OCI, `docker compose --env-file
+For resolved config verification on OCI, `PROBE_RECEIPTS_DIR="$PROBE_RECEIPTS" docker compose --env-file
 "$PROBE_PRIVATE/secrets.env" -f "$PROBE_RELEASE/workflows/evals/hindsight_memory_probe/compose.yaml"
 --profile runner config --format json` is consumed privately by the owned validator, never printed. The validator is
 stdlib and runs directly with `python3 -m ...validate` using these exact args:
@@ -113,7 +123,7 @@ export PROBE_RELEASE_SHA ADE_PROBE_REGISTRY_SHA256 ADE_PROBE_EPOCH_SHA256
 python3 -m workflows.evals.hindsight_memory_probe.validate \
   --env-file "$PROBE_PRIVATE/secrets.env" --private-dir "$PROBE_PRIVATE" --release-sha "$PROBE_RELEASE_SHA"
 python3 -m workflows.evals.hindsight_memory_probe.phase \
-  --receipts "$PROBE_PRIVATE/receipts" --phase startup --operation-id first-start
+  --receipts "$PROBE_RECEIPTS" --phase startup --operation-id first-start
 python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
   --kind work --timeout 120 -- up -d --no-build --pull never model-router
 python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \

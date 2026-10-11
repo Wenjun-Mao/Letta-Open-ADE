@@ -28,6 +28,27 @@ or a modified/extended clock fails closed. Existing admitted operation deadlines
 and source bundles are never rewritten; they remain evidence for their original
 activation and cannot be renewed by the revision-5 supervisor.
 
+Revision-5 state and capture use the source-defined
+`private/activations/hindsight-semantic-follow-up-2026-10-11/receipts` root,
+with the supervisor registry and qualification proof under its `supervisor/`
+child. The immutable registry records the activation ID and exact absolute
+receipt/state paths, and readback checks them against the clean release path.
+Compose binds this activation's receipt root for router wire captures and phase
+state. The retained `private/secrets.env` stays in place and is passed as the
+existing Compose env file; launch sets `PROBE_RECEIPTS_DIR` from the loaded,
+validated registry, so no operator-inherited override can redirect captures.
+The provider gate reads the proof from this state path and requires both the
+revision-5 activation ID and current registry digest in the proof.
+The existing project and experiment-only DB/cache named volumes remain the same.
+Revision-4 receipts and proof are not copied, replaced, or admitted by the new
+gate.
+
+The runner image explicitly copies both `fixtures/campaign.json` and
+`fixtures/semantic-diagnostic-controls-v1.json`; the offline image-surface test
+materializes its declared `COPY` inputs and loads the diagnostic controls from
+that isolated surface. This guards the exact runtime packaging contract without
+requiring an image build or a live service.
+
 Safety tests use a declared synthetic wall clock at activation +100 seconds.
 Expiration, new-work cutoff, operation deadlines, finalization reserve, registry
 identity, process identity and negative paths remain tested against that clock.
@@ -45,7 +66,7 @@ bound into the candidate release identity and registry receipt.
 - Replacing deadlines with `now + duration` was rejected because it would turn
   one approved bounded campaign into an extensible scheduler.
 
-The revision-5 guard can initialize only during its approved window. Tests no
-longer depend on the machine's current date, while the guard's expiry and reserve
-paths remain independently exercised. PC-09/13 isolation and the revision-4
-evidence boundary are unchanged.
+The revision-5 guard can initialize only during its approved window and only at
+the activation-scoped state path. Tests no longer depend on the machine's
+current date, while the guard's expiry and reserve paths remain independently
+exercised. PC-09/13 isolation and the revision-4 evidence boundary are unchanged.

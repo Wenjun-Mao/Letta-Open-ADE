@@ -313,6 +313,8 @@ def launch(state, kind, timeout, arguments):
                 "PROBE_RELEASE_SHA": Path(epoch["release"]).name,
                 "ADE_PROBE_REGISTRY_SHA256": registry["registry_sha256"],
                 "ADE_PROBE_EPOCH_SHA256": epoch["sha256"],
+                # Compose receives this only from the source-bound immutable registry.
+                "PROBE_RECEIPTS_DIR": registry["activation_namespace"]["receipts_root"],
                 **{
                     f"PROBE_{name.upper().replace('-', '_')}_{key.upper()}": str(value)
                     for name, caps in epoch["allocations"].items()

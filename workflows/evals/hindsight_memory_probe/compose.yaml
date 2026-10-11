@@ -44,7 +44,7 @@ services:
       PROBE_RECEIPTS: /receipts/wire
       PROBE_PHASE_FILE: /receipts/phase.json
     volumes:
-      - ${PROBE_PRIVATE_DIR:?private sibling required}/receipts:/receipts
+      - ${PROBE_RECEIPTS_DIR:?activation receipts root required}:/receipts
     # Router stays internal. Optional loopback 18010 is via SSH-to-container diagnostics.
   hindsight:
     image: ghcr.io/vectorize-io/hindsight:0.10.3@sha256:acf5e76bd9a5b65f9f7c540a3414007c7f874b34346587dac7e4feab7ae80cba
@@ -95,7 +95,7 @@ services:
       ADE_EVAL_HINDSIGHT_API_KEY: ${PROBE_HINDSIGHT_KEY:?private generated env required}
       ADE_EVAL_PHASE_FILE: /receipts/phase.json
     volumes:
-      - ${PROBE_PRIVATE_DIR:?private sibling required}/receipts:/receipts
+      - ${PROBE_RECEIPTS_DIR:?activation receipts root required}:/receipts
 volumes:
   db-data: {}
   model-cache: {}

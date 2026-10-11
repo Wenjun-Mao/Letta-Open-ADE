@@ -22,7 +22,14 @@ from . import quiescence
 from . import guard_evidence
 from .receipts import ReceiptStore
 
-from .campaign_clock import STARTED, TARGET, DEADLINE, WORK_CUTOFF, receipt as clock_receipt
+from .campaign_clock import (
+    STARTED,
+    TARGET,
+    DEADLINE,
+    WORK_CUTOFF,
+    activation_namespace,
+    receipt as clock_receipt,
+)
 
 CAP_MEMORY = int(7.75 * host.GIB)
 CAP_CPU = 1.5
@@ -31,11 +38,14 @@ CAP_CPU = 1.5
 def load_registry(directory):
     raw = (directory / "registry.json").read_bytes()
     value = json.loads(raw)
+    namespace = activation_namespace(value.get("release", ""))
     if (
         value.get("started") != STARTED
         or value.get("target") != TARGET
         or value.get("hard_deadline") != DEADLINE
         or value.get("clock") != clock_receipt()
+        or value.get("activation_namespace") != namespace
+        or Path(directory).resolve() != Path(namespace["supervisor_state"])
         or not STARTED <= value.get("created", 0) < WORK_CUTOFF
         or value["project"] != host.PROJECT
         or value["caps_memory"] != CAP_MEMORY
@@ -76,6 +86,9 @@ def initialize(directory, release, now=None):
     releases.verify(release)
     if release.parent != Path("/mnt/projects/apps/ade-hindsight-probe/releases"):
         raise RuntimeError("release_path_not_owned")
+    namespace = activation_namespace(release)
+    if Path(directory).resolve() != Path(namespace["supervisor_state"]):
+        raise RuntimeError("activation_state_path_required")
     if len(release.name) != 40 or any(
         c not in "0123456789abcdef" for c in release.name
     ):
@@ -97,6 +110,7 @@ def initialize(directory, release, now=None):
             "target": TARGET,
             "hard_deadline": DEADLINE,
             "clock": clock_receipt(),
+            "activation_namespace": namespace,
             "caps_memory": CAP_MEMORY,
             "caps_cpu": CAP_CPU,
             "baseline": [host.baseline_projection(c) for c in items],

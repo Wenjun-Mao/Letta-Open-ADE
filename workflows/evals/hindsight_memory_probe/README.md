@@ -154,6 +154,16 @@ control audit and predeclared distinctions are captured alongside each stage
 summary. See [the bounded diagnostic note](semantic-diagnostic-notes.md) for
 causal findings, archive pointers and exact manager-run commands.
 
+The runner image copies both required fixture files, and an offline image-surface
+test loads the controls from a temporary filesystem materialized from the
+runner stage's declared `COPY` instructions. Revision-5 supervisor state and
+router/phase captures live under
+`private/activations/hindsight-semantic-follow-up-2026-10-11/receipts`; its
+absolute paths are bound into the immutable registry. `launch` supplies the
+validated receipt root to Compose. The existing `private/secrets.env` and
+project-scoped DB/cache volumes remain in place; revision-4 receipts and proof
+remain at their original paths.
+
 Replay supports the two predeclared output ceilings `--max-output-tokens 2048`
 (default) and `--max-output-tokens 4096`. Run a capacity ablation against the
 same retained bank using a new output directory; the ceiling applies equally to
@@ -220,12 +230,18 @@ docker ps --no-trunc
 PROBE_ROOT=/mnt/projects/apps/ade-hindsight-probe
 PROBE_RELEASE=$PROBE_ROOT/releases/$PROBE_SHA
 PROBE_PRIVATE=$PROBE_ROOT/private
-PROBE_STATE=$PROBE_PRIVATE/receipts/supervisor
+PROBE_RECEIPTS=$PROBE_PRIVATE/activations/hindsight-semantic-follow-up-2026-10-11/receipts
+PROBE_STATE=$PROBE_RECEIPTS/supervisor
 # First stage only; test refuses existing/conflicting release content.
 test ! -e "$PROBE_RELEASE"
 install -d -m 755 "$PROBE_RELEASE"
 tar -xf /tmp/$PROBE_SHA.tar -C "$PROBE_RELEASE"
-install -d -m 700 "$PROBE_PRIVATE" "$PROBE_PRIVATE/receipts" "$PROBE_STATE"
+test -f "$PROBE_PRIVATE/secrets.env"
+test ! -L "$PROBE_PRIVATE/secrets.env"
+test "$(stat -c %a "$PROBE_PRIVATE/secrets.env")" = 600
+# Retain existing credentials and the two named experiment volumes. Do not
+# recreate private/secrets.env or run docker compose down -v.
+install -d -m 700 "$PROBE_RECEIPTS" "$PROBE_STATE"
 cd "$PROBE_RELEASE"
 python3 -m workflows.evals.hindsight_memory_probe.supervisor --state "$PROBE_STATE" \
   init --release "$PROBE_RELEASE"
@@ -247,8 +263,9 @@ readback receipt, held flock, no duplicate, unchanged deadline. Record all quali
 owned cleanup; SIGKILL recovery requires readback/resume. Test owned BuildKit
 client cancellation before treating builds as supervised. Do not proceed to live
 credentials if dummy expiry/disconnect/cancellation proof fails. Provider activation
-mechanically requires `private/receipts/supervisor/oci-supervisor-proof.json` with
-hard_deadline1791771163, boolean true `dummy_disconnect`, `dummy_expiry`,
+mechanically requires `private/activations/hindsight-semantic-follow-up-2026-10-11/receipts/supervisor/oci-supervisor-proof.json` with
+`activation_id` equal to the revision-5 ID, `registry_sha256` equal to the
+current immutable supervisor registry, `hard_deadline` equal to `1791771163`, boolean true `dummy_disconnect`, `dummy_expiry`,
 `resume_readback`, `build_daemon_cancelled`, `baseline_unchanged`, plus `build_cancellation_receipt` naming the typed successful build-only
 proof and nonempty `evidence_sha256` mapping scoped receipt filenames to verified SHA256 hashes.
 Write this only after observing the real OCI proofs; synthetic offline tests are

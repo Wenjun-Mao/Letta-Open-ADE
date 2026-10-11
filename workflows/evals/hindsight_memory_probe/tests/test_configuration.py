@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from workflows.evals.hindsight_memory_probe.campaign_clock import activation_receipts_root
 from workflows.evals.hindsight_memory_probe.validate import ROOT, render, validate
 
 
@@ -14,7 +15,8 @@ def resolved():
         pytest.skip(
             "Docker Compose CLI unavailable; config rendering is an explicit gap"
         )
-    return render(ROOT / "config/dummy.env.example")
+    private_dir = Path("/tmp/ade-hindsight-probe-dummy")
+    return render(ROOT / "config/dummy.env.example", activation_receipts_root(private_dir))
 
 
 def test_owned_dummy_compose_and_optional_existing_embedding_key(resolved):

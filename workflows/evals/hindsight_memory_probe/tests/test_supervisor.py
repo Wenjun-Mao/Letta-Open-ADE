@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from workflows.evals.hindsight_memory_probe import (
+    campaign_clock,
     epochs,
     host_guard as host,
     supervisor as sup,
@@ -47,11 +48,18 @@ def container(
 
 @pytest.fixture
 def registry(tmp_path, monkeypatch):
+    state = tmp_path / "private/activations" / campaign_clock.ACTIVATION_ID / "receipts/supervisor"
+    namespace = {
+        "activation_id": campaign_clock.ACTIVATION_ID,
+        "receipts_root": str(state.parent),
+        "supervisor_state": str(state),
+    }
+    monkeypatch.setattr(sup, "activation_namespace", lambda _release: namespace)
     monkeypatch.setattr(sup.releases, "verify", lambda _: {"source_sha": "a" * 40})
     monkeypatch.setattr(host, "host_sample", lambda _: copy.deepcopy(SAFE_SAMPLE))
     monkeypatch.setattr(host, "containers", lambda: [container()])
-    sup.initialize(tmp_path, RELEASE, now=sup.STARTED + 1)
-    return tmp_path, sup.load_registry(tmp_path)
+    sup.initialize(state, RELEASE, now=sup.STARTED + 1)
+    return state, sup.load_registry(state)
 
 
 def test_absolute_campaign_clock_and_registry_conflicts(registry):
@@ -104,6 +112,32 @@ def test_campaign_cannot_start_before_approved_activation(tmp_path):
         sup.initialize(tmp_path, RELEASE, now=sup.STARTED - 1)
 
 
+def test_revision_five_namespace_is_source_bound_and_rejects_legacy_state(
+    tmp_path, monkeypatch
+):
+    namespace = campaign_clock.activation_namespace(RELEASE)
+    assert namespace == {
+        "activation_id": campaign_clock.ACTIVATION_ID,
+        "receipts_root": "/mnt/projects/apps/ade-hindsight-probe/private/activations/hindsight-semantic-follow-up-2026-10-11/receipts",
+        "supervisor_state": "/mnt/projects/apps/ade-hindsight-probe/private/activations/hindsight-semantic-follow-up-2026-10-11/receipts/supervisor",
+    }
+    monkeypatch.setattr(sup, "activation_namespace", campaign_clock.activation_namespace)
+    monkeypatch.setattr(sup.releases, "verify", lambda _: {})
+    with pytest.raises(RuntimeError, match="activation_state_path_required"):
+        sup.initialize(tmp_path, RELEASE, now=sup.STARTED + 1)
+
+
+def test_activation_receipts_root_rejects_symlink_into_legacy_location(tmp_path):
+    private_root = tmp_path / "private"
+    activation_parent = private_root / "activations"
+    activation_parent.mkdir(parents=True)
+    legacy = private_root / "receipts"
+    legacy.mkdir()
+    (activation_parent / campaign_clock.ACTIVATION_ID).symlink_to(legacy)
+    with pytest.raises(RuntimeError, match="activation_namespace_symlink"):
+        campaign_clock.activation_receipts_root(private_root)
+
+
 def test_duplicate_lease_is_rejected(tmp_path):
     with sup.lease(tmp_path):
         with pytest.raises(BlockingIOError):
@@ -126,10 +160,16 @@ def test_existing_registry_is_not_reinitialized(registry):
     ],
 )
 def test_preflight_headroom_is_prospective(tmp_path, monkeypatch, sample):
+    state = tmp_path / "private/activations" / sup.clock_receipt()["activation_id"] / "receipts/supervisor"
+    monkeypatch.setattr(sup, "activation_namespace", lambda _release: {
+        "activation_id": sup.clock_receipt()["activation_id"],
+        "receipts_root": str(state.parent),
+        "supervisor_state": str(state),
+    })
     monkeypatch.setattr(sup.releases, "verify", lambda _: {})
     monkeypatch.setattr(host, "host_sample", lambda _: sample)
     with pytest.raises(RuntimeError, match="insufficient"):
-        sup.initialize(tmp_path, RELEASE, now=sup.STARTED + 1)
+        sup.initialize(state, RELEASE, now=sup.STARTED + 1)
 
 
 

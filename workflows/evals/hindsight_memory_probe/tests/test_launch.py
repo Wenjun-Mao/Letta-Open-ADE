@@ -124,6 +124,7 @@ def test_exact_operator_runbook_cache_provisioning_recipe_is_admitted(supervised
 def test_launch_registers_identity_deadline_and_caps_before_gate(
     supervised, monkeypatch
 ):
+    monkeypatch.setenv("PROBE_RECEIPTS_DIR", "/tmp/unapproved-receipts")
     registry = supervisor.load_registry(supervised)
     epoch = epochs.active(supervised, registry)
     calls = []
@@ -154,6 +155,8 @@ def test_launch_registers_identity_deadline_and_caps_before_gate(
     assert environment["ADE_PROBE_EPOCH_SHA256"] == epoch["sha256"]
     assert environment["COMPOSE_PARALLEL_LIMIT"] == "1"
     assert environment["PROBE_HINDSIGHT_MEMORY"] == str(6 * host.GIB)
+    assert environment["PROBE_RECEIPTS_DIR"] == supervisor.load_registry(supervised)["activation_namespace"]["receipts_root"]
+    assert environment["PROBE_RECEIPTS_DIR"] != "/tmp/unapproved-receipts"
     command = json.loads(calls[0][0][4])
     assert command[0:4] == ["docker", "compose", "--project-name", host.PROJECT]
     assert (

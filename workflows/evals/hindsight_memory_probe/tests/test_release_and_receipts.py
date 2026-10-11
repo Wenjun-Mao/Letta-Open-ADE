@@ -56,9 +56,12 @@ def test_live_gate_requires_real_oci_proof_contract_and_current_evidence(
     tmp_path, monkeypatch
 ):
     from workflows.evals.hindsight_memory_probe import qualification_gate as gate
+    from workflows.evals.hindsight_memory_probe.campaign_clock import activation_receipts_root
 
-    state = tmp_path / "receipts/supervisor"
+    state = activation_receipts_root(tmp_path) / "supervisor"
     state.mkdir(parents=True)
+    registry = {"registry_sha256": "f" * 64}
+    monkeypatch.setattr(gate, "load_registry", lambda _state: registry)
     evidence = state / "synthetic-unit-test-evidence.json"
     evidence.write_text("synthetic mechanics only")
     value = {key: True for key in gate.REQUIRED}
@@ -80,6 +83,8 @@ def test_live_gate_requires_real_oci_proof_contract_and_current_evidence(
     )
     value["build_cancellation_receipt"] = cancellation.name
     value.update(
+        activation_id=gate.ACTIVATION_ID,
+        registry_sha256=registry["registry_sha256"],
         hard_deadline=gate.DEADLINE,
         evidence_sha256={
             evidence.name: hashlib.sha256(evidence.read_bytes()).hexdigest(),
@@ -90,6 +95,11 @@ def test_live_gate_requires_real_oci_proof_contract_and_current_evidence(
     proof.write_text(json.dumps(value))
     monkeypatch.setattr(gate.time, "time", lambda: gate.WORK_CUTOFF - 1)
     gate.require_oci_proof(tmp_path)
+    value["registry_sha256"] = "e" * 64
+    proof.write_text(json.dumps(value))
+    with pytest.raises(RuntimeError, match="registry_binding"):
+        gate.require_oci_proof(tmp_path)
+    value["registry_sha256"] = registry["registry_sha256"]
     value["build_daemon_cancelled"] = False
     proof.write_text(json.dumps(value))
     with pytest.raises(RuntimeError, match="incomplete"):
@@ -101,6 +111,13 @@ def test_live_gate_requires_real_oci_proof_contract_and_current_evidence(
         gate.require_oci_proof(tmp_path)
     monkeypatch.setattr(gate.time, "time", lambda: gate.WORK_CUTOFF)
     with pytest.raises(RuntimeError, match="clock_invalid"):
+        gate.require_oci_proof(tmp_path)
+    proof.unlink()
+    old_proof = tmp_path / "revision-four-proof.json"
+    old_proof.write_text("{}")
+    proof.symlink_to(old_proof)
+    monkeypatch.setattr(gate.time, "time", lambda: gate.WORK_CUTOFF - 1)
+    with pytest.raises(RuntimeError, match="proof_path_invalid"):
         gate.require_oci_proof(tmp_path)
 
 
