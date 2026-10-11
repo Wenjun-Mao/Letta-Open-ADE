@@ -285,9 +285,6 @@ class Campaign:
                 memories[0].setdefault("id", case["adequate"])
             else:
                 memories = [dict(item) for item in diagnostic["memories"]]
-            for memory in memories:
-                profile_tagged = "kind:profile" in memory.get("tags", [])
-                memory["tags"] = [f"character:{root}"] + (["kind:profile"] if profile_tagged else [])
             input_value["adequate_memories"] = memories
         label = f"{case['id']}-{checkpoint}-{int(time.time_ns())}"
         capture_dir = self.output / "character" / label

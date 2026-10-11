@@ -187,6 +187,9 @@ def test_full_restore_host_path_runs_under_python_no_site_with_real_docker_text(
         import hashlib, json, os, sys
         from pathlib import Path
         sys.path.insert(0, sys.argv[2])
+        import time
+        from workflows.evals.hindsight_memory_probe.campaign_clock import STARTED
+        time.time = lambda: STARTED + 100
         from workflows.evals.hindsight_memory_probe import epochs, host_guard, restore, restore_controller, restore_process
         from workflows.evals.hindsight_memory_probe.host_guard import GIB
         state = Path(sys.argv[1]); token = "1" * 32

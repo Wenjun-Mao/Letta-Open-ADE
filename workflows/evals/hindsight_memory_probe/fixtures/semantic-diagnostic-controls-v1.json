@@ -6,9 +6,9 @@
       "audit": {
         "subject_id": "subject_a",
         "active_character_root_id": "root_other",
-        "source_ids": ["s01", "s03"],
+      "source_ids": ["s01", "s03"],
         "private_origin_source_ids": ["s01"],
-        "source_character_root_id": "root_xiaotang",
+      "source_character_root_id": "root_xiaotang",
         "source_character_root_is_shared": false
       },
       "expected_distinctions": [
@@ -41,13 +41,23 @@
       ],
       "memories": [
         {
-          "id": "adequate_q06_subject_b_v1",
-          "text": "你说自己喜欢柠檬水；你和我在聊天中给一盆薄荷取名“绿邮差”。",
+          "id": "adequate_q06_profile_v1",
+          "text": "你喜欢柠檬水。",
           "type": "world",
-          "tags": ["character:root_xiaotang", "kind:profile"],
+          "tags": ["kind:profile"],
+          "metadata": {
+            "speaker": "user",
+            "subject_id": "subject_b"
+          }
+        },
+        {
+          "id": "adequate_q06_naming_experience_v1",
+          "text": "在2026-10-01的聊天里，你说你和我昨天给一盆薄荷取名“绿邮差”。",
+          "type": "experience",
+          "tags": ["character:root_xiaotang"],
           "document_id": "s09",
           "mentioned_at": "2026-10-01T17:00:00Z",
-          "context": "来源 s09：subject_b 在 root_xiaotang 的已接受用户陈述及已提交助手回复。",
+          "context": "来源消息时间为2026-10-01T17:00:00Z；原话以“昨天”描述起名事件。消息时间与事件时间不同，不把消息日当事件日。",
           "metadata": {
             "speaker": "user+assistant",
             "source_id": "s09",

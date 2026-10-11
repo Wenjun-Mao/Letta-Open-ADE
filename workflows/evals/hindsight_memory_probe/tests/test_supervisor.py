@@ -57,11 +57,37 @@ def registry(tmp_path, monkeypatch):
 def test_absolute_campaign_clock_and_registry_conflicts(registry):
     directory, value = registry
     assert (value["started"], value["target"], value["hard_deadline"]) == (
-        1791694165,
-        1791730165,
-        1791737365,
+        1791749563,
+        1791767563,
+        1791771163,
     )
+    assert value["clock"]["activation_id"] == "hindsight-semantic-follow-up-2026-10-11"
     value["hard_deadline"] += 1
+    value["registry_sha256"] = sup.digest_registry(value)
+    (directory / "registry.json").write_text(json.dumps(value))
+    with pytest.raises(RuntimeError, match="immutable"):
+        sup.load_registry(directory)
+
+
+def test_revision_four_registry_is_not_adopted_or_renewed(tmp_path, registry):
+    directory, current = registry
+    old = copy.deepcopy(current)
+    old.update({
+        "started": 1791694165,
+        "target": 1791730165,
+        "hard_deadline": 1791737365,
+        "created": 1791694166,
+    })
+    old.pop("clock", None)
+    old["registry_sha256"] = sup.digest_registry(old)
+    (directory / "registry.json").write_text(json.dumps(old))
+    with pytest.raises(RuntimeError, match="immutable"):
+        sup.load_registry(directory)
+
+
+def test_registry_clock_binding_cannot_be_extended_with_new_digest(registry):
+    directory, value = registry
+    value["clock"]["work_cutoff"] += 3600
     value["registry_sha256"] = sup.digest_registry(value)
     (directory / "registry.json").write_text(json.dumps(value))
     with pytest.raises(RuntimeError, match="immutable"):
@@ -71,6 +97,11 @@ def test_absolute_campaign_clock_and_registry_conflicts(registry):
 def test_expired_init_cannot_start(tmp_path):
     with pytest.raises(RuntimeError, match="elapsed"):
         sup.initialize(tmp_path, RELEASE, now=sup.DEADLINE)
+
+
+def test_campaign_cannot_start_before_approved_activation(tmp_path):
+    with pytest.raises(RuntimeError, match="not_activated"):
+        sup.initialize(tmp_path, RELEASE, now=sup.STARTED - 1)
 
 
 def test_duplicate_lease_is_rejected(tmp_path):

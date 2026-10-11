@@ -6,8 +6,9 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
+from ade_api.features.agent_runtime.hindsight_eval_contracts import EvaluationError, EvaluationInput
 
-from workflows.evals.hindsight_memory_probe import freeze, replay
+from workflows.evals.hindsight_memory_probe import diagnostic_controls, freeze, replay
 from workflows.evals.hindsight_memory_probe import bank_profile
 from workflows.evals.hindsight_memory_probe import driver_support
 from workflows.evals.hindsight_memory_probe.driver_support import HindsightHTTP
@@ -113,7 +114,7 @@ def test_real_offline_freeze_validates_and_tampering_fails_before_http(monkeypat
 
 
 def test_diagnostic_replay_freezes_all_arms_expectations_and_capacity(monkeypatch, tmp_path):
-    manifest = freeze.strict_json(freeze.DIAGNOSTIC_CONTROLS.read_text())
+    manifest = freeze.strict_json(diagnostic_controls.PATH.read_text())
     case = json.loads(freeze.FIXTURE.read_text())["cases"]
     q01 = next(item for item in case if item["id"] == "q01")
     manifest.update({
@@ -124,7 +125,7 @@ def test_diagnostic_replay_freezes_all_arms_expectations_and_capacity(monkeypatc
         "sources": [],
         "cases": [],
     })
-    manifest["diagnostic_controls"] = freeze.strict_json(freeze.DIAGNOSTIC_CONTROLS.read_text())
+    manifest["diagnostic_controls"] = freeze.strict_json(diagnostic_controls.PATH.read_text())
     monkeypatch.setattr(replay, "feature_scope", lambda workspace, subject, root: {
         "workspace_id": workspace, "subject_id": subject, "character_root_id": root,
         "bank_id": "bank-offline", "tags": [f"character:{root}", "kind:profile"],
@@ -143,12 +144,111 @@ def test_diagnostic_replay_freezes_all_arms_expectations_and_capacity(monkeypatc
     summary = asyncio.run(campaign.replay_case(q01, checkpoint="offline"))
     assert captured["arms"] == ["hindsight", "empty", "adequate"]
     assert captured["max_output_tokens"] == 4096
-    assert captured["adequate_memories"][0]["tags"] == ["character:root_other", "kind:profile"]
+    EvaluationInput.model_validate(captured)
+    assert captured["adequate_memories"][0]["tags"] == ["kind:profile"]
     assert "document_id" not in captured["adequate_memories"][0]
     assert "character_root_id" not in captured["adequate_memories"][0]["metadata"]
     assert summary["diagnostic_control_version"] == "semantic-diagnostic-controls-v1"
     assert summary["max_output_tokens"] == 4096
     assert "source_character_root_is_shared" in summary["diagnostic_source_scope_audit"]
+
+
+def test_q07_portable_profile_remains_unowned_and_hypothesis_stays_root_local(monkeypatch, tmp_path):
+    fixture = freeze.strict_json(freeze.FIXTURE.read_bytes())
+    manifest = {
+        "workspace_id": "offline-diagnostic", "model_key": "deepseek::deepseek-flash",
+        "persona": "你是林小棠。", "adequate_memories": {}, "sources": [],
+        "diagnostic_controls": diagnostic_controls.load(fixture),
+    }
+    case = next(item for item in fixture["cases"] if item["id"] == "q07")
+    monkeypatch.setattr(replay, "feature_scope", lambda workspace, subject, root: {
+        "workspace_id": workspace, "subject_id": subject, "character_root_id": root,
+        "bank_id": "bank-offline", "tags": [f"character:{root}", "kind:profile"],
+        "tags_match": "any_strict",
+    })
+    monkeypatch.setattr(replay, "set_phase", lambda *_: {"phase": "recall", "operation_id": "offline"})
+    captured = {}
+
+    def capture_feature(command, **kwargs):
+        input_path = Path(command[command.index("--input") + 1])
+        captured.update(json.loads(input_path.read_text()))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(replay.subprocess, "run", capture_feature)
+    campaign = replay.Campaign(manifest, tmp_path / "q07-candidate", object())
+    asyncio.run(campaign.replay_case(case, checkpoint="offline"))
+    EvaluationInput.model_validate(captured)
+    portable, hypothetical = captured["adequate_memories"]
+    assert portable["tags"] == ["kind:profile"]
+    assert set(portable["metadata"]) == {"speaker", "subject_id"}
+    assert not any(key in portable for key in ("document_id", "mentioned_at", "context"))
+    assert hypothetical["tags"] == ["character:root_xiaotang"]
+    assert hypothetical["metadata"]["source_id"] == "s06"
+
+
+def test_q06_profile_and_naming_experience_keep_distinct_ownership_and_time(monkeypatch, tmp_path):
+    fixture = freeze.strict_json(freeze.FIXTURE.read_bytes())
+    manifest = {
+        "workspace_id": "offline-diagnostic", "model_key": "deepseek::deepseek-flash",
+        "persona": "你是林小棠。", "adequate_memories": {}, "sources": [],
+        "diagnostic_controls": diagnostic_controls.load(fixture),
+    }
+    case = next(item for item in fixture["cases"] if item["id"] == "q06")
+    monkeypatch.setattr(replay, "feature_scope", lambda workspace, subject, root: {
+        "workspace_id": workspace, "subject_id": subject, "character_root_id": root,
+        "bank_id": "bank-offline", "tags": [f"character:{root}", "kind:profile"],
+        "tags_match": "any_strict",
+    })
+    monkeypatch.setattr(replay, "set_phase", lambda *_: {"phase": "recall", "operation_id": "offline"})
+    captured = {}
+
+    def capture_feature(command, **kwargs):
+        input_path = Path(command[command.index("--input") + 1])
+        captured.update(json.loads(input_path.read_text()))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(replay.subprocess, "run", capture_feature)
+    campaign = replay.Campaign(manifest, tmp_path / "q06-candidate", object())
+    asyncio.run(campaign.replay_case(case, checkpoint="offline"))
+    EvaluationInput.model_validate(captured)
+    profile, naming_experience = captured["adequate_memories"]
+    assert profile["tags"] == ["kind:profile"]
+    assert set(profile["metadata"]) == {"speaker", "subject_id"}
+    assert naming_experience["tags"] == ["character:root_xiaotang"]
+    assert "昨天" in naming_experience["text"]
+    assert naming_experience["metadata"]["source_timestamp"] == "2026-10-01T17:00:00Z"
+    assert "2026-10-01T17:00:00Z" in naming_experience["context"]
+
+
+def test_diagnostic_control_source_subject_root_and_memory_attribution_fail_closed():
+    fixture = freeze.strict_json(freeze.FIXTURE.read_bytes())
+    controls = diagnostic_controls.load(fixture)
+    wrong_subject = json.loads(json.dumps(controls))
+    wrong_subject["cases"]["q06"]["memories"][0]["metadata"]["subject_id"] = "subject_a"
+    with pytest.raises(ValueError, match="memory_attribution"):
+        diagnostic_controls.validate(wrong_subject, fixture)
+
+    wrong_root = json.loads(json.dumps(controls))
+    wrong_root["cases"]["q07"]["audit"]["hypothetical_source_character_root_id"] = "root_other"
+    with pytest.raises(ValueError, match="scope_invalid"):
+        diagnostic_controls.validate(wrong_root, fixture)
+
+    wrong_source = json.loads(json.dumps(controls))
+    wrong_source["cases"]["q07"]["audit"]["hypothetical_source_ids"] = ["s05"]
+    with pytest.raises(ValueError, match="source_scope_invalid"):
+        diagnostic_controls.validate(wrong_source, fixture)
+
+    bad_input = {
+        "contract": "ade-hindsight-character-evaluation-v1", "synthetic": True,
+        "case_id": "q01-bad-root", "scope": {"workspace_id": "offline", "subject_id": "subject_a", "character_root_id": "root_other"},
+        "model_key": "deepseek::deepseek-flash", "persona": "你是林小棠。",
+        "dialogue": [{"role": "user", "content": "test"}], "query": "test",
+        "query_timestamp": "2026-10-03T12:00:00Z", "arms": ["adequate"],
+        "adequate_memories": [{"id": "foreign-root", "text": "x", "type": "world",
+                                "tags": ["character:root_xiaotang"]}],
+    }
+    with pytest.raises(EvaluationError, match="recall_scope_violation"):
+        EvaluationInput.model_validate(bad_input)
 
 
 def test_runner_wires_release_sha_to_manifest_runtime_identity():

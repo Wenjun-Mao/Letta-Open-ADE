@@ -22,7 +22,7 @@ from . import quiescence
 from . import guard_evidence
 from .receipts import ReceiptStore
 
-from .campaign_clock import STARTED, TARGET, DEADLINE, WORK_CUTOFF
+from .campaign_clock import STARTED, TARGET, DEADLINE, WORK_CUTOFF, receipt as clock_receipt
 
 CAP_MEMORY = int(7.75 * host.GIB)
 CAP_CPU = 1.5
@@ -32,9 +32,11 @@ def load_registry(directory):
     raw = (directory / "registry.json").read_bytes()
     value = json.loads(raw)
     if (
-        value["started"] != STARTED
-        or value["target"] != TARGET
-        or value["hard_deadline"] != DEADLINE
+        value.get("started") != STARTED
+        or value.get("target") != TARGET
+        or value.get("hard_deadline") != DEADLINE
+        or value.get("clock") != clock_receipt()
+        or not STARTED <= value.get("created", 0) < WORK_CUTOFF
         or value["project"] != host.PROJECT
         or value["caps_memory"] != CAP_MEMORY
         or value["caps_cpu"] != CAP_CPU
@@ -66,6 +68,8 @@ def lease(directory, name="supervisor.lock"):
 
 def initialize(directory, release, now=None):
     now = time.time() if now is None else now
+    if now < STARTED:
+        raise RuntimeError("campaign_not_activated")
     if now >= WORK_CUTOFF:
         raise RuntimeError("hard_deadline_elapsed")
     release = releases.validate_path(release)
@@ -92,6 +96,7 @@ def initialize(directory, release, now=None):
             "started": STARTED,
             "target": TARGET,
             "hard_deadline": DEADLINE,
+            "clock": clock_receipt(),
             "caps_memory": CAP_MEMORY,
             "caps_cpu": CAP_CPU,
             "baseline": [host.baseline_projection(c) for c in items],

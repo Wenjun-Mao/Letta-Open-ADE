@@ -248,16 +248,21 @@ owned cleanup; SIGKILL recovery requires readback/resume. Test owned BuildKit
 client cancellation before treating builds as supervised. Do not proceed to live
 credentials if dummy expiry/disconnect/cancellation proof fails. Provider activation
 mechanically requires `private/receipts/supervisor/oci-supervisor-proof.json` with
-hard_deadline1791737365, boolean true `dummy_disconnect`, `dummy_expiry`,
+hard_deadline1791771163, boolean true `dummy_disconnect`, `dummy_expiry`,
 `resume_readback`, `build_daemon_cancelled`, `baseline_unchanged`, plus `build_cancellation_receipt` naming the typed successful build-only
 proof and nonempty `evidence_sha256` mapping scoped receipt filenames to verified SHA256 hashes.
 Write this only after observing the real OCI proofs; synthetic offline tests are
 not qualification receipts. Hash/readback validation cannot interpret the truth
 of an operator's assertion; the subsequent live task must review the evidence.
 
-Campaign started1791694165 (04:49:25Z), target1791730165 (14:49:25Z), hard
-cap1791737365 (16:49:25Z) on2026-10-11. Fresh work/rearm stop300s before hard
-cap (16:44:25Z) to reserve finite owned cleanup. Clock constants are immutable;
+The revision-4 timestamps below are historical. Revision 5 pins activation
+`2026-10-11T20:12:43Z` (`1791749563`), target
+`2026-10-12T01:12:43Z` (`1791767563`), new-work cutoff
+`2026-10-12T01:27:43Z` (`1791768463`) and hard stop
+`2026-10-12T02:12:43Z` (`1791771163`). Its registry binds the exact activation
+clock receipt; revision-4 registries are not resumed or renewed under this clock.
+The final 45 minutes are reserved for owned shutdown, verification and reporting.
+Clock constants are immutable;
 resume/new source/allocations never move them. Stop only explicit IDs after project,
 service, release-path labels and fresh inspect checks. PIDs require start ticks,
 UID and unique inherited ownership token; no PID/group reuse or global kill.

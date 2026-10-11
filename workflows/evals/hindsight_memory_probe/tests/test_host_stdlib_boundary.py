@@ -15,6 +15,7 @@ def test_host_admission_and_snapshot_path_runs_under_python_no_site(tmp_path):
 import contextlib, json, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[2])
+from workflows.evals.hindsight_memory_probe.campaign_clock import STARTED
 from workflows.evals.hindsight_memory_probe import (
     candidate_database, epochs, finalization, host_guard, lifecycle, p4_evidence,
     quiescence, supervisor,
@@ -75,7 +76,7 @@ host_guard.candidate_containers = lambda items, _registry: items
 host_guard.host_sample = lambda _release: {"memory_available": 10 * host_guard.GIB, "disk_free": 10 * host_guard.GIB}
 host_guard.guard_reason = lambda *_args, **_kwargs: (None, None)
 lifecycle.classify = lambda *_args: {"containers": {}, "reason": None}
-finalization.time.time = lambda: finalization.WORK_CUTOFF - 5000
+finalization.time.time = lambda: STARTED + 100
 
 containers = []
 for index, service in enumerate(("db", "hindsight", "model-router")):
