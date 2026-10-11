@@ -34,9 +34,12 @@ The user subsequently selected the existing OCI ARM host for the isolated
 experiment after raising Mac RAM/swap concerns. This supersedes the plan's original
 Mac placement recommendation. Read-only inspection found resource headroom and
 Spark connectivity; it did not qualify deployment or CPU inference. The user's
-planned 4-core/24 GB resize is owner-managed and must be verified before sizing
-the candidate. Keep the Mac as a development/browser client and existing OCI
-services untouched.
+planned 4-core/24 GB resize is owner-managed and unverified. The user then clarified
+that the end-to-end plan must target the current 2-core/approximately 12 GB host:
+the upgrade is optional headroom, not a deployment prerequisite. Refresh actual
+capacity and prove the candidate within measured limits; do not confuse this
+target with completed qualification. Keep the Mac as a development/browser client
+and existing OCI services untouched.
 
 Self-hosting selects who operates Hindsight, not where every model runs. Exact
 service configuration, extraction model, embeddings, reranking and model-access

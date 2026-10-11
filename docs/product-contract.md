@@ -123,8 +123,11 @@ requested during setup planning. Reusing model infrastructure must not change
 native persistence or the running ADE/trial services. The user subsequently
 selected the existing OCI ARM host instead of the Mac for this experiment, to
 avoid extra Mac memory/swap pressure. The announced 4-core/24 GB upgrade is
-planned, not verified. The [setup plan](plans/hindsight-self-hosted-experiment.md)
-records this placement and proposes service/model configuration and checkpoints.
+planned, not verified. The user clarified that the plan must cover deployment on
+the current 2-core/approximately 12 GB host without depending on that upgrade.
+This is the sizing target, not measured deployment or inference acceptance.
+The [setup plan](plans/hindsight-self-hosted-experiment.md) records this placement
+and proposes preparation through OCI deployment, bounded replay and shutdown.
 
 This settles hosting direction and the experiment host, not model/provider routes,
 experiment scope or production adoption. Installation, service startup, live

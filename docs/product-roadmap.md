@@ -73,10 +73,11 @@ persistence, embeddings, Qwen, or tool protocols. See the
   isolation, leaving incumbent execution unchanged. The user selected
   [self-hosting](adr/0062-self-hosted-hindsight.md) rather than Hindsight Cloud
   and an isolated first experiment on OCI rather than the Mac (PC-13). Review the
-  [draft self-hosted setup plan](plans/hindsight-self-hosted-experiment.md), which
-  records OCI placement and proposes existing model infrastructure reuse and
-  separate storage. Recheck actual host capacity, including any completed upgrade,
-  before deployment.
+  [end-to-end setup plan, revision 3](plans/hindsight-self-hosted-experiment.md),
+  covering offline preparation, deployment under `/mnt/projects/apps`, a bounded
+  replay and candidate-only shutdown. Target the current 2-core/approximately
+  12 GB OCI host; the planned upgrade is optional headroom, not a prerequisite.
+  Recheck actual capacity and existing-service health before execution.
   Model/configuration choices, experiment scope, candidate setup and provider calls
   remain unapproved; bank layout is a test hypothesis.
 - Stabilize the native runtime through real product use and evidence-led fixes.

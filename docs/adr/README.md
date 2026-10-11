@@ -56,7 +56,7 @@ record's status notice before applying its original execution details.
 | [0057](0057-model-assisted-evidence-selection-investigation.md) | Agreed investigation design: bounded semantic source selection, fresh shared final evidence and uncertain incomplete recall; no implementation, model run or adoption. |
 | [0058](0058-offline-packet-capacity-and-qualifications.md) | Approved D04-only eight-source offline capacity diagnostic and whole-packet qualification rubric; no runtime count change or provider calls. |
 | [0061](0061-capability-responsibility-map.md) | Domain/Subsystem/Module inventory, authored-characterization versus contextual-application boundary, and three overlapping response-assessment lenses; no new runtime phases or release qualification. |
-| [0062](0062-self-hosted-hindsight.md) | Accepted self-hosted Hindsight direction and isolated OCI experiment placement; planned host upgrade is unverified, model/configuration and run scope remain open, with no installation, live calls or cutover authorized. |
+| [0062](0062-self-hosted-hindsight.md) | Accepted self-hosted Hindsight direction and isolated OCI experiment placement, targeting the current host without an upgrade dependency; model/configuration and run scope remain open, with no installation, live calls or cutover authorized. |
 
 ## Historical, Retired, Or On Hold
 

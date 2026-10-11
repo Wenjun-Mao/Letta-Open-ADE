@@ -13,11 +13,15 @@ native extraction labels make the one-bank layout worth testing. The user select
 [self-hosting over Hindsight Cloud](adr/0062-self-hosted-hindsight.md) for repeated
 test-workload cost reasons (PC-13), and required the first experiment to remain
 isolated from native memory. After read-only OCI inspection, the user selected
-that host instead of the Mac and announced a planned 4-core/24 GB upgrade, not
-yet verified. The [setup plan, revision 2](plans/hindsight-self-hosted-experiment.md)
-records OCI placement, with separate storage/router, existing DeepSeek/Qwen routes
-and multilingual retrieval still proposed. Model/configuration choices and
-setup/provider calls are not authorized. No Hindsight
+that host instead of the Mac. The planned 4-core/24 GB upgrade is unverified and,
+as subsequently clarified, not a prerequisite. The
+[end-to-end plan, revision 3](plans/hindsight-self-hosted-experiment.md) targets the
+current 2-core/approximately 12 GB host, with offline preparation, isolated OCI
+deployment, bounded replay, restart readback and shutdown. Read-only directory and
+Compose-label inspection supports `/mnt/projects/apps/ade-hindsight-probe`, with
+owned volumes under the existing Docker root. Review the proposed model routes,
+resource limits, semantic scope and P0-P4 execution authority next. Implementation,
+setup/provider calls and deployment are not authorized. No Hindsight
 installation, source isolation, provider inference or deployment has occurred.
 Older entries retain their historical scope and are not authority to resume new
 native memory feature work ahead of this review.
