@@ -377,7 +377,10 @@ source fact; only reuse of an original selected fact ID counts as reactivation
 (PC-07).
 
 The runner image copies the tracked driver, fixture, and authored persona while
-preserving its default feature entrypoint. Override only that one-shot command:
+preserving its default feature entrypoint. Compose binds the clean release SHA
+to `ADE_EVAL_SOURCE_SHA`; replay checks that identity and all frozen inputs
+before constructing the Hindsight client, so the slim image does not depend on
+`.git`. Override only that one-shot command:
 
 ```sh
 python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \

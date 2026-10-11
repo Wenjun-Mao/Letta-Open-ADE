@@ -1,11 +1,13 @@
 import asyncio
 import json
 import uuid
+from types import SimpleNamespace
 
 import httpx
 import pytest
 
 from workflows.evals.hindsight_memory_probe import freeze, replay
+from workflows.evals.hindsight_memory_probe import driver_support
 from workflows.evals.hindsight_memory_probe.driver_support import HindsightHTTP
 from workflows.evals.hindsight_memory_probe.receipts import ReceiptStore
 
@@ -46,6 +48,48 @@ def test_offline_freeze_binds_candidate_and_full_retry_payload(monkeypatch):
     assert s10["retain_payload_sha256"] == freeze.sha(s10["retain_payload_utf8"].encode())
     assert s10["workspace"] == manifest["workspace_id"]
     assert "q07" in {case["id"] for case in manifest["cases"]}
+
+
+def test_real_offline_freeze_validates_and_tampering_fails_before_http(monkeypatch, tmp_path):
+    source_sha = "a" * 40
+    real_scope = freeze._feature_scope
+    scope_calls = []
+
+    def tracked_scope(workspace, subject, root):
+        scope_calls.append((workspace, subject, root))
+        return real_scope(workspace, subject, root)
+
+    monkeypatch.setattr(freeze, "_feature_scope", tracked_scope)
+    monkeypatch.setattr(
+        freeze.subprocess,
+        "check_output",
+        lambda command, **kwargs: b"" if command[1] == "status" else source_sha,
+    )
+    manifest = freeze.build_manifest("offline_review_workspace")
+    assert len(scope_calls) == 3
+    freeze.validate_manifest(manifest, expected_source_sha=source_sha)
+    assert len(scope_calls) == 6
+
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setenv("ADE_EVAL_SOURCE_SHA", "b" * 40)
+    monkeypatch.setattr(replay, "HindsightHTTP", lambda *args, **kwargs: pytest.fail("HTTP client constructed before source identity validation"))
+    args = SimpleNamespace(manifest=manifest_path, output_directory=tmp_path / "wrong-source", stage="readiness")
+    with pytest.raises(ValueError, match="campaign_source_revision_mismatch"):
+        asyncio.run(replay.run(args))
+
+    tampered = json.loads(json.dumps(manifest))
+    tampered["sources"][0]["retain_payload_utf8"] += " "
+    monkeypatch.setenv("ADE_EVAL_SOURCE_SHA", source_sha)
+    manifest_path.write_text(json.dumps(tampered), encoding="utf-8")
+    args = SimpleNamespace(manifest=manifest_path, output_directory=tmp_path / "tampered", stage="readiness")
+    with pytest.raises(ValueError, match="campaign_frozen_source_mismatch"):
+        asyncio.run(replay.run(args))
+
+
+def test_runner_wires_release_sha_to_manifest_runtime_identity():
+    compose = (replay.WORKFLOW / "compose.yaml").read_text()
+    assert "ADE_EVAL_SOURCE_SHA: ${PROBE_RELEASE_SHA:?clean release SHA required}" in compose
 
 
 def test_frozen_retain_and_exact_retry_send_identical_payload_and_uuid(monkeypatch, tmp_path):
@@ -162,6 +206,124 @@ def test_completed_parent_and_child_still_surface_nested_child_failure(tmp_path)
                 await api.operation("bank", "parent", replay.NamedReceipt(store, "nested"))
             assert all("private provider detail" not in path.read_text()
                        for path in store.directory.glob("*.json"))
+
+    asyncio.run(exercise())
+
+
+def test_completed_parent_and_child_wait_for_pending_grandchild(monkeypatch, tmp_path):
+    async def no_sleep(_seconds):
+        return None
+
+    monkeypatch.setattr(driver_support.asyncio, "sleep", no_sleep)
+    async def exercise():
+        grandchild_reads = 0
+
+        def handler(request):
+            nonlocal grandchild_reads
+            operation_id = request.url.path.rsplit("/", 1)[-1]
+            if operation_id == "parent":
+                body = {"operation_id": "parent", "status": "completed",
+                        "child_operations": [{"operation_id": "child", "status": "completed"}]}
+            elif operation_id == "child":
+                body = {"operation_id": "child", "status": "completed",
+                        "child_operations": [{"operation_id": "grandchild", "status": "pending"}]}
+            else:
+                grandchild_reads += 1
+                status = "pending" if grandchild_reads == 1 else "completed"
+                body = {"operation_id": "grandchild", "status": status,
+                        "next_retry_at": "2026-10-11T00:00:00Z"}
+            return httpx.Response(200, json=body)
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            api = HindsightHTTP(client, "http://hindsight", "synthetic-key")
+            store = ReceiptStore(tmp_path / "nested-pending")
+            await api.operation("bank", "parent", replay.NamedReceipt(store, "nested"))
+        assert grandchild_reads == 2
+        assert any('"next_retry_at": "2026-10-11T00:00:00Z"' in path.read_text()
+                   for path in store.directory.glob("*.json"))
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.parametrize(
+    ("child_operations", "expected_error"),
+    [
+        ({"not": "a list"}, "operation_children_invalid"),
+        ([{"operation_id": "child", "status": "completed"},
+          {"operation_id": "child", "status": "completed"}], "operation_child_duplicate"),
+        ([{"operation_id": "parent", "status": "completed"}], "operation_child_cycle"),
+        ([{"operation_id": "child", "status": "failed"}], "operation_failed"),
+    ],
+)
+def test_operation_child_shapes_cycles_duplicates_and_reported_failures(
+    tmp_path, child_operations, expected_error
+):
+    async def exercise():
+        seen = []
+
+        def handler(request):
+            operation_id = request.url.path.rsplit("/", 1)[-1]
+            seen.append(operation_id)
+            if operation_id == "parent":
+                return httpx.Response(200, json={"operation_id": "parent", "status": "completed",
+                                                "child_operations": child_operations})
+            return httpx.Response(200, json={"operation_id": operation_id, "status": "completed"})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            api = HindsightHTTP(client, "http://hindsight", "synthetic-key")
+            with pytest.raises(RuntimeError, match=expected_error):
+                await api.operation("bank", "parent", replay.NamedReceipt(ReceiptStore(tmp_path / expected_error), "op"))
+        assert seen == ["parent"]
+
+    asyncio.run(exercise())
+
+
+def test_operation_deadline_bounds_each_request_and_rejects_late_completion(monkeypatch, tmp_path):
+    ticks = iter((0.0, 0.25, 1.01))
+    monkeypatch.setattr(driver_support, "time", SimpleNamespace(monotonic=lambda: next(ticks)))
+    monkeypatch.setenv("ADE_EVAL_OPERATION_TIMEOUT_SECONDS", "1")
+
+    async def exercise():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(200, json={}))) as client:
+            api = HindsightHTTP(client, "http://hindsight", "synthetic-key")
+            observed_timeouts = []
+
+            async def late_request(method, path, **kwargs):
+                observed_timeouts.append(kwargs["timeout"])
+                return {"operation_id": "op", "status": "completed"}
+
+            api.request = late_request
+            with pytest.raises(RuntimeError, match="operation_timeout"):
+                await api.operation("bank", "op", replay.NamedReceipt(ReceiptStore(tmp_path / "late"), "op"))
+            assert observed_timeouts == [0.75]
+
+    asyncio.run(exercise())
+
+
+def test_operation_deadline_reduces_timeout_for_each_descendant(monkeypatch, tmp_path):
+    ticks = iter((0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9))
+    monkeypatch.setattr(driver_support, "time", SimpleNamespace(monotonic=lambda: next(ticks)))
+    monkeypatch.setenv("ADE_EVAL_OPERATION_TIMEOUT_SECONDS", "1")
+
+    async def exercise():
+        async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(200, json={}))) as client:
+            api = HindsightHTTP(client, "http://hindsight", "synthetic-key")
+            request_timeouts = []
+            operations = {
+                "parent": {"operation_id": "parent", "status": "completed",
+                           "child_operations": [{"operation_id": "child", "status": "completed"}]},
+                "child": {"operation_id": "child", "status": "completed",
+                          "child_operations": [{"operation_id": "grandchild", "status": "completed"}]},
+                "grandchild": {"operation_id": "grandchild", "status": "completed"},
+            }
+
+            async def request(_method, path, **kwargs):
+                request_timeouts.append(kwargs["timeout"])
+                return operations[path.rsplit("/", 1)[-1]]
+
+            api.request = request
+            await api.operation("bank", "parent", replay.NamedReceipt(ReceiptStore(tmp_path / "bounded"), "op"))
+            assert request_timeouts == [0.9, 0.7, 0.5]
 
     asyncio.run(exercise())
 

@@ -58,9 +58,24 @@ def _feature_scope(workspace: str, subject: str, root: str) -> dict:
         cwd=ROOT, check=True, capture_output=True, text=True,
     )
     value = json.loads(result.stdout)
-    if value.get("workspace_id") != workspace or value.get("subject_id") != subject:
+    if (value.get("workspace_id") != workspace or value.get("subject_id") != subject
+            or value.get("character_root_id") != root or not isinstance(value.get("bank_id"), str)
+            or not isinstance(value.get("tags"), list) or value.get("tags_match") != "any_strict"):
         raise ValueError("feature_scope_mismatch")
     return value
+
+
+def _frozen_scopes(workspace: str, sources: list[dict]) -> dict[str, dict]:
+    """Resolve each subject/root scope once through the feature-owned CLI."""
+    cache = {}
+    result = {}
+    for source in sources:
+        subject, root = source["subject"], source["root"]
+        key = (subject, root)
+        if key not in cache:
+            cache[key] = _feature_scope(workspace, subject, root)
+        result[f"{subject}:{root}"] = cache[key]
+    return result
 
 
 def _persona() -> str:
@@ -173,10 +188,7 @@ def build_manifest(workspace_id: str) -> dict:
     persona = _persona()
     profile_path = WORKFLOW / "config/model-profiles.json"
     profile = strict_json(profile_path.read_text(encoding="utf-8"))[fixture["model_key"]]
-    scopes = {}
-    for source in sources:
-        key = (source["subject"], source["root"])
-        scopes.setdefault(key, _feature_scope(workspace_id, key[0], key[1]))
+    scopes = _frozen_scopes(workspace_id, sources)
     frozen_sources = []
     for source in sources:
         context, sealed_references = _context_binding(source, by_id)
@@ -251,7 +263,7 @@ def build_manifest(workspace_id: str) -> dict:
         "model_profile_sha256": sha(json.dumps(profile, sort_keys=True, separators=(",", ":")).encode()),
         "pins": strict_json((WORKFLOW / "config/pins.json").read_text(encoding="utf-8")),
         "config_sha256": config_hashes,
-        "scopes": {f"{subject}:{root}": value for (subject, root), value in scopes.items()},
+        "scopes": scopes,
         "sources": frozen_sources,
         "cases": fixture["cases"],
         "adequate_memories": fixture["adequate_memories"],
@@ -300,14 +312,8 @@ def validate_manifest(manifest: dict, *, expected_source_sha: str) -> None:
     sealed = manifest.get("sources")
     if not isinstance(sealed, list) or len(sealed) != len(by_id) or len({item.get("id") for item in sealed if isinstance(item, dict)}) != len(by_id):
         raise ValueError("campaign_source_manifest_invalid")
-    expected_scopes = {}
+    expected_scopes = _frozen_scopes(workspace, fixture["sources"])
     for source_id, source in by_id.items():
-        key = (source["subject"], source["root"])
-        bank = "ade-probe-" + hashlib.sha256(json.dumps([workspace, key[0]], separators=(",", ":")).encode()).hexdigest()[:32]
-        expected_scopes[f"{key[0]}:{key[1]}"] = {
-            "workspace_id": workspace, "subject_id": key[0], "character_root_id": key[1],
-            "bank_id": bank, "tags": [f"character:{key[1]}", "kind:profile"], "tags_match": "any_strict",
-        }
         item = next(candidate for candidate in sealed if candidate["id"] == source_id)
         context, refs = _context_binding(source, by_id)
         content = _source_content(source)

@@ -46,7 +46,7 @@ class HindsightHTTP:
             raise RuntimeError("hindsight_credentials_missing")
         self.client, self.base_url, self.api_key = client, base_url.rstrip("/"), api_key
 
-    async def request(self, method: str, path: str, *, body=None, raw_body: bytes | None = None, params=None, receipt=None):
+    async def request(self, method: str, path: str, *, body=None, raw_body: bytes | None = None, params=None, receipt=None, timeout=120):
         body_bytes = raw_body
         if body is not None:
             canonical = json.dumps(body, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
@@ -65,7 +65,7 @@ class HindsightHTTP:
                 method, self.base_url + path,
                 headers={"Authorization": f"Bearer {self.api_key}", **({"Content-Type": "application/json"} if body_bytes is not None else {})},
                 content=body_bytes, params=params,
-                timeout=120,
+                timeout=timeout,
             )
         except httpx.HTTPError as exc:
             raise RuntimeError("hindsight_transport_failed") from exc
@@ -98,7 +98,14 @@ class HindsightHTTP:
             ancestry.add(selected_id)
             try:
                 while True:
-                    data = await self.request("GET", base + quote(selected_id, safe=''))
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise RuntimeError("operation_timeout")
+                    data = await self.request(
+                        "GET", base + quote(selected_id, safe=''), timeout=min(120, remaining)
+                    )
+                    if time.monotonic() >= deadline:
+                        raise RuntimeError("operation_timeout")
                     returned_id = data.get("operation_id", data.get("id"))
                     if returned_id != selected_id:
                         raise RuntimeError("operation_identity_mismatch")
@@ -111,7 +118,11 @@ class HindsightHTTP:
                     receipt.write("operation", projected)
                     if status in {"failed", "cancelled", "not_found"}:
                         raise RuntimeError("operation_failed")
-                    children = data.get("child_operations") if isinstance(data.get("child_operations"), list) else []
+                    children = data.get("child_operations", [])
+                    if children is None:
+                        children = []
+                    if not isinstance(children, list):
+                        raise RuntimeError("operation_children_invalid")
                     child_ids = []
                     for child in children:
                         if not isinstance(child, dict):
@@ -120,16 +131,21 @@ class HindsightHTTP:
                         child_status = child.get("status")
                         if not isinstance(child_id, str) or child_status not in {"pending", "processing", "completed", "failed", "cancelled", "not_found"}:
                             raise RuntimeError("operation_children_invalid")
+                        if child_status in {"failed", "cancelled", "not_found"}:
+                            raise RuntimeError("operation_failed")
                         child_ids.append(child_id)
                     if len(child_ids) != len(set(child_ids)):
                         raise RuntimeError("operation_child_duplicate")
                     for child_id in child_ids:
                         await wait_one(child_id, selected_id)
                     if status == "completed":
+                        if time.monotonic() >= deadline:
+                            raise RuntimeError("operation_timeout")
                         return projected
-                    if time.monotonic() >= deadline:
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
                         raise RuntimeError("operation_timeout")
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(min(2, remaining))
             finally:
                 ancestry.remove(selected_id)
 
