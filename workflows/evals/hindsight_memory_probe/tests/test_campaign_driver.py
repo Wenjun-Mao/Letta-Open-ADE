@@ -112,7 +112,7 @@ def test_documented_restart_readback_entrypoint_has_cli_dispatch():
         cwd=replay.ROOT, capture_output=True, text=True, check=True,
     )
     assert "{capture,verify}" in result.stdout
-    recipe = (replay.WORKFLOW / "README.md").read_text()
+    recipe = (replay.WORKFLOW / "p4-runbook.md").read_text()
     assert "-m workflows.evals.hindsight_memory_probe.restart_readback_cli" in recipe
 
 

@@ -130,7 +130,10 @@ def run_command(directory: Path, operation: dict, command: list[str], timeout: i
         write_fd = -1
         while child.poll() is None:
             if not host.identity_matches(identity):
-                raise RuntimeError("restore_process_identity_changed")
+                # poll() can race with process exit even without a monitor
+                # callback. Validate identity only while the root remains alive.
+                if child.poll() is None:
+                    raise RuntimeError("restore_process_identity_changed")
             if time.time() >= deadline:
                 raise RuntimeError("restore_process_deadline_elapsed")
             monitor()
@@ -142,8 +145,11 @@ def run_command(directory: Path, operation: dict, command: list[str], timeout: i
         if not result_path.is_file():
             raise RuntimeError("restore_process_result_missing")
         result = json.loads(result_path.read_text())
-        if type(result.get("exit_code")) is not int:
+        if (not isinstance(result, dict) or type(result.get("exit_code")) is not int
+                or result["exit_code"] != child.returncode):
             raise RuntimeError("restore_process_result_invalid")
+        if host.tagged_processes(token):
+            raise RuntimeError("restore_process_descendant_active")
         ReceiptStore(directory).write(f"restore-{operation['token']}-{token}-result.json", {
             "operation": operation_label, "exit_code": result["exit_code"], "completed_at": time.time(),
             "command_sha256": job["command_sha256"],

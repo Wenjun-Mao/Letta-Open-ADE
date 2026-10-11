@@ -63,7 +63,11 @@ def run_monitored(directory: Path, registry: dict, epoch: dict, admitted: dict,
         while child.poll() is None:
             monitor_callback(directory, registry, epoch, admitted, token)
             if not host.identity_matches(identity):
-                raise RuntimeError("finalization_process_identity_changed")
+                # The monitor callback can outlast a short, successful command.
+                # Only treat identity loss as a violation while the registered
+                # root is still alive; a terminal result is checked below.
+                if child.poll() is None:
+                    raise RuntimeError("finalization_process_identity_changed")
             remaining = deadline - time.time()
             if remaining <= 0:
                 raise RuntimeError("finalization_process_deadline_elapsed")
@@ -74,7 +78,13 @@ def run_monitored(directory: Path, registry: dict, epoch: dict, admitted: dict,
         result_path = directory / f"job-{token}.result.json"
         if not result_path.is_file():
             raise RuntimeError("finalization_process_result_missing")
-        return json.loads(result_path.read_text())["exit_code"]
+        result = json.loads(result_path.read_text())
+        if (not isinstance(result, dict) or type(result.get("exit_code")) is not int
+                or result["exit_code"] != child.returncode):
+            raise RuntimeError("finalization_process_result_invalid")
+        if host.tagged_processes(token):
+            raise RuntimeError("finalization_process_descendant_active")
+        return result["exit_code"]
     except Exception:
         for descriptor in (read_fd, write_fd):
             if descriptor >= 0:

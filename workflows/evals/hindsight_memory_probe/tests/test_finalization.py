@@ -20,6 +20,13 @@ def digest(text):
     return hashlib.sha256(text.encode()).hexdigest()
 
 
+def test_finalization_failure_receipts_use_only_fixed_safe_diagnostic_codes():
+    assert finalization.failure_code(RuntimeError("finalization_process_identity_changed")) == (
+        "finalization_process_identity_changed")
+    assert finalization.failure_code(RuntimeError("private text or argv")) == "finalization_stage_failed"
+    assert finalization.failure_code(RuntimeError(["not", "a", "code"])) == "finalization_stage_failed"
+
+
 def db_container():
     return {
         "Id": "candidate-db-id", "Image": "candidate-db-image",
@@ -293,15 +300,20 @@ def test_restart_readback_compares_independent_source_context_and_fact_states(tm
     }))
     with pytest.raises(RuntimeError, match="restart_persistence_readback_mismatch"):
         restart_readback.compare(before, membership_drift, selection)
-    (tmp_path / "restart-selection.json").write_text(json.dumps(selection))
-    (tmp_path / "restart-readback.before.json").write_text(json.dumps(before))
-    (tmp_path / "restart-readback.after.json").write_text(json.dumps(after))
+    evidence_root = tmp_path / "p4" / selection["release_sha"]
+    evidence_root.mkdir(parents=True)
+    selection_path = evidence_root / "restart-selection.json"
+    before_path = evidence_root / "restart-readback.before.json"
+    after_path = evidence_root / "restart-readback.after.json"
+    selection_path.write_text(json.dumps(selection))
+    before_path.write_text(json.dumps(before))
+    after_path.write_text(json.dumps(after))
     proof.update({
-        "selection_file_sha256": restart_selection.sha256_file(tmp_path / "restart-selection.json"),
-        "before_file_sha256": restart_selection.sha256_file(tmp_path / "restart-readback.before.json"),
-        "after_file_sha256": restart_selection.sha256_file(tmp_path / "restart-readback.after.json"),
+        "selection_file_sha256": restart_selection.sha256_file(selection_path),
+        "before_file_sha256": restart_selection.sha256_file(before_path),
+        "after_file_sha256": restart_selection.sha256_file(after_path),
     })
-    (tmp_path / "restart-readback.completed.json").write_text(json.dumps(proof))
+    (evidence_root / "restart-readback.completed.json").write_text(json.dumps(proof))
     state = tmp_path / "supervisor"
     state.mkdir()
     restart_reference = finalization.restart_reference(
@@ -310,7 +322,6 @@ def test_restart_readback_compares_independent_source_context_and_fact_states(tm
     )
     assert restart_reference["status"] == "completed"
     assert restart_reference["after"]["content_sha256"] == proof["after_sha256"]
-    after_path = tmp_path / "restart-readback.after.json"
     after_path.write_text(after_path.read_text() + " ")
     with pytest.raises(RuntimeError, match="restart_readback_proof_invalid"):
         finalization.restart_reference(

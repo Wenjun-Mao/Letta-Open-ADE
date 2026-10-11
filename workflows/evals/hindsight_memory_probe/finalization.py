@@ -9,7 +9,7 @@ import time
 import uuid
 from pathlib import Path
 
-from . import candidate_database, epochs, host_guard as host, lifecycle, quiescence
+from . import candidate_database, epochs, host_guard as host, lifecycle, p4_evidence, quiescence
 from .finalization_process import run_monitored as supervise_process
 from .receipts import ReceiptStore
 from .campaign_clock import DEADLINE, WORK_CUTOFF
@@ -17,6 +17,14 @@ from .supervisor import jobs, record
 
 SERVICES = ("runner", "hindsight", "model-router", "db")
 FINALIZATION_FIXED_RESERVE = 600
+FAILURE_CODES = {
+    "finalization_process_identity_changed",
+    "finalization_process_result_missing",
+    "finalization_process_result_invalid",
+    "finalization_process_descendant_active",
+    "finalization_process_deadline_elapsed",
+    "finalization_process_identity_missing",
+}
 
 
 def admission_path(directory: Path, epoch: dict) -> Path:
@@ -101,7 +109,10 @@ def identity_projection(container: dict) -> dict:
 
 
 def restart_reference(directory: Path, registry: dict, epoch: dict) -> dict:
-    path = directory.parent / "restart-readback.completed.json"
+    release_sha = Path(epoch["release"]).name
+    refs = {artifact: p4_evidence.reference(directory, release_sha, artifact)
+            for artifact in ("selection", "before", "after", "completed")}
+    path = p4_evidence.resolve_reference(directory, refs["completed"], release_sha, "completed")
     if not path.is_file():
         return {"status": "absent"}
     try:
@@ -110,9 +121,10 @@ def restart_reference(directory: Path, registry: dict, epoch: dict) -> dict:
         raise RuntimeError("restart_readback_proof_invalid") from exc
     if not isinstance(proof, dict):
         raise RuntimeError("restart_readback_proof_invalid")
-    selection_path = directory.parent / "restart-selection.json"
-    before_path = directory.parent / "restart-readback.before.json"
-    after_path = directory.parent / "restart-readback.after.json"
+    selection_path = p4_evidence.resolve_reference(directory, refs["selection"], release_sha, "selection")
+    before_path = p4_evidence.resolve_reference(directory, refs["before"], release_sha, "before")
+    after_path = p4_evidence.resolve_reference(directory, refs["after"], release_sha, "after")
+    proof_path = path
     try:
         from .restart_selection import hash_json, read_selection
 
@@ -155,18 +167,21 @@ def restart_reference(directory: Path, registry: dict, epoch: dict) -> dict:
             or not valid_sha256(proof.get("selection_sha256"))):
         raise RuntimeError("restart_readback_proof_invalid")
     return {
-        "status": "completed", "path": "../restart-readback.completed.json",
-        "sha256": sha256_file(path), "selection_sha256": selection_sha256,
+        "status": "completed", **refs["completed"],
+        "sha256": sha256_file(proof_path), "selection_sha256": selection_sha256,
         "selection_file_sha256": proof["selection_file_sha256"],
-        "before": {"path": "../restart-readback.before.json", "sha256": proof["before_file_sha256"],
+        "selection": {**refs["selection"], "sha256": proof["selection_file_sha256"]},
+        "before": {**refs["before"], "sha256": proof["before_file_sha256"],
                    "content_sha256": proof["before_sha256"]},
-        "after": {"path": "../restart-readback.after.json", "sha256": proof["after_file_sha256"],
+        "after": {**refs["after"], "sha256": proof["after_file_sha256"],
                   "content_sha256": proof["after_sha256"]},
     }
 
 
 def restart_selection_reference(directory: Path, registry: dict, epoch: dict) -> dict:
-    path = directory.parent / "restart-selection.json"
+    release_sha = Path(epoch["release"]).name
+    ref = p4_evidence.reference(directory, release_sha, "selection")
+    path = p4_evidence.resolve_reference(directory, ref, release_sha, "selection")
     if not path.is_file():
         return {"status": "absent"}
     try:
@@ -179,7 +194,7 @@ def restart_selection_reference(directory: Path, registry: dict, epoch: dict) ->
             or selection.get("release_sha") != Path(epoch["release"]).name
             or not valid_sha256(selection.get("before_epoch_sha256"))):
         raise RuntimeError("restart_selection_campaign_identity_mismatch")
-    return {"status": "frozen", "path": "../restart-selection.json", "sha256": sha256_file(path)}
+    return {"status": "frozen", **ref, "sha256": sha256_file(path)}
 
 
 def valid_sha256(value) -> bool:
@@ -313,6 +328,13 @@ def run_monitored(directory: Path, registry: dict, epoch: dict, admitted: dict,
                              stdin=stdin)
 
 
+def failure_code(error: Exception) -> str:
+    if (type(error) is RuntimeError and len(error.args) == 1
+            and isinstance(error.args[0], str) and error.args[0] in FAILURE_CODES):
+        return error.args[0]
+    return "finalization_stage_failed"
+
+
 def stop_service(directory: Path, registry: dict, admitted: dict, epoch: dict, store: ReceiptStore, service: str) -> None:
     result_path = store.directory / f"finalize-{admitted['token']}-{service}-stop.result.json"
     if result_path.exists():
@@ -410,9 +432,12 @@ def execute(directory: Path, registry: dict, epoch: dict, store: ReceiptStore) -
         record(store, "finalization_dump_preserved", token=admitted["token"])
         stop_service(directory, registry, admitted, epoch, store, "model-router")
         stop_service(directory, registry, admitted, epoch, store, "db")
-    except Exception:
+    except Exception as exc:
         # Preserve error shape as a fixed code; the supervisor performs bounded full cleanup.
-        store.write(f"finalize-{admitted['token']}-failure.json", {"reason": "finalization_stage_failed", "stage": current_stage(directory, admitted), "time": time.time()})
+        store.write(f"finalize-{admitted['token']}-failure.json", {
+            "reason": "finalization_stage_failed", "error_code": failure_code(exc),
+            "stage": current_stage(directory, admitted), "time": time.time(),
+        })
         raise
 
 

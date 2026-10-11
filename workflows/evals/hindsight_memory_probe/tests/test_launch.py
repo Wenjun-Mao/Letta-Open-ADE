@@ -89,8 +89,8 @@ def test_root_is_rejected_for_every_noncanonical_run(supervised, change, timeout
     assert not list(supervised.glob("job-*.json"))
 
 
-def test_exact_readme_cache_provisioning_recipe_is_admitted(supervised, monkeypatch):
-    lines = (Path(launch.__file__).with_name("README.md")).read_text().splitlines()
+def test_exact_operator_runbook_cache_provisioning_recipe_is_admitted(supervised, monkeypatch):
+    lines = (Path(launch.__file__).with_name("operator-runbook.md")).read_text().splitlines()
     start = next(index for index, line in enumerate(lines)
                  if line.strip().startswith("--kind work --timeout 1800 -- run --rm"))
     recipe_lines = []

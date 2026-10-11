@@ -16,7 +16,7 @@ import contextlib, json, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[2])
 from workflows.evals.hindsight_memory_probe import (
-    candidate_database, epochs, finalization, host_guard, lifecycle,
+    candidate_database, epochs, finalization, host_guard, lifecycle, p4_evidence,
     quiescence, supervisor,
 )
 from workflows.evals.hindsight_memory_probe.receipts import ReceiptStore
@@ -41,14 +41,16 @@ selection = {"schema": 1, "release_sha": release_sha,
             "context_sha256": None, "content_hash": "document-content-hash", "curation_ids": [],
             "facts": {"valid": [{"id": "fact-a", "text_sha256": "2" * 64}],
                 "invalidated": [{"id": "fact-b", "text_sha256": "3" * 64}]}}]}]}
-selection_path = receipts / "restart-selection.json"
+evidence = receipts / "p4" / release_sha
+evidence.mkdir(parents=True)
+selection_path = evidence / "restart-selection.json"
 selection_path.write_text(json.dumps(selection, sort_keys=True))
 selection_hash = hash_json(selection)
 before = {"selection_sha256": selection_hash, "run_identity": {
     "release_sha": release_sha, "registry_sha256": registry["registry_sha256"], "epoch_sha256": before_epoch}}
 after = {"selection_sha256": selection_hash, "run_identity": {
     "release_sha": release_sha, "registry_sha256": registry["registry_sha256"], "epoch_sha256": epoch_sha}}
-before_path, after_path = receipts / "restart-readback.before.json", receipts / "restart-readback.after.json"
+before_path, after_path = evidence / "restart-readback.before.json", evidence / "restart-readback.after.json"
 before_path.write_text(json.dumps(before, sort_keys=True))
 after_path.write_text(json.dumps(after, sort_keys=True))
 proof = {"status": "completed", "claim": "bounded_restart_persistence_readback",
@@ -57,6 +59,9 @@ proof = {"status": "completed", "claim": "bounded_restart_persistence_readback",
     "before_sha256": hash_json(before), "after_sha256": hash_json(after),
     "registry_sha256": registry["registry_sha256"], "release_sha": release_sha,
     "before_epoch_sha256": before_epoch, "after_epoch_sha256": epoch_sha}
+(evidence / "restart-readback.completed.json").write_text(json.dumps(proof, sort_keys=True))
+# Historical root-level receipts do not satisfy a new release-scoped attempt.
+(receipts / "restart-selection.json").write_text(json.dumps(selection, sort_keys=True))
 (receipts / "restart-readback.completed.json").write_text(json.dumps(proof, sort_keys=True))
 
 supervisor.load_registry = lambda _directory: registry
@@ -85,6 +90,8 @@ for index, service in enumerate(("db", "hindsight", "model-router")):
 admitted = finalization.admit(state, drain_timeout=30, dump_timeout=30)
 assert admitted["restart_selection"]["status"] == "frozen"
 assert admitted["restart_readback"]["status"] == "completed"
+assert admitted["restart_selection"]["path"] == f"../p4/{release_sha}/restart-selection.json"
+assert admitted["restart_readback"]["path"] == f"../p4/{release_sha}/restart-readback.completed.json"
 assert "httpx" not in sys.modules and "ade_api" not in sys.modules
 candidate_database.db_container = lambda *_args: {"Id": "container-db", "Image": "image-db"}
 candidate_database.operation_status_counts = lambda *_args: {"failed": 1, "cancelled": 2}
@@ -100,6 +107,7 @@ assert scope_receipt["selection_sha256"] == proof["selection_sha256"]
 assert scope_receipt["selection_file_sha256"] == proof["selection_file_sha256"]
 assert scope_receipt["before_file_sha256"] == proof["before_file_sha256"]
 assert scope_receipt["after_file_sha256"] == proof["after_file_sha256"]
+assert (receipts / "restart-selection.json").is_file()
 print("host_finalization_stdlib_ok")
 ''',
         encoding="utf-8",

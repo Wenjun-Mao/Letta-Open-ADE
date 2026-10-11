@@ -91,18 +91,23 @@ def _load_main(directory: Path) -> tuple[dict, dict, dict, dict]:
     restart_ref = admission.get("restart_readback", {})
     if selection_ref.get("status") != "frozen" or restart_ref.get("status") != "completed":
         raise RuntimeError("restore_requires_frozen_restart_selection")
-    selection_path = (directory / selection_ref.get("path", "")).resolve()
-    if (selection_path != (directory / "../restart-selection.json").resolve()
-            or candidate_database.sha256_file(selection_path) != selection_ref.get("sha256")):
+    from . import p4_evidence
+
+    release_sha = Path(epoch["release"]).name
+    selection_path = p4_evidence.resolve_reference(directory, selection_ref, release_sha, "selection")
+    if candidate_database.sha256_file(selection_path) != selection_ref.get("sha256"):
         raise RuntimeError("restore_selection_reference_invalid")
     selection = json.loads(selection_path.read_text())
     from .restart_selection import validate_selection
 
     validate_selection(selection)
-    for reference in (restart_ref,):
-        proof = (directory / reference["path"]).resolve()
-        if (proof != (directory / "../restart-readback.completed.json").resolve()
-                or candidate_database.sha256_file(proof) != reference.get("sha256")):
+    proof = p4_evidence.resolve_reference(directory, restart_ref, release_sha, "completed")
+    if candidate_database.sha256_file(proof) != restart_ref.get("sha256"):
+        raise RuntimeError("restore_restart_proof_reference_invalid")
+    for artifact in ("before", "after"):
+        reference = restart_ref.get(artifact, {})
+        snapshot_path = p4_evidence.resolve_reference(directory, reference, release_sha, artifact)
+        if candidate_database.sha256_file(snapshot_path) != reference.get("sha256"):
             raise RuntimeError("restore_restart_proof_reference_invalid")
     if (snapshot.get("container_id") != next(row["id"] for row in admission["containers"] if row["service"] == "db")
             or snapshot.get("image_id") != dump.get("image_id")

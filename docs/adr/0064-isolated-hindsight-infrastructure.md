@@ -323,3 +323,24 @@ admission remain separate from this infrastructure decision. Initial supervision
 finalization owns the candidate project; the optional restore has a separately
 sealed, exact project/volume lifecycle and remains an unrun campaign gate until
 fresh OCI evidence is reviewed.
+
+## P4 retry evidence and terminal process observation (2026-10-11)
+
+The revision-4 finalization drain failure exposed two workflow contract gaps. A
+slow safety callback could let a registered command exit before the supervisor's
+next `/proc` identity check; treating an already-exited PID as identity loss
+discarded a valid terminal observation. Supervision now checks identity only
+while the registered root remains alive, then requires the root return code to
+match its durable result and rejects any live process with the inherited owner
+marker. Restore uses the same alive-versus-terminal rule. A missing, malformed
+or mismatched receipt remains a failure; PID disappearance alone is never
+success.
+
+Restart evidence is now isolated under
+`private/receipts/p4/<clean-release-sha>/restart-*.json`. Admission references
+bind that exact namespace and release SHA, and restore resolves only those
+validated references. Root-level receipts from the prior P4 attempt remain
+immutable historical evidence and are not adopted as a retry. Both snapshots
+in a retry must therefore identify the same newly accepted release and distinct
+epochs. This preserves the existing public capture/verify CLI while preventing
+new source from overwriting old proof or claiming a cross-release comparison.

@@ -9,7 +9,7 @@ import time
 import uuid
 from pathlib import Path
 
-from . import canonical_snapshot, epochs, host_guard as host
+from . import canonical_snapshot, epochs, host_guard as host, p4_evidence
 from .receipts import ReceiptStore
 
 SNAPSHOT_TABLES = canonical_snapshot.SNAPSHOT_TABLES
@@ -144,7 +144,9 @@ def snapshot_database(directory: Path, registry: dict, admitted: dict, store: Re
     selection_reference = admitted.get("restart_selection", {"status": "absent"})
     scope = {"status": "absent"}
     if selection_reference.get("status") == "frozen":
-        selection_path = directory.parent / "restart-selection.json"
+        release_sha = admitted.get("release_sha")
+        selection_path = p4_evidence.resolve_reference(
+            directory, selection_reference, release_sha, "selection")
         if sha256_file(selection_path) != selection_reference["sha256"]:
             raise RuntimeError("restart_selection_changed_after_admission")
         from .restart_selection import read_selection
