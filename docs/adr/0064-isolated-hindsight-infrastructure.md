@@ -136,10 +136,13 @@ registered job identities and deadlines, plus the completed restart-proof path
 and hash or explicit absence. This receipt itself closes ordinary dispatch.
 Emergency stop still preempts it. The detached supervisor runs finite stages;
 stage intents are durable before dispatch, and planned exits are accepted only
-for exact identities named by those stop intents. Baseline drift, missing or
-replaced identities, resource-limit drift, OOM, restart, unexpected exits and
-headroom failures remain fatal. Long process stages retain five-second safety
-sampling, and the immutable work cutoff/hard deadline do not move.
+for exact identities named by those stop intents after exit-code-zero and
+non-OOM readback. The host guard removes the running-health obligation only for
+that exact clean planned exit; running unhealthy containers, unplanned or
+abnormal exits, malformed lifecycle views, baseline drift, missing or replaced
+identities, resource-limit drift, OOM, restart, and headroom failures remain
+fatal. Long process stages retain five-second safety sampling, and the immutable
+work cutoff/hard deadline do not move.
 
 The launcher validates a narrow operation-specific Compose option allowlist and
 explicit candidate service names. `run`/`exec` switch to child argv at their

@@ -6,6 +6,7 @@ import hashlib
 import json
 import subprocess
 import time
+import traceback
 import uuid
 from pathlib import Path
 
@@ -24,6 +25,7 @@ FAILURE_CODES = {
     "finalization_process_descendant_active",
     "finalization_process_deadline_elapsed",
     "finalization_process_identity_missing",
+    "finalization_safety_candidate_unhealthy",
 }
 
 
@@ -434,8 +436,15 @@ def execute(directory: Path, registry: dict, epoch: dict, store: ReceiptStore) -
         stop_service(directory, registry, admitted, epoch, store, "db")
     except Exception as exc:
         # Preserve error shape as a fixed code; the supervisor performs bounded full cleanup.
+        extracted = traceback.extract_tb(exc.__traceback__)
+        frame = extracted[-1] if extracted else None
         store.write(f"finalize-{admitted['token']}-failure.json", {
             "reason": "finalization_stage_failed", "error_code": failure_code(exc),
+            "error_type": type(exc).__name__,
+            "error_site": (
+                f"{Path(frame.filename).name}:{frame.name}:{frame.lineno}"
+                if frame is not None else "unknown"
+            ),
             "stage": current_stage(directory, admitted), "time": time.time(),
         })
         raise

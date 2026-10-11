@@ -172,10 +172,36 @@ def guard_reason(
         if current is None or baseline_projection(current) != original:
             return "baseline_identity_or_health_changed", low_since
     candidates = candidate_containers(items, registry)
-    if lifecycle_view and lifecycle_view["reason"]:
+    lifecycle_states = {
+        "active", "dormant", "replacement_pending", "unadmitted",
+        "startup_pending", "planned_stopped",
+    }
+    if lifecycle_view is not None and (
+        not isinstance(lifecycle_view, dict)
+        or "reason" not in lifecycle_view
+        or not isinstance(lifecycle_view.get("containers"), dict)
+        or lifecycle_view.get("reason") is not None
+        and (
+            not isinstance(lifecycle_view.get("reason"), str)
+            or not lifecycle_view["reason"]
+        )
+        or any(
+            not isinstance(identifier, str)
+            or not isinstance(status, str)
+            or status not in lifecycle_states
+            for identifier, status in lifecycle_view.get("containers", {}).items()
+        )
+    ):
+        return "candidate_lifecycle_view_invalid", low_since
+    if lifecycle_view is not None and lifecycle_view["reason"]:
         return lifecycle_view["reason"], low_since
     for candidate in candidates:
-        if lifecycle_view and lifecycle_view["containers"].get(candidate["Id"]) in {
+        lifecycle_status = (
+            lifecycle_view["containers"].get(candidate["Id"])
+            if lifecycle_view is not None
+            else None
+        )
+        if lifecycle_status in {
             "dormant",
             "replacement_pending",
         }:
@@ -196,19 +222,23 @@ def guard_reason(
         oneoff = (
             candidate["Config"]["Labels"].get("com.docker.compose.oneoff") == "True"
         )
-        planned_stop = (
-            lifecycle_view
-            and lifecycle_view.get("containers", {}).get(candidate["Id"])
-            == "planned_stopped"
+        planned_stop_clean = (
+            lifecycle_status == "planned_stopped"
+            and state["Status"] == "exited"
+            and state.get("ExitCode") == 0
+            and not state.get("OOMKilled")
         )
         if (
             service != "runner"
             and not oneoff
             and state["Status"] in {"dead", "exited"}
-            and not planned_stop
+            and not planned_stop_clean
         ):
             return "candidate_service_exited", low_since
-        if state.get("Health", {}).get("Status") == "unhealthy":
+        if (
+            state.get("Health", {}).get("Status") == "unhealthy"
+            and not planned_stop_clean
+        ):
             return "candidate_unhealthy", low_since
     if disk_free < 15 * GIB:
         return "project_disk_below_floor", low_since

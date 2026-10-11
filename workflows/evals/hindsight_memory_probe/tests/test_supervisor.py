@@ -160,6 +160,69 @@ def test_candidate_oom_and_restart_stop(registry):
     )
 
 
+@pytest.mark.parametrize(
+    "lifecycle_state,status,exit_code,oom,restarts,health,expected",
+    [
+        ("planned_stopped", "exited", 0, False, 0, "unhealthy", None),
+        ("planned_stopped", "running", 0, False, 0, "unhealthy", "candidate_unhealthy"),
+        ("planned_stopped", "exited", 1, False, 0, "unhealthy", "candidate_service_exited"),
+        ("planned_stopped", "exited", 0, True, 0, "unhealthy", "candidate_oom_or_restart"),
+        ("planned_stopped", "exited", 0, False, 1, "unhealthy", "candidate_oom_or_restart"),
+        (None, "exited", 0, False, 0, "unhealthy", "candidate_service_exited"),
+        ("planned_stopped", "dead", 0, False, 0, "unhealthy", "candidate_service_exited"),
+    ],
+)
+def test_running_health_is_not_required_after_only_an_exact_clean_planned_stop(
+    registry, lifecycle_state, status, exit_code, oom, restarts, health, expected
+):
+    _, value = registry
+    candidate = container("planned-db", host.PROJECT, "db", status)
+    candidate["State"].update(ExitCode=exit_code, OOMKilled=oom)
+    candidate["State"]["Health"]["Status"] = health
+    candidate["RestartCount"] = restarts
+    lifecycle_view = {
+        "containers": {"planned-db": lifecycle_state} if lifecycle_state else {},
+        "reason": None,
+    }
+    reason, _ = host.guard_reason(
+        value, [container(), candidate], 10 * host.GIB, 20 * host.GIB, None, 100,
+        lifecycle_view=lifecycle_view,
+    )
+    assert reason == expected
+
+
+@pytest.mark.parametrize(
+    "lifecycle_view",
+    [
+        [],
+        {},
+        {"containers": {}},
+        {"containers": None, "reason": None},
+        {"containers": {}, "reason": ""},
+        {"containers": {"candidate": []}, "reason": None},
+    ],
+)
+def test_malformed_lifecycle_views_fail_closed(registry, lifecycle_view):
+    _, value = registry
+    candidate = container("owned", host.PROJECT, "db", "exited")
+    reason, _ = host.guard_reason(
+        value, [container(), candidate], 10 * host.GIB, 20 * host.GIB, None, 100,
+        lifecycle_view=lifecycle_view,
+    )
+    assert reason == "candidate_lifecycle_view_invalid"
+
+
+def test_planned_stop_for_another_identity_does_not_exempt_exit(registry):
+    _, value = registry
+    candidate = container("candidate-db", host.PROJECT, "db", "exited")
+    candidate["State"]["ExitCode"] = 0
+    reason, _ = host.guard_reason(
+        value, [container(), candidate], 10 * host.GIB, 20 * host.GIB, None, 100,
+        lifecycle_view={"containers": {"different-db": "planned_stopped"}, "reason": None},
+    )
+    assert reason == "candidate_service_exited"
+
+
 def test_effective_container_caps_are_checked(registry):
     _, value = registry
     candidate = container("owned", host.PROJECT)

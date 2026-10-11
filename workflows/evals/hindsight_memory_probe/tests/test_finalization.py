@@ -23,8 +23,79 @@ def digest(text):
 def test_finalization_failure_receipts_use_only_fixed_safe_diagnostic_codes():
     assert finalization.failure_code(RuntimeError("finalization_process_identity_changed")) == (
         "finalization_process_identity_changed")
+    assert finalization.failure_code(RuntimeError("finalization_safety_candidate_unhealthy")) == (
+        "finalization_safety_candidate_unhealthy")
     assert finalization.failure_code(RuntimeError("private text or argv")) == "finalization_stage_failed"
     assert finalization.failure_code(RuntimeError(["not", "a", "code"])) == "finalization_stage_failed"
+
+
+def test_monitor_accepts_health_only_after_exact_clean_planned_stop(tmp_path, monkeypatch):
+    from workflows.evals.hindsight_memory_probe import host_guard as host
+
+    token = "0" * 32
+    epoch = {
+        "index": 1, "sha256": "epoch", "release": "/release",
+        "allocations": {"db": {"memory": 100, "cpu": 1e-7}},
+    }
+    registry = {"registry_sha256": "registry", "release": "/release", "baseline": []}
+    admitted = {
+        "token": token, "containers": [], "jobs": [], "deadline": 200,
+    }
+    item = {
+        "Id": "db-id", "Image": "image-id", "RestartCount": 0,
+        "State": {
+            "StartedAt": "started", "Status": "exited", "ExitCode": 0,
+            "FinishedAt": "finished", "OOMKilled": False,
+            "Health": {"Status": "unhealthy", "FailingStreak": 0, "Log": []},
+        },
+        "HostConfig": {"Memory": 100, "NanoCpus": 100},
+        "Config": {"Labels": {
+            "com.docker.compose.project": host.PROJECT,
+            "com.docker.compose.service": "db",
+            "com.docker.compose.project.working_dir": "/release/workflows/evals/hindsight_memory_probe",
+            "com.docker.compose.project.config_files": "/release/workflows/evals/hindsight_memory_probe/compose.yaml",
+        }},
+    }
+    admitted["containers"] = [finalization.identity_projection({
+        **item, "State": {**item["State"], "Status": "running"}
+    })]
+    (tmp_path / "epoch-0001.finalize-admission.json").write_text(json.dumps(admitted))
+    monkeypatch.setattr(finalization, "planned_ids", lambda *_: {"db-id"})
+    monkeypatch.setattr(finalization, "jobs", lambda *_: [])
+    monkeypatch.setattr(host, "containers", lambda: [item])
+    monkeypatch.setattr(host, "host_sample", lambda *_: {
+        "memory_available": 10 * host.GIB, "disk_free": 20 * host.GIB,
+    })
+    monkeypatch.setattr(finalization.epochs, "effective_registry", lambda _directory, value: value)
+    monkeypatch.setattr(finalization.time, "time", lambda: 100)
+
+    finalization.monitor(tmp_path, registry, epoch, admitted)
+    safety_receipts = list(tmp_path.glob(f"finalize-{token}-safety-*.json"))
+    assert len(safety_receipts) == 1
+
+
+def test_failure_receipt_adds_safe_site_without_exception_contents(tmp_path, monkeypatch):
+    store = ReceiptStore(tmp_path)
+    token = "9" * 32
+    epoch = {"index": 1, "sha256": "epoch", "release": "/release", "allocations": {}}
+    registry = {"registry_sha256": "registry"}
+    admitted = {
+        "token": token, "registry_sha256": "registry", "epoch_sha256": "epoch",
+        "containers": [], "jobs": [], "admitted_at": 1, "drain_timeout": 1,
+        "deadline": 200, "restart_readback": {"status": "absent"},
+    }
+    (tmp_path / "epoch-0001.finalize-admission.json").write_text(json.dumps(admitted))
+    (tmp_path / f"finalize-{token}-drain.result.json").write_text("{}")
+    monkeypatch.setattr(finalization, "stop_service", lambda *_args: (_ for _ in ()).throw(
+        RuntimeError("sensitive argv must not be persisted")
+    ))
+    with pytest.raises(RuntimeError):
+        finalization.execute(tmp_path, registry, epoch, store)
+    failure = json.loads((tmp_path / f"finalize-{token}-failure.json").read_text())
+    assert failure["error_code"] == "finalization_stage_failed"
+    assert failure["error_type"] == "RuntimeError"
+    assert failure["error_site"].startswith("test_finalization.py:")
+    assert "sensitive argv" not in json.dumps(failure)
 
 
 def db_container():
@@ -174,7 +245,7 @@ def test_only_exact_admitted_hindsight_exit_is_a_planned_lifecycle_exit(planned,
 
     item = {
         "Id": "hindsight-id", "Image": "image-id", "RestartCount": 0,
-        "State": {"StartedAt": "start", "Status": "exited", "OOMKilled": False},
+        "State": {"StartedAt": "start", "Status": "exited", "ExitCode": 0, "OOMKilled": False},
         "HostConfig": {"Memory": 1, "NanoCpus": 1},
         "Config": {"Labels": {
             "com.docker.compose.project": host.PROJECT,
