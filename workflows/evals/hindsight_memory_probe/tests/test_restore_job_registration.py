@@ -98,7 +98,17 @@ def test_restore_container_uses_the_host_ownership_inventory_during_create(tmp_p
         "HostConfig": {"NetworkMode": "none", "Memory": db.RESTORE_MEMORY,
                        "NanoCpus": int(db.RESTORE_CPU * 1_000_000_000)},
         "NetworkSettings": {"Ports": {}}, "Mounts": [{"Name": volume, "Destination": db.DATA_PATH, "RW": True}]}
+    inventory = [row]
+    (tmp_path / "restore-operation.json").write_text(json.dumps(operation))
+    monkeypatch.setattr(restore.host, "containers", lambda: inventory)
+    monkeypatch.setattr(restore.epochs, "effective_registry", lambda _directory, registry: registry)
+    monkeypatch.setattr(restore.host, "host_sample", lambda *_args: {
+        "memory_available": 8 * restore.host.GIB, "cpus": 2, "disk_free": 50 * restore.host.GIB})
+    monkeypatch.setattr(db, "verify_volume", lambda *_args, **_kwargs: {"Name": volume})
     monkeypatch.setattr(db, "docker_text", lambda *_args, **_kwargs: pytest.fail("must not resample Docker"))
     monkeypatch.setattr(db, "docker_json", lambda *_args, **_kwargs: pytest.fail("must not resample Docker"))
 
-    assert db.restore_container(operation, allow_unregistered=True, inventory=[row]) == row
+    result = restore._verify_host(tmp_path, {"baseline": [], "release": str(tmp_path)},
+                                  {"containers": []}, prospective=False,
+                                  allow_restore_creation=True)
+    assert result is inventory

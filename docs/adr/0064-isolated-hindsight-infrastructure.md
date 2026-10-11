@@ -410,12 +410,17 @@ strict; there is no retry-until-pass or unknown-container exception.
 An explicit `recover-failed-create-cleanup` path handles only a diagnosed
 successful registered Compose create whose create result receipt was not
 published. It requires the durable create intent, exact completed job/command
-receipts, terminal create-stage failure, no live controller/processes, unchanged
+registration and child-result receipts, and explicitly requires the operation
+wrapper result to remain absent. It also requires terminal create-stage failure, no live controller/processes, unchanged
 sealed operation/source/P4/epoch/baseline evidence, and a full fresh readback of
 the exact created container and volume. A separate immutable admission binds
 those identities and authorizes only bounded registered readback, stop and
-removal of that exact container, and removal of its exact unconsumed volume. It
-does not authorize restore progress, provider activity or deadline rewriting.
+removal of that exact container, and removal of its exact unconsumed volume.
+Because the original cleanup reserve may have elapsed, a separate immutable
+read-only admission is sealed before any host readback; only after that evidence
+passes is the cleanup-only admission issued. Neither admission rewrites the
+original operation deadlines or authorizes restore progress or provider
+activity.
 Before active controls are removed, all original attempt bytes are archived,
 hash-checked and sealed as failed-create cleanup history; partial or altered
 history blocks a new attempt. Cleanup completion is not restoration success.

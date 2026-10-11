@@ -213,7 +213,7 @@ After independently checking that the controller and every registered process
 are gone and that the sealed operation, Compose file, source archive/snapshot,
 selection, stopped main epoch and baseline still match, create a mode-0400
 diagnosis JSON with exactly these fields. Hashes refer to the existing files;
-`create_job_result_sha256` is the registered operation result receipt hash.
+`create_child_result_sha256` is the registered child job result receipt hash.
 
 ```json
 {
@@ -224,10 +224,13 @@ diagnosis JSON with exactly these fields. Hashes refer to the existing files;
   "failure_sha256": "<failure result hash>",
   "create_intent_sha256": "<create intent hash>",
   "create_job_token": "<registered create process token>",
-  "create_job_result_sha256": "<restore-token-process-token-result hash>",
+  "create_job_registration_sha256": "<registered process job receipt hash>",
+  "create_child_result_sha256": "<job-token result receipt hash>",
+  "create_wrapper_result_absent": true,
   "container_id": "<exact full Docker container ID>",
   "container_started_at": "<exact Docker StartedAt value>",
   "image_id": "<exact immutable image ID>",
+  "container_identity_sha256": "<sha256 of sorted JSON for stable ID/image/config/labels/env/start/limits/ports/mount identity>",
   "volume": "<exact operation volume name>",
   "volume_identity_sha256": "<sha256 of sorted JSON for Name, Driver, Scope, Options, Mountpoint and CreatedAt>",
   "controller_gone": true,
@@ -245,12 +248,17 @@ python3 -m workflows.evals.hindsight_memory_probe.restore --state "$PROBE_STATE"
   recover-failed-create-cleanup --diagnosis "$PROBE_PRIVATE/restore-create-cleanup-diagnosis.json"
 ```
 
-The command rechecks the exact create command and successful job receipts,
-operation/source seals and image/configuration, all container and volume identity
-fields, process/controller quiescence, and the unchanged main/baseline state.
-It admits a separately sealed, at-most-ten-minute cleanup window (bounded by
-`WORK_CUTOFF`) for registered readback, stopping/removing only that container,
-and removing only its exact unused volume. It then seals a byte-preserving
+Before inspecting Docker it seals a separate read-only admission bound to the
+operation and diagnosis. That admission permits only bounded registered
+container and volume inventory reads through `WORK_CUTOFF`, even when the old
+operation deadline and cleanup reserve have elapsed. The command rechecks the
+exact create command and successful child job receipt (the create operation
+wrapper result must remain absent), operation/source seals and
+image/configuration, all container and volume identity fields,
+process/controller quiescence, and the unchanged main/baseline state. Only after
+those read-only checks does it admit a separately sealed, at-most-ten-minute
+cleanup window (bounded by `WORK_CUTOFF`) for stopping and removing only that
+container, and removing only its exact unused volume. It then seals a byte-preserving
 attempt history before deleting active controls. A partial recovery or invalid
 history blocks the next attempt. The sealed history is evidence of failure
 cleanup, not successful restoration; the next restore uses a new token only

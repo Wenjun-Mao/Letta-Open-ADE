@@ -153,9 +153,9 @@ def restore_container(operation: dict, *, allow_unregistered: bool = False,
             return None
         values = docker_json(["docker", "inspect", *containers])
     else:
-        # Host ownership checks must classify the same Docker snapshot they compare.
-        # A second `ps`/`inspect` can straddle Compose creation and mislabel an
-        # admitted container from the first snapshot as foreign.
+        # Host ownership checks classify the same Docker snapshot they compare.
+        # A create between reads can place the token/project in only one set;
+        # unknown rows in the shared snapshot remain fatal.
         values = inventory
     token, project = operation["token"], operation["compose"]["project"]
     found = []
