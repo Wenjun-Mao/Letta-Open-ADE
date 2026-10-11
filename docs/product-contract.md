@@ -136,9 +136,10 @@ renewed approval or stop at an arbitrary replay/generation count. Preserve prior
 evidence, product expectations, resource safety and the experiment's isolation;
 the plan distinguishes routine decisions from genuine authority/risk changes.
 
-Execution is held until the user's explicit start against that plan; no live
-authority follows from planning alone. The plan defines the bounded operational
-authorization at activation, not production adoption, migration or cutover.
+The user explicitly started Goal mode on 2026-10-11, authorizing the plan's P0-P4
+campaign with a ten-hour target, twelve-hour hard cap and separate Codex tasks.
+Planning alone granted no live authority; activation grants bounded operational
+authority, not production adoption, migration or cutover.
 PC-05/08/09 continue governing the incumbent; no runtime spending gate is added.
 See [ADR 0062](adr/0062-self-hosted-hindsight.md) for rationale and guardrails.
 
@@ -165,7 +166,8 @@ See [ADR 0062](adr/0062-self-hosted-hindsight.md) for rationale and guardrails.
   not user adoption or live-run authorization. Native extraction labels and small
   immutable source units are test candidates; no bank layout or delivery policy
   is settled by the reports. PC-13 separately records self-hosting and the
-  autonomous-campaign direction; setup/model calls await its explicit start gate.
+  autonomous-campaign direction; its explicit Goal start now authorizes the
+  isolated setup/model campaign, not native integration or adoption.
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
   reviewer, reconciliation with corrected or removed facts, and failure behavior.
   PC-03's character boundary and PC-10's archive eligibility are settled;

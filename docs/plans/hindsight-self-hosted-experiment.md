@@ -1,9 +1,8 @@
 # Self-Hosted Hindsight: Isolated First Experiment
 
-Status: Revision 4, 2026-10-11. Expanded autonomous campaign plan, awaiting the
-user's explicit Goal-mode start. The user requested roughly ten hours of progress
-without routine approval interruptions, not implementation during this planning turn.
-Supersedes revision 3's fixed replay limits and per-change execution gates.
+Status: Revision 4 activated in Goal mode, 2026-10-11 04:49:25 UTC. The user
+authorized ten hours of autonomous progress with a twelve-hour hard cap and
+separate Codex tasks. Supersedes revision 3's replay limits and execution gates.
 
 Planning baseline: clean primary `main` at
 `b108a01cd3d2fc484fad249312819bff97f99c47`. Follow
@@ -32,7 +31,7 @@ translation or call vector-only diagnostics full multilingual qualification.
 
 Deliver a reproducible isolated OCI deployment, evidence-backed Chinese
 memory-to-Character assessment, justified repairs/retests and safe recovery/stop
-procedures. Work for up to ten hours from activation, not to fill a ten-hour quota.
+procedures. Target ten hours from activation, never exceed the twelve-hour cap.
 This is not production integration or a measured winner over native memory.
 
 Preparation and OCI deployment are one serial workstream on primary `main`.
@@ -101,13 +100,14 @@ while useful work remains. Report a genuine impasse if no safe progress remains.
 
 ### Time And Completion
 
-Record an absolute ten-hour deadline at activation, preserved across resumptions.
+Activation: `2026-10-11T04:49:25Z`; target `2026-10-11T14:49:25Z`, hard stop
+`2026-10-11T16:49:25Z`. These absolute times survive resumptions; do not extend them.
 Rough priorities: prepare in hours 0-3, deploy/qualify in 3-5, evaluate in 5-7,
 repair/retest/recover in 7-9, then close out; reallocate freely. Reserve the last
 45 minutes for safe shutdown/reporting, and finish early if the work is complete.
 At deadline/impasse, provide a truthful partial handoff, not a false completion
-claim. The user will activate Goal mode; do not create a goal, heartbeat or agent
-daemon during planning. OCI-side expiry bounds work if continuation is interrupted.
+claim. Goal mode is active; no heartbeat or agent daemon is needed. OCI-side expiry
+bounds work if continuation is interrupted. Finish early when the work is complete.
 
 ## What We Can Reuse
 

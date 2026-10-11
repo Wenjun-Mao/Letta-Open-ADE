@@ -62,6 +62,9 @@ class HindsightRecall:
         payload = recall_request(inputs)
         path = f"/v1/default/banks/{inputs.scope.bank_id}/memories/recall"
         started = time.monotonic()
+        capture.write(
+            "hindsight.recall-request.json", {"request_path": path, "request": payload}
+        )
         try:
             # No automatic retry or failure-to-empty fallback.
             response = await self.client.post(
@@ -72,6 +75,16 @@ class HindsightRecall:
             )
             response.raise_for_status()
         except httpx.HTTPError as exc:
+            capture.write(
+                "hindsight.recall-failure.json",
+                {
+                    "error_type": type(exc).__name__,
+                    "http_status": exc.response.status_code
+                    if isinstance(exc, httpx.HTTPStatusError)
+                    else None,
+                    "latency_seconds": time.monotonic() - started,
+                },
+            )
             raise EvaluationError("recall_unavailable") from exc
         try:
             body = response.json()

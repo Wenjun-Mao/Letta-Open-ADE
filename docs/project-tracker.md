@@ -21,10 +21,14 @@ deployment, evidence-led repairs/retests, recovery and shutdown. Read-only direc
 Compose-label inspection supports `/mnt/projects/apps/ade-hindsight-probe`, with
 owned volumes under the existing Docker root. The user requested roughly ten
 hours of autonomous progress and rejected arbitrary replay-count approval gates.
-Next: the user starts Goal mode against the plan, enabling its P0-P4 decision
-envelope; routine engineering choices then proceed without renewed approval.
-No goal/heartbeat or implementation was started during planning. No Hindsight
-installation, source isolation, provider inference or deployment has occurred.
+The user activated Goal mode on 2026-10-11 at 04:49:25 UTC, with a ten-hour target,
+twelve-hour hard cap and standing authorization for separate Codex tasks. P0's
+[feature-owned evaluation CLI](../services/ade-api/src/ade_api/features/agent_runtime/HINDSIGHT_EVALUATION.md)
+is published at `1eafaa2`; the director independently reran 127 focused tests and
+Ruff successfully. OCI preflight still reports two cores, approximately 9.46 GiB
+available RAM and 109.6 GiB free project storage; owned ports/path are unused.
+Next: frozen workflow/configuration, temporary supervision and isolated staging.
+No Hindsight installation, provider inference or deployment has occurred yet.
 Older entries retain their historical scope and are not authority to resume new
 native memory feature work ahead of this review.
 

@@ -127,6 +127,29 @@ def test_recall_timeout_is_one_attempt_and_never_empty(monkeypatch, tmp_path):
     assert len(fake.recalls) == 1
     assert fake.generations == []
     assert "SECRET-DIAGNOSTIC" not in json.dumps(read(tmp_path, "failure.json"))
+    request = read(tmp_path, "hindsight.recall-request.json")
+    assert request["request"]["tags_match"] == "any_strict"
+    failure = read(tmp_path, "hindsight.recall-failure.json")
+    assert failure["error_type"] == "ReadTimeout"
+    assert failure["http_status"] is None
+    assert "SECRET-DIAGNOSTIC" not in json.dumps(failure)
+
+
+def test_recall_request_capture_failure_prevents_recall(monkeypatch, tmp_path):
+    fake = FakeProviders()
+    capture = EvaluationCapture(tmp_path / "receipts")
+    original = capture.write
+
+    def fail(filename, value):
+        if filename == "hindsight.recall-request.json":
+            raise EvaluationError("capture_write_failed")
+        return original(filename, value)
+
+    monkeypatch.setattr(capture, "write", fail)
+    with pytest.raises(EvaluationError, match="capture_write_failed"):
+        run(monkeypatch, tmp_path, fake, capture=capture)
+    assert fake.recalls == []
+    assert fake.generations == []
 
 
 def test_failed_fsync_leaves_no_completion_marker(monkeypatch, tmp_path):

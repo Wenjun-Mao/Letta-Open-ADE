@@ -114,6 +114,10 @@ Receipts (directory 0700, files 0600, exclusive writes with fsync):
   Hindsight identity and selected router model/profile fingerprint.
 - `<arm>.context.json`: admitted attributed memories, recall status/path/payload,
   recall latency/count or explicitly identified control status.
+- `hindsight.recall-request.json`: actual scope/payload captured before dispatch;
+  capture failure prevents recall as well as Character generation.
+- `hindsight.recall-failure.json`: safe HTTP/transport failure metadata, without
+  error bodies, headers or exception text; timeouts retain the request receipt.
 - `hindsight.recall.json`: actual recall request/status/latency and original-value
   result projection, captured before schema/scope admission so rejected candidates
   survive. Keeps the pinned result fields plus scores/chunk IDs; excludes
