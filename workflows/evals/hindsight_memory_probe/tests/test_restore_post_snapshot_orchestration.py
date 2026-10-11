@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 
 from workflows.evals.hindsight_memory_probe import (
+    restore_cleanup,
+    restore_process,
     restore_post_snapshot_archive as archive,
     restore_post_snapshot_contract as contract,
     restore_post_snapshot_recovery as recovery,
@@ -173,7 +175,19 @@ def _wire_recovery_mocks(monkeypatch, *, interrupt_after_container=False):
         return 0
 
     monkeypatch.setattr(recovery, "_run", run)
+    resources["container_row"] = container
     return resources
+
+
+def _write_stopped_capture(recovery_module, session_root: Path, container: dict) -> None:
+    container["State"]["Status"] = "exited"
+    container["State"]["StartedAt"] = "recovery-start"
+    identity_sha = contract._json_digest(recovery_module._container_identity(container))
+    recovery_module._write_once(session_root, "start.result.json", {
+        "recovery_started_at": "recovery-start", "identity_sha256": identity_sha})
+    recovery_module._write_once(session_root, "stop.result.json", {
+        "container_id": container["Id"], "status": "stopped",
+        "started_at": "recovery-start", "container_identity_sha256": identity_sha})
 
 
 def test_orchestrated_capture_archives_before_exact_container_and_volume_retirement(tmp_path, monkeypatch):
@@ -194,8 +208,7 @@ def test_orchestrated_capture_archives_before_exact_container_and_volume_retirem
 
     def capture(*args):
         session_root = args[6]
-        recovery._write_once(session_root, "stop.result.json", {
-            "container_id": create_result["container_id"], "status": "stopped"})
+        _write_stopped_capture(recovery, session_root, resources["container_row"])
         recovery._write_once(session_root, "capture-proof.json", {"state": "stable-synthetic-readback"})
         return {"tables": {"unit_entities": {"sha256": "e" * 64}}}
 
@@ -233,6 +246,31 @@ def test_orchestrated_capture_archives_before_exact_container_and_volume_retirem
     assert "restore-operation.json" in manifest_files
 
 
+def test_real_run_monitor_binds_readback_to_verified_recovery_started_at(tmp_path, monkeypatch):
+    (tmp_path / "registry.json").write_text("{}")
+    seen = {}
+    operation = {"token": "f" * 32, "deadline": 100.0, "cleanup_deadline": 100.0,
+        "compose": {"volume": "restore-volume-failed-attempt"},
+        "finalization": {"containers": []},
+        "_cleanup_recovery_container_id": "c" * 64,
+        "_post_restore_recovery": True,
+        "_post_restore_recovery_started_at": "new-recovery-start"}
+    monkeypatch.setattr(restore_cleanup, "registered_host_readback", lambda *_args: nullcontext())
+    monkeypatch.setattr(recovery.restore, "_verify_host",
+        lambda *_args, **kwargs: seen.update(started_at=kwargs.get("post_restore_recovery_started_at")))
+
+    def run_command(_directory, scoped, command, _timeout, *, monitor, **_kwargs):
+        restore_process._validate_command(scoped, command)
+        monitor()
+        return 0
+
+    monkeypatch.setattr(restore_process, "run_command", run_command)
+
+    assert recovery._run(tmp_path, operation, 100.0, "remove-container",
+                         ["docker", "rm", "c" * 64], 45) == 0
+    assert seen["started_at"] == "new-recovery-start"
+
+
 def test_retry_after_stopped_partial_capture_preserves_prior_session_before_retirement(tmp_path, monkeypatch):
     state = tmp_path / "state"
     state.mkdir(mode=0o700)
@@ -258,8 +296,7 @@ def test_retry_after_stopped_partial_capture_preserves_prior_session_before_reti
 
     def capture(*args):
         session_root = args[6]
-        recovery._write_once(session_root, "stop.result.json", {
-            "container_id": create_result["container_id"], "status": "stopped"})
+        _write_stopped_capture(recovery, session_root, resources["container_row"])
         recovery._write_once(session_root, "capture-proof.json", {"state": "stable-synthetic-readback"})
         return {"tables": {"unit_entities": {"sha256": "e" * 64}}}
 
@@ -299,10 +336,11 @@ def test_archive_resumption_finishes_volume_removal_after_container_was_removed(
                 "1" * 40, "/release")
 
     monkeypatch.setattr(recovery, "_authority", authority_for)
-    monkeypatch.setattr(recovery, "_capture_and_stop", lambda *args: (
-        recovery._write_once(args[6], "stop.result.json", {
-            "container_id": create_result["container_id"], "status": "stopped"})
-        and {"tables": {"unit_entities": {"sha256": "e" * 64}}}))
+    def capture(*args):
+        _write_stopped_capture(recovery, args[6], resources["container_row"])
+        return {"tables": {"unit_entities": {"sha256": "e" * 64}}}
+
+    monkeypatch.setattr(recovery, "_capture_and_stop", capture)
     with pytest.raises(RuntimeError, match="simulated interruption"):
         recovery.recover(state, first_authority_path)
 

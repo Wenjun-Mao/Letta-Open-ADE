@@ -6,14 +6,16 @@ The path preserves and retires one failed attempt; it does not qualify a restore
 ## Problem
 
 The revision-4 disposable restore completed `pg_restore`, then failed while
-capturing the final snapshot. Its `restore_process_identity_changed` reason
-identified the registered host-readback process as the failure point. The
-retained registration showed an empty `/proc/<pid>/cmdline`; that alone did not
-establish whether the registered `Popen` child had exited or changed identity.
-The source runner treated any exact-command mismatch as fatal before collecting
-the child's terminal status. Separately, cleanup correctly retained the failed
-container and volume, but offered no bounded way to preserve the snapshot state
-and release those exact disposable resources. (PC-08/09/13)
+capturing the final snapshot. The retained registration for one
+`docker ps -aq --no-trunc` readback had an empty `/proc/<pid>/cmdline` hash and
+neither a child result nor a wrapper result. This is evidence that registration
+published before proving the child had the expected argv, owner marker, UID,
+PID and start ticks; it is not evidence that the child exited during later
+monitoring. Linux can separately expose empty `cmdline` and `environ` during
+`exit_mm`, so a bounded terminal-process check is useful runtime defense, but
+that race is not the historical root cause. Cleanup correctly retained the
+failed container and volume, but offered no bounded way to preserve the
+snapshot state and release those exact disposable resources. (PC-08/09/13)
 
 ## Decision
 
@@ -31,10 +33,12 @@ immutable authority (maximum ten minutes, capped by `WORK_CUTOFF`) bound to the
 sealed operation, failure and cleanup hashes, exact create-result container and
 volume, recovery source SHA, and a fixed scope. It does not alter the original
 operation or cleanup deadlines. The recovery rechecks the original successful
-create/restore receipts and the exact observed ordered eight-table query prefix
-with its final child-result/no-wrapper semantics, stopped main epoch,
-baseline, source seals, controller/process absence, and the exact exited restore
-container and volume. It starts only that container, registers an independent
+create/restore receipts and the exact observed ordered table-query prefix:
+each attempted table has a zero-exit child result, preceding wrappers succeed,
+and the final wrapper is absent. This incident's prefix has eight tables. It
+also rechecks the stopped main epoch, baseline, source seals,
+controller/process absence, and the exact exited restore container and volume.
+It starts only that container, registers an independent
 finite host-local expiry stopper before start, performs two read-only database
 captures, requires matching table hashes, records the frozen P4 comparison and
 scope readback, and stops the same container with exact `StartedAt` readback.
@@ -57,10 +61,12 @@ reported as a successful restore. (PC-08/09/13)
 
 ## Alternatives And Consequences
 
-- Treating every cmdline mismatch as identity change was rejected because
-  `/proc` teardown can precede `Popen` wait-status publication.
-- Accepting an empty argv or environment as success was rejected; only the
-  registered child's bounded terminal transition is accepted.
+- Publishing a registration before exact identity is proven was rejected; it
+  created an unmonitorable job and allowed its controller to fail without a
+  child result. The gate now stays closed until the exact process identity is
+  established on both sides of durable publication.
+- Treating a readable empty cmdline as sufficient proof of exit was rejected;
+  only the same registered child's bounded terminal transition is accepted.
 - Retrying the old restore, rewriting its deadlines/results, or deleting its
   resources without a sealed capture was rejected because it would blur the
   failed attempt and its evidence.

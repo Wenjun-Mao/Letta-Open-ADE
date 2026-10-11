@@ -2,7 +2,10 @@
 
 import hashlib
 import json
+import os
+import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -10,8 +13,10 @@ from workflows.evals.hindsight_memory_probe import (
     host_guard,
     restore,
     restore_post_snapshot_admission as admission,
+    restore_post_snapshot_archive as retirement_archive,
     restore_cleanup_recovery_contract,
     restore_post_snapshot_contract as contract,
+    restore_post_snapshot_expiry as expiry,
     restore_process,
     restore_snapshot,
 )
@@ -52,15 +57,23 @@ def test_original_proof_accepts_observed_inventory_and_authorized_recovery_readb
                           (selection_path, b"selection")):
         _write(path, content)
     operation = {
-        "token": token,
-        "compose": {"project": "restore-fixture", "path": "/compose.yml", "volume": volume},
+        "schema": 1, "token": token,
+        "compose": {"project": "ade-hindsight-restore-" + token[:16],
+                    "path": "/compose.yml", "volume": volume, "source_image_id": "image-id"},
         "archive": {"path": str(archive_path), "sha256": hashlib.sha256(b"archive").hexdigest()},
         "snapshot": {"path": str(snapshot_path), "root": str(tmp_path),
                      "sha256": hashlib.sha256(b"snapshot").hexdigest()},
         "selection": {"path": str(selection_path), "sha256": hashlib.sha256(b"selection").hexdigest()},
         "restore_root": str(tmp_path / "restore"), "finalization": {"containers": []},
+        "release_path": "/opt/restore/releases/source-sha",
+        "deadline": restore.WORK_CUTOFF - 1000,
+        "cleanup_deadline": restore.WORK_CUTOFF - 500,
+        "hard_deadline": restore.DEADLINE,
     }
     _write(tmp_path / "restore-operation.json", json.dumps(operation).encode())
+    _write(tmp_path / "restore-operation-seal.json", json.dumps({
+        "sha256": hashlib.sha256((tmp_path / "restore-operation.json").read_bytes()).hexdigest()
+    }).encode())
     _write(tmp_path / f"restore-{token}-failure.result.json", json.dumps({
         "token": token, "status": "failed", "stage": "snapshot",
         "reason": "restore_process_identity_changed", "time": 209.0}).encode())
@@ -119,6 +132,7 @@ def test_original_proof_accepts_observed_inventory_and_authorized_recovery_readb
                                      150 + index / 10))
     jobs.append(_success_job(tmp_path, token, "cleanup-preserve-stop",
         ["docker", "stop", "--time", "20", container_id], 208))
+    historical_job_count = len(jobs)
 
     admission_token = "9" * 32
     failure_path = tmp_path / f"restore-{token}-failure.result.json"
@@ -151,6 +165,62 @@ def test_original_proof_accepts_observed_inventory_and_authorized_recovery_readb
     assert proof["failed_job"]["token"] == failed_token
     assert original_snapshot == snapshot_path
 
+    # Exercise the public issuer after an actual guard run has expired. This
+    # keeps the original-attempt validator real while isolating the staged
+    # release SHA, which is not available in this local synthetic fixture.
+    clock = [time.time()]
+    monkeypatch.setattr(contract, "_execution_source", lambda: ("1" * 40, "/fake/release"))
+    monkeypatch.setattr(contract.time, "time", lambda: clock[0])
+    first_authority_path = contract.issue_authority(tmp_path, timeout=300)
+    first_authority = json.loads(first_authority_path.read_text())
+    owner_token = first_authority["admission_token"]
+    row = {"Id": container_id, "Image": "image-id", "RestartCount": 0,
+        "Config": {"Labels": {"ade.hindsight.restore.token": token,
+                               "com.docker.compose.project": operation["compose"]["project"]}},
+        "Mounts": [{"Name": volume}],
+        "State": {"Status": "running", "StartedAt": "historical-start", "OOMKilled": False}}
+
+    def expiry_command(command, **_kwargs):
+        if command[1] == "stop":
+            row["State"]["Status"] = "exited"
+        return SimpleNamespace(stdout=json.dumps([row]).encode())
+
+    monkeypatch.setattr(expiry.subprocess, "run", expiry_command)
+    monkeypatch.setattr(expiry.time, "time", lambda: clock[0])
+    monkeypatch.setattr(expiry.time, "sleep", lambda _seconds: clock.__setitem__(
+        0, first_authority["deadline"] + 1))
+    read_fd, write_fd = os.pipe()
+    os.write(write_fd, b"1")
+    os.close(write_fd)
+    assert expiry.run(tmp_path, token, first_authority_path.name, container_id,
+                      "historical-start", first_authority["deadline"],
+                      hashlib.sha256(first_authority_path.read_bytes()).hexdigest(),
+                      owner_token, read_fd) == 0
+    expiry_job = {"schema": 1, "token": owner_token, "operation_token": token,
+                  "operation": "post-restore-recovery-expiry",
+                  "created_at": first_authority["issued_at"] + 1,
+                  "deadline": first_authority["deadline"], "container_id": container_id}
+    _write(tmp_path / f"restore-{token}-{owner_token}-job.json", json.dumps(expiry_job).encode())
+    jobs.append(expiry_job)
+    second_authority_path = contract.issue_authority(tmp_path, timeout=300)
+    assert second_authority_path != first_authority_path
+    assert clock[0] > first_authority["deadline"]
+
+    archived = retirement_archive._archive(
+        tmp_path, token, authority_path, tmp_path / "session", operation,
+        "2" * 40, {"status": "captured_failed_attempt"})
+    retirement = json.loads((archived / "retirement.json").read_text())
+    absent = set(retirement["absent_original_results"])
+    assert historical_job_count == 194
+    assert f"job-{failed_token}.result.json" in absent
+    assert f"restore-{token}-{failed_token}-result.json" in absent
+    terminal_table = next(job for job in jobs
+                          if job["operation"] == "restore-snapshot-table-unit_entities")
+    assert f"restore-{token}-{terminal_table['token']}-result.json" in absent
+    assert not any(f"job-{job['token']}.result.json" in absent
+                   for job in jobs if job["operation"] == restore_process.IDENTITY_LIST_READBACK
+                   and job["token"] != failed_token)
+
     jobs.pop(next(index for index, job in enumerate(jobs)
                   if job["operation"] == restore_process.IDENTITY_LIST_READBACK
                   and job["token"] != failed_token))
@@ -162,3 +232,35 @@ def test_original_proof_accepts_observed_inventory_and_authorized_recovery_readb
     (tmp_path / f"restore-{token}-{incomplete['token']}-result.json").unlink()
     with pytest.raises(RuntimeError, match="identity_list_receipt_incomplete"):
         admission._validate_original(tmp_path, operation)
+
+
+def test_identity_list_readback_rejects_unrecognized_calculated_command_hash(tmp_path):
+    token, volume = "e" * 32, "restore-volume"
+    successful = _success_job(tmp_path, token, restore_process.IDENTITY_LIST_READBACK,
+        ["docker", "ps", "-aq", "--no-trunc"], 1,
+        command_hash=hashlib.sha256(b"unrecognized command").hexdigest())
+    failed_token = "f" * 32
+    failed = {"token": failed_token, "operation": restore_process.IDENTITY_LIST_READBACK,
+              "command_sha256": hashlib.sha256(
+                  json.dumps(["docker", "ps", "-aq", "--no-trunc"]).encode()).hexdigest(),
+              "identity": {"cmd_sha256": hashlib.sha256(b"").hexdigest()}}
+    _write(tmp_path / f"restore-{token}-{failed_token}-job.json", json.dumps(failed).encode())
+
+    with pytest.raises(RuntimeError, match="identity_list_receipt_incomplete"):
+        contract._failed_identity_list_readback(tmp_path, token, [successful, failed], volume)
+
+
+def test_snapshot_prefix_accepts_a_short_ordered_prefix_with_terminal_child_only(tmp_path):
+    token, container_id = "c" * 32, "d" * 64
+    jobs = []
+    tables = restore_snapshot.candidate_database.SNAPSHOT_TABLES[:3]
+    for index, table in enumerate(tables):
+        command = ["docker", "exec", "-i", container_id, "psql", "-U",
+                   "hindsight_probe", "-d", "hindsight_probe", "-At", "-c",
+                   restore_snapshot.table_query(table)]
+        jobs.append(_success_job(tmp_path, token, f"restore-snapshot-table-{table}",
+                                 command, float(index), wrapper=index < 2))
+
+    terminal = contract._validate_snapshot_prefix(tmp_path, token, container_id, jobs)
+
+    assert terminal is jobs[-1]

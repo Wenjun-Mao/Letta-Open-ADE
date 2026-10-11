@@ -60,7 +60,8 @@ def _failed_identity_list_readback(directory: Path, token: str, jobs: list[dict]
             continue
         if (not isinstance(identity_hash, str) or not re.fullmatch(r"[a-f0-9]{64}", identity_hash)
                 or identity_hash == empty_command_hash or not child_exists or not wrapper_exists
-                or job.get("command_sha256") not in allowed_command_hashes):
+                or not isinstance(job.get("command_sha256"), str)
+                or job["command_sha256"] not in allowed_command_hashes):
             raise RuntimeError("restore_post_snapshot_recovery_identity_list_receipt_incomplete")
         _require_successful_job(directory, token, job)
     if len(failed) != 1:

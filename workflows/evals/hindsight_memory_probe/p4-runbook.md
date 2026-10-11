@@ -271,16 +271,24 @@ says `stage=snapshot`, `reason=restore_process_identity_changed`, and cleanup
 receipt says `status=preserved_failed_state`,
 `reason=post_restore_snapshot_not_preserved`, `removed=false`. The retained
 attempt must show one successful registered create and one successful
-`pg_restore`. The inventory contains 90 identity-list readbacks: 59 completed
-`docker ps -aq --no-trunc` calls and 30 completed exact-volume-list calls, plus
-one failed global-list registration with no child or wrapper result. The other
-identity and operator readbacks also have successful receipts. The snapshot
-queries form the exact ordered leading prefix of eight canonical tables, from
-`banks` through `unit_entities`; the first seven have successful child and
-wrapper receipts. The `unit_entities` child exited zero but has no wrapper, and
-the failed registration was created during that query's monitoring interval.
-The two later table queries were never launched. Do not edit or synthesize any
-original result receipt.
+`pg_restore`. The inventory contains 90 identity-list readbacks: 89 have
+successful child and wrapper receipts, and one failed global-list registration
+has neither result. Fifty-nine successful registrations and the failed one
+share the exact `docker ps -aq --no-trunc` command hash. The remaining 30
+successful jobs share a hash that matches the source-derived volume-list
+command using the sealed `compose.volume`. Their argv is not retained, so that
+attribution is a command-hash match, not a claim of argv readback. The source
+validator calculates both allowed hashes from the operation and rejects other
+commands. The other identity and operator readbacks also have successful
+receipts. The snapshot
+queries form an exact ordered leading prefix of the canonical tables. Each
+attempted table must have a zero-exit child result; every earlier table must
+also have a successful wrapper, while the final table must have no wrapper.
+This observed prefix has eight tables, from `banks` through `unit_entities`;
+the first seven have successful child and wrapper receipts. The `unit_entities`
+child exited zero but has no wrapper, and the failed registration was created
+during that query's monitoring interval. The two later table queries were
+never launched. Do not edit or synthesize any original result receipt.
 
 The authority command independently checks those receipts, source hashes,
 controller/process quiescence and the main stopped epoch. It creates a new

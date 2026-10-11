@@ -262,12 +262,34 @@ def recover(directory: Path, authority_path: Path) -> dict:
             readback_operation, container, fresh_identity, original_snapshot)
 
         stop_proof_path = session_root / "stop.result.json"
-        if not stop_proof_path.is_file():
+        if (stop_proof_path.is_symlink() or not stop_proof_path.is_file()
+                or stop_proof_path.stat().st_mode & 0o377):
             raise RuntimeError("restore_post_snapshot_recovery_stop_receipt_missing")
         stop_proof = json.loads(stop_proof_path.read_text())
+        start_proof_path = session_root / "start.result.json"
+        if (start_proof_path.is_symlink() or not start_proof_path.is_file()
+                or start_proof_path.stat().st_mode & 0o377):
+            raise RuntimeError("restore_post_snapshot_recovery_start_receipt_invalid")
+        start_proof = json.loads(start_proof_path.read_text())
+        stopped_at = stop_proof.get("started_at")
         if (stop_proof.get("container_id") != authority["container_id"]
-                or stop_proof.get("status") != "stopped"):
+                or stop_proof.get("status") != "stopped"
+                or not isinstance(stopped_at, str) or not stopped_at
+                or stop_proof.get("container_identity_sha256") != start_proof.get("identity_sha256")
+                or stopped_at != start_proof.get("recovery_started_at")):
             raise RuntimeError("restore_post_snapshot_recovery_stop_receipt_invalid")
+        post_capture_operation = {**run_operation,
+                                  "_post_restore_recovery_started_at": stopped_at}
+        post_capture_readback = {**readback_operation,
+                                 "_post_restore_recovery_started_at": stopped_at}
+        with restore_cleanup.registered_host_readback(directory, post_capture_readback):
+            stopped_container = db.restore_container(post_capture_readback)
+        if (stopped_container is None or stopped_container.get("Id") != authority["container_id"]
+                or stopped_container.get("State", {}).get("Status") != "exited"
+                or stopped_container.get("State", {}).get("StartedAt") != stopped_at
+                or _json_digest(_container_identity(stopped_container))
+                   != stop_proof.get("container_identity_sha256")):
+            raise RuntimeError("restore_post_snapshot_recovery_stop_readback_invalid")
         remove_container = ["docker", "rm", authority["container_id"]]
         remove_volume = ["docker", "volume", "rm", operation["compose"]["volume"]]
         _write_once(session_root, "remove-container.intent.json", {
@@ -278,22 +300,22 @@ def recover(directory: Path, authority_path: Path) -> dict:
             "authority_sha256": _sha(authority_path)})
         root = _archive(directory, token, authority_path, session_root, operation,
                         recovery_source_sha, capture)
-        _run(directory, run_operation, authority["deadline"], "remove-container", remove_container, 45)
-        with restore_cleanup.registered_host_readback(directory, readback_operation):
-            remaining_container = db.restore_container(readback_operation)
+        _run(directory, post_capture_operation, authority["deadline"], "remove-container", remove_container, 45)
+        with restore_cleanup.registered_host_readback(directory, post_capture_readback):
+            remaining_container = db.restore_container(post_capture_readback)
         if remaining_container is not None:
             raise RuntimeError("restore_post_snapshot_recovery_container_removal_unproven")
-        with restore_cleanup.registered_host_readback(directory, readback_operation):
+        with restore_cleanup.registered_host_readback(directory, post_capture_readback):
             consumers = db.docker_text(["docker", "ps", "-aq", "--no-trunc", "--filter",
                                         "volume=" + operation["compose"]["volume"]])
         if consumers:
             raise RuntimeError("restore_post_snapshot_recovery_volume_consumer_detected")
-        _run(directory, run_operation, authority["deadline"], "remove-volume", remove_volume, 45)
-        with restore_cleanup.registered_host_readback(directory, readback_operation):
-            remaining_volume = db.verify_volume(readback_operation)
+        _run(directory, post_capture_operation, authority["deadline"], "remove-volume", remove_volume, 45)
+        with restore_cleanup.registered_host_readback(directory, post_capture_readback):
+            remaining_volume = db.verify_volume(post_capture_readback)
         if remaining_volume is not None:
             raise RuntimeError("restore_post_snapshot_recovery_volume_removal_unproven")
-        with restore_cleanup.registered_host_readback(directory, readback_operation):
+        with restore_cleanup.registered_host_readback(directory, post_capture_readback):
             restore._verify_host(directory, registry,
                 {"containers": operation["finalization"]["containers"]}, prospective=False)
         _remove_active_sources(directory, token, root, authority_path, session_root)

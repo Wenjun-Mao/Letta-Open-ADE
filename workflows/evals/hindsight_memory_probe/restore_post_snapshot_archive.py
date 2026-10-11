@@ -11,7 +11,7 @@ from pathlib import Path
 from . import host_guard, restore_process
 from . import restore_retirement_archive as archive
 from .restore_post_snapshot_contract import (
-    FAILED_MONITOR_JOB, _json_digest, _require_successful_job, _sha, _write_once,
+    _json_digest, _require_successful_job, _sha, _write_once,
 )
 from .restore_post_snapshot_admission import _validate_recovery_authority
 
@@ -37,31 +37,24 @@ def _archive(directory: Path, token: str, authority_path: Path, session_root: Pa
     rows = [{"path": relative, "sha256": archive.digest_file(source),
              "bytes": source.stat().st_size} for relative, source in sorted(sources.items())]
     failure_path = directory / f"restore-{token}-failure.result.json"
-    expected_absent = [f"restore-{token}-snapshot.result.json", f"restore-{token}-compare.result.json",
-                       f"restore-{token}-result.json",
-                       str(Path("restore") / token / "canonical-snapshot.json")]
-    expected_absent.extend([
-        f"job-{job['token']}.result.json" for job in restore_process.registered_jobs(directory, token)
-        if job.get("operation") == FAILED_MONITOR_JOB
-    ])
-    expected_absent.extend([
-        f"restore-{token}-{job['token']}-result.json"
-        for job in restore_process.registered_jobs(directory, token)
-        if job.get("operation") == FAILED_MONITOR_JOB
-    ])
-    expected_absent.extend([
-        f"restore-{token}-{job['token']}-result.json"
-        for job in restore_process.registered_jobs(directory, token)
-        if job.get("operation") == "restore-snapshot-table-unit_entities"
-    ])
+    absence_candidates = [f"restore-{token}-snapshot.result.json",
+                          f"restore-{token}-compare.result.json",
+                          f"restore-{token}-result.json",
+                          str(Path("restore") / token / "canonical-snapshot.json")]
     for job in restore_process.registered_jobs(directory, token):
         child_name = f"job-{job['token']}.result.json"
         wrapper_name = f"restore-{token}-{job['token']}-result.json"
-        if not (directory / child_name).exists():
-            expected_absent.append(child_name)
-        if not (directory / wrapper_name).exists():
-            expected_absent.append(wrapper_name)
-    expected_absent = sorted(set(expected_absent))
+        absence_candidates.extend((child_name, wrapper_name))
+    if any((directory / relative).is_symlink() for relative in absence_candidates):
+        raise RuntimeError("restore_post_snapshot_recovery_absence_manifest_invalid")
+    expected_absent = sorted({relative for relative in absence_candidates
+                               if not (directory / relative).exists()
+                               and not (directory / relative).is_symlink()})
+    evidence_names = {row["path"] for row in rows}
+    if any((directory / relative).exists() or (directory / relative).is_symlink()
+           or relative in evidence_names
+           for relative in expected_absent):
+        raise RuntimeError("restore_post_snapshot_recovery_absence_manifest_invalid")
     manifest = {"schema": 1, "kind": "failed_post_restore_snapshot_preserved_retired",
         "status": "failed_post_restore_retired", "token": token,
         "operation_sha256": _sha(directory / "restore-operation.json"),

@@ -110,11 +110,14 @@ failed identity-list registration from the earlier completed queries, but does
 not establish wrapper-level completion of `unit_entities` or successful
 restoration.
 
-The source repair adds a bounded terminal-transition check for the registered
-`Popen` child and a separate, short-lived exact-resource recovery authority that
-captures and seals the failed database state before retiring the disposable
-container and volume. It does not modify this attempt's private evidence or old
-deadlines. The repair has only offline synthetic verification here: it has not
+The source repair requires exact argv, owner, UID, PID and start-tick identity
+before a registered child's job receipt is published and rechecks identity
+before releasing its gate. A bounded terminal-transition check separately
+handles Linux `/proc` teardown after a registered child exits. The repair also
+adds a short-lived exact-resource recovery authority that captures and seals
+the failed database state before retiring the disposable container and volume.
+It does not modify this attempt's private evidence or old deadlines. The repair
+has only offline synthetic verification here: it has not
 been deployed to OCI, and its recovery path has not been executed against this
 candidate. Restore acceptance, final provider usage/resource totals, and the
 exact-source live retry remain open. See [ADR 0065](../adr/0065-post-restore-snapshot-failure-recovery.md)

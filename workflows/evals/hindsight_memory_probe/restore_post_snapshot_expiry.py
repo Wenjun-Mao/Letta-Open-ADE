@@ -26,6 +26,23 @@ def _request_cancel(_signum, _frame):
     _cancelled = True
 
 
+def _write_immutable(state: Path, name: str, value: dict) -> Path:
+    """Publish validator-facing expiry evidence as write-once, read-only receipts."""
+    path = state / name
+    if path.exists():
+        if (path.is_symlink() or not path.is_file() or path.stat().st_mode & 0o377
+                or json.loads(path.read_text()) != value):
+            raise RuntimeError("restore_expiry_receipt_conflict")
+        return path
+    if path.is_symlink():
+        raise RuntimeError("restore_expiry_receipt_conflict")
+    ReceiptStore(state).write(name, value)
+    path.chmod(0o400)
+    if path.stat().st_mode & 0o377 or json.loads(path.read_text()) != value:
+        raise RuntimeError("restore_expiry_receipt_publish_invalid")
+    return path
+
+
 def _read_authority(state: Path, operation_token: str, authority_name: str,
                     authority_sha256: str) -> dict:
     operation_path = state / "restore-operation.json"
@@ -129,9 +146,9 @@ def run(state: Path, operation_token: str, authority_name: str, container_id: st
                 "image_id": operation["compose"]["source_image_id"], "volume": operation["compose"]["volume"],
                 "started_at": started_at}
     signal.signal(signal.SIGTERM, _request_cancel)
-    ReceiptStore(state).write(f"restore-{operation_token}-{owner_token}-expiry.ready.json",
-                              {"token": operation_token, "expiry_token": owner_token,
-                               "deadline": deadline, "ready": True})
+    _write_immutable(state, f"restore-{operation_token}-{owner_token}-expiry.ready.json",
+                     {"token": operation_token, "expiry_token": owner_token,
+                      "deadline": deadline, "ready": True})
     while time.time() < deadline and not _cancelled:
         time.sleep(min(1.0, max(0.05, deadline - time.time())))
     if _cancelled:
@@ -147,15 +164,15 @@ def run(state: Path, operation_token: str, authority_name: str, container_id: st
         cancel_status = ("cancelled_before_database_restart"
                          if stopped["started_at"] == expected["started_at"]
                          else "cancelled_after_database_stop")
-        ReceiptStore(state).write(f"restore-{operation_token}-{owner_token}-expiry.result.json",
-                                  {"token": operation_token, "expiry_token": owner_token,
-                                   "status": cancel_status, **stopped,
-                                   "completed_at": time.time()})
+        _write_immutable(state, f"restore-{operation_token}-{owner_token}-expiry.result.json",
+                         {"token": operation_token, "expiry_token": owner_token,
+                          "status": cancel_status, **stopped,
+                          "completed_at": time.time()})
         return 0
     result = _stop_exact(container_id, owner_token, expected)
-    ReceiptStore(state).write(f"restore-{operation_token}-{owner_token}-expiry.result.json",
-                              {"token": operation_token, "expiry_token": owner_token,
-                               **result, "completed_at": time.time()})
+    _write_immutable(state, f"restore-{operation_token}-{owner_token}-expiry.result.json",
+                     {"token": operation_token, "expiry_token": owner_token,
+                      **result, "completed_at": time.time()})
     return 0
 
 

@@ -22,9 +22,12 @@ receipt. A later attempt created the exact disposable container, completed
 `pg_restore`, and then failed during the final snapshot with
 `restore_process_identity_changed`; cleanup retained that failed container and
 volume. The retained identity-list-readback registration has an empty
-command-line hash and no child or wrapper result; this is consistent with a
-Linux procfs terminal-transition race, not proof of command completion. The old
-receipts and deadlines remain untouched. [ADR 0065](../../../docs/adr/0065-post-restore-snapshot-failure-recovery.md)
+command-line hash and no child or wrapper result. That points to registration
+being published without first proving exact argv, owner, UID, PID and start-tick
+identity; it does not establish that the child had completed. A Linux procfs
+terminal-transition race is a separate runtime possibility handled only after
+bounded child-exit confirmation. The old receipts and deadlines remain
+untouched. [ADR 0065](../../../docs/adr/0065-post-restore-snapshot-failure-recovery.md)
 and the [P4 runbook](p4-runbook.md) document a bounded, separately authorized
 preservation and retirement path. This source iteration has not run that path on
 OCI and does not claim restore success. Restore acceptance and final
