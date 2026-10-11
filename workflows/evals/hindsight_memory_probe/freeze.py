@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+from . import bank_profile
 from .receipts import ReceiptStore
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -20,7 +21,8 @@ PERSONAS = ROOT / "content/personas/personas.jsonl"
 NAMESPACE = uuid.UUID("3d30bf87-76ed-5a53-9a5b-5628d86ff8ca")
 CONFIG_PATHS = [
     WORKFLOW / "config/pins.json", WORKFLOW / "config/sources.json",
-    WORKFLOW / "config/model-profiles.json", WORKFLOW / "config/hindsight.env",
+    WORKFLOW / "config/model-profiles.json", WORKFLOW / "config/bank-profile.json",
+    WORKFLOW / "config/hindsight.env",
     WORKFLOW / "compose.yaml", WORKFLOW / "docker/python.Dockerfile",
     ROOT / "services/model-router/pyproject.toml",
     ROOT / "services/ade-api/pyproject.toml",
@@ -188,6 +190,7 @@ def build_manifest(workspace_id: str) -> dict:
     persona = _persona()
     profile_path = WORKFLOW / "config/model-profiles.json"
     profile = strict_json(profile_path.read_text(encoding="utf-8"))[fixture["model_key"]]
+    bank_profile_config = bank_profile.load_config()
     scopes = _frozen_scopes(workspace_id, sources)
     frozen_sources = []
     for source in sources:
@@ -261,6 +264,8 @@ def build_manifest(workspace_id: str) -> dict:
         "model_key": fixture["model_key"],
         "model_profile": profile,
         "model_profile_sha256": sha(json.dumps(profile, sort_keys=True, separators=(",", ":")).encode()),
+        "bank_profile_config": bank_profile_config,
+        "bank_profile_config_sha256": sha(bank_profile.CONFIG_PATH.read_bytes()),
         "pins": strict_json((WORKFLOW / "config/pins.json").read_text(encoding="utf-8")),
         "config_sha256": config_hashes,
         "scopes": scopes,
@@ -300,6 +305,10 @@ def validate_manifest(manifest: dict, *, expected_source_sha: str) -> None:
     profile = strict_json((WORKFLOW / "config/model-profiles.json").read_text(encoding="utf-8"))[fixture["model_key"]]
     if manifest.get("model_key") != fixture["model_key"] or manifest.get("model_profile") != profile or manifest.get("model_profile_sha256") != sha(canonical(profile)):
         raise ValueError("campaign_model_profile_changed")
+    bank_profile_config = bank_profile.load_config()
+    if (manifest.get("bank_profile_config") != bank_profile_config
+            or manifest.get("bank_profile_config_sha256") != sha(bank_profile.CONFIG_PATH.read_bytes())):
+        raise ValueError("campaign_bank_profile_config_changed")
     pins = strict_json((WORKFLOW / "config/pins.json").read_text(encoding="utf-8"))
     if manifest.get("pins") != pins:
         raise ValueError("campaign_runtime_pins_changed")

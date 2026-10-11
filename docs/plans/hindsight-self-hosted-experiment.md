@@ -428,6 +428,22 @@ candidate, with the same sharing/exclusion expectations and source attribution.
 Do not mark entire private source documents as profile-visible. Initially exclude
 raw chunks/source bundles from Character context. Test before/after consolidation.
 
+**Candidate04 q01 negative evidence, 2026-10-11:** the completed Hindsight arm
+answered with the superseded jasmine/hot/half-sugar preference and referred to
+the source conversation. Readback showed the s03 correction and sugar change
+were extracted but had only `character:root_xiaotang`, so `root_other` recall
+could not retrieve them through `kind:profile`. The initial attempt's capture
+failure was before Character dispatch; this later completion supplies the
+observed negative answer. The likely cause is extraction-time optional label
+omission, not reranking. Candidate05 therefore changes only the versioned Memory
+bank mission and label description. It directs fact-level separation of
+portable subject properties/preferences—including safe, clearly time-bounded
+history and corrections—from private source/interaction narrative. Source
+character tags and observation root gates stay intact. Re-ingest the unchanged
+frozen corpus only into a fresh candidate and preserve q01 private-origin
+exclusions. The offline checks bind exact JSON/config/readback and do not prove
+model semantics; candidate04 remains negative pending fresh-candidate evidence.
+
 | Case | Required observation |
 | --- | --- |
 | Shared profile plus private origin in one sentence | Other character sees only the profile fact, not the private conversation/event. |

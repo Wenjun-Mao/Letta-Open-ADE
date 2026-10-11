@@ -204,6 +204,39 @@ runner's completed proof binds the canonical selection hash and exact selection,
 before-snapshot and after-snapshot file hashes; host admission checks those
 bindings and campaign identities without reimplementing feature semantics.
 
+### Candidate05 fact-level profile classification
+
+The completed candidate04 q01 replay exposed an ingestion-classification gap:
+Hindsight extracted the source-supported correction and preference change in s03,
+but both facts had only `character:root_xiaotang` and no `kind:profile`. The
+`root_other` recall therefore excluded those fact IDs under the intended
+character-or-profile filter. This is upstream of recall ranking. The initial
+failure capture occurred before Character dispatch, so it does not establish a
+stale Character answer. PC-02/03/04/06/07/09/12/13 continue to govern profile
+ownership, character boundaries, corrections, minimum scope, and the isolated
+evaluation.
+
+For a fresh candidate05, keep one optional nullable `kind:profile` label and
+refine only the tracked Memory retain mission and label description. Ask the
+extractor to classify each proposition independently and separate portable
+subject properties/preferences from source, chat, assistant, and interaction
+narrative. A supported current value, clearly time-bounded former value, explicit
+correction, or preference change can be profile when it stands alone and remains
+useful without private origin; history is not private merely because it is old.
+Private origin, participation, assistant action/confirmation, and
+relationship-specific experience remain character-local. Preserve each source's
+character tag and observation root gate; never label the whole source. The exact
+prompt and label bytes are versioned in the workflow, frozen into the candidate
+manifest, sent through the bank configuration API, and compared against full
+supported bank-config readback before retain.
+
+Offline tests establish request serialization, config drift rejection, and
+candidate-manifest binding only. They cannot establish that a model applies the
+classification correctly. Candidate05 requires fresh ingestion of the frozen
+corpus and q01 replay with private-origin exclusions; candidate04 remains an
+immutable negative result. No deployed candidate is changed or redeployed by
+this decision.
+
 ### Optional disposable PostgreSQL restore qualification
 
 The optional local P4 restore is admitted only after ordered finalization has

@@ -1,0 +1,23 @@
+{
+  "contract": "hindsight-bank-profile-config-v1",
+  "version": "candidate05-profile-v1",
+  "retain_mission": "Extract only source-supported facts and classify each fact independently, based on the proposition it states rather than the source or conversation it came from. Where useful, separate a portable subject-owned property or preference from a narrative about how it arose. A standalone profile fact may state a current preference, a clearly time-bounded former preference, an explicitly corrected value, or an explicit preference change; preserve meaningful values and temporal distinctions without adding source or interaction provenance. A former value or correction is not private solely because it is historical. Use kind:profile only when that fact is understandable and useful without knowing a particular character, assistant, chat, or private origin. Keep private origin, who participated, where a statement was made, assistant actions or confirmations, and relationship-specific events in separate character-root facts without kind:profile. Never profile-tag a whole source or copy earlier context into a fact. Do not infer an unstated value, correction, change, or time; leave kind unset when portability is unclear.",
+  "observations_mission": "Summarize only source-supported facts in the supplied character-root observation scope. Preserve user versus assistant attribution, temporal correction versus preference change, solo versus shared experience, and explicit uncertainty. Never turn hypotheses into events.",
+  "enable_observations": true,
+  "enable_auto_consolidation": false,
+  "entity_labels": [
+    {
+      "key": "kind",
+      "description": "Fact-level portability classification. Use profile for a standalone subject-owned property or preference, including a current value, a clearly time-bounded former value, an explicit correction, or an explicit change when source-supported and useful without interaction history. Do not label private origin, source or chat details, participant or assistant narrative, assistant actions, or relationship-specific experiences. A profile label does not make the source or relationship shareable; leave unset when the fact's portability is unclear.",
+      "type": "value",
+      "optional": true,
+      "tag": true,
+      "values": [
+        {
+          "value": "profile",
+          "description": "A standalone subject-owned property or preference, including a supported current or clearly time-bounded historical value or correction, with no private origin or interaction narrative in the fact."
+        }
+      ]
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import httpx
 import pytest
 
 from workflows.evals.hindsight_memory_probe import freeze, replay
+from workflows.evals.hindsight_memory_probe import bank_profile
 from workflows.evals.hindsight_memory_probe import driver_support
 from workflows.evals.hindsight_memory_probe.driver_support import HindsightHTTP
 from workflows.evals.hindsight_memory_probe.receipts import ReceiptStore
@@ -67,8 +68,15 @@ def test_real_offline_freeze_validates_and_tampering_fails_before_http(monkeypat
     )
     manifest = freeze.build_manifest("offline_review_workspace")
     assert len(scope_calls) == 3
+    assert manifest["bank_profile_config"] == bank_profile.load_config()
+    assert manifest["bank_profile_config_sha256"] == freeze.sha(bank_profile.CONFIG_PATH.read_bytes())
     freeze.validate_manifest(manifest, expected_source_sha=source_sha)
     assert len(scope_calls) == 6
+
+    changed_profile = json.loads(json.dumps(manifest))
+    changed_profile["bank_profile_config"]["retain_mission"] += " changed"
+    with pytest.raises(ValueError, match="campaign_bank_profile_config_changed"):
+        freeze.validate_manifest(changed_profile, expected_source_sha=source_sha)
 
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
@@ -166,13 +174,12 @@ def test_frozen_retain_and_exact_retry_send_identical_payload_and_uuid(monkeypat
             return httpx.Response(200, json={"operation_id": payload["operation_id"], "status": "completed",
                                              "error_message": "must not be captured"})
         if path.endswith("/config") and request.method == "GET":
-            labels = [{"key":"kind","type":"value","tag":True,
-                       "values":[{"value":"profile","description":"Standalone subject profile fact with no private origin."}]}]
-            return httpx.Response(200, json={"config": {"enable_auto_consolidation": False,
-                                                         "enable_observations": True,
-                                                         "retain_mission": "Extract only source-grounded user profile facts and relationship-local experiences. Preserve speaker, time, correction versus change, hypothetical versus completed event, and whether an event was shared. A kind:profile tag is allowed only for a standalone profile fact safe without private origin. Never profile-tag a whole source or copy private origin.",
-                                                         "observations_mission": "Summarize only source-supported facts in the supplied character-root observation scope. Preserve user versus assistant attribution, temporal correction versus preference change, solo versus shared experience, and explicit uncertainty. Never turn hypotheses into events.",
-                                                         "entity_labels": labels}})
+            expected = bank_profile.load_config()
+            return httpx.Response(200, json={"config": {
+                "enable_auto_consolidation": expected["enable_auto_consolidation"],
+                **bank_profile.create_payload(expected),
+                "entity_labels": expected["entity_labels"],
+            }})
         if path.endswith("/config") and request.method == "PATCH":
             assert set(json.loads(request.content)) == {"updates"}
             return httpx.Response(200, json={"ok": True})

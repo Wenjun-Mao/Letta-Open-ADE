@@ -14,6 +14,7 @@ from urllib.parse import quote
 
 import httpx
 
+from . import bank_profile
 from .driver_support import HindsightHTTP, NamedReceipt, feature_scope, set_phase, sha
 from .freeze import strict_json, validate_manifest
 from .receipts import ReceiptStore
@@ -46,53 +47,29 @@ class Campaign:
     async def configure_bank(self, subject, root):
         scope = feature_scope(self.workspace, subject, root)
         bank_id = scope["bank_id"]
-        # PUT creates a stable bank before first extraction. The bank mission
-        # preserves attribution; PATCH applies the narrow entity label and
-        # disables automatic consolidation before any retain work.
-        create = {
-            "retain_mission": (
-                "Extract only source-grounded user profile facts and relationship-local experiences. "
-                "Preserve speaker, time, correction versus change, hypothetical versus completed event, "
-                "and whether an event was shared. A kind:profile tag is allowed only for a standalone "
-                "profile fact safe without private origin. Never profile-tag a whole source or copy private origin."
-            ),
-            "enable_observations": True,
-            "observations_mission": (
-                "Summarize only source-supported facts in the supplied character-root observation scope. "
-                "Preserve user versus assistant attribution, temporal correction versus preference change, "
-                "solo versus shared experience, and explicit uncertainty. Never turn hypotheses into events."
-            ),
-        }
+        # Keep extraction instructions in a versioned tracked contract so each
+        # fresh candidate binds the precise memory-side change independently.
+        config_contract = bank_profile.load_config()
+        create = bank_profile.create_payload(config_contract)
+        update = bank_profile.update_payload(config_contract)
         receipt = self.receipt(f"configure-{subject}-{root}")
         await self.http.request("PUT", f"/v1/default/banks/{quote(bank_id, safe='')}", body=create, receipt=receipt)
-        update = {
-            "enable_auto_consolidation": False,
-            "entity_labels": [{
-                "key": "kind", "description": "A narrow shareability classification for standalone profile facts.",
-                "type": "value", "optional": True, "tag": True,
-                "values": [{"value": "profile", "description": "Standalone subject profile fact with no private origin."}],
-            }],
-        }
         await self.http.request("PATCH", f"/v1/default/banks/{quote(bank_id, safe='')}/config", body={"updates": update}, receipt=receipt)
         readback = await self.http.request("GET", f"/v1/default/banks/{quote(bank_id, safe='')}/config")
         config = readback.get("config")
-        labels = config.get("entity_labels") if isinstance(config, dict) else None
-        label_groups = labels.get("attributes", []) if isinstance(labels, dict) else labels
-        profile_label = any(
-            isinstance(group, dict) and group.get("key") == "kind" and group.get("tag") is True
-            and any(isinstance(value, dict) and value.get("value") == "profile" for value in group.get("values", []))
-            for group in label_groups if isinstance(label_groups, list)
-        ) if isinstance(label_groups, list) else False
-        if (not isinstance(config, dict) or config.get("enable_auto_consolidation") is not False
-                or config.get("enable_observations") is not True or not profile_label
-                or config.get("retain_mission") != create["retain_mission"]
-                or config.get("observations_mission") != create["observations_mission"]):
-            raise RuntimeError("bank_auto_consolidation_not_disabled")
+        if not isinstance(config, dict):
+            raise RuntimeError("bank_config_readback_mismatch")
+        expected = {
+            "enable_auto_consolidation": config_contract["enable_auto_consolidation"],
+            **create,
+            "entity_labels": config_contract["entity_labels"],
+        }
+        projection = bank_profile.verify_readback(config, expected)
         receipt.write("config-readback", {
-            "bank_id": bank_id, "enable_auto_consolidation": config.get("enable_auto_consolidation"),
-            "enable_observations": config.get("enable_observations"),
-            "retain_mission_sha256": sha(str(config.get("retain_mission", "")).encode()),
-            "entity_labels": config.get("entity_labels"),
+            "bank_id": bank_id,
+            "profile_config_version": config_contract["version"],
+            "profile_config_sha256": sha(bank_profile.CONFIG_PATH.read_bytes()),
+            **projection,
         })
         return bank_id
 

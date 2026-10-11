@@ -81,6 +81,29 @@ probe, timeout and JSON schema-in-prompt serialization. The90s fake-test deadlin
 operations; the600s SDK default is not falsely described as a120s SDK timeout.
 Account for every startup, retain, consolidation, recall and Character request.
 
+### Versioned Memory profile classification
+
+`config/bank-profile.json` is the Memory-only prompt/config contract for the
+next fresh candidate (`candidate05-profile-v1`). It asks Hindsight to classify
+each proposition independently. Portable subject properties and preferences may
+include current values, clearly time-bounded former values, explicit corrections
+and explicit changes when they are useful without interaction history. A value
+does not become private just because it is historical. Source/chat origin,
+participation, assistant narrative and relationship-specific experience remain
+character-local. The profile label stays optional and nullable; this prompt does
+not guarantee correct semantic classification.
+
+The offline freeze manifest carries the full configuration and its SHA256, and
+also includes the tracked config file in `config_sha256`. Before any retain, the
+runner checks the full supported bank-config readback and records the exact
+missions, label description, version and hash. This guards the applied input,
+not the model's interpretation. Candidate05 must use a fresh candidate bank/DB
+and replay the unchanged frozen corpus; do not retry or re-ingest into
+candidate04. Review fact text, labels, character tags, observations and q01's
+private-origin exclusions after readback. The fixture, queries, persona,
+Character profile and limits remain frozen. Offline serialization tests are not
+semantic acceptance, provider qualification, or deployment authorization.
+
 ## Observational capture contract
 
 Workflow-only `router_entrypoint:create_app` replaces the shared app's lifespan
