@@ -16,6 +16,25 @@ from pathlib import Path
 from . import host_guard as host
 from .receipts import ReceiptStore
 
+IDENTITY_READBACK = "restore-identity-readback"
+IDENTITY_LIST_READBACK = "restore-identity-list-readback"
+OPERATOR_READBACK = "restore-operator-readback"
+OPERATOR_LIST_READBACK = "restore-operator-list-readback"
+READ_ONLY_HOST_OPERATIONS = frozenset({
+    IDENTITY_READBACK,
+    IDENTITY_LIST_READBACK,
+    OPERATOR_READBACK,
+    OPERATOR_LIST_READBACK,
+})
+CLEANUP_RESERVE_OPERATIONS = frozenset({
+    "cleanup-preserve-stop",
+    "cleanup-stop",
+    "cleanup-remove-container",
+    "cleanup-remove-volume",
+    OPERATOR_READBACK,
+    OPERATOR_LIST_READBACK,
+})
+
 
 def registered_jobs(directory: Path, operation_token: str) -> list[dict]:
     pattern = re.compile(rf"restore-{re.escape(operation_token)}-([a-f0-9]{{32}})-job\.json")
@@ -36,7 +55,7 @@ def registered_jobs(directory: Path, operation_token: str) -> list[dict]:
 
 
 def command_deadline(operation: dict, timeout: int, operation_label: str, now: float) -> float:
-    uses_cleanup_reserve = operation_label.startswith(("cleanup-", "restore-operator-"))
+    uses_cleanup_reserve = operation_label in CLEANUP_RESERVE_OPERATIONS
     fixed_deadline = operation.get("cleanup_deadline", operation["deadline"]) if uses_cleanup_reserve else operation["deadline"]
     return min(now + timeout, fixed_deadline)
 

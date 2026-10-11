@@ -51,7 +51,7 @@ class Controller:
             with os.fdopen(descriptor, "wb") as output:
                 code = restore_process.run_command(
                     self.directory, self.operation, command, timeout,
-                    operation_label="restore-identity-list-readback", monitor=self.check_basic,
+                    operation_label=restore_process.IDENTITY_LIST_READBACK, monitor=self.check_basic,
                     stdout=output, stderr=subprocess.DEVNULL,
                 )
                 output.flush()
@@ -123,7 +123,7 @@ class Controller:
             with os.fdopen(fd, "wb") as output:
                 code = restore_process.run_command(
                     self.directory, self.operation, command, timeout,
-                    operation_label="restore-identity-readback", monitor=self.check_basic,
+                    operation_label=restore_process.IDENTITY_READBACK, monitor=self.check_basic,
                     stdout=output, stderr=subprocess.DEVNULL,
                 )
                 output.flush()

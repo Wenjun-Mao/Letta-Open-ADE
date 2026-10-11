@@ -223,6 +223,16 @@ def test_expired_restore_deadline_keeps_bounded_cleanup_reserve():
     assert restore_process.command_deadline(operation, 45, "restore-operator-readback", 290.0) == 300.0
 
 
+def test_operation_deadline_uses_exact_cleanup_and_readback_vocabulary():
+    operation = {"deadline": 200.0, "cleanup_deadline": 300.0}
+    assert restore_process.command_deadline(operation, 45, "restore-identity-readback", 190.0) == 200.0
+    assert restore_process.command_deadline(operation, 45, "restore-identity-list-readback", 190.0) == 200.0
+    assert restore_process.command_deadline(operation, 45, "restore-operator-readback", 290.0) == 300.0
+    assert restore_process.command_deadline(operation, 45, "cleanup-stop", 290.0) == 300.0
+    assert restore_process.command_deadline(operation, 45, "restore-operator-arbitrary", 190.0) == 200.0
+    assert restore_process.command_deadline(operation, 45, "cleanup-arbitrary", 190.0) == 200.0
+
+
 def test_controller_lease_allows_only_one_concurrent_resume(tmp_path, monkeypatch):
     tmp_path.chmod(0o700)
     operation = {"token": "c" * 32}

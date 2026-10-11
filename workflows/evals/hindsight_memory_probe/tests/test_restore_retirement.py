@@ -12,6 +12,7 @@ from workflows.evals.hindsight_memory_probe import (
     restore,
     restore_cleanup,
     restore_database,
+    restore_process,
     restore_retirement,
     restore_retirement_archive,
 )
@@ -113,6 +114,30 @@ def _retirement_case(tmp_path, monkeypatch, *, changed=None):
     controller_token = "1" * 32
     controller = state / f"restore-{token}-controller-{controller_token}.json"
     controller.write_text(json.dumps({"token": token, "identity": {"pid": 42}}))
+    producer_operations = {
+        restore_process.IDENTITY_READBACK,
+        restore_process.IDENTITY_LIST_READBACK,
+        restore_process.OPERATOR_READBACK,
+        restore_process.OPERATOR_LIST_READBACK,
+    }
+    assert producer_operations == restore_process.READ_ONLY_HOST_OPERATIONS
+    for index, label in enumerate(sorted(producer_operations), start=1):
+        process_token = f"{index:032x}"
+        registration = {
+            "schema": 1,
+            "token": process_token,
+            "operation_token": token,
+            "operation": label,
+        }
+        (state / f"restore-{token}-{process_token}-job.json").write_text(
+            json.dumps(registration)
+        )
+        (state / f"job-{process_token}.result.json").write_text(
+            json.dumps({"exit_code": 0})
+        )
+        (state / f"restore-{token}-{process_token}-result.json").write_text(
+            json.dumps({"operation": label, "exit_code": 0})
+        )
     diagnosis = {
         "schema": 1,
         "kind": "failed_before_creation",
@@ -150,6 +175,18 @@ def _retirement_case(tmp_path, monkeypatch, *, changed=None):
     if changed == "create_result":
         (state / f"restore-{token}-create.result.json").write_text(
             '{"status":"created"}'
+        )
+    if changed == "create_registration":
+        process_token = "e" * 32
+        (state / f"restore-{token}-{process_token}-job.json").write_text(
+            json.dumps(
+                {
+                    "schema": 1,
+                    "token": process_token,
+                    "operation_token": token,
+                    "operation": "restore-create",
+                }
+            )
         )
     if changed == "missing_failure":
         failure.unlink()
@@ -227,6 +264,7 @@ def test_public_retirement_preserves_complete_failed_admission_namespace(
         "success_receipt",
         "create_intent",
         "create_result",
+        "create_registration",
         "baseline",
         "archive_bytes",
         "selection_bytes",

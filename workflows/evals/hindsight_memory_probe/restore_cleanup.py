@@ -145,7 +145,9 @@ def _docker_cleanup_command(directory: Path, operation: dict, command: list[str]
 @contextlib.contextmanager
 def registered_host_readback(directory: Path, operation: dict):
     from . import host_guard
-    from .restore_process import run_command
+    from . import restore_process
+
+    run_command = restore_process.run_command
 
     previous_reader, previous_text, previous_containers = db.COMMAND_RUNNER, db.TEXT_RUNNER, host_guard.CONTAINER_READER
 
@@ -155,7 +157,7 @@ def registered_host_readback(directory: Path, operation: dict):
         try:
             with os.fdopen(descriptor, "wb") as output:
                 code = run_command(directory, operation, arguments, timeout,
-                    operation_label="restore-operator-readback", monitor=lambda: None,
+                    operation_label=restore_process.OPERATOR_READBACK, monitor=lambda: None,
                     stdout=output, stderr=subprocess.DEVNULL)
                 output.flush()
                 os.fsync(output.fileno())
@@ -175,7 +177,7 @@ def registered_host_readback(directory: Path, operation: dict):
         try:
             with os.fdopen(descriptor, "wb") as output:
                 code = run_command(directory, operation, arguments, timeout,
-                    operation_label="restore-operator-list-readback", monitor=lambda: None,
+                    operation_label=restore_process.OPERATOR_LIST_READBACK, monitor=lambda: None,
                     stdout=output, stderr=subprocess.DEVNULL)
                 output.flush()
                 os.fsync(output.fileno())

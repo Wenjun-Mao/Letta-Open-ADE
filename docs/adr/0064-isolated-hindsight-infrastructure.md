@@ -356,9 +356,14 @@ the restore consumer globbed `job-*.json`, which also matched tokenless terminal
 supervisor already defines registrations by the exact `job-<32 hex>.json`
 filename. Restore admission now consumes that selector; restore-owned subprocess
 checks use the exact operation-token/process-token registration pattern and
-validate the receipt identity. Malformed exact registrations remain fatal, and
-active owned jobs still block admission and cleanup. A token fallback or
-deleting terminal receipts would mask the consumer contract defect.
+validate the receipt identity. Producer and retirement admission share one exact
+allowlist for the four host identity/list and operator readback labels; restore,
+create, snapshot, and cleanup work registrations are never treated as read-only
+retirement evidence. The cleanup-reserve classifier also uses exact operation
+names instead of accepting arbitrary `restore-operator-*` or `cleanup-*` labels.
+Malformed exact registrations remain fatal, and active owned jobs still block
+admission and cleanup. A token fallback or deleting terminal receipts would mask
+the consumer contract defect.
 
 A corrected controller cannot reuse the failed single-use admission. The
 workflow now permits only an explicit `retire-failed-before-create` operation

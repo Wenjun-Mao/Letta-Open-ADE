@@ -246,12 +246,10 @@ def retire_failed_before_create(directory: Path, diagnosis_path: Path) -> dict:
         ):
             raise RuntimeError("restore_controller_still_running")
         jobs = restore_process.registered_jobs(directory, token)
-        readback_operations = {
-            "restore-identity-list-readback",
-            "restore-operator-readback",
-            "restore-operator-list-readback",
-        }
-        if any(job.get("operation") not in readback_operations for job in jobs):
+        if any(
+            job.get("operation") not in restore_process.READ_ONLY_HOST_OPERATIONS
+            for job in jobs
+        ):
             raise RuntimeError("restore_retirement_restore_command_was_registered")
         if any(host.tagged_processes(job["token"]) for job in jobs):
             raise RuntimeError("restore_consumer_process_still_running")
