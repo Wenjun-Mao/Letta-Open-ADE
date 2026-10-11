@@ -9,7 +9,11 @@ from ade_api.features.agent_runtime.hindsight_eval_capture import EvaluationCapt
 from ade_api.features.agent_runtime.hindsight_eval_contracts import (
     EvaluationError,
     RecallScope,
+    RecalledMemory,
     fingerprint,
+)
+from ade_api.features.agent_runtime.hindsight_eval_context import (
+    character_context_projection,
 )
 from ade_api.features.agent_runtime.hindsight_eval_recall import service_url
 from .hindsight_eval_fakes import FakeProviders, inputs, memory, read, run
@@ -30,6 +34,8 @@ def test_three_arms_one_generation_frozen_inputs_and_actual_requests(
             item.model_dump() for item in inputs().dialogue
         ]
         assert dispatched["messages"][0]["content"].startswith(inputs().persona)
+        assert "limit recollection claims" in dispatched["messages"][0]["content"]
+        assert "clearly framed as current" in dispatched["messages"][0]["content"]
         assert dispatched["max_tokens"] == inputs().max_output_tokens
         assert dispatched["stream"] is False
         assert "tools" not in dispatched and "tool_choice" not in dispatched
@@ -47,9 +53,10 @@ def test_three_arms_one_generation_frozen_inputs_and_actual_requests(
         for path in (tmp_path / "receipts").iterdir()
     )
     context = read(tmp_path, "hindsight.context.json")
-    assert context["memories"][0]["metadata"]["speaker"] == "assistant"
-    assert context["memories"][0]["mentioned_at"] == "2026-10-01T00:00:00Z"
-    assert context["memories"][0]["context"] == memory()["context"]
+    history = context["character_context"]["same_character_history"]
+    assert history[0]["metadata"]["speaker"] == "assistant"
+    assert history[0]["mentioned_at"] == "2026-10-01T00:00:00Z"
+    assert history[0]["context"] == memory()["context"]
     assert (
         read(tmp_path, "empty.context.json")["recall"]["status"]
         == "not_requested_control"
@@ -202,7 +209,10 @@ def test_genuine_empty_recall_is_visible(monkeypatch, tmp_path):
     run(monkeypatch, tmp_path, fake)
     context = read(tmp_path, "hindsight.context.json")
     assert context["recall"]["status"] == "ok_empty"
-    assert context["memories"] == []
+    assert context["character_context"] == {
+        "shared_profile_facts": [],
+        "same_character_history": [],
+    }
     assert len(fake.generations) == 3
 
 
@@ -245,7 +255,14 @@ def test_oversized_first_fact_stops_serialized_request(monkeypatch, tmp_path):
     with pytest.raises(EvaluationError, match="natural_context_serialized_overflow"):
         run(monkeypatch, tmp_path, fake)
     assert fake.generations == []
-    assert len(read(tmp_path, "hindsight.context.json")["memories"][0]["text"]) == 20000
+    assert (
+        len(
+            read(tmp_path, "hindsight.context.json")["character_context"][
+                "same_character_history"
+            ][0]["text"]
+        )
+        == 20000
+    )
 
 
 @pytest.mark.parametrize(
@@ -374,37 +391,56 @@ def test_projected_recall_excludes_diagnostics_and_arbitrary_metadata(
     fake = FakeProviders(recalled=[raw])
     run(monkeypatch, tmp_path, fake)
     context = read(tmp_path, "hindsight.context.json")
-    assert context["memories"][0]["metadata"] == {"speaker": "assistant"}
+    assert context["character_context"]["same_character_history"][0]["metadata"] == {
+        "speaker": "assistant"
+    }
     text = json.dumps(context)
     assert "RAW-SOURCE" not in text and "SECRET-REASONING" not in text
 
 
 @pytest.mark.parametrize(
-    "tags,metadata,expected_context",
+    "tags,metadata,expected_group",
     [
-        (["character:C", "kind:profile"], {"character_root_id": "C"}, "source window"),
-        (["character:C", "kind:profile"], {}, "source window"),
-        (["kind:profile"], {"character_root_id": "C"}, "source window"),
-        (["character:A", "kind:profile"], {"character_root_id": "A"}, None),
-        (["kind:profile"], {}, None),
-        (["character:C", "kind:profile"], {"character_root_id": "A"}, None),
+        (
+            ["character:C", "kind:profile"],
+            {"character_root_id": "C"},
+            "same_character_history",
+        ),
+        (["character:C", "kind:profile"], {}, "same_character_history"),
+        (["kind:profile"], {"character_root_id": "C"}, "same_character_history"),
+        (
+            ["character:A", "kind:profile"],
+            {"character_root_id": "A"},
+            "shared_profile_facts",
+        ),
+        (["kind:profile"], {}, "shared_profile_facts"),
+        (
+            ["character:C", "kind:profile"],
+            {"character_root_id": "A"},
+            "shared_profile_facts",
+        ),
         (
             ["character:C", "character:A", "kind:profile"],
             {"character_root_id": "C"},
-            None,
+            "shared_profile_facts",
         ),
+        (["character:", "kind:profile"], {}, "shared_profile_facts"),
     ],
 )
-def test_character_context_requires_one_unconflicted_matching_structural_owner(
-    monkeypatch, tmp_path, tags, metadata, expected_context
+def test_profile_facts_are_grouped_and_foreign_attribution_is_removed(
+    monkeypatch, tmp_path, tags, metadata, expected_group
 ):
     candidate = memory(
         type="world",
         tags=tags,
-        metadata={"source_id": "source-1", **metadata},
+        metadata={"source_id": "source-1", "speaker": "user", **metadata},
         context="source window",
-        text="portable fact",
+        text="portable fact | When: 2026-10-01T09:00:00Z",
         mentioned_at="2026-10-01T00:00:00Z",
+        document_id="source-document",
+        source_fact_ids=["source-fact"],
+        occurred_start="2026-10-01T09:00:00Z",
+        occurred_end="2026-10-01T10:00:00Z",
     )
     fake = FakeProviders(recalled=[candidate])
     run(
@@ -416,18 +452,47 @@ def test_character_context_requires_one_unconflicted_matching_structural_owner(
 
     diagnostic = read(tmp_path, "hindsight.recall.json")["result_projection"][0]
     context_receipt = read(tmp_path, "hindsight.context.json")
-    character_capture = context_receipt["memories"][0]
+    context_groups = context_receipt["character_context"]
+    assert context_groups[expected_group]
+    character_capture = context_groups[expected_group][0]
     assert diagnostic["context"] == "source window"
     assert context_receipt["recall"]["status"] == "ok_nonempty"
     assert len(fake.generations) == 1
-    assert character_capture.get("context") == expected_context
-    for key in ("id", "text", "type", "tags", "mentioned_at", "metadata"):
-        assert character_capture[key] == diagnostic[key]
+    assert character_capture["text"] == diagnostic["text"]
+    assert character_capture["occurred_start"] == diagnostic["occurred_start"]
+    assert character_capture["occurred_end"] == diagnostic["occurred_end"]
+    if expected_group == "same_character_history":
+        assert character_capture["context"] == diagnostic["context"]
+        for key in (
+            "id",
+            "type",
+            "tags",
+            "mentioned_at",
+            "document_id",
+            "source_fact_ids",
+            "metadata",
+        ):
+            assert character_capture[key] == diagnostic[key]
+    else:
+        assert "context" not in character_capture
+        assert character_capture["tags"] == ["kind:profile"]
+        assert "mentioned_at" not in character_capture
+        assert "document_id" not in character_capture
+        assert "source_fact_ids" not in character_capture
+        assert "metadata" not in character_capture
     dispatched = fake.generations[0]
     suffix = dispatched["messages"][0]["content"].split(
         evaluation.CONTEXT_INSTRUCTIONS, 1
     )[1]
-    assert json.loads(suffix)["memories"] == [character_capture]
+    assert json.loads(suffix)[expected_group] == [character_capture]
+    assert (
+        json.loads(suffix)["same_character_history"]
+        == context_groups["same_character_history"]
+    )
+    assert (
+        json.loads(suffix)["shared_profile_facts"]
+        == context_groups["shared_profile_facts"]
+    )
 
 
 def test_matching_root_tag_authorizes_adequate_context_without_metadata(
@@ -446,13 +511,53 @@ def test_matching_root_tag_authorizes_adequate_context_without_metadata(
     )
     run(monkeypatch, tmp_path, fake, request=request)
 
-    captured = read(tmp_path, "adequate.context.json")["memories"][0]
+    captured = read(tmp_path, "adequate.context.json")["character_context"][
+        "same_character_history"
+    ][0]
     assert captured["context"] == "source window"
     dispatched = fake.generations[0]
     suffix = dispatched["messages"][0]["content"].split(
         evaluation.CONTEXT_INSTRUCTIONS, 1
     )[1]
-    assert json.loads(suffix)["memories"] == [captured]
+    assert json.loads(suffix)["same_character_history"] == [captured]
+    assert json.loads(suffix)["shared_profile_facts"] == []
+
+
+@pytest.mark.parametrize(
+    "tags,metadata",
+    [
+        (["character:A"], {}),
+        (["character:C", "character:A"], {}),
+        (["character:C", "character:"], {}),
+        (["character:C"], {"character_root_id": "A"}),
+        ([], {"character_root_id": "A"}),
+        ([], {}),
+    ],
+)
+def test_nonprofile_context_requires_one_valid_active_owner(tags, metadata):
+    candidates = [
+        RecalledMemory.model_validate(
+            memory(type="experience", tags=tags, metadata=metadata)
+        )
+    ]
+    projected = character_context_projection(candidates, character_root_id="C")
+    assert projected == {
+        "shared_profile_facts": [],
+        "same_character_history": [],
+    }
+
+
+def test_profile_fact_and_present_fiction_boundary_is_in_character_request():
+    messages = evaluation.character_messages(
+        inputs(arms=["empty"], adequate_memories=[]), {}
+    )
+    system = messages[0]["content"]
+    assert "limit recollection claims" in system
+    assert "supported by these lists" in system
+    assert "present interpretation or new" in system
+    assert "clearly framed as current" in system
+    assert "previously said or" in system
+    assert "shared" in system
 
 
 def test_empty_and_adequate_controls_do_not_require_hindsight(monkeypatch, tmp_path):

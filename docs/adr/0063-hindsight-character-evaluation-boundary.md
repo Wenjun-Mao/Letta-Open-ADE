@@ -111,6 +111,44 @@ checks observe drift but cannot prevent concurrent deployment changes; the
 workflow must freeze the router. Source-pinned HTTP tests are not pinned-image
 serialization or live semantic acceptance. Normal product execution is untouched.
 
+## Explicit Profile And Character-History Groups (2026-10-11)
+
+Revision-5 q01 source readbacks and Character requests showed that portable
+`kind:profile` facts retained foreign or unresolved source tags, mention times,
+document IDs, and source metadata in the actual request. The earlier projection
+only controlled attached freeform context. That left source identity visible
+beside a fact that was valid for the subject but not evidence of this
+character's participation. The feature-owned request now places portable
+profile propositions in `shared_profile_facts` and exact-root-owned memories in
+`same_character_history`. For a profile proposition without an exact active
+root, retain its text, type, entities, and occurred dates, while removing
+attached context and source attribution fields. Do not parse or rewrite fact
+text: dates in it may describe a profile value or correction, but do not prove
+when or where a source conversation occurred. Unknown, malformed, foreign, or
+conflicting owners suppress non-profile memories from Character context; their
+raw recall remains in diagnostics. Exact-root-owned history retains its source
+attribution. The two groups are captured and compared with the serialized
+request.
+
+Revision-5 q06 also showed unsupported qualifiers and a naming explanation
+phrased as remembered/shared details, while both memories were present in the
+Hindsight and adequate requests. q04 showed a related extra historical detail.
+These observations do not identify a unique causal layer: the answer was
+generated from different representations and stochastic generation remains a
+confound. The feature instruction now makes the PC-03/11/12 attribution boundary
+explicit: claims about what was said or happened before must be supported by the
+lists, while present interpretations and permitted new solo fiction remain
+available when clearly framed as current. This is not a phrase rule, a second
+reviewer, or a guarantee of semantic grounding. It preserves natural wording
+and persona behavior; exact-SHA semantic retesting remains necessary, and q04's
+residual and q07 remain open.
+
+This feature-owned projection and request contract addresses visible source
+scope at the composition layer, consistent with PC-02/03 and PC-12. It does not
+change corpus, questions, persona, model settings, ingestion, native runtime,
+or product qualification. The q01/q06 observations remain diagnostic evidence,
+not acceptance results.
+
 ## Phase receipt naming clarification (2026-10-11)
 
 The initial compare replay exposed a same-path collision: recall and the first
