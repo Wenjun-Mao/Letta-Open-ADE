@@ -138,8 +138,11 @@ def test_deadline_rechecked_at_execution_handshake(state, monkeypatch):
 
 def test_registration_lock_timeout_does_not_skip_owned_cleanup(state, monkeypatch):
     directory, registry, epoch = state
-    calls = []
+    calls, stopped_jobs = [], []
     monkeypatch.setattr(host, "stop_containers", lambda *_: calls.append("owned-stop"))
+    monkeypatch.setattr(
+        host, "stop_processes", lambda job: stopped_jobs.append(job["token"])
+    )
     original = quiescence.bounded_lease
 
     def short_bound(directory, name, seconds, required=True):
@@ -149,8 +152,34 @@ def test_registration_lock_timeout_does_not_skip_owned_cleanup(state, monkeypatc
 
     monkeypatch.setattr(quiescence, "bounded_lease", short_bound)
     with sup.lease(directory, "jobs.lock"):
-        sup.stop_owned(directory, registry, ReceiptStore(directory), "safety_stop")
-    assert calls == ["owned-stop"] and epochs.stopped_path(directory, epoch).exists()
+        with pytest.raises(RuntimeError, match="registration_quiescence_unproven"):
+            sup.stop_owned(directory, registry, ReceiptStore(directory), "safety_stop")
+        assert calls == ["owned-stop"]
+        assert not epochs.stopped_path(directory, epoch).exists()
+        unproven = json.loads(
+            next(directory.glob("*.quiescence-unproven.json")).read_text()
+        )
+        assert unproven["reason"] == "registration_quiescence_unproven"
+        # A still-registering gated child can publish after the stop's process snapshot.
+        ReceiptStore(directory).write(
+            "job-" + "b" * 32 + ".json",
+            {"token": "b" * 32, "identity": {"pid": 123}, "deadline": sup.STARTED + 60},
+        )
+        with pytest.raises(RuntimeError, match="stopping"):
+            with quiescence.dispatch_admission(directory, registry, epoch):
+                pytest.fail("late gated child must never dispatch")
+    assert not epochs.stopped_path(directory, epoch).exists()
+    diagnosis = directory / "diagnosis.json"
+    diagnosis.write_text('{"cause":"registration_timeout"}')
+    with pytest.raises(RuntimeError, match="requires_stopped_epoch"):
+        sup.rearm_epoch(directory, "registration_timeout", diagnosis)
+    # A later exclusive registration lease and fresh process/container readback can prove stop.
+    sup.stop_owned(directory, registry, ReceiptStore(directory), "safety_stop_retry")
+    assert calls == ["owned-stop", "owned-stop"]
+    assert stopped_jobs == ["b" * 32], (
+        "fresh exclusive cleanup includes the late registration"
+    )
+    assert epochs.stopped_path(directory, epoch).exists()
 
 
 def test_receipt_publication_never_exposes_partial_registration_json(

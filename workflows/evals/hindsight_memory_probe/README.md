@@ -200,7 +200,11 @@ registration drain; launch rechecks epoch/stop/deadline under admission lock at
 its final execution handshake. Stop releases admission lock before waiting on
 registration, avoiding lock inversion. Atomic receipt publication prevents partial
 job JSON reads; a gated child expires after20s without a handshake. Even a held
-registration lease cannot skip cleanup of already owned work. Baseline remains immutable across operating epochs.
+registration lease cannot skip cleanup of already owned work. If its bounded wait
+expires, record `registration_quiescence_unproven` and withhold the completed-stop
+marker: a gated child may still register after that cleanup snapshot. The stop
+barrier denies its dispatch; rearm requires a later successful exclusive stop and
+fresh job/process/container readback. Baseline remains immutable across operating epochs.
 A receipt-specified cause and fresh baseline/headroom proof are required to rearm;
 append-only epoch chain records allocations and explicitly admitted clean SHA
 releases. Rearm admits only exact stopped identities captured by the preceding

@@ -68,7 +68,10 @@ PID-token/start/UID identity prevent broad kills or PID reuse. Durable stop
 admission precedes bounded registration drain, with final dispatch under an
 admission lock; stop never holds admission while waiting for registration.
 Atomic exclusive publication prevents partial job JSON, and unregistered gated
-children expire after20s. Lock contention does not skip owned cleanup. Selected
+children expire after20s. Lock contention does not skip known owned cleanup, but
+registration-drain timeout records `registration_quiescence_unproven` and withholds
+completed-stop/rearm proof. A late registration cannot dispatch past the durable
+barrier; a later exclusive lease and fresh cleanup/readback must prove stop. Selected
 Hindsight image shutdown receives35s Docker grace/45s wall, within the300s reserve;
 forced-kill cleanup is not clean persistence evidence. Registered owned
 processes include builds; source quotas alone do not bound BuildKit work. OCI

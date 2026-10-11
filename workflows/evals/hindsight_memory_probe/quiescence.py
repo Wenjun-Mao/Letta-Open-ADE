@@ -55,6 +55,20 @@ def admit_stop(directory, epoch, reason):
             )
 
 
+def require_registration_proof(directory, epoch, acquired):
+    if not acquired:
+        ReceiptStore(directory).write(
+            f"epoch-{epoch['index']:04d}.{time.time_ns()}.quiescence-unproven.json",
+            {
+                "epoch_sha256": epoch["sha256"],
+                "reason": "registration_quiescence_unproven",
+                "known_owned_cleanup_completed": True,
+                "time": time.time(),
+            },
+        )
+        raise RuntimeError("registration_quiescence_unproven")
+
+
 def require_open(directory, registry, epoch):
     from .supervisor import load_registry
 

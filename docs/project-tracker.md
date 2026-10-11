@@ -38,6 +38,8 @@ qualification, OCI dummy disconnect/build-cancellation proof and P2 live startup
 remain unrun. Follow-up review corrected epoch lifecycle admission, bounded
 stop/launch coordination and immediate startup readback; the executable owned
 BuildKit sentinel and typed proof gate are implemented but unrun on OCI.
+Registration-drain timeout cleans known owned work but withholds completed-stop
+and rearm proof until a later exclusive cleanup/readback succeeds.
 Semantic corpus, within-CLI recall/Character phase transition and copying the
 finished replay workflow/persona into the runner are the next serial assignment.
 Initial supervision owns only the candidate project; P4 disposable restore project

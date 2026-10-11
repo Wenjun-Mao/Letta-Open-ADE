@@ -127,7 +127,7 @@ def stop_owned(directory, registry, store, reason):
     registry = epochs.effective_registry(directory, registry)
     quiescence.admit_stop(directory, epoch, reason)
     # The durable barrier forbids new handshakes, even if a registration is still draining.
-    with quiescence.bounded_lease(directory, "jobs.lock", 60, required=False):
+    with quiescence.bounded_lease(directory, "jobs.lock", 60, required=False) as acquired:
         for job in jobs(directory):
             host.stop_processes(job)
         # Give owned process trees a finite grace period; no broad process-group signal.
@@ -146,6 +146,7 @@ def stop_owned(directory, registry, store, reason):
         host.stop_containers(host.containers(), registry)
         stopped_items = host.containers()
         host.ensure_stopped(stopped_items, registry, jobs(directory))
+        quiescence.require_registration_proof(directory, epoch, acquired)
         record(store, "stopped", reason=reason)
         path = epochs.stopped_path(directory, epoch)
         if not path.exists():
