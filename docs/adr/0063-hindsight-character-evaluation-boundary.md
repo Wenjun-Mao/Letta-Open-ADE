@@ -124,30 +124,36 @@ profile propositions in `shared_profile_facts` and exact-root-owned memories in
 root, retain its text, type, entities, and occurred dates, while removing
 attached context and source attribution fields. Do not parse or rewrite fact
 text: dates in it may describe a profile value or correction, but do not prove
-when or where a source conversation occurred. Unknown, malformed, foreign, or
-conflicting owners suppress non-profile memories from Character context; their
-raw recall remains in diagnostics. Exact-root-owned history retains its source
-attribution. The two groups are captured and compared with the serialized
-request.
+when or where a source conversation occurred. Make explicit that these
+propositions are usable to answer questions about the subject, but do not prove
+that this character heard the user say them or participated in their source
+conversation. Unknown, malformed, foreign, or conflicting owners suppress
+non-profile memories from Character context; their raw recall remains in
+diagnostics. Exact-root-owned history retains its source attribution. The two
+groups are captured and compared with the serialized request.
 
 Revision-5 q06 also showed unsupported qualifiers and a naming explanation
 phrased as remembered/shared details, while both memories were present in the
 Hindsight and adequate requests. q04 showed a related extra historical detail.
 These observations do not identify a unique causal layer: the answer was
 generated from different representations and stochastic generation remains a
-confound. The feature instruction now makes the PC-03/11/12 attribution boundary
+confound. q07 also reproduced a bicycle-profile omission under the same
+projector before and after consolidation, while adequate recalled it; both
+memories were present and no cap exhaustion was observed. This supports an
+ambiguity/salience concern, not a unique cause or missing-retrieval diagnosis.
+The feature instruction now makes the PC-03/11/12 attribution boundary
 explicit: claims about what was said or happened before must be supported by the
 lists, while present interpretations and permitted new solo fiction remain
 available when clearly framed as current. This is not a phrase rule, a second
 reviewer, or a guarantee of semantic grounding. It preserves natural wording
 and persona behavior; exact-SHA semantic retesting remains necessary, and q04's
-residual and q07 remain open.
+residual and q07's ambiguity remain open.
 
 This feature-owned projection and request contract addresses visible source
 scope at the composition layer, consistent with PC-02/03 and PC-12. It does not
 change corpus, questions, persona, model settings, ingestion, native runtime,
-or product qualification. The q01/q06 observations remain diagnostic evidence,
-not acceptance results.
+or product qualification. The q01/q06/q07 observations remain diagnostic
+evidence, not acceptance results.
 
 ## Phase receipt naming clarification (2026-10-11)
 

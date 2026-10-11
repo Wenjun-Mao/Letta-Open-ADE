@@ -34,6 +34,12 @@ def test_three_arms_one_generation_frozen_inputs_and_actual_requests(
             item.model_dump() for item in inputs().dialogue
         ]
         assert dispatched["messages"][0]["content"].startswith(inputs().persona)
+        assert "Use their supported propositions to answer questions about" in dispatched[
+            "messages"
+        ][0]["content"]
+        assert "do not establish that this character heard" in dispatched[
+            "messages"
+        ][0]["content"]
         assert "limit recollection claims" in dispatched["messages"][0]["content"]
         assert "clearly framed as current" in dispatched["messages"][0]["content"]
         assert dispatched["max_tokens"] == inputs().max_output_tokens
