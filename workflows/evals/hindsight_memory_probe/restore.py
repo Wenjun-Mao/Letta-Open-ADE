@@ -140,7 +140,9 @@ def _verify_host(directory: Path, registry: dict, admission: dict, *, prospectiv
     operation_path = directory / "restore-operation.json"
     if operation_path.is_file():
         operation = json.loads(operation_path.read_text())
-        restore_container = db.restore_container(operation, allow_unregistered=allow_restore_creation)
+        restore_container = db.restore_container(
+            operation, allow_unregistered=allow_restore_creation, inventory=items
+        )
         volume = db.verify_volume(operation, allow_unregistered=allow_restore_creation)
         if restore_container is not None and volume is None:
             raise RuntimeError("restore_container_volume_missing")
@@ -297,10 +299,12 @@ def _start_unlocked(directory: Path, timeout: int = MAX_RESTORE_SECONDS) -> dict
 
 def start(directory: Path, timeout: int = MAX_RESTORE_SECONDS) -> dict:
     from . import restore_retirement, restore_retirement_archive as retirement_archive
+    from . import restore_cleanup_recovery
 
     with restore_retirement.admission_lease(directory):
         retirement_archive.prepare_next_attempt(directory)
         retirement_archive.validate_retired_history(directory)
+        restore_cleanup_recovery.prepare_next_attempt(directory)
         return _start_unlocked(directory, timeout)
 
 
@@ -383,6 +387,8 @@ def main() -> int:
     start_parser.add_argument("--timeout", type=int, default=MAX_RESTORE_SECONDS)
     retire_parser = sub.add_parser("retire-failed-before-create")
     retire_parser.add_argument("--diagnosis", type=Path, required=True)
+    recover_parser = sub.add_parser("recover-failed-create-cleanup")
+    recover_parser.add_argument("--diagnosis", type=Path, required=True)
     sub.add_parser("inspect")
     sub.add_parser("resume")
     sub.add_parser("stop")
@@ -395,6 +401,10 @@ def main() -> int:
             from .restore_retirement import retire_failed_before_create
 
             result = retire_failed_before_create(args.state, args.diagnosis)
+        elif args.action == "recover-failed-create-cleanup":
+            from .restore_cleanup_recovery import recover
+
+            result = recover(args.state, args.diagnosis)
         elif args.action == "inspect":
             result = inspect(args.state)
         elif args.action == "resume":

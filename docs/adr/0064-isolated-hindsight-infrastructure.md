@@ -393,3 +393,31 @@ unregistered attempts are not eligible. In particular, this path does not
 authorize cleanup of a post-restore volume or retirement of a successful
 operation. This repairs the attempt lifecycle at its owner without extending
 the campaign clock or rebinding release-scoped P4 evidence (PC-07/08/09/13).
+
+### Disposable restore creation snapshot and cleanup-only recovery
+
+The host ownership check now classifies restore containers from the same
+`docker ps`/`inspect` inventory that it compares with baseline and main
+container IDs. Previously `_verify_host` sampled host containers, then
+`restore_container` independently sampled Docker again. A Compose create between
+those reads could make the admitted token/project appear in only one set and
+fail as `restore_unowned_container_detected`. The original failed attempt did
+not retain both transient inventories, so this is a reproduced race mechanism,
+not retrospective proof of the exact historical interleaving. Exact labels,
+image, config, volume, resource limits and foreign-container rejection remain
+strict; there is no retry-until-pass or unknown-container exception.
+
+An explicit `recover-failed-create-cleanup` path handles only a diagnosed
+successful registered Compose create whose create result receipt was not
+published. It requires the durable create intent, exact completed job/command
+receipts, terminal create-stage failure, no live controller/processes, unchanged
+sealed operation/source/P4/epoch/baseline evidence, and a full fresh readback of
+the exact created container and volume. A separate immutable admission binds
+those identities and authorizes only bounded registered readback, stop and
+removal of that exact container, and removal of its exact unconsumed volume. It
+does not authorize restore progress, provider activity or deadline rewriting.
+Before active controls are removed, all original attempt bytes are archived,
+hash-checked and sealed as failed-create cleanup history; partial or altered
+history blocks a new attempt. Cleanup completion is not restoration success.
+Any subsequent restore requires a new token after source qualification and a
+fresh P4 restore admission. (PC-08/09/13)

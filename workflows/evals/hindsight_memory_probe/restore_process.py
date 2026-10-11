@@ -33,6 +33,10 @@ CLEANUP_RESERVE_OPERATIONS = frozenset({
     "cleanup-remove-volume",
     OPERATOR_READBACK,
     OPERATOR_LIST_READBACK,
+    "cleanup-recovery-readback",
+    "cleanup-recovery-stop",
+    "cleanup-recovery-remove-container",
+    "cleanup-recovery-remove-volume",
 })
 
 
@@ -63,6 +67,22 @@ def command_deadline(operation: dict, timeout: int, operation_label: str, now: f
 def _validate_command(operation: dict, command: list[str]) -> None:
     if not command or command[0] != "docker" or any(not isinstance(arg, str) or "\0" in arg for arg in command):
         raise RuntimeError("restore_command_invalid")
+    recovered_id = operation.get("_cleanup_recovery_container_id")
+    if recovered_id:
+        volume = operation["compose"]["volume"]
+        allowed = (
+            command[1:] == ["ps", "-aq", "--no-trunc"]
+            or command[1:2] == ["inspect"] and len(command) >= 3
+            or command[1:] == ["volume", "ls", "-q", "--filter", "name=" + volume]
+            or command[1:] == ["volume", "inspect", volume]
+            or command[1:] == ["stop", "--time", "20", recovered_id]
+            or command[1:] == ["rm", recovered_id]
+            or command[1:] == ["ps", "-aq", "--no-trunc", "--filter", "volume=" + volume]
+            or command[1:] == ["volume", "rm", volume]
+        )
+        if not allowed:
+            raise RuntimeError("restore_cleanup_recovery_command_not_allowed")
+        return
     if command[1:2] == ["compose"]:
         prefix = ["docker", "compose", "--project-name", operation["compose"]["project"],
                   "-f", operation["compose"]["path"]]

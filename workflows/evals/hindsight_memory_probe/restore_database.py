@@ -145,11 +145,18 @@ def source_container(directory: Path, operation: dict) -> dict:
     return current
 
 
-def restore_container(operation: dict, *, allow_unregistered: bool = False) -> dict | None:
-    containers = docker_text(["docker", "ps", "-aq", "--no-trunc"])
-    if not containers:
-        return None
-    values = docker_json(["docker", "inspect", *containers])
+def restore_container(operation: dict, *, allow_unregistered: bool = False,
+                      inventory: list[dict] | None = None) -> dict | None:
+    if inventory is None:
+        containers = docker_text(["docker", "ps", "-aq", "--no-trunc"])
+        if not containers:
+            return None
+        values = docker_json(["docker", "inspect", *containers])
+    else:
+        # Host ownership checks must classify the same Docker snapshot they compare.
+        # A second `ps`/`inspect` can straddle Compose creation and mislabel an
+        # admitted container from the first snapshot as foreign.
+        values = inventory
     token, project = operation["token"], operation["compose"]["project"]
     found = []
     for row in values:
