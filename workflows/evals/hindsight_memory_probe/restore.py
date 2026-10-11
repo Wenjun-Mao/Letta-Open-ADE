@@ -187,7 +187,10 @@ def _controller_lease(directory: Path):
     descriptor = os.open(directory / "restore-controller.lock",
                          os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     try:
-        fcntl.flock(descriptor, fcntl.LOCK_EX)
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise RuntimeError("restore_controller_lease_busy") from exc
         yield
     finally:
         fcntl.flock(descriptor, fcntl.LOCK_UN)
@@ -310,10 +313,10 @@ def inspect(directory: Path) -> dict:
 
 def resume(directory: Path) -> None:
     operation = read_operation(directory)
-    if time.time() >= operation["deadline"] or time.time() >= WORK_CUTOFF:
+    stop_requested = (directory / f"restore-{operation['token']}-stop.intent.json").is_file()
+    allowed_deadline = operation["cleanup_deadline"] if stop_requested else operation["deadline"]
+    if time.time() >= allowed_deadline or time.time() >= WORK_CUTOFF:
         raise RuntimeError("restore_resume_deadline_elapsed")
-    if (directory / f"restore-{operation['token']}-stop.intent.json").exists():
-        raise RuntimeError("restore_stop_already_requested")
     if any(host.tagged_processes(json.loads(path.read_text())["token"])
            for path in directory.glob("restore-*-job.json")):
         raise RuntimeError("restore_registered_process_still_active")
@@ -346,6 +349,12 @@ def stop(directory: Path) -> dict:
              "epoch_sha256": operation["epoch_sha256"], "requested_at": time.time(),
              "kind": "emergency_restore_preemption"}
     ReceiptStore(directory).write(intent_path.name, value)
+    if not _controller_present(directory, token):
+        try:
+            resume(directory)
+        except RuntimeError as exc:
+            if str(exc) not in {"restore_controller_already_running", "restore_controller_lease_busy"}:
+                raise
     return value
 
 

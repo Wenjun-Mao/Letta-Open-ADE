@@ -557,6 +557,10 @@ python3 -m workflows.evals.hindsight_memory_probe.restore --state "$PROBE_STATE"
 python3 -m workflows.evals.hindsight_memory_probe.restore --state "$PROBE_STATE" cleanup
 ```
 
+After an emergency stop or comparison mismatch, `cleanup` records
+`preserved_failed_state` and retains the volume for review; that terminal state
+continues to block rearm.
+
 This proves logical persisted PostgreSQL state restore only. It does not qualify
 Hindsight API behavior, authentication, ranking, reranking, Character behavior,
 provider inference, or live deployment. The current campaign still requires its

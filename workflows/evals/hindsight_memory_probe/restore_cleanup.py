@@ -57,11 +57,13 @@ def cleanup(directory: Path, *, controller_token: str | None = None) -> dict:
     if ((restore_started and (not post_state_saved or comparison_mismatch))
             or (container_creation_started and stopped_by_operator)):
         with registered_host_readback(directory, operation):
-            container = db.restore_container(operation)
+            create_result = directory / f"restore-{token}-create.result.json"
+            unregistered = container_creation_started and not create_result.is_file()
+            container = db.restore_container(operation, allow_unregistered=unregistered)
             if container is not None and container["State"]["Status"] == "running":
                 _docker_cleanup_command(directory, operation,
                     ["docker", "stop", "--time", "20", container["Id"]], "preserve-stop")
-            container = db.restore_container(operation)
+            container = db.restore_container(operation, allow_unregistered=unregistered)
             if container is not None and container["State"]["Status"] == "running":
                 raise RuntimeError("restore_failed_state_stop_unproven")
         preserved = {"status": "preserved_failed_state", "token": token,
