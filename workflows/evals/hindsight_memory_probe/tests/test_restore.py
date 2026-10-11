@@ -17,11 +17,90 @@ from workflows.evals.hindsight_memory_probe import (
     restore_process,
     restart_selection,
 )
+from workflows.evals.hindsight_memory_probe import p4_evidence, supervisor
 from workflows.evals.hindsight_memory_probe.campaign_clock import DEADLINE
 from workflows.evals.hindsight_memory_probe.validate import ROOT
 from workflows.evals.hindsight_memory_probe.tests.restore_test_support import _rows, _selection, _snapshot
 
 REPOSITORY = ROOT.parents[2]
+
+
+def test_main_loader_keeps_canonical_snapshot_path_separate_from_restart_receipts(tmp_path, monkeypatch):
+    state = tmp_path / "receipts" / "supervisor"
+    state.mkdir(parents=True, mode=0o700)
+    token = "1" * 32
+    release_sha = "a" * 40
+    registry_sha = "b" * 64
+    epoch_sha = "c" * 64
+    registry = {"registry_sha256": registry_sha, "release": f"/release/{release_sha}", "baseline": []}
+    epoch = {"index": 1, "sha256": epoch_sha, "release": registry["release"], "allocations": {}}
+    monkeypatch.setattr(supervisor, "load_registry", lambda _directory: registry)
+    monkeypatch.setattr(epochs, "active", lambda *_args: epoch)
+
+    selection = _selection()
+    selection.update({"release_sha": release_sha, "registry_sha256": registry_sha,
+                      "before_epoch_sha256": "d" * 64})
+    evidence_root = state.parent / "p4" / release_sha
+    evidence_root.mkdir(parents=True)
+    selection_path = p4_evidence.path_for(state, release_sha, "selection")
+    before_path = p4_evidence.path_for(state, release_sha, "before")
+    after_path = p4_evidence.path_for(state, release_sha, "after")
+    proof_path = p4_evidence.path_for(state, release_sha, "completed")
+    selection_path.write_text(json.dumps(selection, sort_keys=True))
+    before_path.write_text('{"epoch":"before"}')
+    after_path.write_text('{"epoch":"after"}')
+    proof_path.write_text('{"status":"completed"}')
+    selection_ref = {"status": "frozen", **p4_evidence.reference(state, release_sha, "selection"),
+                     "sha256": restore.candidate_database.sha256_file(selection_path)}
+    restart_ref = {"status": "completed", **p4_evidence.reference(state, release_sha, "completed"),
+                   "sha256": restore.candidate_database.sha256_file(proof_path)}
+    for artifact, evidence_path in (("before", before_path), ("after", after_path)):
+        restart_ref[artifact] = {**p4_evidence.reference(state, release_sha, artifact),
+                                 "sha256": restore.candidate_database.sha256_file(evidence_path)}
+
+    archive_root = state / "finalization" / token
+    archive_root.mkdir(parents=True)
+    archive = archive_root / "candidate.dump"
+    archive.write_bytes(b"PGDMP-test")
+    dump_result = {"archive": archive.name, "sha256": restore.candidate_database.sha256_file(archive),
+                   "bytes": archive.stat().st_size, "toc_valid": True, "image_id": "sha256:" + "e" * 64,
+                   "registry_sha256": registry_sha, "epoch_sha256": epoch_sha}
+    dump_result_path = state / f"finalize-{token}-dump-result.json"
+    dump_result_path.write_text(json.dumps(dump_result, sort_keys=True))
+    canonical_path = state / f"finalize-{token}-canonical-snapshot.json"
+    canonical_snapshot = {"container_id": "db-id", "image_id": dump_result["image_id"],
+                          "volume": "ade-hindsight-probe_db-data", "marker": "canonical"}
+    canonical_path.write_text(json.dumps(canonical_snapshot, sort_keys=True))
+
+    admission = {"registry_sha256": registry_sha, "epoch_sha256": epoch_sha, "token": token,
+                 "containers": [{"id": "db-id", "service": "db"}],
+                 "restart_selection": selection_ref, "restart_readback": restart_ref}
+    (state / "epoch-0001.finalize-admission.json").write_text(json.dumps(admission))
+    finalized = {"registry_sha256": registry_sha, "epoch_sha256": epoch_sha, "token": token,
+                 "p4_complete": True, "baseline_unchanged": True,
+                 "all_candidate_services_stopped": True,
+                 "dump_result": dump_result_path.name,
+                 "dump_result_sha256": restore.candidate_database.sha256_file(dump_result_path)}
+    (state / "epoch-0001.finalized.json").write_text(json.dumps(finalized))
+    (state / "epoch-0001.stopped.json").write_text(json.dumps({"epoch_sha256": epoch_sha}))
+
+    _registry, _epoch, _admission, evidence = restore._load_main(state)
+
+    assert evidence["snapshot"] == canonical_snapshot
+    assert evidence["snapshot_path"] == canonical_path
+
+    monkeypatch.setattr(restore.releases, "verify", lambda _release: {})
+    monkeypatch.setattr(restore.db, "write_compose", lambda *_args: {
+        "project": "restore-project", "path": str(state / "restore-compose.yaml"),
+        "sha256": "f" * 64,
+    })
+    monkeypatch.setattr(restore, "_launch_exclusive", lambda *_args: None)
+    monkeypatch.setattr(restore.uuid, "uuid4", lambda: type("Id", (), {"hex": "2" * 32})())
+    started = restore.start(state)
+    operation = json.loads((state / "restore-operation.json").read_text())
+    assert started["status"] == "admitted"
+    assert operation["snapshot"]["path"] == str(canonical_path)
+    assert operation["snapshot"]["sha256"] == restore.candidate_database.sha256_file(canonical_path)
 
 
 def test_canonical_rows_and_frozen_scope_compare(tmp_path):

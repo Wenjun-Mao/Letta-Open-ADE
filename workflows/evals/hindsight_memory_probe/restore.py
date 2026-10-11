@@ -106,8 +106,8 @@ def _load_main(directory: Path) -> tuple[dict, dict, dict, dict]:
         raise RuntimeError("restore_restart_proof_reference_invalid")
     for artifact in ("before", "after"):
         reference = restart_ref.get(artifact, {})
-        snapshot_path = p4_evidence.resolve_reference(directory, reference, release_sha, artifact)
-        if candidate_database.sha256_file(snapshot_path) != reference.get("sha256"):
+        readback_path = p4_evidence.resolve_reference(directory, reference, release_sha, artifact)
+        if candidate_database.sha256_file(readback_path) != reference.get("sha256"):
             raise RuntimeError("restore_restart_proof_reference_invalid")
     if (snapshot.get("container_id") != next(row["id"] for row in admission["containers"] if row["service"] == "db")
             or snapshot.get("image_id") != dump.get("image_id")
