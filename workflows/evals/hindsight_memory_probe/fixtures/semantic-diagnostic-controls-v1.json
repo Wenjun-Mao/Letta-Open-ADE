@@ -1,0 +1,106 @@
+{
+  "contract": "ade-hindsight-semantic-diagnostic-controls-v1",
+  "version": "semantic-diagnostic-controls-v1",
+  "cases": {
+    "q01": {
+      "audit": {
+        "subject_id": "subject_a",
+        "active_character_root_id": "root_other",
+        "source_ids": ["s01", "s03"],
+        "private_origin_source_ids": ["s01"],
+        "source_character_root_id": "root_xiaotang",
+        "source_character_root_is_shared": false
+      },
+      "expected_distinctions": [
+        "The current hot, unsweetened oolong preference is portable subject profile information.",
+        "The source conversation, source date, participation, and private game/code origin are not available across character roots.",
+        "Do not substitute the event date or a message date as the answer to which conversation originated the profile."
+      ],
+      "memories": [
+        {
+          "id": "adequate_q01_profile_v1",
+          "text": "该用户目前喜欢热的、无糖乌龙奶茶。",
+          "type": "world",
+          "tags": ["kind:profile"],
+          "metadata": {"speaker": "user", "subject_id": "subject_a"}
+        }
+      ]
+    },
+    "q06": {
+      "audit": {
+        "subject_id": "subject_b",
+        "active_character_root_id": "root_xiaotang",
+        "source_ids": ["s09"],
+        "source_character_root_id": "root_xiaotang",
+        "excluded_unrelated_source_ids": ["s05"]
+      },
+      "expected_distinctions": [
+        "The subject_b profile says lemon water, not iced lemon water.",
+        "The green plant nickname is 绿邮差 and belongs to subject_b with this character root.",
+        "No subject_b source establishes that the bag-repair story was told to this user; express uncertainty rather than a categorical never."
+      ],
+      "memories": [
+        {
+          "id": "adequate_q06_subject_b_v1",
+          "text": "你说自己喜欢柠檬水；你和我在聊天中给一盆薄荷取名“绿邮差”。",
+          "type": "world",
+          "tags": ["character:root_xiaotang", "kind:profile"],
+          "document_id": "s09",
+          "mentioned_at": "2026-10-01T17:00:00Z",
+          "context": "来源 s09：subject_b 在 root_xiaotang 的已接受用户陈述及已提交助手回复。",
+          "metadata": {
+            "speaker": "user+assistant",
+            "source_id": "s09",
+            "source_timestamp": "2026-10-01T17:00:00Z",
+            "subject_id": "subject_b",
+            "character_root_id": "root_xiaotang",
+            "definition_version": "xiaotang_v1"
+          }
+        }
+      ]
+    },
+    "q07": {
+      "audit": {
+        "subject_id": "subject_a",
+        "active_character_root_id": "root_xiaotang",
+        "portable_profile_source_ids": ["s08"],
+        "portable_profile_source_character_root_id": "root_other",
+        "excluded_root_specific_name": "青石",
+        "excluded_root_specific_name_source_id": "s08",
+        "hypothetical_source_ids": ["s06"],
+        "hypothetical_source_character_root_id": "root_xiaotang"
+      },
+      "expected_distinctions": [
+        "The portable commute fact is bicycle, while 青石 is a name created only in another character root and is not supplied as this character's shared experience.",
+        "The yellow-scarf seashore trip was hypothetical, not a completed event.",
+        "A new solo fictional story or a new bicycle name may be offered as present invention, never as a remembered event or prior shared naming."
+      ],
+      "memories": [
+        {
+          "id": "adequate_q07_commute_profile_v1",
+          "text": "你平时骑自行车通勤。",
+          "type": "world",
+          "tags": ["kind:profile"],
+          "metadata": {"speaker": "user", "subject_id": "subject_a"}
+        },
+        {
+          "id": "adequate_q07_hypothetical_v1",
+          "text": "林小棠曾说，如果以后去海边，可能会带一条黄色围巾；这是假设，不是已经发生的旅行。",
+          "type": "experience",
+          "tags": ["character:root_xiaotang"],
+          "document_id": "s06",
+          "mentioned_at": "2026-10-01T14:00:00Z",
+          "context": "来源 s06 的已提交助手回复明确将海边与黄色围巾描述为假设。",
+          "metadata": {
+            "speaker": "assistant",
+            "source_id": "s06",
+            "source_timestamp": "2026-10-01T14:00:00Z",
+            "subject_id": "subject_a",
+            "character_root_id": "root_xiaotang",
+            "definition_version": "xiaotang_v1"
+          }
+        }
+      ]
+    }
+  }
+}

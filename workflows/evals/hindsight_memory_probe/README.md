@@ -143,6 +143,23 @@ reasoning. The subsequent replay assignment must separate recalled context from
 full trace and reject incomplete reranking **before** Character dispatch; upstream
 can return HTTP200 with zero-score candidates after a reranker timeout.
 
+## Revision-5 semantic diagnostic checkpoint
+
+The approved revision-5 follow-up uses the separate versioned
+`fixtures/semantic-diagnostic-controls-v1.json` for q01/q06/q07. It leaves the
+original source corpus, questions, persona and candidate04/05 evidence intact.
+The freezer binds those controls into the candidate manifest; the existing
+feature CLI receives Hindsight, empty and adequate arms in the same input. The
+control audit and predeclared distinctions are captured alongside each stage
+summary. See [the bounded diagnostic note](semantic-diagnostic-notes.md) for
+causal findings, archive pointers and exact manager-run commands.
+
+Replay supports the two predeclared output ceilings `--max-output-tokens 2048`
+(default) and `--max-output-tokens 4096`. Run a capacity ablation against the
+same retained bank using a new output directory; the ceiling applies equally to
+Hindsight, empty and adequate arms. This measures a Character output setting,
+not a retrieval or semantic repair.
+
 ## Offline verification
 
 Canonical PostgreSQL snapshots share one schema query for candidate finalization

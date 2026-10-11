@@ -17,12 +17,14 @@ from .receipts import ReceiptStore
 ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = Path(__file__).resolve().parent
 FIXTURE = WORKFLOW / "fixtures/campaign.json"
+DIAGNOSTIC_CONTROLS = WORKFLOW / "fixtures/semantic-diagnostic-controls-v1.json"
 PERSONAS = ROOT / "content/personas/personas.jsonl"
 NAMESPACE = uuid.UUID("3d30bf87-76ed-5a53-9a5b-5628d86ff8ca")
 CONFIG_PATHS = [
     WORKFLOW / "config/pins.json", WORKFLOW / "config/sources.json",
     WORKFLOW / "config/model-profiles.json", WORKFLOW / "config/bank-profile.json",
     WORKFLOW / "config/hindsight.env",
+    DIAGNOSTIC_CONTROLS,
     WORKFLOW / "compose.yaml", WORKFLOW / "docker/python.Dockerfile",
     ROOT / "services/model-router/pyproject.toml",
     ROOT / "services/ade-api/pyproject.toml",
@@ -185,6 +187,8 @@ def build_manifest(workspace_id: str) -> dict:
     fixture_bytes = FIXTURE.read_bytes()
     fixture = strict_json(fixture_bytes)
     _validate_fixture(fixture)
+    diagnostic_controls = strict_json(DIAGNOSTIC_CONTROLS.read_bytes())
+    _validate_diagnostic_controls(diagnostic_controls, fixture)
     sources = fixture["sources"]
     by_id = {item["id"]: item for item in sources}
     persona = _persona()
@@ -272,6 +276,7 @@ def build_manifest(workspace_id: str) -> dict:
         "sources": frozen_sources,
         "cases": fixture["cases"],
         "adequate_memories": fixture["adequate_memories"],
+        "diagnostic_controls": diagnostic_controls,
         "readiness": fixture["readiness"],
         "readiness_payload": readiness_payload,
         "readiness_payload_utf8": readiness_payload_bytes.decode(),
@@ -286,6 +291,8 @@ def validate_manifest(manifest: dict, *, expected_source_sha: str) -> None:
     fixture_bytes = FIXTURE.read_bytes()
     fixture = strict_json(fixture_bytes)
     _validate_fixture(fixture)
+    diagnostic_controls = strict_json(DIAGNOSTIC_CONTROLS.read_bytes())
+    _validate_diagnostic_controls(diagnostic_controls, fixture)
     if manifest.get("contract") != "ade-hindsight-campaign-manifest-v1":
         raise ValueError("campaign_manifest_invalid")
     if manifest.get("source_sha") != expected_source_sha:
@@ -317,6 +324,8 @@ def validate_manifest(manifest: dict, *, expected_source_sha: str) -> None:
         raise ValueError("campaign_configuration_changed")
     if manifest.get("adequate_memories") != fixture["adequate_memories"] or manifest.get("readiness") != fixture["readiness"]:
         raise ValueError("campaign_control_fixture_changed")
+    if manifest.get("diagnostic_controls") != diagnostic_controls:
+        raise ValueError("campaign_diagnostic_controls_changed")
     by_id = {source["id"]: source for source in fixture["sources"]}
     sealed = manifest.get("sources")
     if not isinstance(sealed, list) or len(sealed) != len(by_id) or len({item.get("id") for item in sealed if isinstance(item, dict)}) != len(by_id):
@@ -364,6 +373,66 @@ def validate_manifest(manifest: dict, *, expected_source_sha: str) -> None:
             or manifest.get("readiness_payload_utf8") != ready_bytes.decode()
             or manifest.get("readiness_payload_sha256") != sha(ready_bytes)):
         raise ValueError("campaign_readiness_payload_mismatch")
+
+
+def _validate_diagnostic_controls(controls: dict, fixture: dict) -> None:
+    """Keep versioned oracle memories attributable without changing original cases."""
+    if (controls.get("contract") != "ade-hindsight-semantic-diagnostic-controls-v1"
+            or controls.get("version") != "semantic-diagnostic-controls-v1"
+            or set(controls.get("cases", {})) != {"q01", "q06", "q07"}):
+        raise ValueError("semantic_diagnostic_controls_invalid")
+    sources = {item["id"]: item for item in fixture["sources"]}
+    expected_scopes = {
+        "q01": ("subject_a", "root_other"),
+        "q06": ("subject_b", "root_xiaotang"),
+        "q07": ("subject_a", "root_xiaotang"),
+    }
+    expected_source_roots = {
+        "q01": {"s01": ("subject_a", "root_xiaotang"), "s03": ("subject_a", "root_xiaotang")},
+        "q06": {"s09": ("subject_b", "root_xiaotang"), "s05": ("subject_a", "root_xiaotang")},
+        "q07": {"s08": ("subject_a", "root_other"), "s06": ("subject_a", "root_xiaotang")},
+    }
+    expected_audit_roots = {
+        "q01": {"source_character_root_id": "root_xiaotang"},
+        "q06": {"source_character_root_id": "root_xiaotang"},
+        "q07": {
+            "portable_profile_source_character_root_id": "root_other",
+            "hypothetical_source_character_root_id": "root_xiaotang",
+        },
+    }
+    fixture_cases = {item["id"]: item for item in fixture["cases"]}
+    for case_id, (subject, active_root) in expected_scopes.items():
+        case = controls["cases"][case_id]
+        audit = case.get("audit", {})
+        campaign_case = fixture_cases[case_id]
+        if ((audit.get("subject_id"), audit.get("active_character_root_id")) != (subject, active_root)
+                or (campaign_case.get("subject"), campaign_case.get("root")) != (subject, active_root)
+                or any(audit.get(key) != value for key, value in expected_audit_roots[case_id].items())):
+            raise ValueError("semantic_diagnostic_scope_invalid")
+        memories = case.get("memories")
+        if not isinstance(memories, list) or not memories or not case.get("expected_distinctions"):
+            raise ValueError("semantic_diagnostic_memory_invalid")
+        for memory in memories:
+            if (not isinstance(memory, dict) or not isinstance(memory.get("text"), str)
+                    or not memory["text"].strip() or memory.get("type") not in {"world", "experience", "observation"}
+                    or not isinstance(memory.get("tags"), list) or not memory["tags"]
+                    or not isinstance(memory.get("metadata", {}), dict)):
+                raise ValueError("semantic_diagnostic_memory_invalid")
+            if any(not isinstance(value, str) for value in memory.get("metadata", {}).values()):
+                raise ValueError("semantic_diagnostic_memory_invalid")
+        source_ids = set()
+        for key, value in audit.items():
+            if key.endswith("source_ids") and isinstance(value, list):
+                source_ids.update(value)
+            elif key.endswith("source_id") and isinstance(value, str):
+                source_ids.add(value)
+        if source_ids != set(expected_source_roots[case_id]):
+            raise ValueError("semantic_diagnostic_source_scope_invalid")
+        for source_id in source_ids:
+            source = sources.get(source_id)
+            if (source is None or (source["subject"], source["root"])
+                    != expected_source_roots[case_id].get(source_id)):
+                raise ValueError("semantic_diagnostic_source_scope_invalid")
 
 
 def main(argv=None) -> int:

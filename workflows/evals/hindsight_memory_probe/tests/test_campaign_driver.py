@@ -1,6 +1,7 @@
 import asyncio
 import json
 import uuid
+from pathlib import Path
 from types import SimpleNamespace
 
 import httpx
@@ -49,6 +50,17 @@ def test_offline_freeze_binds_candidate_and_full_retry_payload(monkeypatch):
     assert s10["retain_payload_sha256"] == freeze.sha(s10["retain_payload_utf8"].encode())
     assert s10["workspace"] == manifest["workspace_id"]
     assert "q07" in {case["id"] for case in manifest["cases"]}
+    assert manifest["diagnostic_controls"]["version"] == "semantic-diagnostic-controls-v1"
+    assert set(manifest["diagnostic_controls"]["cases"]) == {"q01", "q06", "q07"}
+    q01_control = manifest["diagnostic_controls"]["cases"]["q01"]
+    q01_memory = q01_control["memories"][0]
+    assert q01_control["audit"]["source_ids"] == ["s01", "s03"]
+    assert q01_control["audit"]["source_character_root_id"] == "root_xiaotang"
+    assert not any(key in q01_memory for key in ("document_id", "mentioned_at"))
+    assert q01_memory["metadata"] == {"speaker": "user", "subject_id": "subject_a"}
+    q07_audit = manifest["diagnostic_controls"]["cases"]["q07"]["audit"]
+    assert q07_audit["portable_profile_source_character_root_id"] == "root_other"
+    assert q07_audit["hypothetical_source_ids"] == ["s06"]
 
 
 def test_real_offline_freeze_validates_and_tampering_fails_before_http(monkeypatch, tmp_path):
@@ -78,6 +90,11 @@ def test_real_offline_freeze_validates_and_tampering_fails_before_http(monkeypat
     with pytest.raises(ValueError, match="campaign_bank_profile_config_changed"):
         freeze.validate_manifest(changed_profile, expected_source_sha=source_sha)
 
+    changed_controls = json.loads(json.dumps(manifest))
+    changed_controls["diagnostic_controls"]["cases"]["q01"]["memories"][0]["text"] += " 改动"
+    with pytest.raises(ValueError, match="campaign_diagnostic_controls_changed"):
+        freeze.validate_manifest(changed_controls, expected_source_sha=source_sha)
+
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     monkeypatch.setenv("ADE_EVAL_SOURCE_SHA", "b" * 40)
@@ -93,6 +110,45 @@ def test_real_offline_freeze_validates_and_tampering_fails_before_http(monkeypat
     args = SimpleNamespace(manifest=manifest_path, output_directory=tmp_path / "tampered", stage="readiness")
     with pytest.raises(ValueError, match="campaign_frozen_source_mismatch"):
         asyncio.run(replay.run(args))
+
+
+def test_diagnostic_replay_freezes_all_arms_expectations_and_capacity(monkeypatch, tmp_path):
+    manifest = freeze.strict_json(freeze.DIAGNOSTIC_CONTROLS.read_text())
+    case = json.loads(freeze.FIXTURE.read_text())["cases"]
+    q01 = next(item for item in case if item["id"] == "q01")
+    manifest.update({
+        "workspace_id": "offline-diagnostic",
+        "model_key": "deepseek::deepseek-flash",
+        "persona": "你是林小棠。",
+        "adequate_memories": {},
+        "sources": [],
+        "cases": [],
+    })
+    manifest["diagnostic_controls"] = freeze.strict_json(freeze.DIAGNOSTIC_CONTROLS.read_text())
+    monkeypatch.setattr(replay, "feature_scope", lambda workspace, subject, root: {
+        "workspace_id": workspace, "subject_id": subject, "character_root_id": root,
+        "bank_id": "bank-offline", "tags": [f"character:{root}", "kind:profile"],
+        "tags_match": "any_strict",
+    })
+    monkeypatch.setattr(replay, "set_phase", lambda *_: {"phase": "recall", "operation_id": "offline"})
+    captured = {}
+
+    def run_feature(command, **kwargs):
+        input_path = Path(command[command.index("--input") + 1])
+        captured.update(json.loads(input_path.read_text()))
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(replay.subprocess, "run", run_feature)
+    campaign = replay.Campaign(manifest, tmp_path / "candidate", object(), max_output_tokens=4096)
+    summary = asyncio.run(campaign.replay_case(q01, checkpoint="offline"))
+    assert captured["arms"] == ["hindsight", "empty", "adequate"]
+    assert captured["max_output_tokens"] == 4096
+    assert captured["adequate_memories"][0]["tags"] == ["character:root_other", "kind:profile"]
+    assert "document_id" not in captured["adequate_memories"][0]
+    assert "character_root_id" not in captured["adequate_memories"][0]["metadata"]
+    assert summary["diagnostic_control_version"] == "semantic-diagnostic-controls-v1"
+    assert summary["max_output_tokens"] == 4096
+    assert "source_character_root_is_shared" in summary["diagnostic_source_scope_audit"]
 
 
 def test_runner_wires_release_sha_to_manifest_runtime_identity():

@@ -25,8 +25,9 @@ FEATURE = "ade_api.features.agent_runtime.hindsight_evaluation"
 
 
 class Campaign:
-    def __init__(self, manifest: dict, output: Path, hindsight: HindsightHTTP):
+    def __init__(self, manifest: dict, output: Path, hindsight: HindsightHTTP, *, max_output_tokens=2048):
         self.manifest, self.output, self.http = manifest, output, hindsight
+        self.max_output_tokens = max_output_tokens
         self.store = ReceiptStore(output)
         self.prefix_count = 0
         self.sources = {source["id"]: source for source in manifest["sources"]}
@@ -261,7 +262,11 @@ class Campaign:
             raise RuntimeError("historical_quote_reactivated_invalidated_fact")
 
     async def replay_case(self, case: dict, *, checkpoint: str, arms=None):
-        arms = arms or ["hindsight", "empty"] + (["adequate"] if case.get("adequate") else [])
+        controls = self.manifest.get("diagnostic_controls", {}).get("cases", {})
+        diagnostic = controls.get(case["id"])
+        arms = arms or ["hindsight", "empty"] + (
+            ["adequate"] if case.get("adequate") or diagnostic else []
+        )
         workspace, subject, root = self.workspace, case["subject"], case["root"]
         scope = feature_scope(workspace, subject, root)
         input_value = {
@@ -270,14 +275,20 @@ class Campaign:
             "model_key": self.manifest["model_key"], "persona": self.manifest["persona"],
             "dialogue": [{"role": "user", "content": case["query"]}], "query": case["query"],
             "query_timestamp": "2026-10-03T12:00:00Z", "arms": arms,
+            "max_output_tokens": self.max_output_tokens,
         }
         if case["id"] == "q01" and "hindsight" in arms:
             input_value["excluded_memory_terms"] = ["雨巷接龙", "纸船靠岸"]
         if "adequate" in arms:
-            memory = dict(self.manifest["adequate_memories"][case["adequate"]])
-            memory.setdefault("id", case["adequate"])
-            memory["tags"] = [f"character:{root}"] + (["kind:profile"] if "kind:profile" in memory.get("tags", []) else [])
-            input_value["adequate_memories"] = [memory]
+            if case.get("adequate"):
+                memories = [dict(self.manifest["adequate_memories"][case["adequate"]])]
+                memories[0].setdefault("id", case["adequate"])
+            else:
+                memories = [dict(item) for item in diagnostic["memories"]]
+            for memory in memories:
+                profile_tagged = "kind:profile" in memory.get("tags", [])
+                memory["tags"] = [f"character:{root}"] + (["kind:profile"] if profile_tagged else [])
+            input_value["adequate_memories"] = memories
         label = f"{case['id']}-{checkpoint}-{int(time.time_ns())}"
         capture_dir = self.output / "character" / label
         capture_dir.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -287,7 +298,14 @@ class Campaign:
         env = os.environ.copy()
         env.setdefault("ADE_EVAL_PHASE_FILE", str(self.output / "phase.json"))
         subprocess.run([sys.executable, "-m", FEATURE, "run", "--input", str(input_path), "--output-directory", str(capture_dir)], cwd=ROOT, env=env, check=True, capture_output=True, text=True)
-        return {"case_id": case["id"], "checkpoint": checkpoint, "arms": arms, "input_sha256": sha(json.dumps(input_value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()), "scope": scope}
+        return {
+            "case_id": case["id"], "checkpoint": checkpoint, "arms": arms,
+            "input_sha256": sha(json.dumps(input_value, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()),
+            "scope": scope, "max_output_tokens": self.max_output_tokens,
+            "diagnostic_control_version": self.manifest.get("diagnostic_controls", {}).get("version") if diagnostic else None,
+            "diagnostic_expected_distinctions": diagnostic.get("expected_distinctions") if diagnostic else None,
+            "diagnostic_source_scope_audit": diagnostic.get("audit") if diagnostic else None,
+        }
 
     async def readiness(self):
         ready = self.manifest["readiness"]
@@ -350,7 +368,7 @@ async def run(args):
     validate_manifest(manifest, expected_source_sha=source_sha)
     async with httpx.AsyncClient(follow_redirects=False) as client:
         api = HindsightHTTP(client, os.environ.get("ADE_EVAL_HINDSIGHT_BASE_URL", ""), os.environ.get("ADE_EVAL_HINDSIGHT_API_KEY", ""))
-        campaign = Campaign(manifest, args.output_directory, api)
+        campaign = Campaign(manifest, args.output_directory, api, max_output_tokens=getattr(args, "max_output_tokens", 2048))
         summaries = []
         if args.stage == "readiness":
             summaries.append(await campaign.readiness())
@@ -375,7 +393,7 @@ async def run(args):
                     seen.add(key)
             for case_id in ("q01", "q06", "q07"):
                 case = next(c for c in manifest["cases"] if c["id"] == case_id)
-                summaries.append(await campaign.replay_case(case, checkpoint="post-consolidation", arms=["hindsight", "empty"]))
+                summaries.append(await campaign.replay_case(case, checkpoint="post-consolidation"))
         elif args.stage == "version-archive":
             campaign.store.write("lifecycle-archive-marker.json", {"conversation":"a_x_01","archived":True,"qualification":"fixture-only; Studio archive path not exercised"})
             case = next(c for c in manifest["cases"] if c["id"] == "q05")
@@ -406,6 +424,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--output-directory", type=Path, required=True)
+    parser.add_argument("--max-output-tokens", type=int, choices=(2048, 4096), default=2048)
     parser.add_argument("--stage", choices=("readiness","initial-retain-a","initial-retain-b","initial-compare-a","initial-compare-b","consolidate","version-archive","invalidate-s10","s11","retry-s10","s12"), required=True)
     args = parser.parse_args(argv)
     if args.output_directory.exists():
