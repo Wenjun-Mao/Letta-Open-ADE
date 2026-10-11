@@ -110,6 +110,13 @@ remaining command. This avoids treating child options such as `psql -v` as
 Compose ownership flags without admitting host-volume, project, environment,
 privilege, or resource overrides.
 
+The only root container exception is the exact 1800-second P1 cache provisioning
+recipe: pinned Hindsight service/image, `python3` entrypoint, fixed cache script,
+offline toggles set to zero, no dependencies or image pulls. That script admits
+only the pinned Hugging Face file allowlist and revision, verifies weight size
+and SHA256, writes a manifest, then chowns the named cache to UID1000. Root is
+denied for the runner and every other command, environment, entrypoint or timeout.
+
 Drain every registered process and all candidate PostgreSQL async operations in
 `pending`, `processing` or `deferred` to one shared drain deadline, then preserve
 the full status-count summary, including failed and cancelled operations.

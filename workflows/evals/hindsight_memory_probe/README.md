@@ -266,6 +266,8 @@ python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" 
   --kind work --timeout 120 -- run --rm --no-deps --pull never \
   --entrypoint python3 hindsight /probe/providers.py
 # Pinned HF download into the owned named cache, provisioning only (no live key yet).
+# Root is admitted only for this exact 1800-second Hindsight cache command. The
+# script verifies pinned files, writes a manifest, then chowns the named cache to UID1000.
 python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
   --kind work --timeout 1800 -- run --rm --no-deps --pull never --user 0 \
   -e HF_HUB_OFFLINE=0 -e TRANSFORMERS_OFFLINE=0 --entrypoint python3 \

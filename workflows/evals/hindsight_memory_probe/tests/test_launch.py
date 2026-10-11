@@ -1,5 +1,6 @@
 import copy
 import json
+import shlex
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -67,6 +68,57 @@ def test_unsafe_command_contracts_fail_before_spawn(supervised, kind, args, matc
     with pytest.raises(RuntimeError, match=match):
         launch.launch(supervised, kind, 60, args)
     assert not list(supervised.glob("job-*.json"))
+
+
+@pytest.mark.parametrize(
+    "change,timeout",
+    [
+        (lambda args: args.__setitem__(-2, "runner"), 1800),
+        (lambda args: args.__setitem__(-1, "/probe/providers.py"), 1800),
+        (lambda args: args.__setitem__(args.index("HF_HUB_OFFLINE=0"), "HF_HUB_OFFLINE=1"), 1800),
+        (lambda args: args.__setitem__(args.index("python3"), "python"), 1800),
+        (lambda args: args.append("--unexpected"), 1800),
+        (lambda args: None, 1799),
+    ],
+)
+def test_root_is_rejected_for_every_noncanonical_run(supervised, change, timeout):
+    arguments = list(launch.CACHE_PROVISIONING_RUN)
+    change(arguments)
+    with pytest.raises(RuntimeError, match="compose_user_override_rejected"):
+        launch.launch(supervised, "work", timeout, arguments)
+    assert not list(supervised.glob("job-*.json"))
+
+
+def test_exact_readme_cache_provisioning_recipe_is_admitted(supervised, monkeypatch):
+    lines = (Path(launch.__file__).with_name("README.md")).read_text().splitlines()
+    start = next(index for index, line in enumerate(lines)
+                 if line.strip().startswith("--kind work --timeout 1800 -- run --rm"))
+    recipe_lines = []
+    for line in lines[start:]:
+        part = line.strip()
+        continues = part.endswith("\\")
+        recipe_lines.append(part[:-1].rstrip() if continues else part)
+        if not continues:
+            break
+    recipe = shlex.split(" ".join(recipe_lines))
+    assert recipe[:4] == ["--kind", "work", "--timeout", "1800"]
+    delimiter = recipe.index("--")
+    arguments = recipe[delimiter + 1:]
+    assert tuple(arguments) == launch.CACHE_PROVISIONING_RUN
+
+    calls = []
+    monkeypatch.setattr(host, "proc_identity", lambda _: {
+        "pid": 123, "start_ticks": "42", "uid": 1000, "cmd_sha256": "gate"
+    })
+    monkeypatch.setattr(launch.subprocess, "Popen", lambda command, **kwargs: (
+        calls.append((command, kwargs)) or SimpleNamespace(pid=123)))
+    monkeypatch.setattr(launch.os, "write", lambda *_args: 1)
+    assert launch.launch(supervised, "work", 1800, arguments) == 123
+
+    compose_command = json.loads(calls[0][0][4])
+    assert compose_command[-len(arguments):] == arguments
+    assert "--user" in compose_command and compose_command[compose_command.index("--user") + 1] == "0"
+    assert compose_command[compose_command.index("hindsight") + 1:] == ["/probe/cache_model.py"]
 
 
 def test_launch_registers_identity_deadline_and_caps_before_gate(

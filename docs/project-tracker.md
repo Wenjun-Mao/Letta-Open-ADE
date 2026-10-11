@@ -60,6 +60,9 @@ readback remains pending.
 An isolated `python -S` regression now exercises host finalization admission,
 restart proof references and canonical snapshot publication without importing
 httpx or ADE; runner-only feature-scope qualification remains intact.
+The launcher admits root only for the exact bounded pinned Hindsight model-cache
+provisioning recipe; the documented recipe is exercised through launch admission
+and nearby root command/environment variants are rejected.
 Older entries retain their historical scope and are not authority to resume new
 native memory feature work ahead of this review.
 

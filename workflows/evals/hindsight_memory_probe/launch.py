@@ -44,6 +44,11 @@ SERVICE_OPERANDS = {
     "pull": {"hindsight"},
 }
 RUN_ENVIRONMENT = {"HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE"}
+CACHE_PROVISIONING_RUN = (
+    "run", "--rm", "--no-deps", "--pull", "never", "--user", "0",
+    "-e", "HF_HUB_OFFLINE=0", "-e", "TRANSFORMERS_OFFLINE=0",
+    "--entrypoint", "python3", "hindsight", "/probe/cache_model.py",
+)
 
 
 def compose_service_options(arguments):
@@ -227,14 +232,13 @@ def launch(state, kind, timeout, arguments):
                 pull_policy(compose_options) != ["never"]
             ):
                 raise RuntimeError("one_shot_must_use_qualified_local_images")
-            if arguments[0] == "run" and any(
+            root_user_requested = arguments[0] == "run" and any(
                 compose_options[index] == "--user" and compose_options[index + 1] == "0"
                 for index in range(len(compose_options) - 1)
-            ) and (
-                _services != "runner"
-                or not any(compose_options[index] == "--entrypoint"
-                           and compose_options[index + 1] in {"python", "python3"}
-                           for index in range(len(compose_options) - 1))
+            )
+            if root_user_requested and (
+                kind != "work" or timeout != 1800
+                or tuple(arguments) != CACHE_PROVISIONING_RUN
             ):
                 raise RuntimeError("compose_user_override_rejected")
             if arguments[0] == "exec" and not ({"-T", "--no-TTY"} & set(compose_options)):
