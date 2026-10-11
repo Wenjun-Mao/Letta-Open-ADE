@@ -20,6 +20,7 @@ IDENTITY_READBACK = "restore-identity-readback"
 IDENTITY_LIST_READBACK = "restore-identity-list-readback"
 OPERATOR_READBACK = "restore-operator-readback"
 OPERATOR_LIST_READBACK = "restore-operator-list-readback"
+POST_RESTORE_RECOVERY_READBACK = "post-restore-recovery-readback"
 READ_ONLY_HOST_OPERATIONS = frozenset({
     IDENTITY_READBACK,
     IDENTITY_LIST_READBACK,
@@ -37,6 +38,12 @@ CLEANUP_RESERVE_OPERATIONS = frozenset({
     "cleanup-recovery-stop",
     "cleanup-recovery-remove-container",
     "cleanup-recovery-remove-volume",
+    "post-restore-recovery-readback",
+    "post-restore-recovery-start",
+    "post-restore-recovery-snapshot-query",
+    "post-restore-recovery-stop",
+    "post-restore-recovery-remove-container",
+    "post-restore-recovery-remove-volume",
 })
 
 
@@ -79,7 +86,16 @@ def _validate_command(operation: dict, command: list[str]) -> None:
             or command[1:] == ["rm", recovered_id]
             or command[1:] == ["ps", "-aq", "--no-trunc", "--filter", "volume=" + volume]
             or command[1:] == ["volume", "rm", volume]
+            or operation.get("_post_restore_recovery") is True
+            and command[1:] == ["start", recovered_id]
         )
+        if operation.get("_post_restore_recovery") is True and command[1:2] == ["exec"]:
+            from .restore_snapshot import allowed_queries
+
+            allowed = (command[2:4] == ["-i", recovered_id]
+                       and command[4:11] == ["psql", "-U", "hindsight_probe", "-d",
+                                             "hindsight_probe", "-At", "-c"]
+                       and len(command) == 12 and command[11] in allowed_queries())
         if not allowed:
             raise RuntimeError("restore_cleanup_recovery_command_not_allowed")
         return
@@ -175,23 +191,38 @@ def run_command(directory: Path, operation: dict, command: list[str], timeout: i
         )
         os.close(read_fd)
         read_fd = -1
-        identity = host.proc_identity(child.pid)
-        if identity is None:
-            raise RuntimeError("restore_process_identity_missing")
+        identity = host.registered_child_identity(child.pid, arguments, token, child)
         job = {"schema": 1, "token": token, "operation_token": operation["token"],
                "operation": operation_label, "identity": identity, "deadline": deadline,
                "command_sha256": hashlib.sha256(command_json.encode()).hexdigest(),
                "created_at": time.time()}
+        if operation.get("_post_restore_recovery") is True:
+            admission_token = operation.get("_post_restore_recovery_admission_token")
+            authority_sha256 = operation.get("_post_restore_recovery_authority_sha256")
+            if (not isinstance(admission_token, str) or not re.fullmatch(r"[a-f0-9]{32}", admission_token)
+                    or not isinstance(authority_sha256, str)
+                    or not re.fullmatch(r"[a-f0-9]{64}", authority_sha256)):
+                raise RuntimeError("restore_post_snapshot_recovery_job_authority_missing")
+            job["recovery_admission_token"] = admission_token
+            job["recovery_authority_sha256"] = authority_sha256
         ReceiptStore(directory).write(f"restore-{operation['token']}-{token}-job.json", job)
+        if host.registered_child_identity(child.pid, arguments, token, child) != identity:
+            raise RuntimeError("restore_process_identity_changed")
+        if time.time() >= deadline:
+            raise RuntimeError("restore_process_deadline_elapsed")
         os.write(write_fd, b"1")
         os.close(write_fd)
         write_fd = -1
         while child.poll() is None:
             if not host.identity_matches(identity):
-                # poll() can race with process exit even without a monitor
-                # callback. Validate identity only while the root remains alive.
-                if child.poll() is None:
-                    raise RuntimeError("restore_process_identity_changed")
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    raise RuntimeError("restore_process_deadline_elapsed")
+                if host.confirm_owned_child_exit(identity, token, child,
+                                                 timeout=min(0.35, remaining)):
+                    if time.time() >= deadline:
+                        raise RuntimeError("restore_process_deadline_elapsed")
+                    break
             if time.time() >= deadline:
                 raise RuntimeError("restore_process_deadline_elapsed")
             monitor()

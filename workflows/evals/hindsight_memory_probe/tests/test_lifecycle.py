@@ -67,6 +67,16 @@ def campaign(tmp_path, monkeypatch):
             "cmd_sha256": "synthetic",
         },
     )
+    monkeypatch.setattr(
+        host,
+        "registered_child_identity",
+        lambda *_args: {
+            "pid": 123,
+            "start_ticks": "42",
+            "uid": 1000,
+            "cmd_sha256": "synthetic",
+        },
+    )
     monkeypatch.setattr(host, "identity_matches", lambda _: True)
     sup.initialize(tmp_path, RELEASE, now=sup.STARTED + 1)
 

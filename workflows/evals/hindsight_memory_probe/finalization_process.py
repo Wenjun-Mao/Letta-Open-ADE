@@ -24,6 +24,8 @@ def run_monitored(directory: Path, registry: dict, epoch: dict, admitted: dict,
     deadline = min(time.time() + timeout, admitted["deadline"], WORK_CUTOFF)
     read_fd, write_fd = os.pipe()
     command_json = json.dumps(command)
+    child_arguments = [sys.executable, "-m", "workflows.evals.hindsight_memory_probe.process_child",
+                       str(read_fd), command_json, str(directory), token]
     operation = (
         "pg_dump" if "pg_dump" in command else
         "pg_restore" if "pg_restore" in command else
@@ -34,8 +36,7 @@ def run_monitored(directory: Path, registry: dict, epoch: dict, admitted: dict,
     job = None
     try:
         child = subprocess.Popen(
-            [sys.executable, "-m", "workflows.evals.hindsight_memory_probe.process_child",
-             str(read_fd), command_json, str(directory), token],
+            child_arguments,
             cwd=epoch["release"], pass_fds=(read_fd,), start_new_session=True,
             env={**os.environ, "ADE_PROBE_PROCESS_OWNER": token,
                  "PROBE_RELEASE_SHA": Path(epoch["release"]).name,
@@ -45,7 +46,7 @@ def run_monitored(directory: Path, registry: dict, epoch: dict, admitted: dict,
         )
         os.close(read_fd)
         read_fd = -1
-        identity = host.proc_identity(child.pid)
+        identity = host.registered_child_identity(child.pid, child_arguments, token, child)
         job = {
             "kind": "p4-finalization", "operation": operation, "token": token,
             "identity": identity, "deadline": deadline,
@@ -57,17 +58,24 @@ def run_monitored(directory: Path, registry: dict, epoch: dict, admitted: dict,
             raise RuntimeError("finalization_process_identity_missing")
         with quiescence.finalization_dispatch_admission(directory, registry, epoch, admitted):
             ReceiptStore(directory).write(f"job-{token}.json", job)
+            if host.registered_child_identity(child.pid, child_arguments, token, child) != identity:
+                raise RuntimeError("finalization_process_identity_changed")
+            if time.time() >= deadline:
+                raise RuntimeError("finalization_process_deadline_elapsed")
             os.write(write_fd, b"1")
         os.close(write_fd)
         write_fd = -1
         while child.poll() is None:
             monitor_callback(directory, registry, epoch, admitted, token)
             if not host.identity_matches(identity):
-                # The monitor callback can outlast a short, successful command.
-                # Only treat identity loss as a violation while the registered
-                # root is still alive; a terminal result is checked below.
-                if child.poll() is None:
-                    raise RuntimeError("finalization_process_identity_changed")
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    raise RuntimeError("finalization_process_deadline_elapsed")
+                if host.confirm_owned_child_exit(identity, token, child,
+                                                 timeout=min(0.35, remaining)):
+                    if time.time() >= deadline:
+                        raise RuntimeError("finalization_process_deadline_elapsed")
+                    break
             remaining = deadline - time.time()
             if remaining <= 0:
                 raise RuntimeError("finalization_process_deadline_elapsed")

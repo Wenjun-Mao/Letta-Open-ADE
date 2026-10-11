@@ -2,8 +2,6 @@ import json
 import threading
 import time
 from pathlib import Path
-from types import SimpleNamespace
-
 import pytest
 
 from workflows.evals.hindsight_memory_probe import (
@@ -17,6 +15,23 @@ from workflows.evals.hindsight_memory_probe import (
 from workflows.evals.hindsight_memory_probe.receipts import ReceiptStore
 
 RELEASE = Path("/mnt/projects/apps/ade-hindsight-probe/releases/" + "a" * 40)
+
+
+class GatedChild:
+    pid = 123
+
+    def __init__(self):
+        self.returncode = None
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        self.returncode = 0
+        return self.returncode
+
+    def kill(self):
+        self.returncode = -9
 
 
 @pytest.fixture
@@ -99,9 +114,11 @@ def test_stop_arriving_during_registration_denies_final_execution_handshake(
     state, monkeypatch
 ):
     directory, registry, epoch = state
-    monkeypatch.setattr(
-        launch.subprocess, "Popen", lambda *_a, **_kw: SimpleNamespace(pid=123)
-    )
+    child = GatedChild()
+    monkeypatch.setattr(launch.subprocess, "Popen", lambda *_a, **_kw: child)
+    monkeypatch.setattr(host, "registered_child_identity", lambda *_args: {
+        "pid": 123, "start_ticks": "42", "uid": 1000, "cmd_sha256": "gate"
+    })
     gates = []
     monkeypatch.setattr(launch.os, "write", lambda *_: gates.append(True))
     prepare = lifecycle.prepare_current
@@ -121,9 +138,11 @@ def test_stop_arriving_during_registration_denies_final_execution_handshake(
 
 def test_deadline_rechecked_at_execution_handshake(state, monkeypatch):
     directory, _, _ = state
-    monkeypatch.setattr(
-        launch.subprocess, "Popen", lambda *_a, **_kw: SimpleNamespace(pid=123)
-    )
+    child = GatedChild()
+    monkeypatch.setattr(launch.subprocess, "Popen", lambda *_a, **_kw: child)
+    monkeypatch.setattr(host, "registered_child_identity", lambda *_args: {
+        "pid": 123, "start_ticks": "42", "uid": 1000, "cmd_sha256": "gate"
+    })
     gates = []
     monkeypatch.setattr(launch.os, "write", lambda *_: gates.append(True))
     monkeypatch.setattr(

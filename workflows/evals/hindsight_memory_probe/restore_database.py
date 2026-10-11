@@ -192,8 +192,14 @@ def restore_container(operation: dict, *, allow_unregistered: bool = False,
             or mount_rows[0].get("RW") is not True
             or set(mount.get("Destination") for mount in row.get("Mounts", [])) != {DATA_PATH}
             or (created is not None and (row.get("Id") != created.get("container_id")
-                or row.get("State", {}).get("StartedAt") != created.get("started_at")))):
+                or row.get("State", {}).get("StartedAt") != operation.get(
+                    "_post_restore_recovery_started_at", created.get("started_at"))))):
         raise RuntimeError("restore_container_identity_changed")
+    if ("_post_restore_recovery_started_at" in operation
+            and (operation.get("_post_restore_recovery") is not True
+                 or not isinstance(operation["_post_restore_recovery_started_at"], str)
+                 or not operation["_post_restore_recovery_started_at"])):
+        raise RuntimeError("restore_container_recovery_lifecycle_proof_invalid")
     env = row.get("Config", {}).get("Env") or []
     if any(item.split("=", 1)[0].startswith(("HINDSIGHT", "OPENAI", "DEEPSEEK", "DGX_", "MODEL_ROUTER", "ADE_EVAL"))
            for item in env):

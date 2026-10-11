@@ -2,6 +2,9 @@
 
 import copy
 import signal
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -224,6 +227,78 @@ def test_registered_process_must_have_positive_token(tmp_path):
         host.stop_processes(
             {"identity": identity, "token": "expected-token"}, tmp_path, lambda *_: None
         )
+
+
+def test_child_registration_retries_empty_and_partial_proc_argv(tmp_path, monkeypatch):
+    token = "register-token"
+    arguments = [sys.executable, "-m", "worker", "42"]
+    directory = tmp_path / "4242"
+    directory.mkdir()
+    start = ["S", "1", *["0"] * 17, "99", "0"]
+    (directory / "stat").write_text("4242 (worker) " + " ".join(start))
+    (directory / "environ").write_bytes(("ADE_PROBE_PROCESS_OWNER=" + token).encode() + b"\0")
+    (directory / "cmdline").write_bytes(b"")
+    child = type("Child", (), {"poll": lambda self: None})()
+    expected = b"\0".join(argument.encode() for argument in arguments) + b"\0"
+    states = iter((b"", expected[:12], expected))
+    def read_bytes(path):
+        if path.name != "cmdline":
+            return path.open("rb").read()
+        try:
+            return next(states)
+        except StopIteration:
+            return expected
+    monkeypatch.setattr(Path, "read_bytes", read_bytes)
+    monkeypatch.setattr(host.time, "sleep", lambda _seconds: None)
+    identity = host.registered_child_identity(4242, arguments, token, child, proc_root=tmp_path)
+    assert identity["pid"] == 4242
+    assert identity["start_ticks"] == "99"
+    assert identity["cmd_sha256"] == __import__("hashlib").sha256(expected).hexdigest()
+
+
+def test_child_registration_rejects_unexpected_nonempty_command(tmp_path):
+    token = "register-token"
+    directory = tmp_path / "4242"
+    directory.mkdir()
+    (directory / "cmdline").write_bytes(b"/tmp/unexpected\0")
+    child = type("Child", (), {"poll": lambda self: None})()
+    with pytest.raises(RuntimeError, match="unexpected_command"):
+        host.registered_child_identity(4242, [sys.executable, "-m", "worker"], token,
+                                       child, proc_root=tmp_path)
+
+
+def test_child_registration_rejects_start_tick_change_before_publication(tmp_path, monkeypatch):
+    token = "register-token"
+    arguments = [sys.executable, "-m", "worker"]
+    directory = tmp_path / "4242"
+    directory.mkdir()
+    (directory / "cmdline").write_bytes(b"\0".join(arg.encode() for arg in arguments) + b"\0")
+    (directory / "environ").write_bytes(("ADE_PROBE_PROCESS_OWNER=" + token).encode() + b"\0")
+    child = type("Child", (), {"poll": lambda self: None})()
+    identity = {"pid": 4242, "start_ticks": "42", "uid": os.getuid(),
+                "cmd_sha256": __import__("hashlib").sha256(
+                    b"\0".join(arg.encode() for arg in arguments) + b"\0").hexdigest()}
+    changed = {**identity, "start_ticks": "43"}
+    seen = iter((identity, changed))
+    monkeypatch.setattr(host, "proc_identity", lambda *_args: next(seen))
+    with pytest.raises(RuntimeError, match="registration_changed"):
+        host.registered_child_identity(4242, arguments, token, child, proc_root=tmp_path)
+
+
+@pytest.mark.skipif(not Path("/proc/self/cmdline").exists(), reason="Linux /proc identity contract")
+def test_real_linux_popen_registration_binds_pid_start_uid_command_and_owner():
+    token = "linux-owner-token"
+    arguments = [sys.executable, "-c", "import time; time.sleep(0.2)"]
+    child = subprocess.Popen(arguments, env={**os.environ, "ADE_PROBE_PROCESS_OWNER": token})
+    try:
+        identity = host.registered_child_identity(child.pid, arguments, token, child)
+        assert identity["pid"] == child.pid
+        assert identity["start_ticks"]
+        assert identity["uid"] == os.getuid()
+        assert host.identity_matches(identity)
+    finally:
+        child.terminate()
+        child.wait(timeout=5)
 def test_stop_only_explicit_owned_ids_preserves_volume(registry, monkeypatch):
     _, value = registry
     owned = container("owned", host.PROJECT)
@@ -277,3 +352,82 @@ def test_pinned_hindsight_gets_compatible_bounded_grace(registry, monkeypatch):
     host.stop_containers([owned], value)
     assert calls[0][0] == ["docker", "stop", "--time", "35", "owned-hindsight"]
     assert calls[0][1]["timeout"] == 45
+
+
+class TerminalTransitionChild:
+    pid = 81
+
+    def __init__(self, exit_after_waits=None):
+        self.returncode = None
+        self.exit_after_waits = exit_after_waits
+        self.waits = 0
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout=None):
+        self.waits += 1
+        if self.exit_after_waits is not None and self.waits >= self.exit_after_waits:
+            self.returncode = 0
+            return 0
+        raise subprocess.TimeoutExpired("registered-child", timeout)
+
+
+def test_owned_empty_cmdline_is_accepted_only_when_same_child_exits(tmp_path, monkeypatch):
+    token = "terminal-owner"
+    child = TerminalTransitionChild(exit_after_waits=3)
+    proc_directory = tmp_path / str(child.pid)
+    proc_directory.mkdir()
+    # Linux may expose both proc files as readable but empty during exit_mm.
+    (proc_directory / "environ").write_bytes(b"")
+    identity = {"pid": child.pid, "start_ticks": "42", "uid": os.getuid(), "cmd_sha256": "registered"}
+    empty_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    monkeypatch.setattr(host, "proc_identity", lambda *_args: {**identity, "cmd_sha256": empty_hash})
+
+    assert host.confirm_owned_child_exit(identity, token, child, proc_root=tmp_path, timeout=0.1)
+    assert child.returncode == 0
+
+
+def test_wrong_nonempty_cmdline_during_terminal_check_is_fatal(tmp_path, monkeypatch):
+    child = TerminalTransitionChild(exit_after_waits=2)
+    identity = {"pid": child.pid, "start_ticks": "42", "uid": os.getuid(), "cmd_sha256": "registered"}
+    monkeypatch.setattr(host, "proc_identity", lambda *_args: {**identity, "cmd_sha256": "wrong"})
+    with pytest.raises(RuntimeError, match="command_changed"):
+        host.confirm_owned_child_exit(identity, "owner", child, proc_root=tmp_path, timeout=0.1)
+
+
+def test_empty_cmdline_that_remains_live_is_fatal(tmp_path, monkeypatch):
+    child = TerminalTransitionChild()
+    identity = {"pid": child.pid, "start_ticks": "42", "uid": os.getuid(), "cmd_sha256": "registered"}
+    monkeypatch.setattr(host, "proc_identity", lambda *_args: {
+        **identity, "cmd_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    })
+    with pytest.raises(RuntimeError, match="transition_still_live"):
+        host.confirm_owned_child_exit(identity, "owner", child, proc_root=tmp_path, timeout=0.05)
+
+
+def test_empty_cmdline_and_empty_environ_that_remain_live_are_fatal(tmp_path, monkeypatch):
+    child = TerminalTransitionChild()
+    proc_directory = tmp_path / str(child.pid)
+    proc_directory.mkdir()
+    (proc_directory / "cmdline").write_bytes(b"")
+    (proc_directory / "environ").write_bytes(b"")
+    identity = {"pid": child.pid, "start_ticks": "42", "uid": os.getuid(), "cmd_sha256": "registered"}
+    empty_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    monkeypatch.setattr(host, "proc_identity", lambda *_args: {**identity, "cmd_sha256": empty_hash})
+
+    with pytest.raises(RuntimeError, match="transition_still_live"):
+        host.confirm_owned_child_exit(identity, "owner", child, proc_root=tmp_path, timeout=0.05)
+
+
+def test_empty_cmdline_with_nonempty_environment_without_owner_is_fatal(tmp_path, monkeypatch):
+    child = TerminalTransitionChild()
+    proc_directory = tmp_path / str(child.pid)
+    proc_directory.mkdir()
+    (proc_directory / "environ").write_bytes(b"OTHER=value\0")
+    identity = {"pid": child.pid, "start_ticks": "42", "uid": os.getuid(), "cmd_sha256": "registered"}
+    empty_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    monkeypatch.setattr(host, "proc_identity", lambda *_args: {**identity, "cmd_sha256": empty_hash})
+
+    with pytest.raises(RuntimeError, match="owner_changed"):
+        host.confirm_owned_child_exit(identity, "owner", child, proc_root=tmp_path, timeout=0.05)

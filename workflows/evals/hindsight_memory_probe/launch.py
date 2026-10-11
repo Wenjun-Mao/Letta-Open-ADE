@@ -290,16 +290,18 @@ def launch(state, kind, timeout, arguments):
         log = os.open(
             state / f"process-{token}.log", os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600
         )
-        child = subprocess.Popen(
-            [
-                sys.executable,
-                "-m",
-                "workflows.evals.hindsight_memory_probe.process_child",
-                str(read_fd),
-                json.dumps(command),
-                str(state),
-                token,
-            ],
+        child_command = [
+            sys.executable,
+            "-m",
+            "workflows.evals.hindsight_memory_probe.process_child",
+            str(read_fd),
+            json.dumps(command),
+            str(state),
+            token,
+        ]
+        try:
+            child = subprocess.Popen(
+                child_command,
             cwd=epoch["release"],
             pass_fds=(read_fd,),
             start_new_session=True,
@@ -319,12 +321,17 @@ def launch(state, kind, timeout, arguments):
             },
             stdin=subprocess.DEVNULL,
             stdout=log,
-            stderr=log,
-        )
+                stderr=log,
+            )
+        except Exception:
+            os.close(log)
+            os.close(read_fd)
+            os.close(write_fd)
+            raise
         os.close(log)
         os.close(read_fd)
         try:
-            identity = host.proc_identity(child.pid)
+            identity = host.registered_child_identity(child.pid, child_command, token, child)
             if identity is None:
                 raise RuntimeError("process_identity_unavailable")
             store.write(
@@ -350,10 +357,28 @@ def launch(state, kind, timeout, arguments):
                 min(WORK_CUTOFF, now + timeout),
                 now,
             )
+            if host.registered_child_identity(child.pid, child_command, token, child) != identity:
+                raise RuntimeError("process_identity_changed_before_dispatch")
+            if time.time() >= min(WORK_CUTOFF, now + timeout):
+                raise RuntimeError("work_deadline_elapsed_before_dispatch")
             with quiescence.dispatch_admission(state, registry, epoch):
+                if time.time() >= min(WORK_CUTOFF, now + timeout):
+                    raise RuntimeError("work_deadline_elapsed_before_dispatch")
                 os.write(write_fd, b"1")
+        except Exception:
+            if write_fd >= 0:
+                os.close(write_fd)
+                write_fd = -1
+            if child.poll() is None:
+                try:
+                    child.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.wait(timeout=5)
+            raise
         finally:
-            os.close(write_fd)
+            if write_fd >= 0:
+                os.close(write_fd)
         # exec changes cmdline; capture stable start tick + current cmdline after handshake.
         # Ownership checks use persisted launch identity for the gate, unique inherited marker after exec.
         return child.pid

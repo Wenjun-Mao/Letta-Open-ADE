@@ -200,9 +200,13 @@ def test_full_restore_host_path_runs_under_python_no_site_with_real_docker_text(
             except OSError: return False
         host_guard.proc_identity = identity
         host_guard.identity_matches = alive
+        host_guard.registered_child_identity = lambda *_args: {
+            "pid": _args[0], "start_ticks": "synthetic", "uid": os.getuid(), "cmd_sha256": "a" * 64}
         host_guard.tagged_processes = lambda _token, *_args: []
         restore_process.host.proc_identity = identity
         restore_process.host.identity_matches = alive
+        restore_process.host.registered_child_identity = lambda *_args: {
+            "pid": _args[0], "start_ticks": "synthetic", "uid": os.getuid(), "cmd_sha256": "a" * 64}
         restore_process.host.tagged_processes = lambda _token, *_args: []
         os.environ["ADE_PROBE_PROCESS_OWNER"] = "controller-token"
         identity = host_guard.proc_identity(os.getpid())

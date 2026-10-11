@@ -16,10 +16,20 @@ supervision and offline tests. The revision-4 OCI campaign used immutable source
 authentication, CPU BGE, semantic replays, same-volume restart readback, and
 ordered main-candidate shutdown passed within their bounded claims. See the
 [interim campaign finding](../../../docs/findings/hindsight-oci-campaign-2026-10-11.md).
-The separate disposable restore failed before creating a container or volume
-because host validation selected a tokenless job-result receipt. Restore retry
-and final usage/resource totals remain open. Later source/docs/tests do not
-redeploy or qualify a new runtime SHA.
+The first separately admitted disposable restore failed before creating a
+container or volume because host validation selected a tokenless job-result
+receipt. A later attempt created the exact disposable container, completed
+`pg_restore`, and then failed during the final snapshot with
+`restore_process_identity_changed`; cleanup retained that failed container and
+volume. The retained identity-list-readback registration has an empty
+command-line hash and no child or wrapper result; this is consistent with a
+Linux procfs terminal-transition race, not proof of command completion. The old
+receipts and deadlines remain untouched. [ADR 0065](../../../docs/adr/0065-post-restore-snapshot-failure-recovery.md)
+and the [P4 runbook](p4-runbook.md) document a bounded, separately authorized
+preservation and retirement path. This source iteration has not run that path on
+OCI and does not claim restore success. Restore acceptance and final
+usage/resource totals remain open. Later source/docs/tests do not redeploy or
+qualify a new runtime SHA.
 
 ## Ownership and candidate configuration
 
@@ -276,4 +286,4 @@ and the missing evidence remains explicit.
 ## Operator runbooks
 
 - [P1 qualification and P2 start/inspect](operator-runbook.md)
-- [P4 restart readback and finalization](p4-runbook.md)
+- [P4 restart readback, finalization, and failed post-restore recovery](p4-runbook.md)

@@ -119,7 +119,8 @@ def _load_main(directory: Path) -> tuple[dict, dict, dict, dict]:
 
 
 def _verify_host(directory: Path, registry: dict, admission: dict, *, prospective: bool,
-                 allow_restore_creation: bool = False) -> list[dict]:
+                 allow_restore_creation: bool = False,
+                 post_restore_recovery_started_at: str | None = None) -> list[dict]:
     items = host.containers()
     main_candidates = host.candidate_containers(items, epochs.effective_registry(directory, registry))
     expected_baseline = {row["id"]: row for row in registry["baseline"]}
@@ -140,6 +141,9 @@ def _verify_host(directory: Path, registry: dict, admission: dict, *, prospectiv
     operation_path = directory / "restore-operation.json"
     if operation_path.is_file():
         operation = json.loads(operation_path.read_text())
+        if post_restore_recovery_started_at is not None:
+            operation = {**operation, "_post_restore_recovery": True,
+                         "_post_restore_recovery_started_at": post_restore_recovery_started_at}
         restore_container = db.restore_container(
             operation, allow_unregistered=allow_restore_creation, inventory=items
         )
@@ -228,13 +232,17 @@ def _launch(directory: Path, operation: dict, *, resume: bool = False) -> None:
                                  stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         os.close(read_fd)
         read_fd = -1
-        identity = host.proc_identity(child.pid)
+        identity = host.registered_child_identity(child.pid, cmd, token, child)
         if identity is None:
             raise RuntimeError("restore_controller_identity_missing")
         ReceiptStore(directory).write(f"restore-{operation['token']}-controller-{token}.json", {
             "token": operation["token"], "controller_token": token, "identity": identity,
             "deadline": operation["deadline"], "resume": resume, "created_at": time.time(),
         })
+        if host.registered_child_identity(child.pid, cmd, token, child) != identity:
+            raise RuntimeError("restore_controller_identity_changed")
+        if time.time() >= operation["deadline"]:
+            raise RuntimeError("restore_controller_deadline_elapsed")
         os.write(write_fd, b"1")
         os.close(write_fd)
     except Exception:
@@ -300,11 +308,13 @@ def _start_unlocked(directory: Path, timeout: int = MAX_RESTORE_SECONDS) -> dict
 def start(directory: Path, timeout: int = MAX_RESTORE_SECONDS) -> dict:
     from . import restore_retirement, restore_retirement_archive as retirement_archive
     from . import restore_cleanup_recovery
+    from . import restore_post_snapshot_recovery
 
     with restore_retirement.admission_lease(directory):
         retirement_archive.prepare_next_attempt(directory)
         retirement_archive.validate_retired_history(directory)
         restore_cleanup_recovery.prepare_next_attempt(directory)
+        restore_post_snapshot_recovery.prepare_next_attempt(directory)
         return _start_unlocked(directory, timeout)
 
 
@@ -389,6 +399,10 @@ def main() -> int:
     retire_parser.add_argument("--diagnosis", type=Path, required=True)
     recover_parser = sub.add_parser("recover-failed-create-cleanup")
     recover_parser.add_argument("--diagnosis", type=Path, required=True)
+    post_restore_parser = sub.add_parser("recover-failed-post-restore-snapshot")
+    post_restore_parser.add_argument("--authority", type=Path, required=True)
+    authorize_post_restore_parser = sub.add_parser("authorize-failed-post-restore-recovery")
+    authorize_post_restore_parser.add_argument("--timeout", type=int, default=300)
     sub.add_parser("inspect")
     sub.add_parser("resume")
     sub.add_parser("stop")
@@ -405,6 +419,15 @@ def main() -> int:
             from .restore_cleanup_recovery import recover
 
             result = recover(args.state, args.diagnosis)
+        elif args.action == "recover-failed-post-restore-snapshot":
+            from .restore_post_snapshot_recovery import recover
+
+            result = recover(args.state, args.authority)
+        elif args.action == "authorize-failed-post-restore-recovery":
+            from .restore_post_snapshot_contract import issue_authority
+
+            path = issue_authority(args.state, args.timeout)
+            result = {"status": "authority_issued", "authority": str(path)}
         elif args.action == "inspect":
             result = inspect(args.state)
         elif args.action == "resume":

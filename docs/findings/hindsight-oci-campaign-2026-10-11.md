@@ -88,3 +88,34 @@ The durable source contracts are in [ADR 0063](../adr/0063-hindsight-character-e
 and [ADR 0064](../adr/0064-isolated-hindsight-infrastructure.md). This campaign
 does not revive Hindsight Cloud, add a generic Memory interface, restore the
 removed privacy policy, or authorize adoption/cutover.
+
+## Subsequent restore attempt and source-only repair
+
+A later separately admitted attempt passed exact container creation and
+`pg_restore`, then failed during the final snapshot with
+`restore_process_identity_changed`; cleanup preserved the failed container and
+volume. The retained `restore-identity-list-readback` registration is for the
+exact `docker ps -aq --no-trunc` command, has an empty command-line hash, and has
+neither child nor wrapper result. The `restore-snapshot-table-unit_entities`
+query has a successful child result but no wrapper; the other expected table
+query jobs have successful child and wrapper results. The complete inventory
+shows 90 identity-list registrations: 59 successful global container-list
+reads, 30 successful exact owned-volume-list reads, and the one failed global
+list registration. It also shows an ordered prefix of eight canonical table
+queries (`banks` through `unit_entities`); the first seven have both successful
+receipts, while the final query has a zero-exit child result without a wrapper.
+The failed registration was created during that final query's monitoring
+interval. The two later table queries were not launched. This separates the
+failed identity-list registration from the earlier completed queries, but does
+not establish wrapper-level completion of `unit_entities` or successful
+restoration.
+
+The source repair adds a bounded terminal-transition check for the registered
+`Popen` child and a separate, short-lived exact-resource recovery authority that
+captures and seals the failed database state before retiring the disposable
+container and volume. It does not modify this attempt's private evidence or old
+deadlines. The repair has only offline synthetic verification here: it has not
+been deployed to OCI, and its recovery path has not been executed against this
+candidate. Restore acceptance, final provider usage/resource totals, and the
+exact-source live retry remain open. See [ADR 0065](../adr/0065-post-restore-snapshot-failure-recovery.md)
+and the [P4 recovery runbook](../../workflows/evals/hindsight_memory_probe/p4-runbook.md).

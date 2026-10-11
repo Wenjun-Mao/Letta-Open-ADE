@@ -107,7 +107,7 @@ def test_exact_operator_runbook_cache_provisioning_recipe_is_admitted(supervised
     assert tuple(arguments) == launch.CACHE_PROVISIONING_RUN
 
     calls = []
-    monkeypatch.setattr(host, "proc_identity", lambda _: {
+    monkeypatch.setattr(host, "registered_child_identity", lambda *_args: {
         "pid": 123, "start_ticks": "42", "uid": 1000, "cmd_sha256": "gate"
     })
     monkeypatch.setattr(launch.subprocess, "Popen", lambda command, **kwargs: (
@@ -128,7 +128,7 @@ def test_launch_registers_identity_deadline_and_caps_before_gate(
     epoch = epochs.active(supervised, registry)
     calls = []
     identity = {"pid": 123, "start_ticks": "42", "uid": 1000, "cmd_sha256": "gate"}
-    monkeypatch.setattr(host, "proc_identity", lambda _: identity)
+    monkeypatch.setattr(host, "registered_child_identity", lambda *_args: identity)
 
     def spawn(command, **kwargs):
         calls.append((command, kwargs))
@@ -161,6 +161,46 @@ def test_launch_registers_identity_deadline_and_caps_before_gate(
     )
 
 
+@pytest.mark.parametrize("fail_after_publication", [False, True])
+def test_registration_failure_closes_gate_and_reaps_owned_child(
+    supervised, monkeypatch, fail_after_publication
+):
+    class Child:
+        pid = 123
+        returncode = None
+        waited = False
+
+        def poll(self):
+            return self.returncode
+
+        def wait(self, timeout=None):
+            self.waited = True
+            self.returncode = 0
+            return 0
+
+    child = Child()
+    monkeypatch.setattr(launch.subprocess, "Popen", lambda *_args, **_kwargs: child)
+    identity = {"pid": 123, "start_ticks": "42", "uid": 1000, "cmd_sha256": "gate"}
+    calls = 0
+
+    def readiness(*_args):
+        nonlocal calls
+        calls += 1
+        if calls == (2 if fail_after_publication else 1):
+            raise RuntimeError("process_child_registration_unready")
+        return identity
+
+    monkeypatch.setattr(host, "registered_child_identity", readiness)
+    dispatched = []
+    monkeypatch.setattr(launch.os, "write", lambda *_args: dispatched.append(True))
+    with pytest.raises(RuntimeError, match="registration_unready"):
+        launch.launch(supervised, "dummy", 60, [])
+    assert child.waited
+    assert dispatched == []
+    registrations = list(supervised.glob("job-" + "?" * 32 + ".json"))
+    assert bool(registrations) is fail_after_publication
+
+
 @pytest.mark.parametrize(
     "arguments,expected_child",
     [
@@ -174,7 +214,7 @@ def test_compose_child_flags_after_service_are_not_scanned_as_compose_overrides(
     supervised, monkeypatch, arguments, expected_child
 ):
     calls = []
-    monkeypatch.setattr(host, "proc_identity", lambda _: {"pid": 123, "start_ticks": "42", "uid": 1000, "cmd_sha256": "gate"})
+    monkeypatch.setattr(host, "registered_child_identity", lambda *_args: {"pid": 123, "start_ticks": "42", "uid": 1000, "cmd_sha256": "gate"})
     monkeypatch.setattr(launch.subprocess, "Popen", lambda command, **kwargs: calls.append((command, kwargs)) or SimpleNamespace(pid=123))
     monkeypatch.setattr(launch.os, "write", lambda *_: 1)
     launch.launch(supervised, "work", 60, arguments)
@@ -210,8 +250,8 @@ def test_build_cancellation_mode_uses_only_owned_pinned_fixture_and_unique_tag(
     calls = []
     monkeypatch.setattr(
         host,
-        "proc_identity",
-        lambda _: {"pid": 123, "uid": 1000, "start_ticks": "42", "cmd_sha256": "test"},
+        "registered_child_identity",
+        lambda *_args: {"pid": 123, "uid": 1000, "start_ticks": "42", "cmd_sha256": "test"},
     )
     monkeypatch.setattr(
         launch.subprocess,

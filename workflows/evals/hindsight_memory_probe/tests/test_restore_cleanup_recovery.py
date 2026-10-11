@@ -33,6 +33,21 @@ def test_cleanup_recovery_command_allowlist_is_bound_to_exact_container_and_volu
         restore_process._validate_command(operation, ["docker", "exec", "-i", "b" * 64, "pg_restore"])
 
 
+def test_failed_create_cleanup_does_not_gain_post_restore_start_or_query_scope():
+    from workflows.evals.hindsight_memory_probe import restore_snapshot
+
+    operation = {"token": "a" * 32, "state_directory": "/private/state",
+                 "compose": {"volume": "owned_volume"},
+                 "_cleanup_recovery_container_id": "owned-container"}
+    with pytest.raises(RuntimeError, match="cleanup_recovery_command_not_allowed"):
+        restore_process._validate_command(operation, ["docker", "start", "owned-container"])
+    query = restore_snapshot.table_query("unit_entities")
+    with pytest.raises(RuntimeError, match="cleanup_recovery_command_not_allowed"):
+        restore_process._validate_command(operation, [
+            "docker", "exec", "-i", "owned-container", "psql", "-U", "hindsight_probe",
+            "-d", "hindsight_probe", "-At", "-c", query])
+
+
 def test_failed_create_history_requires_sealed_byte_exact_files(tmp_path):
     token = "d" * 32
     tmp_path.chmod(0o700)

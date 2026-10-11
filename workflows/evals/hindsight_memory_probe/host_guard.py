@@ -102,6 +102,96 @@ def identity_matches(identity, proc_root=Path("/proc")):
     return proc_identity(identity["pid"], proc_root) == identity
 
 
+def registered_child_identity(pid, arguments, token, process, *, proc_root=Path("/proc"), timeout=2.0):
+    """Capture an exact stable identity for a gated Popen child before publication."""
+    expected = b"\0".join(os.fsencode(argument) for argument in arguments) + b"\0"
+    expected_hash = hashlib.sha256(expected).hexdigest()
+    marker = ("ADE_PROBE_PROCESS_OWNER=" + token).encode()
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            raise RuntimeError("process_child_exited_before_registration")
+        directory = proc_root / str(pid)
+        try:
+            command = (directory / "cmdline").read_bytes()
+        except OSError:
+            command = None
+        if command == expected:
+            identity = proc_identity(pid, proc_root)
+            try:
+                environment = (directory / "environ").read_bytes().split(b"\0")
+            except OSError:
+                environment = []
+            if (identity is not None and identity["uid"] == os.getuid()
+                    and identity["cmd_sha256"] == expected_hash and marker in environment
+                    and process.poll() is None and identity_matches(identity, proc_root)):
+                return identity
+            raise RuntimeError("process_child_registration_changed")
+        # exec startup can expose an empty or truncated argv. Retry only exact
+        # prefixes of the argv Popen was asked to launch; any other command is fatal.
+        if command not in (None, b"") and not expected.startswith(command):
+            raise RuntimeError("process_child_registration_unexpected_command")
+        time.sleep(0.01)
+    raise RuntimeError("process_child_registration_unready")
+
+
+def confirm_owned_child_exit(identity, token, process, *, proc_root=Path("/proc"), timeout=0.35):
+    """Confirm only a brief procfs teardown that ends in this owned Popen's exit.
+
+    Linux can clear cmdline during teardown before the parent has collected the
+    child's wait status. Birth time and UID must remain stable while available;
+    a nonempty wrong command or lost owner marker is never a terminal hint.
+    """
+    if process.pid != identity.get("pid"):
+        raise RuntimeError("process_child_terminal_identity_changed")
+    marker = ("ADE_PROBE_PROCESS_OWNER=" + token).encode()
+    empty_hash = hashlib.sha256(b"").hexdigest()
+    deadline = time.monotonic() + timeout
+    observed_transition = False
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            return True
+        current = proc_identity(process.pid, proc_root)
+        if current is not None:
+            if (current["pid"] != identity.get("pid")
+                    or current["start_ticks"] != identity.get("start_ticks")
+                    or current["uid"] != identity.get("uid")):
+                raise RuntimeError("process_child_terminal_identity_changed")
+            if current["cmd_sha256"] not in (identity.get("cmd_sha256"), empty_hash):
+                raise RuntimeError("process_child_terminal_command_changed")
+            if current["cmd_sha256"] == identity.get("cmd_sha256"):
+                try:
+                    environment = (proc_root / str(process.pid) / "environ").read_bytes().split(b"\0")
+                except OSError:
+                    environment = None
+                if environment is not None and marker not in environment:
+                    raise RuntimeError("process_child_terminal_owner_changed")
+                if not observed_transition:
+                    return False
+            else:
+                observed_transition = True
+                try:
+                    environment_bytes = (proc_root / str(process.pid) / "environ").read_bytes()
+                except OSError:
+                    environment_bytes = None
+                # During Linux exit_mm, both proc files can be readable and empty.
+                # Accept that transient only after cmdline is empty; a live process
+                # still has to be reaped by this registered Popen before timeout.
+                if (environment_bytes not in (None, b"")
+                        and marker not in environment_bytes.split(b"\0")):
+                    raise RuntimeError("process_child_terminal_owner_changed")
+        else:
+            observed_transition = True
+        try:
+            process.wait(timeout=min(0.025, max(0.001, deadline - time.monotonic())))
+        except subprocess.TimeoutExpired:
+            continue
+        return process.poll() is not None
+    if observed_transition:
+        raise RuntimeError("process_child_terminal_transition_still_live")
+    raise RuntimeError("process_child_terminal_identity_changed")
+
+
 def tagged_processes(token, proc_root=Path("/proc")):
     marker = ("ADE_PROBE_PROCESS_OWNER=" + token).encode()
     result = []

@@ -264,6 +264,61 @@ history blocks the next attempt. The sealed history is evidence of failure
 cleanup, not successful restoration; the next restore uses a new token only
 after source qualification and fresh P4 evidence.
 
+#### Preserve and retire the diagnosed post-restore snapshot failure
+
+Use this path only for the exact failed attempt whose immutable failure receipt
+says `stage=snapshot`, `reason=restore_process_identity_changed`, and cleanup
+receipt says `status=preserved_failed_state`,
+`reason=post_restore_snapshot_not_preserved`, `removed=false`. The retained
+attempt must show one successful registered create and one successful
+`pg_restore`. The inventory contains 90 identity-list readbacks: 59 completed
+`docker ps -aq --no-trunc` calls and 30 completed exact-volume-list calls, plus
+one failed global-list registration with no child or wrapper result. The other
+identity and operator readbacks also have successful receipts. The snapshot
+queries form the exact ordered leading prefix of eight canonical tables, from
+`banks` through `unit_entities`; the first seven have successful child and
+wrapper receipts. The `unit_entities` child exited zero but has no wrapper, and
+the failed registration was created during that query's monitoring interval.
+The two later table queries were never launched. Do not edit or synthesize any
+original result receipt.
+
+The authority command independently checks those receipts, source hashes,
+controller/process quiescence and the main stopped epoch. It creates a new
+mode-0400 admission for this operation, exact container and volume, and current
+recovery source. The admission expires within ten minutes or at `WORK_CUTOFF`,
+whichever comes first; it does not extend the failed operation's deadlines.
+Then run the exact command with the returned authority path:
+
+```sh
+python3 -m workflows.evals.hindsight_memory_probe.restore --state "$PROBE_STATE" \
+  authorize-failed-post-restore-recovery --timeout 300
+# Set RESTORE_AUTHORITY to the path printed by the command.
+python3 -m workflows.evals.hindsight_memory_probe.restore --state "$PROBE_STATE" \
+  recover-failed-post-restore-snapshot --authority "$RESTORE_AUTHORITY"
+```
+
+Recovery performs a fresh readback of baseline, stopped main epoch, exact exited
+restore container and volume. It starts only that container and registers an
+independent host-local expiry stopper before releasing the start command. It
+captures the database twice using only the fixed read-only snapshot queries,
+requires stable table hashes, and records the frozen selected-scope comparison
+under a separate recovery namespace. It stops the exact restarted container
+with `StartedAt`, exit, OOM and restart-count readback. The capture and comparison
+are evidence about the failed attempt; they do not create `snapshot.result`,
+`compare.result` or restore-success receipts.
+
+Only after the capture is stopped and sealed does recovery remove the exact
+container, check that the exact volume has no consumers, and remove that volume.
+It verifies absence and unchanged main/baseline state before sealing a closure
+receipt and retiring active controls. The final status is
+`failed_post_restore_retired`, never restore success. If interrupted after
+restart, wait until the registered recovery/expiry processes are gone, issue a
+new authority, and rerun the command. A sealed archive resumes exact-container
+and volume retirement; before the archive is sealed, a new admission takes a
+fresh readback and capture. Changed, symlinked, incomplete or unarchived files
+block continuation. Do not retry the old restore, alter its receipts/deadlines,
+run broad Docker cleanup, or use `down -v`.
+
 This proves logical persisted PostgreSQL state restore only. It does not qualify
 Hindsight API behavior, authentication, ranking, reranking, Character behavior,
 provider inference, or live deployment. The current campaign still requires its

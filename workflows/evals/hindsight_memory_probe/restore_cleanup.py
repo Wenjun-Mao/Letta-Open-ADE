@@ -148,6 +148,10 @@ def registered_host_readback(directory: Path, operation: dict):
     from . import restore_process
 
     run_command = restore_process.run_command
+    readback_label = (restore_process.POST_RESTORE_RECOVERY_READBACK
+                      if operation.get("_post_restore_recovery") is True else None)
+    command_label = readback_label or restore_process.OPERATOR_READBACK
+    list_label = readback_label or restore_process.OPERATOR_LIST_READBACK
 
     previous_reader, previous_text, previous_containers = db.COMMAND_RUNNER, db.TEXT_RUNNER, host_guard.CONTAINER_READER
 
@@ -157,7 +161,7 @@ def registered_host_readback(directory: Path, operation: dict):
         try:
             with os.fdopen(descriptor, "wb") as output:
                 code = run_command(directory, operation, arguments, timeout,
-                    operation_label=restore_process.OPERATOR_READBACK, monitor=lambda: None,
+                    operation_label=command_label, monitor=lambda: None,
                     stdout=output, stderr=subprocess.DEVNULL)
                 output.flush()
                 os.fsync(output.fileno())
@@ -177,7 +181,7 @@ def registered_host_readback(directory: Path, operation: dict):
         try:
             with os.fdopen(descriptor, "wb") as output:
                 code = run_command(directory, operation, arguments, timeout,
-                    operation_label=restore_process.OPERATOR_LIST_READBACK, monitor=lambda: None,
+                    operation_label=list_label, monitor=lambda: None,
                     stdout=output, stderr=subprocess.DEVNULL)
                 output.flush()
                 os.fsync(output.fileno())
