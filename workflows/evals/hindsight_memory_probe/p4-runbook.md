@@ -139,6 +139,66 @@ After an emergency stop or comparison mismatch, `cleanup` records
 `preserved_failed_state` and retains the volume for review; that terminal state
 continues to block rearm.
 
+#### Retire a diagnosed admission failure before creation
+
+The single restore admission is not reusable after controller-start failure.
+Only a positively verified failure before any create or restore intent can be
+retired. First inspect the private operation and preserve the failure evidence.
+Prepare a private diagnosis JSON file with mode `0400` and no group/world access
+(`chmod 400` after writing). It must contain exactly the applicable observations
+for this failed attempt:
+
+```json
+{
+  "schema": 1,
+  "kind": "failed_before_creation",
+  "failure_stage": "controller-start",
+  "failure_code": "pre_creation_controller_admission_failure",
+  "token": "<restore-operation token>",
+  "operation_sha256": "<sha256 of restore-operation.json>",
+  "failure_result_sha256": "<sha256 of restore-<token>-failure.result.json>",
+  "archive_sha256": "<archive hash from the sealed operation>",
+  "snapshot_sha256": "<canonical snapshot hash from the sealed operation>",
+  "selection_sha256": "<frozen selection hash from the sealed operation>",
+  "no_create_intent": true,
+  "no_create_result": true,
+  "controller_gone": true,
+  "registered_processes_gone": true,
+  "restore_container_absent": true,
+  "restore_volume_absent": true,
+  "main_stopped": true,
+  "baseline_unchanged": true
+}
+```
+
+The command verifies the operation seal, unchanged finalization/archive/snapshot/
+selection, exact controller and subprocess registrations, stopped main epoch,
+baseline, and a fresh Docker readback proving the restore container and volume
+are absent. These fields are an operator's diagnosis record, not substitutes for
+those independent checks. Missing or contradictory evidence rejects retirement.
+The complete attempt receipts, private restore directory and diagnosis are
+copied byte-for-byte under `restore-retired/<token>/`, then hashed and sealed
+before active controls are removed. Do not edit or delete that retained archive.
+
+```sh
+python3 -m workflows.evals.hindsight_memory_probe.restore --state "$PROBE_STATE" \
+  retire-failed-before-create --diagnosis "$PROBE_PRIVATE/restore-failure-diagnosis.json"
+```
+
+This explicit path accepts only `failure_stage=controller-start` with no
+create/restore intent or terminal result. It rejects successful, active,
+post-create, preserved-failed-state, partial, malformed, or unregistered
+attempts. An interrupted/incomplete archive remains blocking; start can continue
+only after verifying the full retirement seal and every retained file hash.
+Retirement does not clean any restore container or volume and does not change the
+campaign deadline. Its separate immutable host-readback admission authorizes
+only `docker ps`, `inspect`, and exact volume identity reads through the fixed
+`WORK_CUTOFF`; it remains usable after the old restore cleanup reserve expires.
+It does not extend the old operation's command deadlines or authorize Compose
+creation, `exec`, stop, cleanup, or provider work. After a new source is accepted
+and P4 is freshly qualified, admit the next restore with the normal `start`
+command above.
+
 This proves logical persisted PostgreSQL state restore only. It does not qualify
 Hindsight API behavior, authentication, ranking, reranking, Character behavior,
 provider inference, or live deployment. The current campaign still requires its

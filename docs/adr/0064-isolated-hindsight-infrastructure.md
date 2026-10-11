@@ -347,3 +347,44 @@ immutable historical evidence and are not adopted as a retry. Both snapshots
 in a retry must therefore identify the same newly accepted release and distinct
 epochs. This preserves the existing public capture/verify CLI while preventing
 new source from overwriting old proof or claiming a cross-release comparison.
+
+### Exact registration consumers and failed-before-create retirement
+
+The first disposable restore controller failed during its initial host check:
+the restore consumer globbed `job-*.json`, which also matched tokenless terminal
+`job-<token>.result.json` receipts and indexed each as a registration. The
+supervisor already defines registrations by the exact `job-<32 hex>.json`
+filename. Restore admission now consumes that selector; restore-owned subprocess
+checks use the exact operation-token/process-token registration pattern and
+validate the receipt identity. Malformed exact registrations remain fatal, and
+active owned jobs still block admission and cleanup. A token fallback or
+deleting terminal receipts would mask the consumer contract defect.
+
+A corrected controller cannot reuse the failed single-use admission. The
+workflow now permits only an explicit `retire-failed-before-create` operation
+for a sealed diagnosis bound to that operation, archive, canonical snapshot and
+selection hashes. The diagnosis requires the controller-start failure class,
+no create/restore intent or result, gone controller and registered processes,
+absent restore container and volume, and unchanged stopped main epoch/baseline.
+The command independently checks those source and host conditions before
+publishing a complete hash manifest and seal under
+`restore-retired/<token>/`. It copies all attempt control receipts, the restore
+directory and diagnosis byte-for-byte into read-only private evidence before
+removing the active controls. Only a complete verified retirement can release
+the single-attempt admission slot. A crash before the seal blocks a new start;
+a crash during source removal is recoverable only from the complete verified
+archive. Any changed or extra source artifact fails closed.
+
+The old restore operation's cleanup reserve can expire before the campaign
+cutoff. Retirement therefore publishes a separate immutable read-only admission
+bound to the unchanged operation hash, with a deadline at `WORK_CUTOFF` and an
+allowlist for host/container/volume identity reads only. It uses a transient
+in-memory operation view solely to bound those readbacks; the sealed operation
+and its restore/cleanup deadlines are never rewritten. Compose create, database
+exec, stop, cleanup and provider commands remain outside this scope.
+
+Completed, active, post-create, partial/preserved-volume, malformed, or
+unregistered attempts are not eligible. In particular, this path does not
+authorize cleanup of a post-restore volume or retirement of a successful
+operation. This repairs the attempt lifecycle at its owner without extending
+the campaign clock or rebinding release-scoped P4 evidence (PC-07/08/09/13).

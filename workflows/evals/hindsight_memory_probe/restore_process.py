@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -14,6 +15,24 @@ from pathlib import Path
 
 from . import host_guard as host
 from .receipts import ReceiptStore
+
+
+def registered_jobs(directory: Path, operation_token: str) -> list[dict]:
+    pattern = re.compile(rf"restore-{re.escape(operation_token)}-([a-f0-9]{{32}})-job\.json")
+    jobs = []
+    for path in sorted(directory.iterdir()):
+        match = pattern.fullmatch(path.name)
+        if match is None:
+            continue
+        if path.is_symlink() or not path.is_file():
+            raise RuntimeError("restore_process_registration_invalid")
+        job = json.loads(path.read_text())
+        if (not isinstance(job, dict) or job.get("schema") != 1
+                or job.get("token") != match.group(1)
+                or job.get("operation_token") != operation_token):
+            raise RuntimeError("restore_process_registration_invalid")
+        jobs.append(job)
+    return jobs
 
 
 def command_deadline(operation: dict, timeout: int, operation_label: str, now: float) -> float:

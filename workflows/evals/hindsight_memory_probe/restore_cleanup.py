@@ -13,6 +13,7 @@ from pathlib import Path
 from . import host_guard as host
 from . import restore_database as db
 from .receipts import ReceiptStore
+from .campaign_clock import WORK_CUTOFF
 
 def cleanup(directory: Path, *, controller_token: str | None = None) -> dict:
     from . import restore
@@ -81,8 +82,10 @@ def cleanup(directory: Path, *, controller_token: str | None = None) -> dict:
             live_controllers.append(value)
     if any(row.get("controller_token") != controller_token for row in live_controllers):
         raise RuntimeError("restore_controller_still_running")
-    if any(host.tagged_processes(json.loads(path.read_text())["token"])
-           for path in directory.glob("restore-*-job.json")):
+    from . import restore_process
+
+    if any(host.tagged_processes(job["token"])
+           for job in restore_process.registered_jobs(directory, token)):
         raise RuntimeError("restore_consumer_process_still_running")
     with registered_host_readback(directory, operation):
         restore._verify_host(directory, json.loads((directory / "registry.json").read_text()),
@@ -113,6 +116,23 @@ def cleanup(directory: Path, *, controller_token: str | None = None) -> dict:
               "canonical_snapshot_sha256": operation["snapshot"]["sha256"]}
     ReceiptStore(directory).write(result_path.name, result)
     return result
+
+
+@contextlib.contextmanager
+def retirement_readback(directory: Path, operation: dict, admission: dict):
+    """Allow only bounded read-only identity checks after restore-work expiry."""
+    from . import candidate_database
+
+    operation_hash = candidate_database.sha256_file(directory / "restore-operation.json")
+    if (admission.get("schema") != 1 or admission.get("kind") != "read_only_restore_retirement"
+            or admission.get("commands") != ["docker ps", "docker inspect", "docker volume ls", "docker volume inspect"]
+            or admission.get("token") != operation.get("token")
+            or admission.get("operation_sha256") != operation_hash
+            or admission.get("deadline") != WORK_CUTOFF or time.time() >= WORK_CUTOFF):
+        raise RuntimeError("restore_retirement_readback_admission_invalid")
+    readback_operation = {**operation, "cleanup_deadline": admission["deadline"]}
+    with registered_host_readback(directory, readback_operation):
+        yield
 
 
 def _docker_cleanup_command(directory: Path, operation: dict, command: list[str], suffix: str) -> None:

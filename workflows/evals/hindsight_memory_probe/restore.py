@@ -16,7 +16,7 @@ from pathlib import Path
 from . import candidate_database, epochs, host_guard as host, lifecycle, releases
 from .campaign_clock import DEADLINE, WORK_CUTOFF
 from .receipts import ReceiptStore
-from . import restore_database as db
+from . import restore_database as db, restore_process
 from . import restore_cleanup
 
 MAX_RESTORE_SECONDS = 1800
@@ -158,7 +158,9 @@ def _verify_host(directory: Path, registry: dict, admission: dict, *, prospectiv
                 or labels.get("com.docker.compose.project") != host.PROJECT
                 or container["State"]["Status"] != "exited"):
             raise RuntimeError("restore_main_container_identity_changed")
-    for job in (json.loads(path.read_text()) for path in directory.glob("job-*.json")):
+    from .supervisor import jobs
+
+    for job in jobs(directory):
         if host.tagged_processes(job["token"]):
             raise RuntimeError("restore_main_registered_process_active")
     sample = host.host_sample(admission.get("release_path", registry["release"]))
@@ -246,7 +248,7 @@ def _launch(directory: Path, operation: dict, *, resume: bool = False) -> None:
         raise
 
 
-def start(directory: Path, timeout: int = MAX_RESTORE_SECONDS) -> dict:
+def _start_unlocked(directory: Path, timeout: int = MAX_RESTORE_SECONDS) -> dict:
     if not 1 <= timeout <= MAX_RESTORE_SECONDS:
         raise RuntimeError("restore_timeout_invalid")
     restore_root = directory / "restore"
@@ -293,6 +295,15 @@ def start(directory: Path, timeout: int = MAX_RESTORE_SECONDS) -> dict:
             "project": compose["project"], "compose_sha256": compose["sha256"]}
 
 
+def start(directory: Path, timeout: int = MAX_RESTORE_SECONDS) -> dict:
+    from . import restore_retirement, restore_retirement_archive as retirement_archive
+
+    with restore_retirement.admission_lease(directory):
+        retirement_archive.prepare_next_attempt(directory)
+        retirement_archive.validate_retired_history(directory)
+        return _start_unlocked(directory, timeout)
+
+
 def inspect(directory: Path) -> dict:
     operation = read_operation(directory)
     with restore_cleanup.registered_host_readback(directory, operation):
@@ -322,8 +333,8 @@ def resume(directory: Path) -> None:
     allowed_deadline = operation["cleanup_deadline"] if stop_requested else operation["deadline"]
     if time.time() >= allowed_deadline or time.time() >= WORK_CUTOFF:
         raise RuntimeError("restore_resume_deadline_elapsed")
-    if any(host.tagged_processes(json.loads(path.read_text())["token"])
-           for path in directory.glob("restore-*-job.json")):
+    if any(host.tagged_processes(job["token"])
+           for job in restore_process.registered_jobs(directory, operation["token"])):
         raise RuntimeError("restore_registered_process_still_active")
     create_intent = directory / f"restore-{operation['token']}-create.intent.json"
     create_result = directory / f"restore-{operation['token']}-create.result.json"
@@ -370,6 +381,8 @@ def main() -> int:
     sub = parser.add_subparsers(dest="action", required=True)
     start_parser = sub.add_parser("start")
     start_parser.add_argument("--timeout", type=int, default=MAX_RESTORE_SECONDS)
+    retire_parser = sub.add_parser("retire-failed-before-create")
+    retire_parser.add_argument("--diagnosis", type=Path, required=True)
     sub.add_parser("inspect")
     sub.add_parser("resume")
     sub.add_parser("stop")
@@ -378,6 +391,10 @@ def main() -> int:
     try:
         if args.action == "start":
             result = start(args.state, args.timeout)
+        elif args.action == "retire-failed-before-create":
+            from .restore_retirement import retire_failed_before_create
+
+            result = retire_failed_before_create(args.state, args.diagnosis)
         elif args.action == "inspect":
             result = inspect(args.state)
         elif args.action == "resume":
