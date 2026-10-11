@@ -68,9 +68,10 @@ persistence, embeddings, Qwen, or tool protocols. See the
 
 ## Next
 
-- Review the Hindsight assessment and bound an incumbent Memory isolation/freeze
-  plan before source changes; resolve identity, ingestion and request-composition
-  contracts using Hindsight's existing capabilities.
+- Review the [consultation synthesis](findings/hindsight-consultation/assessment.md):
+  it recommends a disposable Hindsight-to-Character experiment before native
+  isolation, leaving incumbent execution unchanged. Experiment scope, candidate
+  setup and provider calls remain unapproved; bank layout is a test hypothesis.
 - Stabilize the native runtime through real product use and evidence-led fixes.
 - Improve task-specific evaluation where a concrete success contract exists.
 - Keep model aliases configurable so providers and underlying local models can

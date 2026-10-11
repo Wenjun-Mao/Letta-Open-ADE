@@ -4,6 +4,13 @@ Date: 2026-10-10. Status: source-backed assessment complete; recommendations
 await review. Hindsight is the concrete integration target, not an adopted or
 qualified runtime. This iteration changes documentation only.
 
+Review follow-up, 2026-10-10: the [returned-report assessment](hindsight-consultation/assessment.md)
+revises the recommended sequence below: leave incumbent execution unchanged and
+test a disposable Hindsight-to-Character slice before broad isolation. It also
+checks native extraction labels omitted from this assessment's scoping discussion.
+Sections 4 and 6 retain the original proposal, not the latest recommendation.
+No experiment, source isolation or adoption is authorized by either assessment.
+
 ## Authority And Baselines
 
 The user requested a Hindsight-first assessment and proposed isolating/freezing

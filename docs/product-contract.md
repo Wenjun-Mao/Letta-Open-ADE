@@ -127,6 +127,12 @@ grounding agreement or requirement to assess observable responses separately.
   amend conflicting transaction/service assumptions. Source isolation, package
   installation, live calls, migration and cutover are not authorized by the
   assessment request.
+  Returned [consultation reports and source checks](findings/hindsight-consultation/assessment.md)
+  now recommend a disposable Hindsight-to-Character experiment before native
+  isolation, with incumbent execution untouched. This is a revised recommendation,
+  not user adoption or live-run authorization. Native extraction labels and small
+  immutable source units are test candidates; no bank layout or delivery policy
+  is settled by the reports.
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
   reviewer, reconciliation with corrected or removed facts, and failure behavior.
   PC-03's character boundary and PC-10's archive eligibility are settled;
