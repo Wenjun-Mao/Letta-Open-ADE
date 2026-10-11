@@ -44,12 +44,17 @@ def re_sha(value) -> bool:
     return restart_selection.valid_sha1(value)
 
 
-def fact_projection(item: dict, text_hash: str, state: str) -> dict:
+def canonical_entities_sha256(entities: list[str]) -> str:
+    """Hash entity names as an order-independent structured collection."""
+    canonical = json.dumps(sorted(entities), ensure_ascii=False, separators=(",", ":"))
+    return sha_text(canonical)
+
+
+def fact_projection(item: dict, text_hash: str, state: str, entities_sha256: str) -> dict:
     tags = item.get("tags")
     sources = item.get("source_memory_ids", [])
     context = item.get("context")
     metadata = item.get("metadata", {})
-    entities = item.get("entities", "")
     text_fields = ("date", "mentioned_at", "occurred_start", "occurred_end", "chunk_id",
                    "invalidation_reason", "invalidated_at", "edited_at", "updated_at",
                    "consolidated_at", "consolidation_failed_at")
@@ -57,7 +62,6 @@ def fact_projection(item: dict, text_hash: str, state: str) -> dict:
             or not isinstance(sources, list) or any(not isinstance(value, str) for value in sources)
             or not isinstance(context, str)
             or not isinstance(metadata, dict)
-            or not isinstance(entities, str)
             or any(item.get(key) is not None and not isinstance(item.get(key), str) for key in text_fields)
             or not isinstance(item.get("date", ""), str)
             or type(item.get("proof_count", 1)) is not int or item.get("proof_count", 1) < 0
@@ -75,7 +79,7 @@ def fact_projection(item: dict, text_hash: str, state: str) -> dict:
         "occurred_start": item.get("occurred_start"), "occurred_end": item.get("occurred_end"),
         "chunk_id": item.get("chunk_id"), "proof_count": item.get("proof_count", 1),
         "metadata_sha256": hashlib.sha256(metadata_bytes).hexdigest(),
-        "entities_sha256": sha_text(entities), "tags": sorted(tags),
+        "entities_sha256": entities_sha256, "tags": sorted(tags),
         "source_memory_ids": sorted(sources),
         "consolidated_at": item.get("consolidated_at"),
         "consolidation_failed_at": item.get("consolidation_failed_at"),
@@ -126,6 +130,26 @@ def index_memory_states(valid: list[dict], invalidated: list[dict]) -> dict[str,
     if set(states["valid"]) & set(states["invalidated"]):
         raise RuntimeError("restart_readback_memory_in_both_states")
     return states
+
+
+async def fact_entities(client: HindsightHTTP, bank_id: str, source_id: str,
+                        memory_id: str, state: str, list_text_hash: str) -> str:
+    """Read the public detail projection and bind its structured entity names."""
+    path = (f"/v1/default/banks/{quote(bank_id, safe='')}/memories/"
+            f"{quote(memory_id, safe='')}")
+    detail = await client.request("GET", path)
+    if (not isinstance(detail, dict)
+            or detail.get("id") != memory_id
+            or detail.get("document_id") != source_id
+            or detail.get("state") != state
+            or not isinstance(detail.get("text"), str)
+            or sha_text(detail["text"]) != list_text_hash):
+        raise RuntimeError("restart_fact_detail_identity_source_state_mismatch")
+    entities = detail.get("entities")
+    if (not isinstance(entities, list)
+            or any(not isinstance(name, str) or not name for name in entities)):
+        raise RuntimeError("restart_fact_detail_entities_invalid")
+    return canonical_entities_sha256(entities)
 
 
 async def capture(selection: dict, client: HindsightHTTP, run_identity: dict) -> dict:
@@ -201,7 +225,10 @@ async def capture(selection: dict, client: HindsightHTTP, run_identity: dict) ->
                         raise RuntimeError("restart_fact_text_hash_mismatch")
                     if item.get("state") != state or not isinstance(item.get("tags"), list):
                         raise RuntimeError("restart_fact_state_or_tags_invalid")
-                    rows.append(fact_projection(item, digest, state))
+                    entities_sha256 = await fact_entities(
+                        client, bank_id, source_id, frozen["id"], state, digest
+                    )
+                    rows.append(fact_projection(item, digest, state, entities_sha256))
                 facts[state] = sorted(rows, key=lambda row: row["id"])
             if sha_text(original_text) != source["original_text_sha256"]:
                 raise RuntimeError("restart_original_source_hash_mismatch")

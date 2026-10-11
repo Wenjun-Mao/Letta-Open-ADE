@@ -561,7 +561,13 @@ python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" 
 
 The completed readback binds original text, context/content hashes, and the full
 public fact/curation projection (including metadata hash, proof count, chunk ID,
-entity hash, timestamps, state, and source lineage) plus valid/invalidated states.
+entity membership, timestamps, state, and source lineage) plus valid/invalidated
+states. For each selected fact, it reads the public memory detail endpoint and
+hashes the sorted JSON entity-name array. This ignores presentation ordering while
+preserving duplicate names and commas inside a name. Detail identity, source,
+state and text must match the list row; a missing or malformed detail fails the
+readback. The canonical database/restore comparison independently covers entity
+IDs, rows and links.
 Compose passes the active guard's release, registry and epoch identities into
 the runner; the readback records these values for both epochs.
 It proves bounded persisted-state

@@ -229,8 +229,23 @@ def test_restart_readback_compares_independent_source_context_and_fact_states(tm
     with pytest.raises(RuntimeError, match="scope_contract_mismatch"):
         restart_readback.read_selection(invalid_bank_path)
 
+    entity_names = {
+        "profile-only": ["Alice, Jr.", "Bob", "Bob"],
+        "character-fact": ["Xiaotang"],
+        "local-observation": ["Greenhouse"],
+        "other-root": ["Other root"],
+        "untagged": ["No tag"],
+        "other-observation": ["Other observation"],
+        "mixed-observation": ["Mixed observation"],
+        "fact-invalid": ["Removed, source"],
+    }
+
     class FakeHTTP:
         calls = []
+
+        def __init__(self, *, reverse_entities=False, changed_entities=None):
+            self.reverse_entities = reverse_entities
+            self.changed_entities = changed_entities or {}
 
         async def request(self, method, path, *, params=None, **_kwargs):
             self.calls.append(path)
@@ -238,6 +253,16 @@ def test_restart_readback_compares_independent_source_context_and_fact_states(tm
                 state = params["state"]
                 items = memory_rows if state == "valid" else [invalidated_row]
                 return {"items": items, "total": len(items), "limit": 100, "offset": 0}
+            if "/memories/" in path:
+                memory_id = path.rsplit("/", 1)[1]
+                source = next((row for row in memory_rows + [invalidated_row]
+                               if row["id"] == memory_id), None)
+                names = self.changed_entities.get(memory_id, entity_names[memory_id])
+                if self.reverse_entities:
+                    names = list(reversed(names))
+                return {"id": memory_id, "text": source["text"], "context": context,
+                        "date": "", "type": source["fact_type"], "entities": names,
+                        "document_id": source["document_id"], "state": source["state"]}
             return {"id": "source-a", "original_text": source_text, "content_hash": "source-content-hash",
                     "retain_params": {"context": context}}
 
@@ -246,10 +271,28 @@ def test_restart_readback_compares_independent_source_context_and_fact_states(tm
         "epoch_sha256": selection["before_epoch_sha256"],
     }))
     assert all(f"/banks/{subject_bank}/" in path for path in FakeHTTP.calls)
-    after = json.loads(json.dumps(before))
-    after["run_identity"]["epoch_sha256"] = "d" * 64
+    assert any(path.endswith("/memories/profile-only") for path in FakeHTTP.calls)
+    assert any(path.endswith("/memories/fact-invalid") for path in FakeHTTP.calls)
+    after = asyncio.run(restart_readback.capture(selection, FakeHTTP(reverse_entities=True), {
+        "release_sha": selection["release_sha"], "registry_sha256": selection["registry_sha256"],
+        "epoch_sha256": "d" * 64,
+    }))
     proof = restart_readback.compare(before, after, selection)
     assert proof["claim"] == "bounded_restart_persistence_readback"
+    profile = next(row for row in after["banks"][0]["sources"][0]["facts"]["valid"]
+                   if row["id"] == "profile-only")
+    expected_entities = json.dumps(
+        ["Alice, Jr.", "Bob", "Bob"], ensure_ascii=False, separators=(",", ":")
+    )
+    assert profile["entities_sha256"] == digest(expected_entities)
+    membership_drift = asyncio.run(restart_readback.capture(selection, FakeHTTP(
+        changed_entities={"fact-invalid": ["Removed, source", "New member"]}
+    ), {
+        "release_sha": selection["release_sha"], "registry_sha256": selection["registry_sha256"],
+        "epoch_sha256": "e" * 64,
+    }))
+    with pytest.raises(RuntimeError, match="restart_persistence_readback_mismatch"):
+        restart_readback.compare(before, membership_drift, selection)
     (tmp_path / "restart-selection.json").write_text(json.dumps(selection))
     (tmp_path / "restart-readback.before.json").write_text(json.dumps(before))
     (tmp_path / "restart-readback.after.json").write_text(json.dumps(after))
@@ -338,6 +381,39 @@ def test_fact_projection_preserves_pinned_empty_context_and_date_serialization()
         "id": "fact", "context": "", "date": "", "tags": [],
         "source_memory_ids": [], "fact_type": "world", "metadata": {},
         "proof_count": 1,
-    }, digest("fact text"), "valid")
+    }, digest("fact text"), "valid", restart_readback.canonical_entities_sha256([]))
     assert projection["context_sha256"] == digest("")
     assert projection["date"] == ""
+
+
+@pytest.mark.parametrize(
+    "detail,error",
+    [
+        (None, "identity_source_state_mismatch"),
+        ({"id": "other", "document_id": "source", "state": "valid",
+          "text": "fact", "entities": ["Name"]}, "identity_source_state_mismatch"),
+        ({"id": "fact", "document_id": "other-source", "state": "valid",
+          "text": "fact", "entities": ["Name"]}, "identity_source_state_mismatch"),
+        ({"id": "fact", "document_id": "source", "state": "invalidated",
+          "text": "fact", "entities": ["Name"]}, "identity_source_state_mismatch"),
+        ({"id": "fact", "document_id": "source", "state": "valid",
+          "text": "different", "entities": ["Name"]}, "identity_source_state_mismatch"),
+        ({"id": "fact", "document_id": "source", "state": "valid",
+          "text": "fact", "entities": "Name, Other"}, "entities_invalid"),
+        ({"id": "fact", "document_id": "source", "state": "valid",
+          "text": "fact"}, "entities_invalid"),
+        ({"id": "fact", "document_id": "source", "state": "valid",
+          "text": "fact", "entities": ["", "Name"]}, "entities_invalid"),
+        ({"id": "fact", "document_id": "source", "state": "valid",
+          "text": "fact", "entities": ["Name", 1]}, "entities_invalid"),
+    ],
+)
+def test_restart_fact_detail_rejects_malformed_or_mismatched_readback(detail, error):
+    class FakeHTTP:
+        async def request(self, *_args, **_kwargs):
+            return detail
+
+    with pytest.raises(RuntimeError, match=error):
+        asyncio.run(restart_readback.fact_entities(
+            FakeHTTP(), "bank", "source", "fact", "valid", digest("fact")
+        ))

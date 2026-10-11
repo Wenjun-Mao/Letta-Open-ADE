@@ -272,6 +272,26 @@ logical persisted PostgreSQL state restoration. It does not qualify API behavior
 authentication, ranking, reranking, Character behavior or live deployment.
 Static and synthetic checks do not replace actual OCI execution evidence.
 
+### Public fact entity readback
+
+The candidate05 restart comparison exposed that `/memories/list` returns entity
+names as a comma-joined display string. The operator's before/after inspection
+found the selected fact identities, order, text, scope, metadata and lifecycle
+fields unchanged, while only the presentation order of that string differed.
+Hashing it made P4 reject a persisted-state readback for a non-semantic
+presentation change. The same public API's fact detail endpoint returns a
+structured array of entity names, so P4 now reads that endpoint for each frozen
+fact and hashes canonical JSON for the sorted names. It preserves multiplicity
+and commas in names, and rejects missing/malformed details or mismatched fact,
+source, state or text identity. Membership drift remains a readback failure.
+
+Do not split the display string on commas or omit the entity projection: splitting
+cannot preserve names containing commas, while omission would discard a real
+public fact difference. This public name projection is distinct from entity IDs,
+types and links; canonical database snapshot and restore comparisons remain the
+authority for those stored relations. This repair addresses P4 readback under
+PC-07/08/13 without changing storage, ingestion or product semantics.
+
 ## Alternatives and consequences
 
 - Shared router edits or reconstructed adapter requests: rejected; observation
