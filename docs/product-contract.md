@@ -151,6 +151,15 @@ not expand product, safety, deployment, or adoption authority.
 PC-05/08/09 continue governing the incumbent; no runtime spending gate is added.
 See [ADR 0062](adr/0062-self-hosted-hindsight.md) for rationale and guardrails.
 
+Clarification, 2026-10-11: after reviewing the completed campaign, the user
+approved a five-hour-target/six-hour-cap semantic diagnosis-and-repair follow-up
+through Relay Direct. The existing setup plan's revision 5 records fresh clocks,
+controls, execution permissions and closure requirements. This authorizes
+isolated synthetic candidate work and the existing inference routes, not native
+integration/adoption, a native model-default change or a weakening of PC-02/03/07/
+11/12. Earlier failures and revision-4 evidence remain immutable historical
+results. Direct approval does not itself create or resume native Goal mode.
+
 ## Open Decisions, Not Agreements
 
 - Hindsight-first integration assessment: on 2026-10-10 the user selected

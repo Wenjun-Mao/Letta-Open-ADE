@@ -1,4 +1,87 @@
-# Self-Hosted Hindsight: Isolated First Experiment
+# Self-Hosted Hindsight: Isolated Experiment And Semantic Follow-Up
+
+## Revision 5: Approved Semantic Diagnosis And Repair
+
+Status: approved for execution by the user's "Agreed, go ahead" Relay Direct
+instruction on 2026-10-11. This is a new bounded follow-up, not a resumption of
+the closed revision-4 clock or automatic native adoption. Baseline: clean
+primary `main` at `d0138d8a8ed29dfec2b96b0002357d9b28219d7e`; last qualified
+isolated runtime source `a3e78c5c63b17eadc3d02b05ce7e04eb6042944f`.
+
+Activation record: `2026-10-11T20:12:43Z`; five-hour target
+`2026-10-12T01:12:43Z`, new-work cutoff `2026-10-12T01:27:43Z`, six-hour hard
+stop `2026-10-12T02:12:43Z`. Protect the final 45 minutes for shutdown and
+reporting. These deadlines do not extend old operation admissions. Finish early
+when the deliverables are verified; do not reroll unchanged failures to fill time.
+
+### Outcome And Ordered Work
+
+Determine which observed failures originate in extraction/classification,
+retrieval, Character-facing projection, answer generation, or output capacity.
+Repair demonstrated causes at their owning layer and verify comparable results;
+do not promise general reliability from this small synthetic sample.
+
+1. Approximately 45 minutes: trace q01 origin/participation, q06 unsupported
+   recollection, q07 missing bicycle detail, and the empty capped response through
+   the sealed source/readback, recall, projected context, final request and reply.
+   Record what failed, causal evidence, remaining uncertainty and the owning layer.
+2. Approximately 45 minutes: prepare additive, versioned adequate-memory controls
+   for the problem cases alongside the existing retrieved/empty arms. Freeze
+   expected distinctions before live results. If necessary, test output capacity
+   separately with identical settings across arms; incomplete output is not a
+   semantic pass and no native model default is changed.
+3. Approximately 90 minutes: implement the smallest supported durable repairs,
+   with offline regressions. Primary entrypoints are the workflow bank profile,
+   fixtures/freezer/replay and the feature-owned `hindsight_evaluation` CLI,
+   recall and context projection. New contracts require a concise ADR; no second
+   reviewer, generic Memory framework, source-text keyword policy, or synthetic
+   expected-answer patch is allowed.
+4. Approximately 75 minutes: test on fresh experiment-owned banks and output
+   directories, preserving candidate04/05 and all sealed evidence. Replay the
+   original distinctions plus predeclared follow-ups before/after consolidation.
+   Assess grounding, judgment and character fidelity separately (PC-12). Repeat
+   a failed run only for a specific repair, transient or variability hypothesis.
+5. Approximately 45 minutes: independently review evidence and diffs; run the
+   focused README suite and relevant Ruff/static/link checks; commit/push scoped
+   changes; drain, snapshot, archive and stop the candidate using the qualified
+   operator path. Verify baseline services unchanged and owned processes gone.
+
+Review accumulated evidence near hours two and four, or on material changes,
+and choose continue, repair, redirect or close. If a repair would require an
+unapproved architecture or product change, report that decision rather than
+invent a workaround. A truthful diagnosed limitation is preferable to a false
+completion claim; the handoff must distinguish verified repairs from open work.
+
+### Authority, Acceptance And Exclusions
+
+Approval covers this implementation and isolated OCI candidate staging,
+start/redeploy/restart/stop, fresh synthetic-bank retain/recall/consolidation,
+existing DeepSeek/Spark inference routes, bounded diagnostic retests, candidate
+backup and cleanup. Existing task-creation standing approval and normal scoped
+commit/push defaults remain. Work serially on primary `main`; the manager owns
+live operations and independent review. Never edit concurrently with a worker.
+This Relay Direct approval does not itself create or resume native Goal mode.
+
+Reuse pinned infrastructure, refresh host/baseline/auth readbacks and issue new
+owned supervision before live work. Do not claim old runtime qualification for a
+changed source. Repeat full restore qualification only if changed persistence
+contracts or observed inconsistencies make it relevant; otherwise report the
+earlier logical-restore proof as historical, not a fresh proof for this run.
+
+Acceptance checks PC-02/03/04/10 profile sharing versus source participation,
+subject/root/version boundaries, factual correction versus change, PC-07's
+tested invalidation/retry distinctions, and PC-11's uncertainty versus permitted
+new solo fiction. Inspect actual supplied context and actual serialized requests;
+do not substitute structurally valid labels or green tests for semantic evidence.
+
+No native deployment/integration, existing-chat export, new provider/account,
+shared-service reconfiguration, hardware purchase, Studio UI work, native-default
+change, broad benchmark, dependency-cleanup detour, Cloud revival, privacy/no-save
+policy (PC-06), spending gate or new framework (PC-09). Retain PC-13 isolation and
+the revision-4 safety envelope. The final report must identify exact tested source,
+scope, controls, observations, usage, unresolved failures and verification gaps.
+
+## Revision 4: Closed Campaign And Historical Operational Contract
 
 Status: Revision 4 campaign completed under the Goal-mode authorization started
 2026-10-11 04:49:25 UTC. Infrastructure, semantic, same-volume restart, ordered
