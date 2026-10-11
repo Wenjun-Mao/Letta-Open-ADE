@@ -1,0 +1,10 @@
+{
+  "hindsight_source": "eb6df499d35300e5b2f3f029b2e6adda04ed90f8",
+  "hindsight_version": "0.10.3",
+  "bge_repository": "BAAI/bge-reranker-v2-m3",
+  "bge_revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+  "bge_path": "/models/bge-v2-m3",
+  "pgvector_package": "0.8.6-1.pgdg13+1",
+  "embedding_dimensions": 1024,
+  "embedding_served_max_input_tokens": 8192
+}

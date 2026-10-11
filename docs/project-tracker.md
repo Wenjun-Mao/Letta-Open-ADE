@@ -27,7 +27,17 @@ twelve-hour hard cap and standing authorization for separate Codex tasks. P0's
 is published at `1eafaa2`; the director independently reran 127 focused tests and
 Ruff successfully. OCI preflight still reports two cores, approximately 9.46 GiB
 available RAM and 109.6 GiB free project storage; owned ports/path are unused.
-Next: frozen workflow/configuration, temporary supervision and isolated staging.
+P0 infrastructure package is implemented in
+[`hindsight_memory_probe`](../workflows/evals/hindsight_memory_probe/README.md):
+owned pinned Compose/configuration, actual-wire router observation, clean release
+export and temporary detached supervisor with audited rearm/allocation/release
+epochs ([ADR 0064](adr/0064-isolated-hindsight-infrastructure.md)). Offline
+configuration and fake mechanics checks are verified (199 focused tests, Ruff,
+Compose dummy validation and diff checks); pinned-image provider/DB/BGE
+qualification, OCI dummy disconnect/build-cancellation proof and P2 live startup
+remain unrun. Semantic corpus and replay driver are the next serial assignment.
+Initial supervision owns only the candidate project; P4 disposable restore project
+registration remains a subsequent extension before restore work.
 No Hindsight installation, provider inference or deployment has occurred yet.
 Older entries retain their historical scope and are not authority to resume new
 native memory feature work ahead of this review.

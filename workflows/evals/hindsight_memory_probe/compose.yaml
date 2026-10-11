@@ -1,0 +1,96 @@
+name: ade-hindsight-probe
+services:
+  db:
+    image: ade-hindsight-probe-db:${PROBE_RELEASE_SHA:?clean release SHA required}
+    platform: linux/arm64
+    build:
+      context: ../../..
+      dockerfile: workflows/evals/hindsight_memory_probe/docker/postgres.Dockerfile
+    restart: "no"
+    mem_limit: ${PROBE_DB_MEMORY:-1g}
+    cpus: ${PROBE_DB_CPU:-0.25}
+    environment:
+      POSTGRES_DB: hindsight_probe
+      POSTGRES_USER: hindsight_probe
+      POSTGRES_PASSWORD: ${PROBE_DB_PASSWORD:?private generated env required}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./docker/extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U hindsight_probe -d hindsight_probe"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  model-router:
+    image: ade-hindsight-probe-router:${PROBE_RELEASE_SHA:?clean release SHA required}
+    platform: linux/arm64
+    build:
+      context: ../../..
+      dockerfile: workflows/evals/hindsight_memory_probe/docker/python.Dockerfile
+      target: router
+    restart: "no"
+    user: ${PROBE_UID:?private env UID required}:${PROBE_GID:?private env GID required}
+    mem_limit: ${PROBE_MODEL_ROUTER_MEMORY:-256m}
+    cpus: ${PROBE_MODEL_ROUTER_CPU:-0.125}
+    environment:
+      MODEL_ROUTER_SOURCES_FILE: workflows/evals/hindsight_memory_probe/config/sources.json
+      MODEL_ROUTER_MODEL_PROFILES_FILE: workflows/evals/hindsight_memory_probe/config/model-profiles.json
+      MODEL_ROUTER_DEPLOYMENT_MANIFEST_FILE: workflows/evals/hindsight_memory_probe/config/unqualified-deployment-manifest.absent.json
+      MODEL_ROUTER_API_KEY_SECRET: ""
+      MODEL_ROUTER_API_KEY: ${PROBE_ROUTER_KEY:?private generated env required}
+      MODEL_ROUTER_REQUEST_TIMEOUT_SECONDS: "120"
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:?private generated env required}
+      DGX_EMBEDDING_API_KEY: ${DGX_EMBEDDING_API_KEY:-}
+      PROBE_RECEIPTS: /receipts/wire
+      PROBE_PHASE_FILE: /receipts/phase.json
+    volumes:
+      - ${PROBE_PRIVATE_DIR:?private sibling required}/receipts:/receipts
+    # Router stays internal. Optional loopback 18010 is via SSH-to-container diagnostics.
+  hindsight:
+    image: ghcr.io/vectorize-io/hindsight:0.10.3@sha256:acf5e76bd9a5b65f9f7c540a3414007c7f874b34346587dac7e4feab7ae80cba
+    platform: linux/arm64
+    restart: "no"
+    mem_limit: ${PROBE_HINDSIGHT_MEMORY:-6g}
+    cpus: ${PROBE_HINDSIGHT_CPU:-1.0}
+    env_file: ./config/hindsight.env
+    environment:
+      HINDSIGHT_API_EMBEDDINGS_QUERY_PREFIX: "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery: "
+      HINDSIGHT_API_DATABASE_URL: postgresql://hindsight_probe:${PROBE_DB_PASSWORD:?private generated env required}@db:5432/hindsight_probe
+      HINDSIGHT_API_TENANT_API_KEY: ${PROBE_HINDSIGHT_KEY:?private generated env required}
+      HINDSIGHT_CP_DATAPLANE_API_KEY: ${PROBE_HINDSIGHT_KEY:?private generated env required}
+      HINDSIGHT_CP_ACCESS_KEY: ${PROBE_CP_ACCESS_KEY:?separate private CP key required}
+      HINDSIGHT_API_LLM_API_KEY: ${PROBE_ROUTER_KEY:?private generated env required}
+      HINDSIGHT_API_EMBEDDINGS_OPENAI_API_KEY: ${PROBE_ROUTER_KEY:?private generated env required}
+    ports:
+      - 127.0.0.1:18888:8888
+      - 127.0.0.1:19999:9999
+    volumes:
+      - model-cache:/models
+      - ./qualification:/probe:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      model-router:
+        condition: service_started
+  runner:
+    image: ade-hindsight-probe-runner:${PROBE_RELEASE_SHA:?clean release SHA required}
+    platform: linux/arm64
+    build:
+      context: ../../..
+      dockerfile: workflows/evals/hindsight_memory_probe/docker/python.Dockerfile
+      target: runner
+    profiles: [runner]
+    restart: "no"
+    user: ${PROBE_UID:?private env UID required}:${PROBE_GID:?private env GID required}
+    mem_limit: ${PROBE_RUNNER_MEMORY:-512m}
+    cpus: ${PROBE_RUNNER_CPU:-0.125}
+    environment:
+      ADE_EVAL_ROUTER_BASE_URL: http://model-router:8010/v1
+      ADE_EVAL_ROUTER_API_KEY: ${PROBE_ROUTER_KEY:?private generated env required}
+      ADE_EVAL_HINDSIGHT_BASE_URL: http://hindsight:8888
+      ADE_EVAL_HINDSIGHT_API_KEY: ${PROBE_HINDSIGHT_KEY:?private generated env required}
+    volumes:
+      - ${PROBE_PRIVATE_DIR:?private sibling required}/receipts:/receipts
+volumes:
+  db-data: {}
+  model-cache: {}

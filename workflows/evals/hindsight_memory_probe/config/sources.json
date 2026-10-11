@@ -1,0 +1,38 @@
+[
+  {
+    "id": "dgx_embedding_sidecar",
+    "label": "Qwen embedding service (legacy DGX alias)",
+    "base_url": "http://100.64.35.71:8001/v1",
+    "base_url_env": "",
+    "kind": "openai-compatible",
+    "adapter": "vllm_openai",
+    "enabled": true,
+    "enabled_for": [
+      "embedding"
+    ],
+    "api_key_env": "DGX_EMBEDDING_API_KEY",
+    "api_key_secret": "",
+    "model_allowlist": [
+      "Qwen/Qwen3-Embedding-0.6B"
+    ]
+  },
+  {
+    "id": "deepseek",
+    "label": "DeepSeek official API",
+    "base_url": "https://api.deepseek.com",
+    "base_url_env": "DEEPSEEK_API_BASE",
+    "kind": "openai-compatible",
+    "adapter": "deepseek_openai",
+    "enabled": true,
+    "enabled_for": [
+      "agent_studio",
+      "comment_lab",
+      "label_lab"
+    ],
+    "model_allowlist": [
+      "deepseek-flash"
+    ],
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "api_key_secret": ""
+  }
+]
