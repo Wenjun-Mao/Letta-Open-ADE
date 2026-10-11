@@ -347,8 +347,11 @@ away. Freeze ordered lifecycle calls per iteration; no extra LLM judge is needed
 Fake-upstream tests cover actual DeepSeek payloads, Qwen prefix/dimensions,
 scope filters, invalid/missing scope rejection, immutable retry payload identity,
 unavailable versus empty recall, oversized context and complete request captures.
-Capture failure must fail experiment qualification despite the executor's
-best-effort observer. Static Compose checks reject shared DB URLs, mounts,
+Embedding response capture accepts validated numeric arrays and base64 float32
+vectors while retaining dimensions only; it preserves the SDK request format and
+fails qualification on malformed successful replies. Capture failure must fail
+experiment qualification despite the executor's best-effort observer. Static
+Compose checks reject shared DB URLs, mounts,
 networks, missing auth, unbounded worker reservations and unintended providers.
 Run focused workflow/evaluation-entrypoint/executor/router tests with
 `uv run --locked python -m pytest`, Ruff with `uv run --locked ruff check`, and

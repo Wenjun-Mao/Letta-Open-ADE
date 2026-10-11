@@ -1,9 +1,11 @@
 """P1 executable in pinned full Hindsight image. Actual providers + local fake HTTP."""
 
 import asyncio
+import base64
 import json
 import logging
 import os
+import struct
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -24,10 +26,11 @@ class FakeHTTP(BaseHTTPRequestHandler):
         embedding = self.path.endswith("/embeddings")
         failure = self.fail_embeddings if embedding else self.fail_chat
         if embedding:
+            vector = base64.b64encode(struct.pack("<1024f", *([0.0] * 1024))).decode()
             body = {
                 "object": "list",
                 "data": [
-                    {"object": "embedding", "index": i, "embedding": [0.0] * 1024}
+                    {"object": "embedding", "index": i, "embedding": vector}
                     for i, _ in enumerate(payload["input"])
                 ],
                 "usage": {"prompt_tokens": 1, "total_tokens": 1},
@@ -88,6 +91,7 @@ async def qualify(base):
     assert config.embeddings_max_retries == 0
     embeddings = create_embeddings_from_env()
     await embeddings.initialize()
+    assert FakeHTTP.requests[-1][1]["encoding_format"] == "base64"
     assert FakeHTTP.requests[-1][1]["input"] == ["test"]
     assert embeddings.dimension == 1024
     await embeddings.encode_query(["中文问题"])

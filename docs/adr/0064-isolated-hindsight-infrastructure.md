@@ -37,10 +37,20 @@ image IDs and semantic fixtures belong to subsequent evidence.
 Inject an observed httpx client through the shared app lifespan, retaining the
 existing catalog/routes/adapters/defaults/policy. Durable exclusive/fsync inbound
 capture and final outbound request bytes precede upstream dispatch. Capture failure
-prevents forwarding and invalidates qualification. Project only status/usage/time/
-embedding shape from responses; exclude authentication, error text, raw responses
-and private reasoning. Disable the pinned native raw LLM trace and external
-OTEL export; retrieval/recall trace remains available. Reject streaming and secret/reasoning request fields.
+prevents forwarding and invalidates qualification. Project only status, finite
+nonnegative numeric usage, time, embedding dimensions and input count; exclude
+authentication, error text, raw responses, vectors and private reasoning. For
+successful embedding responses, validate input cardinality, contiguous unique
+indices, consistent nonempty dimensions and any explicitly requested dimension.
+Accept finite numeric arrays and strict base64 float32 payloads. This is an
+observation contract: preserve the serialized request and SDK encoding default.
+The former list-only projection recorded no dimensions for successful SDK-default
+base64 replies, even though Hindsight decoded them; this was a capture omission,
+not evidence of failed embeddings.
+Malformed successful embeddings fail and latch qualification; HTTP error bodies
+are not parsed or projected. Disable the pinned native raw LLM trace and external
+OTEL export; retrieval/recall trace remains available. Reject streaming and
+secret/reasoning request fields.
 The existing Character profile remains frozen high thinking, while Memory explicitly
 disables thinking and uses JSONobject. Tests use the real shared forwarding/catalog
 path to fake HTTP. Pinned-image actual Hindsight providers remain P1 qualification.

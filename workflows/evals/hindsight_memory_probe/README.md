@@ -96,9 +96,15 @@ No headers/auth, exception text, provider bodies or reasoning are recorded.
 Pinned Hindsight native LLM trace is explicitly disabled (its default is true),
 as is OTEL export; neither may become a second raw output/error sink. This does
 not disable retrieval/recall trace used for complete reranking qualification.
-Safe response projection: status, numeric usage, latency, embedding dimensions
-and input count only. Streaming and reasoning/credential fields in request JSON
-are rejected. Capture failure prevents forwarding, latches qualification failure,
+Safe response projection: status, finite nonnegative numeric usage, latency,
+embedding dimensions and input count only. Successful embedding responses are
+validated for input cardinality, contiguous unique indices, consistent nonempty
+dimensions and any explicitly requested dimension. Finite numeric arrays and
+strict base64 float32 payloads are accepted; malformed successful responses fail
+and latch qualification. This validates observations without changing the
+serialized request or SDK encoding default. HTTP error bodies are not parsed or
+projected, and vectors are never retained. Streaming and reasoning/credential
+fields in request JSON are rejected. Capture failure prevents forwarding, latches qualification failure,
 and attempts a fixed-code failure receipt; if the filesystem itself is unavailable,
 a fixed stderr code and failed health/readback remain, never a claim of durable
 receipt success. Capture directory0700/files0600 use exclusive atomic link publication after fsync, then fsync(directory).

@@ -1,4 +1,6 @@
 import json
+import base64
+import struct
 from pathlib import Path
 
 import httpx
@@ -13,6 +15,10 @@ from workflows.evals.hindsight_memory_probe.router_entrypoint import build_app
 
 ROOT = Path(__file__).resolve().parents[1]
 PREFIX = "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery: "
+
+
+class CapturedRequests(list):
+    embedding_encoding = "base64"
 
 
 @pytest.fixture
@@ -54,7 +60,7 @@ def observed(tmp_path, monkeypatch):
     phase = tmp_path / "phase.json"
     phase.write_text(json.dumps({"phase": "retain", "operation_id": "synthetic-op"}))
     store = ReceiptStore(tmp_path / "wire")
-    requests = []
+    requests = CapturedRequests()
 
     def dispatch(request):
         raw = request.content
@@ -65,10 +71,51 @@ def observed(tmp_path, monkeypatch):
         )
         requests.append(payload)
         if request.url.path.endswith("embeddings"):
+            if requests.embedding_encoding == "invalid_json":
+                return httpx.Response(200, content=b"private response text")
+            if requests.embedding_encoding == "base64":
+                vector = base64.b64encode(
+                    struct.pack("<1024f", *([0.0] * 1024))
+                ).decode()
+            elif requests.embedding_encoding == "invalid":
+                vector = "not-base64!"
+            elif requests.embedding_encoding == "mixed":
+                return httpx.Response(
+                    200,
+                    json={
+                        "data": [
+                            {"index": 0, "embedding": [0.0] * 1024},
+                            {
+                                "index": 1,
+                                "embedding": base64.b64encode(
+                                    struct.pack("<1024f", *([0.0] * 1024))
+                                ).decode(),
+                            },
+                        ]
+                    },
+                )
+            else:
+                vector = [0.0] * 1024
+                if requests.embedding_encoding == "nonfinite":
+                    vector[0] = float("nan")
+                if requests.embedding_encoding == "bool":
+                    vector[0] = True
             body = {
-                "data": [{"index": 0, "embedding": [0.0] * 1024}],
+                "data": [
+                    {
+                        "index": 0
+                        if requests.embedding_encoding == "duplicate"
+                        else index,
+                        "embedding": vector,
+                    }
+                    for index, _ in enumerate(payload["input"])
+                ],
                 "usage": {"prompt_tokens": 3},
             }
+            if requests.embedding_encoding == "missing":
+                body["data"] = []
+            if requests.embedding_encoding == "dimension_mismatch":
+                body["data"][1]["embedding"] = [0.0] * 1023
         else:
             body = {
                 "choices": [
@@ -82,7 +129,11 @@ def observed(tmp_path, monkeypatch):
                 "usage": {"prompt_tokens": 3, "completion_tokens": 2},
                 "secret": "provider-secret",
             }
-        return httpx.Response(200, json=body)
+        return httpx.Response(
+            200,
+            content=json.dumps(body, allow_nan=True).encode(),
+            headers={"Content-Type": "application/json"},
+        )
 
     original = shared.app.router.lifespan_context
     app = build_app(store, phase, httpx.MockTransport(dispatch))
@@ -191,6 +242,45 @@ def test_qwen_actual_wire_retains_exact_prefix_without_router_additions(observed
     ]
     assert all(
         r["embedding_dimensions"] == [1024] and r["input_count"] == 1 for r in receipts
+    )
+    encoded_vector = base64.b64encode(struct.pack("<1024f", *([0.0] * 1024))).decode()
+    captured = " ".join(path.read_text() for path in store.directory.iterdir())
+    assert encoded_vector not in captured
+
+
+@pytest.mark.parametrize(
+    "encoding",
+    [
+        "invalid",
+        "invalid_json",
+        "mixed",
+        "duplicate",
+        "nonfinite",
+        "bool",
+        "dimension_mismatch",
+        "missing",
+    ],
+)
+def test_malformed_successful_embedding_latches_failure_without_body_capture(
+    observed, encoding
+):
+    client, store, _, requests, _ = observed
+    requests.embedding_encoding = encoding
+    payload = {
+        "model": "dgx_embedding_sidecar::Qwen/Qwen3-Embedding-0.6B",
+        "input": ["one"],
+    }
+    if encoding in {"mixed", "duplicate", "missing", "dimension_mismatch"}:
+        payload["input"] = ["one", "two"]
+    assert post(client, "embeddings", payload).status_code >= 400
+    assert client.get("/probe/qualification").status_code == 503
+    failure = json.loads(next(store.directory.glob("*.failure.json")).read_text())
+    assert failure["code"] == "response_capture_failed"
+    assert "not-base64" not in " ".join(
+        path.read_text() for path in store.directory.iterdir()
+    )
+    assert "private response text" not in " ".join(
+        path.read_text() for path in store.directory.iterdir()
     )
 
 
