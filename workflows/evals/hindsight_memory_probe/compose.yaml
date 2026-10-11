@@ -85,10 +85,12 @@ services:
     mem_limit: ${PROBE_RUNNER_MEMORY:-512m}
     cpus: ${PROBE_RUNNER_CPU:-0.125}
     environment:
+      ADE_EVAL_SOURCE_SHA: ${PROBE_RELEASE_SHA:?clean release SHA required}
       ADE_EVAL_ROUTER_BASE_URL: http://model-router:8010/v1
       ADE_EVAL_ROUTER_API_KEY: ${PROBE_ROUTER_KEY:?private generated env required}
       ADE_EVAL_HINDSIGHT_BASE_URL: http://hindsight:8888
       ADE_EVAL_HINDSIGHT_API_KEY: ${PROBE_HINDSIGHT_KEY:?private generated env required}
+      ADE_EVAL_PHASE_FILE: /receipts/phase.json
     volumes:
       - ${PROBE_PRIVATE_DIR:?private sibling required}/receipts:/receipts
 volumes:

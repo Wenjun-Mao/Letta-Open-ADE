@@ -105,29 +105,32 @@ class FakeProviders:
         if request.url.path.endswith("/memories/recall"):
             assert request.headers["Authorization"] == "Bearer hindsight-secret"
             self.recalls.append((str(request.url), payload))
+            candidate_ids = [item.get("id") for item in self.recalled if isinstance(item, dict)]
             body = (
                 {"error": "invalid"}
                 if self.malformed
                 else {
                     "results": self.recalled,
                     "trace": {
+                        "rrf_merged": [{"node_id": item, "text": "trace candidate"} for item in candidate_ids],
                         "reranked": [
                             {
-                                "node_id": "fact-1",
+                                "node_id": item,
                                 "text": "TRACE-ONLY-CANDIDATE",
                                 "score_components": {
                                     "cross_encoder_score": 0.7,
                                     "cross_encoder_score_normalized": 0.8,
                                 },
-                            }
+                            } for item in candidate_ids
                         ],
                         "summary": {
+                            "results_returned": len(candidate_ids),
                             "phase_metrics": [
                                 {
                                     "phase_name": "reranking",
                                     "duration_seconds": 0.1,
                                     "details": {
-                                        "candidates_reranked": 1,
+                                        "candidates_reranked": len(candidate_ids),
                                         "reranker_type": "cross-encoder",
                                     },
                                 }

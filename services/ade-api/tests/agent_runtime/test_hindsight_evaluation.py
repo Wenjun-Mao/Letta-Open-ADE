@@ -146,6 +146,20 @@ def test_genuine_empty_recall_is_visible(monkeypatch, tmp_path):
     assert len(fake.generations) == 3
 
 
+@pytest.mark.parametrize("field", ["text", "context"])
+def test_private_origin_exclusion_checks_memory_text_and_context_before_generation(
+    monkeypatch, tmp_path, field
+):
+    candidate = memory(**{field: "雨巷接龙"})
+    fake = FakeProviders(recalled=[candidate])
+    request = inputs(arms=["hindsight"], adequate_memories=[],
+                     excluded_memory_terms=["雨巷接龙", "纸船靠岸"])
+    with pytest.raises(EvaluationError, match="recall_content_exclusion"):
+        run(monkeypatch, tmp_path, fake, request=request)
+    assert fake.generations == []
+    assert read(tmp_path, "failure.json")["code"] == "recall_content_exclusion"
+
+
 @pytest.mark.parametrize(
     "status,malformed,code",
     [

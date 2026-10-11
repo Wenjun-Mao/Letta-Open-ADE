@@ -128,6 +128,7 @@ class EvaluationInput(StrictInput):
         list[Literal["hindsight", "empty", "adequate"]], Field(min_length=1)
     ]
     adequate_memories: list[RecalledMemory] = Field(default_factory=list)
+    excluded_memory_terms: list[Text] = Field(default_factory=list)
     timeout_seconds: Annotated[float, Field(gt=0, le=180)] = 120.0
     recall_timeout_seconds: Annotated[float, Field(gt=0, le=180)] = 120.0
     max_output_tokens: Annotated[int, Field(gt=0, le=32768)] = 2048
@@ -174,6 +175,8 @@ class EvaluationInput(StrictInput):
             raise ValueError("adequate arm requires nonempty adequate_memories only")
         for memory in self.adequate_memories:
             memory.check_scope(self.scope)
+        if len(self.excluded_memory_terms) != len(set(self.excluded_memory_terms)):
+            raise ValueError("excluded_memory_terms must be unique")
         return self
 
 

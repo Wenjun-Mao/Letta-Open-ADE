@@ -357,6 +357,17 @@ image run at P1, before live credentials are supplied; never substitute a
 hand-reconstructed request for verification of its actual provider serialization.
 No real-credential startup, model/image downloads or OCI changes occur at P0.
 
+**P0 offline checkpoint, 2026-10-11:** the frozen synthetic corpus and query
+distinctions, immutable reference-context/payload freezer, public-HTTP workflow
+for readiness/retain/consolidation/curation/readback/replay, feature-owned
+pre-generation full-rerank qualification and correlated phase protocol are
+implemented and covered by offline fake-upstream checks. This status does not
+claim P1 image/provider qualification, P2 candidate infrastructure/readiness, or
+P3 semantic replay; those remain unrun. The archived design proposed eight
+paired cases and two adequate controls; q07 is frozen with a historical-context
+clarification to distinguish recall of the prior hypothetical from PC-11's
+permitted new compatible solo fiction.
+
 ### P1: OCI Preflight And Staging
 
 After the user's Goal-mode start, record actual capacity, disks, ports and existing

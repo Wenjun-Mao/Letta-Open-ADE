@@ -8,6 +8,8 @@ COPY services/model-router/ services/model-router/
 COPY services/ade-api/pyproject.toml services/ade-api/pyproject.toml
 COPY packages/ packages/
 COPY workflows/pyproject.toml workflows/pyproject.toml
+COPY workflows/evals/hindsight_memory_probe/compose.yaml workflows/evals/hindsight_memory_probe/compose.yaml
+COPY workflows/evals/hindsight_memory_probe/docker/python.Dockerfile workflows/evals/hindsight_memory_probe/docker/python.Dockerfile
 FROM base AS router
 RUN uv sync --frozen --no-dev --package ade-model-router --package ade-workflows
 COPY workflows/evals/hindsight_memory_probe/ workflows/evals/hindsight_memory_probe/
@@ -15,6 +17,10 @@ ENV PYTHONPATH=/app/services/model-router/src:/app/packages/model-catalog-contra
 CMD ["uvicorn", "workflows.evals.hindsight_memory_probe.router_entrypoint:create_app", "--factory", "--host", "0.0.0.0", "--port", "8010", "--no-access-log", "--log-level", "critical"]
 FROM base AS runner
 COPY services/ade-api/ services/ade-api/
+COPY workflows/evals/hindsight_memory_probe/*.py workflows/evals/hindsight_memory_probe/
+COPY workflows/evals/hindsight_memory_probe/config/ workflows/evals/hindsight_memory_probe/config/
+COPY workflows/evals/hindsight_memory_probe/fixtures/campaign.json workflows/evals/hindsight_memory_probe/fixtures/campaign.json
+COPY content/personas/personas.jsonl content/personas/personas.jsonl
 RUN uv sync --frozen --no-dev --package ade-api
 ENV PYTHONPATH=/app/services/ade-api/src:/app/packages/agent-runtime-eval-contracts/src:/app/packages/model-catalog-contracts/src:/app
 ENTRYPOINT ["python", "-m", "ade_api.features.agent_runtime.hindsight_evaluation"]

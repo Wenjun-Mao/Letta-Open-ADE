@@ -15,6 +15,7 @@ from .hindsight_eval_contracts import (
     EvaluationInput,
     RecalledMemory,
 )
+from .hindsight_eval_trace import qualify_reranking
 
 
 def service_url(value: str) -> str:
@@ -139,6 +140,8 @@ class HindsightRecall:
             memory.check_scope(inputs.scope)
         if not isinstance(trace, dict):
             raise EvaluationError("recall_trace_missing")
+        result_ids = [item.get("id") for item in raw_results if isinstance(item, dict)] if isinstance(raw_results, list) else []
+        qualify_reranking(trace, result_ids)
         return memories, {
             "status": "ok_nonempty" if memories else "ok_empty",
             "request_path": path,

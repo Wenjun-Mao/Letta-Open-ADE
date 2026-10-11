@@ -27,6 +27,16 @@ it for continuity checks. Conversation, archive and persona-version changes do
 not change scope. Another subject/workspace changes the bank; another root
 changes the character tag within that bank (PC-02/03/04/10/11).
 
+For infrastructure readiness, `recall` performs the same strict scope admission
+and full reranking qualification as `run`, then writes the admitted memories and
+trace without constructing Model Router or Character generation:
+
+```sh
+uv run --locked python -m ade_api.features.agent_runtime.hindsight_evaluation recall \
+  --input workflows/evals/hindsight_memory_probe/outputs/readiness.input.json \
+  --output-directory workflows/evals/hindsight_memory_probe/outputs/readiness-feature
+```
+
 The workflow must assign `character:<root>` source tags, a narrow extracted
 `kind:profile` label and character-local observation scopes. Never mark an entire
 private source as profile-visible. Returned facts must match a requested tag;
@@ -73,6 +83,9 @@ generation. `hindsight` performs one scoped recall, `empty` deliberately injects
 no memories without calling Hindsight, and `adequate` uses nonempty manually
 supplied memories validated against the same scope. Omit `adequate_memories`
 when not using that arm. Failed recall aborts, rather than substituting a control.
+Optional `excluded_memory_terms` are checked in both recalled fact text and
+context before any Character dispatch; this is used by q01 to fail closed if a
+private source origin crosses into either field despite its tags.
 
 Optional frozen settings and defaults: `timeout_seconds=120.0` and
 `recall_timeout_seconds=120.0` (positive, at most 180),
@@ -125,9 +138,13 @@ Receipts (directory 0700, files 0600, exclusive writes with fsync):
   error bodies are never stored.
 - `hindsight.recall-trace.json`: actual upstream trace, required for recall;
   never injected into Character. Retrieval candidate text may exceed admitted
-  context. The workflow checks complete reranking using trace score components,
-  phase metrics and candidate configuration/server evidence; HTTP 200 alone is
-  insufficient. The pinned trace's reranking metric does not identify the served
+  context. The feature checks complete reranking using trace score components
+  and phase metrics before any Character generation; HTTP 200 or trace presence
+  alone is insufficient. It rejects missing/duplicate candidate IDs, incomplete
+  score sets, non-finite scores and the pinned zero/zero timeout sentinel while
+  allowing finite nonzero negative logits whose normalization underflows to
+  zero. Empty recall requires the trace to prove zero selected and returned
+  candidates. The pinned trace's reranking metric does not identify the served
   provider. No chunks, global entity views or source-fact bundles are requested.
 - `<arm>.request.json`: the actual final executor payload sent to Model Router,
   captured through awaited authorization before dispatch. It is not a guessed
@@ -145,6 +162,14 @@ each generation and aborts observed drift. The workflow must also bind an
 immutable experiment router release/configuration; catalog checks cannot prevent
 concurrent reconfiguration or capture its upstream serialization. No provider
 sampling overrides or independent serializer are added to the native executor.
+
+When `ADE_EVAL_PHASE_FILE` is set, feature recall and each actual Character
+request publish a durable atomic phase intent/current pointer with a unique
+operation ID and `case:arm` correlation ID. The feature captures the matching
+phase projection before dispatch and fails closed if that capture cannot be
+written. This opt-in hook does not import workflow modules. The runner sets this
+variable to the shared private `phase.json` bind so Model Router wire receipts
+inherit the correct recall versus Character phase.
 
 The HTTP path and models were inspected at Hindsight 0.10.3 source
 `eb6df499d35300e5b2f3f029b2e6adda04ed90f8`:

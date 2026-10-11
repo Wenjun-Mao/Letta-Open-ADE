@@ -1,13 +1,13 @@
 # Isolated Hindsight infrastructure probe
 
-P0 infrastructure package for revision 4 of the
+P0 offline package for revision 4 of the
 [experiment plan](../../../docs/plans/hindsight-self-hosted-experiment.md),
 [ADR 0064](../../../docs/adr/0064-isolated-hindsight-infrastructure.md), PC-08/09/13.
 The existing [feature CLI](../../../services/ade-api/src/ade_api/features/agent_runtime/HINDSIGHT_EVALUATION.md)
 is the only Character evaluation entrypoint. This package constructs no ADE API
-or native persistence. Semantic fixtures, ingestion/curation and replay driving
-are the next serial assignment. No placeholder corpus or fabricated live result
-is included.
+or native persistence. The tracked Chinese corpus, offline freeze command,
+public-HTTP ingestion/curation/replay driver and strict feature reranking gate
+are implemented for P0. No fabricated live result is included.
 
 Implemented: owned Compose, pinned recipes/configuration, observational router,
 clean release export/identity, private environment provisioning, temporary Linux
@@ -309,28 +309,94 @@ permission to generate/Reflect. Mac tunnel: `ssh -N -L 18888:127.0.0.1:18888
 private CP access key. Never print keys or pass them as CLI arguments. Confirm
 Tailscale container routing, dimension1024, query prefix and8192 untruncated
 served limit later, with a disposable readiness bank. Healthy API or partial
-rerank HTTP200 does not advance to P3. The semantic corpus/readiness driver is
-not included in this assignment. The next serial writer must copy the finished
-workflow and authored persona into the runner image and add a narrow replay
-entrypoint that invokes the documented feature CLI; the current runner contains
-only that CLI, without workflow source/persona. A single CLI run containing both
-scoped recall and Character generation needs an explicit phase transition at that
-boundary, rather than labelling recall embedding as Character. This remains the
-subsequent feature/workflow integration assignment.
+rerank HTTP200 does not advance to P3. The feature-owned `recall` command
+proves strict scoped retrieval and complete reranking without constructing
+Character generation. Tracked fixtures and the workflow driver below implement
+the offline P0 protocol; use them against the candidate only during later P2/P3.
 
-The runner service executes only the documented CLI:
+Freeze a unique candidate workspace and immutable inputs offline. The freeze
+command rejects a dirty checkout, invokes the feature's offline `scope` command,
+binds fixture/source/query/persona/model/config/runtime-pin hashes, renders and
+hashes each full retain payload, and seals a fixed UUID for every operation. It
+checks historical reference context against exact prior source excerpts. A
+source's Character-local dialogue remains only the current question. The 12
+source exchanges, eight paired cases, two adequate controls, and separate
+readiness source are in `fixtures/campaign.json`. q01's feature input carries
+the exact private-origin exclusion terms, which are checked in recalled text
+and context before Character generation (PC-02/03/04/07/10/11/12/13).
 
 ```sh
-python3 -m workflows.evals.hindsight_memory_probe.phase \
-  --receipts "$PROBE_PRIVATE/receipts" --phase character --operation-id future-case-empty
-python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
-  --kind work --timeout 600 -- run --rm --no-deps --pull never runner run \
-  --input /receipts/frozen-future-case.json --output-directory /receipts/new-future-case-arm
+uv run --locked python -m workflows.evals.hindsight_memory_probe.freeze \
+  --workspace-id hs_campaign_r4_candidate01 \
+  --output-directory workflows/evals/hindsight_memory_probe/outputs/candidate01/frozen
 ```
 
-That is an invocation shape for the later serial replay assignment, not an
-included fixture or live run. Combined `hindsight`+Character CLI calls require
-replay-side phase sequencing; this infrastructure package does not infer it.
+Each stage uses a new output directory. The driver uses public Hindsight HTTP
+endpoints for bank setup, retain, consolidation, curation, pagination, operation
+polling and document/fact readback. It invokes the feature CLI as a subprocess
+for scope, run, and readiness recall. It captures terminal operation status and
+descendants separately, and omits arbitrary error bodies. Repeat s10 only with
+its exact frozen payload and original UUID. Archive/version is an eligibility
+marker, not qualification of Studio's native path.
+
+```sh
+uv run --locked python -m workflows.evals.hindsight_memory_probe.replay \
+  --manifest workflows/evals/hindsight_memory_probe/outputs/candidate01/frozen/campaign-manifest.json \
+  --output-directory workflows/evals/hindsight_memory_probe/outputs/candidate01/readiness \
+  --stage readiness
+uv run --locked python -m workflows.evals.hindsight_memory_probe.replay \
+  --manifest workflows/evals/hindsight_memory_probe/outputs/candidate01/frozen/campaign-manifest.json \
+  --output-directory workflows/evals/hindsight_memory_probe/outputs/candidate01/initial-retain-a \
+  --stage initial-retain-a
+uv run --locked python -m workflows.evals.hindsight_memory_probe.replay \
+  --manifest workflows/evals/hindsight_memory_probe/outputs/candidate01/frozen/campaign-manifest.json \
+  --output-directory workflows/evals/hindsight_memory_probe/outputs/candidate01/initial-retain-b \
+  --stage initial-retain-b
+uv run --locked python -m workflows.evals.hindsight_memory_probe.replay \
+  --manifest workflows/evals/hindsight_memory_probe/outputs/candidate01/frozen/campaign-manifest.json \
+  --output-directory workflows/evals/hindsight_memory_probe/outputs/candidate01/initial-compare-a \
+  --stage initial-compare-a
+uv run --locked python -m workflows.evals.hindsight_memory_probe.replay \
+  --manifest workflows/evals/hindsight_memory_probe/outputs/candidate01/frozen/campaign-manifest.json \
+  --output-directory workflows/evals/hindsight_memory_probe/outputs/candidate01/initial-compare-b \
+  --stage initial-compare-b
+```
+
+Later stages are `consolidate`, `version-archive`, `invalidate-s10`, `s11`,
+`retry-s10`, and `s12`. Consolidation uses explicit character-root scopes.
+Invalidation selects raw world/experience facts rooted in s10, records linked
+observations, invalidates the selected raw facts, then captures both valid and
+invalidated readbacks. The pinned engine archives invalidated rows separately;
+absence from live state alone is not proof of removal. Unrelated s11, exact s10
+retry, and quoted historical s12 remain distinct checkpoints.
+Run the stages under the same private candidate output directory so later
+s11, retry, and s12 checkpoints can read `invalidate-s10/s10-curation-lineage.json`.
+Each checkpoint captures full valid and invalidated lists alongside the exact
+selected s10 IDs. A newly extracted s12 fact with matching text remains a distinct
+source fact; only reuse of an original selected fact ID counts as reactivation
+(PC-07).
+
+The runner image copies the tracked driver, fixture, and authored persona while
+preserving its default feature entrypoint. Override only that one-shot command:
+
+```sh
+python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
+  --kind work --timeout 3600 -- run --rm --no-deps --pull never \
+  --entrypoint python runner -m workflows.evals.hindsight_memory_probe.replay \
+  --manifest /receipts/frozen/campaign-manifest.json \
+  --output-directory /receipts/initial-retain-a --stage initial-retain-a
+```
+
+Use a 3600-second launcher timeout for each initial retain group and 2400 seconds
+for each initial compare group. These bounded groups keep every launcher command
+within its one-hour ceiling; run later lifecycle checkpoints sequentially with a
+new output directory each time.
+
+The runner sets `ADE_EVAL_PHASE_FILE=/receipts/phase.json`. Feature recall and
+each Character request publish a fresh atomic phase intent, unique operation ID,
+and case/arm correlation ID, then capture that mapping before dispatch. Workflow
+phases annotate retain and consolidation, separating recall embedding from
+Character generation in Model Router wire captures.
 
 ## Inspect, diagnosed restart/new release and final stop
 

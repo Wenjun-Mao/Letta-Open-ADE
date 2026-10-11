@@ -26,6 +26,7 @@ from .hindsight_eval_contracts import (
     fingerprint,
 )
 from .hindsight_eval_recall import HindsightRecall, service_url
+from .hindsight_eval_phase import annotate
 from .router_transport import RouterTransport
 from .errors import RuntimeValidationError
 
@@ -133,7 +134,14 @@ async def evaluate(
             if arm == "hindsight":
                 if recall is None:
                     raise EvaluationError("hindsight_credentials_missing")
+                phase = annotate("recall", f"{inputs.case_id}:hindsight:{arm}")
+                if phase is not None:
+                    capture.write("hindsight.phase.json", phase)
                 memories, recall_receipt = await recall.recall(inputs, capture=capture)
+                for memory in memories:
+                    searchable = (memory.text, memory.context or "")
+                    if any(term in field for term in inputs.excluded_memory_terms for field in searchable):
+                        raise EvaluationError("recall_content_exclusion")
             elif arm == "adequate":
                 memories = inputs.adequate_memories
                 recall_receipt = {
@@ -158,6 +166,9 @@ async def evaluate(
                     raise EvaluationError("multiple_character_requests")
                 if await model_binding(router, inputs) != binding:
                     raise EvaluationError("router_model_binding_changed")
+                phase = annotate("character", f"{inputs.case_id}:{arm}")
+                if phase is not None:
+                    capture.write(f"{arm}.phase.json", phase)
                 # This is the executor's actual final payload, not a separately
                 # reconstructed approximation. Awaited authorization fails closed.
                 capture.write(f"{arm}.request.json", payload)
@@ -248,6 +259,47 @@ async def run_cli(inputs: EvaluationInput, directory: Path) -> dict:
         )
 
 
+async def recall_cli(inputs: EvaluationInput, directory: Path) -> dict:
+    """Readiness-only recall: no Model Router client or Character construction."""
+    if "hindsight" not in inputs.arms:
+        raise EvaluationError("hindsight_arm_required")
+    base_url = service_url(os.environ.get("ADE_EVAL_HINDSIGHT_BASE_URL", ""))
+    api_key = os.environ.get("ADE_EVAL_HINDSIGHT_API_KEY", "")
+    capture = EvaluationCapture(directory)
+    capture.write("input.json", inputs.model_dump())
+    capture.write("binding.json", {
+        "contract": CONTRACT,
+        "hindsight_version": "0.10.3",
+        "hindsight_source": HINDSIGHT_SOURCE,
+        "scope": inputs.scope.receipt(),
+        "frozen_input_sha256": fingerprint(inputs.model_dump(exclude={"arms", "adequate_memories"})),
+        "model_requests_per_arm": 0,
+    })
+    started = time.monotonic()
+    try:
+        async with httpx.AsyncClient(follow_redirects=False) as client:
+            phase = annotate("recall", f"{inputs.case_id}:readiness:hindsight")
+            if phase is not None:
+                capture.write("hindsight.phase.json", phase)
+            memories, receipt = await HindsightRecall(
+                client, base_url=base_url, api_key=api_key
+            ).recall(inputs, capture=capture)
+        capture.write("hindsight.context.json", {
+            "scope": inputs.scope.receipt(), "recall": receipt,
+            "memories": [item.model_dump(exclude_none=True) for item in memories],
+        })
+        completion = {"contract": CONTRACT, "status": "completed", "case_id": inputs.case_id, "readiness": True}
+        capture.write("completion.json", completion)
+        return completion
+    except Exception as exc:
+        code = str(exc) if isinstance(exc, EvaluationError) else "readiness_recall_failed"
+        capture.write("failure.json", {
+            "status": "failed", "code": code,
+            "scope": inputs.scope.receipt(), "elapsed_seconds": time.monotonic() - started,
+        })
+        raise EvaluationError(code) from exc
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -257,6 +309,9 @@ def main(argv: list[str] | None = None) -> int:
     run_parser = commands.add_parser("run", help="Run synthetic comparison arms")
     run_parser.add_argument("--input", type=Path, required=True)
     run_parser.add_argument("--output-directory", type=Path, required=True)
+    recall_parser = commands.add_parser("recall", help="Run readiness recall without Character generation")
+    recall_parser.add_argument("--input", type=Path, required=True)
+    recall_parser.add_argument("--output-directory", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
         if args.command == "scope":
@@ -265,9 +320,12 @@ def main(argv: list[str] | None = None) -> int:
                 subject_id=args.subject_id,
                 character_root_id=args.character_root_id,
             ).receipt()
-        else:
+        elif args.command == "run":
             inputs = EvaluationInput.model_validate_json(args.input.read_bytes())
             receipt = asyncio.run(run_cli(inputs, args.output_directory))
+        else:
+            inputs = EvaluationInput.model_validate_json(args.input.read_bytes())
+            receipt = asyncio.run(recall_cli(inputs, args.output_directory))
         print(json.dumps(receipt, ensure_ascii=False))
         return 0
     except (EvaluationError, ValidationError, OSError, ValueError) as exc:

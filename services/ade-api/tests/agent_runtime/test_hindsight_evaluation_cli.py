@@ -1,6 +1,7 @@
 """CLI integration, trace separation and durable capture failure regressions."""
 
 import json
+import asyncio
 
 import httpx
 import pytest
@@ -59,6 +60,40 @@ def test_trace_is_preserved_exactly_but_never_injected(monkeypatch, tmp_path):
         for request in fake.generations
     )
     assert "trace" not in read(tmp_path, "hindsight.context.json")["recall"]
+
+
+def test_recall_only_readiness_command_never_constructs_character(monkeypatch, tmp_path):
+    fake = FakeProviders()
+    original_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx, "AsyncClient",
+        lambda **kwargs: original_client(transport=httpx.MockTransport(fake.handle), **kwargs),
+    )
+    monkeypatch.setenv("ADE_EVAL_HINDSIGHT_BASE_URL", "http://hindsight")
+    monkeypatch.setenv("ADE_EVAL_HINDSIGHT_API_KEY", "hindsight-secret")
+    request = inputs(arms=["hindsight"], adequate_memories=[])
+    result = asyncio.run(evaluation.recall_cli(request, tmp_path / "readiness"))
+    assert result["readiness"] is True
+    assert fake.generations == [] and len(fake.recalls) == 1
+    assert (tmp_path / "readiness" / "hindsight.recall-trace.json").is_file()
+
+
+def test_result_ids_must_match_complete_trace_before_generation(monkeypatch, tmp_path):
+    fake = FakeProviders()
+    original = fake.handle
+
+    def handle(request):
+        response = original(request)
+        if request.url.path.endswith("/memories/recall"):
+            body = response.json()
+            body["results"][0]["id"] = "untraced-result"
+            return httpx.Response(200, json=body)
+        return response
+
+    monkeypatch.setattr(fake, "handle", handle)
+    with pytest.raises(EvaluationError, match="recall_rerank_trace_invalid"):
+        run(monkeypatch, tmp_path, fake)
+    assert fake.generations == []
 
 
 def test_missing_trace_stops_generation(monkeypatch, tmp_path):
