@@ -85,3 +85,16 @@ Capacity uses the executor's estimate, not provider-tokenization proof. Catalog
 checks observe drift but cannot prevent concurrent deployment changes; the
 workflow must freeze the router. Source-pinned HTTP tests are not pinned-image
 serialization or live semantic acceptance. Normal product execution is untouched.
+
+## Phase receipt naming clarification (2026-10-11)
+
+The initial compare replay exposed a same-path collision: recall and the first
+Character request both attempted exclusive publication to `hindsight.phase.json`.
+The current phase pointer and its immutable operation intent already distinguish
+the workflow's active recall versus Character phase, but feature receipts must
+also be independently durable. Preserve the shared `ADE_EVAL_PHASE_FILE`
+pointer for Model Router correlation; name each feature projection
+`<arm>.<phase>.phase.json` (for example `hindsight.recall.phase.json` and
+`hindsight.character.phase.json`). Correlation IDs include both arm and phase.
+This fixes the feature-owned receipt contract without relaxing exclusive capture,
+changing dispatch ordering, or modifying workflow router behavior.

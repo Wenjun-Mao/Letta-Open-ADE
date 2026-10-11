@@ -26,7 +26,7 @@ from .hindsight_eval_contracts import (
     fingerprint,
 )
 from .hindsight_eval_recall import HindsightRecall, service_url
-from .hindsight_eval_phase import annotate
+from .hindsight_eval_phase import annotate, receipt_filename
 from .router_transport import RouterTransport
 from .errors import RuntimeValidationError
 
@@ -134,9 +134,9 @@ async def evaluate(
             if arm == "hindsight":
                 if recall is None:
                     raise EvaluationError("hindsight_credentials_missing")
-                phase = annotate("recall", f"{inputs.case_id}:hindsight:{arm}")
+                phase = annotate("recall", f"{inputs.case_id}:{arm}:recall")
                 if phase is not None:
-                    capture.write("hindsight.phase.json", phase)
+                    capture.write(receipt_filename(arm, "recall"), phase)
                 memories, recall_receipt = await recall.recall(inputs, capture=capture)
                 for memory in memories:
                     searchable = (memory.text, memory.context or "")
@@ -166,9 +166,9 @@ async def evaluate(
                     raise EvaluationError("multiple_character_requests")
                 if await model_binding(router, inputs) != binding:
                     raise EvaluationError("router_model_binding_changed")
-                phase = annotate("character", f"{inputs.case_id}:{arm}")
+                phase = annotate("character", f"{inputs.case_id}:{arm}:character")
                 if phase is not None:
-                    capture.write(f"{arm}.phase.json", phase)
+                    capture.write(receipt_filename(arm, "character"), phase)
                 # This is the executor's actual final payload, not a separately
                 # reconstructed approximation. Awaited authorization fails closed.
                 capture.write(f"{arm}.request.json", payload)
@@ -278,9 +278,9 @@ async def recall_cli(inputs: EvaluationInput, directory: Path) -> dict:
     started = time.monotonic()
     try:
         async with httpx.AsyncClient(follow_redirects=False) as client:
-            phase = annotate("recall", f"{inputs.case_id}:readiness:hindsight")
+            phase = annotate("recall", f"{inputs.case_id}:hindsight:recall")
             if phase is not None:
-                capture.write("hindsight.phase.json", phase)
+                capture.write(receipt_filename("hindsight", "recall"), phase)
             memories, receipt = await HindsightRecall(
                 client, base_url=base_url, api_key=api_key
             ).recall(inputs, capture=capture)

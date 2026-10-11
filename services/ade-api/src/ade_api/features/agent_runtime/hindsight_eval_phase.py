@@ -12,6 +12,18 @@ from pathlib import Path
 from .hindsight_eval_contracts import EvaluationError
 
 
+def receipt_filename(arm: str, phase: str) -> str:
+    """Name immutable feature receipts as ``<arm>.<phase>.phase.json``."""
+    if arm not in {"hindsight", "empty", "adequate"} or phase not in {
+        "recall",
+        "character",
+    }:
+        raise EvaluationError("phase_invalid")
+    if phase == "recall" and arm != "hindsight":
+        raise EvaluationError("phase_invalid")
+    return f"{arm}.{phase}.phase.json"
+
+
 def annotate(phase: str, correlation_id: str) -> dict | None:
     """Atomically publish a unique phase intent when the runner opts in."""
     target_value = os.environ.get("ADE_EVAL_PHASE_FILE")

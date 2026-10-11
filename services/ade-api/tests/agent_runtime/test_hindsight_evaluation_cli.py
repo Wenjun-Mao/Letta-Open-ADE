@@ -71,11 +71,18 @@ def test_recall_only_readiness_command_never_constructs_character(monkeypatch, t
     )
     monkeypatch.setenv("ADE_EVAL_HINDSIGHT_BASE_URL", "http://hindsight")
     monkeypatch.setenv("ADE_EVAL_HINDSIGHT_API_KEY", "hindsight-secret")
+    target = tmp_path / "phase.json"
+    monkeypatch.setenv("ADE_EVAL_PHASE_FILE", str(target))
     request = inputs(arms=["hindsight"], adequate_memories=[])
     result = asyncio.run(evaluation.recall_cli(request, tmp_path / "readiness"))
     assert result["readiness"] is True
     assert fake.generations == [] and len(fake.recalls) == 1
     assert (tmp_path / "readiness" / "hindsight.recall-trace.json").is_file()
+    phase_receipt = json.loads(
+        (tmp_path / "readiness" / "hindsight.recall.phase.json").read_text()
+    )
+    assert phase_receipt["phase"] == "recall"
+    assert phase_receipt["correlation_id"] == "story-detail:hindsight:recall"
 
 
 def test_result_ids_must_match_complete_trace_before_generation(monkeypatch, tmp_path):

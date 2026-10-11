@@ -59,6 +59,65 @@ def test_three_arms_one_generation_frozen_inputs_and_actual_requests(
     )
 
 
+def test_phase_enabled_comparison_uses_unique_arm_phase_receipts(
+    monkeypatch, tmp_path
+):
+    baseline_fake = FakeProviders()
+    baseline_path = tmp_path / "baseline"
+    baseline_path.mkdir()
+    with monkeypatch.context() as baseline_patch:
+        baseline_patch.delenv("ADE_EVAL_PHASE_FILE", raising=False)
+        run(baseline_patch, baseline_path, baseline_fake)
+    fake = FakeProviders()
+    target = tmp_path / "phase.json"
+    monkeypatch.setenv("ADE_EVAL_PHASE_FILE", str(target))
+    result = run(monkeypatch, tmp_path, fake)
+
+    assert result["status"] == "completed"
+    assert len(fake.generations) == 3
+    assert len(fake.recalls) == 1
+    assert fake.generations == baseline_fake.generations
+    assert read(tmp_path, "binding.json")["router_model"] == read(
+        baseline_path, "binding.json"
+    )["router_model"]
+    assert read(tmp_path, "binding.json")["frozen_input_sha256"] == read(
+        baseline_path, "binding.json"
+    )["frozen_input_sha256"]
+    expected = {
+        "hindsight.recall.phase.json": ("recall", "story-detail:hindsight:recall"),
+        "hindsight.character.phase.json": (
+            "character",
+            "story-detail:hindsight:character",
+        ),
+        "empty.character.phase.json": ("character", "story-detail:empty:character"),
+        "adequate.character.phase.json": (
+            "character",
+            "story-detail:adequate:character",
+        ),
+    }
+    receipts = {name: read(tmp_path, name) for name in expected}
+    for name, (phase, correlation_id) in expected.items():
+        assert receipts[name]["phase"] == phase
+        assert receipts[name]["correlation_id"] == correlation_id
+        assert receipts[name]["operation_id"].startswith("eval-")
+    assert len({item["operation_id"] for item in receipts.values()}) == 4
+    assert len({item["correlation_id"] for item in receipts.values()}) == 4
+    for arm in inputs().arms:
+        assert read(tmp_path, f"{arm}.request.json") == fake.generations[
+            inputs().arms.index(arm)
+        ]
+        assert read(tmp_path, f"{arm}.result.json")["assistant_text"] == read(
+            baseline_path, f"{arm}.result.json"
+        )["assistant_text"]
+    assert json.loads(target.read_text())["phase"] == "character"
+    all_receipts = "\n".join(
+        path.read_text() for path in (tmp_path / "receipts").iterdir()
+    )
+    assert "hindsight-secret" not in all_receipts
+    assert "router-secret" not in all_receipts
+    assert "PRIVATE-REASONING" not in all_receipts
+
+
 def test_pinned_recall_path_nonempty_strict_or_and_no_source_supplements(
     monkeypatch, tmp_path
 ):

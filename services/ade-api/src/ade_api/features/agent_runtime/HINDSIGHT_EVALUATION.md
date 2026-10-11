@@ -165,11 +165,17 @@ sampling overrides or independent serializer are added to the native executor.
 
 When `ADE_EVAL_PHASE_FILE` is set, feature recall and each actual Character
 request publish a durable atomic phase intent/current pointer with a unique
-operation ID and `case:arm` correlation ID. The feature captures the matching
-phase projection before dispatch and fails closed if that capture cannot be
-written. This opt-in hook does not import workflow modules. The runner sets this
-variable to the shared private `phase.json` bind so Model Router wire receipts
-inherit the correct recall versus Character phase.
+operation ID and a phase-specific correlation ID (`case:arm:recall` or
+`case:arm:character`). The feature writes each projection to its own immutable
+`<arm>.<phase>.phase.json` receipt before recall or Character dispatch; for
+example, a full comparison produces `hindsight.recall.phase.json` and one
+`<arm>.character.phase.json` for each generation arm. The readiness-only recall
+entrypoint uses `hindsight.recall.phase.json`. Feature phase receipts never share
+paths between the recall and Character phases. The feature fails closed if a
+phase publication or its receipt cannot be written. This opt-in hook does not
+import workflow modules. The runner sets this variable to the shared private
+`phase.json` bind so Model Router wire receipts inherit the correct recall versus
+Character phase.
 
 The HTTP path and models were inspected at Hindsight 0.10.3 source
 `eb6df499d35300e5b2f3f029b2e6adda04ed90f8`:

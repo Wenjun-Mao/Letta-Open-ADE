@@ -453,9 +453,11 @@ new output directory each time.
 
 The runner sets `ADE_EVAL_PHASE_FILE=/receipts/phase.json`. Feature recall and
 each Character request publish a fresh atomic phase intent, unique operation ID,
-and case/arm correlation ID, then capture that mapping before dispatch. Workflow
-phases annotate retain and consolidation, separating recall embedding from
-Character generation in Model Router wire captures.
+and arm/phase correlation ID, then capture that mapping before dispatch. The
+feature output contains one immutable `<arm>.<phase>.phase.json` receipt per
+operation; the shared `phase.json` remains the router's current-phase pointer.
+Workflow phases annotate retain and consolidation, separating recall embedding
+from Character generation in Model Router wire captures.
 
 ## Inspect, diagnosed restart/new release and final stop
 
