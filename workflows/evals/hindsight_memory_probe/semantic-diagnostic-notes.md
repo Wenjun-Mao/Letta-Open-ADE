@@ -129,18 +129,25 @@ was identical for q01 (14), q06 (4) and q07 (35), and retained-bank inventory
 hashes match. This isolates response changes from raw-recall changes in that
 pair, but not model attention or semantic cause. Fresh initial and
 post-consolidation stages completed nine arms each at 2048 tokens under this
-runtime SHA, the latter on a newly retained bank. The original q02/q03/q04/q05/
-q08 cases ran once as a 12-arm regression, not as focused-case rerolls. Receipts:
+runtime SHA, in the same fresh workspace `hs_semantic_r5_d2a27c3` and retained
+bank state. Consolidation ran between the stages; the post-consolidation stage
+did not reinitialize the workspace or re-retain the bank. The original
+q02/q03/q04/q05/q08 cases ran once as a 12-arm regression, not as focused-case
+rerolls. Receipts:
 [same-bank comparison](outputs/revision5/d2a27c3/manager-same-bank-raw-recall-comparison.json),
 [fresh initial](outputs/revision5/d2a27c3/fresh-d2a27c3/initial-focused-2048/stage-completion.json),
 [fresh post-consolidation](outputs/revision5/d2a27c3/fresh-d2a27c3/post-consolidation-2048/stage-completion.json),
 [original-case regression](outputs/revision5/d2a27c3/fresh-d2a27c3/remaining-original-cases-2048/stage-completion.json).
 
-The 46599c6 baseline also has 2048-token comparison and a 4096-token
-max-output ablation. All recorded Character responses in those capacity checks
-were nonempty and ended with `stop`; they neither reproduced nor identify the
-cause of the earlier empty q01 output. Capacity observations are bounded to
-those requests and do not prove provider-side capacity generally.
+The 46599c6 baseline has an independent post-adapter comparison for all nine
+q01/q06/q07 Hindsight, empty, and adequate request pairs. Within each pair, the
+serialized request bodies are byte-identical except for `max_tokens` changing
+from 2048 to 4096. All recorded Character responses in those checks were
+nonempty and ended with `stop`; they neither reproduce nor identify the cause
+of the earlier empty q01 output. This evidence is bounded to those requests and
+does not prove provider-side capacity generally or justify changing native
+defaults. See
+[post-adapter capacity comparison](outputs/revision5/live-46599c6/manager-capacity-post-adapter-comparison.json).
 
 ### Focused semantic results
 
@@ -159,7 +166,12 @@ those requests and do not prove provider-side capacity generally.
   was a misspeak and oolong was intended. q02 regression Hindsight still
   presents jasmine as a real earlier preference/change, while its adequate
   control correctly distinguishes the misspeak from later temperature and
-  sugar changes. See [q01 post result](outputs/revision5/d2a27c3/fresh-d2a27c3/post-consolidation-2048/character/q01-post-consolidation-1791760733178036716/hindsight.result.json)
+  sugar changes. Separately, the q01 same-bank Hindsight answer says jasmine
+  “茉莉茶底已经改掉了” and then “后来纠正成乌龙,” despite that request
+  containing the explicit raw misspeak correction. That request does not contain
+  the misleading consolidated jasmine-as-original summary, which belongs to
+  q07's context. See [q01 same-bank result](outputs/revision5/d2a27c3/same-bank-repair-2048-d2a27c3/character/q01-same-bank-repair-1791759723933836799/hindsight.result.json),
+  [q01 post result](outputs/revision5/d2a27c3/fresh-d2a27c3/post-consolidation-2048/character/q01-post-consolidation-1791760733178036716/hindsight.result.json)
   and [s03 source](fixtures/campaign.json#L12).
 - **q06:** The same-bank Hindsight result still contains the unsupported prior
   shared naming utterance (“那天我还笑说…”), absent from its supplied facts.
