@@ -72,8 +72,11 @@ persistence, embeddings, Qwen, or tool protocols. See the
   it recommends a disposable Hindsight-to-Character experiment before native
   isolation, leaving incumbent execution unchanged. The user selected
   [self-hosting](adr/0062-self-hosted-hindsight.md) rather than Hindsight Cloud
-  (PC-13). Host/models, experiment scope, candidate setup and provider calls
-  remain open or unapproved; bank layout is a test hypothesis.
+  and an isolated first experiment (PC-13). Review the
+  [draft self-hosted setup plan](plans/hindsight-self-hosted-experiment.md), which
+  proposes Mac hosting, existing model infrastructure reuse and separate storage.
+  Concrete host/models, experiment scope, candidate setup and provider calls
+  remain unapproved; bank layout is a test hypothesis.
 - Stabilize the native runtime through real product use and evidence-led fixes.
 - Improve task-specific evaluation where a concrete success contract exists.
 - Keep model aliases configurable so providers and underlying local models can

@@ -118,6 +118,12 @@ The user rejected Cloud's usage pricing for repeated tests and re-ingestion.
 Do not reopen Cloud as the default next step. Self-hosting does not eliminate
 model/infrastructure costs or require every model to run locally.
 
+The first experiment must remain isolated from native memory, as explicitly
+requested during setup planning. Reusing model infrastructure must not change
+native persistence or the running ADE/trial services. The
+[setup plan](plans/hindsight-self-hosted-experiment.md) proposes the concrete
+host/models and checkpoints; those recommendations are not yet adopted.
+
 This settles hosting direction, not host selection, model/provider routes,
 experiment scope or production adoption. Installation, service startup, live
 calls, migration and cutover are not authorized by this agreement. PC-05/08/09

@@ -11,11 +11,14 @@ incumbent checks passed. The [returned-review synthesis](findings/hindsight-cons
 now recommends a disposable Hindsight-to-Character replay before native isolation;
 native extraction labels make the one-bank layout worth testing. The user selected
 [self-hosting over Hindsight Cloud](adr/0062-self-hosted-hindsight.md) for repeated
-test-workload cost reasons (PC-13). Host and models remain unselected; the experiment
-and its setup/provider calls are not authorized. No Hindsight installation, source
-isolation, provider run or deployment has occurred. Older entries retain their
-historical scope and are not authority to resume new native memory feature work
-ahead of this review.
+test-workload cost reasons (PC-13), and required the first experiment to remain
+isolated from native memory. The [draft setup plan](plans/hindsight-self-hosted-experiment.md)
+uses fresh Mac/Spark read-only inventory to propose Mac-hosted Hindsight, separate
+storage/router, existing DeepSeek/Qwen routes and multilingual retrieval. These
+host/model choices and setup/provider calls are not authorized. No Hindsight
+installation, source isolation, provider inference or deployment has occurred.
+Older entries retain their historical scope and are not authority to resume new
+native memory feature work ahead of this review.
 
 The user directed integration into `main` and continued development in the
 primary checkout ([ADR 0048](adr/0048-mainline-development.md)). Earlier retained-

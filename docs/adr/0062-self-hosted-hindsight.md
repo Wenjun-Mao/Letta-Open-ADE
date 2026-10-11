@@ -23,6 +23,12 @@ experimentation and any subsequent adoption under this direction.
 reopen Cloud as the default next step or create a Cloud account/comparison
 campaign without a changed user direction.
 
+During setup planning the user explicitly required an isolated first experiment.
+Keep its persistence and execution separate from native memory; reuse of model
+infrastructure must not alter the running ADE/trial services. The
+[draft setup plan](../plans/hindsight-self-hosted-experiment.md) contains the
+proposed topology and model choices, not additional accepted decisions.
+
 Self-hosting selects who operates Hindsight, not where every model runs. Host,
 service configuration, extraction model, embeddings, reranking and model-access
 route remain to be selected. Model usage, compute, storage and operation still
