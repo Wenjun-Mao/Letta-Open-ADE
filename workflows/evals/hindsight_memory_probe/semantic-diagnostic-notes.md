@@ -104,7 +104,103 @@ arms at the default 2048 ceiling. Do not change questions, source fixture,
 persona, route, or limits when interpreting the 4096-token capacity ablation.
 
 The new `--max-output-tokens` flag only prepares an input to the existing
-feature CLI and is limited to the predeclared 2048/4096 diagnostic ceilings. No
-Character implementation, model default, deployment, or product contract was
-changed. The approved activation-clock contract is recorded in
+feature CLI and is limited to the predeclared 2048/4096 diagnostic ceilings.
+At that control-preparation checkpoint, no Character implementation, model
+default, deployment, or product contract had changed. This statement describes
+that earlier checkpoint only. The approved activation-clock contract is
+recorded in
 [ADR 0067](../../../docs/adr/0067-hindsight-revision-five-activation-clock.md).
+
+## Revision-5 Exact-Source Retest And Regression Outcome (2026-10-11)
+
+The focused retests and original-case regression ran the repaired Character
+runtime at source SHA
+`d2a27c338d71d90ef2fa8ad7a7085682a7aa4e06`. The capture-shape documentation
+commit `d9f67986cdaee8c1f7ff6d0134e72b0f20b76d5a` was documentation-only and is
+not the runtime identity; this note update is also documentation-only. Persona,
+model, questions and Character defaults were unchanged, and no native default
+or deployment change is implied.
+
+### Mechanically verified composition
+
+The feature captured the two Character context groups and actual request; the
+groups matched their context receipts. Same-bank before/after ordered raw recall
+was identical for q01 (14), q06 (4) and q07 (35), and retained-bank inventory
+hashes match. This isolates response changes from raw-recall changes in that
+pair, but not model attention or semantic cause. Fresh initial and
+post-consolidation stages completed nine arms each at 2048 tokens under this
+runtime SHA, the latter on a newly retained bank. The original q02/q03/q04/q05/
+q08 cases ran once as a 12-arm regression, not as focused-case rerolls. Receipts:
+[same-bank comparison](outputs/revision5/d2a27c3/manager-same-bank-raw-recall-comparison.json),
+[fresh initial](outputs/revision5/d2a27c3/fresh-d2a27c3/initial-focused-2048/stage-completion.json),
+[fresh post-consolidation](outputs/revision5/d2a27c3/fresh-d2a27c3/post-consolidation-2048/stage-completion.json),
+[original-case regression](outputs/revision5/d2a27c3/fresh-d2a27c3/remaining-original-cases-2048/stage-completion.json).
+
+The 46599c6 baseline also has 2048-token comparison and a 4096-token
+max-output ablation. All recorded Character responses in those capacity checks
+were nonempty and ended with `stop`; they neither reproduced nor identify the
+cause of the earlier empty q01 output. Capacity observations are bounded to
+those requests and do not prove provider-side capacity generally.
+
+### Focused semantic results
+
+- **q01:** The current hot, unsweetened oolong order is correct. The cross-root
+  answer now leaves the originating conversation and this character's hearing
+  unestablished. In the fresh post-consolidation answer, however, it calls
+  2026-10-01 09:00 the “earliest record” when asked for the origin. That
+  timestamp may describe a profile record, but does not establish the first
+  source conversation. Preserve useful preference-change/correction dates;
+  this is a remaining source-time inference, not evidence that all profile
+  dates should be erased. The misleading consolidated jasmine-as-original
+  summary is memory `61c86409-af11-4977-bc03-1ed355eac314` in q07's context,
+  not q01's. The immutable
+  [`manager-capture-location-correction.json`](outputs/revision5/d2a27c3/manager-capture-location-correction.json)
+  corrects the earlier capture-location record; the raw s03 source says jasmine
+  was a misspeak and oolong was intended. q02 regression Hindsight still
+  presents jasmine as a real earlier preference/change, while its adequate
+  control correctly distinguishes the misspeak from later temperature and
+  sugar changes. See [q01 post result](outputs/revision5/d2a27c3/fresh-d2a27c3/post-consolidation-2048/character/q01-post-consolidation-1791760733178036716/hindsight.result.json)
+  and [s03 source](fixtures/campaign.json#L12).
+- **q06:** The same-bank Hindsight result still contains the unsupported prior
+  shared naming utterance (“那天我还笑说…”), absent from its supplied facts.
+  Neither of the two fresh Hindsight answers repeats it. This mixed sample is
+  not proof of a deterministic repair. The same-bank optional solo bag story
+  was introduced as something the character could tell now, not as a prior
+  shared event; it is compatible with PC-11's permission for new solo history.
+  See [same-bank result](outputs/revision5/d2a27c3/same-bank-repair-2048-d2a27c3/character/q06-same-bank-repair-1791759809734043506/hindsight.result.json),
+  [fresh initial](outputs/revision5/d2a27c3/fresh-d2a27c3/initial-focused-2048/character/q06-fresh-initial-1791760513993038797/hindsight.result.json)
+  and [fresh post](outputs/revision5/d2a27c3/fresh-d2a27c3/post-consolidation-2048/character/q06-post-consolidation-1791760817785599081/hindsight.result.json).
+- **q07:** The repaired same-bank and both fresh Hindsight answers state the
+  bicycle profile, keep the yellow-scarf trip hypothetical and do not expose
+  `青石` from the other character root. Judgment remains mixed: the same-bank
+  answer turns an unconfirmed red-kite guess into a categorical denial; fresh
+  initial also ends with an unsupported “we have not gone together” statement,
+  while fresh post-consolidation preserves uncertainty. Speculation that the
+  user confused another chat remains weakly supported. These samples show
+  restored bicycle use without qualifying reliable recall or judgment. See
+  [fresh initial](outputs/revision5/d2a27c3/fresh-d2a27c3/initial-focused-2048/character/q07-fresh-initial-1791760550854681316/hindsight.result.json)
+  and [fresh post](outputs/revision5/d2a27c3/fresh-d2a27c3/post-consolidation-2048/character/q07-post-consolidation-1791760856386776014/hindsight.result.json).
+
+### Original-case regression and scoped usage
+
+- **q02:** Hindsight resolves the current order but treats the corrected
+  misspeak as a real earlier jasmine preference; adequate distinguishes it.
+- **q03 and q05:** Hindsight recalls the rainy-alley shared event and the
+  imaginary bookstore `慢灯`, including its exact tagline, and keeps the shop
+  imaginary.
+- **q04:** Hindsight correctly recalls the blue cotton thread and the
+  character's solo repair, but invents a beige bag color absent from s05 and
+  the supplied context. The thread detail is source-supported. Adequate leaves
+  the bag color unknown.
+- **q08:** Hindsight returns the red notebook cover. This single run is not a
+  new curation qualification.
+
+[`manager-character-usage-summary.json`](outputs/revision5/d2a27c3/manager-character-usage-summary.json)
+counts 39 baseline and 39 repaired
+Character responses (78 total), all nonempty with `stop`. Its reported
+161,442 prompt and 35,357 completion tokens are API-reported Character-result
+usage only; the summary excludes retain, consolidation and embedding-model
+usage and is neither a complete model-usage total, invoice, nor spend estimate.
+No native default changed. These exact-source observations establish a
+mechanical projection/request change with mixed semantic outcomes; they do not
+establish Hindsight adoption or general behavioral qualification.
