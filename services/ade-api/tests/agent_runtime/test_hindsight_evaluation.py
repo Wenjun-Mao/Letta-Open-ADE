@@ -49,6 +49,7 @@ def test_three_arms_one_generation_frozen_inputs_and_actual_requests(
     context = read(tmp_path, "hindsight.context.json")
     assert context["memories"][0]["metadata"]["speaker"] == "assistant"
     assert context["memories"][0]["mentioned_at"] == "2026-10-01T00:00:00Z"
+    assert context["memories"][0]["context"] == memory()["context"]
     assert (
         read(tmp_path, "empty.context.json")["recall"]["status"]
         == "not_requested_control"
@@ -376,6 +377,82 @@ def test_projected_recall_excludes_diagnostics_and_arbitrary_metadata(
     assert context["memories"][0]["metadata"] == {"speaker": "assistant"}
     text = json.dumps(context)
     assert "RAW-SOURCE" not in text and "SECRET-REASONING" not in text
+
+
+@pytest.mark.parametrize(
+    "tags,metadata,expected_context",
+    [
+        (["character:C", "kind:profile"], {"character_root_id": "C"}, "source window"),
+        (["character:C", "kind:profile"], {}, "source window"),
+        (["kind:profile"], {"character_root_id": "C"}, "source window"),
+        (["character:A", "kind:profile"], {"character_root_id": "A"}, None),
+        (["kind:profile"], {}, None),
+        (["character:C", "kind:profile"], {"character_root_id": "A"}, None),
+        (
+            ["character:C", "character:A", "kind:profile"],
+            {"character_root_id": "C"},
+            None,
+        ),
+    ],
+)
+def test_character_context_requires_one_unconflicted_matching_structural_owner(
+    monkeypatch, tmp_path, tags, metadata, expected_context
+):
+    candidate = memory(
+        type="world",
+        tags=tags,
+        metadata={"source_id": "source-1", **metadata},
+        context="source window",
+        text="portable fact",
+        mentioned_at="2026-10-01T00:00:00Z",
+    )
+    fake = FakeProviders(recalled=[candidate])
+    run(
+        monkeypatch,
+        tmp_path,
+        fake,
+        request=inputs(arms=["hindsight"], adequate_memories=[]),
+    )
+
+    diagnostic = read(tmp_path, "hindsight.recall.json")["result_projection"][0]
+    context_receipt = read(tmp_path, "hindsight.context.json")
+    character_capture = context_receipt["memories"][0]
+    assert diagnostic["context"] == "source window"
+    assert context_receipt["recall"]["status"] == "ok_nonempty"
+    assert len(fake.generations) == 1
+    assert character_capture.get("context") == expected_context
+    for key in ("id", "text", "type", "tags", "mentioned_at", "metadata"):
+        assert character_capture[key] == diagnostic[key]
+    dispatched = fake.generations[0]
+    suffix = dispatched["messages"][0]["content"].split(
+        evaluation.CONTEXT_INSTRUCTIONS, 1
+    )[1]
+    assert json.loads(suffix)["memories"] == [character_capture]
+
+
+def test_matching_root_tag_authorizes_adequate_context_without_metadata(
+    monkeypatch, tmp_path
+):
+    adequate = memory(
+        type="world",
+        tags=["character:C"],
+        metadata={"source_id": "source-1"},
+        context="source window",
+    )
+    fake = FakeProviders()
+    request = inputs(
+        arms=["adequate"],
+        adequate_memories=[adequate],
+    )
+    run(monkeypatch, tmp_path, fake, request=request)
+
+    captured = read(tmp_path, "adequate.context.json")["memories"][0]
+    assert captured["context"] == "source window"
+    dispatched = fake.generations[0]
+    suffix = dispatched["messages"][0]["content"].split(
+        evaluation.CONTEXT_INSTRUCTIONS, 1
+    )[1]
+    assert json.loads(suffix)["memories"] == [captured]
 
 
 def test_empty_and_adequate_controls_do_not_require_hindsight(monkeypatch, tmp_path):

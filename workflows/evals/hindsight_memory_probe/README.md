@@ -408,6 +408,19 @@ readiness source are in `fixtures/campaign.json`. q01's feature input carries
 the exact private-origin exclusion terms, which are checked in recalled text
 and context before Character generation (PC-02/03/04/07/10/11/12/13).
 
+The completed candidate05 initial-compare-a qualified recall/rerank and
+Character request mechanics. Its q01 answer gave the corrected current drink
+preference but also named an unsupported original chat time. The captured
+profile facts were correctly eligible across roots; their attached Hindsight
+reference windows named `root_xiaotang` and included earlier source excerpts,
+which the old Character projection passed through. The development feature now
+retains attached context only when structural character tags and any
+`metadata.character_root_id` resolve without conflict to the active root.
+Unknown or conflicting ownership omits context while preserving the portable
+fact and original recall diagnostic. The projected q01 behavior has not yet
+been semantically retested; this change does not claim that it corrects the
+unsupported answer. See [ADR 0063](../../docs/adr/0063-hindsight-character-evaluation-boundary.md#structural-character-context-ownership-2026-10-11).
+
 ```sh
 uv run --locked python -m workflows.evals.hindsight_memory_probe.freeze \
   --workspace-id hs_campaign_r4_candidate01 \

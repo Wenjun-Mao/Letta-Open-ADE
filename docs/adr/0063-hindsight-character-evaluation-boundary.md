@@ -78,9 +78,34 @@ the mapping before dispatch. It does not import workflow code. This lets the
 workflow-instrumented router distinguish Hindsight recall embedding from the
 actual Character generation request.
 
-Offline regression tests cover scope, controls, capture failures, oversized whole
-requests, one-generation/tool rejection, trace separation, full-rerank edge cases,
-phase transitions and router profile drift.
+Offline regression tests cover scope, controls, structural context ownership and
+capture-to-request consistency, capture failures, oversized whole requests,
+one-generation/tool rejection, trace separation, full-rerank edge cases, phase
+transitions and router profile drift.
+
+## Structural Character Context Ownership (2026-10-11)
+
+The candidate05 q01 capture showed that `kind:profile` correctly admitted a
+portable user fact across character roots, but the returned fact's freeform
+source-reference window also reached Character. The recall projection retained
+the source `character_root_id` and character tags, while final composition did
+not use them to scope that attached context. This exposed a feature-owned
+projection gap; it does not establish that the window caused q01's unsupported
+origin answer.
+
+Keep profile eligibility attached to the fact proposition. Keep its Character-
+facing context only when structural ownership resolves to exactly the active
+root: the set of `character:<root>` tags and any `metadata.character_root_id`
+must contain exactly that root. Either matching source suffices when the other
+is absent. Unknown, multiple or conflicting owners omit only `context`; they
+do not reject an otherwise admitted fact. Never infer ownership by parsing the
+freeform context string. Preserve the full original recall projection and trace
+for diagnostics, and capture the projected memory objects that are actually
+serialized into the Character request.
+
+This preserves PC-02 profile sharing and PC-03 character participation
+boundaries without adding phrase or privacy policy. Source/root projection is
+not semantic acceptance: repeat q01 and assess the resulting answer separately.
 Capacity uses the executor's estimate, not provider-tokenization proof. Catalog
 checks observe drift but cannot prevent concurrent deployment changes; the
 workflow must freeze the router. Source-pinned HTTP tests are not pinned-image

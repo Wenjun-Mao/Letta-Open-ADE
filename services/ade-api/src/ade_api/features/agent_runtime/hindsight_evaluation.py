@@ -26,6 +26,7 @@ from .hindsight_eval_contracts import (
     fingerprint,
 )
 from .hindsight_eval_recall import HindsightRecall, service_url
+from .hindsight_eval_context import character_context_projection
 from .hindsight_eval_phase import annotate, receipt_filename
 from .router_transport import RouterTransport
 from .errors import RuntimeValidationError
@@ -148,6 +149,9 @@ async def evaluate(
                     "status": "supplied_adequate_control",
                     "result_count": len(memories),
                 }
+            character_memories = character_context_projection(
+                memories, character_root_id=inputs.scope.character_root_id
+            )
             capture.write(
                 f"{arm}.context.json",
                 {
@@ -155,7 +159,8 @@ async def evaluate(
                     "scope": inputs.scope.receipt(),
                     "recall": recall_receipt,
                     "memories": [
-                        item.model_dump(exclude_none=True) for item in memories
+                        item.model_dump(exclude_none=True)
+                        for item in character_memories
                     ],
                 },
             )
@@ -177,7 +182,7 @@ async def evaluate(
             arm_started = time.monotonic()
             result = await ConversationExecutor(router).execute(
                 model_key=inputs.model_key,
-                messages=character_messages(inputs, memories),
+                messages=character_messages(inputs, character_memories),
                 timeout_seconds=inputs.timeout_seconds,
                 max_output_tokens=inputs.max_output_tokens,
                 tools={},
