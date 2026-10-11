@@ -110,6 +110,20 @@ categories, attribution and time remain useful context. Evidence terminology can
 remain appropriate for ingestion diagnostics and evaluation. This changes no
 grounding agreement or requirement to assess observable responses separately.
 
+## Hindsight Hosting
+
+**PC-13 (agreed 2026-10-10):** Use self-hosted Hindsight, not Hindsight Cloud,
+for the planned experimentation and any subsequent adoption under this direction.
+The user rejected Cloud's usage pricing for repeated tests and re-ingestion.
+Do not reopen Cloud as the default next step. Self-hosting does not eliminate
+model/infrastructure costs or require every model to run locally.
+
+This settles hosting direction, not host selection, model/provider routes,
+experiment scope or production adoption. Installation, service startup, live
+calls, migration and cutover are not authorized by this agreement. PC-05/08/09
+continue governing the incumbent; no runtime spending gate is added. See
+[ADR 0062](adr/0062-self-hosted-hindsight.md) for rationale and remaining choices.
+
 ## Open Decisions, Not Agreements
 
 - Hindsight-first integration assessment: on 2026-10-10 the user selected
@@ -132,7 +146,8 @@ grounding agreement or requirement to assess observable responses separately.
   isolation, with incumbent execution untouched. This is a revised recommendation,
   not user adoption or live-run authorization. Native extraction labels and small
   immutable source units are test candidates; no bank layout or delivery policy
-  is settled by the reports.
+  is settled by the reports. Hosting is separately settled as self-hosted by
+  PC-13, without approving the experiment or its setup/model calls.
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
   reviewer, reconciliation with corrected or removed facts, and failure behavior.
   PC-03's character boundary and PC-10's archive eligibility are settled;

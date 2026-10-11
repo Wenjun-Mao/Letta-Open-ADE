@@ -9,11 +9,13 @@ The [Hindsight integration assessment](findings/hindsight-integration-assessment
 is complete against v0.10.3 and native baseline `d94913d`; 45 focused offline
 incumbent checks passed. The [returned-review synthesis](findings/hindsight-consultation/assessment.md)
 now recommends a disposable Hindsight-to-Character replay before native isolation;
-native extraction labels make the one-bank layout worth testing. The experiment
-and its setup/provider calls are not authorized. No Hindsight installation,
-source isolation, provider run or deployment has occurred. Older entries retain
-their historical scope and are not authority to resume new native memory feature
-work ahead of this review.
+native extraction labels make the one-bank layout worth testing. The user selected
+[self-hosting over Hindsight Cloud](adr/0062-self-hosted-hindsight.md) for repeated
+test-workload cost reasons (PC-13). Host and models remain unselected; the experiment
+and its setup/provider calls are not authorized. No Hindsight installation, source
+isolation, provider run or deployment has occurred. Older entries retain their
+historical scope and are not authority to resume new native memory feature work
+ahead of this review.
 
 The user directed integration into `main` and continued development in the
 primary checkout ([ADR 0048](adr/0048-mainline-development.md)). Earlier retained-

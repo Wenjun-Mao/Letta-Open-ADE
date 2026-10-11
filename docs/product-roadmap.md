@@ -70,8 +70,10 @@ persistence, embeddings, Qwen, or tool protocols. See the
 
 - Review the [consultation synthesis](findings/hindsight-consultation/assessment.md):
   it recommends a disposable Hindsight-to-Character experiment before native
-  isolation, leaving incumbent execution unchanged. Experiment scope, candidate
-  setup and provider calls remain unapproved; bank layout is a test hypothesis.
+  isolation, leaving incumbent execution unchanged. The user selected
+  [self-hosting](adr/0062-self-hosted-hindsight.md) rather than Hindsight Cloud
+  (PC-13). Host/models, experiment scope, candidate setup and provider calls
+  remain open or unapproved; bank layout is a test hypothesis.
 - Stabilize the native runtime through real product use and evidence-led fixes.
 - Improve task-specific evaluation where a concrete success contract exists.
 - Keep model aliases configurable so providers and underlying local models can
