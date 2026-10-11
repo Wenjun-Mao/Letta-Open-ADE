@@ -140,7 +140,7 @@ def test_full_restore_host_path_runs_under_python_no_site_with_real_docker_text(
         elif args[:2] == ["compose", "--project-name"] and "up" in args:
             project, config = args[2], args[4]
             config_text = Path(config).read_text()
-            token = re.search(r"ade\.hindsight\.restore\.token: ([0-9a-f]{32})", config_text).group(1)
+            token = re.search(r'ade\.hindsight\.restore\.token: "([0-9a-f]{32})"', config_text).group(1)
             volume = re.search(r"(?m)^    name: ([^\n]+)$", config_text).group(1)
             image = re.search(r"    image: (.+)", config_text).group(1)
             state["volumes"][volume] = {"Name": volume, "Driver": "local", "Scope": "local", "Options": None,

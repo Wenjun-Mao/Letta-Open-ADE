@@ -88,6 +88,26 @@ def test_compose_is_one_private_networkless_db_service(tmp_path):
     assert (tmp_path / "restore" / token / "compose.yaml").stat().st_mode & 0o777 == 0o600
 
 
+@pytest.mark.parametrize("token", ["1" * 32, "1e" + "0" * 30, "a" * 32])
+def test_compose_render_preserves_restore_token_labels_as_strings(tmp_path, token):
+    import shutil
+    import subprocess
+
+    docker = shutil.which("docker")
+    if docker is None:
+        pytest.skip("Docker Compose CLI unavailable; restore token rendering is unverified")
+    compose = restore_database.write_compose(
+        tmp_path / token, token, "ade-hindsight-probe-db:" + "b" * 40,
+        "sha256:" + "e" * 64)
+
+    rendered = subprocess.run([docker, "compose", "-f", compose["path"], "config", "--format", "json"],
+        check=True, capture_output=True, text=True, timeout=15)
+    value = json.loads(rendered.stdout)
+
+    assert value["services"]["db"]["labels"]["ade.hindsight.restore.token"] == token
+    assert value["volumes"]["data"]["labels"]["ade.hindsight.restore.token"] == token
+
+
 def test_rearm_is_blocked_until_exact_restore_cleanup_is_complete(tmp_path):
     (tmp_path / "restore-operation.json").write_text(json.dumps({"token": "e" * 32}))
     with pytest.raises(RuntimeError, match="rearm_blocked_by_disposable_restore"):

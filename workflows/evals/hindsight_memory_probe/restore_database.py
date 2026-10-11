@@ -60,14 +60,14 @@ def write_compose(directory: Path, token: str, source_image: str, image_id: str)
         "      POSTGRES_USER: hindsight_probe\n"
         f"      POSTGRES_PASSWORD: restore-{token}\n"
         "    labels:\n"
-        f"      ade.hindsight.restore.token: {token}\n"
+        f'      ade.hindsight.restore.token: "{token}"\n'
         "    volumes:\n"
         f"      - data:{DATA_PATH}\n"
         "volumes:\n"
         "  data:\n"
         f"    name: {volume}\n"
         "    labels:\n"
-        f"      ade.hindsight.restore.token: {token}\n"
+        f'      ade.hindsight.restore.token: "{token}"\n'
     )
     descriptor = os.open(config, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
@@ -100,11 +100,11 @@ def write_contract(operation: dict) -> str:
         "    network_mode: none\n    environment:\n"
         "      POSTGRES_DB: hindsight_probe\n      POSTGRES_USER: hindsight_probe\n"
         f"      POSTGRES_PASSWORD: restore-{token}\n    labels:\n"
-        f"      ade.hindsight.restore.token: {token}\n    volumes:\n"
+        f'      ade.hindsight.restore.token: "{token}"\n    volumes:\n'
         f"      - data:{DATA_PATH}\nvolumes:\n  data:\n"
         f"    name: {volume}\n"
         "    labels:\n"
-        f"      ade.hindsight.restore.token: {token}\n"
+        f'      ade.hindsight.restore.token: "{token}"\n'
     )
 
 
