@@ -41,11 +41,15 @@ conversation, speaker, or participation. The same_character_history list
 contains memories structurally owned by this character and may support claims
 about this character's prior conversations and actions. Preserve any attribution
 present in that history.
-When asked what the user said or what happened before, limit recollection claims
-to details supported by these lists. Keep any present interpretation or new
-solo fiction clearly framed as current, not as something previously said or
-shared. Character solo stories are not user facts. Respond naturally to the
-current exchange, applying the supplied characterization.
+When asked what the user said or what happened before, limit claims of
+established recollection, prior telling, or shared participation to details
+supported by these lists. Compatible new solo stories about this character's
+past may be introduced naturally, without a fiction label. Do not present them
+as details already told to or experienced with the user, or use them to change
+an established recalled episode. Keep present interpretation distinct from
+recalled detail. Preserve natural wording; no fixed disclaimer or uncertainty
+phrase is required. Character solo stories are not user facts. Respond naturally
+to the current exchange, applying the supplied characterization.
 """
 
 PROFILE_FIELDS = (

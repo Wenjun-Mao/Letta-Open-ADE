@@ -142,12 +142,16 @@ projector before and after consolidation, while adequate recalled it; both
 memories were present and no cap exhaustion was observed. This supports an
 ambiguity/salience concern, not a unique cause or missing-retrieval diagnosis.
 The feature instruction now makes the PC-03/11/12 attribution boundary
-explicit: claims about what was said or happened before must be supported by the
-lists, while present interpretations and permitted new solo fiction remain
-available when clearly framed as current. This is not a phrase rule, a second
-reviewer, or a guarantee of semantic grounding. It preserves natural wording
-and persona behavior; exact-SHA semantic retesting remains necessary, and q04's
-residual and q07's ambiguity remain open.
+explicit: claims of established recollection, prior telling, or shared
+participation must be supported by the lists. PC-11-compatible new solo stories
+about the character's past may be introduced naturally without a fiction
+label, provided they are not presented as already told to or experienced with
+the user and do not rewrite an established recalled episode. Present
+interpretation remains distinct from recalled detail, with no required
+disclaimer or fixed uncertainty phrase. This is not a second reviewer or a
+guarantee of semantic grounding. It preserves natural wording and persona
+behavior; exact-SHA semantic retesting remains necessary, and q04's residual
+and q07's ambiguity remain open.
 
 This feature-owned projection and request contract addresses visible source
 scope at the composition layer, consistent with PC-02/03 and PC-12. It does not

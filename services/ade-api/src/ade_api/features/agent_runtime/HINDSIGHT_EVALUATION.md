@@ -102,6 +102,14 @@ omits non-profile memories from Character context while retaining them in raw
 recall diagnostics. The feature never parses freeform context or fact text to
 infer ownership or rewrites profile text.
 
+The Character instruction distinguishes established recollection, prior
+telling and shared participation from new solo history. Compatible new solo
+stories about the character's past may be introduced naturally without a
+fiction label; they must not be presented as details already told to or
+experienced with the user, or used to change an established recalled episode.
+Present interpretation stays distinct from recalled detail. No fixed disclaimer
+or uncertainty phrase is required (PC-03/11/12).
+
 Optional frozen settings and defaults: `timeout_seconds=120.0` and
 `recall_timeout_seconds=120.0` (positive, at most 180),
 `max_output_tokens=2048`, `input_token_limit=8192`, `recall_max_tokens=2048`,

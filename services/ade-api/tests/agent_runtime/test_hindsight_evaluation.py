@@ -40,8 +40,10 @@ def test_three_arms_one_generation_frozen_inputs_and_actual_requests(
         assert "do not establish that this character heard" in dispatched[
             "messages"
         ][0]["content"]
-        assert "limit recollection claims" in dispatched["messages"][0]["content"]
-        assert "clearly framed as current" in dispatched["messages"][0]["content"]
+        assert "limit claims of" in dispatched["messages"][0]["content"]
+        assert "established recollection" in dispatched["messages"][0]["content"]
+        assert "new solo stories about this character's" in dispatched["messages"][0]["content"]
+        assert "without a fiction label" in dispatched["messages"][0]["content"]
         assert dispatched["max_tokens"] == inputs().max_output_tokens
         assert dispatched["stream"] is False
         assert "tools" not in dispatched and "tool_choice" not in dispatched
@@ -553,17 +555,21 @@ def test_nonprofile_context_requires_one_valid_active_owner(tags, metadata):
     }
 
 
-def test_profile_fact_and_present_fiction_boundary_is_in_character_request():
+def test_recollection_and_new_solo_story_boundary_is_in_character_request():
     messages = evaluation.character_messages(
         inputs(arms=["empty"], adequate_memories=[]), {}
     )
     system = messages[0]["content"]
-    assert "limit recollection claims" in system
+    assert "limit claims of" in system
+    assert "established recollection" in system
     assert "supported by these lists" in system
-    assert "present interpretation or new" in system
-    assert "clearly framed as current" in system
-    assert "previously said or" in system
-    assert "shared" in system
+    assert "established recollection, prior telling, or shared participation" in system
+    assert "new solo stories about this character's" in system
+    assert "without a fiction label" in system
+    assert "details already told to or experienced with the user" in system
+    assert "use them to change" in system
+    assert "established recalled episode" in system
+    assert "no fixed disclaimer or uncertainty" in system
 
 
 def test_empty_and_adequate_controls_do_not_require_hindsight(monkeypatch, tmp_path):
