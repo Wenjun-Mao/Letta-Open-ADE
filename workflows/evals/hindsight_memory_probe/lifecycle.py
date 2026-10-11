@@ -81,6 +81,17 @@ def verified_dormant(directory, epoch, candidates):
     return result
 
 
+def proven_removal(container, dormant):
+    """Recognize only a Docker removal transition of an exact stop-proven identity."""
+    if container["State"]["Status"] != "removing":
+        return False
+    current = dormant_projection(container)
+    for stopped in dormant:
+        if {**current, "status": stopped["status"]} == stopped:
+            return True
+    return False
+
+
 def path(directory, epoch, service, suffix):
     return directory / f"epoch-{epoch['index']:04d}-{service}.{suffix}.json"
 
@@ -126,6 +137,7 @@ def _classify(directory, epoch, candidates, now):
         intent = read_record(directory, epoch, service, "activation")
         started = read_record(directory, epoch, service, "started")
         result = read_record(directory, epoch, service, "activation-result")
+        replacement_pending = False
         relevant = [
             c
             for c in candidates
@@ -141,6 +153,16 @@ def _classify(directory, epoch, candidates, now):
                 active_found = True
             elif proven_dormant:
                 rows[container["Id"]] = "dormant"
+            elif (
+                intent is not None
+                and intent["release"] == epoch["release"]
+                and proven_removal(container, dormant)
+            ):
+                # Compose may be replacing a stopped prior-release container. Its
+                # exact stop receipt still proves identity; the service intent
+                # bounds this transitional state by the replacement deadline.
+                rows[container["Id"]] = "replacement_pending"
+                replacement_pending = True
             elif started is not None:
                 rows[container["Id"]] = "unadmitted"
                 reason = "candidate_identity_changed_without_rearm"
@@ -178,43 +200,91 @@ def _classify(directory, epoch, candidates, now):
             and (now >= intent["deadline"] or result is not None)
         ):
             reason = "candidate_startup_not_observed"
+        if replacement_pending and (now >= intent["deadline"] or result is not None):
+            reason = "candidate_predecessor_removal_not_observed"
     return {"containers": rows, "reason": reason}
 
 
 def classify(directory, epoch, candidates, now):
+    return observe(directory, epoch, candidates, now)["view"]
+
+
+def observe(directory, epoch, candidates, now):
+    """Return one lifecycle decision with the immutable admission records it used."""
     with transaction(directory):
-        return _classify(directory, epoch, candidates, now)
+        return _observation_locked(directory, epoch, candidates, now)
+
+
+def _observation_locked(directory, epoch, candidates, now):
+    admissions = {}
+    for service in sorted(host.SERVICES - {"runner"}):
+        intent = read_record(directory, epoch, service, "activation")
+        if intent is not None:
+            admissions[service] = intent
+    return {
+        "view": _classify(directory, epoch, candidates, now),
+        "admissions": admissions,
+    }
+
+
+def observe_current(directory, epoch, registry, now):
+    """Take the Docker and lifecycle readbacks under one lifecycle lease."""
+    with transaction(directory):
+        items = host.containers()
+        candidates = host.candidate_containers(items, registry)
+        observation = _observation_locked(directory, epoch, candidates, now)
+        return {
+            "items": items,
+            "candidates": candidates,
+            **observation,
+        }
 
 
 def prepare(directory, epoch, candidates, services, job_token, deadline, now):
     with transaction(directory):
-        view = _classify(directory, epoch, candidates, now)
-        if view["reason"]:
-            raise RuntimeError(view["reason"])
-        for service in services:
-            intent = read_record(directory, epoch, service, "activation")
-            if intent is not None:
-                # Compose dependencies already running are an idempotent prerequisite, never a restart waiver.
-                if any(
-                    c["Config"]["Labels"]["com.docker.compose.service"] == service
-                    and view["containers"].get(c["Id"]) == "active"
-                    and c["State"]["Status"] == "running"
-                    for c in candidates
-                ):
-                    continue
-                raise RuntimeError("startup_already_admitted_requires_rearm")
-            write_record(
-                directory,
-                epoch,
-                service,
-                "activation",
-                {
-                    "job_token": job_token,
-                    "deadline": deadline,
-                    "release": epoch["release"],
-                    "registered_time": now,
-                },
-            )
+        _prepare_locked(
+            directory, epoch, candidates, services, job_token, deadline, now
+        )
+
+
+def prepare_current(directory, epoch, registry, services, job_token, deadline, now):
+    """Re-sample Docker under the admission lease immediately before dispatch."""
+    with transaction(directory):
+        items = host.containers()
+        candidates = host.candidate_containers(items, registry)
+        _prepare_locked(
+            directory, epoch, candidates, services, job_token, deadline, now
+        )
+
+
+def _prepare_locked(directory, epoch, candidates, services, job_token, deadline, now):
+    view = _classify(directory, epoch, candidates, now)
+    if view["reason"]:
+        raise RuntimeError(view["reason"])
+    for service in services:
+        intent = read_record(directory, epoch, service, "activation")
+        if intent is not None:
+            # Compose dependencies already running are an idempotent prerequisite, never a restart waiver.
+            if any(
+                c["Config"]["Labels"]["com.docker.compose.service"] == service
+                and view["containers"].get(c["Id"]) == "active"
+                and c["State"]["Status"] == "running"
+                for c in candidates
+            ):
+                continue
+            raise RuntimeError("startup_already_admitted_requires_rearm")
+        write_record(
+            directory,
+            epoch,
+            service,
+            "activation",
+            {
+                "job_token": job_token,
+                "deadline": deadline,
+                "release": epoch["release"],
+                "registered_time": now,
+            },
+        )
 
 
 def complete(directory, job_token):
@@ -224,12 +294,12 @@ def complete(directory, job_token):
 
     registry = load_registry(directory)
     epoch = epochs.active(directory, registry)
-    items = host.containers()
-    candidates = host.candidate_containers(
-        items, epochs.effective_registry(directory, registry)
-    )
     sample = host.host_sample(epoch["release"])
     with transaction(directory):
+        items = host.containers()
+        candidates = host.candidate_containers(
+            items, epochs.effective_registry(directory, registry)
+        )
         view = _classify(directory, epoch, candidates, time.time())
         for service in host.SERVICES - {"runner"}:
             intent = read_record(directory, epoch, service, "activation")

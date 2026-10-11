@@ -9,6 +9,7 @@ import pytest
 
 from workflows.evals.hindsight_memory_probe import (
     epochs,
+    guard_evidence,
     host_guard as host,
     lifecycle,
     launch,
@@ -77,8 +78,11 @@ def campaign(tmp_path, monkeypatch):
     yield tmp_path, items
 
 
-def stop_and_rearm(directory, items, retune=False):
-    items.append(candidate())
+def stop_and_rearm(directory, items, retune=False, release=None, prior_unhealthy=False):
+    item = candidate()
+    if prior_unhealthy:
+        item["State"]["Health"] = {"Status": "unhealthy"}
+    items.append(item)
     registry = sup.load_registry(directory)
     sup.stop_owned(directory, registry, ReceiptStore(directory), "planned_pause")
     diagnosis = directory / "diagnosis.json"
@@ -92,7 +96,7 @@ def stop_and_rearm(directory, items, retune=False):
         allocation_file = directory / "retune.json"
         allocation_file.write_text(json.dumps(allocations))
     epoch = sup.rearm_epoch(
-        directory, "persistence_restart", diagnosis, allocation_file
+        directory, "persistence_restart", diagnosis, allocation_file, release
     )
     return registry, epoch
 
@@ -224,6 +228,247 @@ def test_dormant_resurrection_without_authorized_startup_is_fatal(campaign):
     _, epoch = stop_and_rearm(directory, items)
     items[0]["State"].update(Status="running", StartedAt="unauthorized-start")
     assert guard(directory, epoch, items) == "candidate_startup_not_admitted"
+
+
+def test_stopped_prior_release_removal_is_bounded_by_replacement_intent(campaign):
+    directory, items = campaign
+    next_release = Path("/mnt/projects/apps/ade-hindsight-probe/releases/" + "b" * 40)
+    _, epoch = stop_and_rearm(
+        directory, items, retune=True, release=next_release, prior_unhealthy=True
+    )
+    lifecycle.prepare(
+        directory,
+        epoch,
+        items,
+        ["db"],
+        "b" * 32,
+        sup.STARTED + 160,
+        sup.STARTED + 100,
+    )
+    items[0]["State"]["Status"] = "removing"
+
+    view = lifecycle.classify(directory, epoch, items, sup.STARTED + 101)
+    assert view == {
+        "containers": {"owned-db": "replacement_pending"},
+        "reason": None,
+    }
+    assert guard(directory, epoch, items) is None
+
+    replacement = candidate("new-db", status="created")
+    replacement["State"]["StartedAt"] = "0001-01-01T00:00:00Z"
+    replacement["Config"]["Labels"][
+        "com.docker.compose.project.working_dir"
+    ] = str(next_release / "workflows/evals/hindsight_memory_probe")
+    replacement["Config"]["Labels"][
+        "com.docker.compose.project.config_files"
+    ] = str(next_release / "workflows/evals/hindsight_memory_probe/compose.yaml")
+    replacement["HostConfig"].update(
+        Memory=epoch["allocations"]["db"]["memory"],
+        NanoCpus=int(epoch["allocations"]["db"]["cpu"] * 1e9),
+    )
+    items.append(replacement)
+    view = lifecycle.classify(directory, epoch, items, sup.STARTED + 102)
+    assert view == {
+        "containers": {
+            "owned-db": "replacement_pending",
+            "new-db": "startup_pending",
+        },
+        "reason": None,
+    }
+    replacement["State"].update(
+        Status="running", StartedAt="replacement-start", FinishedAt=""
+    )
+    lifecycle.write_record(
+        directory,
+        epoch,
+        "db",
+        "started",
+        {
+            "identity": lifecycle.identity(replacement),
+            "job_token": "b" * 32,
+            "observed_time": sup.STARTED + 103,
+        },
+    )
+    view = lifecycle.classify(directory, epoch, items, sup.STARTED + 161)
+    assert view["reason"] == "candidate_predecessor_removal_not_observed"
+    items.remove(items[0])
+    lifecycle.complete(directory, "b" * 32)
+    items.remove(replacement)
+    view = lifecycle.classify(directory, epoch, items, sup.STARTED + 103)
+    assert view["reason"] == "candidate_active_identity_missing"
+
+
+def test_prior_release_removal_without_matching_intent_fails_closed(campaign):
+    directory, items = campaign
+    next_release = Path("/mnt/projects/apps/ade-hindsight-probe/releases/" + "b" * 40)
+    _, epoch = stop_and_rearm(directory, items, release=next_release)
+    items[0]["State"]["Status"] = "removing"
+
+    view = lifecycle.classify(directory, epoch, items, sup.STARTED + 100)
+    assert view["reason"] == "candidate_startup_not_admitted"
+
+
+@pytest.mark.parametrize(
+    "changed_field",
+    [
+        "id",
+        "image",
+        "started",
+        "finished",
+        "restarts",
+        "oom_killed",
+        "health",
+        "memory",
+        "nano_cpus",
+        "service",
+        "release_directory",
+    ],
+)
+def test_unproven_removing_identity_fails_closed_during_replacement(
+    campaign, changed_field
+):
+    directory, items = campaign
+    next_release = Path("/mnt/projects/apps/ade-hindsight-probe/releases/" + "b" * 40)
+    _, epoch = stop_and_rearm(directory, items, release=next_release)
+    lifecycle.prepare(
+        directory,
+        epoch,
+        items,
+        ["db"],
+        "b" * 32,
+        sup.STARTED + 160,
+        sup.STARTED + 100,
+    )
+    items[0]["State"]["Status"] = "removing"
+    candidate_item = items[0]
+    if changed_field == "id":
+        candidate_item["Id"] = "unknown-container"
+    elif changed_field == "image":
+        candidate_item["Image"] = "sha256:changed-after-stop"
+    elif changed_field == "started":
+        candidate_item["State"]["StartedAt"] = "unrecorded-start"
+    elif changed_field == "finished":
+        candidate_item["State"]["FinishedAt"] = "unrecorded-finish"
+    elif changed_field == "restarts":
+        candidate_item["RestartCount"] += 1
+    elif changed_field == "oom_killed":
+        candidate_item["State"]["OOMKilled"] = True
+    elif changed_field == "health":
+        candidate_item["State"]["Health"] = {"Status": "unhealthy"}
+    elif changed_field == "memory":
+        candidate_item["HostConfig"]["Memory"] += 1
+    elif changed_field == "nano_cpus":
+        candidate_item["HostConfig"]["NanoCpus"] += 1
+    elif changed_field == "service":
+        candidate_item["Config"]["Labels"]["com.docker.compose.service"] = "model-router"
+    elif changed_field == "release_directory":
+        candidate_item["Config"]["Labels"][
+            "com.docker.compose.project.working_dir"
+        ] = "/unadmitted/release/workflows/evals/hindsight_memory_probe"
+
+    view = lifecycle.classify(directory, epoch, items, sup.STARTED + 101)
+    assert view["reason"] == "candidate_startup_not_admitted"
+
+
+def test_removing_predecessor_does_not_extend_startup_deadline(campaign):
+    directory, items = campaign
+    next_release = Path("/mnt/projects/apps/ade-hindsight-probe/releases/" + "b" * 40)
+    _, epoch = stop_and_rearm(directory, items, release=next_release)
+    deadline = sup.STARTED + 160
+    lifecycle.prepare(
+        directory, epoch, items, ["db"], "b" * 32, deadline, sup.STARTED + 100
+    )
+    items[0]["State"]["Status"] = "removing"
+
+    view = lifecycle.classify(directory, epoch, items, deadline + 1)
+    assert view["reason"] == "candidate_predecessor_removal_not_observed"
+
+
+def test_current_observation_cannot_pair_stale_docker_items_with_new_receipts(campaign):
+    directory, items = campaign
+    next_release = Path("/mnt/projects/apps/ade-hindsight-probe/releases/" + "b" * 40)
+    _, epoch = stop_and_rearm(directory, items, release=next_release)
+    token = "b" * 32
+    lifecycle.prepare(
+        directory, epoch, items, ["db"], token, sup.STARTED + 160, sup.STARTED + 100
+    )
+    stale_items = copy.deepcopy(items)
+    items.clear()
+    replacement = candidate("new-db", status="running")
+    replacement["State"].update(
+        StartedAt="replacement-start", FinishedAt=""
+    )
+    replacement["Config"]["Labels"][
+        "com.docker.compose.project.working_dir"
+    ] = str(next_release / "workflows/evals/hindsight_memory_probe")
+    replacement["Config"]["Labels"][
+        "com.docker.compose.project.config_files"
+    ] = str(next_release / "workflows/evals/hindsight_memory_probe/compose.yaml")
+    items.append(replacement)
+    lifecycle.complete(directory, token)
+
+    stale = lifecycle.observe(
+        directory,
+        epoch,
+        host.candidate_containers(
+            stale_items, epochs.effective_registry(directory, sup.load_registry(directory))
+        ),
+        sup.STARTED + 101,
+    )
+    assert stale["view"]["reason"] == "candidate_active_identity_missing"
+
+    current = lifecycle.observe_current(
+        directory,
+        epoch,
+        epochs.effective_registry(directory, sup.load_registry(directory)),
+        sup.STARTED + 101,
+    )
+    assert current["items"] == items
+    assert current["view"] == {"containers": {"new-db": "active"}, "reason": None}
+
+
+def test_guard_failure_receipt_is_redacted_exact_and_immutable(campaign):
+    directory, items = campaign
+    _, epoch = stop_and_rearm(directory, items)
+    lifecycle.prepare(
+        directory, epoch, items, ["db"], "b" * 32, sup.STARTED + 160, sup.STARTED + 100
+    )
+    items[0]["Config"]["Env"] = ["TOKEN=private-value"]
+    candidates = host.candidate_containers(
+        items, epochs.effective_registry(directory, sup.load_registry(directory))
+    )
+    observation = lifecycle.observe(directory, epoch, candidates, sup.STARTED + 101)
+    assert observation["admissions"]["db"]["job_token"] == "b" * 32
+    assert guard_evidence.publish(
+        directory,
+        sup.load_registry(directory),
+        epoch,
+        candidates,
+        observation,
+        "candidate_startup_not_admitted",
+        sup.STARTED + 101,
+    )
+
+    path = directory / "epoch-0002-guard-failure.json"
+    before = path.read_text()
+    assert "private-value" not in before
+    assert '"Env"' not in before
+    evidence = json.loads(before)
+    assert evidence["lifecycle"] == observation["view"]
+    assert evidence["guard_reason"] == "candidate_startup_not_admitted"
+    assert evidence["candidates"][0]["dormant"] == lifecycle.dormant_projection(
+        candidates[0]
+    )
+    assert not guard_evidence.publish(
+        directory,
+        sup.load_registry(directory),
+        epoch,
+        candidates,
+        observation,
+        "replacement_reason_must_not_overwrite",
+        sup.STARTED + 102,
+    )
+    assert path.read_text() == before
 
 
 def test_rearm_rejects_unproven_or_changed_stopped_identity(campaign):

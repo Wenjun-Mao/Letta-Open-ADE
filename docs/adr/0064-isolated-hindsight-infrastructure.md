@@ -91,6 +91,34 @@ with no extra Compose service or private/provider inputs. Positive RUN argv and
 post-deadline daemon/client readback bind a typed cancellation receipt to its
 registered job; a timed-out Docker client or boolean alone is insufficient.
 
+Take Docker inventory and lifecycle-record reads under the same finite flock
+lease. Previously a caller could snapshot Docker, wait for the lease while the
+detached reaper published a new started identity, then classify the stale
+snapshot against newer lifecycle records and report the active replacement
+missing. Startup preparation and reaper completion also refresh Docker under
+the lease immediately before changing admission state. Docker commands retain
+their finite read timeouts; the lease serializes durable admission state and its
+corresponding observation without suppressing container transitions.
+
+Compose may report an old, stop-proven container as `removing` while replacing it
+for a newly admitted release. The ordinary dormant projection includes status,
+so that transition no longer equals the stop receipt and previously caused the
+guard to call the known predecessor an unadmitted startup. Treat only that exact
+prior identity as `replacement_pending`, and only while a service activation
+intent targets the epoch release. All other projected fields must still match
+the stop receipt. The intent's finite deadline still requires a replacement to
+be observed; once a replacement is admitted, its exact active identity must
+remain present. Unknown IDs, changed identity/resource fields, running
+resurrection, and removal without an activation intent remain fatal. The
+incident's pre-stop container snapshot was not retained, so the synthetic
+reproduction establishes this failure mode, not the precise Docker state at the
+original OCI stop. For future guard stop decisions, publish one immutable,
+redacted epoch receipt containing the exact sampled candidate projections,
+lifecycle decision and activation intents used for that decision, stop reason,
+sample time and registry/epoch hashes. It deliberately excludes Docker `Config`,
+environment, mounts and network details. If receipt storage fails, the guard
+still stops owned work and does not claim diagnostic evidence was saved.
+
 ## P4 ordered finalization and bounded restart evidence
 
 Revision-4 P4 makes independent restart readback and exact shutdown order part of

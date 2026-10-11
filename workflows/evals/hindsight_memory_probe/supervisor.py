@@ -19,6 +19,7 @@ from . import epochs
 from . import releases
 from . import lifecycle
 from . import quiescence
+from . import guard_evidence
 from .receipts import ReceiptStore
 
 from .campaign_clock import STARTED, TARGET, DEADLINE, WORK_CUTOFF
@@ -166,10 +167,14 @@ def stop_owned(directory, registry, store, reason):
 
 def readback(directory):
     registry = load_registry(directory)
-    candidates = host.candidate_containers(
-        host.containers(), epochs.effective_registry(directory, registry)
-    )
     epoch = epochs.active(directory, registry)
+    observation = lifecycle.observe_current(
+        directory,
+        epoch,
+        epochs.effective_registry(directory, registry),
+        time.time(),
+    )
+    candidates = observation["candidates"]
     admission_path = directory / f"epoch-{epoch['index']:04d}.finalize-admission.json"
     finalized_path = directory / f"epoch-{epoch['index']:04d}.finalized.json"
     admission = json.loads(admission_path.read_text()) if admission_path.exists() else None
@@ -193,9 +198,7 @@ def readback(directory):
         "stopping": quiescence.stop_path(
             directory, epochs.active(directory, registry)
         ).exists(),
-        "lifecycle": lifecycle.classify(
-            directory, epochs.active(directory, registry), candidates, time.time()
-        ),
+        "lifecycle": observation["view"],
         "jobs": [
             {
                 "kind": j["kind"],
@@ -273,7 +276,11 @@ def run(directory, resume=False):
                     reason = "hard_deadline_elapsed"
                     break
                 sample = host.host_sample(registry["release"])
-                items = host.containers()
+                observation = lifecycle.observe_current(
+                    directory, epoch, owned_registry, now
+                )
+                items = observation["items"]
+                candidates = observation["candidates"]
                 reason, low_since = host.guard_reason(
                     owned_registry,
                     items,
@@ -282,13 +289,18 @@ def run(directory, resume=False):
                     low_since,
                     now,
                     epoch["allocations"],
-                    lifecycle.classify(
-                        directory,
-                        epoch,
-                        host.candidate_containers(items, owned_registry),
-                        now,
-                    ),
+                    observation["view"],
                 )
+                if reason:
+                    guard_evidence.publish(
+                        directory,
+                        registry,
+                        epoch,
+                        candidates,
+                        observation,
+                        reason,
+                        now,
+                    )
                 record(
                     store,
                     "sample",

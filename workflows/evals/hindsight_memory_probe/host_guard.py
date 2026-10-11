@@ -175,10 +175,10 @@ def guard_reason(
     if lifecycle_view and lifecycle_view["reason"]:
         return lifecycle_view["reason"], low_since
     for candidate in candidates:
-        if (
-            lifecycle_view
-            and lifecycle_view["containers"].get(candidate["Id"]) == "dormant"
-        ):
+        if lifecycle_view and lifecycle_view["containers"].get(candidate["Id"]) in {
+            "dormant",
+            "replacement_pending",
+        }:
             continue
         state = candidate["State"]
         if allocations is not None:

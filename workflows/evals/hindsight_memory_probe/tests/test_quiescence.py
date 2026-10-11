@@ -104,13 +104,13 @@ def test_stop_arriving_during_registration_denies_final_execution_handshake(
     )
     gates = []
     monkeypatch.setattr(launch.os, "write", lambda *_: gates.append(True))
-    prepare = lifecycle.prepare
+    prepare = lifecycle.prepare_current
 
     def stop_after_registration(*args):
         prepare(*args)
         quiescence.admit_stop(directory, epoch, "test_safety_stop")
 
-    monkeypatch.setattr(lifecycle, "prepare", stop_after_registration)
+    monkeypatch.setattr(lifecycle, "prepare_current", stop_after_registration)
     with sup.lease(directory), pytest.raises(RuntimeError, match="stopping"):
         launch.launch(directory, "dummy", 60, [])
     assert not gates
@@ -128,7 +128,7 @@ def test_deadline_rechecked_at_execution_handshake(state, monkeypatch):
     monkeypatch.setattr(launch.os, "write", lambda *_: gates.append(True))
     monkeypatch.setattr(
         lifecycle,
-        "prepare",
+        "prepare_current",
         lambda *_: monkeypatch.setattr(sup.time, "time", lambda: sup.WORK_CUTOFF),
     )
     with sup.lease(directory), pytest.raises(RuntimeError, match="deadline"):

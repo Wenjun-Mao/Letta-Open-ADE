@@ -144,8 +144,9 @@ def launch(state, kind, timeout, arguments):
     with lease(state, "jobs.lock"):
         quiescence.require_open(state, registry, epoch)
         owned_registry = epochs.effective_registry(state, registry)
-        items = host.containers()
-        candidates = host.candidate_containers(items, owned_registry)
+        observation = lifecycle.observe_current(state, epoch, owned_registry, now)
+        items = observation["items"]
+        candidates = observation["candidates"]
         sample = host.host_sample(registry["release"])
         reason, _ = host.guard_reason(
             owned_registry,
@@ -155,7 +156,7 @@ def launch(state, kind, timeout, arguments):
             None,
             now,
             epoch["allocations"],
-            lifecycle.classify(state, epoch, candidates, now),
+            observation["view"],
         )
         if reason or sample["memory_available"] < 1.5 * host.GIB:
             raise RuntimeError("unsafe_work_launch")
@@ -340,10 +341,10 @@ def launch(state, kind, timeout, arguments):
                     "epoch_sha256": epoch["sha256"],
                 },
             )
-            lifecycle.prepare(
+            lifecycle.prepare_current(
                 state,
                 epoch,
-                candidates,
+                owned_registry,
                 startup,
                 token,
                 min(WORK_CUTOFF, now + timeout),

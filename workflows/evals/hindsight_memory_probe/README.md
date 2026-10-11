@@ -219,12 +219,29 @@ fresh job/process/container readback. Baseline remains immutable across operatin
 A receipt-specified cause and fresh baseline/headroom proof are required to rearm;
 append-only epoch chain records allocations and explicitly admitted clean SHA
 releases. Rearm admits only exact stopped identities captured by the preceding
-stop readback as dormant, including prior-release rows. No current cap check or
-exit exemption applies to an unproven stopped row. Before Compose startup, a
-service/epoch/deadline intent is durably registered; the detached reaper immediately
-binds actual Docker start identity and fails early exits/limit drift. Active IDs
-remain strict across resume, disappearance, exit and replacement. Dormant prior
-releases remain owned for cleanup, never silently counted as active allocations.
+stop readback as dormant, including prior-release rows. During an admitted
+replacement, the exact stopped predecessor may transition to Docker status
+`removing`; it remains `replacement_pending` only while a service intent targets
+the active epoch release and every other field still matches the stop receipt.
+The intent deadline still requires a replacement to be observed. Unknown or
+changed IDs, active identity loss, resurrection, and removal without an intent
+remain fatal. Before Compose startup, a service/epoch/deadline intent is durably
+registered; the detached reaper immediately binds actual Docker start identity
+and fails early exits/limit drift. Dormant prior releases remain owned for
+cleanup, never silently counted as active allocations.
+
+The detached supervisor takes Docker inventory and lifecycle records under one
+finite lifecycle lease. Startup preparation and Compose completion refresh
+Docker under the same lease before changing activation records, so a stale
+container snapshot cannot be paired with a later started receipt.
+
+On a safety-triggered epoch stop, the supervisor writes one immutable
+`epoch-NNNN-guard-failure.json` receipt from the same Docker sample and lifecycle
+observation that produced the stop reason. It contains only baseline and dormant
+projections, activation intent fields, the lifecycle classification, reason and
+registry/epoch hashes; it never stores raw inspect data, environment, mounts or
+network settings. If writing this receipt fails, safety cleanup still proceeds
+and the missing evidence remains explicit.
 
 ## P1 qualification and P2 start/inspect
 
@@ -309,8 +326,27 @@ For resolved config verification on OCI, `docker compose --env-file
 stdlib and runs directly with `python3 -m ...validate` using these exact args:
 
 ```sh
+# Bind the three nonsecret Compose identity values from the immutable active
+# registry/epoch. secrets.env intentionally remains unchanged and contains no
+# live epoch identity. This prints only hex release/registry/epoch identifiers.
+read -r PROBE_RELEASE_SHA ADE_PROBE_REGISTRY_SHA256 ADE_PROBE_EPOCH_SHA256 <<EOF
+$(python3 - "$PROBE_STATE" <<'PY'
+import sys
+from pathlib import Path
+from workflows.evals.hindsight_memory_probe import epochs
+from workflows.evals.hindsight_memory_probe.supervisor import load_registry
+
+state = Path(sys.argv[1])
+registry = load_registry(state)
+epoch = epochs.active(state, registry)
+print(Path(epoch["release"]).name, registry["registry_sha256"], epoch["sha256"])
+PY
+)
+EOF
+export PROBE_RELEASE_SHA ADE_PROBE_REGISTRY_SHA256 ADE_PROBE_EPOCH_SHA256
+
 python3 -m workflows.evals.hindsight_memory_probe.validate \
-  --env-file "$PROBE_PRIVATE/secrets.env" --private-dir "$PROBE_PRIVATE" --release-sha "$PROBE_SHA"
+  --env-file "$PROBE_PRIVATE/secrets.env" --private-dir "$PROBE_PRIVATE" --release-sha "$PROBE_RELEASE_SHA"
 python3 -m workflows.evals.hindsight_memory_probe.phase \
   --receipts "$PROBE_PRIVATE/receipts" --phase startup --operation-id first-start
 python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
