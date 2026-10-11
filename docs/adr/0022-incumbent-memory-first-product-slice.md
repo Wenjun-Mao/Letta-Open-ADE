@@ -1,8 +1,16 @@
 # ADR 0022: Incumbent Memory First For The Next Product Slice
 
-Status: Accepted incumbent-memory direction; execution details partially superseded.
+Status: Accepted incumbent baseline; planning priority and execution details partially superseded.
 
-> The external-service comparison remains deferred, not passed. DeepSeek replaces
+> On 2026-10-10 the user selected a Hindsight-first integration assessment and
+> proposed incumbent Memory isolation/freeze preparation. External-memory
+> deferral no longer blocks that assessment. See the current
+> [product contract](../product-contract.md#open-decisions-not-agreements) and
+> [assessment](../findings/hindsight-integration-assessment-2026-10-10.md).
+> The original M2 comparison remains unmeasured; this does not authorize a
+> service, provider run, migration or cutover. Historical rationale below remains.
+
+> The original measured comparison remains deferred, not passed. DeepSeek replaces
 > the Luna-only lane ([ADR 0025](0025-deepseek-development-lane.md)); the current
 > reviewer and explicit operator-removal path follow
 > [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md).

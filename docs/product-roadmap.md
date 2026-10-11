@@ -25,10 +25,14 @@ status, blockers, next actions, and evidence.
 | M4 | Real-use validation | Longer-session trials, deployment-provider validation, and operator review meet agreed acceptance criteria. |
 
 Under [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md), M3's
-bounded profile-memory slice is the current priority. The original measured
-M2 comparison is deferred with its historical findings preserved. Review
-remaining capability gaps at the end of M3 before adding memory machinery.
-Scene-based roleplay is deferred.
+bounded profile-memory slice established the incumbent development direction.
+On 2026-10-10 the user selected a Hindsight-first integration assessment and
+incumbent isolation/freeze preparation as the next planning priority. The
+[assessment](findings/hindsight-integration-assessment-2026-10-10.md) records
+source findings and recommendations, not integration or cutover approval. The
+original measured M2 comparison remains unexecuted/deferred, with historical
+findings preserved; no comparison winner is inferred. Scene-based roleplay
+remains deferred.
 
 ## Delivered
 
@@ -64,12 +68,15 @@ persistence, embeddings, Qwen, or tool protocols. See the
 
 ## Next
 
+- Review the Hindsight assessment and bound an incumbent Memory isolation/freeze
+  plan before source changes; resolve identity, ingestion and request-composition
+  contracts using Hindsight's existing capabilities.
 - Stabilize the native runtime through real product use and evidence-led fixes.
 - Improve task-specific evaluation where a concrete success contract exists.
 - Keep model aliases configurable so providers and underlying local models can
   evolve without source changes.
-- Complete the four supported M3 operator journeys and inspect the diagnostic
-  before considering further memory machinery.
+- Preserve the four supported M3 operator journeys and their outstanding
+  acceptance work while assessing the memory replacement.
 
 ## Later
 

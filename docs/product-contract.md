@@ -1,6 +1,6 @@
 # ADE Current Product Contract
 
-Updated: 2026-10-04. This is the single entrypoint for **current agreed product
+Updated: 2026-10-10. This is the single entrypoint for **current agreed product
 intent**, not a claim that every agreement is implemented or release-qualified.
 It consolidates existing decisions; it does not authorize implementation, live
 experiments, deployment, or a change to release evidence.
@@ -82,7 +82,7 @@ standing live-run authorization or release qualification.
 
 **PC-12 (agreed 2026-10-04):** Persona Definition owns authored, versioned
 characterization, including behavioral tendencies. Conversation Behavior applies
-that characterization to the present exchange, interpreting available evidence
+that characterization to the present exchange, interpreting available context
 and choosing and expressing a response. The boundary is authored intent versus
 contextual application, not static facts versus all behavioral instructions.
 ADE-wide requirements remain independent of persona-specific expectations.
@@ -104,8 +104,29 @@ agent, reviewer, model phase, persona edit, live run or behavioral qualification
 See [ADR 0061's clarification](adr/0061-capability-responsibility-map.md#character-clarification-2026-10-04)
 and the [assessment guide](architecture/capability-map/character-assessment.md).
 
+Clarification, 2026-10-10: Character receives relevant memories and their context
+alongside characterization and dialogue, not a packet it must adjudicate. Memory
+categories, attribution and time remain useful context. Evidence terminology can
+remain appropriate for ingestion diagnostics and evaluation. This changes no
+grounding agreement or requirement to assess observable responses separately.
+
 ## Open Decisions, Not Agreements
 
+- Hindsight-first integration assessment: on 2026-10-10 the user selected
+  assessment against Hindsight's concrete capabilities rather than designing a
+  generic Memory protocol, and proposed isolating/freezing incumbent Memory in
+  preparation. The [source-pinned assessment](findings/hindsight-integration-assessment-2026-10-10.md)
+  records v0.10.3, the native baseline and recommended seams. This supersedes
+  external-memory deferral as the next planning priority, not the existing
+  runtime or M2's unmeasured comparison. Working expectations are submission of
+  accepted user input for Hindsight extraction and an ADE-owned adapter that
+  constructs the final Character model request. Bank mapping, source context,
+  committed assistant ingestion, delivery timing, removal/reprocessing behavior,
+  storage authority and model access still require an adoption decision.
+  PC-05/08/09 continue governing the incumbent; a Hindsight path must explicitly
+  amend conflicting transaction/service assumptions. Source isolation, package
+  installation, live calls, migration and cutover are not authorized by the
+  assessment request.
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
   reviewer, reconciliation with corrected or removed facts, and failure behavior.
   PC-03's character boundary and PC-10's archive eligibility are settled;

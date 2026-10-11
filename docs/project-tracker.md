@@ -1,9 +1,18 @@
 # ADE Project Tracker
 
-Updated: 2026-09-30. Owner: this ADE task, using Relay for delegated reporting.
+Updated: 2026-10-10. Owner: this ADE task, using Relay for delegated reporting.
 Direction and milestone completion criteria live in the [roadmap](product-roadmap.md).
 
 ## Current Summary
+
+The [Hindsight integration assessment](findings/hindsight-integration-assessment-2026-10-10.md)
+is complete against v0.10.3 and native baseline `d94913d`; 45 focused offline
+incumbent checks passed. The user selected assessment and proposed Memory
+isolation/freeze preparation. Scope/ingestion decisions and a bounded source
+plan are next; no Hindsight installation, source isolation, provider run or
+deployment has occurred. Older milestone entries below retain their historical
+scope and are not authority to resume new native memory feature work ahead of
+this review.
 
 The user directed integration into `main` and continued development in the
 primary checkout ([ADR 0048](adr/0048-mainline-development.md)). Earlier retained-
