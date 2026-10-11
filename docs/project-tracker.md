@@ -52,6 +52,11 @@ pinned runtime/license allowlist and streams SHA256 reads; the pinned weight siz
 and hash are checked without claiming a duplicate framework weight exists. Launcher
 parsing now stops Compose option validation at the real run/exec service boundary
 while continuing full service/option validation for up/build/pull.
+The runner now receives guard release/registry/epoch identity, restart selection
+checks reuse the public feature scope command, and the candidate manifest pins
+the tracked semantic fixture and offline implementation hashes. This wiring is
+covered by launcher, Compose-contract and documented-CLI checks; live restart
+readback remains pending.
 Older entries retain their historical scope and are not authority to resume new
 native memory feature work ahead of this review.
 

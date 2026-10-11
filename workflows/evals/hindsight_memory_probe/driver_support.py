@@ -170,7 +170,11 @@ def feature_scope(workspace, subject, root):
         "--workspace-id", workspace, "--subject-id", subject, "--character-root-id", root,
     ], cwd=ROOT, capture_output=True, text=True, check=True)
     value = json.loads(result.stdout)
-    if value.get("tags_match") != "any_strict" or len(value.get("tags", [])) != 2:
+    if (value.get("workspace_id") != workspace or value.get("subject_id") != subject
+            or value.get("character_root_id") != root
+            or not isinstance(value.get("bank_id"), str) or not value["bank_id"]
+            or value.get("tags") != [f"character:{root}", "kind:profile"]
+            or value.get("tags_match") != "any_strict"):
         raise RuntimeError("feature_scope_invalid")
     return value
 

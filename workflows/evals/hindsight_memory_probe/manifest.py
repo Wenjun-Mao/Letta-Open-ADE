@@ -10,6 +10,12 @@ from .receipts import ReceiptStore
 
 ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW = Path(__file__).resolve().parent
+SEMANTIC_FIXTURE = "workflows/evals/hindsight_memory_probe/fixtures/campaign.json"
+OFFLINE_IMPLEMENTATION = (
+    "workflows/evals/hindsight_memory_probe/freeze.py",
+    "workflows/evals/hindsight_memory_probe/replay.py",
+    "workflows/evals/hindsight_memory_probe/driver_support.py",
+)
 
 
 def candidate_manifest():
@@ -37,13 +43,16 @@ def candidate_manifest():
         .splitlines()
     )
     hashes = {p: hashlib.sha256((ROOT / p).read_bytes()).hexdigest() for p in tracked}
+    if SEMANTIC_FIXTURE not in hashes or any(path not in hashes for path in OFFLINE_IMPLEMENTATION):
+        raise RuntimeError("candidate_manifest_inputs_untracked")
     value = {
         "contract": "ade-hindsight-infrastructure-v1",
         "source_sha": sha,
         "file_sha256": hashes,
         "pins": json.loads((WORKFLOW / "config/pins.json").read_text()),
         "runtime_image_ids": "P1 unmeasured",
-        "semantic_fixtures": "subsequent serial assignment",
+        "semantic_fixture": {"path": SEMANTIC_FIXTURE, "sha256": hashes[SEMANTIC_FIXTURE]},
+        "offline_implementation_sha256": {path: hashes[path] for path in OFFLINE_IMPLEMENTATION},
     }
     value["candidate_identity_sha256"] = hashlib.sha256(
         json.dumps(value, sort_keys=True).encode()

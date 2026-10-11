@@ -86,6 +86,9 @@ services:
     cpus: ${PROBE_RUNNER_CPU:-0.125}
     environment:
       ADE_EVAL_SOURCE_SHA: ${PROBE_RELEASE_SHA:?clean release SHA required}
+      PROBE_RELEASE_SHA: ${PROBE_RELEASE_SHA:?clean release SHA required}
+      ADE_PROBE_REGISTRY_SHA256: ${ADE_PROBE_REGISTRY_SHA256:?guard registry identity required}
+      ADE_PROBE_EPOCH_SHA256: ${ADE_PROBE_EPOCH_SHA256:?guard epoch identity required}
       ADE_EVAL_ROUTER_BASE_URL: http://model-router:8010/v1
       ADE_EVAL_ROUTER_API_KEY: ${PROBE_ROUTER_KEY:?private generated env required}
       ADE_EVAL_HINDSIGHT_BASE_URL: http://hindsight:8888

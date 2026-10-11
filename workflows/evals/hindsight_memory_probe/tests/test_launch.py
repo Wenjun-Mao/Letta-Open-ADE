@@ -72,6 +72,8 @@ def test_unsafe_command_contracts_fail_before_spawn(supervised, kind, args, matc
 def test_launch_registers_identity_deadline_and_caps_before_gate(
     supervised, monkeypatch
 ):
+    registry = supervisor.load_registry(supervised)
+    epoch = epochs.active(supervised, registry)
     calls = []
     identity = {"pid": 123, "start_ticks": "42", "uid": 1000, "cmd_sha256": "gate"}
     monkeypatch.setattr(host, "proc_identity", lambda _: identity)
@@ -96,6 +98,8 @@ def test_launch_registers_identity_deadline_and_caps_before_gate(
     assert launch.launch(supervised, "build", 60, ["build", "db"]) == 123
     environment = calls[0][1]["env"]
     assert environment["PROBE_RELEASE_SHA"] == "a" * 40
+    assert environment["ADE_PROBE_REGISTRY_SHA256"] == registry["registry_sha256"]
+    assert environment["ADE_PROBE_EPOCH_SHA256"] == epoch["sha256"]
     assert environment["COMPOSE_PARALLEL_LIMIT"] == "1"
     assert environment["PROBE_HINDSIGHT_MEMORY"] == str(6 * host.GIB)
     command = json.loads(calls[0][0][4])

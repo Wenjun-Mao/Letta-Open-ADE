@@ -90,6 +90,22 @@ def test_real_offline_freeze_validates_and_tampering_fails_before_http(monkeypat
 def test_runner_wires_release_sha_to_manifest_runtime_identity():
     compose = (replay.WORKFLOW / "compose.yaml").read_text()
     assert "ADE_EVAL_SOURCE_SHA: ${PROBE_RELEASE_SHA:?clean release SHA required}" in compose
+    assert "PROBE_RELEASE_SHA: ${PROBE_RELEASE_SHA:?clean release SHA required}" in compose
+    assert "ADE_PROBE_REGISTRY_SHA256: ${ADE_PROBE_REGISTRY_SHA256:?guard registry identity required}" in compose
+    assert "ADE_PROBE_EPOCH_SHA256: ${ADE_PROBE_EPOCH_SHA256:?guard epoch identity required}" in compose
+
+
+def test_documented_restart_readback_entrypoint_has_cli_dispatch():
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "-m", "workflows.evals.hindsight_memory_probe.restart_readback_cli", "--help"],
+        cwd=replay.ROOT, capture_output=True, text=True, check=True,
+    )
+    assert "{capture,verify}" in result.stdout
+    recipe = (replay.WORKFLOW / "README.md").read_text()
+    assert "-m workflows.evals.hindsight_memory_probe.restart_readback_cli" in recipe
 
 
 def test_frozen_retain_and_exact_retry_send_identical_payload_and_uuid(monkeypatch, tmp_path):

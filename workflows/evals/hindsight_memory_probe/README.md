@@ -461,7 +461,7 @@ call the Character feature.
 # Capture before restart while selected state is live.
 python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
   --kind work --timeout 120 -- run --rm --no-deps --pull never \
-  --entrypoint python runner -m workflows.evals.hindsight_memory_probe.restart_readback \
+  --entrypoint python runner -m workflows.evals.hindsight_memory_probe.restart_readback_cli \
   capture --selection /receipts/restart-selection.json \
   --output /receipts/restart-readback.before.json
 
@@ -469,12 +469,12 @@ python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" 
 # then capture again; don't re-run replay or Character.
 python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
   --kind work --timeout 120 -- run --rm --no-deps --pull never \
-  --entrypoint python runner -m workflows.evals.hindsight_memory_probe.restart_readback \
+  --entrypoint python runner -m workflows.evals.hindsight_memory_probe.restart_readback_cli \
   capture --selection /receipts/restart-selection.json \
   --output /receipts/restart-readback.after.json
 python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
   --kind work --timeout 20 -- run --rm --no-deps --pull never \
-  --entrypoint python runner -m workflows.evals.hindsight_memory_probe.restart_readback \
+  --entrypoint python runner -m workflows.evals.hindsight_memory_probe.restart_readback_cli \
   verify --selection /receipts/restart-selection.json \
   --before /receipts/restart-readback.before.json \
   --after /receipts/restart-readback.after.json \
@@ -484,6 +484,8 @@ python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" 
 The completed readback binds original text, context/content hashes, and the full
 public fact/curation projection (including metadata hash, proof count, chunk ID,
 entity hash, timestamps, state, and source lineage) plus valid/invalidated states.
+Compose passes the active guard's release, registry and epoch identities into
+the runner; the readback records these values for both epochs.
 It proves bounded persisted-state
 readback only; it does not qualify authentication, ranking, reranking or
 Character behavior. If an earlier campaign failure prevented the check, leave

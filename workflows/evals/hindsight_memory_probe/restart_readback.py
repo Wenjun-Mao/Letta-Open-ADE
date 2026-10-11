@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 from urllib.parse import quote
 
-from .driver_support import HindsightHTTP
+from .driver_support import HindsightHTTP, feature_scope
 
 
 def sha_text(value: str) -> str:
@@ -31,6 +31,7 @@ def read_selection(path: Path) -> dict:
         raise RuntimeError("restart_selection_bank_identity_invalid")
     subject_banks = {}
     bank_subjects = {}
+    resolved_scopes = {}
     for bank in selection["banks"]:
         workspace_id, subject_id = bank.get("workspace_id"), bank.get("subject_id")
         if (not isinstance(workspace_id, str) or not workspace_id
@@ -39,8 +40,6 @@ def read_selection(path: Path) -> dict:
                 or not isinstance(bank.get("scopes"), list) or not bank["scopes"]):
             raise RuntimeError("restart_selection_invalid")
         bank_id = bank["bank_id"]
-        if bank_id != subject_bank_id(workspace_id, subject_id):
-            raise RuntimeError("restart_selection_subject_bank_identity_mismatch")
         if ((workspace_id, subject_id) in subject_banks and subject_banks[(workspace_id, subject_id)] != bank_id
                 or bank_id in bank_subjects and bank_subjects[bank_id] != (workspace_id, subject_id)):
             raise RuntimeError("restart_selection_subject_bank_isolation_invalid")
@@ -50,11 +49,18 @@ def read_selection(path: Path) -> dict:
         for scope in bank["scopes"]:
             root = scope.get("character_root_id")
             tags = scope.get("tags")
+            scope_key = (workspace_id, subject_id, root)
+            if scope_key not in resolved_scopes and isinstance(root, str) and root:
+                resolved_scopes[scope_key] = feature_scope(workspace_id, subject_id, root)
+            public_scope = resolved_scopes.get(scope_key)
+            if public_scope is not None and public_scope.get("bank_id") != bank_id:
+                raise RuntimeError("restart_selection_subject_bank_identity_mismatch")
             cohort, positive, excluded = (scope.get("cohort_ids"), scope.get("positive_ids"),
                                           scope.get("exclusion_ids"))
             if (not isinstance(root, str) or not root or root in roots
-                    or tags != [f"character:{root}", "kind:profile"]
-                    or scope.get("tags_match") != "any_strict"
+                    or public_scope is None
+                    or tags != public_scope.get("tags")
+                    or scope.get("tags_match") != public_scope.get("tags_match")
                     or not isinstance(cohort, list) or not cohort
                     or not isinstance(positive, list) or not positive
                     or not isinstance(excluded, list) or not excluded
@@ -101,11 +107,6 @@ def re_hash(value) -> bool:
 
 def re_sha(value) -> bool:
     return isinstance(value, str) and len(value) == 40 and all(c in "0123456789abcdef" for c in value)
-
-
-def subject_bank_id(workspace_id: str, subject_id: str) -> str:
-    identity = json.dumps([workspace_id, subject_id], separators=(",", ":")).encode()
-    return "ade-probe-" + hashlib.sha256(identity).hexdigest()[:32]
 
 
 def fact_projection(item: dict, text_hash: str, state: str) -> dict:

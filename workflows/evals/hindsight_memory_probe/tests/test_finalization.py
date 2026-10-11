@@ -6,7 +6,12 @@ import json
 
 import pytest
 
-from workflows.evals.hindsight_memory_probe import candidate_database, finalization, restart_readback
+from workflows.evals.hindsight_memory_probe import (
+    candidate_database,
+    driver_support,
+    finalization,
+    restart_readback,
+)
 from workflows.evals.hindsight_memory_probe.receipts import ReceiptStore
 
 
@@ -200,7 +205,7 @@ def test_restart_readback_compares_independent_source_context_and_fact_states(tm
     cohort = [row["id"] for row in memory_rows] + [invalidated_row["id"]]
     positives = ["profile-only", "character-fact", "local-observation"]
     exclusions = sorted(set(cohort) - set(positives))
-    subject_bank = restart_readback.subject_bank_id("workspace-a", "subject-a")
+    subject_bank = driver_support.feature_scope("workspace-a", "subject-a", "root-x")["bank_id"]
     selection = {"schema": 1, "release_sha": "a" * 40, "registry_sha256": "b" * 64,
                  "before_epoch_sha256": "c" * 64, "banks": [{"bank_id": subject_bank,
         "workspace_id": "workspace-a", "subject_id": "subject-a", "scopes": [{
@@ -215,7 +220,9 @@ def test_restart_readback_compares_independent_source_context_and_fact_states(tm
     }] }]}
 
     invalid_bank = json.loads(json.dumps(selection))
-    invalid_bank["banks"][0]["bank_id"] = restart_readback.subject_bank_id("workspace-a", "subject-b")
+    invalid_bank["banks"][0]["bank_id"] = driver_support.feature_scope(
+        "workspace-a", "subject-b", "root-x"
+    )["bank_id"]
     invalid_bank_path = tmp_path / "wrong-subject-bank.json"
     invalid_bank_path.write_text(json.dumps(invalid_bank))
     with pytest.raises(RuntimeError, match="subject_bank_identity_mismatch"):

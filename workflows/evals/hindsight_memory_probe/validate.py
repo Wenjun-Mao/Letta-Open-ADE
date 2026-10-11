@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -152,6 +153,12 @@ def validate(document, private_dir, release_sha, workflow_dir=ROOT, allocations=
     ]:
         assert 0 < float(henv[key]) <= ceiling
     assert "HINDSIGHT_API_LLM_REASONING_EFFORT" not in henv
+    runner_env = document["services"]["runner"]["environment"]
+    assert runner_env["ADE_EVAL_SOURCE_SHA"] == release_sha
+    assert runner_env["PROBE_RELEASE_SHA"] == release_sha
+    for key in ("ADE_PROBE_REGISTRY_SHA256", "ADE_PROBE_EPOCH_SHA256"):
+        assert re.fullmatch(r"[0-9a-f]{64}", runner_env[key])
+    assert runner_env["ADE_PROBE_REGISTRY_SHA256"] != runner_env["ADE_PROBE_EPOCH_SHA256"]
     assert henv["HINDSIGHT_API_DATABASE_URL"].startswith(
         "postgresql://hindsight_probe:"
     )

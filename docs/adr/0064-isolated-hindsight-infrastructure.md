@@ -143,6 +143,14 @@ invokes Character generation. If a prior
 failure prevented the check, finalization can preserve a failure-case dump and
 still stop safely, but marks P4 incomplete; no restart evidence is fabricated.
 
+The runner receives release, registry and epoch identities from the guard-owned
+launcher environment through required Compose mappings; restart receipts bind
+the identity of the actual readback job. Selection validation calls the existing
+offline feature scope command and checks its public bank/tag result, avoiding a
+second implementation of subject-bank derivation or tag policy. The candidate
+manifest binds the tracked campaign fixture and the current offline freeze/replay
+implementation hashes; runtime image IDs remain separately unmeasured until P1.
+
 Optional disposable restore remains deferred. If implemented later, it needs an
 explicit exact project/volume/token/image/dump-result registry binding, mutually
 exclusive restore epoch, DB-only isolated execution, canonical snapshot/scope
