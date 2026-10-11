@@ -108,42 +108,59 @@ def restart_reference(directory: Path, registry: dict, epoch: dict) -> dict:
         proof = json.loads(path.read_text())
     except (OSError, ValueError) as exc:
         raise RuntimeError("restart_readback_proof_invalid") from exc
+    if not isinstance(proof, dict):
+        raise RuntimeError("restart_readback_proof_invalid")
     selection_path = directory.parent / "restart-selection.json"
     before_path = directory.parent / "restart-readback.before.json"
     after_path = directory.parent / "restart-readback.after.json"
     try:
-        from .restart_readback import compare, read_selection
+        from .restart_selection import hash_json, read_selection
 
         selection = read_selection(selection_path)
-        selection_sha256 = hashlib.sha256(
-            json.dumps(selection, sort_keys=True, separators=(",", ":")).encode()
-        ).hexdigest()
+        selection_sha256 = hash_json(selection)
         before = json.loads(before_path.read_text())
         after = json.loads(after_path.read_text())
-        verified = compare(before, after, selection)
+        if not isinstance(before, dict) or not isinstance(after, dict):
+            raise ValueError("restart_snapshot_invalid")
+        before_sha256, after_sha256 = hash_json(before), hash_json(after)
     except (OSError, ValueError) as exc:
         raise RuntimeError("restart_readback_evidence_invalid") from exc
-    for key in ("status", "claim", "selection_sha256", "before_sha256", "after_sha256",
-                "registry_sha256", "release_sha", "before_epoch_sha256", "after_epoch_sha256"):
-        if proof.get(key) != verified.get(key):
-            raise RuntimeError("restart_readback_proof_mismatch")
+    before_identity = before.get("run_identity")
+    after_identity = after.get("run_identity")
+    if not isinstance(before_identity, dict) or not isinstance(after_identity, dict):
+        raise RuntimeError("restart_readback_proof_invalid")
     if (proof.get("status") != "completed"
             or proof.get("claim") != "bounded_restart_persistence_readback"
             or proof.get("selection_sha256") != selection_sha256
+            or proof.get("selection_file_sha256") != sha256_file(selection_path)
+            or proof.get("before_file_sha256") != sha256_file(before_path)
+            or proof.get("after_file_sha256") != sha256_file(after_path)
+            or proof.get("before_sha256") != before_sha256
+            or proof.get("after_sha256") != after_sha256
+            or before.get("selection_sha256") != selection_sha256
+            or after.get("selection_sha256") != selection_sha256
+            or before_identity.get("release_sha") != selection.get("release_sha")
+            or after_identity.get("release_sha") != selection.get("release_sha")
+            or before_identity.get("registry_sha256") != selection.get("registry_sha256")
+            or after_identity.get("registry_sha256") != selection.get("registry_sha256")
+            or before_identity.get("epoch_sha256") != selection.get("before_epoch_sha256")
+            or after_identity.get("epoch_sha256") != proof.get("after_epoch_sha256")
             or selection.get("release_sha") != Path(epoch["release"]).name
             or selection.get("registry_sha256") != registry["registry_sha256"]
             or proof.get("registry_sha256") != registry["registry_sha256"]
             or proof.get("release_sha") != Path(epoch["release"]).name
+            or proof.get("before_epoch_sha256") != selection["before_epoch_sha256"]
             or proof.get("after_epoch_sha256") != epoch["sha256"]
-            or proof.get("before_epoch_sha256") == epoch["sha256"]
+            or proof.get("before_epoch_sha256") == proof.get("after_epoch_sha256")
             or not valid_sha256(proof.get("selection_sha256"))):
         raise RuntimeError("restart_readback_proof_invalid")
     return {
         "status": "completed", "path": "../restart-readback.completed.json",
         "sha256": sha256_file(path), "selection_sha256": selection_sha256,
-        "before": {"path": "../restart-readback.before.json", "sha256": sha256_file(before_path),
+        "selection_file_sha256": proof["selection_file_sha256"],
+        "before": {"path": "../restart-readback.before.json", "sha256": proof["before_file_sha256"],
                    "content_sha256": proof["before_sha256"]},
-        "after": {"path": "../restart-readback.after.json", "sha256": sha256_file(after_path),
+        "after": {"path": "../restart-readback.after.json", "sha256": proof["after_file_sha256"],
                   "content_sha256": proof["after_sha256"]},
     }
 
@@ -153,7 +170,7 @@ def restart_selection_reference(directory: Path, registry: dict, epoch: dict) ->
     if not path.is_file():
         return {"status": "absent"}
     try:
-        from .restart_readback import read_selection
+        from .restart_selection import read_selection
 
         selection = read_selection(path)
     except (OSError, ValueError) as exc:

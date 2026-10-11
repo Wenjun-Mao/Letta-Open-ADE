@@ -151,7 +151,7 @@ def snapshot_database(directory: Path, registry: dict, admitted: dict, store: Re
         selection_path = directory.parent / "restart-selection.json"
         if sha256_file(selection_path) != selection_reference["sha256"]:
             raise RuntimeError("restart_selection_changed_after_admission")
-        from .restart_readback import read_selection
+        from .restart_selection import read_selection
 
         read_selection(selection_path)
         restart_reference = admitted.get("restart_readback", {"status": "absent"})
@@ -159,8 +159,11 @@ def snapshot_database(directory: Path, registry: dict, admitted: dict, store: Re
             scope = {
                 "status": "public_readback_bound",
                 "selection_sha256": restart_reference["selection_sha256"],
+                "selection_file_sha256": restart_reference["selection_file_sha256"],
                 "restart_readback_sha256": restart_reference["sha256"],
+                "before_file_sha256": restart_reference["before"]["sha256"],
                 "before_snapshot_sha256": restart_reference["before"]["content_sha256"],
+                "after_file_sha256": restart_reference["after"]["sha256"],
                 "after_snapshot_sha256": restart_reference["after"]["content_sha256"],
             }
         else:

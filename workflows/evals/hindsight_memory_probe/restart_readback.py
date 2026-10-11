@@ -10,6 +10,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from .driver_support import HindsightHTTP, feature_scope
+from . import restart_selection
 
 
 def sha_text(value: str) -> str:
@@ -17,96 +18,30 @@ def sha_text(value: str) -> str:
 
 
 def read_selection(path: Path) -> dict:
-    selection = json.loads(path.read_text(encoding="utf-8"))
-    if selection.get("schema") != 1 or not isinstance(selection.get("banks"), list) or not selection["banks"]:
-        raise RuntimeError("restart_selection_invalid")
-    if (not re_sha(selection.get("release_sha"))
-            or not re_hash(selection.get("registry_sha256"))
-            or not re_hash(selection.get("before_epoch_sha256"))):
-        raise RuntimeError("restart_selection_campaign_identity_invalid")
-    bank_ids = [bank.get("bank_id") for bank in selection["banks"] if isinstance(bank, dict)]
-    if (len(bank_ids) != len(selection["banks"])
-            or any(not isinstance(identifier, str) or not identifier for identifier in bank_ids)
-            or len(bank_ids) != len(set(bank_ids))):
-        raise RuntimeError("restart_selection_bank_identity_invalid")
-    subject_banks = {}
-    bank_subjects = {}
-    resolved_scopes = {}
-    for bank in selection["banks"]:
-        workspace_id, subject_id = bank.get("workspace_id"), bank.get("subject_id")
-        if (not isinstance(workspace_id, str) or not workspace_id
-                or not isinstance(subject_id, str) or not subject_id
-                or not isinstance(bank.get("sources"), list) or not bank["sources"]
-                or not isinstance(bank.get("scopes"), list) or not bank["scopes"]):
-            raise RuntimeError("restart_selection_invalid")
-        bank_id = bank["bank_id"]
-        if ((workspace_id, subject_id) in subject_banks and subject_banks[(workspace_id, subject_id)] != bank_id
-                or bank_id in bank_subjects and bank_subjects[bank_id] != (workspace_id, subject_id)):
-            raise RuntimeError("restart_selection_subject_bank_isolation_invalid")
-        subject_banks[(workspace_id, subject_id)] = bank_id
-        bank_subjects[bank_id] = (workspace_id, subject_id)
-        roots = set()
-        for scope in bank["scopes"]:
-            root = scope.get("character_root_id")
-            tags = scope.get("tags")
-            scope_key = (workspace_id, subject_id, root)
-            if scope_key not in resolved_scopes and isinstance(root, str) and root:
-                resolved_scopes[scope_key] = feature_scope(workspace_id, subject_id, root)
-            public_scope = resolved_scopes.get(scope_key)
-            if public_scope is not None and public_scope.get("bank_id") != bank_id:
-                raise RuntimeError("restart_selection_subject_bank_identity_mismatch")
-            cohort, positive, excluded = (scope.get("cohort_ids"), scope.get("positive_ids"),
-                                          scope.get("exclusion_ids"))
-            if (not isinstance(root, str) or not root or root in roots
-                    or public_scope is None
-                    or tags != public_scope.get("tags")
-                    or scope.get("tags_match") != public_scope.get("tags_match")
-                    or not isinstance(cohort, list) or not cohort
-                    or not isinstance(positive, list) or not positive
-                    or not isinstance(excluded, list) or not excluded
-                    or any(not isinstance(value, str) or not value for value in cohort + positive + excluded)
-                    or len(set(cohort)) != len(cohort) or len(set(positive)) != len(positive)
-                    or len(set(excluded)) != len(excluded)
-                    or set(cohort) != set(positive) | set(excluded)
-                    or set(positive) & set(excluded)):
-                raise RuntimeError("restart_selection_scope_eligibility_invalid")
-            roots.add(root)
-        seen_sources = set()
-        bank_fact_ids = set()
-        for source in bank["sources"]:
-            source_id = source.get("source_id")
-            if not isinstance(source_id, str) or not source_id or source_id in seen_sources:
-                raise RuntimeError("restart_selection_source_invalid")
-            seen_sources.add(source_id)
-            if not re_hash(source.get("original_text_sha256")) or (source.get("context_sha256") is not None and not re_hash(source.get("context_sha256"))):
-                raise RuntimeError("restart_selection_source_hash_invalid")
-            if not isinstance(source.get("content_hash"), str) or not source["content_hash"]:
-                raise RuntimeError("restart_selection_content_hash_invalid")
-            facts = source.get("facts")
-            if not isinstance(facts, dict) or set(facts) != {"valid", "invalidated"}:
-                raise RuntimeError("restart_selection_fact_state_invalid")
-            ids = [item.get("id") for state in facts.values() for item in state]
-            if not ids or any(not isinstance(item, str) for item in ids) or len(ids) != len(set(ids)):
-                raise RuntimeError("restart_selection_fact_ids_invalid")
-            bank_fact_ids.update(ids)
-            if any(not re_hash(item.get("text_sha256")) for state in facts.values() for item in state):
-                raise RuntimeError("restart_selection_fact_hash_invalid")
-            invalidated_ids = {item["id"] for item in facts["invalidated"]}
-            curation_ids = source.get("curation_ids")
-            if (not isinstance(curation_ids, list) or len(curation_ids) != len(set(curation_ids))
-                    or not set(curation_ids).issubset(invalidated_ids)):
-                raise RuntimeError("restart_selection_curation_ids_invalid")
-        if any(not set(scope["cohort_ids"]).issubset(bank_fact_ids) for scope in bank["scopes"]):
-            raise RuntimeError("restart_selection_scope_fact_missing")
+    selection = restart_selection.read_selection(path)
+    validate_feature_scopes(selection)
     return selection
 
 
+def validate_feature_scopes(selection: dict) -> None:
+    """Bind runner-side selection scopes to the existing public feature contract."""
+    for bank in selection["banks"]:
+        for scope in bank["scopes"]:
+            public_scope = feature_scope(
+                bank["workspace_id"], bank["subject_id"], scope["character_root_id"]
+            )
+            if (public_scope.get("bank_id") != bank["bank_id"]
+                    or scope["tags"] != public_scope.get("tags")
+                    or scope["tags_match"] != public_scope.get("tags_match")):
+                raise RuntimeError("restart_selection_scope_contract_mismatch")
+
+
 def re_hash(value) -> bool:
-    return isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value)
+    return restart_selection.valid_sha256(value)
 
 
 def re_sha(value) -> bool:
-    return isinstance(value, str) and len(value) == 40 and all(c in "0123456789abcdef" for c in value)
+    return restart_selection.valid_sha1(value)
 
 
 def fact_projection(item: dict, text_hash: str, state: str) -> dict:
@@ -290,7 +225,7 @@ async def capture(selection: dict, client: HindsightHTTP, run_identity: dict) ->
                       "subject_id": bank["subject_id"],
                       "scope_eligibility": sorted(scope_projections, key=lambda row: row["character_root_id"]),
                       "sources": sorted(sources, key=lambda row: row["source_id"])})
-    return {"schema": 1, "selection_sha256": hashlib.sha256(json.dumps(selection, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
+    return {"schema": 1, "selection_sha256": restart_selection.hash_json(selection),
             "selection_release_sha": selection["release_sha"],
             "selection_registry_sha256": selection["registry_sha256"],
             "selection_before_epoch_sha256": selection["before_epoch_sha256"],
@@ -383,7 +318,7 @@ def compare(before: dict, after: dict, selection: dict) -> dict:
 
 
 def hash_json(value: dict) -> str:
-    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return restart_selection.hash_json(value)
 
 
 if __name__ == "__main__":

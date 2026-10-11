@@ -457,6 +457,11 @@ isolated. Empty scope/fact selections are rejected. Do not regenerate the select
 The readback helper issues only GETs; it does not ingest, curate, consolidate or
 call the Character feature.
 
+Feature-scope and HTTP readback checks run in the qualified runner. The detached
+OCI supervisor has no ADE or third-party Python packages, so its admission and
+snapshot path uses only the stdlib selection structure plus the runner proof's
+selection and before/after file hashes.
+
 ```sh
 # Capture before restart while selected state is live.
 python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \

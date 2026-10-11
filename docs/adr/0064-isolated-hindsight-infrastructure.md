@@ -151,6 +151,14 @@ second implementation of subject-bank derivation or tag policy. The candidate
 manifest binds the tracked campaign fixture and the current offline freeze/replay
 implementation hashes; runtime image IDs remain separately unmeasured until P1.
 
+The OCI supervisor is stdlib-only and does not install ADE or runner dependencies.
+Its selection admission and canonical snapshot path therefore use a separate
+stdlib structural contract for identities, IDs and hashes. Public feature-scope
+qualification and HTTP capture/compare stay inside the qualified runner. The
+runner's completed proof binds the canonical selection hash and exact selection,
+before-snapshot and after-snapshot file hashes; host admission checks those
+bindings and campaign identities without reimplementing feature semantics.
+
 Optional disposable restore remains deferred. If implemented later, it needs an
 explicit exact project/volume/token/image/dump-result registry binding, mutually
 exclusive restore epoch, DB-only isolated execution, canonical snapshot/scope

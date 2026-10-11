@@ -15,6 +15,7 @@ OFFLINE_IMPLEMENTATION = (
     "workflows/evals/hindsight_memory_probe/freeze.py",
     "workflows/evals/hindsight_memory_probe/replay.py",
     "workflows/evals/hindsight_memory_probe/driver_support.py",
+    "workflows/evals/hindsight_memory_probe/restart_selection.py",
 )
 
 

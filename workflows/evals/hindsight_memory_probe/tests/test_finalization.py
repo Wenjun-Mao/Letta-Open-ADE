@@ -11,6 +11,7 @@ from workflows.evals.hindsight_memory_probe import (
     driver_support,
     finalization,
     restart_readback,
+    restart_selection,
 )
 from workflows.evals.hindsight_memory_probe.receipts import ReceiptStore
 
@@ -225,7 +226,7 @@ def test_restart_readback_compares_independent_source_context_and_fact_states(tm
     )["bank_id"]
     invalid_bank_path = tmp_path / "wrong-subject-bank.json"
     invalid_bank_path.write_text(json.dumps(invalid_bank))
-    with pytest.raises(RuntimeError, match="subject_bank_identity_mismatch"):
+    with pytest.raises(RuntimeError, match="scope_contract_mismatch"):
         restart_readback.read_selection(invalid_bank_path)
 
     class FakeHTTP:
@@ -252,6 +253,11 @@ def test_restart_readback_compares_independent_source_context_and_fact_states(tm
     (tmp_path / "restart-selection.json").write_text(json.dumps(selection))
     (tmp_path / "restart-readback.before.json").write_text(json.dumps(before))
     (tmp_path / "restart-readback.after.json").write_text(json.dumps(after))
+    proof.update({
+        "selection_file_sha256": restart_selection.sha256_file(tmp_path / "restart-selection.json"),
+        "before_file_sha256": restart_selection.sha256_file(tmp_path / "restart-readback.before.json"),
+        "after_file_sha256": restart_selection.sha256_file(tmp_path / "restart-readback.after.json"),
+    })
     (tmp_path / "restart-readback.completed.json").write_text(json.dumps(proof))
     state = tmp_path / "supervisor"
     state.mkdir()
@@ -261,6 +267,14 @@ def test_restart_readback_compares_independent_source_context_and_fact_states(tm
     )
     assert restart_reference["status"] == "completed"
     assert restart_reference["after"]["content_sha256"] == proof["after_sha256"]
+    after_path = tmp_path / "restart-readback.after.json"
+    after_path.write_text(after_path.read_text() + " ")
+    with pytest.raises(RuntimeError, match="restart_readback_proof_invalid"):
+        finalization.restart_reference(
+            state, {"registry_sha256": selection["registry_sha256"]},
+            {"release": f"/release/{selection['release_sha']}",
+             "sha256": after["run_identity"]["epoch_sha256"]},
+        )
     after["banks"][0]["sources"][0]["facts"]["invalidated"] = []
     with pytest.raises(RuntimeError, match="fact_set_or_state_mismatch"):
         restart_readback.compare(before, after, selection)

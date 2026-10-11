@@ -14,6 +14,7 @@ import httpx
 from .driver_support import HindsightHTTP
 from .receipts import ReceiptStore
 from .restart_readback import capture, compare, read_selection
+from .restart_selection import sha256_file
 
 
 async def run(args) -> int:
@@ -21,6 +22,11 @@ async def run(args) -> int:
     if args.command == "verify":
         before, after = json.loads(args.before.read_text()), json.loads(args.after.read_text())
         result = compare(before, after, selection)
+        result.update({
+            "selection_file_sha256": sha256_file(args.selection),
+            "before_file_sha256": sha256_file(args.before),
+            "after_file_sha256": sha256_file(args.after),
+        })
         ReceiptStore(args.output.parent).write(args.output.name, result)
         return 0
     run_identity = {

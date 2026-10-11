@@ -108,6 +108,32 @@ def test_documented_restart_readback_entrypoint_has_cli_dispatch():
     assert "-m workflows.evals.hindsight_memory_probe.restart_readback_cli" in recipe
 
 
+def test_restart_readback_verify_receipt_binds_exact_input_files(monkeypatch, tmp_path):
+    import asyncio
+    from types import SimpleNamespace
+
+    from workflows.evals.hindsight_memory_probe import restart_readback_cli
+
+    selection = tmp_path / "selection.json"
+    before = tmp_path / "before.json"
+    after = tmp_path / "after.json"
+    output = tmp_path / "completed.json"
+    selection.write_text('{"selection":"frozen"}')
+    before.write_text('{"snapshot":"before"}')
+    after.write_text('{"snapshot":"after"}')
+    monkeypatch.setattr(restart_readback_cli, "read_selection", lambda _: {"selection": "frozen"})
+    monkeypatch.setattr(restart_readback_cli, "compare", lambda *_: {
+        "status": "completed", "claim": "bounded_restart_persistence_readback",
+    })
+    args = SimpleNamespace(command="verify", selection=selection, before=before,
+                           after=after, output=output)
+    assert asyncio.run(restart_readback_cli.run(args)) == 0
+    proof = json.loads(output.read_text())
+    assert proof["selection_file_sha256"] == freeze.sha(selection.read_bytes())
+    assert proof["before_file_sha256"] == freeze.sha(before.read_bytes())
+    assert proof["after_file_sha256"] == freeze.sha(after.read_bytes())
+
+
 def test_frozen_retain_and_exact_retry_send_identical_payload_and_uuid(monkeypatch, tmp_path):
     payload = {
         "async": True, "operation_id": str(uuid.uuid4()),

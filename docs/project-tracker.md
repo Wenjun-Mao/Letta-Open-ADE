@@ -57,6 +57,9 @@ checks reuse the public feature scope command, and the candidate manifest pins
 the tracked semantic fixture and offline implementation hashes. This wiring is
 covered by launcher, Compose-contract and documented-CLI checks; live restart
 readback remains pending.
+An isolated `python -S` regression now exercises host finalization admission,
+restart proof references and canonical snapshot publication without importing
+httpx or ADE; runner-only feature-scope qualification remains intact.
 Older entries retain their historical scope and are not authority to resume new
 native memory feature work ahead of this review.
 
