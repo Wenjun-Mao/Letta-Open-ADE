@@ -225,10 +225,14 @@ correction, or preference change can be profile when it stands alone and remains
 useful without private origin; history is not private merely because it is old.
 Private origin, participation, assistant action/confirmation, and
 relationship-specific experience remain character-local. Preserve each source's
-character tag and observation root gate; never label the whole source. The exact
-prompt and label bytes are versioned in the workflow, frozen into the candidate
-manifest, sent through the bank configuration API, and compared against full
-supported bank-config readback before retain.
+character tag and observation root gate; never label the whole source. This
+refinement retains the original extraction obligations for speaker attribution,
+time, hypothetical versus completed events, solo versus shared participation,
+uncertainty, and correction versus preference change. The exact prompt and label
+bytes are versioned in the workflow, frozen into the candidate manifest, sent
+through the bank configuration API, and compared against full supported
+bank-config readback before retain. Offline loader validation also requires
+observations enabled and automatic consolidation disabled.
 
 Offline tests establish request serialization, config drift rejection, and
 candidate-manifest binding only. They cannot establish that a model applies the

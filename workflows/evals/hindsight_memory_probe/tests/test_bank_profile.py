@@ -50,6 +50,10 @@ def test_configure_bank_captures_versioned_prompts_and_exact_readback(monkeypatc
         "current preference", "clearly time-bounded former preference",
         "explicitly corrected value", "explicit preference change",
         "A former value or correction is not private solely because it is historical",
+        "Preserve who said or did each thing", "the speaker's role", "time information",
+        "hypothetical or unverified claims from completed events", "solo events from shared events",
+        "whether the user participated", "Preserve explicit uncertainty",
+        "Distinguish a factual correction", "from a preference change",
     ):
         assert instruction in mission
     for exclusion in (
@@ -68,6 +72,40 @@ def test_configure_bank_captures_versioned_prompts_and_exact_readback(monkeypatc
     assert readback["profile_config_sha256"] == hashlib.sha256(bank_profile.CONFIG_PATH.read_bytes()).hexdigest()
     assert {key: value for key, value in readback.items()
             if key in _returned_config(contract)} == _returned_config(contract)
+
+
+@pytest.mark.parametrize(
+    "mutate,error",
+    [
+        (lambda config: config.pop("enable_observations"), "bank_profile_config_flags_invalid"),
+        (lambda config: config.update(enable_observations=False), "bank_profile_config_flags_invalid"),
+        (lambda config: config.update(enable_observations=1), "bank_profile_config_flags_invalid"),
+        (lambda config: config.pop("enable_auto_consolidation"), "bank_profile_config_flags_invalid"),
+        (lambda config: config.update(enable_auto_consolidation=True), "bank_profile_config_flags_invalid"),
+        (lambda config: config.update(enable_auto_consolidation=0), "bank_profile_config_flags_invalid"),
+        (lambda config: config.pop("retain_mission"), "bank_profile_config_invalid"),
+        (lambda config: config.update(retain_mission="  "), "bank_profile_config_invalid"),
+        (lambda config: config.pop("observations_mission"), "bank_profile_config_invalid"),
+        (lambda config: config.update(observations_mission=None), "bank_profile_config_invalid"),
+        (lambda config: config["entity_labels"][0].pop("description"), "bank_profile_label_config_invalid"),
+        (lambda config: config["entity_labels"][0].update(description=" "), "bank_profile_label_config_invalid"),
+        (lambda config: config["entity_labels"][0]["values"][0].pop("description"), "bank_profile_label_config_invalid"),
+        (lambda config: config["entity_labels"][0]["values"][0].update(description=""), "bank_profile_label_config_invalid"),
+        (lambda config: config["entity_labels"][0].update(optional=False), "bank_profile_label_config_invalid"),
+        (lambda config: config["entity_labels"][0].update(tag=False), "bank_profile_label_config_invalid"),
+        (lambda config: config["entity_labels"][0].update(values=[]), "bank_profile_label_config_invalid"),
+        (lambda config: config["entity_labels"][0]["values"][0].update(value="other"), "bank_profile_label_config_invalid"),
+        (lambda config: config["entity_labels"].append(copy.deepcopy(config["entity_labels"][0])), "bank_profile_label_config_invalid"),
+    ],
+)
+def test_load_config_rejects_missing_or_malformed_contract_fields(monkeypatch, tmp_path, mutate, error):
+    config = copy.deepcopy(bank_profile.load_config())
+    mutate(config)
+    path = tmp_path / "bank-profile.json"
+    path.write_text(json.dumps(config), encoding="utf-8")
+    monkeypatch.setattr(bank_profile, "CONFIG_PATH", path)
+    with pytest.raises(ValueError, match=error):
+        bank_profile.load_config()
 
 
 @pytest.mark.parametrize(

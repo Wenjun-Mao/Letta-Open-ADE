@@ -93,6 +93,10 @@ participation, assistant narrative and relationship-specific experience remain
 character-local. The profile label stays optional and nullable; this prompt does
 not guarantee correct semantic classification.
 
+The refined mission also preserves source attribution and time, hypothetical or
+unverified status, solo versus shared participation, explicit uncertainty, and
+the distinction between a correction and a preference change.
+
 The offline freeze manifest carries the full configuration and its SHA256, and
 also includes the tracked config file in `config_sha256`. Before any retain, the
 runner checks the full supported bank-config readback and records the exact

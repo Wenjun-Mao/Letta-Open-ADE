@@ -439,10 +439,13 @@ omission, not reranking. Candidate05 therefore changes only the versioned Memory
 bank mission and label description. It directs fact-level separation of
 portable subject properties/preferences—including safe, clearly time-bounded
 history and corrections—from private source/interaction narrative. Source
-character tags and observation root gates stay intact. Re-ingest the unchanged
-frozen corpus only into a fresh candidate and preserve q01 private-origin
-exclusions. The offline checks bind exact JSON/config/readback and do not prove
-model semantics; candidate04 remains negative pending fresh-candidate evidence.
+character tags and observation root gates stay intact; speaker/time attribution,
+hypothetical/unverified status, solo/shared participation, uncertainty and
+correction-versus-change distinction remain explicit retain obligations.
+Re-ingest the unchanged frozen corpus only into a fresh candidate and preserve
+q01 private-origin exclusions. The offline checks bind exact
+JSON/config/readback and do not prove model semantics; candidate04 remains
+negative pending fresh-candidate evidence.
 
 | Case | Required observation |
 | --- | --- |
