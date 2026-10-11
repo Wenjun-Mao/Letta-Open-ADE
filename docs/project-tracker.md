@@ -5,22 +5,27 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 
 ## Current Summary
 
-The revision-4 self-hosted OCI campaign is active under the Goal-mode authorization
-started 2026-10-11 at 04:49:25 UTC. Infrastructure checks, semantic observations,
-same-volume restart readback, and ordered candidate shutdown are summarized in the
-[interim campaign finding](findings/hindsight-oci-campaign-2026-10-11.md). The
-immutable deployed source is `537e93c993406c41050424ddee161a875f421077`; later
-test/document commits are not deployment or runtime qualification evidence.
+The revision-4 self-hosted OCI campaign completed under PC-13 and the 2026-10-11
+time-extension clarification. The [final campaign finding](findings/hindsight-oci-campaign-2026-10-11.md)
+records qualified infrastructure, bounded logical restore, sealed evidence,
+reported usage/resources, and mixed semantic outcomes. Final deployed runtime source was
+`a3e78c5c63b17eadc3d02b05ce7e04eb6042944f`; this docs-only iteration does not
+redeploy or qualify another runtime SHA. The campaign finished before the
+original 12-hour hard stop; no operation deadlines were moved.
 
-The ordered P4 finalization completed: 62 async operations were completed with no
-pending/processing/deferred work, a candidate-only dump and canonical snapshot
-were published, all three candidate containers stopped cleanly, and six baseline
-OCI identities remained unchanged. The separately admitted disposable restore
-failed before creating a container or volume: `restore.py:_verify_host` selected
-a tokenless `job-*.result.json` as a job registration via a broad glob. The
-canonical `supervisor.jobs` selector is the diagnosed repair seam. Main candidate
-services remain stopped; restore retry and final provider-usage/resource aggregate
-are pending. No campaign-completion or adoption claim is made.
+Ordered P4 finalization drained all 62 async operations, published the
+candidate-only dump/canonical snapshot, and stopped the three candidate
+containers cleanly while six baseline OCI identities remained unchanged. The
+separate logical PostgreSQL restore matched canonical tables and selected scopes;
+its exact disposable container/volume were removed; campaign job/receipt files
+remain preserved while all registered job processes are gone.
+Authenticated same-volume restart readback passed. These results do not prove
+restored Hindsight API startup, crash recovery, native continuity, or Studio
+archive UI. The local extracted archive matches remote SHA-256
+`ac09bb1ce1450b4841c1b872ffccffc1f777aa3d0d474b5bf5edd1b8c5bf3464`; all
+10,054 files were byte/hash verified. Semantic support remains mixed; no native
+comparison winner or adoption decision is made. Earlier failed restore attempts
+remain preserved.
 
 The user directed integration into `main` and continued development in the
 primary checkout ([ADR 0048](adr/0048-mainline-development.md)). Earlier retained-

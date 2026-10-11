@@ -140,6 +140,14 @@ The user explicitly started Goal mode on 2026-10-11, authorizing the plan's P0-P
 campaign with a ten-hour target, twelve-hour hard cap and separate Codex tasks.
 Planning alone granted no live authority; activation grants bounded operational
 authority, not production adoption, migration or cutover.
+Clarification, 2026-10-11 12:47:46 UTC: the user authorized extending the
+campaign time limits at the operator's judgment to finish the goal. This
+supersedes the plan's earlier prohibition on extending campaign time. In this
+execution, work continued beyond the ten-hour target and all live work and the
+sealed archive finished by the original twelve-hour hard stop and cutoff; the
+original activation/target/hard-stop timestamps remain immutable records and no
+previously admitted operation deadline was changed. The time clarification did
+not expand product, safety, deployment, or adoption authority.
 PC-05/08/09 continue governing the incumbent; no runtime spending gate is added.
 See [ADR 0062](adr/0062-self-hosted-hindsight.md) for rationale and guardrails.
 
@@ -166,8 +174,10 @@ See [ADR 0062](adr/0062-self-hosted-hindsight.md) for rationale and guardrails.
   not user adoption or live-run authorization. Native extraction labels and small
   immutable source units are test candidates; no bank layout or delivery policy
   is settled by the reports. PC-13 separately records self-hosting and the
-  autonomous-campaign direction; its explicit Goal start now authorizes the
-  isolated setup/model campaign, not native integration or adoption.
+  autonomous-campaign direction. The authorized revision-4 OCI campaign is now
+  complete; its [finding](findings/hindsight-oci-campaign-2026-10-11.md) records
+  mixed semantic evidence and infrastructure qualification, not native
+  integration or adoption.
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
   reviewer, reconciliation with corrected or removed facts, and failure behavior.
   PC-03's character boundary and PC-10's archive eligibility are settled;

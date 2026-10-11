@@ -68,14 +68,12 @@ persistence, embeddings, Qwen, or tool protocols. See the
 
 ## Next
 
-- The revision-4 Hindsight OCI campaign remains active while its separately
-  admitted disposable database restore is repaired and retried. Its
-  [interim finding](findings/hindsight-oci-campaign-2026-10-11.md) records
-  infrastructure qualification, bounded restart persistence, semantic outcomes,
-  clean main-candidate shutdown, and the failed restore admission. This is not the
-  original measured M2 comparison and has no winner over native ADE. Adoption,
-  integration, or cutover requires a later explicit decision under
-  PC-02/03/04/07/09/10/11/12/13.
+- Review the completed [revision-4 Hindsight OCI campaign](findings/hindsight-oci-campaign-2026-10-11.md)
+  as decision evidence. Pinned self-hosted infrastructure and bounded logical
+  restore qualified; semantic observations remain mixed and do not establish the
+  original measured M2 comparison or a winner over native ADE. Decide separately
+  whether any later native integration work is justified under
+  PC-02/03/04/07/09/10/11/12/13. No adoption or cutover is implied.
 - Stabilize the native runtime through real product use and evidence-led fixes.
 - Improve task-specific evaluation where a concrete success contract exists.
 - Keep model aliases configurable so providers and underlying local models can

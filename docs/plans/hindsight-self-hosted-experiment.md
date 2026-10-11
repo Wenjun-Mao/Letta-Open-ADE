@@ -1,13 +1,12 @@
 # Self-Hosted Hindsight: Isolated First Experiment
 
-Status: Revision 4 activated in Goal mode at 2026-10-11 04:49:25 UTC and remains
-active. Pinned infrastructure checks, semantic observations, authenticated
-same-volume restart readback, and main-candidate ordered shutdown are in the
-[interim finding](../findings/hindsight-oci-campaign-2026-10-11.md). The separately
-admitted disposable restore failed before container/volume creation due to a
-tokenless result receipt matching a broad job glob. Restore diagnosis/retry and
-final provider-usage/resource totals remain open; no final campaign claim is made.
-The user authorized ten hours of progress with a twelve-hour hard cap. Revision 4
+Status: Revision 4 campaign completed under the Goal-mode authorization started
+2026-10-11 04:49:25 UTC. Infrastructure, semantic, same-volume restart, ordered
+shutdown, sealed archive, and a bounded logical PostgreSQL restore are recorded
+in the [campaign finding](../findings/hindsight-oci-campaign-2026-10-11.md).
+Semantic reliability remains mixed; no native adoption or M2 winner follows.
+The user later authorized discretionary campaign-time extension to finish; the
+work and sealed archive completed within the original hard stop. Revision 4
 supersedes revision 3's replay limits and execution gates.
 
 Planning baseline: clean primary `main` at
@@ -37,8 +36,10 @@ translation or call vector-only diagnostics full multilingual qualification.
 
 Deliver a reproducible isolated OCI deployment, evidence-backed Chinese
 memory-to-Character assessment, justified repairs/retests and safe recovery/stop
-procedures. Target ten hours from activation, never exceed the twelve-hour cap.
-This is not production integration or a measured winner over native memory.
+procedures. The initial target was ten hours with a twelve-hour hard cap; after
+the user's time clarification, the operator could extend campaign time by
+judgment to finish. This is not production integration or a measured winner over
+native memory.
 
 Preparation and OCI deployment are one serial workstream on primary `main`.
 Do not introduce native-memory refactoring, dual writes, existing-dialogue export,
@@ -106,14 +107,19 @@ while useful work remains. Report a genuine impasse if no safe progress remains.
 
 ### Time And Completion
 
-Activation: `2026-10-11T04:49:25Z`; target `2026-10-11T14:49:25Z`, hard stop
-`2026-10-11T16:49:25Z`. These absolute times survive resumptions; do not extend them.
+Activation: `2026-10-11T04:49:25Z`; original target
+`2026-10-11T14:49:25Z`, work cutoff `2026-10-11T16:44:25Z`, and hard stop
+`2026-10-11T16:49:25Z`. These are immutable historical timestamps. At
+`2026-10-11T12:47:46Z`, the user authorized the operator to extend campaign time
+at their judgment to finish the goal, superseding the earlier no-extension rule.
+The live work and sealed archive finished before the original hard stop; no
+operation-specific admission or deadline was changed.
 Rough priorities: prepare in hours 0-3, deploy/qualify in 3-5, evaluate in 5-7,
 repair/retest/recover in 7-9, then close out; reallocate freely. Reserve the last
 45 minutes for safe shutdown/reporting, and finish early if the work is complete.
 At deadline/impasse, provide a truthful partial handoff, not a false completion
-claim. Goal mode is active; no heartbeat or agent daemon is needed. OCI-side expiry
-bounds work if continuation is interrupted. Finish early when the work is complete.
+claim. The campaign is now closed; no heartbeat or agent daemon was part of its
+completion. OCI-side expiry bounded the live work while it was active.
 
 ## What We Can Reuse
 
@@ -370,12 +376,13 @@ No real-credential startup, model/image downloads or OCI changes occur at P0.
 distinctions, immutable reference-context/payload freezer, public-HTTP workflow
 for readiness/retain/consolidation/curation/readback/replay, feature-owned
 pre-generation full-rerank qualification and correlated phase protocol are
-implemented and covered by offline fake-upstream checks. This status does not
-claim P1 image/provider qualification, P2 candidate infrastructure/readiness, or
-P3 semantic replay; those remain unrun. The archived design proposed eight
-paired cases and two adequate controls; q07 is frozen with a historical-context
-clarification to distinguish recall of the prior hypothetical from PC-11's
-permitted new compatible solo fiction.
+implemented and covered by offline fake-upstream checks. At this P0 offline
+checkpoint, P1 image/provider qualification, P2 candidate infrastructure/
+readiness, and P3 semantic replay were unrun. Those stages were later completed
+under the activated campaign; see the current status and linked campaign finding
+above. The archived design proposed eight paired cases and two adequate controls;
+q07 is frozen with a historical-context clarification to distinguish recall of
+the prior hypothetical from PC-11's permitted new compatible solo fiction.
 
 ### P1: OCI Preflight And Staging
 
@@ -441,8 +448,11 @@ were extracted but had only `character:root_xiaotang`, so `root_other` recall
 could not retrieve them through `kind:profile`. The initial attempt's capture
 failure was before Character dispatch; this later completion supplies the
 observed negative answer. The likely cause is extraction-time optional label
-omission, not reranking. Candidate05 therefore changes only the versioned Memory
-bank mission and label description. It directs fact-level separation of
+omission, not reranking. Candidate05 changed the versioned Memory bank mission
+and label description in fresh banks. The measured Hindsight RAM ceiling was
+also retuned from 6 GiB to 4 GiB for host headroom; corpus, queries, persona,
+Character model settings, retrieval-token limits, reranker and concurrency stayed
+fixed. The mission directs fact-level separation of
 portable subject properties/preferences—including safe, clearly time-bounded
 history and corrections—from private source/interaction narrative. Source
 character tags and observation root gates stay intact; speaker/time attribution,
@@ -450,8 +460,9 @@ hypothetical/unverified status, solo/shared participation, uncertainty and
 correction-versus-change distinction remain explicit retain obligations.
 Re-ingest the unchanged frozen corpus only into a fresh candidate and preserve
 q01 private-origin exclusions. The offline checks bind exact
-JSON/config/readback and do not prove model semantics; candidate04 remains
-negative pending fresh-candidate evidence.
+JSON/config/readback and do not prove model semantics. Candidate04's negative
+result remains historical; candidate05 outcomes and limits are in the completed
+[campaign finding](../findings/hindsight-oci-campaign-2026-10-11.md).
 
 | Case | Required observation |
 | --- | --- |
@@ -481,22 +492,18 @@ worker identity; account for every startup probe. Independently read back a
 retained source and curated state, without re-ingesting the corpus. This proves
 bounded restart persistence, not crash-recovery qualification.
 
-The live campaign completed same-container/image/volume restart readback and
-ordered P4 archive/shutdown. The disposable restore was then admitted but failed
-before it created a container or volume: restore host validation selected a
-tokenless `job-*.result.json` as a registered job. The owning contract is the
-canonical registered-job selector in `supervisor.jobs`; diagnose and retry only
-with a separately admitted immutable operation. No restore pass or final usage/
-resource aggregate is claimed. Main candidate services are stopped and baseline
-OCI identities remained unchanged. See the [interim finding](../findings/hindsight-oci-campaign-2026-10-11.md).
+The live campaign completed same-container/image/volume restart readback,
+ordered P4 archive/shutdown, and an independently qualified logical PostgreSQL
+restore. Earlier restore admission and post-restore snapshot failures remain
+sealed historical evidence; final-source P4 and restore receipts qualify the
+completed persistence comparison. See the [campaign finding](../findings/hindsight-oci-campaign-2026-10-11.md).
 
-For a diagnosed restore retry, stop inference, restore only the candidate dump
-into a new disposable PostgreSQL volume/project, and reuse the same resource envelope by
-stopping the main candidate when necessary. Compare source, fact, curation and
-scope readback without re-ingesting the corpus; API startup probes, if needed,
-remain part of the accounted campaign. Never restore over baseline/final state.
-Preserve the dump and receipt before removing an explicitly disposable restore
-copy. Unperformed or failed restoration remains visible in the handoff.
+The successful restore proved the bounded persisted PostgreSQL state only:
+canonical data/schema tables and frozen scopes matched; the exact disposable
+container and volume were removed. It did not start Hindsight API against the
+restored DB and does not prove crash recovery, native product continuity, or
+archive UI behavior. Never restore over baseline/final state. Preserve the dump
+and receipts; unperformed/failed restoration remains visible in future runs.
 
 Stop runner and Hindsight/worker first, preserve receipts and a candidate-only
 logical DB dump, then stop router and DB. Retain owned volumes/cache; do not use

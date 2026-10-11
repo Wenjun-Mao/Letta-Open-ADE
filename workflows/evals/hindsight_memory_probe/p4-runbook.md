@@ -2,6 +2,12 @@
 
 Follow the [workflow entrypoint](README.md). These commands use the same private receipt root and selected clean release SHA.
 
+Revision-4 campaign closeout is complete. The final source passed same-volume
+restart readback, ordered candidate archive/shutdown, and the bounded logical
+PostgreSQL restore; see the [campaign finding](../../../docs/findings/hindsight-oci-campaign-2026-10-11.md)
+for hashes and limits. The recovery procedure below documents earlier failed
+attempt handling and is not authorization to rerun the closed campaign.
+
 ### Restart readback and ordered finalization
 
 P4 restart evidence is a public-HTTP readback against a frozen selection. Create
@@ -330,10 +336,13 @@ fresh readback and capture. Changed, symlinked, incomplete or unarchived files
 block continuation. Do not retry the old restore, alter its receipts/deadlines,
 run broad Docker cleanup, or use `down -v`.
 
-This proves logical persisted PostgreSQL state restore only. It does not qualify
-Hindsight API behavior, authentication, ranking, reranking, Character behavior,
-provider inference, or live deployment. The current campaign still requires its
-separate OCI execution and evidence review.
+This recovery path preserves evidence from a failed restore attempt; by itself it
+does not prove restore success. The final-source restore separately matched the
+canonical persisted schema/data and frozen scopes, and then removed its exact
+disposable resources. That proves logical persisted PostgreSQL state restore
+only. It does not qualify Hindsight API behavior against the restored DB, crash
+recovery, ranking, reranking, Character behavior, provider inference, native
+product continuity, or Studio archive UI.
 
 No global stop/kill/prune or `down -v`. The finalizer stops exact recorded
 container IDs in stage order and retains volumes/cache. Pinned Hindsight's wrapper

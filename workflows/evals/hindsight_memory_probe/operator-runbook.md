@@ -2,6 +2,12 @@
 
 Follow the [workflow entrypoint](README.md) and its product/authority boundaries.
 
+Revision-4 campaign closed on final runtime source
+`a3e78c5c63b17eadc3d02b05ce7e04eb6042944f`. This file retains procedural
+commands and does not itself authorize a new live campaign. See the
+[campaign finding](../../../docs/findings/hindsight-oci-campaign-2026-10-11.md)
+for verified closeout evidence and semantic limits.
+
 ## P1 qualification and P2 start/inspect
 
 After the dummy stop, write a private diagnosis (cause, evidence, correction,
@@ -141,17 +147,17 @@ the exact private-origin exclusion terms, which are checked in recalled text
 and context before Character generation (PC-02/03/04/07/10/11/12/13).
 
 The completed candidate05 initial-compare-a qualified recall/rerank and
-Character request mechanics. Its q01 answer gave the corrected current drink
-preference but also named an unsupported original chat time. The captured
-profile facts were correctly eligible across roots; their attached Hindsight
-reference windows named `root_xiaotang` and included earlier source excerpts,
-which the old Character projection passed through. The development feature now
-retains attached context only when structural character tags and any
-`metadata.character_root_id` resolve without conflict to the active root.
-Unknown or conflicting ownership omits context while preserving the portable
-fact and original recall diagnostic. The projected q01 behavior has not yet
-been semantically retested; this change does not claim that it corrects the
-unsupported answer. See [ADR 0063](../../docs/adr/0063-hindsight-character-evaluation-boundary.md#structural-character-context-ownership-2026-10-11).
+Character request mechanics. Candidate05 initial and post-consolidation q01 responses
+both said hot, unsweetened oolong and also asserted an October 1 first-chat
+origin. q01 targets the other root: the profile preference is portable, but
+private source origin, first-chat participation and time should be excluded.
+The s01 message timestamp is October 1 at 09:00 and refers to an event the day
+before; event and message dates are distinct, so September 30 is not an expected
+cross-root answer. The structural source-context projection then produced one
+empty q01 output at the exact 2048-token cap. That is incomplete, not a semantic
+pass. Source windows with unknown/conflicting character ownership are omitted
+while the portable fact and original recall diagnostic remain. See [ADR 0063](../../../docs/adr/0063-hindsight-character-evaluation-boundary.md#structural-character-context-ownership-2026-10-11)
+and the [campaign finding](../../../docs/findings/hindsight-oci-campaign-2026-10-11.md).
 
 ```sh
 uv run --locked python -m workflows.evals.hindsight_memory_probe.freeze \

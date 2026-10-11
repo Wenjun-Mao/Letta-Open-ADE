@@ -1,38 +1,24 @@
 # Isolated Hindsight infrastructure probe
 
-P0 offline package for revision 4 of the
+This workflow implements the P0 package for revision 4 of the
 [experiment plan](../../../docs/plans/hindsight-self-hosted-experiment.md),
 [ADR 0064](../../../docs/adr/0064-isolated-hindsight-infrastructure.md), PC-08/09/13.
 The existing [feature CLI](../../../services/ade-api/src/ade_api/features/agent_runtime/HINDSIGHT_EVALUATION.md)
 is the only Character evaluation entrypoint. This package constructs no ADE API
 or native persistence. The tracked Chinese corpus, offline freeze command,
 public-HTTP ingestion/curation/replay driver and strict feature reranking gate
-are implemented for P0. No fabricated live result is included.
+were implemented and tested in P0. Final campaign observations are linked below.
 
 Implemented: owned Compose, pinned recipes/configuration, observational router,
 clean release export/identity, private environment provisioning, temporary Linux
-supervision and offline tests. The revision-4 OCI campaign used immutable source
-`537e93c993406c41050424ddee161a875f421077`; pinned infrastructure checks,
-authentication, CPU BGE, semantic replays, same-volume restart readback, and
-ordered main-candidate shutdown passed within their bounded claims. See the
-[interim campaign finding](../../../docs/findings/hindsight-oci-campaign-2026-10-11.md).
-The first separately admitted disposable restore failed before creating a
-container or volume because host validation selected a tokenless job-result
-receipt. A later attempt created the exact disposable container, completed
-`pg_restore`, and then failed during the final snapshot with
-`restore_process_identity_changed`; cleanup retained that failed container and
-volume. The retained identity-list-readback registration has an empty
-command-line hash and no child or wrapper result. That points to registration
-being published without first proving exact argv, owner, UID, PID and start-tick
-identity; it does not establish that the child had completed. A Linux procfs
-terminal-transition race is a separate runtime possibility handled only after
-bounded child-exit confirmation. The old receipts and deadlines remain
-untouched. [ADR 0065](../../../docs/adr/0065-post-restore-snapshot-failure-recovery.md)
-and the [P4 runbook](p4-runbook.md) document a bounded, separately authorized
-preservation and retirement path. This source iteration has not run that path on
-OCI and does not claim restore success. Restore acceptance and final
-usage/resource totals remain open. Later source/docs/tests do not redeploy or
-qualify a new runtime SHA.
+supervision and offline tests. The revision-4 campaign is closed at final runtime
+source `a3e78c5c63b17eadc3d02b05ce7e04eb6042944f`. Pinned infrastructure,
+authentication, CPU BGE, semantic replays, same-volume restart, ordered final
+archive/shutdown, and logical PostgreSQL restore are documented in the
+[campaign finding](../../../docs/findings/hindsight-oci-campaign-2026-10-11.md).
+Earlier restore-admission and post-restore snapshot failures remain preserved;
+the final source independently passed the bounded persisted-state comparison.
+This docs commit does not redeploy or qualify another runtime SHA.
 
 ## Ownership and candidate configuration
 
@@ -186,10 +172,13 @@ requires a validated epoch allocation JSON passed to `validate --allocations`.
 
 ## P1 preflight, clean stage and detached guard
 
-The following are future OCI operator commands, **not executed at P0**. Run as
-the OCI Docker owner with python3 and Tailscale already available. Do not alter
-existing services/networking. Supply the reviewed clean commit as `PROBE_SHA`.
-All commands use scoped variables, not native `.env` sourcing.
+The following commands document the operator workflow; the initial P0 checkpoint
+did not execute them. Later authorized campaign stages exercised the documented
+contracts; see the closeout finding before treating any command as current
+authorization. Commands require the OCI Docker owner and never imply permission
+to alter existing services/networking. Use the campaign's explicit reviewed
+release as `PROBE_SHA`, not an arbitrary current checkout. All commands use
+scoped variables, not native `.env` sourcing.
 
 On the clean Mac checkout, export tracked source and candidate manifest:
 
