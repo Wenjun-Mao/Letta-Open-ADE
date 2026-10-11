@@ -153,9 +153,9 @@ origin. q01 targets the other root: the profile preference is portable, but
 private source origin, first-chat participation and time should be excluded.
 The s01 message timestamp is October 1 at 09:00 and refers to an event the day
 before; event and message dates are distinct, so September 30 is not an expected
-cross-root answer. The structural source-context projection then produced one
-empty q01 output at the exact 2048-token cap. That is incomplete, not a semantic
-pass. Source windows with unknown/conflicting character ownership are omitted
+cross-root answer. A separate structural source-context projection retest
+produced one empty q01 output at the exact 2048-token cap. This is incomplete,
+not a semantic pass. Source windows with unknown/conflicting character ownership are omitted
 while the portable fact and original recall diagnostic remain. See [ADR 0063](../../../docs/adr/0063-hindsight-character-evaluation-boundary.md#structural-character-context-ownership-2026-10-11)
 and the [campaign finding](../../../docs/findings/hindsight-oci-campaign-2026-10-11.md).
 

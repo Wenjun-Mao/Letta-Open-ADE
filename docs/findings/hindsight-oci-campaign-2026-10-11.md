@@ -158,9 +158,11 @@ The local independently verified archive is under
 `workflows/evals/hindsight_memory_probe/outputs/campaign-closeout/final-a3e78c5-1791733755949290911/`;
 the corresponding remote private archive is under the OCI campaign-closeout
 directory. Its local verification receipt and archive manifest bind deployed
-source SHA `a3e78c5c63b17eadc3d02b05ce7e04eb6042944f`, manifest hash
-`a3cc7ef61d2cc1a4d5289c80afb820fb9990cb8d9d89f585b1653ace212d0de0`, and
-bundle hash `a640db9c2254487a0773624465f47443fe3270fb11851ebddc2e525cefde96be`.
+source SHA `a3e78c5c63b17eadc3d02b05ce7e04eb6042944f`. The manifest and bundle
+hashes are transitively bound through the archive, its evidence file index, and
+the archived source-bound proof chain: manifest
+`a3cc7ef61d2cc1a4d5289c80afb820fb9990cb8d9d89f585b1653ace212d0de0`, bundle
+`a640db9c2254487a0773624465f47443fe3270fb11851ebddc2e525cefde96be`.
 The campaign closed before the original hard stop without modifying operation
 deadlines. The durable source contracts are in [ADR 0063](../adr/0063-hindsight-character-evaluation-boundary.md),
 [ADR 0064](../adr/0064-isolated-hindsight-infrastructure.md),
@@ -174,10 +176,10 @@ removed privacy policy, or authorize adoption/cutover.
 Earlier failed operations remain separately preserved: attempt 47 failed before
 resource creation during job selection; attempt 85 created a restore resource
 but did not publish a coherent inventory; E459 failed after import with an
-invalid pre-gate empty-command registration. That registration state is
-observed, not a proven cause of the original E459 failure. Linux `/proc`
-terminal teardown was a possible mechanism, not established as the incident
-cause.
+invalid pre-gate empty-command registration, a directly observed
+registration-contract defect. The original process transition was not sampled,
+so whether startup or terminal teardown through Linux `/proc` produced that
+state was not retrospectively established.
 
 A later separately admitted attempt passed exact container creation and
 `pg_restore`, then failed during the final snapshot with
