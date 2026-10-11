@@ -12,10 +12,12 @@ now recommends a disposable Hindsight-to-Character replay before native isolatio
 native extraction labels make the one-bank layout worth testing. The user selected
 [self-hosting over Hindsight Cloud](adr/0062-self-hosted-hindsight.md) for repeated
 test-workload cost reasons (PC-13), and required the first experiment to remain
-isolated from native memory. The [draft setup plan](plans/hindsight-self-hosted-experiment.md)
-uses fresh Mac/Spark read-only inventory to propose Mac-hosted Hindsight, separate
-storage/router, existing DeepSeek/Qwen routes and multilingual retrieval. These
-host/model choices and setup/provider calls are not authorized. No Hindsight
+isolated from native memory. After read-only OCI inspection, the user selected
+that host instead of the Mac and announced a planned 4-core/24 GB upgrade, not
+yet verified. The [setup plan, revision 2](plans/hindsight-self-hosted-experiment.md)
+records OCI placement, with separate storage/router, existing DeepSeek/Qwen routes
+and multilingual retrieval still proposed. Model/configuration choices and
+setup/provider calls are not authorized. No Hindsight
 installation, source isolation, provider inference or deployment has occurred.
 Older entries retain their historical scope and are not authority to resume new
 native memory feature work ahead of this review.

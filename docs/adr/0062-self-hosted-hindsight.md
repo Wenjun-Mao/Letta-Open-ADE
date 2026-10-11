@@ -1,6 +1,7 @@
 # ADR 0062: Self-Hosted Hindsight
 
-Status: Accepted hosting direction, 2026-10-10, by explicit user direction.
+Status: Accepted hosting direction and OCI experiment placement, 2026-10-10,
+by explicit user direction.
 Not installation, model-call, integration or deployment authorization.
 
 ## Problem
@@ -27,9 +28,17 @@ During setup planning the user explicitly required an isolated first experiment.
 Keep its persistence and execution separate from native memory; reuse of model
 infrastructure must not alter the running ADE/trial services. The
 [draft setup plan](../plans/hindsight-self-hosted-experiment.md) contains the
-proposed topology and model choices, not additional accepted decisions.
+selected placement and proposed service/model configuration.
 
-Self-hosting selects who operates Hindsight, not where every model runs. Host,
+The user subsequently selected the existing OCI ARM host for the isolated
+experiment after raising Mac RAM/swap concerns. This supersedes the plan's original
+Mac placement recommendation. Read-only inspection found resource headroom and
+Spark connectivity; it did not qualify deployment or CPU inference. The user's
+planned 4-core/24 GB resize is owner-managed and must be verified before sizing
+the candidate. Keep the Mac as a development/browser client and existing OCI
+services untouched.
+
+Self-hosting selects who operates Hindsight, not where every model runs. Exact
 service configuration, extraction model, embeddings, reranking and model-access
 route remain to be selected. Model usage, compute, storage and operation still
 have costs; self-hosting is not a zero-cost or all-local-processing guarantee.
@@ -38,6 +47,8 @@ have costs; self-hosting is not a zero-cost or all-local-processing guarantee.
 
 - Cloud-first experiment: rejected for this project's expected repeated test
   workload, despite the convenience of managed operation.
+- Mac-hosted first experiment: superseded by the user's OCI selection to avoid
+  adding server/reranker memory pressure to the daily workstation.
 - All-local models as an automatic consequence: not selected; hosting and
   model placement are separate choices, with quality and resource tradeoffs.
 - Resume native-memory feature development instead: not implied by rejecting

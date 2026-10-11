@@ -120,11 +120,13 @@ model/infrastructure costs or require every model to run locally.
 
 The first experiment must remain isolated from native memory, as explicitly
 requested during setup planning. Reusing model infrastructure must not change
-native persistence or the running ADE/trial services. The
-[setup plan](plans/hindsight-self-hosted-experiment.md) proposes the concrete
-host/models and checkpoints; those recommendations are not yet adopted.
+native persistence or the running ADE/trial services. The user subsequently
+selected the existing OCI ARM host instead of the Mac for this experiment, to
+avoid extra Mac memory/swap pressure. The announced 4-core/24 GB upgrade is
+planned, not verified. The [setup plan](plans/hindsight-self-hosted-experiment.md)
+records this placement and proposes service/model configuration and checkpoints.
 
-This settles hosting direction, not host selection, model/provider routes,
+This settles hosting direction and the experiment host, not model/provider routes,
 experiment scope or production adoption. Installation, service startup, live
 calls, migration and cutover are not authorized by this agreement. PC-05/08/09
 continue governing the incumbent; no runtime spending gate is added. See
