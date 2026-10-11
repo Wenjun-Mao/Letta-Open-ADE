@@ -119,7 +119,7 @@ def _run_stage(directory: Path, operation: dict, admission: dict, stage: str,
         "intent_sha256": source_archive.digest_file(intent_path),
         "command_job_token": None if command is None else proof["job"]["token"],
         "command_child_result_sha256": None if command is None else source_archive.digest_file(proof["child_result_path"]),
-        "wrapper_result_absent": False if command is None else not proof["wrapper_path"].exists(),
+        "wrapper_result_absent": None if command is None else not proof["wrapper_path"].exists(),
         "completed_at": time.time()})
 
 

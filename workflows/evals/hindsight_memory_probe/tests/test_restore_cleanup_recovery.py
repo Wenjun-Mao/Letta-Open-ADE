@@ -402,6 +402,48 @@ def test_public_recovery_resumes_after_archive_seal_before_control_removal(tmp_p
     restore_cleanup_recovery.prepare_next_attempt(state)
 
 
+def test_public_recovery_archives_already_exited_container(tmp_path, monkeypatch):
+    state, diagnosis_path, host_state, _operation, _failure, _diagnosis, _main, _verify_compose, stop_interrupt = (
+        _public_recovery_case(tmp_path, monkeypatch))
+    stop_interrupt["stop"] = False
+    host_state["container"]["State"]["Status"] = "exited"
+    result = restore_cleanup_recovery.recover(state, diagnosis_path)
+    assert result["status"] == "failed_create_cleaned"
+    assert host_state == {"container": None, "volume": None}
+    restore_cleanup_recovery_history.validate_history(state)
+
+
+def test_public_recovery_resumes_manifest_published_before_seal(tmp_path, monkeypatch):
+    state, diagnosis_path, host_state, _operation, _failure, _diagnosis, _main, _verify_compose, stop_interrupt = (
+        _public_recovery_case(tmp_path, monkeypatch))
+    stop_interrupt["stop"] = False
+    write_once = restore_cleanup_recovery_history._write_once
+
+    def interrupt_before_seal(directory, name, value):
+        if directory.name == "a" * 32 and name == "recovery-seal.json":
+            raise RuntimeError("interrupted between manifest and seal")
+        return write_once(directory, name, value)
+
+    monkeypatch.setattr(restore_cleanup_recovery_history, "_write_once", interrupt_before_seal)
+    with pytest.raises(RuntimeError, match="interrupted between manifest and seal"):
+        restore_cleanup_recovery.recover(state, diagnosis_path)
+    root = state / "restore-cleanup-recovered" / ("a" * 32)
+    assert (root / "recovery.json").is_file()
+    assert not (root / "recovery-seal.json").exists()
+    assert (state / "restore-operation.json").is_file()
+    with pytest.raises(RuntimeError):
+        restore_cleanup_recovery.prepare_next_attempt(state)
+
+    monkeypatch.setattr(restore_cleanup_recovery_history, "_write_once", write_once)
+    result = restore_cleanup_recovery.recover(state, diagnosis_path)
+    assert result["status"] == "failed_create_cleaned"
+    assert (root / "recovery-seal.json").is_file()
+    assert not (state / "restore-operation.json").exists()
+    assert host_state == {"container": None, "volume": None}
+    restore_cleanup_recovery_history.validate_history(state)
+    restore_cleanup_recovery.prepare_next_attempt(state)
+
+
 def test_resealed_wrong_command_history_blocks_next_attempt(tmp_path, monkeypatch):
     state, diagnosis_path, _host_state, _operation, _failure, _diagnosis, _main, _verify_compose, stop_interrupt = (
         _public_recovery_case(tmp_path, monkeypatch))

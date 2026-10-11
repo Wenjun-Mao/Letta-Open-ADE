@@ -152,7 +152,11 @@ def validate_history(directory: Path, *, allow_unsealed: bool = False) -> None:
         if root.is_symlink() or not root.is_dir() or not re.fullmatch(r"[a-f0-9]{32}", token):
             raise RuntimeError("restore_cleanup_recovery_history_invalid")
         manifest_path, seal_path = root / "recovery.json", root / "recovery-seal.json"
-        if {path.name for path in root.iterdir()} != {"evidence", "recovery.json", "recovery-seal.json"}:
+        root_entries = {path.name for path in root.iterdir()}
+        sealed_entries = {"evidence", "recovery.json", "recovery-seal.json"}
+        unsealed_entries = {"evidence", "recovery.json"}
+        if (root_entries != sealed_entries
+                and not (allow_unsealed and root_entries == unsealed_entries)):
             raise RuntimeError("restore_cleanup_recovery_history_unlisted_root_entry")
         if (not manifest_path.is_file() or manifest_path.is_symlink()
                     or manifest_path.stat().st_mode & 0o377):
@@ -165,7 +169,7 @@ def validate_history(directory: Path, *, allow_unsealed: bool = False) -> None:
                 or manifest.get("token") != token or not isinstance(rows, list) or not rows):
             raise RuntimeError("restore_cleanup_recovery_history_schema_invalid")
         if not seal_path.exists() and allow_unsealed:
-            seal = {"token": token, "sha256": source_archive.digest_file(manifest_path)}
+            seal = {"schema": 1, "token": token, "sha256": source_archive.digest_file(manifest_path)}
         else:
             if (not seal_path.is_file() or seal_path.is_symlink()
                     or seal_path.stat().st_mode & 0o377):
