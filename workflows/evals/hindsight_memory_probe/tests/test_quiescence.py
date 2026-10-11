@@ -136,6 +136,17 @@ def test_deadline_rechecked_at_execution_handshake(state, monkeypatch):
     assert not gates
 
 
+def test_finalization_admission_closes_new_work_dispatch(state):
+    directory, registry, epoch = state
+    ReceiptStore(directory).write(
+        f"epoch-{epoch['index']:04d}.finalize-admission.json",
+        {"registry_sha256": registry["registry_sha256"], "epoch_sha256": epoch["sha256"]},
+    )
+    with pytest.raises(RuntimeError, match="stopping_or_dispatch"):
+        with quiescence.dispatch_admission(directory, registry, epoch):
+            pytest.fail("finalization must close ordinary dispatch")
+
+
 def test_registration_lock_timeout_does_not_skip_owned_cleanup(state, monkeypatch):
     directory, registry, epoch = state
     calls, stopped_jobs = [], []

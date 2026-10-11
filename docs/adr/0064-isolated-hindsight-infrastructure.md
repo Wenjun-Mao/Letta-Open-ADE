@@ -81,6 +81,76 @@ with no extra Compose service or private/provider inputs. Positive RUN argv and
 post-deadline daemon/client readback bind a typed cancellation receipt to its
 registered job; a timed-out Docker client or boolean alone is insufficient.
 
+## P4 ordered finalization and bounded restart evidence
+
+Revision-4 P4 makes independent restart readback and exact shutdown order part of
+the isolated Hindsight experiment evidence (PC-07/08/13). The former single
+stop could not leave PostgreSQL available after worker shutdown, and the previous
+operator dump recipe ran before that stop. A launcher log also joined binary
+stdout and stderr, so it was not a valid archive sink. The fix belongs in the
+guard-owned lifecycle and archive publisher; a Docker exception or renamed log
+would hide the lifecycle mismatch.
+
+Admit one immutable finalization under the existing jobs-then-admission lock
+order. It binds registry and epoch hashes, selected release SHA, a unique token,
+exact candidate container IDs/image IDs/start times/service/project labels,
+registered job identities and deadlines, plus the completed restart-proof path
+and hash or explicit absence. This receipt itself closes ordinary dispatch.
+Emergency stop still preempts it. The detached supervisor runs finite stages;
+stage intents are durable before dispatch, and planned exits are accepted only
+for exact identities named by those stop intents. Baseline drift, missing or
+replaced identities, resource-limit drift, OOM, restart, unexpected exits and
+headroom failures remain fatal. Long process stages retain five-second safety
+sampling, and the immutable work cutoff/hard deadline do not move.
+
+The launcher validates a narrow operation-specific Compose option allowlist and
+explicit candidate service names. `run`/`exec` switch to child argv at their
+service operand; `up`/`build`/`pull` have no child boundary and validate the full
+remaining command. This avoids treating child options such as `psql -v` as
+Compose ownership flags without admitting host-volume, project, environment,
+privilege, or resource overrides.
+
+Drain every registered process and all candidate PostgreSQL async operations in
+`pending`, `processing` or `deferred` to one shared drain deadline, then preserve
+the full status-count summary, including failed and cancelled operations.
+Stop runner and Hindsight/worker next. While the exact candidate DB remains
+running, write a private canonical read-only snapshot of schema/extensions,
+banks, documents, chunks, live facts/observations, invalidated facts, provenance,
+history, entities and links. Verify `current_database()` and the named candidate
+volume before dumping. Stream only `pg_dump -Fc --no-owner --no-acl` stdout to an
+exclusive private file, keep stderr separate, enforce lock/wall bounds, verify
+nonempty bytes and `pg_restore --list`, hash and fsync before exclusive archive
+publication. Publish a typed dump result before stopping router and DB. On any
+failure the supervisor still performs bounded full cleanup; a failed partial
+archive is not reported as a successful dump. Final stopped/baseline/headroom
+readback occurs before the finalization receipt is written.
+
+The `restart_readback` helper uses only the public Hindsight HTTP API. Its frozen
+selection binds workspace/subject bank identity, one or more character-root
+scopes, source/curation/fact IDs, and original text, document content, retain
+context and fact text hashes. The tag rule mirrors the pinned
+`hindsight-api-slim/hindsight_api/engine/search/tags.py` from Hindsight source
+`eb6df499d35300e5b2f3f029b2e6adda04ed90f8`: `any_strict` means nonempty OR tag
+overlap, so character-tagged facts and profile-only facts can both match. The
+feature's readback contract further admits observations only when their character
+tags name exactly the selected root. Separate subject-derived bank IDs preserve
+subject isolation. Pagination and state sets reject invalid totals, malformed or
+duplicate IDs, including IDs present as both valid and invalidated. Independent
+pre/post observations must preserve full public fact/curation projections and
+valid versus invalidated states across the registered restart epoch, with the
+same registry/release and a distinct post-restart epoch. It never re-ingests or
+invokes Character generation. If a prior
+failure prevented the check, finalization can preserve a failure-case dump and
+still stop safely, but marks P4 incomplete; no restart evidence is fabricated.
+
+Optional disposable restore remains deferred. If implemented later, it needs an
+explicit exact project/volume/token/image/dump-result registry binding, mutually
+exclusive restore epoch, DB-only isolated execution, canonical snapshot/scope
+comparison, deliberate mismatch checks, and exact-ID/volume-consumer cleanup.
+The current P4 contract makes no claim of successful restoration, API auth,
+ranked retrieval, reranking or Character behavior. Offline tests establish local
+mechanics only; the campaign still needs actual OCI/P4 execution proof.
+
 ## Alternatives and consequences
 
 - Shared router edits or reconstructed adapter requests: rejected; observation
@@ -96,11 +166,9 @@ registered job; a timed-out Docker client or boolean alone is insufficient.
   prove them with pinned-image fakes.
 
 Static validation and synthetic tests guard the contract. Offline success is
-neither ARM build/extension/reranker acceptance nor OCI guard proof or semantic
-qualification. The owning README contains precise future operator commands and
-remaining P1/P2 gates. Semantic replay and complete-trace pre-Character reranking
-admission remain the subsequent serial assignment. Exact ordered P4 dump-after-worker-stop finalization remains a later owned
-lifecycle operation; the current all-at-once stop and prior dump recipe do not
-qualify that ordering. Initial supervision is main
-project only; disposable P4 restore support requires explicit validated registry
-extension and dummy qualification before use.
+neither ARM provider/extension/reranker acceptance nor OCI guard proof or semantic
+qualification. The owning README contains exact operator commands and remaining
+P1/P2/P4 gates. Semantic replay and complete-trace pre-Character reranking
+admission remain separate from this infrastructure decision. Initial supervision
+and finalization own only the candidate project; disposable P4 restore support
+requires a later explicit registry extension and dummy qualification.

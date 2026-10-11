@@ -19,6 +19,94 @@ from .receipts import ReceiptStore
 from .supervisor import WORK_CUTOFF, jobs, lease, load_registry
 
 OPERATIONS = {"build", "pull", "up", "run", "restart", "exec", "stop"}
+OWNERSHIP_OPTIONS = {"-p", "--project-name", "-f", "--file", "--env-file",
+                     "--project-directory", "-v", "--volume", "--volumes",
+                     "--remove-orphans", "--profile", "--build"}
+SERVICE_OPTIONS = {
+    "up": {"--pull"},
+    "run": {"--pull", "--entrypoint", "--env", "-e", "--user"},
+    "exec": set(),
+    "build": set(),
+    "pull": set(),
+}
+SERVICE_FLAGS = {
+    "up": {"-d", "--detach", "--no-build"},
+    "run": {"--rm", "--no-deps", "-T", "--no-TTY"},
+    "exec": {"-T", "--no-TTY"},
+    "build": {"--no-cache"},
+    "pull": set(),
+}
+SERVICE_OPERANDS = {
+    "up": {"db", "model-router", "hindsight", "runner"},
+    "run": {"hindsight", "runner"},
+    "exec": {"db", "model-router", "hindsight", "runner"},
+    "build": {"db", "model-router", "runner"},
+    "pull": {"hindsight"},
+}
+RUN_ENVIRONMENT = {"HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE"}
+
+
+def compose_service_options(arguments):
+    """Parse the narrow Compose surface without scanning child argv as Compose flags."""
+    operation = arguments[0]
+    options = SERVICE_OPTIONS.get(operation, set())
+    flags = SERVICE_FLAGS.get(operation, set())
+    parsed = []
+    services = []
+    index = 1
+    while index < len(arguments):
+        argument = arguments[index]
+        if argument == "--":
+            raise RuntimeError("compose_child_separator_not_allowed")
+        option = argument.split("=", 1)[0]
+        if (option in OWNERSHIP_OPTIONS
+                or argument.startswith(("-p", "-f", "-v")) and not argument.startswith("--")):
+            raise RuntimeError("compose_ownership_override_rejected")
+        if argument.startswith("-"):
+            if option in options:
+                if "=" in argument:
+                    value = argument.split("=", 1)[1]
+                    if not value:
+                        raise RuntimeError("compose_option_value_missing")
+                    parsed.extend((option, value))
+                    index += 1
+                else:
+                    if index + 1 >= len(arguments) or arguments[index + 1] == "--":
+                        raise RuntimeError("compose_option_value_missing")
+                    parsed.extend((option, arguments[index + 1]))
+                    index += 2
+                if operation == "run" and option in {"-e", "--env"}:
+                    key, separator, value = parsed[-1].partition("=")
+                    if key not in RUN_ENVIRONMENT or not separator or value not in {"0", "1"}:
+                        raise RuntimeError("compose_environment_override_rejected")
+                if operation == "run" and option == "--entrypoint" and parsed[-1] not in {"python", "python3"}:
+                    raise RuntimeError("compose_entrypoint_override_rejected")
+                if operation == "run" and option == "--user" and parsed[-1] != "0":
+                    raise RuntimeError("compose_user_override_rejected")
+                continue
+            if option in flags and "=" not in argument:
+                parsed.append(argument)
+                index += 1
+                continue
+            raise RuntimeError("compose_option_unrecognized")
+        if argument not in SERVICE_OPERANDS.get(operation, set()):
+            raise RuntimeError("compose_service_unrecognized")
+        services.append(argument)
+        if operation in {"run", "exec"}:
+            if len(services) != 1:
+                raise RuntimeError("compose_service_ambiguous")
+            return parsed, index, argument
+        index += 1
+    if not services:
+        raise RuntimeError("compose_service_required")
+    if len(services) != len(set(services)):
+        raise RuntimeError("compose_service_duplicate")
+    return parsed, None, services
+
+
+def pull_policy(options):
+    return [options[index + 1] for index, option in enumerate(options[:-1])
+            if option == "--pull"]
 
 
 def launch(state, kind, timeout, arguments):
@@ -79,11 +167,14 @@ def launch(state, kind, timeout, arguments):
         if any(host.tagged_processes(j["token"]) for j in jobs(state)):
             raise RuntimeError("serial_work_only")
         token = uuid.uuid4().hex
+        operation = None
+        service = None
         if kind == "dummy":
             if arguments:
                 raise RuntimeError("dummy_takes_no_command")
             command = [sys.executable, "-c", "import time; time.sleep(90)"]
         elif kind == "build-cancel":
+            operation = "build-cancel"
             if arguments or timeout > 120 or now + 600 >= registry["hard_deadline"]:
                 raise RuntimeError("bounded_cancellation_fixture_required")
             if any(c["State"]["Status"] == "running" for c in candidates):
@@ -119,46 +210,35 @@ def launch(state, kind, timeout, arguments):
         else:
             if not arguments or arguments[0] not in OPERATIONS:
                 raise RuntimeError("owned_compose_operation_required")
-            if any(
-                a
-                in {
-                    "-p",
-                    "--project-name",
-                    "-f",
-                    "--file",
-                    "--env-file",
-                    "--project-directory",
-                    "--volumes",
-                    "-v",
-                    "--volume",
-                    "--remove-orphans",
-                    "--build",
-                    "--profile",
-                }
-                or a.split("=")[0]
-                in {
-                    "--project-name",
-                    "--file",
-                    "--env-file",
-                    "--project-directory",
-                    "--volume",
-                }
-                for a in arguments[1:]
-            ):
-                raise RuntimeError("compose_ownership_override_rejected")
+            if arguments[0] in {"restart", "stop"}:
+                raise RuntimeError("use_supervisor_pause_and_diagnosed_rearm")
+            compose_options, _service_boundary, _services = compose_service_options(arguments)
+            operation = arguments[0]
+            service = _services
             if arguments[0] == "up" and (
-                "--no-build" not in arguments
-                or "--pull" not in arguments
-                or arguments[arguments.index("--pull") + 1] != "never"
+                "--no-build" not in compose_options
+                or sum(option in {"-d", "--detach"} for option in compose_options) != 1
+                or pull_policy(compose_options) != ["never"]
             ):
                 raise RuntimeError("startup_must_use_qualified_local_images")
             if arguments[0] == "run" and (
-                "--pull" not in arguments
-                or arguments[arguments.index("--pull") + 1] != "never"
+                "--rm" not in compose_options or "--no-deps" not in compose_options
+                or
+                pull_policy(compose_options) != ["never"]
             ):
                 raise RuntimeError("one_shot_must_use_qualified_local_images")
-            if arguments[0] in {"restart", "stop"}:
-                raise RuntimeError("use_supervisor_pause_and_diagnosed_rearm")
+            if arguments[0] == "run" and any(
+                compose_options[index] == "--user" and compose_options[index + 1] == "0"
+                for index in range(len(compose_options) - 1)
+            ) and (
+                _services != "runner"
+                or not any(compose_options[index] == "--entrypoint"
+                           and compose_options[index + 1] in {"python", "python3"}
+                           for index in range(len(compose_options) - 1))
+            ):
+                raise RuntimeError("compose_user_override_rejected")
+            if arguments[0] == "exec" and not ({"-T", "--no-TTY"} & set(compose_options)):
+                raise RuntimeError("exec_must_disable_tty")
             if kind == "build":
                 if arguments[0] not in {"build", "pull"} or any(
                     c["State"]["Status"] == "running" for c in candidates
@@ -224,6 +304,8 @@ def launch(state, kind, timeout, arguments):
                 "COMPOSE_PARALLEL_LIMIT": "1",
                 **({"DOCKER_BUILDKIT": "1"} if kind == "build-cancel" else {}),
                 "PROBE_RELEASE_SHA": Path(epoch["release"]).name,
+                "ADE_PROBE_REGISTRY_SHA256": registry["registry_sha256"],
+                "ADE_PROBE_EPOCH_SHA256": epoch["sha256"],
                 **{
                     f"PROBE_{name.upper().replace('-', '_')}_{key.upper()}": str(value)
                     for name, caps in epoch["allocations"].items()
@@ -244,6 +326,8 @@ def launch(state, kind, timeout, arguments):
                 f"job-{token}.json",
                 {
                     "kind": kind,
+                    "operation": operation,
+                    "service": service,
                     "build_sentinel": token if kind == "build-cancel" else None,
                     "identity": identity,
                     "token": token,

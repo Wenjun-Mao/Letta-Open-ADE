@@ -193,7 +193,17 @@ def guard_reason(
         oneoff = (
             candidate["Config"]["Labels"].get("com.docker.compose.oneoff") == "True"
         )
-        if service != "runner" and not oneoff and state["Status"] in {"dead", "exited"}:
+        planned_stop = (
+            lifecycle_view
+            and lifecycle_view.get("containers", {}).get(candidate["Id"])
+            == "planned_stopped"
+        )
+        if (
+            service != "runner"
+            and not oneoff
+            and state["Status"] in {"dead", "exited"}
+            and not planned_stop
+        ):
             return "candidate_service_exited", low_since
         if state.get("Health", {}).get("Status") == "unhealthy":
             return "candidate_unhealthy", low_since

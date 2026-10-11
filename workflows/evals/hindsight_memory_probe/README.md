@@ -11,9 +11,14 @@ are implemented for P0. No fabricated live result is included.
 
 Implemented: owned Compose, pinned recipes/configuration, observational router,
 clean release export/identity, private environment provisioning, temporary Linux
-supervision and offline tests. P1 image builds/provider qualification, OCI dummy
-supervisor proof, BGE cache download, extension smoke and P2 infrastructure/live
-readiness are **unrun**. A source build or config render is not acceptance.
+supervision and offline tests. Latest campaign-manager report, 2026-10-11: detached
+supervisor qualification is recorded with nine real evidence hashes; the pinned
+ARM64 router, DB, Hindsight and runner images and the actual pinned-image fake-provider
+test passed. Candidate PostgreSQL is running and healthy; pgvector 0.8.6, PGroonga
+4.0.8 and Chinese term/vector smoke passed. No provider credentials or inference
+were used. The pinned BGE cache download still awaits this streaming-hash fix in the
+accepted release. These remote observations have not been independently refreshed
+by this source iteration; a source build or config render is not acceptance.
 
 ## Ownership and candidate configuration
 
@@ -239,6 +244,13 @@ Use one registered operation at a time; `inspect` until its token-tagged process
 are gone, then review the private process log and expected artifacts. All builds
 and pulls require `--kind build`; runtime launches reject implicit build/pull.
 A failed command is not permission to repeat unchanged input without a diagnosis.
+The launcher parses its narrow Compose option allowlist through the service
+boundary; `run` and `exec` child argv is passed intact. Project/file/env-file and
+volume ownership overrides are rejected before the service, while child
+`psql -v ON_ERROR_STOP=1` remains a child option. `up`, `build` and `pull` have no
+child-command boundary: every remaining option and service operand is validated.
+Only explicit candidate service names are accepted, and `up`/`run` require one
+`--pull never` policy.
 
 ```sh
 python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
@@ -428,29 +440,97 @@ stop markers or alter original deadline/baseline to resume. Persistent wire-capt
 failures require preserved old receipts and a reviewed new capture directory;
 this is a qualification repair, not deletion of failed evidence.
 
-Drain and dump **candidate only** before final stop, into a fresh private receipt:
+### Restart readback and ordered finalization
+
+P4 restart evidence is a public-HTTP readback against a frozen selection. Prepare
+`$PROBE_PRIVATE/receipts/restart-selection.json` from the completed replay and
+curation receipts. It must identify each bank and source, the independently frozen
+original-text hash, Hindsight document content hash, retain-context hash, curation
+IDs, and each selected fact ID/text hash under `valid` or `invalidated`. Each bank
+also binds `workspace_id`, `subject_id`, and the subject-derived bank ID. Its
+`scopes` list freezes `character_root_id`, tags, `tags_match: "any_strict"`, and
+the candidate, positive and excluded IDs. `any_strict` is nonempty OR overlap:
+`character:<root>` facts and `kind:profile`-only facts both match. A returned
+observation is positive only when its character tags identify exactly that root,
+matching the feature contract. Subject-derived bank IDs keep separate subjects
+isolated. Empty scope/fact selections are rejected. Do not regenerate the selection after restart.
+The readback helper issues only GETs; it does not ingest, curate, consolidate or
+call the Character feature.
 
 ```sh
-# Registered candidate-only dump; binary stdout is its exclusive private process log.
+# Capture before restart while selected state is live.
 python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
-  --kind work --timeout 120 -- exec -T db pg_dump -U hindsight_probe -d hindsight_probe -Fc
-# Inspect until terminal result exit_code=0, then rename that job's process-TOKEN.log
-# to a new final-candidate.dump (never overwrite); verify nonempty and retain job receipt.
-python3 -m workflows.evals.hindsight_memory_probe.supervisor --state "$PROBE_STATE" stop
+  --kind work --timeout 120 -- run --rm --no-deps --pull never \
+  --entrypoint python runner -m workflows.evals.hindsight_memory_probe.restart_readback \
+  capture --selection /receipts/restart-selection.json \
+  --output /receipts/restart-readback.before.json
+
+# Use the diagnosed guard stop/rearm flow above. Restart the same candidate volumes,
+# then capture again; don't re-run replay or Character.
+python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
+  --kind work --timeout 120 -- run --rm --no-deps --pull never \
+  --entrypoint python runner -m workflows.evals.hindsight_memory_probe.restart_readback \
+  capture --selection /receipts/restart-selection.json \
+  --output /receipts/restart-readback.after.json
+python3 -m workflows.evals.hindsight_memory_probe.launch --state "$PROBE_STATE" \
+  --kind work --timeout 20 -- run --rm --no-deps --pull never \
+  --entrypoint python runner -m workflows.evals.hindsight_memory_probe.restart_readback \
+  verify --selection /receipts/restart-selection.json \
+  --before /receipts/restart-readback.before.json \
+  --after /receipts/restart-readback.after.json \
+  --output /receipts/restart-readback.completed.json
+```
+
+The completed readback binds original text, context/content hashes, and the full
+public fact/curation projection (including metadata hash, proof count, chunk ID,
+entity hash, timestamps, state, and source lineage) plus valid/invalidated states.
+It proves bounded persisted-state
+readback only; it does not qualify authentication, ranking, reranking or
+Character behavior. If an earlier campaign failure prevented the check, leave
+the completed receipt absent and report that limitation.
+
+To admit finalization, the detached supervisor must already be running. The
+command durably closes ordinary dispatch and returns after admission; the
+detached guard owns the remaining finite stages even if SSH/controller disconnects.
+Emergency `stop` still preempts it. Admission is rejected if the requested drain,
+dump and cleanup reserve do not fit before `WORK_CUTOFF`.
+
+```sh
+python3 -m workflows.evals.hindsight_memory_probe.supervisor --state "$PROBE_STATE" \
+  finalize --drain-timeout 600 --dump-timeout 120
+# Inspect private receipts. The finalized receipt appears after stopped readback;
+# p4_complete=false means restart evidence was absent.
 python3 -m workflows.evals.hindsight_memory_probe.supervisor --state "$PROBE_STATE" inspect
 ```
 
-The dump is an owned foreground operator operation: register it as a monitored
-`exec` via launcher for autonomous operation (launcher logs binary dump privately;
-rename that exclusive process log to the dump only after successful exit).
-No global stop/kill/prune or `down -v`. Guard stops runner/Hindsight first, then
-router/DB, retaining volumes/cache. Pinned Hindsight's wrapper needs30s for internal
-cleanup, so it receives35s Docker grace with45s subprocess wall; other services
-receive10s/20s. Observed exit/readback remains required. Forced-kill stop never
-qualifies clean persistence. The all-at-once stop currently cannot insert a dump
-between stopped runner/Hindsight and still-running router/DB. The dump-before-stop
-recipe above does **not** satisfy P4's exact finalization ordering; a later owned
-quiescence/teardown operation is required before P4 acceptance. Recheck original baseline and host safety.
+Finalization drains registered jobs and pending/processing/deferred Hindsight
+async operations, then records status counts (including failed and cancelled)
+before stopping runner and Hindsight. It records a private canonical
+snapshot of the pinned candidate database's schema/extensions, banks, documents,
+chunks, live/invalidated facts, observations, sources, history, entities and links.
+It then dumps only `hindsight_probe` from the positively identified candidate
+PostgreSQL container and named volume. Binary `pg_dump -Fc` stdout goes to a fresh
+exclusive `0600` file; stderr is separate. During long stages, the guard checks
+baseline identity, host headroom, candidate limits, OOM/restart state and exact
+container identity at intervals no longer than five seconds. It requires a
+nonempty archive and successful `pg_restore --list`, hashes and fsyncs it, and
+publishes the archive/result without overwrite. Only after the dump result is
+durable does it stop router and database. The final receipt records baseline and
+stopped-state proof, restart-proof path/hash or explicit absence, and whether P4
+acceptance is complete. TOC validation proves archive readability, not restoration.
+
+No separate `pg_dump`, process-log rename, whole-project stop or `down -v` before
+`finalize`. On stage failure the supervisor performs bounded cleanup and writes a
+fixed-code failure receipt; partial dump files remain private and are not
+published as a successful archive. Retained volumes/cache are not removed.
+Disposable restore project support is not implemented in this iteration; optional
+P4 restore remains unrun.
+
+No global stop/kill/prune or `down -v`. The finalizer stops exact recorded
+container IDs in stage order and retains volumes/cache. Pinned Hindsight's wrapper
+needs30s for internal cleanup, so it receives35s Docker grace with45s subprocess
+wall; other services receive10s/20s. Forced-kill stop never qualifies clean
+persistence. Recheck original baseline and host safety in the final receipt.
 Remove temporary supervisor only after stopped readback; no daemon/automation
 remains. This initial guard supports **only the candidate project**. P4 separate
 restore projects require a subsequent explicit validated project/volume registry

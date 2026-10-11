@@ -32,20 +32,26 @@ P0 infrastructure package is implemented in
 owned pinned Compose/configuration, actual-wire router observation, clean release
 export and temporary detached supervisor with audited rearm/allocation/release
 epochs ([ADR 0064](adr/0064-isolated-hindsight-infrastructure.md)). Offline
-configuration and fake mechanics checks are verified (219 focused tests, Ruff,
-Compose dummy validation and diff checks); pinned-image provider/DB/BGE
-qualification, OCI dummy disconnect/build-cancellation proof and P2 live startup
-remain unrun. Follow-up review corrected epoch lifecycle admission, bounded
-stop/launch coordination and immediate startup readback; the executable owned
-BuildKit sentinel and typed proof gate are implemented but unrun on OCI.
-Registration-drain timeout cleans known owned work but withholds completed-stop
-and rearm proof until a later exclusive cleanup/readback succeeds.
-Semantic corpus, within-CLI recall/Character phase transition and copying the
-finished replay workflow/persona into the runner are the next serial assignment.
-Initial supervision owns only the candidate project; P4 disposable restore project
-registration and ordered dump-after-worker-stop finalization remain subsequent
-extensions before P4 acceptance.
-No Hindsight installation, provider inference or deployment has occurred yet.
+configuration and fake mechanics checks were verified in the prior checkpoint.
+The latest campaign-manager report, 2026-10-11, records detached supervisor
+qualification with nine real evidence hashes. Pinned ARM64 router/DB/Hindsight/runner
+images, the actual pinned-image fake-provider test, pgvector 0.8.6, PGroonga 4.0.8
+and Chinese term/vector smoke passed; candidate PostgreSQL was running and healthy.
+No provider credentials or inference were used. The pinned BGE cache download still
+awaits this streaming-hash fix in the accepted release. These remote observations
+are manager-reported and have not been independently refreshed by this repository
+iteration.
+
+This iteration adds the guard-owned ordered P4 finalize admission/drain/stop,
+candidate-only canonical snapshot and binary archive publication, plus the
+public-HTTP frozen restart-readback helper. Offline mechanics do not qualify live
+P4; the remote campaign still uses the immutable previously staged release and
+must not adopt this in-progress source automatically. Optional disposable restore
+remains unimplemented and unrun. Model-cache qualification now downloads only the
+pinned runtime/license allowlist and streams SHA256 reads; the pinned weight size
+and hash are checked without claiming a duplicate framework weight exists. Launcher
+parsing now stops Compose option validation at the real run/exec service boundary
+while continuing full service/option validation for up/build/pull.
 Older entries retain their historical scope and are not authority to resume new
 native memory feature work ahead of this review.
 

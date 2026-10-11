@@ -79,6 +79,7 @@ def require_open(directory, registry, epoch):
         or stop_path(directory, epoch).exists()
         or epochs.stopped_path(directory, epoch).exists()
         or (directory / f"epoch-{epoch['index']:04d}.pause-request.json").exists()
+        or (directory / f"epoch-{epoch['index']:04d}.finalize-admission.json").exists()
     ):
         raise RuntimeError("epoch_stopping_or_dispatch_deadline_elapsed")
 
@@ -88,3 +89,20 @@ def dispatch_admission(directory, registry, epoch):
     with bounded_lease(directory, "admission.lock", 20):
         require_open(directory, registry, epoch)
         yield
+
+
+@contextmanager
+def finalization_dispatch_admission(directory, registry, epoch, admission):
+    from .supervisor import load_registry
+
+    with bounded_lease(directory, "jobs.lock", 20):
+        with bounded_lease(directory, "admission.lock", 20):
+            path = directory / f"epoch-{epoch['index']:04d}.finalize-admission.json"
+            current = json.loads(path.read_text()) if path.is_file() else None
+            if (load_registry(directory) != registry or epochs.active(directory, registry) != epoch
+                    or current is None or current.get("token") != admission.get("token")
+                    or stop_path(directory, epoch).exists()
+                    or (directory / f"epoch-{epoch['index']:04d}.pause-request.json").exists()
+                    or time.time() >= min(WORK_CUTOFF, admission["deadline"])):
+                raise RuntimeError("finalization_dispatch_preempted")
+            yield

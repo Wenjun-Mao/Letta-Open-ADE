@@ -44,11 +44,21 @@ def supervised(tmp_path, monkeypatch):
     "kind,args,match",
     [
         ("work", ["build", "db"], "registered_as_build"),
-        ("work", ["up", "-d"], "qualified_local_images"),
+        ("work", ["up", "-d"], "compose_service_required"),
         ("work", ["run", "runner"], "qualified_local_images"),
         ("work", ["up", "--build"], "override_rejected"),
         ("work", ["up", "--env-file=/tmp/native.env"], "override_rejected"),
         ("work", ["run", "-v", "/var/run/docker.sock:/sock"], "override_rejected"),
+        ("work", ["up", "-f", "/tmp/other-compose.yaml", "db"], "override_rejected"),
+        ("work", ["up", "db", "--file", "/tmp/other-compose.yaml"], "override_rejected"),
+        ("work", ["exec", "--project-name=other", "db", "psql"], "override_rejected"),
+        ("work", ["run", "--privileged", "--pull", "never", "runner"], "option_unrecognized"),
+        ("work", ["run", "--device", "/dev/sda", "--pull", "never", "runner"], "option_unrecognized"),
+        ("work", ["run", "--pull", "never", "--rm", "--no-deps", "-e", "API_KEY=secret", "runner"], "environment_override_rejected"),
+        ("work", ["run", "--pull", "never", "--rm", "--no-deps", "--user", "0", "runner"], "user_override_rejected"),
+        ("work", ["up", "--pull", "never", "--pull", "always", "db"], "qualified_local_images"),
+        ("work", ["up", "db", "--scale", "runner=2"], "option_unrecognized"),
+        ("build", ["build", "db", "--parallel"], "option_unrecognized"),
         ("work", ["restart", "hindsight"], "pause_and_diagnosed_rearm"),
         ("dummy", ["any-command"], "no_command"),
     ],
@@ -75,6 +85,8 @@ def test_launch_registers_identity_deadline_and_caps_before_gate(
         assert (
             receipt["identity"] == identity
             and receipt["deadline"] == supervisor.STARTED + 70
+            and receipt["operation"] == "build"
+            and receipt["service"] == ["db"]
         )
         assert value == b"1"
         return 1
@@ -91,6 +103,37 @@ def test_launch_registers_identity_deadline_and_caps_before_gate(
     assert (
         str(RELEASE / "workflows/evals/hindsight_memory_probe/compose.yaml") in command
     )
+
+
+@pytest.mark.parametrize(
+    "arguments,expected_child",
+    [
+        (["exec", "-T", "db", "psql", "-v", "ON_ERROR_STOP=1", "-c", "SELECT 1"],
+         ["docker", "compose", "exec", "-T", "db", "psql", "-v", "ON_ERROR_STOP=1", "-c", "SELECT 1"]),
+        (["run", "--rm", "--no-deps", "--pull", "never", "runner", "python", "-m", "sample", "-v"],
+         ["docker", "compose", "run", "--rm", "--no-deps", "--pull", "never", "runner", "python", "-m", "sample", "-v"]),
+    ],
+)
+def test_compose_child_flags_after_service_are_not_scanned_as_compose_overrides(
+    supervised, monkeypatch, arguments, expected_child
+):
+    calls = []
+    monkeypatch.setattr(host, "proc_identity", lambda _: {"pid": 123, "start_ticks": "42", "uid": 1000, "cmd_sha256": "gate"})
+    monkeypatch.setattr(launch.subprocess, "Popen", lambda command, **kwargs: calls.append((command, kwargs)) or SimpleNamespace(pid=123))
+    monkeypatch.setattr(launch.os, "write", lambda *_: 1)
+    launch.launch(supervised, "work", 60, arguments)
+    command = json.loads(calls[0][0][4])
+    assert command[0:2] == expected_child[0:2]
+    assert command[-len(expected_child[2:]):] == expected_child[2:]
+
+
+def test_up_options_after_service_are_still_validated_as_compose_options():
+    options, boundary, services = launch.compose_service_options(
+        ["up", "db", "-d", "--no-build", "--pull", "never"]
+    )
+    assert services == ["db"]
+    assert boundary is None
+    assert options == ["-d", "--no-build", "--pull", "never"]
 
 
 def test_launch_rejects_deadline_margin_and_unregistered_controller(

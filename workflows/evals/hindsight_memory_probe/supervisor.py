@@ -169,13 +169,27 @@ def readback(directory):
     candidates = host.candidate_containers(
         host.containers(), epochs.effective_registry(directory, registry)
     )
+    epoch = epochs.active(directory, registry)
+    admission_path = directory / f"epoch-{epoch['index']:04d}.finalize-admission.json"
+    finalized_path = directory / f"epoch-{epoch['index']:04d}.finalized.json"
+    admission = json.loads(admission_path.read_text()) if admission_path.exists() else None
+    finalization_state = {"status": "absent"}
+    if admission is not None:
+        failure_path = directory / f"finalize-{admission['token']}-failure.json"
+        finalization_state = {
+            "status": "completed" if finalized_path.exists() else "failed" if failure_path.exists() else "admitted",
+            "token": admission["token"],
+            "p4_complete": json.loads(finalized_path.read_text()).get("p4_complete") if finalized_path.exists() else False,
+            "restart_readback": admission.get("restart_readback", {"status": "absent"}),
+        }
     return {
         "registry_sha256": registry["registry_sha256"],
         "hard_deadline": DEADLINE,
         "seconds_remaining": max(0, DEADLINE - time.time()),
         "sample": host.host_sample(registry["release"]),
         "owned_containers": [host.baseline_projection(c) for c in candidates],
-        "epoch": epochs.active(directory, registry),
+        "epoch": epoch,
+        "finalization": finalization_state,
         "stopping": quiescence.stop_path(
             directory, epochs.active(directory, registry)
         ).exists(),
@@ -247,6 +261,14 @@ def run(directory, resume=False):
                 ):
                     reason = "planned_operator_pause"
                     break
+                finalization_request = directory / f"epoch-{epoch['index']:04d}.finalize-admission.json"
+                finalized_receipt = directory / f"epoch-{epoch['index']:04d}.finalized.json"
+                if finalization_request.exists() and not finalized_receipt.exists():
+                    from . import finalization
+
+                    finalization.execute(directory, registry, epoch, store)
+                    reason = "ordered_finalization_complete"
+                    break
                 if now >= WORK_CUTOFF:
                     reason = "hard_deadline_elapsed"
                     break
@@ -290,6 +312,10 @@ def run(directory, resume=False):
             raise
         finally:
             stop_owned(directory, registry, store, reason or "supervisor_ended")
+            if reason == "ordered_finalization_complete":
+                from .finalization import complete_stop
+
+                complete_stop(directory, registry, epoch, store)
 
 
 def rearm_epoch(directory, reason, diagnosis, allocation_file=None, release=None):
@@ -364,6 +390,9 @@ def main():
     start.add_argument("--resume", action="store_true")
     sub.add_parser("inspect")
     sub.add_parser("stop")
+    finalize = sub.add_parser("finalize")
+    finalize.add_argument("--drain-timeout", type=int, default=600)
+    finalize.add_argument("--dump-timeout", type=int, default=120)
     rearm = sub.add_parser("rearm")
     rearm.add_argument("--reason", required=True)
     rearm.add_argument("--diagnosis", type=Path, required=True)
@@ -384,6 +413,10 @@ def main():
             rearm_epoch(
                 args.state, args.reason, args.diagnosis, args.allocations, args.release
             )
+        elif args.action == "finalize":
+            from .finalization import admit
+
+            print(json.dumps(admit(args.state, args.drain_timeout, args.dump_timeout), sort_keys=True))
         else:
             request_pause(args.state)
             return 0
