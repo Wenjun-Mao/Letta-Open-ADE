@@ -11,14 +11,15 @@ are implemented for P0. No fabricated live result is included.
 
 Implemented: owned Compose, pinned recipes/configuration, observational router,
 clean release export/identity, private environment provisioning, temporary Linux
-supervision and offline tests. Latest campaign-manager report, 2026-10-11: detached
-supervisor qualification is recorded with nine real evidence hashes; the pinned
-ARM64 router, DB, Hindsight and runner images and the actual pinned-image fake-provider
-test passed. Candidate PostgreSQL is running and healthy; pgvector 0.8.6, PGroonga
-4.0.8 and Chinese term/vector smoke passed. No provider credentials or inference
-were used. The pinned BGE cache download still awaits this streaming-hash fix in the
-accepted release. These remote observations have not been independently refreshed
-by this source iteration; a source build or config render is not acceptance.
+supervision and offline tests. The revision-4 OCI campaign used immutable source
+`537e93c993406c41050424ddee161a875f421077`; pinned infrastructure checks,
+authentication, CPU BGE, semantic replays, same-volume restart readback, and
+ordered main-candidate shutdown passed within their bounded claims. See the
+[interim campaign finding](../../../docs/findings/hindsight-oci-campaign-2026-10-11.md).
+The separate disposable restore failed before creating a container or volume
+because host validation selected a tokenless job-result receipt. Restore retry
+and final usage/resource totals remain open. Later source/docs/tests do not
+redeploy or qualify a new runtime SHA.
 
 ## Ownership and candidate configuration
 
@@ -149,6 +150,8 @@ can return HTTP200 with zero-score candidates after a reranker timeout.
 uv run --locked pytest workflows/evals/hindsight_memory_probe/tests \
   services/ade-api/tests/agent_runtime/test_hindsight_evaluation.py \
   services/ade-api/tests/agent_runtime/test_hindsight_evaluation_cli.py \
+  services/ade-api/tests/agent_runtime/test_hindsight_eval_phase.py \
+  services/ade-api/tests/agent_runtime/test_hindsight_eval_trace.py \
   services/ade-api/tests/agent_runtime/test_executor.py services/model-router/tests -q
 uv run --locked ruff check workflows/evals/hindsight_memory_probe
 uv run --locked python -m workflows.evals.hindsight_memory_probe.validate \

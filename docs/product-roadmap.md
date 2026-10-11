@@ -68,19 +68,14 @@ persistence, embeddings, Qwen, or tool protocols. See the
 
 ## Next
 
-- Review the [consultation synthesis](findings/hindsight-consultation/assessment.md):
-  it recommends a disposable Hindsight-to-Character experiment before native
-  isolation, leaving incumbent execution unchanged. The user selected
-  [self-hosting](adr/0062-self-hosted-hindsight.md) rather than Hindsight Cloud
-  and an isolated first experiment on OCI rather than the Mac (PC-13). Review the
-  [autonomous campaign plan, revision 4](plans/hindsight-self-hosted-experiment.md),
-  covering preparation, deployment under `/mnt/projects/apps`, evidence-led
-  repairs/retests, recovery and candidate-only shutdown. Target the current 2-core/approximately
-  12 GB OCI host; the planned upgrade is optional headroom, not a prerequisite.
-  Recheck actual capacity and existing-service health before execution.
-  Await the user's Goal-mode start, then proceed within the plan's decision
-  envelope without routine milestone/replay approvals. No fixed replay count;
-  bank layouts remain hypotheses, not production adoption decisions.
+- The revision-4 Hindsight OCI campaign remains active while its separately
+  admitted disposable database restore is repaired and retried. Its
+  [interim finding](findings/hindsight-oci-campaign-2026-10-11.md) records
+  infrastructure qualification, bounded restart persistence, semantic outcomes,
+  clean main-candidate shutdown, and the failed restore admission. This is not the
+  original measured M2 comparison and has no winner over native ADE. Adoption,
+  integration, or cutover requires a later explicit decision under
+  PC-02/03/04/07/09/10/11/12/13.
 - Stabilize the native runtime through real product use and evidence-led fixes.
 - Improve task-specific evaluation where a concrete success contract exists.
 - Keep model aliases configurable so providers and underlying local models can

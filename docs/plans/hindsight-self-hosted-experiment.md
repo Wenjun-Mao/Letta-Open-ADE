@@ -1,8 +1,14 @@
 # Self-Hosted Hindsight: Isolated First Experiment
 
-Status: Revision 4 activated in Goal mode, 2026-10-11 04:49:25 UTC. The user
-authorized ten hours of autonomous progress with a twelve-hour hard cap and
-separate Codex tasks. Supersedes revision 3's replay limits and execution gates.
+Status: Revision 4 activated in Goal mode at 2026-10-11 04:49:25 UTC and remains
+active. Pinned infrastructure checks, semantic observations, authenticated
+same-volume restart readback, and main-candidate ordered shutdown are in the
+[interim finding](../findings/hindsight-oci-campaign-2026-10-11.md). The separately
+admitted disposable restore failed before container/volume creation due to a
+tokenless result receipt matching a broad job glob. Restore diagnosis/retry and
+final provider-usage/resource totals remain open; no final campaign claim is made.
+The user authorized ten hours of progress with a twelve-hour hard cap. Revision 4
+supersedes revision 3's replay limits and execution gates.
 
 Planning baseline: clean primary `main` at
 `b108a01cd3d2fc484fad249312819bff97f99c47`. Follow
@@ -475,8 +481,17 @@ worker identity; account for every startup probe. Independently read back a
 retained source and curated state, without re-ingesting the corpus. This proves
 bounded restart persistence, not crash-recovery qualification.
 
-If time permits, stop inference, dump only the candidate DB and restore into a
-new disposable PostgreSQL volume/project. Reuse the same resource envelope by
+The live campaign completed same-container/image/volume restart readback and
+ordered P4 archive/shutdown. The disposable restore was then admitted but failed
+before it created a container or volume: restore host validation selected a
+tokenless `job-*.result.json` as a registered job. The owning contract is the
+canonical registered-job selector in `supervisor.jobs`; diagnose and retry only
+with a separately admitted immutable operation. No restore pass or final usage/
+resource aggregate is claimed. Main candidate services are stopped and baseline
+OCI identities remained unchanged. See the [interim finding](../findings/hindsight-oci-campaign-2026-10-11.md).
+
+For a diagnosed restore retry, stop inference, restore only the candidate dump
+into a new disposable PostgreSQL volume/project, and reuse the same resource envelope by
 stopping the main candidate when necessary. Compare source, fact, curation and
 scope readback without re-ingesting the corpus; API startup probes, if needed,
 remain part of the accounted campaign. Never restore over baseline/final state.

@@ -5,67 +5,22 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 
 ## Current Summary
 
-The [Hindsight integration assessment](findings/hindsight-integration-assessment-2026-10-10.md)
-is complete against v0.10.3 and native baseline `d94913d`; 45 focused offline
-incumbent checks passed. The [returned-review synthesis](findings/hindsight-consultation/assessment.md)
-now recommends a disposable Hindsight-to-Character replay before native isolation;
-native extraction labels make the one-bank layout worth testing. The user selected
-[self-hosting over Hindsight Cloud](adr/0062-self-hosted-hindsight.md) for repeated
-test-workload cost reasons (PC-13), and required the first experiment to remain
-isolated from native memory. After read-only OCI inspection, the user selected
-that host instead of the Mac. The planned 4-core/24 GB upgrade is unverified and,
-as subsequently clarified, not a prerequisite. The
-[autonomous campaign plan, revision 4](plans/hindsight-self-hosted-experiment.md)
-targets the current 2-core/approximately 12 GB host, with preparation, isolated
-deployment, evidence-led repairs/retests, recovery and shutdown. Read-only directory and
-Compose-label inspection supports `/mnt/projects/apps/ade-hindsight-probe`, with
-owned volumes under the existing Docker root. The user requested roughly ten
-hours of autonomous progress and rejected arbitrary replay-count approval gates.
-The user activated Goal mode on 2026-10-11 at 04:49:25 UTC, with a ten-hour target,
-twelve-hour hard cap and standing authorization for separate Codex tasks. P0's
-[feature-owned evaluation CLI](../services/ade-api/src/ade_api/features/agent_runtime/HINDSIGHT_EVALUATION.md)
-is published at `1eafaa2`; the director independently reran 127 focused tests and
-Ruff successfully. OCI preflight still reports two cores, approximately 9.46 GiB
-available RAM and 109.6 GiB free project storage; owned ports/path are unused.
-P0 infrastructure package is implemented in
-[`hindsight_memory_probe`](../workflows/evals/hindsight_memory_probe/README.md):
-owned pinned Compose/configuration, actual-wire router observation, clean release
-export and temporary detached supervisor with audited rearm/allocation/release
-epochs ([ADR 0064](adr/0064-isolated-hindsight-infrastructure.md)). Offline
-configuration and fake mechanics checks were verified in the prior checkpoint.
-The latest campaign-manager report, 2026-10-11, records detached supervisor
-qualification with nine real evidence hashes. Pinned ARM64 router/DB/Hindsight/runner
-images, the actual pinned-image fake-provider test, pgvector 0.8.6, PGroonga 4.0.8
-and Chinese term/vector smoke passed; candidate PostgreSQL was running and healthy.
-No provider credentials or inference were used. The pinned BGE cache download still
-awaits this streaming-hash fix in the accepted release. These remote observations
-are manager-reported and have not been independently refreshed by this repository
-iteration.
+The revision-4 self-hosted OCI campaign is active under the Goal-mode authorization
+started 2026-10-11 at 04:49:25 UTC. Infrastructure checks, semantic observations,
+same-volume restart readback, and ordered candidate shutdown are summarized in the
+[interim campaign finding](findings/hindsight-oci-campaign-2026-10-11.md). The
+immutable deployed source is `537e93c993406c41050424ddee161a875f421077`; later
+test/document commits are not deployment or runtime qualification evidence.
 
-This iteration adds the guard-owned ordered P4 finalize admission/drain/stop,
-candidate-only canonical snapshot and binary archive publication, plus the
-public-HTTP frozen restart-readback helper. Offline mechanics do not qualify live
-P4; the remote campaign still uses the immutable previously staged release and
-must not adopt this source automatically. Optional disposable PostgreSQL restore
-is now implemented as a local, isolated qualification path, but remains unrun on
-the OCI campaign. Model-cache qualification now downloads only the
-pinned runtime/license allowlist and streams SHA256 reads; the pinned weight size
-and hash are checked without claiming a duplicate framework weight exists. Launcher
-parsing now stops Compose option validation at the real run/exec service boundary
-while continuing full service/option validation for up/build/pull.
-The runner now receives guard release/registry/epoch identity, restart selection
-checks reuse the public feature scope command, and the candidate manifest pins
-the tracked semantic fixture and offline implementation hashes. This wiring is
-covered by launcher, Compose-contract and documented-CLI checks; live restart
-readback remains pending.
-An isolated `python -S` regression now exercises host finalization admission,
-restart proof references and canonical snapshot publication without importing
-httpx or ADE; runner-only feature-scope qualification remains intact.
-The launcher admits root only for the exact bounded pinned Hindsight model-cache
-provisioning recipe; the documented recipe is exercised through launch admission
-and nearby root command/environment variants are rejected.
-Older entries retain their historical scope and are not authority to resume new
-native memory feature work ahead of this review.
+The ordered P4 finalization completed: 62 async operations were completed with no
+pending/processing/deferred work, a candidate-only dump and canonical snapshot
+were published, all three candidate containers stopped cleanly, and six baseline
+OCI identities remained unchanged. The separately admitted disposable restore
+failed before creating a container or volume: `restore.py:_verify_host` selected
+a tokenless `job-*.result.json` as a job registration via a broad glob. The
+canonical `supervisor.jobs` selector is the diagnosed repair seam. Main candidate
+services remain stopped; restore retry and final provider-usage/resource aggregate
+are pending. No campaign-completion or adoption claim is made.
 
 The user directed integration into `main` and continued development in the
 primary checkout ([ADR 0048](adr/0048-mainline-development.md)). Earlier retained-
