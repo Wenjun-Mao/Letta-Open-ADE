@@ -56,6 +56,13 @@ this vocabulary, not a refactor or new-agent authorization.
   feature/runtime boundary.
 - Add only the error handling that represents a real contract or reachable failure.
 
+Backward compatibility is not a project design goal unless the user explicitly
+requests it for a named boundary. Prefer changing callers and removing replaced
+contracts to compatibility aliases, legacy adapters or fallback paths. This is
+not permission to delete existing data, weaken product semantics or change live
+services. For the Hindsight fresh-start decision, see
+[PC-14](product-contract.md#default-memory-implementation).
+
 ## Workflow Locality
 
 Put workflow runner, configuration, fixtures, tests, README, and ignored outputs

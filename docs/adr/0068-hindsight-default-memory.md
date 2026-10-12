@@ -1,7 +1,8 @@
 # ADR 0068: Hindsight As Default Memory
 
 Status: Accepted product direction, 2026-10-12, by explicit user decision.
-Implementation, migration and deployment remain pending integration planning.
+Implementation and deployment remain pending integration planning; historical
+data migration is excluded from the fresh-workspace/subject scope.
 
 ## Context
 
@@ -37,6 +38,22 @@ subject/character boundaries, archive eligibility, operator removal, or PC-11/12
 Character agreements. Existing findings and completed experiment plans remain
 historical, including their failures and qualification gaps.
 
+### Fresh Start Without Backward Compatibility
+
+The user selected a fresh workspace/subject and explicitly rejected backward
+compatibility as a design constraint. Existing data remains untouched; it is not
+an input to migration, backfill or automatic ingestion in this scope. This is not
+a commitment to a later legacy migration or to opening old conversations in the
+new runtime.
+
+Implement a direct Hindsight path and replace obsolete incumbent contracts where
+needed. Do not add compatibility adapters, dual writes, automatic native fallback
+or a generic backend framework to keep the old Memory implementation executable.
+Preserve historical evidence and stored data without carrying old behavior into
+the new design. Breaking source/API changes may be part of the implementation
+plan; deletion, data rewriting and live cutover are not authorized by this
+planning decision. PC-02/03/04/10/11 still govern continuity in the new scope.
+
 ## Integration Decisions Still Needed
 
 The [source-pinned assessment](../findings/hindsight-integration-assessment-2026-10-10.md)
@@ -52,7 +69,7 @@ remain inputs, not pre-approved implementation instructions. Resolve:
   and single-transaction Memory assumptions explicitly rather than faking native
   review results or running a duplicate semantic engine.
 - Operator removal under later ingestion/reprocessing, retained history,
-  existing-data migration, cutover and recovery behavior.
+  fresh-scope cutover and recovery behavior; historical migration is excluded.
 - Truthful Interface inspection and status, plus integration and operational
   verification separate from Character behavioral evaluation.
 
@@ -62,7 +79,10 @@ remain inputs, not pre-approved implementation instructions. Resolve:
   the user's adoption decision. Targeted defect and integration checks remain
   useful; they are not a reason to silently reopen the selected default.
 - Immediate deployment or automatic historical backfill: not authorized by a
-  request to adopt the direction and discuss next steps.
+  request to adopt the direction and discuss next steps; backfill is explicitly
+  outside the selected fresh-start scope.
+- Compatibility-preserving replacement: rejected by the user. Keeping stored
+  data untouched does not require retaining old code contracts or runtime paths.
 - A new generic Memory framework or second semantic reviewer: not implied by
   adoption and inconsistent with PC-09 without a separate demonstrated need.
 

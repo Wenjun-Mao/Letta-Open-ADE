@@ -188,11 +188,22 @@ historical findings or the requirement for an integration design. PC-13's
 self-hosting choice and PC-01/02/03/04/06/07/10/11/12 remain in force. Incumbent
 reviewer and atomic-memory-write mechanisms in PC-05/08/09 are not requirements
 to duplicate inside Hindsight; the integration design must explicitly replace
-conflicting transaction and service assumptions while preserving ADE's product
-API, source integrity, ownership and truthful outcomes. No generic Memory
-framework or second semantic reviewer is implied.
+conflicting transaction and service assumptions while retaining one ADE-owned
+product API, source integrity, ownership boundaries and truthful outcomes.
+No generic Memory framework or second semantic reviewer is implied.
 
-Status: product direction adopted; native integration, migration and cutover
+Clarification, 2026-10-12: start the integration with a fresh workspace/subject
+and leave all existing data untouched. Historical migration/backfill is outside
+this scope, not a required later phase. Backward compatibility is not a design
+goal: replace incumbent contracts where needed rather than adding legacy
+adapters, dual writes, fallback execution or compatibility-only abstractions.
+Preserving existing data does not require the new runtime to open or resume
+legacy conversations. This permits breaking code/API changes in the eventual
+approved implementation; it does not authorize deleting or rewriting retained
+data or changing live services now. Scope and continuity agreements apply within
+the new workspace/subject; a fresh start must not silently reset an existing one.
+
+Status: product direction adopted; native integration and cutover
 are not implemented or qualified by this decision. Current runtime and retained
 data remain unchanged. The request authorizes recording the decision and
 discussing next steps, not source implementation, installation, live/provider
@@ -205,7 +216,7 @@ adoption does not turn the experiments into an M2 quality-winner claim.
 - Hindsight integration mechanics under the adopted PC-14 direction: bank/scope
   mapping, attributed source units, committed assistant ingestion, delivery
   timing and failure semantics, operator removal under reprocessing, storage
-  authority, model access, existing-data migration and cutover sequencing remain
+  authority, model access and fresh-scope cutover sequencing remain
   to be designed. These are integration decisions, not a reopened choice of the
   default Memory implementation. The
   [source-pinned assessment](findings/hindsight-integration-assessment-2026-10-10.md)
