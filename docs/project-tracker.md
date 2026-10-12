@@ -5,6 +5,28 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 
 ## Current Summary
 
+The revision-5 isolated semantic follow-up is closed. Its
+[finding](findings/hindsight-semantic-follow-up-2026-10-11.md) records 78
+completed Character responses, a verified ownership/projection/request repair,
+and mixed semantic results. Final tested runtime source was
+`d2a27c338d71d90ef2fa8ad7a7085682a7aa4e06`; later documentation commits are
+not deployed runtime identities. q01/q02 correction and record-time issues,
+q06 invented shared recollection, q07 uncertainty overreach, q04 unsupported
+color and a separate q07 consolidation error remain. No native adoption or
+M2 winner follows.
+
+Candidate work was drained; the dump/canonical snapshot was published and the
+three candidate containers stopped cleanly before the target. Six baseline
+identities remained unchanged; all 55 registered job processes and the controller
+are gone, while candidate volumes/secrets remain. The 3,724-file sealed archive
+was independently verified remotely and locally. No fresh public restart readback
+or disposable restore was run (`p4_complete=false`); the prior logical-restore
+proof below remains historical. The source worker is archived and its Relay
+route removed; unrelated routes remain. The next step is review/planning, not
+automatic native integration or another live run.
+
+### Historical Revision-4 Closeout
+
 The revision-4 self-hosted OCI campaign completed under PC-13 and the 2026-10-11
 time-extension clarification. The [final campaign finding](findings/hindsight-oci-campaign-2026-10-11.md)
 records qualified infrastructure, bounded logical restore, sealed evidence,
@@ -26,6 +48,8 @@ archive UI. The local extracted archive matches remote SHA-256
 10,054 files were byte/hash verified. Semantic support remains mixed; no native
 comparison winner or adoption decision is made. Earlier failed restore attempts
 remain preserved.
+
+### Native Development And Earlier Work
 
 The user directed integration into `main` and continued development in the
 primary checkout ([ADR 0048](adr/0048-mainline-development.md)). Earlier retained-

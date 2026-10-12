@@ -1,12 +1,19 @@
 # Self-Hosted Hindsight: Isolated Experiment And Semantic Follow-Up
 
-## Revision 5: Approved Semantic Diagnosis And Repair
+## Revision 5: Closed Semantic Diagnosis And Repair
 
-Status: approved for execution by the user's "Agreed, go ahead" Relay Direct
-instruction on 2026-10-11. This is a new bounded follow-up, not a resumption of
-the closed revision-4 clock or automatic native adoption. Baseline: clean
+Status: closed after the user's "Agreed, go ahead" Relay Direct authorization
+on 2026-10-11. The [follow-up finding](../findings/hindsight-semantic-follow-up-2026-10-11.md)
+records 78 completed Character arms, verified request/projection changes and
+remaining semantic failures. Final tested runtime source was
+`d2a27c338d71d90ef2fa8ad7a7085682a7aa4e06`; candidate shutdown and the sealed
+archive completed before the target. No fresh restart/restore qualification or
+native adoption follows. The approval and ordered work below are historical,
+not authorization to rerun a closed activation. This was a new bounded
+follow-up, not a resumption of the closed revision-4 clock. Planning baseline: clean
 primary `main` at `d0138d8a8ed29dfec2b96b0002357d9b28219d7e`; last qualified
-isolated runtime source `a3e78c5c63b17eadc3d02b05ce7e04eb6042944f`.
+isolated runtime source before revision 5 was
+`a3e78c5c63b17eadc3d02b05ce7e04eb6042944f`.
 
 Activation record: `2026-10-11T20:12:43Z`; five-hour target
 `2026-10-12T01:12:43Z`, new-work cutoff `2026-10-12T01:27:43Z`, six-hour hard

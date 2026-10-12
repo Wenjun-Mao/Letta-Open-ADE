@@ -8,6 +8,13 @@ commands and does not itself authorize a new live campaign. See the
 [campaign finding](../../../docs/findings/hindsight-oci-campaign-2026-10-11.md)
 for verified closeout evidence and semantic limits.
 
+Revision 5 is also closed at tested runtime source
+`d2a27c338d71d90ef2fa8ad7a7085682a7aa4e06`; see the
+[semantic follow-up finding](../../../docs/findings/hindsight-semantic-follow-up-2026-10-11.md).
+Candidate shutdown and the sealed archive were verified; remaining semantic
+failures are not qualified away. No fresh restart/restore was run. These
+procedures do not authorize another activation or renewal of either closed clock.
+
 Revision 5 binds supervisor state and captures to
 `$PROBE_PRIVATE/activations/hindsight-semantic-follow-up-2026-10-11/receipts`.
 Reuse the retained `$PROBE_PRIVATE/secrets.env` and the existing

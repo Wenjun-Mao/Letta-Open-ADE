@@ -20,6 +20,15 @@ Earlier restore-admission and post-restore snapshot failures remain preserved;
 the final source independently passed the bounded persisted-state comparison.
 This docs commit does not redeploy or qualify another runtime SHA.
 
+The revision-5 semantic follow-up is also closed, at tested runtime source
+`d2a27c338d71d90ef2fa8ad7a7085682a7aa4e06`. Its
+[finding](../../../docs/findings/hindsight-semantic-follow-up-2026-10-11.md)
+records 78 nonempty Character responses, verified request/projection changes,
+remaining semantic failures, and verified candidate shutdown/private archive.
+No fresh restart/restore was run (`p4_complete=false`); revision-4 evidence
+is historical. Procedures below are not permission to reuse a closed clock or
+start another run. Neither closeout establishes native adoption or an M2 winner.
+
 ## Ownership and candidate configuration
 
 Explicit project `ade-hindsight-probe`; default owned network only. Dedicated
@@ -143,9 +152,9 @@ reasoning. The subsequent replay assignment must separate recalled context from
 full trace and reject incomplete reranking **before** Character dispatch; upstream
 can return HTTP200 with zero-score candidates after a reranker timeout.
 
-## Revision-5 semantic diagnostic checkpoint
+## Revision-5 closed semantic follow-up
 
-The approved revision-5 follow-up uses the separate versioned
+The completed revision-5 follow-up used the separate versioned
 `fixtures/semantic-diagnostic-controls-v1.json` for q01/q06/q07. It leaves the
 original source corpus, questions, persona and candidate04/05 evidence intact.
 The freezer binds those controls into the candidate manifest; the existing
@@ -153,6 +162,11 @@ feature CLI receives Hindsight, empty and adequate arms in the same input. The
 control audit and predeclared distinctions are captured alongside each stage
 summary. See [the bounded diagnostic note](semantic-diagnostic-notes.md) for
 causal findings, archive pointers and exact manager-run commands.
+Those commands preserve reproducibility, not current live-run authority. See the
+[closeout finding](../../../docs/findings/hindsight-semantic-follow-up-2026-10-11.md)
+for the tested source, capacity-comparison limits, remaining failures and sealed
+private evidence. Fresh initial/post stages used the same new workspace and
+retained banks, with consolidation between them; no re-retain occurred for post.
 
 The runner image copies both required fixture files, and an offline image-surface
 test loads the controls from a temporary filesystem materialized from the

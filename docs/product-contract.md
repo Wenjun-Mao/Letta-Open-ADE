@@ -160,6 +160,14 @@ integration/adoption, a native model-default change or a weakening of PC-02/03/0
 11/12. Earlier failures and revision-4 evidence remain immutable historical
 results. Direct approval does not itself create or resume native Goal mode.
 
+Status, 2026-10-11: revision 5 is closed at tested runtime source
+`d2a27c338d71d90ef2fa8ad7a7085682a7aa4e06`. Its
+[finding](findings/hindsight-semantic-follow-up-2026-10-11.md) records verified
+Character context/request mechanics, mixed semantic results, stopped candidate
+services and a sealed archive. No fresh restart/restore or lifecycle qualification
+was performed; revision-4 proof remains historical. This changes no product
+agreement and authorizes neither another activation nor native adoption.
+
 ## Open Decisions, Not Agreements
 
 - Hindsight-first integration assessment: on 2026-10-10 the user selected
@@ -186,7 +194,10 @@ results. Direct approval does not itself create or resume native Goal mode.
   autonomous-campaign direction. The authorized revision-4 OCI campaign is now
   complete; its [finding](findings/hindsight-oci-campaign-2026-10-11.md) records
   mixed semantic evidence and infrastructure qualification, not native
-  integration or adoption.
+  integration or adoption. The closed
+  [revision-5 semantic follow-up](findings/hindsight-semantic-follow-up-2026-10-11.md)
+  adds a verified projection/request repair but leaves semantic failures and
+  the integration/adoption decision open; it does not establish an M2 winner.
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
   reviewer, reconciliation with corrected or removed facts, and failure behavior.
   PC-03's character boundary and PC-10's archive eligibility are settled;

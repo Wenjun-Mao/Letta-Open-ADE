@@ -69,9 +69,11 @@ persistence, embeddings, Qwen, or tool protocols. See the
 ## Next
 
 - Review the completed [revision-4 Hindsight OCI campaign](findings/hindsight-oci-campaign-2026-10-11.md)
-  as decision evidence. Pinned self-hosted infrastructure and bounded logical
-  restore qualified; semantic observations remain mixed and do not establish the
-  original measured M2 comparison or a winner over native ADE. Decide separately
+  and [revision-5 semantic follow-up](findings/hindsight-semantic-follow-up-2026-10-11.md)
+  as decision evidence. Revision 4 qualified pinned infrastructure and bounded
+  logical restore; revision 5 verified the Character projection/request repair
+  with remaining semantic failures and no fresh restart/restore. These do not
+  establish the original measured M2 comparison or a winner over native ADE. Decide separately
   whether any later native integration work is justified under
   PC-02/03/04/07/09/10/11/12/13. No adoption or cutover is implied.
 - Stabilize the native runtime through real product use and evidence-led fixes.

@@ -10,6 +10,14 @@ PostgreSQL restore; see the [campaign finding](../../../docs/findings/hindsight-
 for hashes and limits. The recovery procedure below documents earlier failed
 attempt handling and is not authorization to rerun the closed campaign.
 
+Revision 5 is closed at tested runtime source
+`d2a27c338d71d90ef2fa8ad7a7085682a7aa4e06`; its
+[finding](../../../docs/findings/hindsight-semantic-follow-up-2026-10-11.md)
+records verified ordered drain/dump/snapshot/shutdown and sealed evidence, but
+**no fresh public restart readback or disposable restore** (`p4_complete=false`).
+The readable dump does not renew revision-4 logical-restore qualification. The
+procedures below are not authority to restart or rerun either closed campaign.
+
 ### Restart readback and ordered finalization
 
 P4 restart evidence is a public-HTTP readback against a frozen selection. Create
