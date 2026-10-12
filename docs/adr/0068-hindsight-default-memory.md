@@ -54,6 +54,22 @@ the new design. Breaking source/API changes may be part of the implementation
 plan; deletion, data rewriting and live cutover are not authorized by this
 planning decision. PC-02/03/04/10/11 still govern continuity in the new scope.
 
+### Attributed Asynchronous Source Delivery
+
+The user approved retaining accepted user messages and committed Character
+replies with explicit speaker, time and conversation attribution. Uncommitted
+reply candidates are excluded; accepted user input remains eligible even when
+Character generation fails. Submission records what was said without declaring
+all utterances established events or removing their uncertainty (PC-03/11).
+
+Delivery is durable and asynchronous, with visible progress and failure status.
+Do not couple a successful conversation outcome to a claim that Hindsight has
+finished retention. Distinguish queued/accepted delivery from completed
+processing; processing completion is not a semantic-quality certificate.
+This direction does not yet select source-unit size, append/replacement behavior,
+ordering/retry mechanics or whether a later recall waits for pending ingestion.
+Those choices belong in the integration design, not implicit adapter behavior.
+
 ## Integration Decisions Still Needed
 
 The [source-pinned assessment](../findings/hindsight-integration-assessment-2026-10-10.md)
@@ -62,9 +78,9 @@ remain inputs, not pre-approved implementation instructions. Resolve:
 
 - Workspace/subject/character scope and profile sharing, including derived
   observations and source context, without transferring participation.
-- Attributed user and committed Character source delivery, ordering, retries,
-  freshness, failure visibility and the boundary between a recorded utterance
-  and an established event.
+- Source-unit boundaries, ordering, retries, recall freshness during pending
+  ingestion and detailed failure behavior for the agreed attributed asynchronous
+  delivery. Preserve the boundary between an utterance and an established event.
 - Product-data and Hindsight-state authority, replacing the incumbent's reviewer
   and single-transaction Memory assumptions explicitly rather than faking native
   review results or running a duplicate semantic engine.

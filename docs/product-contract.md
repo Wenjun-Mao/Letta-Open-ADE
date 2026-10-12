@@ -203,6 +203,17 @@ approved implementation; it does not authorize deleting or rewriting retained
 data or changing live services now. Scope and continuity agreements apply within
 the new workspace/subject; a fresh start must not silently reset an existing one.
 
+Ingestion agreement, 2026-10-12: deliver accepted user messages and committed
+Character replies to Hindsight with explicit speaker, time and conversation
+attribution. Exclude uncommitted reply candidates. An accepted user message
+remains eligible if reply generation later fails. Preserve utterance attribution;
+delivery does not declare every proposition a true shared event (PC-03/11).
+Use durable asynchronous delivery with visible progress and failure status.
+Conversation success, delivery acceptance and retention completion are distinct;
+queued work must not be presented as completed memory. Exact source units,
+ordering/retry mechanics and recall behavior while retention is pending remain
+integration design decisions.
+
 Status: product direction adopted; native integration and cutover
 are not implemented or qualified by this decision. Current runtime and retained
 data remain unchanged. The request authorizes recording the decision and
@@ -214,9 +225,9 @@ adoption does not turn the experiments into an M2 quality-winner claim.
 ## Open Decisions, Not Agreements
 
 - Hindsight integration mechanics under the adopted PC-14 direction: bank/scope
-  mapping, attributed source units, committed assistant ingestion, delivery
-  timing and failure semantics, operator removal under reprocessing, storage
-  authority, model access and fresh-scope cutover sequencing remain
+  mapping, source-unit boundaries, ordered/idempotent asynchronous delivery,
+  recall freshness and detailed failure behavior, operator removal under
+  reprocessing, storage authority, model access and fresh-scope cutover sequencing remain
   to be designed. These are integration decisions, not a reopened choice of the
   default Memory implementation. The
   [source-pinned assessment](findings/hindsight-integration-assessment-2026-10-10.md)
