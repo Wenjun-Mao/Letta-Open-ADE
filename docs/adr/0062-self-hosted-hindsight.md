@@ -5,6 +5,11 @@ by explicit user direction.
 Autonomous-campaign planning direction clarified 2026-10-11; execution waits for
 the user's explicit Goal-mode start against the linked plan, not this ADR alone.
 
+Adoption clarification, 2026-10-12: [ADR 0068](0068-hindsight-default-memory.md)
+accepts Hindsight as the default Memory implementation. It supersedes the
+adoption-deferred status below while preserving this self-hosting decision and
+the historical experiment's isolation. Integration and cutover remain separate.
+
 ## Problem
 
 The user rejected Hindsight Cloud's usage pricing for ADE's iterative test

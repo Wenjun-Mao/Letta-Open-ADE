@@ -1,6 +1,6 @@
 # ADE Current Product Contract
 
-Updated: 2026-10-11. This is the single entrypoint for **current agreed product
+Updated: 2026-10-12. This is the single entrypoint for **current agreed product
 intent**, not a claim that every agreement is implemented or release-qualified.
 It consolidates existing decisions; it does not authorize implementation, live
 experiments, deployment, or a change to release evidence.
@@ -168,36 +168,53 @@ services and a sealed archive. No fresh restart/restore or lifecycle qualificati
 was performed; revision-4 proof remains historical. This changes no product
 agreement and authorizes neither another activation nor native adoption.
 
+## Default Memory Implementation
+
+**PC-14 (agreed 2026-10-12):** Adopt self-hosted Hindsight as ADE's default
+Memory implementation. The user selected adoption after reviewing the completed
+experiments and separating Memory findings from Character behavior. The next
+planning activity is integration and transition, not another vendor-selection
+gate. [ADR 0068](adr/0068-hindsight-default-memory.md) records this decision.
+
+The domain remains Memory: Retention & Updates, Organization & Maintenance, and
+Recall & Context. ADE preserves its product ownership and scope/continuity
+contracts while using Hindsight's concrete capabilities. Character continues to
+own interpretation and response behavior; Interface owns user-facing use,
+configuration and inspection. Adoption neither transfers those responsibilities
+to Hindsight nor qualifies them through Memory tests (PC-11/12, ADR 0061).
+
+This supersedes the earlier assessment-only/adoption-deferred direction, not
+historical findings or the requirement for an integration design. PC-13's
+self-hosting choice and PC-01/02/03/04/06/07/10/11/12 remain in force. Incumbent
+reviewer and atomic-memory-write mechanisms in PC-05/08/09 are not requirements
+to duplicate inside Hindsight; the integration design must explicitly replace
+conflicting transaction and service assumptions while preserving ADE's product
+API, source integrity, ownership and truthful outcomes. No generic Memory
+framework or second semantic reviewer is implied.
+
+Status: product direction adopted; native integration, migration and cutover
+are not implemented or qualified by this decision. Current runtime and retained
+data remain unchanged. The request authorizes recording the decision and
+discussing next steps, not source implementation, installation, live/provider
+operations, historical-data export, deployment or removal of the incumbent.
+Known consolidation defects and Character failures remain separate work items;
+adoption does not turn the experiments into an M2 quality-winner claim.
+
 ## Open Decisions, Not Agreements
 
-- Hindsight-first integration assessment: on 2026-10-10 the user selected
-  assessment against Hindsight's concrete capabilities rather than designing a
-  generic Memory protocol, and proposed isolating/freezing incumbent Memory in
-  preparation. The [source-pinned assessment](findings/hindsight-integration-assessment-2026-10-10.md)
-  records v0.10.3, the native baseline and recommended seams. This supersedes
-  external-memory deferral as the next planning priority, not the existing
-  runtime or M2's unmeasured comparison. Working expectations are submission of
-  accepted user input for Hindsight extraction and an ADE-owned adapter that
-  constructs the final Character model request. Bank mapping, source context,
-  committed assistant ingestion, delivery timing, removal/reprocessing behavior,
-  storage authority and model access still require an adoption decision.
-  PC-05/08/09 continue governing the incumbent; a Hindsight path must explicitly
-  amend conflicting transaction/service assumptions. Source isolation, package
-  installation, live calls, migration and cutover are not authorized by the
-  assessment request.
-  Returned [consultation reports and source checks](findings/hindsight-consultation/assessment.md)
-  now recommend a disposable Hindsight-to-Character experiment before native
-  isolation, with incumbent execution untouched. This is a revised recommendation,
-  not user adoption or live-run authorization. Native extraction labels and small
-  immutable source units are test candidates; no bank layout or delivery policy
-  is settled by the reports. PC-13 separately records self-hosting and the
-  autonomous-campaign direction. The authorized revision-4 OCI campaign is now
-  complete; its [finding](findings/hindsight-oci-campaign-2026-10-11.md) records
-  mixed semantic evidence and infrastructure qualification, not native
-  integration or adoption. The closed
-  [revision-5 semantic follow-up](findings/hindsight-semantic-follow-up-2026-10-11.md)
-  adds a verified projection/request repair but leaves semantic failures and
-  the integration/adoption decision open; it does not establish an M2 winner.
+- Hindsight integration mechanics under the adopted PC-14 direction: bank/scope
+  mapping, attributed source units, committed assistant ingestion, delivery
+  timing and failure semantics, operator removal under reprocessing, storage
+  authority, model access, existing-data migration and cutover sequencing remain
+  to be designed. These are integration decisions, not a reopened choice of the
+  default Memory implementation. The
+  [source-pinned assessment](findings/hindsight-integration-assessment-2026-10-10.md)
+  and [consultation synthesis](findings/hindsight-consultation/assessment.md)
+  supply candidate seams and tradeoffs, not approved implementation mechanics.
+  Earlier requirements for another experiment before deciding adoption are
+  superseded by PC-14; their observations and unresolved defects remain valid
+  historical evidence. PC-05/08/09 continue governing the running incumbent
+  until an explicitly designed and authorized transition.
 - Historical source recovery: retrieval strategy, bounded evidence supplied to the
   reviewer, reconciliation with corrected or removed facts, and failure behavior.
   PC-03's character boundary and PC-10's archive eligibility are settled;

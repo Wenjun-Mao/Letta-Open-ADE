@@ -56,12 +56,13 @@ record's status notice before applying its original execution details.
 | [0057](0057-model-assisted-evidence-selection-investigation.md) | Agreed investigation design: bounded semantic source selection, fresh shared final evidence and uncertain incomplete recall; no implementation, model run or adoption. |
 | [0058](0058-offline-packet-capacity-and-qualifications.md) | Approved D04-only eight-source offline capacity diagnostic and whole-packet qualification rubric; no runtime count change or provider calls. |
 | [0061](0061-capability-responsibility-map.md) | Domain/Subsystem/Module inventory, authored-characterization versus contextual-application boundary, and three overlapping response-assessment lenses; no new runtime phases or release qualification. |
-| [0062](0062-self-hosted-hindsight.md) | Self-hosted isolated OCI experiment on the current host, with an autonomous campaign instead of fixed replay approval gates; execution awaits the user's Goal-mode start, and production adoption/cutover remain excluded. |
+| [0062](0062-self-hosted-hindsight.md) | Self-hosting and historical isolated OCI campaign direction; adoption-deferred status superseded by 0068, with integration/cutover still separate. |
 | [0063](0063-hindsight-character-evaluation-boundary.md) | Evaluation-only CLI owns strict scoped recall, frozen Character comparison arms and fail-closed durable captures; workflow owns ingestion/curation and qualification, with incumbent execution unchanged. |
 | [0064](0064-isolated-hindsight-infrastructure.md) | Offline isolated deployment, fail-closed actual-wire observation, detached deadline/safety guard, release-scoped P4 restart evidence and terminal process receipts; OCI/image/semantic qualification remains pending. |
 | [0065](0065-post-restore-snapshot-failure-recovery.md) | Registered child exit-mm handling and a separate, finite, exact-resource recovery path for the failed P4 post-restore snapshot; captured state remains failed evidence, not restore success. |
 | [0066](0066-canonical-persisted-schema-snapshots.md) | Shared P4 schema capture excludes only numeric PostgreSQL temporary namespaces; durable schema, owner, extension, migration and data drift remain exact mismatches. |
 | [0067](0067-hindsight-revision-five-activation-clock.md) | Revision-5 source-pinned clock and activation-scoped registry/capture paths; old admissions and receipts are never renewed, and tests use a declared synthetic clock. |
+| [0068](0068-hindsight-default-memory.md) | Hindsight adopted as default Memory implementation; domain boundaries and historical evidence preserved, with integration, migration and deployment pending design and authorization. |
 
 ## Historical, Retired, Or On Hold
 
