@@ -1,9 +1,20 @@
 # ADE Project Tracker
 
-Updated: 2026-10-11. Owner: this ADE task, using Relay for delegated reporting.
+Updated: 2026-10-12. Owner: this ADE task, using Relay for delegated reporting.
 Direction and milestone completion criteria live in the [roadmap](product-roadmap.md).
 
 ## Current Summary
+
+Hindsight is the selected default Memory implementation under PC-14 and ADR 0068.
+The [three-stage integration plan](plans/hindsight-integration.md) is drafted for
+review: complete product flow, isolation/failure verification, then recovery and
+fresh-start readiness. Live checks are planned in a new isolated OCI stack;
+implementation, provider calls and service activation are not yet authorized.
+The new scope has character-local learned memories, no legacy compatibility or
+historical import, and separate ADE/Hindsight persistence authorities. Earlier
+milestone and adoption-pending entries below are historical, not current intent.
+
+### Historical Revision-5 Closeout
 
 The revision-5 isolated semantic follow-up is closed. Its
 [finding](findings/hindsight-semantic-follow-up-2026-10-11.md) records 78

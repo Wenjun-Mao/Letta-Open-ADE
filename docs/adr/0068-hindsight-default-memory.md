@@ -172,6 +172,11 @@ The unchanged incumbent and historical evidence retain their original contracts.
 
 ## Integration Decisions Still Needed
 
+The user requested the [three-stage integration plan](../plans/hindsight-integration.md)
+and selected a new isolated OCI stack for its live checks. Current ADE/trial
+services and closed experiment data remain unchanged; full-stack capacity must
+be rechecked before activation. Plan approval alone does not authorize execution.
+
 The [source-pinned assessment](../findings/hindsight-integration-assessment-2026-10-10.md)
 and [consultation synthesis](../findings/hindsight-consultation/assessment.md)
 remain inputs, not pre-approved implementation instructions. Resolve:

@@ -21,15 +21,16 @@ status, blockers, next actions, and evidence.
 | M0 | Development foundation | Native ADE and Luna development route verified, with their limits recorded. |
 | M1 | Character-continuity baseline | Conversations reviewed; failures attributed to model, prompt, representation, retrieval, or policy; known policy defects covered by regression tests. |
 | M2 | Memory approach comparison (deferred) | Original criterion remains: compare ADE and Hindsight against M1 cases for quality, latency, complexity, and recommendation. No comparison winner has been established. |
-| M3 | Usable profile memory in Agent Studio (in progress) | The four operator journeys in the [M3 plan](plans/m3-agent-studio-continuity.md) pass UI/API acceptance, native behavioral acceptance and release readiness separately. Subject facts persist across conversations and persona versions; private character relationship history is not claimed. |
+| M3 | Usable continuity in Agent Studio (Hindsight integration planned) | The [three-stage plan](plans/hindsight-integration.md) connects the product flow, verifies relationship isolation/failures, and proves recovery/fresh-start readiness. PC-02/03/14 supersede the incumbent shared-profile scope; implementation and live qualification remain pending. |
 | M4 | Real-use validation | Longer-session trials, deployment-provider validation, and operator review meet agreed acceptance criteria. |
 
 Under [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md), M3's
 bounded profile-memory slice established the incumbent development direction.
-On 2026-10-10 the user selected a Hindsight-first integration assessment and
-incumbent isolation/freeze preparation as the next planning priority. The
-[assessment](findings/hindsight-integration-assessment-2026-10-10.md) records
-source findings and recommendations, not integration or cutover approval. The
+On 2026-10-12 the user selected Hindsight as default Memory (PC-14) and then
+requested the [three-stage integration plan](plans/hindsight-integration.md).
+The earlier [assessment](findings/hindsight-integration-assessment-2026-10-10.md)
+and incumbent M3 plan remain historical inputs, not authority to revive shared
+profiles, compatibility paths or another adoption prerequisite. The
 original measured M2 comparison remains unexecuted/deferred, with historical
 findings preserved; no comparison winner is inferred. Scene-based roleplay
 remains deferred.
@@ -68,20 +69,18 @@ persistence, embeddings, Qwen, or tool protocols. See the
 
 ## Next
 
-- Review the completed [revision-4 Hindsight OCI campaign](findings/hindsight-oci-campaign-2026-10-11.md)
-  and [revision-5 semantic follow-up](findings/hindsight-semantic-follow-up-2026-10-11.md)
-  as decision evidence. Revision 4 qualified pinned infrastructure and bounded
-  logical restore; revision 5 verified the Character projection/request repair
-  with remaining semantic failures and no fresh restart/restore. These do not
-  establish the original measured M2 comparison or a winner over native ADE. Decide separately
-  whether any later native integration work is justified under
-  PC-02/03/04/07/09/10/11/12/13. No adoption or cutover is implied.
-- Stabilize the native runtime through real product use and evidence-led fixes.
+- Review the [Hindsight integration plan](plans/hindsight-integration.md): connect
+  the full flow, verify isolation/failures, and prove recovery/fresh-start
+  readiness in a new isolated OCI stack. Adoption is settled; execution and
+  provider/operational permissions remain separate. Closed campaign findings
+  remain evidence with unresolved semantic and recovery limits, not an M2 winner.
+- Improve the adopted runtime through real product use and evidence-led fixes
+  after its implementation and activation are authorized.
 - Improve task-specific evaluation where a concrete success contract exists.
 - Keep model aliases configurable so providers and underlying local models can
   evolve without source changes.
-- Preserve the four supported M3 operator journeys and their outstanding
-  acceptance work while assessing the memory replacement.
+- Carry useful M3 operator journeys into the new contracts without preserving
+  obsolete native fact fields or treating incumbent evidence as new acceptance.
 
 ## Later
 

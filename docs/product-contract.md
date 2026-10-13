@@ -268,6 +268,13 @@ including removals. Exact backup coordination and restore procedures remain
 integration work. This amends PC-05/08's incumbent reviewer and single-authority
 assumptions for the new path, not Character responsibility or PC-02/03 isolation.
 
+Planning placement, 2026-10-12: the user selected a new isolated stack on the
+existing OCI host for the first live ADE + Hindsight integration checks. Preserve
+current ADE/trial services and closed experiment data; recheck capacity before
+activation. The [three-stage plan](plans/hindsight-integration.md) covers the
+complete flow, boundary/failure verification, and recovery/fresh-start readiness.
+This selects a test location, not implementation or live-operation permission.
+
 Status: product direction adopted; native integration and cutover
 are not implemented or qualified by this decision. Current runtime and retained
 data remain unchanged. The request authorizes recording the decision and
