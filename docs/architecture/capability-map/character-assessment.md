@@ -237,16 +237,83 @@ compulsory distinguishing quirk in every sentence. Mentioning flowers or sweets
 does not establish fidelity merely because they appear in the biography. Equally,
 one acceptable reply does not establish consistent characterization across cases.
 
-## Minimal Review Record
+## Repeatable Review Method
 
-Use a short narrative or table; this is not a new runtime output schema. Identify:
+Agreed 2026-10-13 under PC-12 and
+[ADR 0061](../../adr/0061-capability-responsibility-map.md#repeatable-assessment-clarification-2026-10-13).
+Use a conversation case, its captured run, and a short review. These are logical
+records for reproducible assessment, not new runtime objects, model phases or a
+test framework. The [starter case set](character-assessment-cases.md) consolidates
+the discussed examples for review; it is not a runnable or qualified test suite.
 
-- Case, supplied persona/version and relevant authored intentions or contrasts.
-- Actual request/source references, scope and capture-completeness limits.
-- Semantic sufficiency and qualifications, including missing or ambiguous evidence.
-- Response passage and contextual reason for each lens's descriptive assessment.
-- Acceptable alternatives, uncertainty and whether the conclusion is an observation
-  or a separately supported causal explanation.
+### Case Card
+
+Freeze the case before seeing the answer. Record its identity/revision, promise,
+prior conversation, current message, relationship scope, persona/prompt version,
+language and expected memory-processing state. Describe successful meaning,
+specific failures, acceptable variation and genuinely unknown information.
+History and attribution matter, not just isolated fact values. Do not require
+one expected sentence or make examples into keyword rules.
+
+Keep the evaluator's expectations out of the answering Character's request.
+For open-ended fiction, define the creation constraints first, then capture the
+actual story and established details before evaluating its follow-ups. A changed
+case is a new revision, not a reason to rewrite an earlier result as successful.
+
+### Captured Run
+
+Preserve every attempt with its case/run identity, actual messages and reply,
+persona and system prompt, supplied memories and serialized generation input,
+source/scope references, processing state, effective model/config identities,
+software revision and capture limitations. Reuse existing evidence capture where
+suitable; its presence does not establish that an old evaluator supports the
+Hindsight path or current character-local scope.
+
+Separate intended setup from observed setup. Unexpected preparation, isolation,
+capture or recovery failures remain visible operational results; do not silently
+drop them or call them semantic passes. A missing reply or insufficient evidence
+may prevent semantic assessment. Deliberately pending retention and successful
+empty recall are distinct cases, not automatically failures.
+
+### Minimal Review Record
+
+For each lens, retain a descriptive result, a quoted response passage and the
+contextual reason. Identify the relevant authored intention, semantic sufficiency,
+acceptable alternatives and uncertainty. Missing evidence is not a successful
+result, and a judgment of one reply does not qualify general reliability.
+
+| Result | Meaning |
+| --- | --- |
+| Meets | Satisfies the relevant expectation in this case. |
+| Partly meets | Provides some value but has a specific, explained shortcoming. |
+| Fails | Violates a clear expectation. |
+| Cannot assess | Evidence or criteria are insufficient; explain what is missing or indeterminate. |
+
+Retain grounding, conversational judgment and character fidelity separately.
+For example, "You switched from jasmine to oolong" fails grounding in the
+misspeak-correction case because it invents a real preference change. Pleasant
+wording cannot offset that failure. Do not infer a causal component diagnosis
+from an end-to-end result alone; support any diagnosis with separate evidence.
+
+### Calibration And Reporting
+
+Start with human review of clear successes, failures and borderline examples
+across the five promises. Use disagreement to clarify criteria, preserving
+genuinely indeterminate cases. AI judging may assist but is not the sole authority.
+
+Repeat versioned cases without selecting the best attempt, and include unseen
+variants. Keep all failures. Report by promise and lens with explicit sample
+sizes/denominators, uncertainty and repeat consistency; repeated attempts or
+turns are not additional independent scenarios. Promises and lenses overlap, so
+do not add their counts into a misleading total or average the lenses into one
+quality score. Report operational failures and unassessable results separately
+and visibly, including whether a planned case was never run.
+
+Calibration and a measured baseline must inform any numerical release threshold;
+none is selected by this guide. Structural isolation and recovery requirements
+remain separate gates that conversational charm cannot offset. Under the
+Hindsight plan, known semantic failures still need a durable fix or explicit user
+acceptance of a bounded limitation before fresh-start readiness.
 
 For persona-content review, ask whether the authored intent is coherent and
 distinguishable, with meaningful character-specific contrasts rather than only

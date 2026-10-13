@@ -1,6 +1,6 @@
 # ADE Current Product Contract
 
-Updated: 2026-10-12. This is the single entrypoint for **current agreed product
+Updated: 2026-10-13. This is the single entrypoint for **current agreed product
 intent**, not a claim that every agreement is implemented or release-qualified.
 It consolidates existing decisions; it does not authorize implementation, live
 experiments, deployment, or a change to release evidence.
@@ -119,6 +119,17 @@ latest stated value. Apply these distinctions when relevant to the exchange,
 without requiring history recitals or fixed wording. The assessment guide's
 [continuity calibration](architecture/capability-map/character-assessment.md#continuity-calibration)
 records agreed examples, not behavioral qualification or a completed test suite.
+
+Clarification, 2026-10-13: repeatable assessment freezes the conversation case
+before observing an answer and preserves the actual run separately from its
+review. Report each lens as meets, partly meets, fails or cannot assess, with a
+response passage and contextual reason. Calibrate with human review; AI judging
+may assist but is not the sole authority. Retain all attempts and report by
+promise/lens with denominators, uncertainty and repeat consistency, not an overall
+average. Mechanical failures remain visible separately. This selects no numerical
+release threshold, runtime schema or execution authority. See the guide's
+[review method](architecture/capability-map/character-assessment.md#repeatable-review-method)
+and [ADR 0061](adr/0061-capability-responsibility-map.md#repeatable-assessment-clarification-2026-10-13).
 
 ## Hindsight Hosting
 

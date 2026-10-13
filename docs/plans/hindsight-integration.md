@@ -1,6 +1,6 @@
 # Hindsight Integration: Three-Stage Plan
 
-Updated: 2026-10-12. Status: agreed planning scope; execution not authorized.
+Updated: 2026-10-13. Status: agreed planning scope; execution not authorized.
 The user approved these three planning stages and an isolated OCI test placement,
 not implementation, provider calls, installation or deployment. Work serially on
 `main` in the primary checkout; scoped verified commits/pushes follow ADR 0048.
@@ -204,6 +204,12 @@ or fallback executes. Partial Stage 1 success does not qualify later stages.
 **Outcome:** observable tests show that the new path keeps the agreed promises,
 not merely that its HTTP requests succeed. Use synthetic fixtures with explicit
 expected distinctions, not altered historical evidence or answer-specific rules.
+
+Use PC-12's agreed [case/run/review method](../architecture/capability-map/character-assessment.md#repeatable-review-method)
+and the [starter case set](../architecture/capability-map/character-assessment-cases.md)
+to prepare semantic cases before execution. Bind exact Chinese inputs and runtime
+identities; retain every attempt and report per-promise/per-lens outcomes without
+a composite score. The starter set is review input, not complete release coverage.
 
 | Case | Required evidence / acceptance |
 | --- | --- |

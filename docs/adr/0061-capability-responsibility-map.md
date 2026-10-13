@@ -88,3 +88,33 @@ Source IDs cannot prove that missing antecedents or qualifications were supplied
 Report conditional observations before causal explanations; one successful
 reference-packet response proves neither a sole retrieval cause nor reliability.
 No runtime change, additional model call or behavioral acceptance follows.
+
+## Repeatable Assessment Clarification, 2026-10-13
+
+The user approved five continuity promises and a reusable review method under
+PC-12. One-off plausible examples or fact-hit counts cannot establish whether
+conversation quality improves reliably, and retrospective expectations can hide
+failures. The [assessment guide](../architecture/capability-map/character-assessment.md#repeatable-review-method)
+owns the method and links the reviewable starter cases.
+
+Freeze a case's history, current request, scope, characterization and expected
+meaning before observing its answer. Preserve the actual run separately from
+the review. Keep all attempts and judge grounding, conversational judgment and
+character fidelity separately as meets, partly meets, fails or cannot assess,
+with a quoted passage and contextual reason. Expectations are evaluator-only,
+not extra instructions or an expected answer supplied to Character.
+
+Calibrate with human review, use AI judging only as assistance, and include
+repeated cases plus unseen variants. Report results by promise/lens with explicit
+denominators, uncertainty and consistency; repetitions are not independent case
+coverage. Mechanical failures remain visible separately. Observations do not
+automatically identify a causal component failure.
+
+Reject exact-reply/keyword grading as a substitute for meaning, cherry-picked
+rerolls, an uncalibrated AI-only judge, and an aggregate score that offsets
+unsupported history with attractive voice. Human calibration costs effort and
+can remain indeterminate; preserve that limitation rather than invent precision.
+No numerical release threshold, new framework, runtime contract, provider call
+or deployment is authorized. Existing source-capture mechanisms may be reused
+only after their current-path suitability is verified. A starter case document
+is design input, not live evidence or a completed release qualification suite.
