@@ -245,6 +245,16 @@ again. A successful lookup with no relevant memories is a valid empty result,
 not a failure. Pending retention alone still does not block a reply. Detailed
 attempt/idempotency mechanics remain integration work.
 
+Removal agreement, 2026-10-12: use Hindsight's native invalidation to remove a
+selected saved memory from recall, preserving the original chat (PC-07). The
+same statement may still be visible in current dialogue, and a genuinely new
+statement can be learned later; removal is not a permanent topic ban. Ordinary
+delivery, retries and new messages must not silently undo removal. Do not
+automatically reprocess the whole conversation on each new message; replaying
+the same delivery must not create a fresh copy of a removed fact. Deliberate
+rebuild/reprocessing of old memories is a separate operation outside the first
+integration scope, not a promised removal-preserving rebuild feature.
+
 Status: product direction adopted; native integration and cutover
 are not implemented or qualified by this decision. Current runtime and retained
 data remain unchanged. The request authorizes recording the decision and
@@ -257,8 +267,8 @@ adoption does not turn the experiments into an M2 quality-winner claim.
 
 - Hindsight integration mechanics under the adopted PC-14 direction: bank/scope
   mapping, source-unit boundaries, ordered/idempotent asynchronous delivery,
-  detailed failure behavior, operator removal under
-  reprocessing, storage authority, model access and fresh-scope cutover sequencing remain
+  detailed failure behavior, native removal integration, storage authority,
+  model access and fresh-scope cutover sequencing remain
   to be designed. These are integration decisions, not a reopened choice of the
   default Memory implementation. The
   [source-pinned assessment](findings/hindsight-integration-assessment-2026-10-10.md)

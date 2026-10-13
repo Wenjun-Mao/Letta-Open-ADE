@@ -124,6 +124,23 @@ empty recall remains a usable result, and pending background retention alone
 does not trigger this failure behavior. The distinction preserves the earlier
 no-retention-wait agreement without hiding inability to read existing Memory.
 
+### Remove Saved Memory Without Erasing Chat
+
+The user approved using Hindsight's native invalidation for selected saved
+memories. The original chat remains unchanged, and recent dialogue can still
+contain the statement. New statements remain eligible for retention; there is
+no permanent topic ban or promise that Character can never mention the fact.
+This preserves PC-07's distinction between memory removal and historical erasure.
+
+Ordinary delivery/retries must not recreate a removed memory. Do not repeatedly
+reprocess an entire conversation as new messages arrive. Hindsight's source
+reprocessing resets fact curation, so a deliberate rebuild is a separate
+operation outside the first integration scope, not an automatic maintenance
+step or a promised removal-preserving replay. The integration must verify
+invalidation and affected derived memories before reporting completion; exact
+delivery/source-unit mechanics remain to be designed. Historical chat contents
+and experiment captures are not rewritten by this decision.
+
 ## Integration Decisions Still Needed
 
 The [source-pinned assessment](../findings/hindsight-integration-assessment-2026-10-10.md)
@@ -139,8 +156,9 @@ remain inputs, not pre-approved implementation instructions. Resolve:
 - Product-data and Hindsight-state authority, replacing the incumbent's reviewer
   and single-transaction Memory assumptions explicitly rather than faking native
   review results or running a duplicate semantic engine.
-- Operator removal under later ingestion/reprocessing, retained history,
-  fresh-scope cutover and recovery behavior; historical migration is excluded.
+- Native invalidation and removal verification under ordinary delivery/retries,
+  fresh-scope cutover and recovery behavior. Historical migration and deliberate
+  old-source rebuild/reprocessing are excluded from the first integration.
 - Truthful Interface inspection and status, plus integration and operational
   verification separate from Character behavioral evaluation.
 
