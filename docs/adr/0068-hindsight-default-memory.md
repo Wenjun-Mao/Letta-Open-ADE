@@ -66,9 +66,24 @@ Delivery is durable and asynchronous, with visible progress and failure status.
 Do not couple a successful conversation outcome to a claim that Hindsight has
 finished retention. Distinguish queued/accepted delivery from completed
 processing; processing completion is not a semantic-quality certificate.
-This direction does not yet select source-unit size, append/replacement behavior,
-ordering/retry mechanics or whether a later recall waits for pending ingestion.
-Those choices belong in the integration design, not implicit adapter behavior.
+This direction does not yet select source-unit size, append/replacement behavior
+or ordering/retry mechanics. Those choices belong in the integration design,
+not implicit adapter behavior.
+
+### No Retention Wait Before Replies
+
+The user selected replies without waiting for pending retention. Current input
+and bounded recent dialogue are supplied independently of the Memory ingestion
+pipeline; normal scoped recall uses the memories available at that time. Do not
+add a retention catch-up barrier before generation.
+
+The rationale applies to recent turns actually included in the current
+conversation context, not to every recent chat or all older history. Cross-chat
+and out-of-window recall can lag while earlier source messages are still being
+processed. Interface exposes retention progress/failures; no forced Character
+disclaimer is introduced. This accepts eventual recall availability, not skipped
+recall, hidden delivery failure or a promise of immediate cross-chat freshness.
+Recall-outage behavior remains a separate integration decision.
 
 ## Integration Decisions Still Needed
 
@@ -78,9 +93,9 @@ remain inputs, not pre-approved implementation instructions. Resolve:
 
 - Workspace/subject/character scope and profile sharing, including derived
   observations and source context, without transferring participation.
-- Source-unit boundaries, ordering, retries, recall freshness during pending
-  ingestion and detailed failure behavior for the agreed attributed asynchronous
-  delivery. Preserve the boundary between an utterance and an established event.
+- Source-unit boundaries, ordering, retries and detailed failure behavior for
+  the agreed attributed asynchronous delivery. Preserve the boundary between an
+  utterance and an established event.
 - Product-data and Hindsight-state authority, replacing the incumbent's reviewer
   and single-transaction Memory assumptions explicitly rather than faking native
   review results or running a duplicate semantic engine.

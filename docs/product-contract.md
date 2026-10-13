@@ -210,9 +210,19 @@ remains eligible if reply generation later fails. Preserve utterance attribution
 delivery does not declare every proposition a true shared event (PC-03/11).
 Use durable asynchronous delivery with visible progress and failure status.
 Conversation success, delivery acceptance and retention completion are distinct;
-queued work must not be presented as completed memory. Exact source units,
-ordering/retry mechanics and recall behavior while retention is pending remain
-integration design decisions.
+queued work must not be presented as completed memory. Exact source units and
+ordering/retry mechanics remain integration design decisions.
+
+Freshness agreement, 2026-10-12: replies do not wait for pending retention to
+finish. Perform normal scoped recall against available Memory and supply the
+current input and bounded recent dialogue independently of retention completion.
+Recent turns already present in the current conversation context do not need a
+second copy from Hindsight. This does not imply that other chats or all older
+messages are in context; recall of those sources may lag while ingestion is
+pending. Interface shows retention progress/failures. No retention catch-up
+barrier is required, and pending work must remain distinguishable from completed
+processing. This does not skip the normal recall call or select recall-outage
+behavior.
 
 Status: product direction adopted; native integration and cutover
 are not implemented or qualified by this decision. Current runtime and retained
@@ -226,7 +236,7 @@ adoption does not turn the experiments into an M2 quality-winner claim.
 
 - Hindsight integration mechanics under the adopted PC-14 direction: bank/scope
   mapping, source-unit boundaries, ordered/idempotent asynchronous delivery,
-  recall freshness and detailed failure behavior, operator removal under
+  detailed failure behavior, operator removal under
   reprocessing, storage authority, model access and fresh-scope cutover sequencing remain
   to be designed. These are integration decisions, not a reopened choice of the
   default Memory implementation. The
