@@ -7,6 +7,7 @@ dependencies = [
     "agent-runtime-eval-contracts",
     "httpx>=0.28.1",
     "model-catalog-contracts",
+    "pydantic>=2.12.5,<3",
     "python-dotenv>=1.2.2",
     "tenacity>=9.1.2",
 ]

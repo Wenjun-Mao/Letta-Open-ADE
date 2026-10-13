@@ -63,6 +63,7 @@ record's status notice before applying its original execution details.
 | [0066](0066-canonical-persisted-schema-snapshots.md) | Shared P4 schema capture excludes only numeric PostgreSQL temporary namespaces; durable schema, owner, extension, migration and data drift remain exact mismatches. |
 | [0067](0067-hindsight-revision-five-activation-clock.md) | Revision-5 source-pinned clock and activation-scoped registry/capture paths; old admissions and receipts are never renewed, and tests use a declared synthetic clock. |
 | [0068](0068-hindsight-default-memory.md) | Hindsight default with character-local learned memory, fresh scope, no backward compatibility, asynchronous ingestion and separate data authorities; native updates/corrections, manual removal deferred, historical migration excluded, implementation/deployment pending. |
+| [0069](0069-offline-character-assessment-kit.md) | Offline Mandarin case/run/review kit with immutable evidence, append-only judgments and all-attempt reporting; no live adapter, calibrated baseline or runtime change. |
 
 ## Historical, Retired, Or On Hold
 

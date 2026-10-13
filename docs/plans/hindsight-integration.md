@@ -1,8 +1,8 @@
 # Hindsight Integration: Three-Stage Plan
 
-Updated: 2026-10-13. Status: agreed planning scope; execution not authorized.
-The user approved these three planning stages and an isolated OCI test placement,
-not implementation, provider calls, installation or deployment. Work serially on
+Updated: 2026-10-13. Status: offline assessment kit authorized and implemented;
+the three product-integration stages remain planning scope, not execution authority.
+The kit approval authorizes no provider calls, installation or deployment. Work serially on
 `main` in the primary checkout; scoped verified commits/pushes follow ADR 0048.
 No new chat, worktree, Goal campaign or delegated writer is required.
 
@@ -206,10 +206,11 @@ not merely that its HTTP requests succeed. Use synthetic fixtures with explicit
 expected distinctions, not altered historical evidence or answer-specific rules.
 
 Use PC-12's agreed [case/run/review method](../architecture/capability-map/character-assessment.md#repeatable-review-method)
-and the [starter case set](../architecture/capability-map/character-assessment-cases.md)
-to prepare semantic cases before execution. Bind exact Chinese inputs and runtime
-identities; retain every attempt and report per-promise/per-lens outcomes without
-a composite score. The starter set is review input, not complete release coverage.
+and the [runnable offline kit](../../workflows/evals/hindsight_integration/README.md),
+the first implementation deliverable (ADR 0069), to freeze exact Chinese cases,
+bind runtime identities and retain all attempts without a composite score.
+Offline mechanics are implemented; Stage 1 must connect verified live capture,
+then human calibration and the live baseline follow. Starter coverage is not release coverage.
 
 | Case | Required evidence / acceptance |
 | --- | --- |

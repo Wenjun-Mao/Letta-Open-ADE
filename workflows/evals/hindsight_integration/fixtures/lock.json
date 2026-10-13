@@ -1,0 +1,15 @@
+{
+  "files": {
+    "calibration.json": "fe826ec447dbf7f288009b41c91436571b7db2abaf6e0794e8e5252be87c90c6",
+    "catalog.json": "efc8c742eeeacc74be8b0cf3019fb49ebc17a6d803ee239a6615dd1ff4624afa",
+    "persona.json": "30404026320b391e3c1df6a76b5474cb45a5517dd65cacc4ffeae92027002bdd",
+    "q01.json": "2d43fd135b5338297b23a3b0c14a907393e5c203cdab03299b66f1fc8b4ba885",
+    "q02.json": "f696f8bf76dbc22638908ff6bd1ed557ff6d31722b6c999d927cf92cea714c8a",
+    "q03.json": "b885274326cc78f41b419ee77066bcdd0a19e38cf26a47ce2c350787b964a7e9",
+    "q04.json": "e705e8c30b124e098701779eb61b55c0bc66587a990dd75444690e1f6a7014bf",
+    "q05.json": "4e4b2a2b2771acae13c4c567a92b003d39f48d2a6a052728cc4fda297aaa0521"
+  },
+  "schema_version": 1,
+  "sha256": "3f81e01ea2c3a94962a2455fed2f90941e880e0fe37fce6a62da797b36341593",
+  "suite_revision": "zh-cn-2026-10-13-v1"
+}

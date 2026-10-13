@@ -244,7 +244,8 @@ Agreed 2026-10-13 under PC-12 and
 Use a conversation case, its captured run, and a short review. These are logical
 records for reproducible assessment, not new runtime objects, model phases or a
 test framework. The [starter case set](character-assessment-cases.md) consolidates
-the discussed examples for review; it is not a runnable or qualified test suite.
+the meanings; the [offline kit](../../../workflows/evals/hindsight_integration/README.md)
+implements frozen Mandarin cases and artifact mechanics, not a qualified live suite.
 
 ### Case Card
 

@@ -1,0 +1,37 @@
+{
+  "family": "Q01",
+  "cases": [
+    {
+      "case_id": "q01-relevant", "family": "Q01", "revision": 1,
+      "title": "Use an established preference when it reduces effort", "language": "zh-CN",
+      "history_kind": "user_dialogue",
+      "source_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "target_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "history": [{"fixture_id": "u1", "role": "user", "content": "我平时买茶，最常点的就是无糖乌龙。"}],
+      "prompt": "今天忙了一整天，刚走到茶店门口，实在不想再做选择了。你替我挑一杯吧。",
+      "rubric": {
+        "success": ["Use the established usual order to reduce the present decision burden."],
+        "failures": ["Unnecessarily ask for the usual preference again.", "Invent a different usual preference."],
+        "alternatives": ["A direct recommendation or a natural recognition of the usual order can succeed.", "No memory announcement or special catchphrase is required."],
+        "unknowns": ["The shop menu and stock are unknown; do not claim availability."],
+        "limits": ["One fitting answer does not establish general recall reliability or distinctive voice."]
+      }
+    },
+    {
+      "case_id": "q01-unrelated", "family": "Q01", "revision": 1,
+      "title": "Do not force an available preference into an unrelated request", "language": "zh-CN",
+      "history_kind": "user_dialogue",
+      "source_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "target_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "history": [{"fixture_id": "u1", "role": "user", "content": "我平时买茶，最常点的就是无糖乌龙。"}],
+      "prompt": "房东问我明天下午三点能不能让师傅来修水龙头，我那个时间在家。帮我写一句简短的回复吧。",
+      "rubric": {
+        "success": ["Help write a short confirmation using the information in the current request."],
+        "failures": ["Distract from the request with gratuitous tea personalization.", "Invent additional scheduling commitments."],
+        "alternatives": ["Omitting the tea preference is appropriate, even if it was available.", "Several brief phrasings can work."],
+        "unknowns": ["The landlord's name and additional availability are unknown."],
+        "limits": ["Absence of a tea reference does not prove recall failed or memory was unavailable."]
+      }
+    }
+  ]
+}

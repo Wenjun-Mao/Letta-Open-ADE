@@ -1,10 +1,15 @@
 # Character Assessment: Starter Cases
 
-Prepared: 2026-10-13. Status: starter coverage for review, not executed, runnable
-or release-qualified. The five promises and
+Prepared: 2026-10-13. Status: starter meanings for review, not live-executed or
+release-qualified. The five promises and
 [review method](character-assessment.md#repeatable-review-method) are agreed;
 this document consolidates their examples into reusable human-readable cases.
 It selects no numerical target, model configuration or implementation authority.
+
+The [offline kit](../../../workflows/evals/hindsight_integration/README.md) now
+binds twelve exact Mandarin variants and fifteen authored calibration examples
+to a runnable case/capture/review/report procedure. Its scripted rehearsal tests
+mechanics, not model quality; live capture and human calibration remain pending.
 
 ## Before Using A Case
 
@@ -36,7 +41,7 @@ Branches are separate declared probes; reset/freeze their starting conditions
 so one answer does not silently become evidence for a different branch.
 
 The case IDs below are human review references, not runtime schema identifiers.
-All five cases currently have **no run or scored review**. They cover selected
+All five promises currently have **no live baseline or calibrated review**. They cover selected
 quality distinctions, not the integration plan's complete mechanical, lifecycle,
 operational, language, context-length or persona-version acceptance matrix.
 

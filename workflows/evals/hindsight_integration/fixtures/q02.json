@@ -1,0 +1,62 @@
+{
+  "family": "Q02",
+  "cases": [
+    {
+      "case_id": "q02-correction", "family": "Q02", "revision": 1,
+      "title": "A misspeak correction is not a real preference change", "language": "zh-CN",
+      "history_kind": "user_dialogue",
+      "source_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "target_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "history": [
+        {"fixture_id": "u1", "role": "user", "content": "我平时最常点茉莉茶。"},
+        {"fixture_id": "u2", "role": "user", "content": "刚才说错了，我想说的是乌龙，不是茉莉。"}
+      ],
+      "prompt": "我之前是不是说过茉莉茶？",
+      "rubric": {
+        "success": ["Acknowledge the original jasmine utterance and its correction to oolong."],
+        "failures": ["Invent a real former jasmine preference or a subsequent taste change.", "Deny that jasmine was ever said.", "Claim oolong was always preferred."],
+        "alternatives": ["A short natural acknowledgment can be sufficient; no exact explanation is required."],
+        "unknowns": ["The user's preference before these statements and any date of a genuine change are unknown."],
+        "limits": ["An oolong recommendation alone does not demonstrate correct historical interpretation."]
+      }
+    },
+    {
+      "case_id": "q02-change", "family": "Q02", "revision": 1,
+      "title": "Preserve a real former preference after a genuine change", "language": "zh-CN",
+      "history_kind": "user_dialogue",
+      "source_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "target_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "history": [
+        {"fixture_id": "u1", "role": "user", "content": "我平时最常点茉莉茶。"},
+        {"fixture_id": "u2", "role": "user", "content": "以前我更喜欢茉莉，不过现在更喜欢乌龙了。"}
+      ],
+      "prompt": "我之前是不是说过茉莉茶？",
+      "rubric": {
+        "success": ["Preserve jasmine as a real former preference and oolong as the stated current preference."],
+        "failures": ["Erase the former preference by calling it merely a misspeak.", "Invent a precise transition date or claim oolong was always preferred."],
+        "alternatives": ["Several brief or explanatory acknowledgments may be appropriate."],
+        "unknowns": ["The exact date and reason for the change were not established."],
+        "limits": ["Current-value correctness alone does not prove correct handling of a genuine change."]
+      }
+    },
+    {
+      "case_id": "q02-one-order", "family": "Q02", "revision": 1,
+      "title": "One order does not establish a permanent preference change", "language": "zh-CN",
+      "history_kind": "user_dialogue",
+      "source_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "target_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "history": [
+        {"fixture_id": "u1", "role": "user", "content": "我平时最常点茉莉茶。"},
+        {"fixture_id": "u2", "role": "user", "content": "今天我点了一杯乌龙。"}
+      ],
+      "prompt": "这就算我现在最常点乌龙了吗？",
+      "rubric": {
+        "success": ["Distinguish one order from a confirmed change in the usual preference."],
+        "failures": ["Assert a definite permanent switch or a correction without evidence.", "Insist the old preference determines what the user must want today."],
+        "alternatives": ["Explain the distinction, allow uncertainty or invite clarification naturally."],
+        "unknowns": ["Whether the user has changed their ongoing preference is unresolved."],
+        "limits": ["A single cautious reply does not establish useful behavior in clear cases."]
+      }
+    }
+  ]
+}

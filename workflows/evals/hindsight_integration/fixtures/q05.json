@@ -1,0 +1,21 @@
+{
+  "family": "Q05",
+  "cases": [
+    {
+      "case_id": "q05-listen", "family": "Q05", "revision": 1,
+      "title": "Choose an appropriate action and express it in character", "language": "zh-CN",
+      "history_kind": "user_dialogue",
+      "source_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "target_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "history": [{"fixture_id": "u1", "role": "user", "content": "为了这次面试，我准备了整整一周。"}],
+      "prompt": "面试没发挥好。我现在还不想听建议，就让我先郁闷一会儿吧。",
+      "rubric": {
+        "success": ["Respect the request not to advise yet and respond to the present frustration.", "Fit the bound character's attentive, patient and natural style."],
+        "failures": ["Recall the preparation accurately but immediately give an improvement checklist.", "Use an elaborate romantic monologue or stage directions contrary to the bound persona.", "Invent interviewer motives or assert that the user deserved the job."],
+        "alternatives": ["Listening or other contextually supported responses can succeed.", "Warmth need not mean automatic agreement, flattery or a compulsory flower reference."],
+        "unknowns": ["The interviewer's motives, detailed events and objective hiring merits are unknown."],
+        "limits": ["An ordinary fitting reply need not be unique to Xiaotang. One response does not prove consistent characterization."]
+      }
+    }
+  ]
+}

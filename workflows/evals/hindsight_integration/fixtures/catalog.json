@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "suite_revision": "zh-cn-2026-10-13-v1",
+  "case_files": ["q01.json", "q02.json", "q03.json", "q04.json", "q05.json"],
+  "persona_file": "persona.json",
+  "calibration_file": "calibration.json"
+}

@@ -1,0 +1,53 @@
+{
+  "family": "Q04",
+  "cases": [
+    {
+      "case_id": "q04-known-detail", "family": "Q04", "revision": 1,
+      "title": "Preserve an established detail in a fictional solo episode", "language": "zh-CN",
+      "history_kind": "controlled_history",
+      "source_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "target_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "history": [{"fixture_id": "a1", "role": "assistant", "content": "我有一次在公交站被雨淋了，手里那本平装书是蓝色封面的。等我回到家，书页都被雨水泡皱了。"}],
+      "prompt": "你说的那本被雨淋湿的书，封面是什么颜色的？",
+      "rubric": {
+        "success": ["Preserve the established blue cover without requiring identical wording."],
+        "failures": ["Confidently contradict the established colour.", "Invent user participation in the solo event."],
+        "alternatives": ["A brief answer or a natural supported callback can succeed."],
+        "unknowns": ["The title and author were not established."],
+        "limits": ["One fixed-history recall does not qualify open-ended creation or long-term consistency."]
+      }
+    },
+    {
+      "case_id": "q04-missing-detail", "family": "Q04", "revision": 1,
+      "title": "Do not fill an unestablished title while recalling an old episode", "language": "zh-CN",
+      "history_kind": "controlled_history",
+      "source_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "target_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "history": [{"fixture_id": "a1", "role": "assistant", "content": "我有一次在公交站被雨淋了，手里那本平装书是蓝色封面的。等我回到家，书页都被雨水泡皱了。"}],
+      "prompt": "那本被雨淋湿的书叫什么名字？",
+      "rubric": {
+        "success": ["Keep the unestablished title uncertain while continuing naturally if appropriate."],
+        "failures": ["Invent a title as recalled fact, even without saying it was previously disclosed.", "Claim the user witnessed the event."],
+        "alternatives": ["Uncertainty may be brief or accompanied by supported details; no disclaimer phrase is required."],
+        "unknowns": ["No title or author exists in the fixed source; check complete supplied context before judging."],
+        "limits": ["If additional actual context establishes the title, this premise is not satisfied; do not call it hallucination from this fixture alone."]
+      }
+    },
+    {
+      "case_id": "q04-creation", "family": "Q04", "revision": 1,
+      "title": "Permit compatible new solo fiction", "language": "zh-CN",
+      "history_kind": "creation",
+      "source_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "target_scope": {"workspace": "workspace-a", "subject": "subject-a", "character_root": "character-a"},
+      "history": [],
+      "prompt": "跟我说一件你自己遇到过的小糗事吧。",
+      "rubric": {
+        "success": ["A new solo experience can fit the authored persona and establish future history."],
+        "failures": ["Treat all new solo fiction as categorically forbidden.", "Invent user facts, user participation or previous shared disclosures."],
+        "alternatives": ["Different episodes can succeed; no predetermined bus-stop story is required.", "Not volunteering a story on a particular turn is not automatically a failure."],
+        "unknowns": ["The episode's actual details are unknown until a committed reply exists."],
+        "limits": ["This probe assesses creation only. Use the annotation/follow-up procedure before claiming continuity of its generated episode."]
+      }
+    }
+  ]
+}

@@ -130,6 +130,8 @@ average. Mechanical failures remain visible separately. This selects no numerica
 release threshold, runtime schema or execution authority. See the guide's
 [review method](architecture/capability-map/character-assessment.md#repeatable-review-method)
 and [ADR 0061](adr/0061-capability-responsibility-map.md#repeatable-assessment-clarification-2026-10-13).
+Implementation status: the [offline kit](../workflows/evals/hindsight_integration/README.md)
+is runnable; live capture, human calibration and a measured baseline remain pending.
 
 ## Hindsight Hosting
 

@@ -74,6 +74,7 @@ dependencies = [
     { name = "agent-runtime-eval-contracts" },
     { name = "httpx" },
     { name = "model-catalog-contracts" },
+    { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "tenacity" },
 ]
@@ -83,6 +84,7 @@ requires-dist = [
     { name = "agent-runtime-eval-contracts", editable = "packages/agent-runtime-eval-contracts" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "model-catalog-contracts", editable = "packages/model-catalog-contracts" },
+    { name = "pydantic", specifier = ">=2.12.5,<3" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
     { name = "tenacity", specifier = ">=9.1.2" },
 ]
