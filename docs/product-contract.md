@@ -233,8 +233,17 @@ second copy from Hindsight. This does not imply that other chats or all older
 messages are in context; recall of those sources may lag while ingestion is
 pending. Interface shows retention progress/failures. No retention catch-up
 barrier is required, and pending work must remain distinguishable from completed
-processing. This does not skip the normal recall call or select recall-outage
-behavior.
+processing. This does not skip the normal recall call.
+
+Recall-failure agreement, 2026-10-12: if a Hindsight memory lookup fails, pause
+that reply and offer Retry in Interface. Preserve the accepted user message;
+do not continue Character generation with an empty-memory substitute or report
+that nothing was remembered. The interface explains the service failure rather
+than generating a Character apology. Retry attempts the reply for the saved
+message, including a fresh scoped lookup, without appending the user's message
+again. A successful lookup with no relevant memories is a valid empty result,
+not a failure. Pending retention alone still does not block a reply. Detailed
+attempt/idempotency mechanics remain integration work.
 
 Status: product direction adopted; native integration and cutover
 are not implemented or qualified by this decision. Current runtime and retained

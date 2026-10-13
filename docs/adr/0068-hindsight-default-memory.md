@@ -108,7 +108,21 @@ and out-of-window recall can lag while earlier source messages are still being
 processed. Interface exposes retention progress/failures; no forced Character
 disclaimer is introduced. This accepts eventual recall availability, not skipped
 recall, hidden delivery failure or a promise of immediate cross-chat freshness.
-Recall-outage behavior remains a separate integration decision.
+
+### Pause On Failed Recall
+
+The user selected pausing the affected reply and offering Retry when a Hindsight
+lookup fails. Keep the accepted message saved; do not continue generation using
+an empty-memory substitute, switch to native Memory or report that no relevant
+history exists. Interface presents the failure and retry action rather than
+having Character generate an in-character error response.
+
+Retry starts another reply attempt for the same saved user message, with a fresh
+scoped recall. It must not append a duplicate user message. Exact attempt and
+delivery-idempotency mechanics belong in the integration design. Successful
+empty recall remains a usable result, and pending background retention alone
+does not trigger this failure behavior. The distinction preserves the earlier
+no-retention-wait agreement without hiding inability to read existing Memory.
 
 ## Integration Decisions Still Needed
 
