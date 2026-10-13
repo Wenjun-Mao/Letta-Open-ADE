@@ -53,7 +53,9 @@ adoption is settled; another vendor-selection experiment is not a prerequisite.
 
 ## Source-Grounded Design
 
-Baseline inspected: `3491bb9`. Paths below are relative to the repository.
+Initial baseline: `3491bb9`; final planning review rechecked the relevant runtime,
+UI and lifecycle owners at `f0d84df`. No runtime changes or qualification follow
+from that review. Paths below are relative to the repository.
 Under `services/ade-api/src/ade_api/features/agent_runtime/`:
 
 | Boundary | Current coupling | Planned treatment |
@@ -63,8 +65,16 @@ Under `services/ade-api/src/ade_api/features/agent_runtime/`:
 | `turn_result.py`, `worker_finalization.py`, `worker_events.py` | Success requires native review/embeddings and a memory/reply transaction. | Commit reply, run outcome and reply-delivery intent atomically within ADE; do not fabricate empty review results. |
 | `executor.py`, `turn_compaction.py`, `compaction_executor.py` | Provider continuation and local dialogue compaction are already owned here. | Preserve those responsibilities; replace native fact-specific tool/context contracts. |
 | `definition_service.py`, `deployments.py`, `contracts.py`, bootstrap/session modules | Definitions and requests require native reviewer/retriever roles. | Replace obsolete fields/bindings directly; preserve persona/version and Character model identity. |
-| `memory_contracts.py`, `memory_removals.py`, presenters | Inspection/removal assumes native fact revisions and generation. | Expose scoped Hindsight-native readback and truthful progress; remove obsolete manual-removal contracts/controls from the new path, not existing stored data. |
+| `memory_contracts.py`, `resource_service.py`, `agent_studio_api.py`, presenters | Inspection is subject-only and assumes native fact revisions/generation. | Require the subject/character relationship for memory, source and delivery-status reads; remove obsolete manual-removal contracts/controls, not existing stored data. |
+| `worker.py` | One loop awaits each claimed turn before claiming another. | Give durable delivery independent scheduling/leases so a retain/poll wait cannot occupy the only reply worker or its conversation lease. |
+| `agent_studio_reset.py`, `evaluation_sessions.py` | Reset/cleanup assumes one ADE SQL transaction owns all memory state. | Retire the SQL-only product reset from the new path; use exact paired disposable-stack cleanup for integration tests, not a new product erasure feature. |
 | `database_boundary.py` | Workspace identity is hard-coded to the default. | Establish a fresh persisted/configured workspace identity consistently; no silent default fallback or unnecessary workspace-management UI. |
+
+The web's `use-agent-studio.ts:146` refreshes chat, memories, runs and activity
+through one `Promise.all`; a failed memory read currently aborts the whole refresh.
+Split product-state loading from remote-memory inspection so Hindsight failure
+cannot hide saved messages, run state or Retry. This is a PC-08/14 boundary fix,
+not permission to generate a reply without the required recall.
 
 Additional owners: `persistence/metadata.py` and `services/ade-api/migrations/`
 for ADE schema; `platform/settings.py` and `integrations/` for service wiring;
@@ -81,6 +91,9 @@ splitting oversized touched modules instead of adding unrelated responsibilities
   Scope reads, writes and source inspection identically. Initialize and
   verify a new empty bank before treating an empty first recall as successful;
   a missing/deleted established bank is an error, not forgotten history.
+  Conversation views derive the pair from their binding; standalone inspection
+  explicitly selects both person and character, never all of a person's banks.
+  Reject mismatched source/operation IDs and stale cross-selection responses.
 - Use a small concrete Hindsight HTTP integration, not the evaluation CLI as a
   production backend. Reuse verified transport/serialization ideas, not its
   shared-profile projection or diagnostic-only runtime. Keep Hindsight access
@@ -90,11 +103,20 @@ splitting oversized touched modules instead of adding unrelated responsibilities
   preserve order within a relationship while allowing unrelated scopes to
   progress. Separate message acceptance, delivery acknowledgement and completed
   processing. No Hindsight network request belongs inside an ADE SQL transaction.
+- Run delivery independently of reply execution with bounded concurrency; no
+  microservice framework is needed. Exhausted/uncertain delivery blocks later
+  deliveries only in that relationship until reconciliation, not other banks or
+  otherwise healthy recall/replies. Expose oldest pending age and the blocked
+  item with an operational recovery path; never skip/reorder it silently or
+  require restarting a Character reply to retry delivery. Test backlog pressure
+  across ADE workers, database pools, Hindsight and the shared model routes.
 - Begin source-unit design with immutable per-message deliveries and bounded,
   attributed antecedent context for references such as "yes, that one". Verify
   source attribution, reference resolution, corrections and retry behavior before
   settling the exact native retain mode. Avoid redundant whole-chat processing;
   no removal-specific context barrier or native patch is required by this scope.
+  Preserve original message/utterance times on retry; delivery, extraction and
+  consolidation timestamps must not silently become dates when events happened.
 - Leave extraction, factual updates/corrections and consolidation to Hindsight.
   ADE supplies attributed sources and enforces delivery/ownership integrity, not
   semantic update commands, a parallel reviewer or keyword lifecycle rules.
@@ -131,6 +153,10 @@ retention, scoped recall and the actual Agent Studio UI.
    ownership, outbox state, reply Retry and schema/API changes before wiring the
    full runtime. Use Alembic on a new isolated ADE database; do not run migrations
    against retained databases or keep unused native code executable for them.
+   Before first retention, version the bank's speaker/character identity, Memory
+   missions and model/embedding bindings without the old shared-profile classifier.
+   Select native consolidation scheduling, including recovery after downtime;
+   do not carry over the experiment's manual-only maintenance by default.
 2. Resolve the source-unit and retry feasibility gate before dependent rollout.
    Inspect pinned source/API behavior, write fake-transport/SQL tests, then run
    focused synthetic checks under integration execution approval, not the
@@ -151,6 +177,8 @@ retention, scoped recall and the actual Agent Studio UI.
    reply delivery in the same ADE transaction as reply/run success. Remove
    superseded code/contracts and update maintained callers, not compatibility
    wrappers. Preserve historical evidence; version historical fixtures explicitly.
+   Include inspection, reset and evaluation-cleanup entrypoints in that audit;
+   no reachable route may erase ADE mappings while Hindsight work is outstanding.
 5. Wire Hindsight recall, Character composition, concrete scoped memory search,
    API status/readback/Retry and Agent Studio. Update OpenAPI, feature READMEs and
    affected tests. Create the integration workflow at
@@ -179,22 +207,23 @@ expected distinctions, not altered historical evidence or answer-specific rules.
 
 | Case | Required evidence / acceptance |
 | --- | --- |
-| Identity and continuity (PC-02/03/04/10) | Same relationship across new chats, ordinary persona versions and archived chats; different character, subject and workspace cannot read/write/inspect the first relationship's facts, sources or derived observations. Include forged IDs and missing metadata. |
+| Identity and continuity (PC-02/03/04/10) | Same relationship across new chats, ordinary persona versions and archived chats; different character, subject and workspace cannot read/write/inspect the first relationship's facts, sources or derived observations. Include forged source/operation IDs, standalone inspection, rapid UI character switching and missing metadata. |
 | Source attribution (PC-03/11/14) | User message retained after failed generation; only committed replies retained; jokes/hypotheticals/solo stories are not asserted as shared events. Reference-only replies resolve against attributed context rather than inventing their subject or speaker. |
 | Delivery crashes (PC-05/08/14) | Crash before dispatch, after remote acceptance, before ADE acknowledgement, during polling and after worker lease loss. Restart reconciles the original delivery without loss, duplicate extraction or out-of-order overwrite. Partial extraction remains visible, not completed success. |
+| Background progress (PC-09/14) | Sustained synthetic dialogue and one exhausted/uncertain delivery do not block unrelated delivery or healthy reply execution. Observe queue age, blocked scope and reply/recall latency with retention and consolidation active; include compaction pressure, not just one delayed fake. Recovery neither drops a message nor reorders a correction. |
 | Recall and Retry (PC-01/14) | Timeout, authentication failure, malformed response and lost service pause generation; successful empty recall works; missing bank is not empty. Concurrent/repeated Retry, reload and stale workers produce one accepted input and at most one committed reply. Pending retention alone does not pause. |
 | Natural updates and corrections (PC-01/05/14) | Conversational misspeak correction differs from a genuine later change. Inspect Hindsight facts, observations and recall after retention/consolidation, including delayed/retried delivery; no manual fact repair or ADE semantic override. Preserve original chat and source/time attribution. |
 | Context and lifecycle (PC-04/09/12) | Oversized memories, long Chinese dialogue, compaction, tool continuations, cancellation and version races preserve bounded requests, message ordering and source/summary integrity. No silent truncation of mandatory input. |
-| Interface truth (PC-07/14) | Real browser covers new conversation, status refresh, failed lookup/Retry, archived-chat continuity and read-only memory inspection. No manual removal controls or guaranteed deletion claims. Reload preserves pending/error state; no queued receipt is called completed memory. |
+| Interface truth (PC-07/14) | Real browser covers new conversation, status refresh, failed lookup/Retry, archived-chat continuity and read-only relationship inspection. During a Hindsight outage, reload still shows ADE chat, saved input and run/Retry state; remote-memory failure is not an empty-memory display. No manual removal controls, one-store reset or guaranteed deletion claims. No queued receipt is called completed memory. |
 | Model/retention quality (PC-11/12) | Capture actual delivered memories and serialized Character input separately from the reply; assess grounding, judgment and character fidelity separately. Report usage/latency by phase without spending gates or invented billing totals. |
 
 Reproduce representative revision-5 risks under the new character-local scope:
 misspeak correction versus genuine preference change, unknown detail versus
 invented recollection, hypothetical versus event, solo versus shared history,
 and consolidation changing factual meaning. Inspect raw facts and derived
-observations before blaming Character. Version the Memory mission without the
-old shared-profile classifier; select and exercise the intended consolidation
-schedule, including backlog/failure status. Do not silently disable a capability
+observations before blaming Character. Exercise the Stage-1 versioned Memory
+mission and consolidation schedule, including backlog/failure status and recovery
+without a manual consolidation command. Do not silently disable a capability
 or change inputs after a failure just to claim acceptance.
 
 **Stage exit:** all mechanical/isolation tests pass, real API/UI journeys
@@ -344,7 +373,11 @@ architecture/runtime status and OpenAPI when implementation changes their truth.
 Final handoff includes stage-by-stage pass/fail/pending, invariant coverage,
 source/image/config hashes, safe evidence locations, observed requests/usage,
 remaining semantic limitations, unchanged-baseline proof, paired restore proof
-and a fresh-start runbook. Do not label a stage complete while its required
+and a fresh-start runbook. Keep two conclusions separate: mechanical integration
+works versus conversational quality is acceptable. Initial good recall does not
+settle known correction, invented-detail or consolidation defects. Record any
+accepted limitation explicitly instead of quietly relabeling it out of scope.
+Do not label a stage complete while its required
 verification remains missing. This planning revision does not execute runtime,
 database, browser or live gates.
 
