@@ -141,6 +141,35 @@ invalidation and affected derived memories before reporting completion; exact
 delivery/source-unit mechanics remain to be designed. Historical chat contents
 and experiment captures are not rewritten by this decision.
 
+### Separate Product Records And Learned Memory
+
+The user approved ADE as the authority for original conversation messages,
+character definitions/bindings, run state and durable delivery status. Hindsight
+owns extracted memories, organization, recall and curation. Source copies kept
+by Hindsight for processing do not replace ADE's original conversation record.
+ADE delivery bookkeeping is operational state, not a parallel fact store or
+semantic reviewer. The new path must not maintain either alongside Hindsight.
+
+The incumbent couples native fact changes and reply success in one transaction.
+That cannot be treated as a transaction across ADE and Hindsight: the approved
+asynchronous delivery can complete after the product commit. Preserve durable
+source capture and truthful status instead of fabricating native review results
+or making Hindsight imitate native fact versions. The integration plan must
+define crash/retry behavior at this boundary, including removal preservation.
+
+Back up both authorities. ADE conversations alone cannot restore Hindsight's
+curated state, including removals; do not treat Hindsight as a disposable cache
+or automatic chat replay as recovery. Coordinated backup/restore procedures
+remain to be designed and verified. This selects data responsibility, not a
+physical database topology or authorization to operate existing services.
+
+For the Hindsight path this supersedes the single Agent Studio persistence
+authority in [ADR 0019](0019-ade-steady-state-runtime.md) and the native reviewer /
+atomic-Memory requirements in [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md).
+It preserves one ADE product API/runtime, Model Router's identity responsibility,
+source integrity, character-local isolation and PC-07's retained chat history.
+The unchanged incumbent and historical evidence retain their original contracts.
+
 ## Integration Decisions Still Needed
 
 The [source-pinned assessment](../findings/hindsight-integration-assessment-2026-10-10.md)
@@ -153,9 +182,9 @@ remain inputs, not pre-approved implementation instructions. Resolve:
 - Source-unit boundaries, ordering, retries and detailed failure behavior for
   the agreed attributed asynchronous delivery. Preserve the boundary between an
   utterance and an established event.
-- Product-data and Hindsight-state authority, replacing the incumbent's reviewer
-  and single-transaction Memory assumptions explicitly rather than faking native
-  review results or running a duplicate semantic engine.
+- Product-commit/delivery mechanics and backup/restore across the agreed ADE and
+  Hindsight authorities; remove native reviewer/transaction dependencies without
+  dummy review results or a duplicate semantic engine.
 - Native invalidation and removal verification under ordinary delivery/retries,
   fresh-scope cutover and recovery behavior. Historical migration and deliberate
   old-source rebuild/reprocessing are excluded from the first integration.

@@ -26,7 +26,7 @@ record's status notice before applying its original execution details.
 | [0014](0014-curated-tool-invocation-and-external-source-authority.md) | Partial: tool validation and source authority; phrase inference removed by 0036. |
 | [0015](0015-model-scoped-tool-call-thinking-mode.md) | Current: model-scoped thinking policy; not a universal forced-tool guarantee. |
 | [0018](0018-evaluation-cleanup-must-prove-absence.md) | Current: verified evaluation cleanup. |
-| [0019](0019-ade-steady-state-runtime.md) | Current single native stack; release details amended by 0027. |
+| [0019](0019-ade-steady-state-runtime.md) | Current incumbent stack; release details amended by 0027; planned Hindsight data-authority split under 0068. |
 | [0020](0020-luna-character-development-workflow.md) | Retained development workflow, not the primary provider or qualified backend. |
 | [0022](0022-incumbent-memory-first-product-slice.md) | Historical incumbent slice; Hindsight adoption and character-local learned-memory ownership supersede its default and subject-wide sharing direction under 0068. |
 | [0023](0023-agent-studio-intent-and-async-ownership.md) | Partial: async ownership and immutable-version guards; phrase intent selector removed by 0035. |
@@ -35,7 +35,7 @@ record's status notice before applying its original execution details.
 | [0027](0027-provider-neutral-release-and-embedding-space.md) | Current selected-route release and stable embedding-space contract; qualification pending. |
 | [0029](0029-natural-memory-bounded-contract.md) | Partial: lifecycle and atomic generation guards; reviewer/accounting replaced by 0035. |
 | [0030](0030-pending-lease-database-clock.md) | Current: database-clock lease expiry. |
-| [0035](0035-compact-natural-review-and-observational-dispatch.md) | Current amended reviewer boundary and observational counting; no release qualification implied. |
+| [0035](0035-compact-natural-review-and-observational-dispatch.md) | Incumbent reviewer boundary and observational counting; native reviewer/atomic-Memory requirements replaced for the planned Hindsight path under 0068. |
 | [0036](0036-discretionary-curated-tools-and-structured-requirements.md) | Current discretionary tools and explicit structured requirements. |
 | [0037](0037-current-product-contract.md) | Current documentation authority and agreement maintenance. |
 | [0038](0038-bounded-history-probe-source-contract.md) | Isolated historical-recall probe source and snapshot contract; no production selection. |
@@ -62,7 +62,7 @@ record's status notice before applying its original execution details.
 | [0065](0065-post-restore-snapshot-failure-recovery.md) | Registered child exit-mm handling and a separate, finite, exact-resource recovery path for the failed P4 post-restore snapshot; captured state remains failed evidence, not restore success. |
 | [0066](0066-canonical-persisted-schema-snapshots.md) | Shared P4 schema capture excludes only numeric PostgreSQL temporary namespaces; durable schema, owner, extension, migration and data drift remain exact mismatches. |
 | [0067](0067-hindsight-revision-five-activation-clock.md) | Revision-5 source-pinned clock and activation-scoped registry/capture paths; old admissions and receipts are never renewed, and tests use a declared synthetic clock. |
-| [0068](0068-hindsight-default-memory.md) | Hindsight default with character-local learned memory, fresh scope, no backward compatibility, and asynchronous ingestion without a retention wait; historical migration excluded, implementation/deployment pending. |
+| [0068](0068-hindsight-default-memory.md) | Hindsight default with character-local learned memory, fresh scope, no backward compatibility, asynchronous ingestion, and separate ADE/Hindsight data authorities; historical migration excluded, implementation/deployment pending. |
 
 ## Historical, Retired, Or On Hold
 

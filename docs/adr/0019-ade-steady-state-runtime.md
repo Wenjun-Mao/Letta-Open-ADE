@@ -1,5 +1,12 @@
 # ADR 0019: ADE Owns The Steady-State Agent Runtime
 
+> Hindsight-path amendment, 2026-10-12: [ADR 0068](0068-hindsight-default-memory.md#separate-product-records-and-learned-memory)
+> supersedes the sole Agent Studio persistence authority below for the planned
+> integration. ADE owns original product records; Hindsight owns learned-memory
+> state, with separate persistence and recovery responsibilities. One ADE product
+> API/runtime and Model Router identity ownership remain. The incumbent and its
+> historical evidence are unchanged; integration and cutover are not authorized.
+
 - Status: Accepted stack architecture; release details amended by
   [ADR 0027](0027-provider-neutral-release-and-embedding-space.md).
 

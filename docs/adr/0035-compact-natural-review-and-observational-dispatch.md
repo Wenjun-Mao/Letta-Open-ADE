@@ -1,5 +1,12 @@
 # ADR 0035: Compact Natural Review And Observational Dispatch
 
+> Hindsight-path amendment, 2026-10-12: [ADR 0068](0068-hindsight-default-memory.md#separate-product-records-and-learned-memory)
+> replaces the native reviewer and atomic-Memory requirements below for the
+> planned integration. Hindsight owns learned-memory processing/state; ADE owns
+> original messages and durable asynchronous delivery, without a second semantic
+> reviewer. Structural ownership and truthful outcomes remain. The running
+> incumbent and historical evidence are unchanged; implementation is pending.
+
 - Status: Accepted for offline checkpoints 1–4; natural reviewer boundary amended 2026-09-24; no live or release authority
 - Supersedes model-facing and accounting portions of ADRs 0029, 0032 and 0034.
   Those records remain historical. ADRs 0031 and 0033 describe earlier capacity
