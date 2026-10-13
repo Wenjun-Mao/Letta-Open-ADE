@@ -111,6 +111,15 @@ categories, attribution and time remain useful context. Evidence terminology can
 remain appropriate for ingestion diagnostics and evaluation. This changes no
 grounding agreement or requirement to assess observable responses separately.
 
+Clarification, 2026-10-12: useful continuity reduces unnecessary repetition,
+improves a relevant response or creates appropriate recognition; recalling more
+facts is not itself better. Assess corrections, genuine changes, temporary
+choices and unresolved ambiguity according to their meaning, not merely the
+latest stated value. Apply these distinctions when relevant to the exchange,
+without requiring history recitals or fixed wording. The assessment guide's
+[continuity calibration](architecture/capability-map/character-assessment.md#continuity-calibration)
+records agreed examples, not behavioral qualification or a completed test suite.
+
 ## Hindsight Hosting
 
 **PC-13 (agreed 2026-10-10):** Use self-hosted Hindsight, not Hindsight Cloud,

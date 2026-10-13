@@ -79,10 +79,74 @@ defect. One successful reference-packet response shows possible success under th
 condition, not reliable recurrence or proof that retrieval is the only cause.
 Assessment reports concern observable outcomes, not hidden internal reasoning.
 
-For initial persona contrasts, prefer current-turn-only cases or shared subject
-facts with no shared-participation claim. PC-02/03 distinguish user facts from
-character-specific experiences. Test the latter with correctly scoped fixtures;
-do not transfer another character's ownership merely to make prompts symmetrical.
+For initial persona contrasts, prefer current-turn-only cases or independently
+established facts in each tested relationship, with no shared-participation claim.
+PC-02/03 scope all learned facts and experiences to the same workspace, subject
+and character root. Use correctly scoped fixtures; do not transfer another
+character's memories merely to make prompts symmetrical. Authored biography is
+distinct from learned conversational history.
+
+## Continuity Calibration
+
+The following rules were agreed on 2026-10-12 under PC-01/05/12. Calibration is
+still in progress; these are assessment criteria, not test results, complete
+release criteria or authorization for implementation/model calls. Illustrative
+replies below are invented examples, not observed outputs or required wording.
+Assess acceptable meanings and contextual reasons, retaining the three lenses
+separately. A response can miss an end-to-end continuity promise without proving
+whether retention, retrieval, supplied context or Character caused the failure.
+
+### Useful Remembering
+
+Remembering should reduce repetition, improve the response or create appropriate
+recognition without distracting from the present need. Do not count recalled
+facts or reward constant personalization. Explicit recognition can be welcome;
+neither always announcing memory nor never mentioning it is the goal.
+
+Example setup: in an earlier chat with the same character, the user established
+that unsweetened oolong is their usual tea. In a new chat after memory processing
+has caught up, they say, "Long day. I'm at the tea shop and don't feel like
+deciding. Pick something for me?"
+
+| Illustrative response | Assessment of useful remembering |
+| --- | --- |
+| "Unsweetened oolong. One less decision today." | Uses relevant history to answer the present request. |
+| "Your usual unsweetened oolong sounds right." | Explicit recognition can also serve the conversation naturally. |
+| "You previously told me that your preferred tea is unsweetened oolong. I remember your preferences." | Correct information alone does not establish good judgment; this foregrounds remembering rather than the present need. |
+| "What kind of tea do you usually like?" | Misses this promise by unnecessarily asking for clearly established, directly relevant information again. Diagnose the cause separately. |
+
+Change the current request to help writing a landlord reply, and omitting the tea
+preference is normally appropriate. When relevance is weak, omission is not a
+continuity failure. A preference also does not override a present request for
+something different. These examples alone do not establish character fidelity;
+that assessment still needs the actual authored persona and conversation.
+
+### Meaning Of An Update
+
+Preserve the meaning and certainty of an update: a correction, genuine change,
+temporary choice or unresolved ambiguity. What the user said is not automatically
+what was true. The original utterance can remain part of conversation history
+without remaining a valid factual description of the user.
+
+Both examples start with "Jasmine is my usual." Later, the user asks, "Didn't I
+say jasmine before?" The intermediate update changes the warranted answer:
+
+| Intermediate update | Warranted interpretation | Unsupported interpretation |
+| --- | --- | --- |
+| "Sorry, I meant oolong, not jasmine." | The user said jasmine, then corrected the statement to oolong. | The user used to prefer jasmine and then switched. |
+| "I used to prefer jasmine, but these days I prefer oolong." | Jasmine was a real former preference; oolong is the stated current preference. | The earlier jasmine preference was merely a mistake. |
+
+Recommending oolong now could succeed in both cases, so a current-preference check
+alone cannot establish correct historical understanding. Neither case establishes
+that oolong was always preferred or when an unstated change occurred. "I ordered
+oolong today" alone establishes neither a permanent switch nor a correction.
+
+Only require the distinction to appear when the current exchange needs it; an
+ordinary drink recommendation need not recite the history. For clear cases,
+inventing a change or erasing a real former preference is a grounding failure,
+even if the current recommendation is correct. Ambiguous cases permit multiple
+supported interpretations, not unsupported certainty. This assesses observable
+behavior without prescribing Hindsight's representation or phrase-matching rules.
 
 ## Minimal Review Record
 
