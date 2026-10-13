@@ -5,6 +5,12 @@ for settled intent and later exclusions. Section 3's character-root boundary is
 retained as PC-03; later privacy-policy and phrase-rule removals supersede the
 corresponding proposals here. This document is not the current status summary.
 
+Ownership supersession, 2026-10-12: amended PC-02/03 and
+[ADR 0068](../adr/0068-hindsight-default-memory.md#character-local-learned-memory)
+replace this proposal's subject-wide shared profiles with character-local
+ownership of all learned facts and preferences. Same-character continuity
+remains; the shared-knowledge exception below is historical, not current intent.
+
 Revision 4, 2026-09-23. **Amended proposal accompanying an implementation plan for review.**
 This is a design, not an implementation plan or authorization to change runtime,
 schema, providers, budgets, deployment, or release evidence. Accepted ADRs still

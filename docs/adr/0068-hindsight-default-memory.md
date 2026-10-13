@@ -38,6 +38,31 @@ subject/character boundaries, archive eligibility, operator removal, or PC-11/12
 Character agreements. Existing findings and completed experiment plans remain
 historical, including their failures and qualification gaps.
 
+### Character-Local Learned Memory
+
+On 2026-10-12 the user rejected another character receiving a preference told
+to Xiaotang. All learned conversational memories, including ordinary facts and
+preferences about the user, belong to `(workspace, subject, character root)`.
+There is no shared-profile exception and no automatic cross-character propagation.
+If the user independently tells another character the same fact, that is a
+separate source in that relationship, not inherited memory.
+
+The same character retains continuity across chats, ordinary persona versions
+and archived conversations. Different subjects remain isolated. This governs
+learned conversational memory, not common authored persona definitions or the
+model's general knowledge. PC-06 still excludes conversational consent/no-save
+policy features; structural ownership does not introduce a sharing mechanism.
+
+This explicitly amends PC-02/03 and supersedes the subject-wide profile-sharing
+direction in [ADR 0022](0022-incumbent-memory-first-product-slice.md), the relevant
+part of the [historical natural-memory design](../architecture/natural-memory-design.md),
+and the cross-root profile exception used by
+[ADR 0063's experiment](0063-hindsight-character-evaluation-boundary.md).
+Historical fixtures and captures remain unchanged. Their sharing successes are
+not acceptance evidence for this corrected boundary. Bank layout remains an
+integration design choice and must isolate learned memories by character; do
+not copy the experiment's character-OR-profile recall policy into the new path.
+
 ### Fresh Start Without Backward Compatibility
 
 The user selected a fresh workspace/subject and explicitly rejected backward
@@ -91,8 +116,9 @@ The [source-pinned assessment](../findings/hindsight-integration-assessment-2026
 and [consultation synthesis](../findings/hindsight-consultation/assessment.md)
 remain inputs, not pre-approved implementation instructions. Resolve:
 
-- Workspace/subject/character scope and profile sharing, including derived
-  observations and source context, without transferring participation.
+- Bank mapping and enforcement of the agreed workspace/subject/character
+  ownership, including derived observations and source-context access. There
+  is no cross-character profile sharing to design.
 - Source-unit boundaries, ordering, retries and detailed failure behavior for
   the agreed attributed asynchronous delivery. Preserve the boundary between an
   utterance and an established event.

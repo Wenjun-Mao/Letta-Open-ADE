@@ -3,6 +3,13 @@
 Status: Accepted for the explicitly assigned P0 offline implementation,
 2026-10-11. Evaluation-only; no native runtime or product-contract amendment.
 
+Scope supersession, 2026-10-12: amended PC-02/03 and
+[ADR 0068](0068-hindsight-default-memory.md#character-local-learned-memory)
+exclude cross-character access to all learned facts, including preferences.
+The character-OR-profile policy below remains historical experiment behavior,
+not the adopted Hindsight integration contract. Fixtures and captures are not
+rewritten; sharing results do not qualify the new character-local boundary.
+
 ## Problem
 
 The isolated experiment needs Hindsight context compared with deliberate empty

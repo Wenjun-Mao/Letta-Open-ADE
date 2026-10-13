@@ -2,6 +2,12 @@
 
 Status: Accepted incumbent baseline; planning priority and execution details partially superseded.
 
+> On 2026-10-12, [ADR 0068](0068-hindsight-default-memory.md#character-local-learned-memory)
+> and amended PC-02/03 supersede this record's subject-wide profile sharing:
+> learned facts and preferences remain with the same subject and character.
+> Hindsight is now the selected default. Historical behavior below is preserved,
+> not a compatibility requirement or authority to share facts across characters.
+
 > On 2026-10-10 the user selected a Hindsight-first integration assessment and
 > proposed incumbent Memory isolation/freeze preparation. External-memory
 > deferral no longer blocks that assessment. See the current
@@ -14,7 +20,8 @@ Status: Accepted incumbent baseline; planning priority and execution details par
 > the Luna-only lane ([ADR 0025](0025-deepseek-development-lane.md)); the current
 > reviewer and explicit operator-removal path follow
 > [ADR 0035](0035-compact-natural-review-and-observational-dispatch.md).
-> Subject sharing and immutable persona versions remain current.
+> Immutable persona versions remain current; subject-wide profile sharing is
+> superseded by the 2026-10-12 ownership decision above.
 
 ## Context
 

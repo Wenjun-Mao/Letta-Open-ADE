@@ -28,7 +28,7 @@ record's status notice before applying its original execution details.
 | [0018](0018-evaluation-cleanup-must-prove-absence.md) | Current: verified evaluation cleanup. |
 | [0019](0019-ade-steady-state-runtime.md) | Current single native stack; release details amended by 0027. |
 | [0020](0020-luna-character-development-workflow.md) | Retained development workflow, not the primary provider or qualified backend. |
-| [0022](0022-incumbent-memory-first-product-slice.md) | Partial: ADE memory retained, external comparison deferred, shared subjects; later provider/removal contracts apply. |
+| [0022](0022-incumbent-memory-first-product-slice.md) | Historical incumbent slice; Hindsight adoption and character-local learned-memory ownership supersede its default and subject-wide sharing direction under 0068. |
 | [0023](0023-agent-studio-intent-and-async-ownership.md) | Partial: async ownership and immutable-version guards; phrase intent selector removed by 0035. |
 | [0025](0025-deepseek-development-lane.md) | Partial: provider integration retained; development-only scope extended by 0027, old smoke caps historical. |
 | [0026](0026-memory-removal-reply-boundary.md) | Current: truthful capability/commit claims, not conversational privacy-policy enforcement. |
@@ -62,7 +62,7 @@ record's status notice before applying its original execution details.
 | [0065](0065-post-restore-snapshot-failure-recovery.md) | Registered child exit-mm handling and a separate, finite, exact-resource recovery path for the failed P4 post-restore snapshot; captured state remains failed evidence, not restore success. |
 | [0066](0066-canonical-persisted-schema-snapshots.md) | Shared P4 schema capture excludes only numeric PostgreSQL temporary namespaces; durable schema, owner, extension, migration and data drift remain exact mismatches. |
 | [0067](0067-hindsight-revision-five-activation-clock.md) | Revision-5 source-pinned clock and activation-scoped registry/capture paths; old admissions and receipts are never renewed, and tests use a declared synthetic clock. |
-| [0068](0068-hindsight-default-memory.md) | Hindsight adopted as default Memory implementation; domain boundaries and historical evidence preserved, with integration, migration and deployment pending design and authorization. |
+| [0068](0068-hindsight-default-memory.md) | Hindsight default with character-local learned memory, fresh scope, no backward compatibility, and asynchronous ingestion without a retention wait; historical migration excluded, implementation/deployment pending. |
 
 ## Historical, Retired, Or On Hold
 
