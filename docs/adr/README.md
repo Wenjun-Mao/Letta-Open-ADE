@@ -31,7 +31,7 @@ record's status notice before applying its original execution details.
 | [0022](0022-incumbent-memory-first-product-slice.md) | Historical incumbent slice; Hindsight adoption and character-local learned-memory ownership supersede its default and subject-wide sharing direction under 0068. |
 | [0023](0023-agent-studio-intent-and-async-ownership.md) | Partial: async ownership and immutable-version guards; phrase intent selector removed by 0035. |
 | [0025](0025-deepseek-development-lane.md) | Partial: provider integration retained; development-only scope extended by 0027, old smoke caps historical. |
-| [0026](0026-memory-removal-reply-boundary.md) | Current: truthful capability/commit claims, not conversational privacy-policy enforcement. |
+| [0026](0026-memory-removal-reply-boundary.md) | Truthful capability/commit claims remain; manual removal is deferred for the first Hindsight integration under 0068. |
 | [0027](0027-provider-neutral-release-and-embedding-space.md) | Current selected-route release and stable embedding-space contract; qualification pending. |
 | [0029](0029-natural-memory-bounded-contract.md) | Partial: lifecycle and atomic generation guards; reviewer/accounting replaced by 0035. |
 | [0030](0030-pending-lease-database-clock.md) | Current: database-clock lease expiry. |
@@ -62,7 +62,7 @@ record's status notice before applying its original execution details.
 | [0065](0065-post-restore-snapshot-failure-recovery.md) | Registered child exit-mm handling and a separate, finite, exact-resource recovery path for the failed P4 post-restore snapshot; captured state remains failed evidence, not restore success. |
 | [0066](0066-canonical-persisted-schema-snapshots.md) | Shared P4 schema capture excludes only numeric PostgreSQL temporary namespaces; durable schema, owner, extension, migration and data drift remain exact mismatches. |
 | [0067](0067-hindsight-revision-five-activation-clock.md) | Revision-5 source-pinned clock and activation-scoped registry/capture paths; old admissions and receipts are never renewed, and tests use a declared synthetic clock. |
-| [0068](0068-hindsight-default-memory.md) | Hindsight default with character-local learned memory, fresh scope, no backward compatibility, asynchronous ingestion, and separate ADE/Hindsight data authorities; historical migration excluded, implementation/deployment pending. |
+| [0068](0068-hindsight-default-memory.md) | Hindsight default with character-local learned memory, fresh scope, no backward compatibility, asynchronous ingestion and separate data authorities; native updates/corrections, manual removal deferred, historical migration excluded, implementation/deployment pending. |
 
 ## Historical, Retired, Or On Hold
 

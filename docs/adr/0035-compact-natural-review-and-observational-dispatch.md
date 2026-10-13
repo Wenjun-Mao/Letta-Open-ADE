@@ -6,6 +6,9 @@
 > original messages and durable asynchronous delivery, without a second semantic
 > reviewer. Structural ownership and truthful outcomes remain. The running
 > incumbent and historical evidence are unchanged; implementation is pending.
+> The later [manual-removal deferral](0068-hindsight-default-memory.md#defer-manual-removal-use-native-updates)
+> excludes operator-removal API/UI from the first integration; ordinary updates
+> and corrections use Hindsight rather than this record's native lifecycle schema.
 
 - Status: Accepted for offline checkpoints 1–4; natural reviewer boundary amended 2026-09-24; no live or release authority
 - Supersedes model-facing and accounting portions of ADRs 0029, 0032 and 0034.

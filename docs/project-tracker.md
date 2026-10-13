@@ -6,13 +6,16 @@ Direction and milestone completion criteria live in the [roadmap](product-roadma
 ## Current Summary
 
 Hindsight is the selected default Memory implementation under PC-14 and ADR 0068.
-The [three-stage integration plan](plans/hindsight-integration.md) is drafted for
-review: complete product flow, isolation/failure verification, then recovery and
+The [three-stage integration plan](plans/hindsight-integration.md) has agreed scope:
+complete product flow, isolation/failure verification, then recovery and
 fresh-start readiness. Live checks are planned in a new isolated OCI stack;
 implementation, provider calls and service activation are not yet authorized.
 The new scope has character-local learned memories, no legacy compatibility or
-historical import, and separate ADE/Hindsight persistence authorities. Earlier
-milestone and adoption-pending entries below are historical, not current intent.
+historical import, and separate ADE/Hindsight persistence authorities. Manual
+removal is deferred; its unstarted probe is cancelled. Ordinary updates and
+corrections stay with Hindsight and remain acceptance cases. Read-only checks
+confirmed the OCI upgrade to four cores/23.4 GiB RAM, not full-stack load readiness.
+Earlier milestone and adoption-pending entries below are historical, not current intent.
 
 ### Historical Revision-5 Closeout
 

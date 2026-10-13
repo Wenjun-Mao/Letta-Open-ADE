@@ -34,9 +34,10 @@ model access and operational recovery remain supporting responsibilities.
 The decision supersedes the assessment-only/adoption-deferred direction in
 [ADR 0062](0062-self-hosted-hindsight.md) and the product contract's former
 open Hindsight-adoption item. It does not supersede the self-hosting choice,
-subject/character boundaries, archive eligibility, operator removal, or PC-11/12
-Character agreements. Existing findings and completed experiment plans remain
-historical, including their failures and qualification gaps.
+subject/character boundaries, archive eligibility or PC-11/12 Character agreements.
+Manual removal is deferred for the first integration by the later amendment below.
+Existing findings and completed experiment plans remain historical, including
+their failures and qualification gaps.
 
 ### Character-Local Learned Memory
 
@@ -126,6 +127,10 @@ no-retention-wait agreement without hiding inability to read existing Memory.
 
 ### Remove Saved Memory Without Erasing Chat
 
+> Superseded for the first integration by the user's later 2026-10-12
+> [deferral](#defer-manual-removal-use-native-updates). This preserves the earlier
+> decision's rationale, not an active implementation or acceptance requirement.
+
 The user approved using Hindsight's native invalidation for selected saved
 memories. The original chat remains unchanged, and recent dialogue can still
 contain the statement. New statements remain eligible for retention; there is
@@ -141,6 +146,30 @@ invalidation and affected derived memories before reporting completion; exact
 delivery/source-unit mechanics remain to be designed. Historical chat contents
 and experiment captures are not rewritten by this decision.
 
+### Defer Manual Removal; Use Native Updates
+
+The user subsequently deferred manual memory removal and cancelled its isolated
+removal-preservation probe before any resources or provider requests were created.
+Ordinary conversational corrections do not require a separate deletion feature:
+Hindsight owns their interpretation, retention and consolidation. ADE owns
+attributed source delivery, structural isolation and truthful readback, not a
+second semantic reviewer or a manual semantic-update command layer.
+
+Exclude manual removal API/UI and removal-preserving delivery tests from the
+first integration. The earlier probe permission is withdrawn, not reusable for
+other live work. Preserve normal correction/change tests, delivery idempotency,
+source attribution and dual-store recovery. Inspect native facts, observations
+and recall without manually repairing them to pass acceptance. Existing known
+correction/consolidation defects still require diagnosis, a fix or an explicit
+bounded limitation; native ownership is not proof of correctness.
+
+This amends PC-07 and the Hindsight applicability of ADRs 0022/0026/0035, not
+the running incumbent or historical data. No guaranteed conversational deletion,
+permanent topic ban, automatic old-source rebuild or future removal commitment
+is implied. Keeping manual removal now would add unneeded UI and ingestion
+constraints; building an ADE correction engine would duplicate Memory ownership.
+Any later removal feature requires a fresh scope and verification decision.
+
 ### Separate Product Records And Learned Memory
 
 The user approved ADE as the authority for original conversation messages,
@@ -155,11 +184,11 @@ That cannot be treated as a transaction across ADE and Hindsight: the approved
 asynchronous delivery can complete after the product commit. Preserve durable
 source capture and truthful status instead of fabricating native review results
 or making Hindsight imitate native fact versions. The integration plan must
-define crash/retry behavior at this boundary, including removal preservation.
+define crash/retry behavior at this boundary without duplicating semantic work.
 
 Back up both authorities. ADE conversations alone cannot restore Hindsight's
-curated state, including removals; do not treat Hindsight as a disposable cache
-or automatic chat replay as recovery. Coordinated backup/restore procedures
+learned state; do not treat Hindsight as a disposable cache or automatic chat
+replay as recovery. Coordinated backup/restore procedures
 remain to be designed and verified. This selects data responsibility, not a
 physical database topology or authorization to operate existing services.
 
@@ -190,9 +219,9 @@ remain inputs, not pre-approved implementation instructions. Resolve:
 - Product-commit/delivery mechanics and backup/restore across the agreed ADE and
   Hindsight authorities; remove native reviewer/transaction dependencies without
   dummy review results or a duplicate semantic engine.
-- Native invalidation and removal verification under ordinary delivery/retries,
-  fresh-scope cutover and recovery behavior. Historical migration and deliberate
-  old-source rebuild/reprocessing are excluded from the first integration.
+- Native updates/corrections, fresh-scope cutover and recovery behavior. Manual
+  removal, historical migration and deliberate old-source rebuild/reprocessing
+  are excluded from the first integration.
 - Truthful Interface inspection and status, plus integration and operational
   verification separate from Character behavioral evaluation.
 

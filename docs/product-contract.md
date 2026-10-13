@@ -24,9 +24,9 @@ retained development branch, not the deployed production revision.
 | PC-02 | All learned conversational memories, including user facts and preferences, belong to `(workspace, subject, character root)`. Reusing the same subject and character preserves continuity across chats and ordinary persona-version updates. A different subject or character does not inherit them. | Amended by user 2026-10-12: no cross-character profile sharing. New ownership is agreed, not implemented/qualified; earlier subject-wide fact behavior is historical. | [ADR 0068](adr/0068-hindsight-default-memory.md#character-local-learned-memory), [superseded ADR 0022 scope](adr/0022-incumbent-memory-first-product-slice.md) |
 | PC-03 | Shared conversational experiences belong to the same user and the same character across chats and ordinary persona-version updates. Definition root identifies that character; a different character needs a distinct root, not a similarity guess. Neither learned facts nor experiences transfer to another character (PC-02). | Character continuity remains agreed; 2026-10-12 clarification removes the former shared-profile exception. General historical-recall behavior is not implemented/qualified. | [ADR 0068](adr/0068-hindsight-default-memory.md#character-local-learned-memory), [historical design section 3](architecture/natural-memory-design.md#3-fact-identity-scope-and-time) |
 | PC-04 | Persona edits create immutable versions. New conversations can use the new version; previous conversations retain their original binding. An ordinary version edit does not create a different character. | Version creation and retained bindings have isolated UI/API evidence. | [M3 version journey](findings/m3-prompt-center-immutable-version-journey.md), PC-03 |
-| PC-05 | Memory interprets natural factual meaning, scope, uncertainty, corrections and requested lifecycle operations. ADE enforces source integrity, structural ownership and truthful outcomes. The Hindsight path follows PC-14's separate persistence authorities, not a duplicate ADE reviewer or native fact-version transaction. Valid attribution is not proof of correct interpretation. | Native reviewer remains implemented in the incumbent; Hindsight responsibility and persistence replacement agreed, not implemented/qualified. Earlier semantic failures remain historical evidence. | [ADR 0068](adr/0068-hindsight-default-memory.md#separate-product-records-and-learned-memory), [incumbent ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md), [live findings](findings/natural-memory-factual-followup-2026-09-24.md) |
+| PC-05 | Memory interprets natural factual meaning, scope, uncertainty, corrections and supported lifecycle operations. ADE enforces source integrity, structural ownership and truthful outcomes. The Hindsight path follows PC-14's separate persistence authorities, not a duplicate ADE reviewer or native fact-version transaction. Valid attribution is not proof of correct interpretation. | Native reviewer remains implemented in the incumbent; Hindsight responsibility and persistence replacement agreed, not implemented/qualified. Earlier semantic failures remain historical evidence. | [ADR 0068](adr/0068-hindsight-default-memory.md#separate-product-records-and-learned-memory), [incumbent ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md), [live findings](findings/natural-memory-factual-followup-2026-09-24.md) |
 | PC-06 | Do not implement conversational privacy/no-save/consent policy features or phrase-specific semantic rules, including equivalent keyword tables. This is removal, not dormant configuration. Structural subject/character isolation, credential handling and syntactic validation remain. | Natural and typed memory rules and phrase-based tool routing removed in the development branch. | User direction 2026-09-24, [ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md), [ADR 0036](adr/0036-discretionary-curated-tools-and-structured-requirements.md) |
-| PC-07 | Explicit operator fact removal remains available. Historical messages/revisions are not thereby erased. Factual ending, correction and removal are distinct; report committed outcomes truthfully. | Lifecycle and atomicity checks implemented; no general data-erasure or topic-suppression feature is promised. | [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md), [ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md) |
+| PC-07 | Manual memory removal is deferred for the first Hindsight integration. Hindsight handles ordinary updates/corrections from conversation; neither a deletion control nor guaranteed conversational deletion is required. Preserve original chat and report outcomes truthfully. | Amended by user 2026-10-12; new scope not implemented. Incumbent operator removal and historical lifecycle/atomicity evidence remain unchanged, not requirements for the new path. No erasure or topic-suppression guarantee. | [ADR 0068](adr/0068-hindsight-default-memory.md#defer-manual-removal-use-native-updates), [incumbent ADR 0026](adr/0026-memory-removal-reply-boundary.md) |
 | PC-08 | Keep ADE-owned PostgreSQL product records and one product API/runtime. Hindsight owns learned-memory state under PC-14, with a separate persistence boundary. Model Router separates model/provider identity from product behavior. Embedding identity must not depend on deployment on Spark specifically. | Native foundation implemented; separate Hindsight-state authority agreed, not implemented/qualified. | [ADR 0068](adr/0068-hindsight-default-memory.md#separate-product-records-and-learned-memory), [ADR 0019](adr/0019-ade-steady-state-runtime.md), [ADR 0027](adr/0027-provider-neutral-release-and-embedding-space.md) |
 | PC-09 | Prefer minimum code and direct ownership. No speculative memory service, episode store, second reviewer, or generic framework. Count provider requests observationally, without spending gates; retain execution timeouts, explicit retry semantics and finite tool loops. | Spending controls removed; new architectural additions require a demonstrated need and explicit decision. | User direction 2026-09-24, [ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md), [conventions](development-conventions.md) |
 
@@ -40,8 +40,9 @@ the conversation merely to read it. Eligibility does not require mentioning ever
 archived conversation or make its historical statements current facts.
 
 This is an agreed product contract, not implemented historical-retrieval behavior.
-Explicit fact removal remains governed by PC-07; reconciling recovered source text
-with corrected or removed facts must be specified in the historical-recovery plan.
+Reconcile recovered source text with later corrections rather than treating old
+statements as current facts. PC-07 defers manual removal from the first Hindsight
+integration; incumbent removed-fact recovery requirements remain historical.
 
 ## Improvised Character History
 
@@ -122,10 +123,10 @@ The first experiment must remain isolated from native memory, as explicitly
 requested during setup planning. Reusing model infrastructure must not change
 native persistence or the running ADE/trial services. The user subsequently
 selected the existing OCI ARM host instead of the Mac for this experiment, to
-avoid extra Mac memory/swap pressure. The announced 4-core/24 GB upgrade is
-planned, not verified. The user clarified that the plan must cover deployment on
-the current 2-core/approximately 12 GB host without depending on that upgrade.
-This is the sizing target, not measured deployment or inference acceptance.
+avoid extra Mac memory/swap pressure. At that time the announced 4-core/24 GB
+upgrade was unverified, so the first experiment targeted the then-current
+2-core/approximately 12 GB host. The later upgrade verification is recorded
+under PC-14; it does not change the first experiment's historical resource evidence.
 The [setup plan](plans/hindsight-self-hosted-experiment.md) records this placement
 and preparation through OCI deployment, iterative replay, recovery and shutdown.
 
@@ -245,15 +246,16 @@ again. A successful lookup with no relevant memories is a valid empty result,
 not a failure. Pending retention alone still does not block a reply. Detailed
 attempt/idempotency mechanics remain integration work.
 
-Removal agreement, 2026-10-12: use Hindsight's native invalidation to remove a
-selected saved memory from recall, preserving the original chat (PC-07). The
-same statement may still be visible in current dialogue, and a genuinely new
-statement can be learned later; removal is not a permanent topic ban. Ordinary
-delivery, retries and new messages must not silently undo removal. Do not
-automatically reprocess the whole conversation on each new message; replaying
-the same delivery must not create a fresh copy of a removed fact. Deliberate
-rebuild/reprocessing of old memories is a separate operation outside the first
-integration scope, not a promised removal-preserving rebuild feature.
+Scope amendment, 2026-10-12: defer manual memory removal from the first Hindsight
+integration and cancel the unstarted removal-preservation probe. This supersedes
+the earlier native-invalidation requirement and removal-specific ingestion gate
+recorded in [ADR 0068](adr/0068-hindsight-default-memory.md#remove-saved-memory-without-erasing-chat).
+Let Hindsight handle ordinary factual updates/corrections through retention and
+consolidation; ADE does not add a second semantic reviewer, manual update commands
+or keyword rules. Verify corrections through native state and subsequent recall,
+not manual fact repair. This is no promise of perfect correction, conversational
+deletion or erasure of original chat. Isolation, source attribution, delivery
+integrity and recovery requirements remain; old-source rebuild remains excluded.
 
 Storage agreement, 2026-10-12: ADE remains authoritative for original conversation
 messages, character definitions/bindings, run state and durable delivery status.
@@ -263,16 +265,17 @@ Do not maintain a second ADE fact store or semantic reviewer alongside it.
 Source delivery and its bookkeeping are not another Memory engine. ADE product
 commits and Hindsight retention are separate persistence operations, not one
 cross-service transaction. Protect both stores in backup/recovery planning;
-replaying chats is not an equivalent restore of curated Hindsight state,
-including removals. Exact backup coordination and restore procedures remain
-integration work. This amends PC-05/08's incumbent reviewer and single-authority
+replaying chats is not an equivalent restore of Hindsight's learned state.
+Exact backup coordination and restore procedures remain integration work. This
+amends PC-05/08's incumbent reviewer and single-authority
 assumptions for the new path, not Character responsibility or PC-02/03 isolation.
 
 Planning placement, 2026-10-12: the user selected a new isolated stack on the
 existing OCI host for the first live ADE + Hindsight integration checks. Preserve
-current ADE/trial services and closed experiment data; recheck capacity before
-activation. The [three-stage plan](plans/hindsight-integration.md) covers the
-complete flow, boundary/failure verification, and recovery/fresh-start readiness.
+current ADE/trial services and closed experiment data. The completed host upgrade
+was confirmed read-only as four cores and 23.4 GiB RAM; measure full-stack resource
+use before qualification. The [three-stage plan](plans/hindsight-integration.md)
+covers the complete flow, boundary/failure verification, and recovery/fresh-start readiness.
 This selects a test location, not implementation or live-operation permission.
 
 Status: product direction adopted; native integration and cutover
@@ -287,7 +290,7 @@ adoption does not turn the experiments into an M2 quality-winner claim.
 
 - Hindsight integration mechanics under the adopted PC-14 direction: bank/scope
   mapping, source-unit boundaries, ordered/idempotent asynchronous delivery,
-  detailed failure behavior, native removal integration, backup/restore,
+  detailed failure behavior, native updates/corrections, backup/restore,
   model access and fresh-scope cutover sequencing remain
   to be designed. These are integration decisions, not a reopened choice of the
   default Memory implementation. The

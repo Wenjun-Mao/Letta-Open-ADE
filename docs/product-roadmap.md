@@ -28,6 +28,8 @@ Under [ADR 0022](adr/0022-incumbent-memory-first-product-slice.md), M3's
 bounded profile-memory slice established the incumbent development direction.
 On 2026-10-12 the user selected Hindsight as default Memory (PC-14) and then
 requested the [three-stage integration plan](plans/hindsight-integration.md).
+Manual memory removal is deferred from that first integration; Hindsight owns
+ordinary conversational updates/corrections, whose quality must still be verified.
 The earlier [assessment](findings/hindsight-integration-assessment-2026-10-10.md)
 and incumbent M3 plan remain historical inputs, not authority to revive shared
 profiles, compatibility paths or another adoption prerequisite. The
@@ -69,7 +71,7 @@ persistence, embeddings, Qwen, or tool protocols. See the
 
 ## Next
 
-- Review the [Hindsight integration plan](plans/hindsight-integration.md): connect
+- Establish execution authority for the agreed [Hindsight integration plan](plans/hindsight-integration.md): connect
   the full flow, verify isolation/failures, and prove recovery/fresh-start
   readiness in a new isolated OCI stack. Adoption is settled; execution and
   provider/operational permissions remain separate. Closed campaign findings

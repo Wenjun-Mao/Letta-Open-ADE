@@ -1,6 +1,6 @@
 # Hindsight Integration: Three-Stage Plan
 
-Updated: 2026-10-12. Status: proposed execution plan for user review.
+Updated: 2026-10-12. Status: agreed planning scope; execution not authorized.
 The user approved these three planning stages and an isolated OCI test placement,
 not implementation, provider calls, installation or deployment. Work serially on
 `main` in the primary checkout; scoped verified commits/pushes follow ADR 0048.
@@ -10,8 +10,9 @@ No new chat, worktree, Goal campaign or delegated writer is required.
 
 Deliver one usable ADE conversation path backed by self-hosted Hindsight:
 save original messages in ADE, retain them asynchronously, recall within the
-same user/character relationship, inspect progress and memories, retry a failed
-lookup without resending the message, and remove saved memories truthfully.
+same user/character relationship, inspect progress and memories, and retry a
+failed lookup without resending the message. Hindsight handles ordinary memory
+updates and corrections from conversation; manual removal is deferred.
 Then demonstrate isolation, failure handling and recovery before a fresh start.
 
 Authority: [PC-01 through PC-14](../product-contract.md), especially PC-02/03/04/10
@@ -38,6 +39,9 @@ adoption is settled; another vendor-selection experiment is not a prerequisite.
   finite curated-tool execution and one ADE-owned product API/runtime.
 - No new conversational no-save/consent policy, phrase-specific semantic rule,
   shared profile pool, permanent topic ban or guaranteed historical erasure.
+- No manual memory-removal API/UI, removal-preservation acceptance gate or
+  guaranteed conversational deletion. The separately proposed removal probe was
+  cancelled before startup or provider use; its earlier permission is withdrawn.
 - No broad Character/persona redesign, mandatory Hindsight reflect phase,
   general memory editor, old-source rebuild, external-tool feature or M2 winner
   claim. Targeted diagnosis is allowed; changed product intent needs review.
@@ -56,7 +60,7 @@ Under `services/ade-api/src/ade_api/features/agent_runtime/`:
 | `turn_result.py`, `worker_finalization.py`, `worker_events.py` | Success requires native review/embeddings and a memory/reply transaction. | Commit reply, run outcome and reply-delivery intent atomically within ADE; do not fabricate empty review results. |
 | `executor.py`, `turn_compaction.py`, `compaction_executor.py` | Provider continuation and local dialogue compaction are already owned here. | Preserve those responsibilities; replace native fact-specific tool/context contracts. |
 | `definition_service.py`, `deployments.py`, `contracts.py`, bootstrap/session modules | Definitions and requests require native reviewer/retriever roles. | Replace obsolete fields/bindings directly; preserve persona/version and Character model identity. |
-| `memory_contracts.py`, `memory_removals.py`, presenters | Inspection/removal assumes native fact revisions and generation. | Expose Hindsight-native readback/removal with ADE ownership checks and truthful progress. |
+| `memory_contracts.py`, `memory_removals.py`, presenters | Inspection/removal assumes native fact revisions and generation. | Expose scoped Hindsight-native readback and truthful progress; remove obsolete manual-removal contracts/controls from the new path, not existing stored data. |
 | `database_boundary.py` | Workspace identity is hard-coded to the default. | Establish a fresh persisted/configured workspace identity consistently; no silent default fallback or unnecessary workspace-management UI. |
 
 Additional owners: `persistence/metadata.py` and `services/ade-api/migrations/`
@@ -71,7 +75,7 @@ splitting oversized touched modules instead of adding unrelated responsibilities
 - One Hindsight bank per `(workspace, subject, character root)`, resolved only
   by ADE from persisted ownership. Conversation and persona version are source
   metadata, not new banks. No model/browser-supplied arbitrary bank selection.
-  Scope reads, writes, source inspection and removal identically. Initialize and
+  Scope reads, writes and source inspection identically. Initialize and
   verify a new empty bank before treating an empty first recall as successful;
   a missing/deleted established bank is an error, not forgotten history.
 - Use a small concrete Hindsight HTTP integration, not the evaluation CLI as a
@@ -84,9 +88,13 @@ splitting oversized touched modules instead of adding unrelated responsibilities
   progress. Separate message acceptance, delivery acknowledgement and completed
   processing. No Hindsight network request belongs inside an ADE SQL transaction.
 - Begin source-unit design with immutable per-message deliveries and bounded,
-  attributed antecedent context for references such as "yes, that one". Never
-  automatically replace/reprocess the growing whole conversation. This design
-  is provisional until the source-unit gate below proves its semantics.
+  attributed antecedent context for references such as "yes, that one". Verify
+  source attribution, reference resolution, corrections and retry behavior before
+  settling the exact native retain mode. Avoid redundant whole-chat processing;
+  no removal-specific context barrier or native patch is required by this scope.
+- Leave extraction, factual updates/corrections and consolidation to Hindsight.
+  ADE supplies attributed sources and enforces delivery/ownership integrity, not
+  semantic update commands, a parallel reviewer or keyword lifecycle rules.
 - Perform normal recall for each reply attempt without waiting for retention.
   Combine bound persona, product instructions, current input, bounded local
   dialogue and relevant memories. Preserve attribution, dates and uncertainty;
@@ -105,8 +113,9 @@ splitting oversized touched modules instead of adding unrelated responsibilities
 - Interface distinguishes queued, processing, completed, failed and uncertain
   delivery states, and recall failure from successful empty recall. Display
   source-backed memories without pretending native fact revisions still exist.
-  Removal targets supported raw facts; derived observations are labeled and
-  linked to their supporting facts, not falsely advertised as directly editable.
+  Label derived observations and link supporting facts where available. Inspection
+  is read-only in this scope; do not imply that a user can delete/edit a memory
+  or that an ordinary correction erases the original conversation.
 
 ## Stage 1: Connect The Complete Flow
 
@@ -121,11 +130,12 @@ retention, scoped recall and the actual Agent Studio UI.
    against retained databases or keep unused native code executable for them.
 2. Resolve the source-unit and retry feasibility gate before dependent rollout.
    Inspect pinned source/API behavior, write fake-transport/SQL tests, then run
-   the smallest authorized synthetic live probe. Prove reference resolution,
+   focused synthetic checks under integration execution approval, not the
+   cancelled removal-probe permission. Prove reference resolution,
    accepted-user-only retention after a failed reply, committed-reply attribution,
-   lost acknowledgement, unchanged payload replay, partial failure and removed
-   fact preservation when later deliveries carry antecedent context. A context
-   label alone is not proof that old content will not be learned again.
+   lost acknowledgement, unchanged payload replay, partial failure and ordinary
+   corrections across deliveries. Do not manually repair facts to make a
+   correction test pass; capture native retention/consolidation and recall.
 3. Implement source delivery and the replacement runtime contract together.
    Bind a caller-generated async operation ID to its immutable payload; poll or
    reconcile that operation after a timeout instead of minting a fresh ID. A
@@ -139,7 +149,7 @@ retention, scoped recall and the actual Agent Studio UI.
    superseded code/contracts and update maintained callers, not compatibility
    wrappers. Preserve historical evidence; version historical fixtures explicitly.
 5. Wire Hindsight recall, Character composition, concrete scoped memory search,
-   API status/removal/Retry and Agent Studio. Update OpenAPI, feature READMEs and
+   API status/readback/Retry and Agent Studio. Update OpenAPI, feature READMEs and
    affected tests. Create the integration workflow at
    `workflows/evals/hindsight_integration/` with its fixtures, config, runner,
    README and ignored outputs together; product code must not import the lab.
@@ -149,7 +159,8 @@ native operation state, retained facts/observations and subsequent recall.
 Stable document IDs, append mode or prompt wording alone are insufficient.
 If pinned Hindsight cannot satisfy the contract, preserve the counterexample and
 propose a bounded native change or explicit tradeoff before dependent work;
-do not add a shadow semantic engine, weaken removal, or reopen vendor selection.
+do not add a shadow semantic engine or reopen vendor selection. This gate tests
+delivery integrity and normal memory behavior, not deferred manual removal.
 
 **Stage exit:** offline tests and real PostgreSQL readback pass; one authorized
 Chinese UI journey saves user/reply messages, shows retention progress, then
@@ -165,13 +176,13 @@ expected distinctions, not altered historical evidence or answer-specific rules.
 
 | Case | Required evidence / acceptance |
 | --- | --- |
-| Identity and continuity (PC-02/03/04/10) | Same relationship across new chats, ordinary persona versions and archived chats; different character, subject and workspace cannot read/write/inspect/remove the first relationship's facts, sources or derived observations. Include forged IDs and missing metadata. |
-| Source attribution (PC-03/11/14) | User message retained after failed generation; only committed replies retained; jokes/hypotheticals/solo stories are not asserted as shared events. Reference-only replies use sufficient context without newly learning removed antecedents. |
+| Identity and continuity (PC-02/03/04/10) | Same relationship across new chats, ordinary persona versions and archived chats; different character, subject and workspace cannot read/write/inspect the first relationship's facts, sources or derived observations. Include forged IDs and missing metadata. |
+| Source attribution (PC-03/11/14) | User message retained after failed generation; only committed replies retained; jokes/hypotheticals/solo stories are not asserted as shared events. Reference-only replies resolve against attributed context rather than inventing their subject or speaker. |
 | Delivery crashes (PC-05/08/14) | Crash before dispatch, after remote acceptance, before ADE acknowledgement, during polling and after worker lease loss. Restart reconciles the original delivery without loss, duplicate extraction or out-of-order overwrite. Partial extraction remains visible, not completed success. |
 | Recall and Retry (PC-01/14) | Timeout, authentication failure, malformed response and lost service pause generation; successful empty recall works; missing bank is not empty. Concurrent/repeated Retry, reload and stale workers produce one accepted input and at most one committed reply. Pending retention alone does not pause. |
-| Removal (PC-07/14) | Native invalidation plus affected-observation readback; timeout/lost response reconciled without false completion. Ordinary retries and unrelated new messages do not recreate the removed memory. Original chat remains; a genuinely new assertion may be learned. Test concurrent retention/consolidation and removal. |
+| Natural updates and corrections (PC-01/05/14) | Conversational misspeak correction differs from a genuine later change. Inspect Hindsight facts, observations and recall after retention/consolidation, including delayed/retried delivery; no manual fact repair or ADE semantic override. Preserve original chat and source/time attribution. |
 | Context and lifecycle (PC-04/09/12) | Oversized memories, long Chinese dialogue, compaction, tool continuations, cancellation and version races preserve bounded requests, message ordering and source/summary integrity. No silent truncation of mandatory input. |
-| Interface truth (PC-07/14) | Real browser covers new conversation, status refresh, failed lookup/Retry, archived-chat continuity and memory removal. Reload preserves pending/error state; no queued receipt is called completed memory. |
+| Interface truth (PC-07/14) | Real browser covers new conversation, status refresh, failed lookup/Retry, archived-chat continuity and read-only memory inspection. No manual removal controls or guaranteed deletion claims. Reload preserves pending/error state; no queued receipt is called completed memory. |
 | Model/retention quality (PC-11/12) | Capture actual delivered memories and serialized Character input separately from the reply; assess grounding, judgment and character fidelity separately. Report usage/latency by phase without spending gates or invented billing totals. |
 
 Reproduce representative revision-5 risks under the new character-local scope:
@@ -183,7 +194,7 @@ old shared-profile classifier; select and exercise the intended consolidation
 schedule, including backlog/failure status. Do not silently disable a capability
 or change inputs after a failure just to claim acceptance.
 
-**Stage exit:** all mechanical/isolation/removal tests pass, real API/UI journeys
+**Stage exit:** all mechanical/isolation tests pass, real API/UI journeys
 are recorded, and remaining semantic defects have source/request/reply evidence
 and a named owner. Known semantic failures require a durable fix or explicit
 user acceptance of a bounded limitation before fresh-start readiness; a good
@@ -198,11 +209,11 @@ stores. Readiness is not permission to replace existing services.
 1. Back up ADE product state and Hindsight state as a coordinated, documented
    recovery point. Quiesce new writes and drain or explicitly record in-flight
    work on the isolated stack; include outbox/operation identities, bank mapping,
-   curation/removals, source/config hashes and schema versions. Protect credentials
-   separately. A dump with a readable table of contents is not restore proof.
+   native learned-memory state, source/config hashes and schema versions. Protect
+   credentials separately. A dump with a readable table of contents is not restore proof.
 2. Test orderly restart and controlled crash recovery of the integration stack.
    Verify completed and pending deliveries, retryable replies, source identity,
-   removed facts/observations and same-character continuity through public APIs.
+   corrected facts/observations and same-character continuity through public APIs.
    Disable provider dispatch until restored identities and pending operations
    are reconciled; never fall back to bulk replay of original conversations.
 3. Restore into separately owned disposable databases/volumes, start the actual
@@ -236,17 +247,20 @@ historical only. No automatic production cutover is included.
 ## Environment, Models And Execution Permissions
 
 The user selected a **new isolated OCI stack** for live integration checks.
-Plan for the last observed two-core/about-12-GiB host without depending on an
-upgrade. Re-inventory before activation; the old three-container experiment's
-fit does not prove the full ADE API/worker/web + Hindsight stack will fit.
+The user completed the 4-core/24-GB-class upgrade. Read-only `lscpu`, `free -b`
+and `df -B1 /mnt/projects` checks on 2026-10-12 confirmed four ARM64 cores,
+23.4 GiB total RAM, 21.8 GiB available RAM and 99.4 GiB available disk. This
+removes the earlier two-core/about-12-GiB planning constraint, not the need to
+measure the full ADE API/worker/web + Hindsight stack at startup and under load.
 
 Use a new Compose project, isolated networks/credentials, fresh ADE and Hindsight
 databases/volumes, and unused loopback ports reached by a private tunnel. Do not
 reuse the root Compose data binds or closed probe project. Prefer separately
 owned database services initially, preserving each pinned extension/version
 requirement. Confirm the whole allocation before startup, including browser-test
-and serial build peaks. Keep at least the prior 1.5-GiB memory and 0.5-core safety
-headroom unless fresh evidence justifies a reviewed adjustment; no fit means
+and serial build peaks. Re-inventory before activation and reserve at least
+4 GiB RAM and one core for the host/baseline services in the proposed allocation;
+measure build pressure separately from runtime container limits. No fit means
 stop and surface the placement/resource choice, not evict baseline services.
 Browser interaction can run on the Mac against the OCI stack without a local
 Hindsight server. Provider/model traffic still originates from the authorized
@@ -274,6 +288,8 @@ URLs, logs and artifacts; safe diagnostic captures exclude private reasoning.
 
 Currently authorized: read-only planning, documentation changes, checks and
 scoped commit/push; OCI is the selected future test location, not activated.
+The narrow removal-preservation probe was cancelled before any new resource or
+provider request was created. Do not reuse its revoked permission for other tests.
 Explicit implementation/activation approval must cover the following scope:
 
 - Source/API/schema/UI edits on `main`, removing replaced contracts; offline
@@ -332,5 +348,5 @@ database, browser or live gates.
 ## Pinned API References
 
 - [Banks](https://github.com/vectorize-io/hindsight/blob/eb6df499d35300e5b2f3f029b2e6adda04ed90f8/skills/hindsight-docs/references/developer/api/memory-banks.md): bank isolation and missing-bank behavior; ADE still owns relationship authorization.
-- [Retain](https://github.com/vectorize-io/hindsight/blob/eb6df499d35300e5b2f3f029b2e6adda04ed90f8/skills/hindsight-docs/references/developer/api/retain.md): contextual ingestion, replacement/append and async operation IDs; not a proof of removal-safe contextual delivery.
-- [Memory curation](https://github.com/vectorize-io/hindsight/blob/eb6df499d35300e5b2f3f029b2e6adda04ed90f8/skills/hindsight-docs/references/developer/api/memories.md): raw-fact invalidation, derived observations and reprocessing resetting curation.
+- [Retain](https://github.com/vectorize-io/hindsight/blob/eb6df499d35300e5b2f3f029b2e6adda04ed90f8/skills/hindsight-docs/references/developer/api/retain.md): contextual ingestion, replacement/append and async operation IDs; native semantics still require source/delivery verification.
+- [Memory curation](https://github.com/vectorize-io/hindsight/blob/eb6df499d35300e5b2f3f029b2e6adda04ed90f8/skills/hindsight-docs/references/developer/api/memories.md): facts and derived observations; manual invalidation is a native capability, not a first-integration requirement.

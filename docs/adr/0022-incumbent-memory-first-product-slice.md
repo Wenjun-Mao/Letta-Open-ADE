@@ -7,6 +7,9 @@ Status: Accepted incumbent baseline; planning priority and execution details par
 > learned facts and preferences remain with the same subject and character.
 > Hindsight is now the selected default. Historical behavior below is preserved,
 > not a compatibility requirement or authority to share facts across characters.
+> The later [manual-removal deferral](0068-hindsight-default-memory.md#defer-manual-removal-use-native-updates)
+> also excludes this record's removal UI from the first Hindsight integration;
+> ordinary updates/corrections remain Hindsight's responsibility.
 
 > On 2026-10-10 the user selected a Hindsight-first integration assessment and
 > proposed incumbent Memory isolation/freeze preparation. External-memory

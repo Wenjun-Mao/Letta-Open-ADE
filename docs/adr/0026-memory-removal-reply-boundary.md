@@ -3,6 +3,11 @@
 - Status: Accepted for the M3 development slice; behavioral acceptance remains open
 - Date: 2026-09-23
 
+> Hindsight-path amendment, 2026-10-12: [ADR 0068](0068-hindsight-default-memory.md#defer-manual-removal-use-native-updates)
+> defers manual removal from the first integration. This record does not require
+> that UI, a native reviewer or removal tests in the new path. Truthful capability
+> claims and retained chat history still apply; incumbent behavior is unchanged.
+
 ## Problem
 
 The isolated M3 removal turn committed a valid `forget` revision and removed the
