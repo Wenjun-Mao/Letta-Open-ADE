@@ -164,3 +164,29 @@ accuracy, and PC-11 story-admission/continuity remain unresolved. Later native
 integration or another experiment needs a separate planning/authority decision;
 this report adds no second reviewer, keyword policy, generic Memory framework,
 Cloud revival, native deployment, or adoption claim.
+
+## Subsequent Authorized Teardown
+
+On 2026-10-12 (Toronto), the user explicitly approved removing the retired OCI
+test stack and its synthetic data while keeping the archives, after being told
+that the revision-5 dump had not been restore-tested. Cleanup was verified at
+`2026-10-13T03:16:32Z`; the campaign results and closeout records above are unchanged.
+
+Removed only the three stopped `ade-hindsight-probe` containers, its Compose
+network, and the `db-data` / `model-cache` volumes. Ownership labels and exclusive
+volume use were checked first; exact Docker IDs/names were removed without force
+or a broad prune. Subsequent project-filtered container/network/volume lists
+were empty. No service activation or provider request was involved.
+
+Revision-4 and revision-5 remote archive hashes still match their sealed values;
+the revision-5 local archive and index were also reverified. All six unrelated
+container IDs, states, start times, restart counts, health statuses, mounts and
+network attachments matched before/after. Rolling health-check timestamps were
+excluded from that comparison. Images, source releases, private configuration,
+dumps and archived evidence remain; no provider credential was revoked.
+
+The ignored operational receipt is
+`workflows/evals/hindsight_memory_probe/outputs/cleanup/2026-10-12-teardown.json`.
+The deleted synthetic database cannot be directly restarted. This cleanup is
+not restore qualification, a product-memory deletion feature, or permission to
+activate the new integration stack; `p4_complete=false` remains unchanged.

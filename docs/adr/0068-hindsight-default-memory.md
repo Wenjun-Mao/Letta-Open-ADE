@@ -4,6 +4,11 @@ Status: Accepted product direction, 2026-10-12, by explicit user decision.
 Implementation and deployment remain pending integration planning; historical
 data migration is excluded from the fresh-workspace/subject scope.
 
+> Later operational update, 2026-10-12: the user separately authorized
+> [teardown of the retired OCI test stack](../findings/hindsight-semantic-follow-up-2026-10-11.md#subsequent-authorized-teardown)
+> including synthetic DB/cache volumes. Archives and unrelated services remain.
+> This is not integration activation or permission to delete other existing data.
+
 ## Context
 
 After reviewing the closed Hindsight campaigns, the user selected Hindsight as
@@ -203,7 +208,7 @@ The unchanged incumbent and historical evidence retain their original contracts.
 
 The user requested the [three-stage integration plan](../plans/hindsight-integration.md)
 and selected a new isolated OCI stack for its live checks. Current ADE/trial
-services and closed experiment data remain unchanged; full-stack capacity must
+services and archived experiment evidence remain unchanged; full-stack capacity must
 be rechecked before activation. Plan approval alone does not authorize execution.
 
 The [source-pinned assessment](../findings/hindsight-integration-assessment-2026-10-10.md)
@@ -238,8 +243,9 @@ remain inputs, not pre-approved implementation instructions. Resolve:
 - A new generic Memory framework or second semantic reviewer: not implied by
   adoption and inconsistent with PC-09 without a separate demonstrated need.
 
-The running incumbent, existing data and closed experiment resources remain
-unchanged. Implementation must follow a bounded integration plan and its actual
+The running incumbent, ADE/trial data and archived experiment evidence remain
+unchanged; retired test resources follow the separate teardown notice above.
+Implementation must follow a bounded integration plan and its actual
 execution permissions. This documentation checkpoint authorizes no installation,
 provider call, live service operation, migration or cutover. Tests and rollout
 criteria must distinguish Memory behavior, Character behavior and Interface

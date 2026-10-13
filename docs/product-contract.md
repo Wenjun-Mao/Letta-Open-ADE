@@ -272,11 +272,19 @@ assumptions for the new path, not Character responsibility or PC-02/03 isolation
 
 Planning placement, 2026-10-12: the user selected a new isolated stack on the
 existing OCI host for the first live ADE + Hindsight integration checks. Preserve
-current ADE/trial services and closed experiment data. The completed host upgrade
+current ADE/trial services and archived experiment evidence. The completed host upgrade
 was confirmed read-only as four cores and 23.4 GiB RAM; measure full-stack resource
 use before qualification. The [three-stage plan](plans/hindsight-integration.md)
 covers the complete flow, boundary/failure verification, and recovery/fresh-start readiness.
 This selects a test location, not implementation or live-operation permission.
+
+Separate cleanup, 2026-10-12: the user explicitly authorized retiring the old
+OCI test stack and synthetic database/cache while preserving archives, with the
+unverified revision-5 restore limitation disclosed. The
+[teardown record](findings/hindsight-semantic-follow-up-2026-10-11.md#subsequent-authorized-teardown)
+confirms removal and unchanged unrelated services. This narrow exception to
+test-data preservation does not authorize deleting ADE/trial data, modifying
+historical evidence or activating the new integration.
 
 Status: product direction adopted; native integration and cutover
 are not implemented or qualified by this decision. Current runtime and retained

@@ -15,6 +15,9 @@ historical import, and separate ADE/Hindsight persistence authorities. Manual
 removal is deferred; its unstarted probe is cancelled. Ordinary updates and
 corrections stay with Hindsight and remain acceptance cases. Read-only checks
 confirmed the OCI upgrade to four cores/23.4 GiB RAM, not full-stack load readiness.
+The user subsequently authorized [old-stack cleanup](findings/hindsight-semantic-follow-up-2026-10-11.md#subsequent-authorized-teardown):
+three containers, the network and DB/cache volumes are removed; archives and
+all six unrelated OCI container identities/states/attachments are preserved.
 Earlier milestone and adoption-pending entries below are historical, not current intent.
 
 ### Historical Revision-5 Closeout

@@ -32,7 +32,10 @@ adoption is settled; another vendor-selection experiment is not a prerequisite.
 ### Scope Boundaries
 
 - Start with a new workspace/subject and new Hindsight state. Existing ADE/trial
-  data, closed experiment banks, volumes, secrets and evidence remain untouched.
+  data and retained experiment evidence/private files remain untouched. The old
+  test containers, network and DB/cache volumes were separately removed by
+  [explicit user-approved cleanup](../findings/hindsight-semantic-follow-up-2026-10-11.md#subsequent-authorized-teardown);
+  do not depend on them or restore archived test banks into the fresh scope.
 - No historical import/backfill, dual writes, native fallback, compatibility
   adapters, second fact store/reviewer or generic Memory backend framework.
 - Keep authored personas, immutable definition versions, bounded local dialogue,
