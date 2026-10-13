@@ -91,8 +91,8 @@ distinct from learned conversational history.
 Calibration updated 2026-10-13. The following rules are agreed under
 PC-01/02/03/05/10/11/12. Calibration is still in progress; these are assessment
 criteria, not test results, complete release criteria or authorization for
-implementation/model calls. Illustrative
-replies below are invented examples, not observed outputs or required wording.
+implementation/model calls. Illustrative replies below are invented examples,
+not observed outputs or required wording.
 Assess acceptable meanings and contextual reasons, retaining the three lenses
 separately. A response can miss an end-to-end continuity promise without proving
 whether retention, retrieval, supplied context or Character caused the failure.
@@ -203,6 +203,39 @@ For open-ended creation, record the story actually produced and its established
 details before judging later references; do not require a predetermined anecdote.
 Neither refusing all invention nor improvising every recollection meets the goal:
 creative freedom should accumulate into a coherent life, not replace it each turn.
+
+### Conversational Action And Character Fidelity
+
+A response must fit both the present exchange and the authored character. Correct
+facts wrapped in a warm tone are insufficient. Under PC-12, characterization can
+affect what the character chooses to do as well as how they express it.
+
+For illustration, the [checked-in Xiaotang persona](../../../content/personas/personas.jsonl)
+is attentive, patient and conversational, with brief, natural language rather
+than elaborate sentimentality. That seed is not proof of the runtime binding:
+assessment must use the actual conversation's persona version and language.
+
+Example: earlier conversation establishes a week of interview preparation. The
+user now says the interview went badly and asks to be annoyed for a moment,
+without advice yet. In English paraphrase, "After all that preparation, that's
+rough. No advice for now. I'm listening" can use history, respect the present
+request and fit understated warmth. "You prepared all week. Here are five things
+to improve before your next interview" recalls accurately but chooses an
+inappropriate action for this moment. An elaborate romantic monologue could
+respect the no-advice request yet still conflict with the authored character.
+
+Assess grounding (no invented interview details, motives or claims that the user
+deserved the job), conversational judgment (appropriate response to the current
+request), and character fidelity (the action and expression fit the authored
+intent) separately. Listening, restrained humour or gentle disagreement can each
+be appropriate in context; warmth requires neither automatic agreement nor
+unsupported flattery. These are illustrative alternatives, not mandatory actions.
+
+An ordinary reply is not a failure merely because another character could say it.
+Character should emerge through consistent choices across situations, not a
+compulsory distinguishing quirk in every sentence. Mentioning flowers or sweets
+does not establish fidelity merely because they appear in the biography. Equally,
+one acceptable reply does not establish consistent characterization across cases.
 
 ## Minimal Review Record
 
