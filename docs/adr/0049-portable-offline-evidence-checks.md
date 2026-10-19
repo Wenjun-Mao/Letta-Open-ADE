@@ -33,3 +33,12 @@ A clean checkout verifies mechanics without claiming historical replay coverage.
 Reports must identify historical-evidence skips separately from database skips.
 Reject blanket skipping of the failing tests, weakening loader checks, silently
 relabeling old evidence, or tracking private outputs just to make CI green.
+
+## Generated-Output Discovery Clarification (2026-10-18)
+
+Normal pytest discovery excludes `outputs` directories while retaining pytest's
+other standard exclusions. Ignored source snapshots and downloaded upstream
+checkouts contain their own tests and dependencies; collecting those as current
+ADE tests confuses two different source authorities. Tracked historical replay
+tests still run under the rules above and still reject invalid available evidence.
+This excludes generated test copies, not failing current tests or their fixtures.

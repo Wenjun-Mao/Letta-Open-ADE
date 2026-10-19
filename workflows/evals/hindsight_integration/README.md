@@ -12,6 +12,22 @@ Authority: [PC-02/03/11/12/14](../../../docs/product-contract.md), the
 and [ADR 0069](../../../docs/adr/0069-offline-character-assessment-kit.md).
 This workflow owns evidence artifacts, not product APIs or semantic policy.
 
+## Integration Work In Progress
+
+2026-10-18: the user approved M0-M6 and A1-A6 in the implementation plan.
+The concrete Hindsight HTTP client and immutable per-message source contract
+have offline coverage; the normal product runtime and live collector are still
+being implemented. [ADR 0070](../../../docs/adr/0070-hindsight-message-delivery.md)
+records the source/replay decision and its pending native feasibility gate.
+
+The pre-change current-source baseline reports 1,568 passed, 81 skipped, 54 failed
+and 61 errors. The failure/error totals match the October 13 checkpoint; the
+new CI guardrail adds one pass. The ignored baseline log is under
+`outputs/implementation-20261018/`.
+Generated upstream/source-copy tests are excluded from normal discovery by the
+repository's pytest configuration. Existing historical replay failures remain
+visible; their evidence has not been rebound or weakened.
+
 ## Run The Offline Rehearsal
 
 From the repository root, choose a new output directory each time:

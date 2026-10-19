@@ -1,8 +1,9 @@
 # ADR 0068: Hindsight As Default Memory
 
 Status: Accepted product direction, 2026-10-12, by explicit user decision.
-Implementation and deployment remain pending integration planning; historical
-data migration is excluded from the fresh-workspace/subject scope.
+M0-M6 implementation and A1-A6 execution were approved on 2026-10-18 and are
+underway; integration verification remains pending. Historical data migration
+is excluded from the fresh-workspace/subject scope.
 
 > Later operational update, 2026-10-12: the user separately authorized
 > [teardown of the retired OCI test stack](../findings/hindsight-semantic-follow-up-2026-10-11.md#subsequent-authorized-teardown)
@@ -209,7 +210,9 @@ The unchanged incumbent and historical evidence retain their original contracts.
 The user requested the [three-stage integration plan](../plans/hindsight-integration.md)
 and selected a new isolated OCI stack for its live checks. Current ADE/trial
 services and archived experiment evidence remain unchanged; full-stack capacity must
-be rechecked before activation. Plan approval alone does not authorize execution.
+be rechecked before activation. The later explicit M0-M6/A1-A6 execution approval
+covers the plan's Stage 1, with GitHub Actions excluded; later qualification and
+production cutover remain separate.
 
 The [source-pinned assessment](../findings/hindsight-integration-assessment-2026-10-10.md)
 and [consultation synthesis](../findings/hindsight-consultation/assessment.md)

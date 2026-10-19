@@ -4,8 +4,9 @@ Updated: 2026-10-18. The user agreed to the next deliverable: one complete
 Hindsight-backed ADE conversation path, inspectable delivery/recall evidence,
 and verified capture of the actual Character request. This revision makes
 Stage 1 executable in ordered increments and proposes one execution-approval
-package. Planning and the separate manual-only CI change are authorized;
-product implementation, provider use and OCI activation are not yet authorized.
+package. The user subsequently approved M0-M6 and A1-A6 and started the active
+implementation goal on 2026-10-18, with GitHub Actions explicitly excluded.
+Implementation and its required live verification are now authorized and in progress.
 
 ## Outcome, Authority And Domain Boundaries
 
@@ -356,8 +357,8 @@ billing totals, add spending gates, substitute a provider or quietly change pers
 
 ## One Execution-Approval Package
 
-**Not yet granted.** The present request authorizes this concrete plan, not
-implementation. A single explicit approval of M0-M6 and A1-A6 below will cover
+**Granted, 2026-10-18:** the user explicitly approved M0-M6 and A1-A6 and requested
+implementation through Relay Direct, with no GitHub Actions. This covers
 their routine dependencies, diagnosis, repairs, retests and safe closeout.
 No repeated permission at each milestone, service rebuild or fresh fixture.
 
