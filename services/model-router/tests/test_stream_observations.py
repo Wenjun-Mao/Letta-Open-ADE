@@ -47,3 +47,15 @@ def test_cancelled_or_malformed_stream_cannot_be_called_complete(tmp_path):
             ]
             is False
         )
+
+
+def test_done_marker_does_not_hide_incomplete_utf8_tail(tmp_path):
+    observer = StreamObservation(RequestObservation(tmp_path, "partial-utf8"))
+    observer.feed(b"data: [DONE]\n\n\xe4\xb8")
+    assert observer.finish(200)
+    assert (
+        json.loads((tmp_path / "partial-utf8.outcome.json").read_bytes())[
+            "response_capture_complete"
+        ]
+        is False
+    )

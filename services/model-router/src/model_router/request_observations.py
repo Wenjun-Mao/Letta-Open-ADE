@@ -2,6 +2,8 @@
 
 from contextlib import contextmanager
 from contextvars import ContextVar
+import base64
+import binascii
 from dataclasses import dataclass
 import hashlib
 import json
@@ -22,6 +24,7 @@ _CONTEXT: ContextVar[dict | None] = ContextVar(
     "router_observation_context", default=None
 )
 _HEADERS = {
+    "x-ade-request-id": "ade_request_id",
     "x-ade-observation-role": "role",
     "x-ade-observation-phase": "phase",
     "x-ade-run-id": "run_id",
@@ -38,12 +41,17 @@ _PRIVATE_FIELDS = {
     "access_token",
     "refresh_token",
     "password",
+    "client_secret",
     "reasoning_content",
     "encrypted_content",
 }
 
 
 class ObservationUnavailable(RuntimeError):
+    pass
+
+
+class ObservationCorrupt(RuntimeError):
     pass
 
 
@@ -81,6 +89,8 @@ def _private_fields(value: object) -> bool:
 
 def _write(path: Path, value: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if path.parent.is_symlink() or path.parent.stat().st_mode & 0o077:
+        raise ValueError("Observation directory is not private")
     descriptor, temporary = tempfile.mkstemp(prefix=".observation-", dir=path.parent)
     try:
         with os.fdopen(descriptor, "wb") as target:
@@ -108,7 +118,7 @@ def visible_response(value: dict) -> dict:
     result = {
         key: value[key]
         for key in ("id", "model", "object", "usage", "created")
-        if key in value
+        if key in value and not _private_fields(value[key])
     }
     if isinstance(value.get("choices"), list):
         result["choices"] = [
@@ -131,11 +141,23 @@ def visible_response(value: dict) -> dict:
         ]
     if isinstance(value.get("data"), list):
         result["embedding_dimensions"] = [
-            len(item["embedding"])
+            _embedding_dimension(item.get("embedding"))
             for item in value["data"]
-            if isinstance(item, dict) and isinstance(item.get("embedding"), list)
+            if isinstance(item, dict)
         ]
     return result
+
+
+def _embedding_dimension(value: object) -> int | None:
+    if isinstance(value, list):
+        return len(value)
+    if isinstance(value, str):
+        try:
+            raw = base64.b64decode(value, validate=True)
+        except (binascii.Error, ValueError):
+            return None
+        return len(raw) // 4 if len(raw) % 4 == 0 else None
+    return None
 
 
 @dataclass
@@ -235,9 +257,30 @@ def read_observation(request_id: str) -> dict | None:
     request_path = Path(root) / f"{identity}.request.json"
     if not request_path.is_file():
         return None
-    request = json.loads(request_path.read_bytes())
-    outcome_path = Path(root) / f"{identity}.outcome.json"
-    outcome = json.loads(outcome_path.read_bytes()) if outcome_path.is_file() else None
+    try:
+        request = json.loads(request_path.read_bytes())
+        if request.get("request_id") != identity:
+            raise ValueError("request_identity_mismatch")
+        if request.get("input_complete") is True:
+            raw = request["raw_body_utf8"].encode("utf-8")
+            if (
+                hashlib.sha256(raw).hexdigest() != request["request_sha256"]
+                or json.loads(raw) != request["body"]
+                or _private_fields(request["body"])
+            ):
+                raise ValueError("request_body_mismatch")
+        elif "body" in request or "raw_body_utf8" in request:
+            raise ValueError("invalid_incomplete_request")
+        outcome_path = Path(root) / f"{identity}.outcome.json"
+        outcome = (
+            json.loads(outcome_path.read_bytes()) if outcome_path.is_file() else None
+        )
+        if outcome and (
+            outcome.get("request_id") != identity or _private_fields(outcome)
+        ):
+            raise ValueError("outcome_identity_or_privacy_mismatch")
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
+        raise ObservationCorrupt("request_observation_invalid") from exc
     return {"request": request, "outcome": outcome}
 
 
@@ -247,7 +290,7 @@ def list_observations(*, run_id: str | None, offset: int, limit: int) -> dict:
         return {"items": [], "total": 0, "enabled": False}
     items = []
     for path in Path(root).glob("*.request.json"):
-        value = json.loads(path.read_bytes())
+        value = read_observation(path.name.removesuffix(".request.json"))["request"]
         if run_id is not None and value.get("metadata", {}).get("run_id") != run_id:
             continue
         items.append(

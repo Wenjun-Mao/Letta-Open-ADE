@@ -373,3 +373,35 @@ def test_tool_continuation_keeps_both_actual_requests_and_visible_tool_response(
         assert all(record["request"]["input_complete"] for record in records)
 
     exercise(monkeypatch, provider, scenario)
+
+
+@pytest.mark.parametrize(
+    "field", ["body", "raw_body_utf8", "request_sha256", "request_id"]
+)
+def test_private_export_rejects_corrupt_hash_body_or_identity(
+    monkeypatch, tmp_path, field
+):
+    settings = configure(monkeypatch, tmp_path)
+
+    async def scenario(client):
+        response = await client.post(
+            "/v1/chat/completions",
+            headers=AUTH,
+            json={
+                "model": MODEL,
+                "messages": [{"role": "user", "content": "original"}],
+            },
+        )
+        identity = response.headers["X-Model-Router-Request-Id"]
+        path = Path(settings.observation_root) / f"{identity}.request.json"
+        record = json.loads(path.read_bytes())
+        record[field] = {} if field == "body" else "changed"
+        path.write_text(json.dumps(record))
+        assert (
+            await client.get(f"/v1/router/observations/{identity}", headers=AUTH)
+        ).status_code == 503
+        assert (
+            await client.get("/v1/router/observations", headers=AUTH)
+        ).status_code == 503
+
+    exercise(monkeypatch, lambda request: completion(), scenario)

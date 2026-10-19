@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import asyncio
 import re
+import os
 import time
 from collections import defaultdict
 from dataclasses import dataclass
@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from .router_transport import RouterRequestError
+from .private_observations import AttemptObservation, capture_root
+from .traced_transport import TracedRouterTransport
 from .tool_policy import ToolRequirement
 
 if TYPE_CHECKING:
@@ -33,6 +35,39 @@ class AttemptTrace:
         self.observation_incomplete = False
         self.memory_lookup_active = False
         self.natural_evidence: NaturalAttemptEvidence | None = None
+        self.identity: dict[str, str] = {}
+        self.private_observer: AttemptObservation | None = None
+
+    def bind_attempt(self, *, settings, run: dict, attempt_id: str) -> None:
+        self.identity = {
+            "run_id": str(run["id"]),
+            "workspace_id": str(run["workspace_id"]),
+            "conversation_id": str(run["conversation_id"]),
+            "attempt_id": attempt_id,
+        }
+        try:
+            root = capture_root(settings)
+            if root is not None:
+                self.private_observer = AttemptObservation(root, dict(self.identity))
+                self.record_private(
+                    "attempt_execution.started",
+                    {
+                        "attempt": self.attempt,
+                        "source_revision": os.getenv("ADE_SOURCE_REVISION"),
+                        "source_fingerprint": os.getenv("ADE_SOURCE_FINGERPRINT"),
+                        "source_dirty": os.getenv("ADE_SOURCE_DIRTY"),
+                    },
+                )
+        except Exception:
+            self.observation_incomplete = True
+
+    def record_private(self, event_type: str, value: dict) -> None:
+        if self.private_observer is not None:
+            try:
+                if not self.private_observer.record(event_type, value):
+                    self.observation_incomplete = True
+            except Exception:
+                self.observation_incomplete = True
 
     def transport(
         self,
@@ -118,6 +153,7 @@ class AttemptTrace:
         request_number: int,
         response: dict[str, Any],
         started_at: float,
+        router_request_id: str | None = None,
     ) -> None:
         payload = {
             "request_id": request_id,
@@ -129,6 +165,8 @@ class AttemptTrace:
             "latency_ms": _elapsed_ms(started_at),
         }
         payload.update(_safe_response_shape(operation, response))
+        if router_request_id:
+            payload["router_request_id"] = router_request_id
         self._events.append(
             NormalizedTraceEvent(
                 event_type="model.response.completed",
@@ -145,6 +183,7 @@ class AttemptTrace:
         request_number: int,
         exc: Exception,
         started_at: float,
+        router_request_id: str | None = None,
     ) -> None:
         retryable = bool(
             exc.retryable if isinstance(exc, RouterRequestError) else False
@@ -165,6 +204,8 @@ class AttemptTrace:
             "retry_after_seconds": retry_after_seconds,
             "latency_ms": _elapsed_ms(started_at),
         }
+        if router_request_id:
+            payload["router_request_id"] = router_request_id
         self._events.append(
             NormalizedTraceEvent(event_type="model.request.failed", payload=payload)
         )
@@ -194,110 +235,6 @@ class AttemptTrace:
         )
 
 
-@dataclass(frozen=True)
-class TracedRouterTransport:
-    transport: Any
-    trace: AttemptTrace
-    stage: str
-    model_fingerprint: str | None = None
-
-    async def catalog(self, *, timeout_seconds: float = 10.0) -> dict[str, Any]:
-        return await self._invoke(
-            operation="catalog",
-            model_key=None,
-            timeout_seconds=timeout_seconds,
-            call=lambda: self.transport.catalog(timeout_seconds=timeout_seconds),
-        )
-
-    async def chat_completion(
-        self, payload: dict[str, Any], *, timeout_seconds: float
-    ) -> dict[str, Any]:
-        return await self._invoke(
-            operation="chat_completion",
-            model_key=_model_key(payload),
-            timeout_seconds=timeout_seconds,
-            call=lambda: self.transport.chat_completion(
-                payload, timeout_seconds=timeout_seconds
-            ),
-        )
-
-    async def embeddings(
-        self, payload: dict[str, Any], *, timeout_seconds: float
-    ) -> dict[str, Any]:
-        return await self._invoke(
-            operation="embeddings",
-            model_key=_model_key(payload),
-            timeout_seconds=timeout_seconds,
-            call=lambda: self.transport.embeddings(
-                payload, timeout_seconds=timeout_seconds
-            ),
-        )
-
-    async def _invoke(
-        self,
-        *,
-        operation: str,
-        model_key: str | None,
-        timeout_seconds: float,
-        call,
-    ) -> dict[str, Any]:
-        started: tuple[str, int, float] | None = None
-        try:
-            started = self.trace._start(
-                operation=operation,
-                stage=self.stage,
-                model_key=model_key,
-                model_fingerprint=self.model_fingerprint,
-                timeout_seconds=timeout_seconds,
-            )
-        except Exception:
-            # Observation is best effort. A missing start makes aggregate counts
-            # incomplete, but cannot change the outbound request.
-            self.trace.observation_incomplete = True
-        try:
-            response = await call()
-        except asyncio.CancelledError:
-            if started is not None:
-                try:
-                    self.trace._cancel(
-                        request_id=started[0],
-                        operation=operation,
-                        stage=self.stage,
-                        request_number=started[1],
-                        started_at=started[2],
-                    )
-                except Exception:
-                    self.trace.observation_incomplete = True
-            raise
-        except Exception as exc:
-            if started is not None:
-                try:
-                    self.trace._fail(
-                        request_id=started[0],
-                        operation=operation,
-                        stage=self.stage,
-                        request_number=started[1],
-                        exc=exc,
-                        started_at=started[2],
-                    )
-                except Exception:
-                    self.trace.observation_incomplete = True
-            raise
-        if started is not None:
-            try:
-                self.trace._complete(
-                    request_id=started[0],
-                    operation=operation,
-                    stage=self.stage,
-                    request_number=started[1],
-                    response=response,
-                    started_at=started[2],
-                )
-            except Exception:
-                self.trace.observation_incomplete = True
-        return response
-
-
 def _validate_stage(value: str) -> str:
     stage = str(value or "").strip()
     allowed = {
@@ -313,11 +250,6 @@ def _validate_stage(value: str) -> str:
     if stage not in allowed:
         raise ValueError(f"unsupported provider trace stage: {stage}")
     return stage
-
-
-def _model_key(payload: dict[str, Any]) -> str | None:
-    value = payload.get("model")
-    return str(value) if isinstance(value, str) and value else None
 
 
 def _provider_request_id(response: dict[str, Any]) -> str | None:

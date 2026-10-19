@@ -24,6 +24,7 @@ from .contracts import (
 )
 from .agent_studio_api import router as agent_studio_router
 from .memory_inspection_api import router as memory_inspection_router
+from .private_observation_api import router as private_observation_router
 from .api_boundary import call_runtime
 from .dependencies import (
     AgentRuntimeHealthServiceDependency,
@@ -38,6 +39,7 @@ router = APIRouter(
 )
 router.include_router(agent_studio_router)
 router.include_router(memory_inspection_router)
+router.include_router(private_observation_router)
 
 
 @router.get(

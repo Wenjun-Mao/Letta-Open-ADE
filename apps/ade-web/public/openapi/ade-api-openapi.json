@@ -4056,6 +4056,34 @@
         "title": "NativeOperationsResponse",
         "type": "object"
       },
+      "ObservationIdentity": {
+        "properties": {
+          "attempt_id": {
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "conversation_id": {
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "attempt_id",
+          "workspace_id",
+          "conversation_id"
+        ],
+        "title": "ObservationIdentity",
+        "type": "object"
+      },
       "PersonaTemplatePatchRequest": {
         "properties": {
           "content": {
@@ -4137,6 +4165,137 @@
           "content"
         ],
         "title": "PersonaTemplateWriteRequest",
+        "type": "object"
+      },
+      "PrivateAttemptObservation": {
+        "properties": {
+          "attempt_id": {
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/PrivateObservationRecord"
+            },
+            "title": "Records",
+            "type": "array"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "records"
+        ],
+        "title": "PrivateAttemptObservation",
+        "type": "object"
+      },
+      "PrivateObservationRecord": {
+        "properties": {
+          "identity": {
+            "$ref": "#/components/schemas/ObservationIdentity"
+          },
+          "input_complete": {
+            "title": "Input Complete",
+            "type": "boolean"
+          },
+          "recorded_at": {
+            "title": "Recorded At",
+            "type": "number"
+          },
+          "schema_version": {
+            "const": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "sequence": {
+            "minimum": 1.0,
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "attempt_execution.started",
+              "attempt_execution.finished",
+              "context.sources",
+              "context.composed",
+              "compaction.sources",
+              "compaction.completed",
+              "memory_lookup.started",
+              "memory_lookup.completed",
+              "memory_lookup.failed",
+              "model_request.started",
+              "model_request.finished"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "additionalProperties": true,
+            "title": "Value",
+            "type": "object"
+          }
+        },
+        "required": [
+          "schema_version",
+          "identity",
+          "sequence",
+          "recorded_at",
+          "type",
+          "input_complete",
+          "value"
+        ],
+        "title": "PrivateObservationRecord",
+        "type": "object"
+      },
+      "PrivateObservationResponse": {
+        "properties": {
+          "committed_assistant_message_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Committed Assistant Message Ids",
+            "type": "array"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/PrivateAttemptObservation"
+            },
+            "title": "Observations",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "run_status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "saved_attempts": {
+            "items": {
+              "$ref": "#/components/schemas/SavedAttemptObservation"
+            },
+            "title": "Saved Attempts",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "workspace_id": {
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "run_id",
+          "workspace_id",
+          "run_status",
+          "saved_attempts",
+          "committed_assistant_message_ids",
+          "observations"
+        ],
+        "title": "PrivateObservationResponse",
         "type": "object"
       },
       "PromptTemplatePatchRequest": {
@@ -4670,6 +4829,30 @@
           "source_fingerprint"
         ],
         "title": "RuntimeWorkerHealthResponse",
+        "type": "object"
+      },
+      "SavedAttemptObservation": {
+        "properties": {
+          "attempt_number": {
+            "minimum": 1.0,
+            "title": "Attempt Number",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "attempt_number",
+          "status"
+        ],
+        "title": "SavedAttemptObservation",
         "type": "object"
       },
       "SourceResponse": {
@@ -8736,6 +8919,54 @@
           }
         ],
         "summary": "Inspect an original source within the selected relationship",
+        "tags": [
+          "Agent Runtime"
+        ]
+      }
+    },
+    "/api/v3/private-observations/runs/{run_id}": {
+      "get": {
+        "operationId": "read_run_observations_api_v3_private_observations_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateObservationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Export opt-in development-workspace observations for one saved run",
         "tags": [
           "Agent Runtime"
         ]

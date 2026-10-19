@@ -4056,6 +4056,34 @@
         "title": "原生运行时 操作 响应",
         "type": "object"
       },
+      "ObservationIdentity": {
+        "properties": {
+          "attempt_id": {
+            "title": "尝试 ID",
+            "type": "string"
+          },
+          "conversation_id": {
+            "title": "会话 ID",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "运行 ID",
+            "type": "string"
+          },
+          "workspace_id": {
+            "title": "工作区 ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "attempt_id",
+          "workspace_id",
+          "conversation_id"
+        ],
+        "title": "观测 身份",
+        "type": "object"
+      },
       "PersonaTemplatePatchRequest": {
         "properties": {
           "content": {
@@ -4137,6 +4165,137 @@
           "content"
         ],
         "title": "Persona 模板 写入 请求",
+        "type": "object"
+      },
+      "PrivateAttemptObservation": {
+        "properties": {
+          "attempt_id": {
+            "title": "尝试 ID",
+            "type": "string"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/PrivateObservationRecord"
+            },
+            "title": "记录",
+            "type": "array"
+          }
+        },
+        "required": [
+          "attempt_id",
+          "records"
+        ],
+        "title": "私有 尝试 观测",
+        "type": "object"
+      },
+      "PrivateObservationRecord": {
+        "properties": {
+          "identity": {
+            "$ref": "#/components/schemas/ObservationIdentity"
+          },
+          "input_complete": {
+            "title": "输入 完整",
+            "type": "boolean"
+          },
+          "recorded_at": {
+            "title": "记录时间",
+            "type": "number"
+          },
+          "schema_version": {
+            "const": 1,
+            "title": "Schema 版本",
+            "type": "integer"
+          },
+          "sequence": {
+            "minimum": 1.0,
+            "title": "序号",
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "attempt_execution.started",
+              "attempt_execution.finished",
+              "context.sources",
+              "context.composed",
+              "compaction.sources",
+              "compaction.completed",
+              "memory_lookup.started",
+              "memory_lookup.completed",
+              "memory_lookup.failed",
+              "model_request.started",
+              "model_request.finished"
+            ],
+            "title": "类型",
+            "type": "string"
+          },
+          "value": {
+            "additionalProperties": true,
+            "title": "值",
+            "type": "object"
+          }
+        },
+        "required": [
+          "schema_version",
+          "identity",
+          "sequence",
+          "recorded_at",
+          "type",
+          "input_complete",
+          "value"
+        ],
+        "title": "私有 观测 记录",
+        "type": "object"
+      },
+      "PrivateObservationResponse": {
+        "properties": {
+          "committed_assistant_message_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "已提交 助手 消息 ID",
+            "type": "array"
+          },
+          "observations": {
+            "items": {
+              "$ref": "#/components/schemas/PrivateAttemptObservation"
+            },
+            "title": "观测记录",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "运行 ID",
+            "type": "string"
+          },
+          "run_status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "saved_attempts": {
+            "items": {
+              "$ref": "#/components/schemas/SavedAttemptObservation"
+            },
+            "title": "已保存的尝试",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 1,
+            "title": "Schema 版本",
+            "type": "integer"
+          },
+          "workspace_id": {
+            "title": "工作区 ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "run_id",
+          "workspace_id",
+          "run_status",
+          "saved_attempts",
+          "committed_assistant_message_ids",
+          "observations"
+        ],
+        "title": "私有 观测 响应",
         "type": "object"
       },
       "PromptTemplatePatchRequest": {
@@ -4670,6 +4829,30 @@
           "source_fingerprint"
         ],
         "title": "运行时 工作器 健康状态 响应",
+        "type": "object"
+      },
+      "SavedAttemptObservation": {
+        "properties": {
+          "attempt_number": {
+            "minimum": 1.0,
+            "title": "尝试 序号",
+            "type": "integer"
+          },
+          "id": {
+            "title": "ID",
+            "type": "string"
+          },
+          "status": {
+            "title": "状态",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "attempt_number",
+          "status"
+        ],
+        "title": "已保存 尝试 观测",
         "type": "object"
       },
       "SourceResponse": {
@@ -8736,6 +8919,54 @@
           }
         ],
         "summary": "检视所选关系中的原始来源",
+        "tags": [
+          "智能体运行时"
+        ]
+      }
+    },
+    "/api/v3/private-observations/runs/{run_id}": {
+      "get": {
+        "operationId": "read_run_observations_api_v3_private_observations_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "运行 ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivateObservationResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "导出显式启用的开发工作区内单次已保存运行的观测记录",
         "tags": [
           "智能体运行时"
         ]

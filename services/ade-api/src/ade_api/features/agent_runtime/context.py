@@ -127,6 +127,7 @@ class BuiltContext:
     retrieved_fact_ids: list[str]
     estimated_input_tokens: int
     current_chat: bool | None = None
+    components: list[dict[str, Any]] | None = None
 
 
 @dataclass(frozen=True)

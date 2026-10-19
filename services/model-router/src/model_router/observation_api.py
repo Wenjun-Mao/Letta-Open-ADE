@@ -6,6 +6,7 @@ from model_router.request_observations import (
     list_observations,
     observation_context,
     read_observation,
+    ObservationCorrupt,
 )
 
 
@@ -23,7 +24,10 @@ def install_observation_api(application: FastAPI, require_auth) -> None:
         authorization: str | None = Header(default=None),
     ):
         require_auth(authorization)
-        return list_observations(run_id=run_id, offset=offset, limit=limit)
+        try:
+            return list_observations(run_id=run_id, offset=offset, limit=limit)
+        except (ObservationCorrupt, ValueError):
+            raise HTTPException(status_code=503, detail="Observation invalid")
 
     @application.get("/v1/router/observations/{request_id}")
     def get_observation(
@@ -34,6 +38,8 @@ def install_observation_api(application: FastAPI, require_auth) -> None:
             result = read_observation(request_id)
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid observation identity")
+        except ObservationCorrupt:
+            raise HTTPException(status_code=503, detail="Observation invalid")
         if result is None:
             raise HTTPException(status_code=404, detail="Observation unavailable")
         return result

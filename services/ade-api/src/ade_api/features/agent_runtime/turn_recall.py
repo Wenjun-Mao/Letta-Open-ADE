@@ -38,14 +38,35 @@ class TurnRecall:
     ) -> list[dict]:
         if self.trace is not None:
             self.trace.memory_lookup_active = True
+            self.trace.record_private(
+                "memory_lookup.started",
+                {
+                    "phase": phase,
+                    "bank_id": self.bank_id,
+                    "query": query,
+                    "limit": limit,
+                },
+            )
         try:
             async with asyncio.timeout(max(0, self.deadline - time.monotonic())):
                 await self.banks.ensure_ready(self.bank_id, deadline=self.deadline)
+                payload = {"query": query, "budget": "mid", "max_tokens": 1800}
+                if self.trace is not None and self.trace.private_observer is not None:
+                    payload["trace"] = True
                 value = await self.client.recall(
                     self.bank_id,
-                    {"query": query, "budget": "mid", "max_tokens": 1800},
+                    payload,
                 )
         except (HindsightError, MemoryBankError, TimeoutError) as exc:
+            if self.trace is not None:
+                self.trace.record_private(
+                    "memory_lookup.failed",
+                    {
+                        "phase": phase,
+                        "bank_id": self.bank_id,
+                        "error_code": getattr(exc, "code", "memory_lookup_timeout"),
+                    },
+                )
             raise MemoryLookupError(
                 getattr(exc, "code", "memory_lookup_timeout")
             ) from exc
@@ -59,8 +80,27 @@ class TurnRecall:
             or not isinstance(item.get("text"), str)
             for item in results
         ):
+            if self.trace is not None:
+                self.trace.record_private(
+                    "memory_lookup.failed",
+                    {
+                        "phase": phase,
+                        "bank_id": self.bank_id,
+                        "error_code": "hindsight_recall_invalid",
+                    },
+                )
             raise MemoryLookupError("hindsight_recall_invalid")
         selected = results[:limit]
+        if self.trace is not None:
+            self.trace.record_private(
+                "memory_lookup.completed",
+                {
+                    "phase": phase,
+                    "bank_id": self.bank_id,
+                    "response": value,
+                    "selected_ids": [item["id"] for item in selected],
+                },
+            )
         self.observations.append(
             {
                 "phase": phase,

@@ -3,6 +3,7 @@
 import asyncio
 import json
 import time
+import hashlib
 from uuid import uuid4
 
 import pytest
@@ -194,13 +195,14 @@ def test_context_keeps_persona_input_attribution_and_serialized_bounds():
     )
     context = build_hindsight_context(
         definition={
+            "id": "definition-version",
             "prompt_content": "Authored instructions",
             "persona_content": "Authored persona",
         },
         messages=[
             {"id": "older", "sequence": 1, "role": "user", "content": "x" * 1000}
         ],
-        current_user={"sequence": 2, "content": "Exact current input"},
+        current_user={"id": "current", "sequence": 2, "content": "Exact current input"},
         summary=None,
         memories=[
             {
@@ -221,6 +223,17 @@ def test_context_keeps_persona_input_attribution_and_serialized_bounds():
     assert "Solo character history" in context.messages[0]["content"]
     assert context.omitted_message_ids == ["older"]
     assert context.estimated_input_tokens <= budget.input_limit
+    system = context.messages[0]["content"]
+    offset = 0
+    for component in context.components:
+        text = context.messages[component["message_index"]]["content"][
+            component["start"] : component["end"]
+        ]
+        assert hashlib.sha256(text.encode()).hexdigest() == component["sha256"]
+        if component["message_index"] == 0:
+            assert component["start"] == offset
+            offset = component["end"]
+    assert offset == len(system)
     assert (
         estimate_tokens(json.dumps(context.messages, ensure_ascii=False))
         <= budget.input_limit

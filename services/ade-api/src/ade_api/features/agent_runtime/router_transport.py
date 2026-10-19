@@ -6,6 +6,8 @@ from typing import Any
 
 import httpx
 
+from .router_correlation import correlation_headers, receive_router_identity
+
 
 _TRANSIENT_ERRORS = (
     httpx.TimeoutException,
@@ -42,6 +44,7 @@ class RouterTransport:
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
+        headers.update(correlation_headers())
         return headers
 
     async def catalog(self, *, timeout_seconds: float = 10.0) -> dict[str, Any]:
@@ -90,6 +93,7 @@ class RouterTransport:
                 retryable=True,
                 error_code=f"transport_{error_name.casefold()}",
             ) from exc
+        receive_router_identity(response.headers.get("X-Model-Router-Request-Id"))
         retryable = response.status_code == 429 or response.status_code >= 500
         if response.status_code >= 400:
             retry_after: float | None = None

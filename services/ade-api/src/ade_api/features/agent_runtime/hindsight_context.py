@@ -1,6 +1,7 @@
 """Bounded Character context without a native fact profile or reviewer instructions."""
 
 import json
+import hashlib
 
 from .context import (
     BuiltContext,
@@ -130,6 +131,54 @@ def build_hindsight_context(
             detail_code="context_serialized_overflow",
         )
     selected_ids = {str(row["id"]) for row in selected}
+    components = []
+    offset = 0
+    pieces = [
+        ("product_instructions", str(definition["prompt_content"]), []),
+        (
+            "persona",
+            "\n\nPersona:\n" + definition["persona_content"],
+            [str(definition["id"])],
+        ),
+        ("memory_policy", "\n\n" + MEMORY_INSTRUCTIONS, []),
+        ("chat_metadata", "\n\n" + sections["conversation_history"], []),
+        (
+            "summary",
+            "\n\n" + sections["conversation_summary"],
+            [str(summary["id"])] if summary and summary.get("id") else [],
+        ),
+        (
+            "automatic_recall",
+            "\n\n" + sections["automatic_recall"],
+            [item["id"] for item in retained_memories],
+        ),
+    ]
+    for kind, text, source_ids in pieces:
+        components.append(
+            {
+                "kind": kind,
+                "message_index": 0,
+                "start": offset,
+                "end": offset + len(text),
+                "sha256": hashlib.sha256(text.encode()).hexdigest(),
+                "source_ids": source_ids,
+                "present": bool(summary) if kind == "summary" else True,
+            }
+        )
+        offset += len(text)
+    for index, row in enumerate([*selected, current_user], 1):
+        components.append(
+            {
+                "kind": "current_input"
+                if index == len(selected) + 1
+                else "local_dialogue",
+                "message_index": index,
+                "start": 0,
+                "end": len(row["content"]),
+                "sha256": hashlib.sha256(row["content"].encode()).hexdigest(),
+                "source_ids": [str(row["id"])],
+            }
+        )
     return BuiltContext(
         messages=packed,
         section_tokens={
@@ -143,4 +192,5 @@ def build_hindsight_context(
         retrieved_fact_ids=[item["id"] for item in retained_memories],
         estimated_input_tokens=total,
         current_chat=bool(selected or summary),
+        components=components,
     )

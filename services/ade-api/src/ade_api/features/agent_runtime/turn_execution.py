@@ -91,6 +91,23 @@ class TurnExecution:
         if len(users) != 1:
             raise RuntimeValidationError("Run has no unique immutable accepted input")
         current_user = users[0]
+        trace.identity.update(
+            {
+                "subject_id": scope.subject_id,
+                "character_root_id": scope.character_root_id,
+            }
+        )
+        trace.record_private(
+            "context.sources",
+            {
+                "bank_id": scope.bank_id,
+                "definition_version_id": str(definition["id"]),
+                "definition_root_id": scope.character_root_id,
+                "current_user_message_id": str(current_user["id"]),
+                "message_ids": [str(row["id"]) for row in messages],
+                "summary": summary,
+            },
+        )
 
         # Pending delivery is deliberately not an admission barrier. Every attempt
         # (including saved-input Retry) still performs this required lookup.
@@ -130,6 +147,13 @@ class TurnExecution:
             compaction_input_token_budget=compaction_budget.input_limit,
         )
         if plan is not None:
+            trace.record_private(
+                "compaction.sources",
+                {
+                    "source_message_ids": list(plan.source_message_ids),
+                    "through_sequence": plan.through_sequence,
+                },
+            )
             compaction = await CompactionExecutor(
                 trace.transport(
                     self.transport,
@@ -150,6 +174,17 @@ class TurnExecution:
                 "through_sequence": plan.through_sequence,
                 "content": compaction.content,
             }
+            trace.record_private(
+                "compaction.completed",
+                {
+                    "content": compaction.content,
+                    "content_sha256": compaction.content_sha256,
+                    "input_sha256": compaction.input_sha256,
+                    "source_message_ids": list(plan.source_message_ids),
+                    "model_fingerprint": compaction.model_fingerprint,
+                    "provider_request_id": compaction.provider_request_id,
+                },
+            )
         tools = curated_tools(
             tuple(definition["tool_names"]),
             search_memory=recall.search,
@@ -167,6 +202,15 @@ class TurnExecution:
             tools=tools,
             provider_adapter=adapter,
             model_key=str(deployment["route_alias"]),
+        )
+        trace.record_private(
+            "context.composed",
+            {
+                "messages": context.messages,
+                "components": context.components,
+                "omitted_message_ids": context.omitted_message_ids,
+                "automatic_memory_ids": context.retrieved_fact_ids,
+            },
         )
         result = await ConversationExecutor(
             trace.transport(

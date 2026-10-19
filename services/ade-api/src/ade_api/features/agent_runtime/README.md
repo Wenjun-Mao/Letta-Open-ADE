@@ -59,6 +59,10 @@ Archived original chats are still readable; archiving is not erasure.
   [ADR 0074](../../../../../../docs/adr/0074-relationship-memory-inspection.md).
 - `worker.py` and `worker_*` own leases, cancellation, attempts and finalization.
   `turn_result.py` carries reply/compaction output, not a fake empty review.
+- `private_observations.py`, `private_observation_service.py` and its operator-only
+  API own explicitly enabled synthetic-workspace snapshots. Safe activity never
+  substitutes for these full records. See
+  [ADR 0075](../../../../../../docs/adr/0075-product-memory-and-request-observations.md).
 
 ## Configuration And Verification
 

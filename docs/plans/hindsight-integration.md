@@ -218,6 +218,17 @@ These are scoped increments, not a claim that M0-M6 is complete.
   complete actual-product capture, the six live probe slots and M6
   native product fault/closeout gates remain pending. Do not count this backend
   checkpoint as full M2/M3 or M0-M6 completion.
+- Normal-worker private observations and the public-boundary collector now cover
+  exact run/attempt/request joins, actual recall snapshots and source/component
+  manifests under [ADR 0075](../adr/0075-product-memory-and-request-observations.md).
+  Controlled SQL -> normal worker -> real Router -> recording-provider -> public
+  collector checks include tools and seven corrupted/missing-join variants.
+  The final focused local gate passed 349 checks, including 42 application-role SQL
+  cases and supplementary activity/schema checks. OpenAPI generation
+  reported no missing Chinese terms. No live provider call occurred in this gate.
+  These are capture mechanics, not the six actual native product probes; the
+  live demonstration and M6 remain pending. Current governed hashes now include
+  the concrete Hindsight integration modules, without rebinding frozen evidence.
 
 Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission

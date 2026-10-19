@@ -30,6 +30,7 @@ from .definition_service import DefinitionService
 from .evaluation_sessions import EvaluationSessionService
 from .errors import RuntimeNotReady
 from .memory_inspection import MemoryInspectionService
+from .private_observation_service import PrivateObservationService
 from .persistence.database import create_persistence_engine
 from .resource_service import ResourceService
 from .router_transport import RouterTransport
@@ -62,6 +63,9 @@ class AgentRuntimeApplication:
             router_transport=router_transport,
         )
         self.resources = ResourceService(self.database)
+        self.private_observations = PrivateObservationService(
+            database=self.database, settings=settings
+        )
         self.memory_inspection = MemoryInspectionService(
             database=self.database, settings=settings, client=hindsight_client
         )

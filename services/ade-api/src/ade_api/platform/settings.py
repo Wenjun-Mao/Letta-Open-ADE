@@ -53,6 +53,8 @@ class AdeApiSettings(BaseSettings):
     history_trial_enabled: bool = False
     database_url: str = ""
     agent_runtime_workspace_key: str = ""
+    # Explicit synthetic development workspace only; never ordinary request logging.
+    agent_runtime_observation_root: str = ""
     agent_runtime_deployment_manifest: str = (
         "workflows/evals/hindsight_integration/config/deployments.json"
     )

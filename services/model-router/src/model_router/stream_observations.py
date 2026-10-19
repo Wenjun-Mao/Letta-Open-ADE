@@ -44,6 +44,12 @@ class StreamObservation:
     def finish(self, status_code: int, *, error_type: str | None = None) -> bool:
         if self.observation is None:
             return True
+        try:
+            tail = self.decoder.decode(b"", final=True)
+            if tail or self.pending.strip():
+                self.valid = False
+        except UnicodeError:
+            self.valid = False
         return self.observation.outcome(
             {
                 "http_status": status_code,

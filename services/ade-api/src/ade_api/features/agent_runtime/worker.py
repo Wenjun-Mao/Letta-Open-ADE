@@ -192,16 +192,23 @@ class AgentRuntimeWorker:
             last_attempt_trace = AttemptTrace(attempt=attempt)
             started = await self.attempts.start_attempt(claim, attempt)
             last_attempt_id = started.attempt_id
+            last_attempt_trace.bind_attempt(
+                settings=self.settings, run=claim.run, attempt_id=started.attempt_id
+            )
             last_attempt_started_event_id = started.started_event_id
             last_failure_event_id = None
+            execution_status = "interrupted"
             try:
-                return await self.attempts.execute_attempt(
+                result = await self.attempts.execute_attempt(
                     claim,
                     trace=last_attempt_trace,
                     cancelled=cancelled,
                     lease_lost=lease_lost,
                 )
+                execution_status = "candidate_produced"
+                return result
             except Exception as exc:
+                execution_status = type(exc).__name__
                 last_failure_event_id = await self.attempts.finish_attempt_failure(
                     claim,
                     last_attempt_id,
@@ -212,6 +219,14 @@ class AgentRuntimeWorker:
                 )
                 last_attempt_id = None
                 raise
+            finally:
+                last_attempt_trace.record_private(
+                    "attempt_execution.finished",
+                    {
+                        "status": execution_status,
+                        "observation_incomplete": last_attempt_trace.observation_incomplete,
+                    },
+                )
 
         async def on_retry(
             completed_local: int,

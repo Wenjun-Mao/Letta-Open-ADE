@@ -50,10 +50,11 @@ POLICY_INPUT_ROOTS: Final[dict[str, tuple[str, ...]]] = {
     ),
 }
 POLICY_INPUT_FILES: Final[dict[str, tuple[str, ...]]] = {
-    "prompt": (),
+    "prompt": ("services/ade-api/src/ade_api/integrations/hindsight_bank.py",),
     "tool": (
         "config/model-router/model-profiles.json",
         "config/model-router/sources.json",
+        "services/ade-api/src/ade_api/integrations/hindsight.py",
     ),
     "schema": (
         "scripts/check_agent_studio_release_gate.py",
@@ -66,8 +67,13 @@ POLICY_INPUT_FILES: Final[dict[str, tuple[str, ...]]] = {
         "services/ade-api/src/ade_api/platform/auth.py",
         "services/ade-api/src/ade_api/platform/project_paths.py",
         "services/ade-api/src/ade_api/platform/settings.py",
+        "services/ade-api/src/ade_api/integrations/hindsight_sources.py",
     ),
-    "retrieval": (),
+    "retrieval": (
+        "services/ade-api/src/ade_api/integrations/hindsight.py",
+        "services/ade-api/src/ade_api/integrations/hindsight_bank.py",
+        "services/ade-api/src/ade_api/integrations/hindsight_sources.py",
+    ),
 }
 
 

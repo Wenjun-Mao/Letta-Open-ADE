@@ -224,3 +224,26 @@ or any staged/active release. Set
 Definitions bind `model_key` and `compaction_model_key`; obsolete reviewer and
 embedding role keys are rejected. Source publication alone does not start this
 stack, authorize an old ADE/trial redeploy or complete the browser/capture gates.
+
+## Product Request Capture
+
+Set `ADE_API_AGENT_RUNTIME_OBSERVATION_ROOT` to a new private, operator-owned
+absolute directory for the isolated development workspace. Mount it read/write
+only in the candidate worker and read-only in the candidate API. It is disabled
+by default and unavailable to reader credentials. Never enable it on an incumbent
+workspace or mount provider secret files there.
+
+The operator export is `/api/v3/private-observations/runs/{run_id}`. The normal
+worker records each actual automatic/tool lookup, context component/source spans,
+pre-Router request, correlation and execution outcome. It asks native recall for
+a diagnostic rerank trace only while capture is enabled. The final-wire request
+remains Router's actual sent bytes, not the pre-Router snapshot.
+
+`product_capture.collect_saved_run` collects through the public ADE and Router
+boundaries; `capture_validation.qualify_run_capture` rejects missing attempts,
+requests, continuations, source/scope/byte mismatches, copied probe history and a
+reply that differs from the actual final provider response. Setup/probe grouping
+is a predeclared workflow sidecar, not an instruction sent to the Character.
+Preserve the collected bundle, read journal and failed validation. Raw captures
+remain ignored private evidence. A private-reasoning-bearing input is incomplete,
+not silently redacted into a full capture. See [ADR 0075](../../../docs/adr/0075-product-memory-and-request-observations.md).
