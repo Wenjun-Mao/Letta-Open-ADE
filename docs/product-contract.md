@@ -1,6 +1,6 @@
 # ADE Current Product Contract
 
-Updated: 2026-10-13. This is the single entrypoint for **current agreed product
+Updated: 2026-10-19. This is the single entrypoint for **current agreed product
 intent**, not a claim that every agreement is implemented or release-qualified.
 It consolidates existing decisions; it does not authorize implementation, live
 experiments, deployment, or a change to release evidence.
@@ -308,21 +308,25 @@ confirms removal and unchanged unrelated services. This narrow exception to
 test-data preservation does not authorize deleting ADE/trial data, modifying
 historical evidence or activating the new integration.
 
-Status: product direction adopted; native integration and cutover
-are not implemented or qualified by this decision. Current runtime and retained
-data remain unchanged. The request authorizes recording the decision and
-discussing next steps, not source implementation, installation, live/provider
-operations, historical-data export, deployment or removal of the incumbent.
+Status, 2026-10-19: product direction adopted. The user approved Stage 1 M0-M6
+and A1-A6 on 2026-10-18, authorizing scoped implementation, isolated OCI/provider
+checks and repair under the [integration plan](plans/hindsight-integration.md),
+with GitHub Actions excluded. The [native source/recovery boundary](findings/hindsight-native-boundary-2026-10-19.md)
+has scoped evidence; ADE persistence/runtime/UI integration and actual-product
+capture remain in progress. Existing ADE/trial services and retained data remain
+untouched. This is not production cutover, release qualification, broader Stage 2/3
+acceptance or authority to remove the incumbent's retained data.
 Known consolidation defects and Character failures remain separate work items;
 adoption does not turn the experiments into an M2 quality-winner claim.
 
 ## Open Decisions, Not Agreements
 
-- Hindsight integration mechanics under the adopted PC-14 direction: bank/scope
-  mapping, source-unit boundaries, ordered/idempotent asynchronous delivery,
-  detailed failure behavior, native updates/corrections, backup/restore,
-  model access and fresh-scope cutover sequencing remain
-  to be designed. These are integration decisions, not a reopened choice of the
+- Remaining Hindsight integration work under PC-14 includes runtime/UI wiring,
+  qualification of native updates/corrections, coordinated backup/recovery and
+  later fresh-scope readiness. [ADR 0070](adr/0070-hindsight-message-delivery.md)
+  selects bank/source/recovery identities and [ADR 0072](adr/0072-hindsight-outbox-and-saved-input-retry.md)
+  selects outbox and saved-input Retry mechanics; their product verification
+  remains in progress. These are integration decisions, not a reopened choice of the
   default Memory implementation. The
   [source-pinned assessment](findings/hindsight-integration-assessment-2026-10-10.md)
   and [consultation synthesis](findings/hindsight-consultation/assessment.md)

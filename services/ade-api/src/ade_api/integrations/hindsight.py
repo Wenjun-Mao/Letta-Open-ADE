@@ -209,6 +209,7 @@ class HindsightClient:
         body = await self._request(
             "GET", self.bank_path(bank_id) + "/operations", params=params
         )
+        _identity(body.get("bank_id"), expected=bank_id, code="hindsight_bank_mismatch")
         if (
             not isinstance(body.get("operations"), list)
             or type(body.get("total")) is not int
@@ -259,9 +260,28 @@ class HindsightClient:
         return body
 
     async def document(self, bank_id: str, document_id: str) -> dict:
-        return await self._request(
+        body = await self._request(
             "GET", self.bank_path(bank_id) + "/documents/" + quote(document_id, safe="")
         )
+        _identity(body.get("bank_id"), expected=bank_id, code="hindsight_bank_mismatch")
+        _identity(
+            body.get("id"), expected=document_id, code="hindsight_document_mismatch"
+        )
+        return body
 
     async def statistics(self, bank_id: str) -> dict:
-        return await self._request("GET", self.bank_path(bank_id) + "/stats")
+        body = await self._request(
+            "GET", self.bank_path(bank_id) + "/stats", params={"refresh": "true"}
+        )
+        _identity(body.get("bank_id"), expected=bank_id, code="hindsight_bank_mismatch")
+        if any(
+            type(body.get(key)) is not int or body[key] < 0
+            for key in (
+                "total_nodes",
+                "total_documents",
+                "pending_operations",
+                "failed_operations",
+            )
+        ):
+            raise HindsightError("hindsight_statistics_invalid")
+        return body

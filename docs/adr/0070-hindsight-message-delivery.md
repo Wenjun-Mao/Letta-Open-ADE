@@ -1,7 +1,8 @@
 # ADR 0070: Immutable Hindsight Message Delivery
 
-Status: Selected for Stage 1 implementation, 2026-10-18. Native feasibility and
-product integration verification remain pending. User authority is M0-M6/A1-A6
+Status: Selected for Stage 1 implementation, 2026-10-18. The isolated native
+[source/recovery gates](../findings/hindsight-native-boundary-2026-10-19.md) passed
+on 2026-10-19; ADE product integration verification remains pending. User authority is M0-M6/A1-A6
 in the [implementation plan](../plans/hindsight-integration.md).
 
 ## Problem

@@ -155,3 +155,31 @@ receipts unless an explicitly registered disposable resource is being retired.
 Never use global prune or delete retained baseline/experiment archives.
 Restarting under a new lease requires fresh checks and operation reconciliation;
 it does not authorize whole-history replay or production cutover.
+
+## ADE Persistence Checks
+
+The new delivery repository/worker libraries have separate real-PostgreSQL tests;
+they are not yet evidence that the maintained ADE reply path uses them. Use the
+existing `ade_api.features.agent_runtime.bootstrap` before Alembic: the version
+table lives in `ade`, so a bare empty database is not a bootstrapped database.
+Keep distinct non-login owner and application roles; run data-path tests as the
+application role, not the database superuser.
+
+For these tests, `ADE_TEST_DATABASE_URL` must name a disposable loopback database
+whose name starts with `ade_hindsight_test`, using role `ade_hindsight_app`.
+Supply credentials only through private environment/configuration, never Git:
+
+```sh
+uv run --locked pytest \
+  services/ade-api/tests/agent_runtime/persistence/test_hindsight_delivery_sql.py \
+  services/ade-api/tests/agent_runtime/persistence/test_hindsight_leases_sql.py \
+  services/ade-api/tests/agent_runtime/persistence/test_hindsight_worker_sql.py -q
+```
+
+The tests create controlled SQL fixtures, not product-established dialogue.
+The native substitute records calls and checks that another connection can lock
+the bank/outbox during each simulated HTTP call. Tests cover rollback, immutable
+source/hash/scope, ordered dispatch, unrelated progress, lost acknowledgement,
+native Retry, missing established banks and expired-worker fencing. Native live
+feasibility remains separate; actual ADE acceptance/finalization and browser
+verification remain required in subsequent increments.

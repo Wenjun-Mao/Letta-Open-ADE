@@ -177,6 +177,26 @@ rejected alternatives rather than relying on implicit conventions.
 
 ## Stage 1: Ordered Implementation Deliverables
 
+### Execution Checkpoints, 2026-10-19
+
+These are scoped increments, not a claim that M0-M6 is complete.
+
+- The [native source/recovery boundary](../findings/hindsight-native-boundary-2026-10-19.md)
+  has actual pinned-runtime receipts, including lost acknowledgement, immutable
+  replay, automatic consolidation and failed/partially committed retry. Controlled
+  sources do not establish an ADE product conversation or qualify Character.
+- The new persistence/delivery libraries have 23 passing application-role
+  PostgreSQL tests and 61 focused offline checks. They are not yet wired into
+  the maintained acceptance/finalization/reply path; replacing those callers,
+  native obligations and public contracts remains required below.
+- The kit/guardrail run passed 115 tests. A broader Agent Runtime offline run
+  produced 521 passed, 99 skipped, 44 failed and nine errors; all 53 failing/error
+  test identities were already in the pre-change baseline. Frozen historical
+  source mismatches remain visible and were not rebound. This is not a full
+  repository pass or a waiver of any new-path gate.
+- Scoped recall and saved-input Retry, API/UI behavior, actual-product capture,
+  the six probe slots and M6 fault/closeout gates remain pending.
+
 Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission
 request once the execution package below is approved.

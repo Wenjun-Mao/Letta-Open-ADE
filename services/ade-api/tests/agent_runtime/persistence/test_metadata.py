@@ -31,11 +31,14 @@ EXPECTED_TABLES = {
     "memory_revision_sources",
     "memory_revisions",
     "memory_subjects",
+    "memory_relationships",
+    "memory_deliveries",
     "messages",
     "outbox",
     "run_attempts",
     "run_events",
     "runs",
+    "run_retry_requests",
     "summary_sources",
     "workspaces",
     "worker_instances",
@@ -53,6 +56,11 @@ def test_metadata_has_the_complete_ade_runtime_table_set() -> None:
 
 def test_metadata_uses_named_constraints_and_indexes() -> None:
     validate_metadata_contract()
+    from ade_api.features.agent_runtime.persistence.metadata import workspaces
+
+    assert "ck_workspaces_positive_state_generation" in {
+        constraint.name for constraint in workspaces.constraints
+    }
 
 
 def test_active_state_guards_are_partial_unique_indexes() -> None:

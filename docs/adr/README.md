@@ -64,8 +64,9 @@ record's status notice before applying its original execution details.
 | [0067](0067-hindsight-revision-five-activation-clock.md) | Revision-5 source-pinned clock and activation-scoped registry/capture paths; old admissions and receipts are never renewed, and tests use a declared synthetic clock. |
 | [0068](0068-hindsight-default-memory.md) | Hindsight default with character-local learned memory, fresh scope, no backward compatibility, asynchronous ingestion and separate data authorities; native updates/corrections, manual removal deferred, historical migration excluded, implementation/deployment pending. |
 | [0069](0069-offline-character-assessment-kit.md) | Offline Mandarin case/run/review kit with immutable evidence, append-only judgments and all-attempt reporting; no live adapter, calibrated baseline or runtime change. |
-| [0070](0070-hindsight-message-delivery.md) | Immutable per-message Hindsight source/operation identities, attributed antecedents and native reconciliation/retry; selected for implementation with native verification pending. |
+| [0070](0070-hindsight-message-delivery.md) | Immutable per-message Hindsight source/operation identities, attributed antecedents and native reconciliation/retry; native gates passed, ADE verification pending. |
 | [0071](0071-private-wire-observations-and-activation-leases.md) | Opt-in authenticated capture at Router's final send boundary and finite owned activation leases with permanent admission closure; live qualification pending. |
+| [0072](0072-hindsight-outbox-and-saved-input-retry.md) | Immutable source/outbox transactions, independently fenced delivery and saved-input pause/Retry; Stage 1 implementation in progress. |
 
 ## Historical, Retired, Or On Hold
 

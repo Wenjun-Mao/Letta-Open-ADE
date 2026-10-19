@@ -155,3 +155,72 @@ def test_unknown_operation_states_are_not_processing_success(status):
         ),
         exercise,
     )
+
+
+@pytest.mark.parametrize(
+    "bank,document", [("other", "doc"), (BANK, "other"), (None, "doc")]
+)
+def test_source_readback_rejects_wrong_or_missing_native_ownership(bank, document):
+    async def exercise(client):
+        with pytest.raises(HindsightError):
+            await client.document(BANK, "doc")
+
+    run(
+        lambda request: httpx.Response(200, json={"bank_id": bank, "id": document}),
+        exercise,
+    )
+
+
+def test_statistics_refreshes_native_cache_and_validates_scope_and_counts():
+    def handler(request):
+        assert request.url.params["refresh"] == "true"
+        return httpx.Response(
+            200,
+            json={
+                "bank_id": BANK,
+                "total_nodes": 0,
+                "total_documents": 0,
+                "pending_operations": 0,
+                "failed_operations": 0,
+            },
+        )
+
+    async def exercise(client):
+        assert (await client.statistics(BANK))["total_documents"] == 0
+
+    run(handler, exercise)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        {"bank_id": "other"},
+        {"bank_id": BANK},
+        {
+            "bank_id": BANK,
+            "total_nodes": "0",
+            "total_documents": 0,
+            "pending_operations": 0,
+            "failed_operations": 0,
+        },
+    ],
+)
+def test_malformed_or_wrong_bank_statistics_are_not_an_empty_bank(value):
+    async def exercise(client):
+        with pytest.raises(HindsightError):
+            await client.statistics(BANK)
+
+    run(lambda request: httpx.Response(200, json=value), exercise)
+
+
+def test_operation_listing_rejects_wrong_relationship_response():
+    async def exercise(client):
+        with pytest.raises(HindsightError, match="bank_mismatch"):
+            await client.operations(BANK)
+
+    run(
+        lambda request: httpx.Response(
+            200, json={"bank_id": "other", "operations": [], "total": 0}
+        ),
+        exercise,
+    )
