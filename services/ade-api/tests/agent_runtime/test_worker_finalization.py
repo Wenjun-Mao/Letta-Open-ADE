@@ -1,63 +1,63 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
 import pytest
 
 from ade_api.features.agent_runtime import worker_control, worker_finalization
+from ade_api.features.agent_runtime.persistence import run_lifecycle
 from ade_api.features.agent_runtime.errors import RuntimeValidationError
 from ade_api.features.agent_runtime.worker_claims import ClaimedRun
 from ade_api.features.agent_runtime.provider_tracing import AttemptTrace
 from ade_api.features.agent_runtime.worker_control import (
     AttemptController,
     LeaseLost,
+    RunCancelled,
     WorkerDraining,
 )
 from ade_api.features.agent_runtime.worker_finalization import RunFinalizer
 
 
 class _Transaction:
+    def __init__(self, runs):
+        self.runs = runs
+
     async def __aenter__(self):
-        return object()
+        return SimpleNamespace(runs=self.runs)
 
     async def __aexit__(self, exc_type, exc, traceback):
         return False
 
 
 class _Engine:
+    def __init__(self, runs):
+        self.runs = runs
+
     def begin(self):
-        return _Transaction()
+        return _Transaction(self.runs)
 
 
-def test_finalization_locks_conversation_before_subject_even_when_ids_sort_otherwise() -> (
-    None
-):
-    acquired: list[str] = []
+class _Conversations:
+    async def get_for_update(self, identity):
+        return {"id": identity}
 
-    class Conversations:
-        async def get_for_update(self, conversation_id: str):
-            acquired.append(f"conversation:{conversation_id}")
-            return {"id": conversation_id}
 
-    class Memory:
-        async def lock_subject(self, subject_id: str):
-            acquired.append(f"subject:{subject_id}")
-            return {"id": subject_id}
-
-    conversation_id = "ffffffff-ffff-ffff-ffff-ffffffffffff"
-    subject_id = "00000000-0000-0000-0000-000000000001"
-    asyncio.run(
-        worker_finalization._lock_conversation_and_subject(
-            Conversations(),  # type: ignore[arg-type]
-            Memory(),  # type: ignore[arg-type]
-            conversation_id,
-            subject_id,
-        )
+@pytest.fixture(autouse=True)
+def current_conversation_first_lock(monkeypatch):
+    monkeypatch.setattr(
+        run_lifecycle, "ConversationRepository", lambda _: _Conversations()
     )
-    assert acquired == [
-        f"conversation:{conversation_id}",
-        f"subject:{subject_id}",
-    ]
+    monkeypatch.setattr(
+        run_lifecycle, "RunRepository", lambda connection: connection.runs
+    )
+
+
+def test_finalization_and_attempts_use_the_shared_conversation_first_lock():
+    from ade_api.features.agent_runtime.persistence.run_lifecycle import lock_run
+
+    assert worker_finalization.lock_run is lock_run
+    assert worker_control.lock_run is lock_run
 
 
 class _Runs:
@@ -70,6 +70,12 @@ class _Runs:
             "status": "running",
             "attempt_count": 1,
             "cancellation_requested_at": None,
+        }
+
+    async def get(self, run_id):
+        return {
+            "conversation_id": "conversation-1",
+            **await self.get_for_update(run_id),
         }
 
     async def finish(self, *args, **kwargs):
@@ -86,6 +92,9 @@ class _Leases:
 
     async def release(self, lease_token: str) -> None:
         self.released = True
+        raise AssertionError("a stale worker must not release another worker's lease")
+
+    async def release_owned(self, _lease_token, _run_id):
         raise AssertionError("a stale worker must not release another worker's lease")
 
 
@@ -106,7 +115,7 @@ def test_terminal_finalization_is_fenced_by_the_claimed_lease(
         lease_token="stale-token",
         recovered=False,
     )
-    finalizer = RunFinalizer(_Engine())  # type: ignore[arg-type]
+    finalizer = RunFinalizer(_Engine(runs))  # type: ignore[arg-type]
 
     async def execute() -> None:
         method = getattr(finalizer, terminal_method)
@@ -134,7 +143,7 @@ def test_failed_attempt_record_is_fenced_by_the_claimed_lease(
         lambda _connection: leases,
     )
     controller = AttemptController(
-        engine=_Engine(),  # type: ignore[arg-type]
+        engine=_Engine(runs),  # type: ignore[arg-type]
         settings=object(),  # type: ignore[arg-type]
         execution=object(),  # type: ignore[arg-type]
     )
@@ -171,7 +180,7 @@ def test_retry_scheduling_is_fenced_by_the_claimed_lease(
         lambda _connection: leases,
     )
     controller = AttemptController(
-        engine=_Engine(),  # type: ignore[arg-type]
+        engine=_Engine(runs),  # type: ignore[arg-type]
         settings=object(),  # type: ignore[arg-type]
         execution=object(),  # type: ignore[arg-type]
     )
@@ -194,19 +203,19 @@ def test_retry_scheduling_is_fenced_by_the_claimed_lease(
         )
 
 
-def test_worker_drain_interrupts_backoff_before_another_attempt() -> None:
-    stop_requested = asyncio.Event()
-    stop_requested.set()
-
-    with pytest.raises(WorkerDraining, match="draining before retry"):
-        asyncio.run(
-            AttemptController.backoff_sleep(
-                30,
-                asyncio.Event(),
-                asyncio.Event(),
-                stop_requested,
-            )
+@pytest.mark.parametrize(
+    "trigger,error", [(0, RunCancelled), (1, LeaseLost), (2, WorkerDraining)]
+)
+def test_backoff_reacts_to_the_first_control_signal(trigger, error):
+    async def check():
+        signals = [asyncio.Event() for _ in range(3)]
+        signals[trigger].set()
+        await asyncio.wait_for(
+            AttemptController.backoff_sleep(30, *signals), timeout=0.5
         )
+
+    with pytest.raises(error):
+        asyncio.run(check())
 
 
 class _TerminalRuns:
@@ -221,6 +230,12 @@ class _TerminalRuns:
             "status": "running",
             "attempt_count": 1,
             "cancellation_requested_at": None,
+        }
+
+    async def get(self, run_id):
+        return {
+            "conversation_id": "conversation-1",
+            **await self.get_for_update(run_id),
         }
 
     async def finish_attempt(self, attempt_id: str, **kwargs):
@@ -243,8 +258,9 @@ class _OwnedLeases:
     async def owns(self, _lease_token: str, _run_id: str) -> bool:
         return True
 
-    async def release(self, _lease_token: str) -> None:
+    async def release_owned(self, _lease_token: str, _run_id: str) -> bool:
         self.released = True
+        return True
 
 
 class _SuccessfulTransport:
@@ -269,7 +285,7 @@ def test_terminal_fallback_persists_trace_and_redacts_exception_text(
             {"model": "source::model", "messages": []}, timeout_seconds=5
         )
     )
-    finalizer = RunFinalizer(_Engine())  # type: ignore[arg-type]
+    finalizer = RunFinalizer(_Engine(runs))  # type: ignore[arg-type]
     claim = ClaimedRun(
         run={"id": "run-1"},
         lease_token="owned-token",
@@ -294,9 +310,7 @@ def test_terminal_fallback_persists_trace_and_redacts_exception_text(
     assert runs.events[0]["causation_id"] == "attempt-started-event"
     assert runs.events[2]["causation_id"] == runs.events[1]["id"]
     assert runs.finished_run is not None
-    assert runs.finished_run["error_message"] == (
-        "Agent Runtime v3 run failed (runtime_error)"
-    )
+    assert runs.finished_run["error_message"] == ("ADE reply failed (runtime_error)")
     assert "secret" not in str(runs.finished_run)
     assert leases.released is True
 
@@ -312,7 +326,7 @@ def test_terminal_failure_persists_safe_validation_detail_code(
         "ConversationLeaseRepository",
         lambda _connection: leases,
     )
-    finalizer = RunFinalizer(_Engine())  # type: ignore[arg-type]
+    finalizer = RunFinalizer(_Engine(runs))  # type: ignore[arg-type]
     claim = ClaimedRun(
         run={"id": "run-1"},
         lease_token="owned-token",
@@ -338,7 +352,7 @@ def test_terminal_failure_persists_safe_validation_detail_code(
     assert runs.events[-1]["payload"] == {"attempt_count": 1, **expected_error}
     assert runs.finished_run is not None
     assert runs.finished_run["error_message"] == (
-        "Agent Runtime v3 run failed (runtime_validation_error)"
+        "ADE reply failed (runtime_validation_error)"
     )
     assert "private provider-derived detail" not in repr(runs.finished_attempts)
     assert "private provider-derived detail" not in repr(runs.events)

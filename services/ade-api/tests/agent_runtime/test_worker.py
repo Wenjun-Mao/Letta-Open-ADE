@@ -11,10 +11,6 @@ import pytest
 
 from ade_api.features.agent_runtime.errors import RuntimeValidationError
 from ade_api.features.agent_runtime.worker import AgentRuntimeWorker
-import ade_api.features.agent_runtime.worker as worker_module
-from ade_api.features.agent_runtime.natural_attempt_evidence import (
-    NaturalAttemptEvidence,
-)
 import ade_api.features.agent_runtime.worker_claims as worker_claims_module
 from ade_api.features.agent_runtime.worker_claims import ClaimedRun
 from ade_api.features.agent_runtime.worker_claims import RunClaimer
@@ -82,6 +78,7 @@ def _worker(attempts: _Attempts, finalizer: _Finalizer) -> AgentRuntimeWorker:
     worker = AgentRuntimeWorker.__new__(AgentRuntimeWorker)
     worker.attempts = attempts
     worker.finalizer = finalizer
+    worker.settings = SimpleNamespace()
     return worker
 
 
@@ -89,6 +86,8 @@ def _claim() -> ClaimedRun:
     return ClaimedRun(
         run={
             "id": "run-1",
+            "workspace_id": "workspace-1",
+            "conversation_id": "conversation-1",
             "attempt_count": 0,
             "retry_count": 0,
             "retry_attempt_base": 0,
@@ -134,142 +133,112 @@ def test_drain_before_attempt_fails_claim_without_starting_provider_work() -> No
     assert isinstance(finalizer.failure, WorkerDraining)
 
 
-def test_artifact_retention_fault_cannot_undo_committed_success(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    class _EvidenceAttempts(_Attempts):
+def test_private_observation_failure_cannot_undo_committed_success() -> None:
+    class BrokenObserver:
+        def record(self, *_args):
+            raise OSError("synthetic disk fault")
+
+    class ObservedAttempts(_Attempts):
         async def execute_attempt(self, _claim, **kwargs):
-            kwargs["trace"].natural_evidence = NaturalAttemptEvidence(
-                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v4-b"
-            )
+            self.trace = kwargs["trace"]
+            self.trace.private_observer = BrokenObserver()
             return SimpleNamespace()
 
-    async def fail_retention(_engine, _evidence):
-        raise OSError("synthetic disk fault")
+    async def scenario():
+        attempts, finalizer = ObservedAttempts(), _Finalizer()
+        await _worker(attempts, finalizer)._process_claim(_claim(), asyncio.Event())
+        return attempts, finalizer
 
-    monkeypatch.setattr(worker_module, "retain_attempt_evidence", fail_retention)
-
-    async def scenario() -> _Finalizer:
-        attempts = _EvidenceAttempts()
-        finalizer = _Finalizer()
-        worker = _worker(attempts, finalizer)
-        worker.engine = object()
-        await worker._process_claim(_claim(), asyncio.Event())
-        return finalizer
-
-    finalizer = asyncio.run(scenario())
-    assert finalizer.succeeded is True
-    assert finalizer.failure is None
+    attempts, finalizer = asyncio.run(scenario())
+    assert finalizer.succeeded and finalizer.failure is None
+    assert attempts.trace.observation_incomplete is True
 
 
-def test_lost_commit_ack_rechecks_authoritative_success_before_evidence(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    observed: list[NaturalAttemptEvidence] = []
-
-    class _EvidenceAttempts(_Attempts):
+def test_lost_commit_ack_does_not_run_the_candidate_again() -> None:
+    class Attempts(_Attempts):
         async def execute_attempt(self, _claim, **kwargs):
-            kwargs["trace"].natural_evidence = NaturalAttemptEvidence(
-                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v4-b"
-            )
+            self.trace = kwargs["trace"]
             return SimpleNamespace()
 
-    class _LostAckFinalizer(_Finalizer):
+    class LostAckFinalizer(_Finalizer):
         async def commit_success(self, claim, attempt_id, result, *, trace=None):
             await super().commit_success(claim, attempt_id, result, trace=trace)
             raise ConnectionError("synthetic acknowledgment loss")
 
         async def commit_failure(self, claim, attempt_id, exc, **kwargs):
-            # The real finalizer observes a terminal run and leaves it committed.
-            assert self.succeeded is True
+            # The real finalizer separately verifies authoritative terminal state.
+            assert self.succeeded
+            self.failure_calls = getattr(self, "failure_calls", 0) + 1
 
-    async def retain(_engine, evidence):
-        observed.append(evidence)
+    async def scenario():
+        attempts, finalizer = Attempts(), LostAckFinalizer()
+        await _worker(attempts, finalizer)._process_claim(_claim(), asyncio.Event())
+        return attempts, finalizer
 
-    monkeypatch.setattr(worker_module, "retain_attempt_evidence", retain)
-
-    async def scenario() -> _LostAckFinalizer:
-        worker = _worker(_EvidenceAttempts(), _LostAckFinalizer())
-        worker.engine = object()
-        await worker._process_claim(_claim(), asyncio.Event())
-        return worker.finalizer
-
-    finalizer = asyncio.run(scenario())
-    assert finalizer.succeeded is True
-    assert finalizer.failure is None
-    assert len(observed) == 1
+    attempts, finalizer = asyncio.run(scenario())
+    assert attempts.start_count == 1
+    assert finalizer.succeeded and finalizer.failure is None
+    assert finalizer.failure_calls == 1
 
 
-def test_rejected_candidate_is_retained_after_worker_failure(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    observed: list[NaturalAttemptEvidence] = []
+def test_execution_failure_keeps_private_capture_and_never_commits_candidate() -> None:
+    records = []
 
-    class _RejectedAttempts(_Attempts):
+    class Observer:
+        def record(self, event_type, value):
+            records.append((event_type, value))
+            return True
+
+    class RejectedAttempts(_Attempts):
         async def execute_attempt(self, _claim, **kwargs):
-            evidence = NaturalAttemptEvidence(
-                run_id="run-1", attempt=1, policy_binding="natural-user-assertions-v4-b"
-            )
-            evidence.capture_candidate("Okay, Toronto.", [])
-            evidence.reviewer_decision = {
-                "claim_dispositions": [
-                    {"claim_id": "residence", "outcome": "contradiction"}
-                ]
-            }
-            kwargs["trace"].natural_evidence = evidence
+            trace = kwargs["trace"]
+            trace.private_observer = Observer()
+            trace.record_private("controlled_candidate", {"reply": "candidate only"})
             raise RuntimeValidationError(
-                "synthetic false veto", detail_code="natural_memory_reply_conflict"
+                "controlled invalid candidate",
+                detail_code="synthetic_invalid_candidate",
             )
 
         async def finish_attempt_failure(self, *_args, **_kwargs):
             return "failed-event"
 
-    async def retain(_engine, evidence):
-        observed.append(evidence)
-
-    monkeypatch.setattr(worker_module, "retain_attempt_evidence", retain)
-
-    async def scenario() -> _Finalizer:
-        attempts = _RejectedAttempts()
+    async def scenario():
         finalizer = _Finalizer()
-        worker = _worker(attempts, finalizer)
-        worker.engine = object()
-        await worker._process_claim(_claim(), asyncio.Event())
+        await _worker(RejectedAttempts(), finalizer)._process_claim(
+            _claim(), asyncio.Event()
+        )
         return finalizer
 
     finalizer = asyncio.run(scenario())
-    assert finalizer.succeeded is False
+    assert not finalizer.succeeded
     assert isinstance(finalizer.failure, RuntimeValidationError)
-    assert observed[0].candidate_visible_reply == "Okay, Toronto."
-    assert (
-        observed[0].reviewer_decision["claim_dispositions"][0]["outcome"]
-        == "contradiction"
-    )
+    assert records[0] == ("controlled_candidate", {"reply": "candidate only"})
+    assert records[-1][0] == "attempt_execution.finished"
+    assert records[-1][1]["status"] == "RuntimeValidationError"
 
 
 def test_run_claimer_only_claims_work_accepted_in_its_runtime_mode(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    seen: list[tuple[str, str]] = []
+    seen = []
 
     class _Engine:
         @asynccontextmanager
         async def begin(self):
             yield object()
 
-    class _Runs:
+    class _Lifecycle:
         def __init__(self, _connection) -> None:
             pass
 
-        async def claim_pending(self, *, runtime_mode: str):
-            seen.append(("pending", runtime_mode))
+        async def claim(self, *, runtime_mode, workspace_id, abandoned=False):
+            seen.append(
+                ("abandoned" if abandoned else "pending", runtime_mode, workspace_id)
+            )
             return None
 
-        async def claim_abandoned(self, *, runtime_mode: str):
-            seen.append(("abandoned", runtime_mode))
-            return None
-
-    monkeypatch.setattr(worker_claims_module, "RunRepository", _Runs)
+    monkeypatch.setattr(worker_claims_module, "RunRepository", lambda _: object())
+    monkeypatch.setattr(worker_claims_module, "RunLifecycleRepository", _Lifecycle)
     monkeypatch.setattr(
         worker_claims_module,
         "ConversationLeaseRepository",
@@ -277,8 +246,14 @@ def test_run_claimer_only_claims_work_accepted_in_its_runtime_mode(
     )
     claimer = RunClaimer(
         engine=_Engine(),
-        settings=SimpleNamespace(agent_runtime_mode="release"),
+        settings=SimpleNamespace(
+            agent_runtime_mode="release",
+            agent_runtime_workspace_key="synthetic-claim-workspace",
+        ),
     )
 
     assert asyncio.run(claimer.claim()) == (None, False)
-    assert seen == [("pending", "release"), ("abandoned", "release")]
+    assert seen == [
+        ("pending", "release", claimer.database.workspace_id),
+        ("abandoned", "release", claimer.database.workspace_id),
+    ]

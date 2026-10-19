@@ -254,7 +254,9 @@ class AttemptController:
             waiters = {cancellation_task, lease_task}
             if draining_task is not None:
                 waiters.add(draining_task)
-            done, _ = await asyncio.wait(waiters, timeout=delay)
+            done, _ = await asyncio.wait(
+                waiters, timeout=delay, return_when=asyncio.FIRST_COMPLETED
+            )
             if cancellation_task in done:
                 raise RunCancelled("run cancellation was requested")
             if lease_task in done:

@@ -273,6 +273,24 @@ These are scoped increments, not a claim that M0-M6 is complete.
   workspace/claim and native-policy rejection tests were reconciled to current
   contracts without restoring retired callers. Remaining full-suite debt,
   repaired live startup, six-slot execution and M6 are still pending.
+- The next stack passed startup, but actual public preflight rejected its ready
+  worker because API/worker Memory endpoints differed. No dialogue slot started.
+  ADR 0076 records the shared-endpoint correction; the resolved-Compose check
+  reproduced the mismatch before the fix. The failed activation is stopped;
+  all six baseline identities/health are unchanged. A separate immutable
+  closeout correction distinguishes stopped-candidate health from baseline health.
+  Maintained non-SQL runtime tests now pass (510, three evidence-absence skips);
+  the unfiltered sweep still fails 44 checks plus nine errors, all in the three
+  frozen historical story modules. Their source hashes/inputs remain untouched.
+  The 231 workflow/Router/guard checks and 50 selected application-role SQL checks
+  passed (the adjacent deployment-helper test makes 51 in that invocation).
+  Timing additionally exposed all-completed retry backoff: each of three new
+  half-second control-signal regressions failed, then passed with FIRST_COMPLETED.
+  The existing historical reviewer-budget helper remains tested with its owner;
+  no retired native reviewer or cutover gate was restored. M5/M6 remain pending.
+  The final combined non-SQL gate passed 743 checks with three evidence-absence
+  skips; the final selected SQL-only invocation passed 50 checks. Full-suite
+  green remains unestablished because frozen historical replay still rejects drift.
 
 Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission

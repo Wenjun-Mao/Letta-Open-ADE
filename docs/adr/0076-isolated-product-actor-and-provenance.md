@@ -57,6 +57,17 @@ to fixed candidate upstreams and records IDs/hashes/status only. It cannot alter
 semantic input, access Docker, target baseline services or implement product policy.
 Holds have finite deadlines and recheck activation closure before forwarding.
 
+Endpoint compatibility correction, 2026-10-19: API and worker must share the
+same concrete Memory endpoint, including this proxy. The first healthy full-stack
+startup registered a ready worker, but API admission correctly rejected it because
+its direct-native endpoint differed from the worker's proxy endpoint. Route both
+through the shared Compose environment; do not remove endpoint binding from worker
+compatibility or invent a logical-service override. Read-only inspection is still
+normal proxy forwarding, not an injected recall or a different Memory authority.
+The runner's native diagnostics may address Hindsight directly. A resolved-Compose
+regression requires API/worker Memory endpoints to match. Preserve the failed
+preflight; no dialogue slot or Character inference had begun.
+
 Candidate image builds run serially before supervision/inference startup, reserving
 host CPU 3 and limiting each build to three CPUs and 3 GiB RAM. The installed OCI
 Buildx command has no per-build resource-limit option. **Temporary build-tool

@@ -19,7 +19,7 @@ x-ade-environment: &ade-environment
   ADE_API_MODEL_ROUTER_BASE_URL: http://model-router:8010
   ADE_API_MODEL_ROUTER_API_KEY_SECRET: ""
   MODEL_ROUTER_API_KEY: ${INTEGRATION_ROUTER_KEY:?private generated credential required}
-  ADE_API_HINDSIGHT_BASE_URL: http://hindsight:8888
+  ADE_API_HINDSIGHT_BASE_URL: http://fault-proxy:8020/hindsight
   ADE_API_HINDSIGHT_API_KEY: ${INTEGRATION_HINDSIGHT_KEY:?private generated credential required}
   ADE_API_HINDSIGHT_TIMEOUT_SECONDS: "150"
   ADE_API_RUNTIME_DATA_DIR: /runtime
@@ -201,7 +201,6 @@ services:
     environment:
       <<: *ade-environment
       ADE_API_MODEL_ROUTER_BASE_URL: http://fault-proxy:8020/router
-      ADE_API_HINDSIGHT_BASE_URL: http://fault-proxy:8020/hindsight
       ADE_API_AGENT_RUNTIME_WORKER_ID: hindsight-stage1-primary
     command: [python, -m, ade_api.features.agent_runtime.worker]
     volumes:

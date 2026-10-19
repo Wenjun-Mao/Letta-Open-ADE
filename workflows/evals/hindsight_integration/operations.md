@@ -97,6 +97,10 @@ never reuse a database/bank or alter the source volume. The helper verifies the
 actual complete weight hash and metadata after copying. Otherwise it downloads
 the exact public BGE snapshot
 and verifies the weight hash and metadata before the Hindsight server starts.
+The OCI kernel charged buffered copy writeback to a 512-MiB helper and killed it
+at that cgroup limit despite ample host headroom. Preserve that partial-copy
+receipt; a bounded helper may use up to the existing 3-GiB preparation envelope
+for this fixed 2.27-GB snapshot. Await copy completion before verification.
 Preserve partial failures; repeated provisioning may resume the same pinned
 download but cannot accept an unverified or silently substituted model.
 

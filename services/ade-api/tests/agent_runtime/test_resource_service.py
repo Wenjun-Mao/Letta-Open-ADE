@@ -32,78 +32,12 @@ class _Database:
     async def ensure_ready(self) -> None:
         return None
 
+    def require_workspace(self, row):
+        assert row["workspace_id"] == DEFAULT_WORKSPACE_ID
+
     @asynccontextmanager
     async def translated_errors(self):
         yield
-
-
-class _MemoryRepository:
-    async def get_subject(self, subject_id: str) -> dict[str, Any]:
-        return {
-            "id": subject_id,
-            "workspace_id": DEFAULT_WORKSPACE_ID,
-            "memory_generation": 3,
-        }
-
-    async def list_facts_with_entities(self, subject_id: str) -> list[dict[str, Any]]:
-        assert subject_id == "subject-1"
-        return [
-            {
-                "id": "fact-1",
-                "normalized_key": "pet.name|entity-1|",
-                "fact_type": "pet.name",
-                "entity_id": "entity-1",
-                "entity_kind": "pet",
-                "entity_label": "Rocky",
-                "qualifier": None,
-                "value": "Rocky",
-                "status": "active",
-                "version": 2,
-                "updated_at": NOW,
-            }
-        ]
-
-    async def list_revisions(self, fact_id: str) -> list[dict[str, Any]]:
-        assert fact_id == "fact-1"
-        return [
-            {
-                "id": "revision-2",
-                "operation": "correct",
-                "fact_version": 2,
-                "value": "Rocky",
-                "run_id": "run-2",
-                "created_at": NOW,
-            }
-        ]
-
-    async def list_revision_predecessor_ids(self, revision_id: str) -> list[str]:
-        assert revision_id == "revision-2"
-        return ["revision-1"]
-
-    async def list_revision_sources(
-        self,
-        revision_id: str,
-        *,
-        workspace_id: str,
-        subject_id: str,
-        purpose: str | None,
-    ) -> list[dict[str, Any]]:
-        assert revision_id == "revision-2"
-        assert workspace_id == DEFAULT_WORKSPACE_ID
-        assert subject_id == "subject-1"
-        assert purpose is None
-        return [
-            {
-                "message_id": "message-2",
-                "conversation_id": "conversation-2",
-                "message_sequence": 42,
-                "start_char": 10,
-                "end_char": 15,
-                "quote": "Rocky",
-                "message_sha256": "a" * 64,
-                "authority_role": "user_assertion",
-            }
-        ]
 
 
 class _ConversationRepository:
@@ -166,25 +100,8 @@ class _ConversationRepository:
         return ["message-1"]
 
 
-def test_subject_memory_read_model_exposes_entity_metadata_and_revision_lineage(
-    monkeypatch,
-) -> None:
-    repository = _MemoryRepository()
-    monkeypatch.setattr(resource_service, "MemoryRepository", lambda _: repository)
-
-    response = asyncio.run(
-        ResourceService(_Database()).get_subject_memories("subject-1")
-    )
-
-    fact = response["facts"][0]
-    assert response["memory_generation"] == 3
-    assert fact["entity_kind"] == "pet"
-    assert fact["entity_label"] == "Rocky"
-    assert fact["revisions"][0]["predecessor_revision_ids"] == ["revision-1"]
-    assert fact["revisions"][0]["evidence"][0]["message_id"] == "message-2"
-    assert fact["revisions"][0]["evidence"][0]["conversation_id"] == "conversation-2"
-    assert fact["revisions"][0]["evidence"][0]["message_sequence"] == 42
-    assert fact["revisions"][0]["evidence"][0]["authority_role"] == "user_assertion"
+def test_product_resource_service_cannot_restore_native_fact_inspection() -> None:
+    assert not hasattr(ResourceService, "get_subject_memories")
 
 
 def test_conversation_state_exposes_latest_summary_with_boundary_and_provenance(

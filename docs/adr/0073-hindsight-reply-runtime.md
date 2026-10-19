@@ -50,6 +50,12 @@ Explicit Retry uses one idempotent receipt per observed attempt; each accepted
 Retry starts another bounded automatic-retry group for that saved input. Recovery
 cannot obtain a fresh automatic budget merely by restarting a worker. Cancel and
 stale leases cannot create an assistant source.
+Backoff control correction, 2026-10-19: cancellation, lease loss or drain ends a
+retry delay at the first signal. The previous `asyncio.wait` used its default
+all-completed condition, delaying an already-triggered signal for the full
+backoff. Three bounded regressions reproduced this for each independent signal;
+the worker now uses `FIRST_COMPLETED`, preserves existing signal priority and
+cancels/joins all remaining waiters. This changes no retry budget or saved input.
 Recovery must acquire its replacement lease before abandoning an original attempt
 or failing an exhausted run; an expiry observed during selection may already be
 obsolete. Recheck run state after the conversation lock, and preserve a pending

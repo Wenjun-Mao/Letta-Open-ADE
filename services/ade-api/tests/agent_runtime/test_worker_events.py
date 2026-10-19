@@ -47,6 +47,7 @@ def test_success_events_pair_model_and_tool_boundaries() -> None:
             estimated_input_tokens=10,
             omitted_message_ids=[],
             retrieved_fact_ids=[],
+            current_chat={"message_ids": ["user-1"], "summary": None},
         ),
         executor=SimpleNamespace(
             model_request_count=2,
@@ -68,13 +69,7 @@ def test_success_events_pair_model_and_tool_boundaries() -> None:
             ),
             tool_requirement_satisfied=True,
         ),
-        reviewer=SimpleNamespace(
-            model_request_count=1,
-            provider_request_ids=[],
-            protocol_repaired=False,
-            usage={},
-        ),
-        review=SimpleNamespace(operations=[]),
+        memory_lookups=[],
     )
 
     asyncio.run(
@@ -83,8 +78,8 @@ def test_success_events_pair_model_and_tool_boundaries() -> None:
             run_id="run-1",
             attempt=1,
             result=result,
-            committed=[],
             assistant_message_id="message-1",
+            delivery_operation_id="delivery-1",
         )
     )
 
@@ -121,7 +116,17 @@ def test_success_events_pair_model_and_tool_boundaries() -> None:
     assert requirement_satisfied["causation_id"] == first_tool_completed["id"]
     completed = repository.events[-1]
     assert completed["event_type"] == "run.completed"
-    assert completed["payload"]["model_request_count"] == 3
+    assert completed["payload"]["model_request_count"] == 2
+    queued = next(
+        row
+        for row in repository.events
+        if row["event_type"] == "memory.delivery.queued"
+    )
+    assert queued["payload"] == {
+        "operation_id": "delivery-1",
+        "message_id": "message-1",
+    }
+    assert "reviewer" not in completed["payload"]["model_request_counts"]
     assert completed["payload"]["usage"] == {"total_tokens": 12}
 
 
@@ -133,6 +138,7 @@ def test_compaction_events_and_provenance_are_emitted_in_execution_order() -> No
             estimated_input_tokens=10,
             omitted_message_ids=[],
             retrieved_fact_ids=[],
+            current_chat={"message_ids": ["user-1"], "summary": None},
         ),
         executor=SimpleNamespace(
             model_request_count=1,
@@ -142,13 +148,7 @@ def test_compaction_events_and_provenance_are_emitted_in_execution_order() -> No
             tool_requirement=None,
             tool_requirement_satisfied=False,
         ),
-        reviewer=SimpleNamespace(
-            model_request_count=1,
-            provider_request_ids=["review-request"],
-            protocol_repaired=False,
-            usage={"completion_tokens": 2},
-        ),
-        review=SimpleNamespace(operations=[]),
+        memory_lookups=[],
         compaction=SimpleNamespace(
             provider_request_id="summary-request",
             usage={"prompt_tokens": 4, "completion_tokens": 1},
@@ -176,8 +176,8 @@ def test_compaction_events_and_provenance_are_emitted_in_execution_order() -> No
             run_id="run-1",
             attempt=1,
             result=result,
-            committed=[],
             assistant_message_id="message-3",
+            delivery_operation_id="delivery-3",
             summary=summary,
         )
     )
@@ -198,12 +198,11 @@ def test_compaction_events_and_provenance_are_emitted_in_execution_order() -> No
     completed = repository.events[-1]
     assert completed["payload"]["model_request_counts"] == {
         "conversation": 1,
-        "reviewer": 1,
         "compaction": 1,
     }
     assert completed["payload"]["usage"] == {
         "prompt_tokens": 14,
-        "completion_tokens": 3,
+        "completion_tokens": 1,
     }
 
 
