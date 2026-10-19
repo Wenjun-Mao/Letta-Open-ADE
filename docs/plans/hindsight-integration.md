@@ -210,9 +210,11 @@ These are scoped increments, not a claim that M0-M6 is complete.
   Relationship-scoped inspection and independent browser Memory loading are now
   implemented under [ADR 0074](../adr/0074-relationship-memory-inspection.md), with
   182 passing focused backend checks (40 application-role SQL cases), frontend
-  production build and lint. Browser mechanics checks exposed and repaired
-  the Retry-receipt mismatch and intrinsic-width overflow; final source-bound
-  browser replay remains required. Remaining maintained-test reconciliation,
+  production build and lint, plus 93 passing frontend tests. The
+  [source-bound controlled browser replay](../findings/hindsight-interface-mechanics-2026-10-19.md)
+  passed after repairing the Retry-receipt mismatch and intrinsic-width overflow.
+  This is Interface/product-persistence mechanics, not native semantic proof.
+  Remaining maintained-test reconciliation,
   complete actual-product capture, the six live probe slots and M6
   native product fault/closeout gates remain pending. Do not count this backend
   checkpoint as full M2/M3 or M0-M6 completion.
