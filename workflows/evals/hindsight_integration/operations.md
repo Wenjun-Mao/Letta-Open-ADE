@@ -24,6 +24,9 @@ python3 -m workflows.evals.hindsight_integration.operations_cli check \
 
 Preparation inventories baseline identities/health/mounts without exporting
 their environments or data. It refuses an overlapping running candidate owner.
+Persistent services are exact baseline identities. Explicit auto-removing Compose
+one-offs are inventoried separately because successful completion removes them;
+an unclassified missing service still closes the activation.
 The maximum lease is twelve hours, with a one-hour shutdown margin. A fresh
 lease is a new immutable activation, with reconciliation before any new startup.
 

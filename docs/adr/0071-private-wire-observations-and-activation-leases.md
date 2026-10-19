@@ -59,6 +59,15 @@ Native startup verifies the live heartbeat, unclosed lease and provisioned confi
 hash before Compose and checks closure afterward, stopping owned new containers
 on a startup race. Closed activations and their evidence are never reopened.
 
+Persistent baseline services retain exact identity/health/mount checks. Record
+auto-removing Compose one-off jobs separately: their normal completion/removal is
+not service drift. Classification requires both Docker `AutoRemove=true` and the
+Compose one-off label, not a name guess. Preserve their activation-time inventory.
+Stopped historical integration candidates are retained resources, not external
+baseline services. A container disappearing between list/inspect is reported as
+absent only for Docker's exact missing-container error; missing persistent IDs
+still close admission, and other inspection errors fail closed.
+
 ## Alternatives And Consequences
 
 Reconstructing requests in the evaluation CLI was rejected because it misses

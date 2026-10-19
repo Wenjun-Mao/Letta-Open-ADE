@@ -26,6 +26,7 @@ INSPECTION = (
     '{"id":{{json .Id}},"name":{{json .Name}},"image":{{json .Image}},'
     '"state":{{json .State.Status}},"started_at":{{json .State.StartedAt}},'
     '"restarts":{{json .RestartCount}},"oom":{{json .State.OOMKilled}},'
+    '"auto_remove":{{json .HostConfig.AutoRemove}},'
     '"health":{{with index .State "Health"}}{{json .Status}}{{else}}null{{end}},'
     '"mounts":{{json .Mounts}},"labels":{{json .Config.Labels}},'
     '"networks":{{json .NetworkSettings.Networks}}}'
@@ -65,7 +66,30 @@ class DockerOperations:
             identities = self._run(["ps", "-aq", "--no-trunc"]).split()
         if not identities:
             return []
-        output = self._run(["inspect", "--format", INSPECTION, *identities])
+        result = subprocess.run(
+            [
+                "docker",
+                "inspect",
+                "--type",
+                "container",
+                "--format",
+                INSPECTION,
+                *identities,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=20,
+        )
+        if result.returncode:
+            missing = {
+                f"Error: No such container: {identity}" for identity in identities
+            }
+            errors = set(result.stderr.strip().splitlines())
+            # Containers may finish between `ps` and `inspect`. Expected persistent
+            # identities are still checked below, rather than silently discarded.
+            if not errors or not errors <= missing:
+                raise RuntimeError("docker_inspection_failed")
+        output = result.stdout
         return sorted(
             (canonical_snapshot(json.loads(line)) for line in output.splitlines()),
             key=lambda x: x["id"],
@@ -102,6 +126,7 @@ class Lease:
     expires_at: int
     disk_path: str
     baseline: tuple[dict, ...]
+    transient_baseline: tuple[dict, ...] = ()
     minimum_available_ram: int = 4 * GIB
     minimum_free_disk: int = 10 * GIB
 
@@ -142,6 +167,7 @@ class Lease:
         if hashlib.sha256(encoded(value)).hexdigest() != seal["sha256"]:
             raise ValueError("Activation lease changed")
         value["baseline"] = tuple(value["baseline"])
+        value["transient_baseline"] = tuple(value.get("transient_baseline", ()))
         return cls(**value)
 
 
@@ -151,6 +177,14 @@ def canonical_snapshot(record: dict) -> dict:
     if "mounts" in result:
         result["mounts"] = sorted(result["mounts"], key=encoded)
     return result
+
+
+def transient_job(record: dict) -> bool:
+    return (
+        record.get("auto_remove") is True
+        and (record.get("labels") or {}).get("com.docker.compose.oneoff", "").lower()
+        == "true"
+    )
 
 
 def prepare_lease(
@@ -173,6 +207,13 @@ def prepare_lease(
             "Reconcile and stop the previous activation before a new lease"
         )
     now = int(time.time()) if now is None else now
+    external = [
+        record
+        for record in snapshots
+        if not (record.get("labels") or {})
+        .get(PROJECT_LABEL, "")
+        .startswith(PROJECT_PREFIX)
+    ]
     lease = Lease(
         project,
         str(uuid4()),
@@ -181,11 +222,8 @@ def prepare_lease(
         now + duration - SHUTDOWN_MARGIN_SECONDS,
         now + duration,
         disk_path,
-        tuple(
-            record
-            for record in snapshots
-            if (record.get("labels") or {}).get(PROJECT_LABEL) != project
-        ),
+        tuple(record for record in external if not transient_job(record)),
+        tuple(record for record in external if transient_job(record)),
     )
     lease.save(root)
     return lease

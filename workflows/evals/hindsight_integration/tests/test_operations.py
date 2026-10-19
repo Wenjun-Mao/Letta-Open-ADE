@@ -15,6 +15,7 @@ from workflows.evals.hindsight_integration.operations import (
     prepare_lease,
     stop_owned,
     canonical_snapshot,
+    DockerOperations,
 )
 
 
@@ -115,6 +116,71 @@ def test_mount_order_is_not_baseline_drift_but_mount_changes_are(tmp_path):
     assert canonical_snapshot({"mounts": mounts}) == canonical_snapshot(
         {"mounts": list(reversed(mounts))}
     )
+
+
+def test_only_explicit_auto_removing_oneoffs_have_a_transient_lifecycle(tmp_path):
+    docker = DockerFake()
+    job = {
+        "id": "job",
+        "state": "running",
+        "auto_remove": True,
+        "labels": {"com.docker.compose.oneoff": "True"},
+    }
+    docker.records.append(job)
+    lease = prepare(tmp_path, docker)
+    assert [item["id"] for item in lease.baseline] == ["baseline"]
+    assert lease.transient_baseline == (job,)
+    assert Lease.load(tmp_path).transient_baseline == (job,)
+    docker.records.remove(job)
+    assert check_lease(lease, docker=docker, capacity=CAPACITY, now=101) == []
+    docker.records.clear()
+    assert check_lease(lease, docker=docker, capacity=CAPACITY, now=101) == [
+        "baseline_changed"
+    ]
+
+
+def test_oneoff_label_alone_cannot_exempt_a_persistent_container(tmp_path):
+    docker = DockerFake()
+    docker.records[0]["labels"]["com.docker.compose.oneoff"] = "True"
+    lease = prepare(tmp_path, docker)
+    assert lease.transient_baseline == ()
+    docker.records.clear()
+    assert check_lease(lease, docker=docker, capacity=CAPACITY, now=101) == [
+        "baseline_changed"
+    ]
+
+
+def test_stopped_previous_candidates_are_not_baseline_services(tmp_path):
+    docker = DockerFake()
+    prior = prepare(tmp_path / "prior", docker)
+    docker.records.append({**owned_record(prior), "state": "exited"})
+    lease = prepare(tmp_path / "next", docker)
+    assert [item["id"] for item in lease.baseline] == ["baseline"]
+
+
+@pytest.mark.parametrize(
+    "error", ["Error: No such container: missing", "permission denied"]
+)
+def test_docker_inspection_race_is_narrow_and_does_not_hide_other_errors(
+    monkeypatch, error
+):
+    from types import SimpleNamespace
+    from workflows.evals.hindsight_integration import operations
+
+    monkeypatch.setattr(
+        operations.subprocess,
+        "run",
+        lambda *a, **kw: SimpleNamespace(
+            returncode=1,
+            stdout='{"id":"alive"}\n',
+            stderr=error,
+        ),
+    )
+    if error.startswith("Error: No such container"):
+        assert DockerOperations().snapshot(["alive", "missing"]) == [{"id": "alive"}]
+    else:
+        with pytest.raises(RuntimeError, match="inspection_failed"):
+            DockerOperations().snapshot(["alive", "missing"])
 
 
 @pytest.mark.parametrize(
