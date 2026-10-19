@@ -15,7 +15,7 @@ def test_stale_case_requires_both_candidate_and_recovery_evidence(monkeypatch, d
     calls = []
     exported = {
         "saved_attempts": [
-            {"id": "first", "attempt_number": 1, "status": "abandoned"},
+            {"id": "first", "attempt_number": 1, "status": "failed"},
             {"id": "second", "attempt_number": 2, "status": "succeeded"},
         ],
         "observations": [
@@ -78,4 +78,6 @@ def test_stale_case_requires_both_candidate_and_recovery_evidence(monkeypatch, d
             asyncio.run(scenario.stale_worker(Context()))
     else:
         assert asyncio.run(scenario.stale_worker(Context()))["deliveries"]["retained"]
-    assert calls == ["held", "lock-subject", "released", "expire-finalizer"]
+    assert calls == ["held", "lock-subject", "released", "expire-finalizer"] + (
+        [] if damage else ["verify-finalizer"]
+    )

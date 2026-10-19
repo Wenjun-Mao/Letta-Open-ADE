@@ -161,6 +161,41 @@ class StaleFinalizer:
             finally:
                 self.log.close()
 
+    def verify(self, details):
+        run = identifiers(details, ("run_id",))["run_id"]
+        if (
+            self.read(
+                "SELECT count(*) FROM ade.runs WHERE "
+                f"id='{run}' AND conversation_id='{self.conversation}' "
+                "AND status='succeeded' AND attempt_count=2;"
+            )
+            != "1"
+        ):
+            raise ValueError("owned_finalizer_recovery_not_complete")
+        attempts = json.loads(
+            self.read(
+                "SELECT json_agg(json_build_object('number',attempt_number,'status',status,"
+                "'error_code',provider_outcome->>'error_code') ORDER BY attempt_number) "
+                f"FROM ade.run_attempts WHERE run_id='{run}';"
+            )
+        )
+        if [(row["number"], row["status"], row["error_code"]) for row in attempts] != [
+            (1, "failed", "worker_lease_expired"),
+            (2, "succeeded", None),
+        ]:
+            raise ValueError("owned_finalizer_attempt_outcome_mismatch")
+        if (
+            self.read(
+                "SELECT count(*) FROM ade.messages WHERE "
+                f"run_id='{run}' AND role='assistant';"
+            )
+            != "1"
+        ):
+            raise ValueError("owned_finalizer_committed_duplicate_reply")
+        result = {"run_id": run, "attempts": attempts, "committed_assistants": 1}
+        create_record(self.controls.output / "finalizer-recovery.json", result)
+        return result
+
     def resume(self):
         if self.paused:
             self.controls.fence()

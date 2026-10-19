@@ -20,10 +20,15 @@ from .safety_protocol import SafetyContext
 from .safety_scenarios import PROXIED_SCENARIOS
 from .host_scenarios import HOST_SCENARIOS
 from .stale_worker_scenario import stale_worker
+from .isolation_scenario import isolation
 from .wire_capture import require
 
 
-SCENARIOS = PROXIED_SCENARIOS | HOST_SCENARIOS | {"stale-worker": stale_worker}
+SCENARIOS = (
+    PROXIED_SCENARIOS
+    | HOST_SCENARIOS
+    | {"stale-worker": stale_worker, "isolation": isolation}
+)
 
 
 async def run_safety(root, *, activation_root, controller_revision, scenarios):
@@ -74,6 +79,7 @@ async def run_safety(root, *, activation_root, controller_revision, scenarios):
             "safety_scenarios.py",
             "host_scenarios.py",
             "stale_worker_scenario.py",
+            "isolation_scenario.py",
         )
     }
     write_new(

@@ -399,3 +399,15 @@ It requires actual first-candidate production, lease expiry, abandoned attempt,
 recovery and one committed assistant. Preserve all host/SQL/HTTP receipts even on
 failure. See ADR 0081. These observations do not qualify Memory semantics, human
 Character acceptance or Stage 3 paired restore.
+
+The additional `--scenario isolation` first establishes a real source, then
+checks forged source/operation/retry IDs across separately varied subject and
+character scopes. It also checks reader/unauthenticated roles and a temporary
+same-image, private-network-only API bound to a new workspace. No second worker
+or public port is added. The original lease/CPU reserve still fences every step.
+The host records its exact identity and stops it in normal/failure cleanup.
+
+Paired checkpoints preserve every ADE relationship's bank state before stopping
+writers. A recorded non-established/missing bank may retain a native 404 without
+being created as cleanup; unexpected absence of a `ready` bank remains an error.
+These records are not an empty-success or restore-qualified claim.

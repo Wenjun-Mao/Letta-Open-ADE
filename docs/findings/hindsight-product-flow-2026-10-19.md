@@ -1,6 +1,6 @@
 # Hindsight Product Flow: Scoped Stage 1 Observations
 
-Status: real six-slot capture and four proxy safety cases observed. M0-M6 is
+Status: real six-slot capture, four proxy and two host recovery cases observed. M0-M6 is
 **not complete**; remaining safety, negative-access and paired-backup gates are
 pending. No human Character judgment, general Memory reliability, paired restore,
 production deployment or release qualification follows.
@@ -62,6 +62,24 @@ recorded product runner image. Product and controller revisions remain distinct.
 All four mechanical cases passed. They do not establish semantic Memory quality,
 Character acceptance, billing totals, quiescence or the remaining M6 requirements.
 Traffic snapshots are time-bounded observations; native work can continue.
+
+## Owned Host Recovery
+
+`host-safety-01` passed both recall-outage and same-store runtime restart at the
+same product image, using controller `d513fd5aa5b9c51ff0e5fe91720fea5721ff75ae`.
+The outage paused without Character dispatch or a fabricated empty Memory result;
+explicit Retry reused the saved run/user input with an idempotent replay receipt.
+The restart stopped/restarted the exact API/worker/native containers and mounted
+stores after native acceptance. Reconciliation retained the immutable operation
+with one submission attempt; it did not replay history.
+
+`stale-worker-01`, controller `0adfb4acf02f681c5ca414e014284eccdc8d12ac`, remains a
+failed controller case. Its actual finalizer waited behind the owned subject lock,
+the database clock proved lease expiry, both attempts produced real candidates,
+and one reply committed on attempt two. The validator incorrectly expected an
+`abandoned` status; the owning repository uses `failed` with
+`worker_lease_expired`. The corrected controller additionally reads that reason
+from SQL. A new predeclared case remains required; do not relabel this failed one.
 
 The first paired-checkpoint attempt at the previous activation preserved readbacks
 and stopped owned resources, but failed before dumps because of a wrong Alembic

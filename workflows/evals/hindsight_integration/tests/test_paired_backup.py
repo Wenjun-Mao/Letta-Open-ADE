@@ -149,7 +149,7 @@ def test_two_store_backup_has_no_writers_and_always_closes_owned_resources(
     monkeypatch.setattr(backup, "require_configuration", lambda *args: None)
     monkeypatch.setattr(backup, "product_readbacks", lambda *args: [])
     monkeypatch.setattr(
-        backup, "sql", lambda *args: "" if "bank_id" in args[-1] else "20261019_0010"
+        backup, "sql", lambda *args: "[]" if "bank_id" in args[-1] else "20261019_0010"
     )
     monkeypatch.setattr(
         backup,
@@ -214,8 +214,9 @@ def test_two_store_backup_has_no_writers_and_always_closes_owned_resources(
 
 def test_native_pending_preserves_failures_unknown_states_and_incomplete_pages():
     class Reads:
-        def get(self, service, path):
+        def get(self, service, path, *, allowed_statuses):
             assert service == "native" and "limit=100" in path
+            assert allowed_statuses == (200,)
             return {
                 "total": 3,
                 "operations": [
@@ -224,10 +225,38 @@ def test_native_pending_preserves_failures_unknown_states_and_incomplete_pages()
                 ],
             }
 
-    result = native_pending(Reads(), ["ade-" + "a" * 32])
+    result = native_pending(Reads(), [{"bank_id": "ade-" + "a" * 32, "state": "ready"}])
     assert [row["operation_id"] for row in result["pending"]] == ["active"]
     assert [row["operation_id"] for row in result["failed"]] == ["failed"]
     assert result["incomplete_banks"] == ["ade-" + "a" * 32]
+
+
+@pytest.mark.parametrize("state", ["new", "initializing", "missing", "failed", "ready"])
+def test_checkpoint_preserves_unestablished_or_missing_banks_without_creating_them(
+    state,
+):
+    class Reads:
+        def get(self, service, path, *, allowed_statuses):
+            if state == "ready":
+                assert allowed_statuses == (200,)
+                raise RuntimeError("missing_established_bank")
+            assert allowed_statuses == (200, 404)
+            return {"unavailable_http_status": 404}
+
+    relationship = {
+        "bank_id": "ade-" + "b" * 32,
+        "state": state,
+        "last_error_code": "original-state",
+    }
+    if state == "ready":
+        with pytest.raises(RuntimeError, match="missing_established"):
+            native_pending(Reads(), [relationship])
+    else:
+        result = native_pending(Reads(), [relationship])
+        assert result["unavailable_banks"] == [
+            {**relationship, "unavailable_http_status": 404}
+        ]
+        assert result["pending"] == result["failed"] == []
 
 
 def test_unstaged_controller_cannot_quiesce_a_stack(tmp_path):

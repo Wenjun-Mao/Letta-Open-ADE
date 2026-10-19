@@ -31,7 +31,7 @@ async def stale_worker(context):
     attempts = exported["saved_attempts"]
     require(
         [(row["attempt_number"], row["status"]) for row in attempts]
-        == [(1, "abandoned"), (2, "succeeded")],
+        == [(1, "failed"), (2, "succeeded")],
         "stale_attempt_not_abandoned_before_recovered_commit",
     )
     first = next(
@@ -47,6 +47,7 @@ async def stale_worker(context):
         ),
         "stale_attempt_did_not_really_produce_candidate",
     )
+    verified = await context.host("verify-finalizer", {"run_id": receipt["run_id"]})
     return {
         "subject_lock": locked,
         "expired_finalizer": expired,
@@ -54,4 +55,5 @@ async def stale_worker(context):
         "saved_state": state,
         "deliveries": retained,
         "attempt_readback": capture,
+        "verified_recovery": verified,
     }

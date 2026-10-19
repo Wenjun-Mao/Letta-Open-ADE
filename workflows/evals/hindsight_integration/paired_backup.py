@@ -168,12 +168,17 @@ def run_backup(
         )
         ade = owned_service(docker, lease, "ade-db")
         native = owned_service(docker, lease, "db")
-        banks = sql(
-            ade["id"],
-            "ade_integration_admin",
-            "ade_integration",
-            "SELECT bank_id FROM ade.memory_relationships ORDER BY bank_id;",
-        ).splitlines()
+        banks = json.loads(
+            sql(
+                ade["id"],
+                "ade_integration_admin",
+                "ade_integration",
+                "SELECT coalesce(json_agg(row_to_json(r)), '[]') FROM "
+                "(SELECT bank_id,state,last_error_code FROM ade.memory_relationships "
+                "ORDER BY bank_id) r;",
+            )
+        )
+        create_record(output / "relationship-states.json", {"relationships": banks})
         for name in ("ade-web", "ade-api", "ade-worker"):
             docker.stop(owned_service(docker, lease, name)["id"])
         deadline, stable = time.monotonic() + drain_seconds, 0

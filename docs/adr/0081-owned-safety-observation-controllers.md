@@ -28,9 +28,23 @@ the real finalizer is observed waiting on that session, pause only the exact
 owned worker until the database clock proves lease expiry. Roll back the lock
 and resume that worker. Require an abandoned, genuinely produced first candidate,
 a successful second attempt and exactly one saved/retained assistant source.
+The repository represents abandonment as attempt `failed` with the saved
+`worker_lease_expired` reason, not a literal `abandoned` status. The first live
+controller's incorrect status assertion is preserved as failed; a read-only SQL
+verification now requires the real reason as well as public/private readbacks.
 Session statement/idle limits and finally-cleanup bound the lock; failed cleanup
 closes the candidate. This tests the final SQL commit fence, not merely cancellation
 before a candidate exists. It adds no product fault hook or special generation.
+
+Negative access checks isolate subject and character separately, using a known
+retained document/operation as a positive control before forging their IDs in
+another relationship. Reader and unauthenticated private-export denial remain
+distinct from authorized read-only source inspection. Workspace checks use one
+temporary API at the exact product image and database, a fresh workspace and
+fresh source-seeded authoring directory. It has no public ports or reply worker,
+at most 0.1 CPU/512 MiB, and cannot exceed the three-CPU candidate aggregate.
+Only this named/labelled owned API is stopped afterward. This fixture validates
+the configured workspace boundary, not a new deployment shape or tenant service.
 
 Predeclared cases cover failed generation, cancellation, deliberately delayed
 retention with unrelated progress, and lost acknowledgement after real native
@@ -72,6 +86,13 @@ and stopped stores. Derive and validate schema/table identifiers from the staged
 source configuration before quiescing; do not add a missing-table fallback. The
 actual-config and alternate-config regressions pass. Actual paired archives
 still need a new successful checkpoint.
+
+Checkpoint inventory includes every ADE bank's initialization/error state. Only
+an established `ready` bank requires native presence; a never-initialized or
+already unavailable bank may truthfully retain a 404 receipt. Do not create it
+as cleanup, drop it from the inventory or reinterpret absence as completed work.
+Existing native operations are still drained/recorded even for unestablished
+relationships. An established bank unexpectedly missing remains a failed read.
 
 This is a coordinated backup without live product writers, not a restored or
 release-qualified recovery point. Stage 3 still needs deliberate paired restore,

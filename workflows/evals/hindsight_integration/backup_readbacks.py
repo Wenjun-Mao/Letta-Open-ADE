@@ -19,7 +19,7 @@ class PublicReads:
             "router": environment["INTEGRATION_ROUTER_KEY"],
         }
 
-    def get(self, service, path):
+    def get(self, service, path, *, allowed_statuses=(200,)):
         ports = {"api": 18021, "native": 18889, "router": 18019}
         request = urllib.request.Request(
             f"http://127.0.0.1:{ports[service]}{path}",
@@ -62,8 +62,10 @@ class PublicReads:
                 "body": value,
             },
         )
-        if status != 200:
+        if status not in allowed_statuses:
             raise RuntimeError("paired_checkpoint_public_read_failed")
+        if status != 200:
+            return {"unavailable_http_status": status}
         return value
 
 
@@ -92,13 +94,21 @@ def product_readbacks(reads, product_run):
 
 
 def native_pending(reads, banks):
-    pending, failed, incomplete = [], [], []
-    for bank in banks:
+    pending, failed, incomplete, unavailable = [], [], [], []
+    for relationship in banks:
+        bank, state = relationship["bank_id"], relationship["state"]
         if not re.fullmatch(r"ade-[a-f0-9]{32}", bank):
             raise ValueError("paired_checkpoint_bank_identity_invalid")
+        if state not in {"new", "initializing", "ready", "missing", "failed"}:
+            raise ValueError("paired_checkpoint_relationship_state_unknown")
         value = reads.get(
-            "native", f"/v1/default/banks/{bank}/operations?limit=100&offset=0"
+            "native",
+            f"/v1/default/banks/{bank}/operations?limit=100&offset=0",
+            allowed_statuses=(200,) if state == "ready" else (200, 404),
         )
+        if "unavailable_http_status" in value:
+            unavailable.append({**relationship, **value})
+            continue
         if value["total"] != len(value["operations"]):
             incomplete.append(bank)
         for row in value["operations"]:
@@ -107,7 +117,12 @@ def native_pending(reads, banks):
                 failed.append(entry)
             elif row["status"] != "completed":
                 pending.append(entry)
-    return {"pending": pending, "failed": failed, "incomplete_banks": incomplete}
+    return {
+        "pending": pending,
+        "failed": failed,
+        "incomplete_banks": incomplete,
+        "unavailable_banks": unavailable,
+    }
 
 
 def router_snapshot(reads):

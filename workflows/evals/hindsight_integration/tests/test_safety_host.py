@@ -16,6 +16,7 @@ def controls(tmp_path):
     value.root, value.lease = tmp_path, SimpleNamespace(source_revision="a" * 40)
     value.changed = []
     value.finalizer = None
+    value.isolation = None
     value.events = []
     rows = [
         {

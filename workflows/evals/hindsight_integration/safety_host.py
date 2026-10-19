@@ -16,12 +16,14 @@ from .operations import DockerOperations, Lease, create_record, stop_owned
 from .paired_backup import owned_service
 from .startup import require_configuration
 from .stale_finalizer_host import StaleFinalizer, identifiers
+from .isolation_host import IsolationAPI
 
 
 STEPS = {
     "recall-outage": ("stop-native", "start-native"),
     "runtime-restart": ("restart-runtime",),
-    "stale-worker": ("lock-subject", "expire-finalizer"),
+    "stale-worker": ("lock-subject", "expire-finalizer", "verify-finalizer"),
+    "isolation": ("start-isolation-api", "stop-isolation-api"),
 }
 
 
@@ -42,6 +44,7 @@ class OwnedControls:
         self.native_key = values["INTEGRATION_HINDSIGHT_KEY"]
         self.workspace = values["INTEGRATION_WORKSPACE_KEY"]
         self.finalizer = None
+        self.isolation = None
 
     def fence(self):
         healthy_lease(self.root, self.lease, self.docker)
@@ -101,11 +104,22 @@ class OwnedControls:
                 self.start(name)
         elif action == "restore-owned":
             self.restore()
+        elif action == "start-isolation-api":
+            if self.isolation is not None:
+                raise ValueError("isolation_api_already_started")
+            self.isolation = IsolationAPI(self)
+            return self.isolation.start()
+        elif action == "stop-isolation-api":
+            if self.isolation is None:
+                raise ValueError("isolation_api_not_started")
+            return self.isolation.stop()
         else:
             raise ValueError("undeclared_owned_control")
         return {name: self.current(name) for name in self.original}
 
     def restore(self):
+        if self.isolation is not None:
+            self.isolation.stop()
         if self.finalizer is not None:
             self.finalizer.close()
         for name in ("hindsight", "ade-api", "ade-worker"):
@@ -130,6 +144,7 @@ def respond(path, *, output, controls, scenarios, positions):
     fields = {
         "lock-subject": ("subject_id", "conversation_id"),
         "expire-finalizer": ("run_id",),
+        "verify-finalizer": ("run_id",),
     }
     if action in fields and scenario == "stale-worker":
         identifiers(value["details"], fields[action])
@@ -150,11 +165,11 @@ def respond(path, *, output, controls, scenarios, positions):
         if scenario == "stale-worker" and action in fields:
             if controls.finalizer is None:
                 controls.finalizer = StaleFinalizer(controls, controls.workspace)
-            method = (
-                controls.finalizer.lock
-                if action == "lock-subject"
-                else controls.finalizer.expire
-            )
+            method = {
+                "lock-subject": controls.finalizer.lock,
+                "expire-finalizer": controls.finalizer.expire,
+                "verify-finalizer": controls.finalizer.verify,
+            }[action]
             receipt["control_result"] = method(value["details"])
         else:
             receipt["owned_after"] = controls.perform(action)
@@ -285,6 +300,9 @@ def run_host(root, environment, output, *, controller_revision, scenarios):
             ).hexdigest(),
             "stale_finalizer_host_sha256": hashlib.sha256(
                 Path(__file__).with_name("stale_finalizer_host.py").read_bytes()
+            ).hexdigest(),
+            "isolation_host_sha256": hashlib.sha256(
+                Path(__file__).with_name("isolation_host.py").read_bytes()
             ).hexdigest(),
             "activation_id": controls.lease.activation_id,
             "steps": {key: list(STEPS[key]) for key in scenarios},
