@@ -199,6 +199,7 @@ uv run --locked pytest \
   services/ade-api/tests/agent_runtime/persistence/test_hindsight_runtime_sql.py \
   services/ade-api/tests/agent_runtime/persistence/test_hindsight_runtime_fences_sql.py \
   services/ade-api/tests/agent_runtime/persistence/test_hindsight_claim_races_sql.py \
+  services/ade-api/tests/agent_runtime/persistence/test_lease_wall_clock_sql.py \
   services/ade-api/tests/agent_runtime/persistence/test_hindsight_sessions_sql.py \
   services/ade-api/tests/agent_runtime/persistence/test_postgres_lock_order.py \
   services/ade-api/tests/agent_runtime/test_hindsight_execution.py -q

@@ -239,6 +239,18 @@ These are scoped increments, not a claim that M0-M6 is complete.
   including 46 application-role PostgreSQL cases, with no provider requests.
   These are software mechanics only; actual
   six-slot native execution, M6 and maintained-test reconciliation remain pending.
+- Four real-SQL regressions reproduced expired ownership inside an old transaction
+  and reply finalization blocked past expiry. The wall-clock and final-release
+  repair is recorded in [ADR 0077](../adr/0077-database-wall-clock-lease-fences.md).
+  The focused gate passed 370 tests, including 50 application-role SQL cases.
+  The first full-product image activation was closed without product startup or
+  inference; baseline identities/health remained unchanged and no owned container
+  remained running. Its build receipts are not repaired-runtime evidence.
+- A complete Agent Runtime offline sweep at the actor checkpoint produced
+  490 passed, 123 skipped, 96 failed and nine errors. This includes maintained
+  tests still using removed caller contracts and frozen historical inputs whose
+  source hashes differ. The XML receipt is retained privately; reconciliation
+  remains required, with no historical fingerprint rebind or full-suite claim.
 
 Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission

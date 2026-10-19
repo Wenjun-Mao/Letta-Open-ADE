@@ -4,7 +4,7 @@ import asyncio
 import re
 import time
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -232,8 +232,7 @@ class AttemptController:
             async with self.engine.begin() as connection:
                 owned = await ConversationLeaseRepository(connection).heartbeat(
                     claim.lease_token,
-                    utc_now()
-                    + timedelta(seconds=self.settings.agent_runtime_lease_seconds),
+                    lease_seconds=self.settings.agent_runtime_lease_seconds,
                 )
             if not owned:
                 lease_lost.set()

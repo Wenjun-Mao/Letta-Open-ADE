@@ -86,13 +86,17 @@ class MemoryRelationshipRepository:
                 or_(
                     memory_relationships.c.state == "new",
                     (memory_relationships.c.state == "initializing")
-                    & (memory_relationships.c.initialization_expires_at <= func.now()),
+                    & (
+                        memory_relationships.c.initialization_expires_at
+                        <= func.clock_timestamp()
+                    ),
                 ),
             )
             .values(
                 state="initializing",
                 initialization_token=token,
-                initialization_expires_at=func.now() + timedelta(seconds=lease_seconds),
+                initialization_expires_at=func.clock_timestamp()
+                + timedelta(seconds=lease_seconds),
             )
             .returning(*memory_relationships.c)
         )
@@ -127,7 +131,8 @@ class MemoryRelationshipRepository:
                 memory_relationships.c.workspace_id == workspace_id,
                 memory_relationships.c.state == "initializing",
                 memory_relationships.c.initialization_token == token,
-                memory_relationships.c.initialization_expires_at > func.now(),
+                memory_relationships.c.initialization_expires_at
+                > func.clock_timestamp(),
             )
             .values(**values)
         )

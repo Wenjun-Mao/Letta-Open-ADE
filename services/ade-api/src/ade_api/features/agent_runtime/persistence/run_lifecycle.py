@@ -43,7 +43,7 @@ class RunLifecycleRepository:
                 [
                     runs.c.status == "running",
                     conversation_leases.c.released_at.is_(None),
-                    conversation_leases.c.expires_at <= func.now(),
+                    conversation_leases.c.expires_at <= func.clock_timestamp(),
                 ]
             )
         else:

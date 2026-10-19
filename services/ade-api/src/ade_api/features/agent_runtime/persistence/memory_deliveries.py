@@ -141,7 +141,8 @@ class MemoryDeliveryRepository:
                         memory_deliveries.c.next_attempt_at <= func.now(),
                         or_(
                             memory_deliveries.c.lease_token.is_(None),
-                            memory_deliveries.c.lease_expires_at <= func.now(),
+                            memory_deliveries.c.lease_expires_at
+                            <= func.clock_timestamp(),
                         ),
                         ~blocked,
                     )
@@ -166,7 +167,8 @@ class MemoryDeliveryRepository:
             )
             .values(
                 lease_token=token,
-                lease_expires_at=func.now() + timedelta(seconds=lease_seconds),
+                lease_expires_at=func.clock_timestamp()
+                + timedelta(seconds=lease_seconds),
                 check_count=memory_deliveries.c.check_count + 1,
                 status=case(
                     (
@@ -185,7 +187,7 @@ class MemoryDeliveryRepository:
         return update(memory_deliveries).where(
             memory_deliveries.c.operation_id == operation_id,
             memory_deliveries.c.lease_token == token,
-            memory_deliveries.c.lease_expires_at > func.now(),
+            memory_deliveries.c.lease_expires_at > func.clock_timestamp(),
         )
 
     async def heartbeat(
@@ -193,7 +195,8 @@ class MemoryDeliveryRepository:
     ) -> bool:
         result = await self.connection.execute(
             self.owned(operation_id, token).values(
-                lease_expires_at=func.now() + timedelta(seconds=lease_seconds),
+                lease_expires_at=func.clock_timestamp()
+                + timedelta(seconds=lease_seconds),
                 updated_at=func.now(),
             )
         )

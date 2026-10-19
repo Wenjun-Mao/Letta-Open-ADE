@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import timedelta
 
 from sqlalchemy import and_, func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -24,10 +24,11 @@ class ConversationLeaseRepository:
         run_id: str,
         lease_token: str,
         holder_id: str,
-        expires_at: datetime,
+        lease_seconds: float,
     ) -> dict[str, object]:
         """Acquire or reclaim only an expired active lease in one PostgreSQL statement."""
 
+        expires_at = func.clock_timestamp() + timedelta(seconds=lease_seconds)
         result = await self._connection.execute(
             pg_insert(conversation_leases)
             .values(
@@ -45,11 +46,11 @@ class ConversationLeaseRepository:
                     "run_id": run_id,
                     "lease_token": lease_token,
                     "holder_id": holder_id,
-                    "heartbeat_at": func.now(),
+                    "heartbeat_at": func.clock_timestamp(),
                     "expires_at": expires_at,
                     "released_at": None,
                 },
-                where=conversation_leases.c.expires_at <= func.now(),
+                where=conversation_leases.c.expires_at <= func.clock_timestamp(),
             )
             .returning(*conversation_leases.c)
         )
@@ -77,7 +78,7 @@ class ConversationLeaseRepository:
                 # Admission reserves the conversation while its run is pending.
                 # Expire at the database clock so an immediate worker claim can
                 # atomically replace this placeholder without cross-process skew.
-                expires_at=func.now(),
+                expires_at=func.clock_timestamp(),
             )
             .returning(*conversation_leases.c)
         )
@@ -103,23 +104,26 @@ class ConversationLeaseRepository:
                     conversation_leases.c.lease_token == lease_token,
                     conversation_leases.c.run_id == run_id,
                     conversation_leases.c.released_at.is_(None),
-                    conversation_leases.c.expires_at > func.now(),
+                    conversation_leases.c.expires_at > func.clock_timestamp(),
                 )
             )
         )
         return result.scalar_one_or_none() is not None
 
-    async def heartbeat(self, lease_token: str, expires_at: datetime) -> bool:
+    async def heartbeat(self, lease_token: str, *, lease_seconds: float) -> bool:
         result = await self._connection.execute(
             update(conversation_leases)
             .where(
                 and_(
                     conversation_leases.c.lease_token == lease_token,
                     conversation_leases.c.released_at.is_(None),
-                    conversation_leases.c.expires_at > func.now(),
+                    conversation_leases.c.expires_at > func.clock_timestamp(),
                 )
             )
-            .values(heartbeat_at=func.now(), expires_at=expires_at)
+            .values(
+                heartbeat_at=func.clock_timestamp(),
+                expires_at=func.clock_timestamp() + timedelta(seconds=lease_seconds),
+            )
         )
         return result.rowcount == 1
 
@@ -133,6 +137,29 @@ class ConversationLeaseRepository:
                 )
             )
             .values(released_at=func.now())
+        )
+        return result.rowcount == 1
+
+    async def release_owned(self, lease_token: str, run_id: str) -> bool:
+        identity = await self._connection.scalar(
+            select(conversation_leases.c.id)
+            .where(
+                conversation_leases.c.lease_token == lease_token,
+                conversation_leases.c.run_id == run_id,
+                conversation_leases.c.released_at.is_(None),
+            )
+            .with_for_update()
+        )
+        if identity is None:
+            return False
+        # Re-evaluate after any lease-row wait, not just before product writes.
+        result = await self._connection.execute(
+            update(conversation_leases)
+            .where(
+                conversation_leases.c.id == identity,
+                conversation_leases.c.expires_at > func.clock_timestamp(),
+            )
+            .values(released_at=func.clock_timestamp())
         )
         return result.rowcount == 1
 

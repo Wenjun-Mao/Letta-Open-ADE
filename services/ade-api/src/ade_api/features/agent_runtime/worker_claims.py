@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -61,8 +60,7 @@ class RunClaimer:
                     run_id=str(run["id"]),
                     lease_token=lease_token,
                     holder_id=self.settings.agent_runtime_worker_id,
-                    expires_at=_utc_now()
-                    + timedelta(seconds=self.settings.agent_runtime_lease_seconds),
+                    lease_seconds=self.settings.agent_runtime_lease_seconds,
                 )
             except LeaseUnavailableError:
                 if not recovered:
@@ -121,7 +119,3 @@ class RunClaimer:
             return ClaimedRun(
                 run=run, lease_token=lease_token, recovered=recovered
             ), True
-
-
-def _utc_now() -> datetime:
-    return datetime.now(UTC)

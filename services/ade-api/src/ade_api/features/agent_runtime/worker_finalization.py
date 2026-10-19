@@ -113,7 +113,8 @@ class RunFinalizer:
                 summary=summary,
                 trace=trace,
             )
-            await leases.release(claim.lease_token)
+            if not await leases.release_owned(claim.lease_token, run_id):
+                raise LeaseLost("Conversation lease expired during reply finalization")
         if trace is not None:
             try:
                 async with self.engine.begin() as connection:
@@ -234,7 +235,10 @@ class RunFinalizer:
             )
             # The paused run's unique active-conversation index remains its input
             # guard; releasing this lease lets the worker serve unrelated replies.
-            await leases.release(claim.lease_token)
+            if not await leases.release_owned(claim.lease_token, run_id):
+                raise LeaseLost(
+                    "Conversation lease expired during outcome finalization"
+                )
 
 
 async def _commit_compaction(conversations, result, *, conversation_id, run_id):
