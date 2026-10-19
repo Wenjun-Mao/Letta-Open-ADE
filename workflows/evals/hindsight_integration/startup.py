@@ -13,6 +13,7 @@ from .operations import (
     resources,
     stop_owned,
 )
+from .runtime_assets import require_runtime_assets
 
 
 def require_supervision(root: Path, lease: Lease, *, now: float) -> None:
@@ -55,6 +56,9 @@ def start_product(root: Path, environment: Path) -> None:
             [
                 "up",
                 "-d",
+                "--wait",
+                "--wait-timeout",
+                "240",
                 "db",
                 "model-router",
                 "hindsight",
@@ -97,6 +101,8 @@ def _start(
         for step in steps:
             require_supervision(root, lease, now=time.time())
             require_configuration(root, environment, lease)
+            if product:
+                require_runtime_assets(root)
             if (
                 root / "closed.json"
             ).exists() or time.time() >= lease.dispatch_deadline:

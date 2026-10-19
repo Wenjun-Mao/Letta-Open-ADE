@@ -184,6 +184,7 @@ services:
     volumes:
       - ${INTEGRATION_PRODUCT_OBSERVATION_ROOT:?private product observations required}:/product-observations:ro
       - ${INTEGRATION_RUNTIME_ROOT:?fresh runtime assets required}:/runtime
+      - ${INTEGRATION_RUNTIME_ROOT:?fresh runtime assets required}/content:/app/content
     depends_on:
       ade-db:
         condition: service_healthy
@@ -206,6 +207,7 @@ services:
     volumes:
       - ${INTEGRATION_PRODUCT_OBSERVATION_ROOT:?private product observations required}:/product-observations
       - ${INTEGRATION_RUNTIME_ROOT:?fresh runtime assets required}:/runtime:ro
+      - ${INTEGRATION_RUNTIME_ROOT:?fresh runtime assets required}/content:/app/content:ro
     depends_on:
       ade-db:
         condition: service_healthy

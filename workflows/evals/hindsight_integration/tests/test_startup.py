@@ -8,6 +8,7 @@ import pytest
 
 from workflows.evals.hindsight_integration.operations import Lease, create_record
 from workflows.evals.hindsight_integration import startup
+from workflows.evals.hindsight_integration.runtime_assets import seed_runtime_assets
 
 
 def candidate(tmp_path, monkeypatch):
@@ -23,6 +24,10 @@ def candidate(tmp_path, monkeypatch):
     )
     root = tmp_path / "activation"
     lease.save(root)
+    source = tmp_path / "staged-content"
+    source.mkdir()
+    (source / "seed.json").write_text('{"controlled":"seed"}')
+    seed_runtime_assets(root, source)
     create_record(
         root / "checks" / "001.json",
         {
@@ -128,6 +133,7 @@ def test_product_start_migrates_only_owned_ade_database_before_inference_service
         "ade-web",
     ]
     assert all("--profile" in command and "product" in command for command in calls)
+    assert "--wait" in calls[2]
 
 
 def test_product_migration_failure_closes_owned_stack_without_starting_inference(

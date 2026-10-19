@@ -69,6 +69,13 @@ files and generates separate candidate database/Router/Hindsight keys. It prints
 paths/identity only. The runner never mounts provider credentials. Do not print
 resolved Compose configuration or container environments.
 
+Provisioning also copies only the staged source's authored `content` tree into a
+new private runtime tree and hashes every source asset. The non-root API gets that
+copy read/write at `/app/content`; worker gets it read-only. Do not mount incumbent
+assets or chmod the release/image to fix authoring startup. The frozen product
+startup rechecks the seed receipt. See
+[ADR 0078](../../../docs/adr/0078-candidate-authoring-asset-seed.md).
+
 The build helper requires the staged directory name to equal the lease's full
 commit. It builds serially under three-CPU/3-GiB limits with CPU 3 excluded, checks
 actual cgroup enforcement in an uncached budget build first, and records immutable
@@ -83,7 +90,12 @@ build load must not invalidate or postpone its heartbeat.
 Create the candidate model-cache volume with the Compose project/volume labels
 and activation/source ownership recorded before use. Run `model_cache.py` in the
 pinned Hindsight image, with no credentials, one CPU and bounded RAM. Mount only
-that new volume and the helper source. It downloads the exact public BGE snapshot
+that new volume and the helper source, explicitly as `--user 0:0` for new-volume
+ownership preparation only. A prior owned public model-artifact volume may be
+mounted read-only solely to copy the same pinned files into this new cache;
+never reuse a database/bank or alter the source volume. The helper verifies the
+actual complete weight hash and metadata after copying. Otherwise it downloads
+the exact public BGE snapshot
 and verifies the weight hash and metadata before the Hindsight server starts.
 Preserve partial failures; repeated provisioning may resume the same pinned
 download but cannot accept an unverified or silently substituted model.

@@ -251,6 +251,17 @@ These are scoped increments, not a claim that M0-M6 is complete.
   tests still using removed caller contracts and frozen historical inputs whose
   source hashes differ. The XML receipt is retained privately; reconciliation
   remains required, with no historical fingerprint rebind or full-suite claim.
+- Actual candidate startup found a non-root authoring-directory permission failure
+  after the fresh ADE migration. The owning workflow now seeds/hashes private
+  authored assets and mounts them at existing registry paths, per
+  [ADR 0078](../adr/0078-candidate-authoring-asset-seed.md). It does not chmod the
+  image/release or change product registries. The focused gate passed 389 tests,
+  including 50 SQL cases, real application-dependency construction and reconciled
+  API tests for current compaction/chat inspection and absent purge/reset/removal.
+  The failed activation's two startup Router observations remain retained; no
+  six-slot product dialogue began. Both databases remain preserved stopped and
+  baseline identity/health verified unchanged. Repaired live startup/M5/M6 remain
+  pending, as does the rest of maintained-test reconciliation.
 
 Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission

@@ -10,6 +10,7 @@ import secrets
 import shlex
 
 from .operations import Lease, create_record
+from .runtime_assets import seed_runtime_assets
 
 
 def read_existing_credentials(path: Path) -> dict[str, str]:
@@ -73,6 +74,9 @@ def prepare_environment(
         "evidence",
     ):
         (activation_root / name).mkdir(mode=0o700, exist_ok=False)
+    seed_runtime_assets(
+        activation_root, Path(__file__).resolve().parents[3] / "content"
+    )
     environment = {
         "INTEGRATION_PROJECT": lease.project,
         "INTEGRATION_ACTIVATION_ID": lease.activation_id,
