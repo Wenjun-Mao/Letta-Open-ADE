@@ -116,6 +116,26 @@ Other source fixtures are `q02-correction`, `q02-change`, `reference` and
 Failed/partial-operation recovery requires additional captured fault/retry proof;
 successful ordinary replay alone does not close that M1 requirement.
 
+For real failed/partial recovery, run the host orchestrator from the staged source:
+
+```sh
+python3 -m workflows.evals.hindsight_integration.native_faults \
+  --root "$INTEGRATION_ACTIVATION" --environment "$INTEGRATION_ENV" \
+  --out "$INTEGRATION_ACTIVATION/evidence/native-failed-01"
+python3 -m workflows.evals.hindsight_integration.native_faults \
+  --root "$INTEGRATION_ACTIVATION" --environment "$INTEGRATION_ENV" \
+  --out "$INTEGRATION_ACTIVATION/evidence/native-partial-01" --partial
+```
+
+It stops only the inspected, source-bound candidate Router. The partial case waits
+for actual committed memories while the same operation is processing. The runner
+must observe a genuinely failed operation before the host restores Router, retries
+the same operation, and verifies unchanged source and preserved prefix identities
+plus newly completed work. A completed-before-interruption attempt fails the proof.
+These dedicated diagnostic banks disable automatic consolidation to isolate retain
+recovery, and the partial bank uses small streaming chunks; neither setting changes
+the default Memory bank configuration or qualifies semantics. Preserve every attempt.
+
 ## Closeout
 
 Quiesce candidate writes, capture the paired recovery point and pending operation

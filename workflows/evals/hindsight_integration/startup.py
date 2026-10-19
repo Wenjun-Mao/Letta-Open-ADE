@@ -30,6 +30,17 @@ def require_supervision(root: Path, lease: Lease, *, now: float) -> None:
         raise ValueError("Startup requires a fresh healthy source-bound supervisor")
 
 
+def require_configuration(root: Path, environment: Path, lease: Lease) -> None:
+    provisioned = json.loads((root / "provisioned.json").read_bytes())
+    if (
+        provisioned.get("environment_path") != str(environment.resolve())
+        or provisioned.get("environment_sha256")
+        != hashlib.sha256(environment.read_bytes()).hexdigest()
+        or provisioned.get("activation_id") != lease.activation_id
+    ):
+        raise ValueError("Candidate configuration differs from provisioned identity")
+
+
 def start_native(root: Path, environment: Path) -> None:
     lease = Lease.load(root)
     docker = DockerOperations()
@@ -42,14 +53,7 @@ def start_native(root: Path, environment: Path) -> None:
     if issues:
         raise ValueError("Candidate startup refused: " + ",".join(issues))
     require_supervision(root, lease, now=time.time())
-    provisioned = json.loads((root / "provisioned.json").read_bytes())
-    if (
-        provisioned.get("environment_path") != str(environment.resolve())
-        or provisioned.get("environment_sha256")
-        != hashlib.sha256(environment.read_bytes()).hexdigest()
-        or provisioned.get("activation_id") != lease.activation_id
-    ):
-        raise ValueError("Candidate configuration differs from provisioned identity")
+    require_configuration(root, environment, lease)
     compose = Path(__file__).with_name("compose.yaml")
     command = [
         "docker",
