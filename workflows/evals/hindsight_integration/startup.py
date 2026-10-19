@@ -42,6 +42,35 @@ def require_configuration(root: Path, environment: Path, lease: Lease) -> None:
 
 
 def start_native(root: Path, environment: Path) -> None:
+    _start(root, environment, [["up", "-d", "db", "model-router", "hindsight"]])
+
+
+def start_product(root: Path, environment: Path) -> None:
+    _start(
+        root,
+        environment,
+        [
+            ["up", "-d", "--wait", "--wait-timeout", "60", "ade-db"],
+            ["run", "--rm", "--no-deps", "ade-migrate"],
+            [
+                "up",
+                "-d",
+                "db",
+                "model-router",
+                "hindsight",
+                "fault-proxy",
+                "ade-api",
+                "ade-worker",
+                "ade-web",
+            ],
+        ],
+        product=True,
+    )
+
+
+def _start(
+    root: Path, environment: Path, steps: list[list[str]], *, product=False
+) -> None:
     lease = Lease.load(root)
     docker = DockerOperations()
     issues = check_lease(
@@ -62,17 +91,24 @@ def start_native(root: Path, environment: Path) -> None:
         str(environment),
         "-f",
         str(compose),
+        *(["--profile", "product"] if product else []),
     ]
     try:
-        subprocess.run(
-            [*command, "up", "-d", "db", "model-router", "hindsight"],
-            check=True,
-            timeout=300,
-        )
-        # Closure during startup must not leave newly created containers running.
-        require_supervision(root, lease, now=time.time())
-        if (root / "closed.json").exists():
-            raise ValueError("Activation closed during candidate startup")
+        for step in steps:
+            require_supervision(root, lease, now=time.time())
+            require_configuration(root, environment, lease)
+            if (
+                root / "closed.json"
+            ).exists() or time.time() >= lease.dispatch_deadline:
+                raise ValueError("Activation closed during candidate startup")
+            subprocess.run([*command, *step], check=True, timeout=300)
+            # Closure during startup must not leave newly created containers running.
+            require_supervision(root, lease, now=time.time())
+            require_configuration(root, environment, lease)
+            if (
+                root / "closed.json"
+            ).exists() or time.time() >= lease.dispatch_deadline:
+                raise ValueError("Activation closed during candidate startup")
     except Exception:
         stop_owned(lease, docker=docker, root=root, reason="startup_failed")
         raise

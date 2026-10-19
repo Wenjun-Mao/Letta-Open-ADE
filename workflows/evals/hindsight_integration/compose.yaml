@@ -2,6 +2,28 @@ name: ${INTEGRATION_PROJECT:?owned project required}
 x-owner-labels: &owner-labels
   io.ade.integration.activation: ${INTEGRATION_ACTIVATION_ID:?activation required}
   io.ade.integration.source: ${INTEGRATION_SOURCE_REVISION:?committed source required}
+x-source-build: &source-build
+  ADE_SOURCE_REVISION: ${INTEGRATION_SOURCE_REVISION:?committed source required}
+  ADE_SOURCE_FINGERPRINT: ${INTEGRATION_SOURCE_FINGERPRINT:?source fingerprint required}
+x-ade-environment: &ade-environment
+  ADE_API_AUTH_ENABLED: "true"
+  ADE_API_ADMIN_KEY: ${INTEGRATION_ADE_ADMIN_KEY:?private candidate admin key required}
+  ADE_API_OPERATOR_KEY: ${INTEGRATION_ADE_OPERATOR_KEY:?private candidate operator key required}
+  ADE_API_READER_KEY: ${INTEGRATION_ADE_READER_KEY:?private candidate reader key required}
+  ADE_API_AGENT_RUNTIME_ENABLED: "true"
+  ADE_API_AGENT_RUNTIME_MODE: development
+  ADE_API_AGENT_RUNTIME_WORKSPACE_KEY: ${INTEGRATION_WORKSPACE_KEY:?fresh workspace required}
+  ADE_API_AGENT_RUNTIME_DEPLOYMENT_MANIFEST: workflows/evals/hindsight_integration/config/deployments.json
+  ADE_API_AGENT_RUNTIME_OBSERVATION_ROOT: /product-observations
+  ADE_API_DATABASE_URL: postgresql+psycopg://ade_integration_app:${INTEGRATION_ADE_DB_APP_PASSWORD:?private ADE database credential required}@ade-db:5432/ade_integration
+  ADE_API_MODEL_ROUTER_BASE_URL: http://model-router:8010
+  ADE_API_MODEL_ROUTER_API_KEY_SECRET: ""
+  MODEL_ROUTER_API_KEY: ${INTEGRATION_ROUTER_KEY:?private generated credential required}
+  ADE_API_HINDSIGHT_BASE_URL: http://hindsight:8888
+  ADE_API_HINDSIGHT_API_KEY: ${INTEGRATION_HINDSIGHT_KEY:?private generated credential required}
+  ADE_API_HINDSIGHT_TIMEOUT_SECONDS: "150"
+  ADE_API_RUNTIME_DATA_DIR: /runtime
+  ADE_API_PERSONA_DB_PATH: /runtime/personas/personas.sqlite3
 services:
   db:
     image: ${INTEGRATION_NATIVE_DB_IMAGE:?pinned native database image required}
@@ -28,6 +50,7 @@ services:
       context: ../../..
       dockerfile: workflows/evals/hindsight_integration/docker/python.Dockerfile
       target: router
+      args: *source-build
     platform: linux/arm64
     labels: *owner-labels
     restart: "no"
@@ -37,7 +60,7 @@ services:
     environment:
       MODEL_ROUTER_SOURCES_FILE: workflows/evals/hindsight_integration/config/sources.json
       MODEL_ROUTER_MODEL_PROFILES_FILE: workflows/evals/hindsight_integration/config/model-profiles.json
-      MODEL_ROUTER_DEPLOYMENT_MANIFEST_FILE: workflows/evals/hindsight_integration/config/absent-development-manifest.json
+      MODEL_ROUTER_DEPLOYMENT_MANIFEST_FILE: workflows/evals/hindsight_integration/config/deployments.json
       MODEL_ROUTER_API_KEY_SECRET: ""
       MODEL_ROUTER_API_KEY: ${INTEGRATION_ROUTER_KEY:?private generated credential required}
       MODEL_ROUTER_ACTIVATION_ROOT: /activation
@@ -82,23 +105,166 @@ services:
       context: ../../..
       dockerfile: workflows/evals/hindsight_integration/docker/python.Dockerfile
       target: runner
+      args: *source-build
     profiles: [tools]
     platform: linux/arm64
     labels: *owner-labels
     restart: "no"
     user: ${INTEGRATION_UID:?operator UID required}:${INTEGRATION_GID:?operator GID required}
     mem_limit: 768m
-    cpus: 0.25
+    cpus: 0.1
     environment:
       ADE_INTEGRATION_HINDSIGHT_URL: http://hindsight:8888
       ADE_INTEGRATION_HINDSIGHT_KEY: ${INTEGRATION_HINDSIGHT_KEY:?private generated credential required}
       ADE_INTEGRATION_ROUTER_URL: http://model-router:8010
       ADE_INTEGRATION_ROUTER_KEY: ${INTEGRATION_ROUTER_KEY:?private generated credential required}
       ADE_INTEGRATION_SOURCE_REVISION: ${INTEGRATION_SOURCE_REVISION:?committed source required}
+      ADE_INTEGRATION_SOURCE_FINGERPRINT: ${INTEGRATION_SOURCE_FINGERPRINT:?source fingerprint required}
+      ADE_INTEGRATION_API_URL: http://ade-api:8000
+      ADE_INTEGRATION_API_KEY: ${INTEGRATION_ADE_OPERATOR_KEY:?private candidate operator key required}
+      ADE_INTEGRATION_READER_KEY: ${INTEGRATION_ADE_READER_KEY:?private candidate reader key required}
+      ADE_INTEGRATION_FAULT_URL: http://fault-proxy:8020
+      ADE_INTEGRATION_FAULT_KEY: ${INTEGRATION_FAULT_KEY:?private fault control required}
     volumes:
       - ${INTEGRATION_ACTIVATION_ROOT:?owned activation required}:/activation:ro
       - ${INTEGRATION_EVIDENCE_ROOT:?private evidence root required}:/evidence
+  ade-db:
+    image: ${INTEGRATION_NATIVE_DB_IMAGE:?pinned database image required}
+    platform: linux/arm64
+    profiles: [product]
+    labels: *owner-labels
+    restart: "no"
+    mem_limit: 512m
+    cpus: 0.15
+    environment:
+      POSTGRES_USER: ade_integration_admin
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${INTEGRATION_ADE_DB_ADMIN_PASSWORD:?private ADE admin credential required}
+    volumes:
+      - ade-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U ade_integration_admin -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  ade-migrate:
+    image: ade-hindsight-integration-runner:${INTEGRATION_SOURCE_REVISION:?committed source required}
+    profiles: [tools]
+    platform: linux/arm64
+    labels: *owner-labels
+    restart: "no"
+    user: ${INTEGRATION_UID:?operator UID required}:${INTEGRATION_GID:?operator GID required}
+    mem_limit: 384m
+    cpus: 0.1
+    environment:
+      ADE_DATABASE_ADMIN_URL: postgresql://ade_integration_admin:${INTEGRATION_ADE_DB_ADMIN_PASSWORD:?private ADE admin credential required}@ade-db:5432/postgres
+      ADE_DATABASE_MIGRATION_URL: postgresql+psycopg://ade_integration_admin:${INTEGRATION_ADE_DB_ADMIN_PASSWORD:?private ADE admin credential required}@ade-db:5432/ade_integration
+      ADE_PG_DB: ade_integration
+      ADE_PG_OWNER_ROLE: ade_integration_owner
+      ADE_PG_APP_USER: ade_integration_app
+      ADE_PG_APP_PASSWORD: ${INTEGRATION_ADE_DB_APP_PASSWORD:?private ADE application credential required}
+    command: [-m, workflows.evals.hindsight_integration.product_database]
+  ade-api:
+    image: ade-hindsight-integration-api:${INTEGRATION_SOURCE_REVISION:?committed source required}
+    build:
+      context: ../../..
+      dockerfile: workflows/evals/hindsight_integration/docker/python.Dockerfile
+      target: api
+      args: *source-build
+    profiles: [product]
+    platform: linux/arm64
+    labels: *owner-labels
+    restart: "no"
+    user: ${INTEGRATION_UID:?operator UID required}:${INTEGRATION_GID:?operator GID required}
+    mem_limit: 512m
+    cpus: 0.15
+    environment: *ade-environment
+    ports:
+      - 127.0.0.1:18021:8000
+    volumes:
+      - ${INTEGRATION_PRODUCT_OBSERVATION_ROOT:?private product observations required}:/product-observations:ro
+      - ${INTEGRATION_RUNTIME_ROOT:?fresh runtime assets required}:/runtime
+    depends_on:
+      ade-db:
+        condition: service_healthy
+  ade-worker:
+    image: ade-hindsight-integration-api:${INTEGRATION_SOURCE_REVISION:?committed source required}
+    profiles: [product]
+    platform: linux/arm64
+    labels: *owner-labels
+    restart: "no"
+    stop_grace_period: 45s
+    user: ${INTEGRATION_UID:?operator UID required}:${INTEGRATION_GID:?operator GID required}
+    mem_limit: 768m
+    cpus: 0.4
+    environment:
+      <<: *ade-environment
+      ADE_API_MODEL_ROUTER_BASE_URL: http://fault-proxy:8020/router
+      ADE_API_HINDSIGHT_BASE_URL: http://fault-proxy:8020/hindsight
+      ADE_API_AGENT_RUNTIME_WORKER_ID: hindsight-stage1-primary
+    command: [python, -m, ade_api.features.agent_runtime.worker]
+    volumes:
+      - ${INTEGRATION_PRODUCT_OBSERVATION_ROOT:?private product observations required}:/product-observations
+      - ${INTEGRATION_RUNTIME_ROOT:?fresh runtime assets required}:/runtime:ro
+    depends_on:
+      ade-db:
+        condition: service_healthy
+      fault-proxy:
+        condition: service_healthy
+  fault-proxy:
+    image: ade-hindsight-integration-runner:${INTEGRATION_SOURCE_REVISION:?committed source required}
+    profiles: [product]
+    platform: linux/arm64
+    labels: *owner-labels
+    restart: "no"
+    user: ${INTEGRATION_UID:?operator UID required}:${INTEGRATION_GID:?operator GID required}
+    mem_limit: 128m
+    cpus: 0.1
+    environment:
+      ADE_INTEGRATION_FAULT_KEY: ${INTEGRATION_FAULT_KEY:?private fault control required}
+      ADE_INTEGRATION_FAULT_ROOT: /fault-observations
+      ADE_INTEGRATION_ACTIVATION_ROOT: /activation
+    command: [-m, workflows.evals.hindsight_integration.fault_proxy]
+    ports:
+      - 127.0.0.1:18890:8020
+    volumes:
+      - ${INTEGRATION_ACTIVATION_ROOT:?owned activation required}:/activation:ro
+      - ${INTEGRATION_FAULT_OBSERVATION_ROOT:?private fault records required}:/fault-observations
+    depends_on:
+      model-router:
+        condition: service_started
+      hindsight:
+        condition: service_started
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8020/health', timeout=2).read()"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+  ade-web:
+    image: ade-hindsight-integration-web:${INTEGRATION_SOURCE_REVISION:?committed source required}
+    build:
+      context: ../../../apps/ade-web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_ADE_WEB_VERSION: hindsight-stage1
+        NEXT_PUBLIC_ADE_WEB_BUILD: ${INTEGRATION_SOURCE_REVISION:?committed source required}
+    profiles: [product]
+    platform: linux/arm64
+    labels: *owner-labels
+    restart: "no"
+    mem_limit: 512m
+    cpus: 0.1
+    environment:
+      ADE_API_BASE_URL: http://ade-api:8000
+      ADE_API_ADMIN_KEY: ${INTEGRATION_ADE_OPERATOR_KEY:?private candidate operator key required}
+    ports:
+      - 127.0.0.1:18020:3000
+    depends_on:
+      ade-api:
+        condition: service_started
 volumes:
+  ade-data:
+    labels: *owner-labels
   hindsight-data:
     labels: *owner-labels
   model-cache:

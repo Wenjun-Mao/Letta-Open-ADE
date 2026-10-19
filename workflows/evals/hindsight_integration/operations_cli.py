@@ -20,7 +20,8 @@ from .operations import (
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "action", choices=["prepare", "check", "supervise", "start", "stop"]
+        "action",
+        choices=["prepare", "check", "supervise", "start", "start-product", "stop"],
     )
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--project", default="ade-hindsight-integration")
@@ -54,12 +55,13 @@ def main() -> int:
         return 0
     if args.action == "supervise":
         return supervise(args.root)
-    if args.action == "start":
-        from .startup import start_native
+    if args.action in {"start", "start-product"}:
+        from .startup import start_native, start_product
 
         if args.environment is None:
             parser.error("--environment is required for start")
-        start_native(args.root, args.environment)
+        start = start_product if args.action == "start-product" else start_native
+        start(args.root, args.environment)
         return 0
     lease = Lease.load(args.root)
     if args.action == "check":

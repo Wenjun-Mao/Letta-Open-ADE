@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+import re
 from pathlib import Path
 
 from agent_runtime_eval_contracts.qualification import policy_bundle_hash
@@ -21,6 +22,7 @@ def prepare_run(
     runtime: RuntimeBinding,
     repeats: int = 1,
     case_ids: list[str] | None = None,
+    evaluator_revision: str | None = None,
 ) -> Run:
     suite = load_suite()
     selected = list(suite["cases"]) if case_ids is None else case_ids
@@ -35,6 +37,12 @@ def prepare_run(
             "Runtime persona differs from the frozen starter persona; review a new suite"
         )
     reject_sensitive_fields(runtime.model_dump(mode="json"))
+    if evaluator_revision is None:
+        evaluator_revision = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, text=True
+        ).strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", evaluator_revision):
+        raise ValueError("An exact evaluator source revision is required")
     files = [
         str(path.relative_to(WORKFLOW_ROOT))
         for path in sorted(WORKFLOW_ROOT.rglob("*"))
@@ -51,9 +59,7 @@ def prepare_run(
         suite_sha256=suite["sha256"],
         repeats=repeats,
         runtime=runtime,
-        evaluator_revision=subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=PROJECT_ROOT, text=True
-        ).strip(),
+        evaluator_revision=evaluator_revision,
         evaluator_files_sha256=policy_bundle_hash(WORKFLOW_ROOT, files).removeprefix(
             "sha256:"
         ),
@@ -120,6 +126,9 @@ def record_capture(path: Path, observation: Observation) -> list[str]:
     if observation.mode != run.mode:
         raise ValueError("Scripted and live evidence cannot be relabeled or mixed")
     reject_sensitive_fields(observation.model_dump(mode="json"))
+    from .live_provenance import validate_product_provenance
+
+    validate_product_provenance(path, run, case, attempt, observation)
     capture = Capture(
         attempt_sha256=attempt_hash,
         captured_at=utc_now(),
@@ -139,6 +148,9 @@ def load_capture(path: Path) -> tuple[Run, Case, Attempt, Capture, str, list[str
     if capture.attempt_sha256 != attempt_hash or capture.observation.mode != run.mode:
         raise ValueError("Capture belongs to a different attempt or evidence mode")
     reject_sensitive_fields(capture.model_dump(mode="json"))
+    from .live_provenance import validate_product_provenance
+
+    validate_product_provenance(path, run, case, attempt, capture.observation)
     return (
         run,
         case,

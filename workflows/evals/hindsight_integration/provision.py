@@ -45,6 +45,7 @@ def prepare_environment(
     environment_path: Path,
     existing_credentials: Path,
     database_image: str,
+    source_fingerprint: str,
 ) -> dict:
     activation_root = activation_root.resolve()
     environment_path = environment_path.resolve()
@@ -54,6 +55,8 @@ def prepare_environment(
         )
     if not re.fullmatch(r"sha256:[0-9a-f]{64}", database_image):
         raise ValueError("Native database must bind an inspected immutable image ID")
+    if not re.fullmatch(r"[0-9a-f]{64}", source_fingerprint):
+        raise ValueError("An exact governed source fingerprint is required")
     lease = Lease.load(activation_root)
     credentials = read_existing_credentials(existing_credentials)
     secrets_root = environment_path.parent / lease.activation_id
@@ -62,20 +65,41 @@ def prepare_environment(
     _private_text(deepseek_path, credentials["DEEPSEEK_API_KEY"])
     _private_text(embedding_path, credentials.get("DGX_EMBEDDING_API_KEY", ""))
     # Non-root candidate tools share only the operator's private artifact directories.
-    for name in ("observations", "evidence"):
+    for name in (
+        "observations",
+        "product-observations",
+        "fault-observations",
+        "runtime-data",
+        "evidence",
+    ):
         (activation_root / name).mkdir(mode=0o700, exist_ok=False)
     environment = {
         "INTEGRATION_PROJECT": lease.project,
         "INTEGRATION_ACTIVATION_ID": lease.activation_id,
         "INTEGRATION_SOURCE_REVISION": lease.source_revision,
+        "INTEGRATION_SOURCE_FINGERPRINT": source_fingerprint,
+        "INTEGRATION_WORKSPACE_KEY": "hindsight-stage1-" + lease.activation_id,
         "INTEGRATION_ACTIVATION_ROOT": str(activation_root),
         "INTEGRATION_OBSERVATION_ROOT": str(activation_root / "observations"),
         "INTEGRATION_EVIDENCE_ROOT": str(activation_root / "evidence"),
+        "INTEGRATION_PRODUCT_OBSERVATION_ROOT": str(
+            activation_root / "product-observations"
+        ),
+        "INTEGRATION_FAULT_OBSERVATION_ROOT": str(
+            activation_root / "fault-observations"
+        ),
+        "INTEGRATION_RUNTIME_ROOT": str(activation_root / "runtime-data"),
         "INTEGRATION_NATIVE_DB_IMAGE": database_image,
         "INTEGRATION_DB_PASSWORD": secrets.token_urlsafe(36),
         "INTEGRATION_ROUTER_KEY": secrets.token_urlsafe(36),
         "INTEGRATION_HINDSIGHT_KEY": secrets.token_urlsafe(36),
         "INTEGRATION_CP_KEY": secrets.token_urlsafe(36),
+        "INTEGRATION_ADE_DB_ADMIN_PASSWORD": secrets.token_urlsafe(36),
+        "INTEGRATION_ADE_DB_APP_PASSWORD": secrets.token_urlsafe(36),
+        "INTEGRATION_ADE_ADMIN_KEY": secrets.token_urlsafe(36),
+        "INTEGRATION_ADE_OPERATOR_KEY": secrets.token_urlsafe(36),
+        "INTEGRATION_ADE_READER_KEY": secrets.token_urlsafe(36),
+        "INTEGRATION_FAULT_KEY": secrets.token_urlsafe(36),
         "INTEGRATION_DEEPSEEK_SECRET_FILE": str(deepseek_path),
         "INTEGRATION_EMBEDDING_SECRET_FILE": str(embedding_path),
         "INTEGRATION_UID": str(os.getuid()),
@@ -107,6 +131,7 @@ def main() -> None:
     parser.add_argument("--environment", type=Path, required=True)
     parser.add_argument("--existing-credentials", type=Path, required=True)
     parser.add_argument("--database-image", required=True)
+    parser.add_argument("--source-fingerprint", required=True)
     args = parser.parse_args()
     print(
         json.dumps(
@@ -115,6 +140,7 @@ def main() -> None:
                 environment_path=args.environment,
                 existing_credentials=args.existing_credentials,
                 database_image=args.database_image,
+                source_fingerprint=args.source_fingerprint,
             )
         )
     )

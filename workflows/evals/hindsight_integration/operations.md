@@ -55,11 +55,12 @@ python3 -m workflows.evals.hindsight_integration.provision \
   --activation-root "$INTEGRATION_ACTIVATION" \
   --environment "$INTEGRATION_ENV" \
   --existing-credentials /mnt/projects/apps/ade-hindsight-probe/private/secrets.env \
-  --database-image "$INTEGRATION_DATABASE_IMAGE"
+  --database-image "$INTEGRATION_DATABASE_IMAGE" \
+  --source-fingerprint "$INTEGRATION_SOURCE_FINGERPRINT"
 docker compose --env-file "$INTEGRATION_ENV" \
   -f workflows/evals/hindsight_integration/compose.yaml config --quiet
-docker compose --env-file "$INTEGRATION_ENV" \
-  -f workflows/evals/hindsight_integration/compose.yaml build model-router runner
+python3 -m workflows.evals.hindsight_integration.build_images \
+  --root "$INTEGRATION_ACTIVATION" --environment "$INTEGRATION_ENV"
 ```
 
 `INTEGRATION_ENV` must be outside the mounted activation directory. Provisioning
@@ -67,6 +68,17 @@ copies only the existing DeepSeek/embedding credentials into new private secret
 files and generates separate candidate database/Router/Hindsight keys. It prints
 paths/identity only. The runner never mounts provider credentials. Do not print
 resolved Compose configuration or container environments.
+
+The build helper requires the staged directory name to equal the lease's full
+commit. It builds serially under three-CPU/3-GiB limits with CPU 3 excluded, checks
+actual cgroup enforcement in an uncached budget build first, and records immutable
+image IDs/private logs. It temporarily selects the legacy builder in its child
+environment only because this host's installed Buildx lacks per-build limits.
+Do not replace a failed budget assertion with an unrestricted build. This is a
+candidate-only mitigation with a Stage 3 replacement requirement in
+[ADR 0076](../../../docs/adr/0076-isolated-product-actor-and-provenance.md).
+Complete image/model preparation **before** starting the inference supervisor;
+build load must not invalidate or postpone its heartbeat.
 
 Create the candidate model-cache volume with the Compose project/volume labels
 and activation/source ownership recorded before use. Run `model_cache.py` in the
@@ -247,3 +259,60 @@ is a predeclared workflow sidecar, not an instruction sent to the Character.
 Preserve the collected bundle, read journal and failed validation. Raw captures
 remain ignored private evidence. A private-reasoning-bearing input is incomplete,
 not silently redacted into a full capture. See [ADR 0075](../../../docs/adr/0075-product-memory-and-request-observations.md).
+
+## Actual Product Demonstration
+
+After image/model preparation, start the source-bound host supervisor and verify
+its independent expiry timer. Use the guarded full-stack entrypoint:
+
+```sh
+python3 -m workflows.evals.hindsight_integration.operations_cli start-product \
+  --root "$INTEGRATION_ACTIVATION" --environment "$INTEGRATION_ENV"
+docker compose --env-file "$INTEGRATION_ENV" \
+  -f workflows/evals/hindsight_integration/compose.yaml run --rm --no-deps runner \
+  -m workflows.evals.hindsight_integration.live_runner \
+  --run-id stage1-product-01 --out /evidence/stage1-product-01
+```
+
+`start-product` boots a fresh ADE database, runs the public bootstrap/Alembic
+commands, then starts the owned native/API/worker/proxy/web services. ADE and
+Hindsight use different volumes and database authorities. Never substitute an
+incumbent database or import historical state. API/worker share a fresh explicit
+workspace; worker calls traverse the normally transparent workflow fault proxy.
+ADE web/API bind to loopback 18020/18021, and private fault control to 18890.
+Use only activation-owned tunnels. The browser server uses the operator key.
+The full Compose resource sum reserves at least one of this host's four CPUs.
+
+The runner admits only the predeclared three cases times two repeats. Each slot
+creates a new subject/character relationship and two same-version conversations.
+Actual user seeds go through normal turn acceptance and actual worker-generated
+assistant replies become source messages. The evaluator waits for source delivery
+and native consolidation, reads original native documents, then sends the exact
+probe in the already-created empty chat. No rubric, authored assistant answer,
+source chat window or summary is injected into probe input.
+
+It freezes the archive's explicit evaluator revision and source/config/runtime
+binding before Character calls. API/Router HTTP journals omit all headers. Each
+completed slot has a physical-hash-bound sidecar tying actual setup and probe
+collections, native documents, processing readbacks, exact recall and committed
+reply together. `record_capture` and report loading independently revalidate it.
+Do not repair a failed slot with edited JSON or a second recall. Failed slots,
+partial source receipts and capture limitations remain visible. A failed or
+private-reasoning-incomplete capture does not imply that the saved reply failed.
+
+Each slot writes `human-review-template.json`, not a submitted `review-*.json`.
+Report Memory findings separately and keep Character `UNREVIEWED` until genuine
+human review. The end-of-run traffic snapshot includes all observable candidate
+Router requests, including native traffic and missing outcomes. Native processing
+may continue afterward; M6 still needs quiescence, in-flight identities, paired
+backups, owned shutdown and baseline verification. See
+[ADR 0076](../../../docs/adr/0076-isolated-product-actor-and-provenance.md).
+
+The controlled SQL actor tests exercise this whole software path with explicitly
+fake native/provider responses, not live semantics:
+
+```sh
+uv run --locked pytest \
+  services/ade-api/tests/agent_runtime/persistence/test_product_actor_sql.py \
+  services/ade-api/tests/agent_runtime/persistence/test_product_capture_sql.py -q
+```

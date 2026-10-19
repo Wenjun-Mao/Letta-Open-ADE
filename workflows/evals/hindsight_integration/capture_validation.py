@@ -1,6 +1,7 @@
 """Join public ADE, runtime observations and final Router request records."""
 
 import hashlib
+import json
 
 from .checks import reject_sensitive_fields
 from .capture_components import context_components, validate_conversation_chain
@@ -156,6 +157,32 @@ def qualify_run_capture(
                 set(contexts[0]["automatic_memory_ids"])
                 <= set(automatic[0]["selected_ids"]),
                 "unobserved_memory_in_context",
+            )
+            automatic_parts = [
+                part
+                for part in contexts[0]["components"]
+                if part["kind"] == "automatic_recall"
+            ]
+            require(
+                len(automatic_parts) == 1
+                and automatic_parts[0].get("encoding") == "json",
+                "automatic_component_projection_missing",
+            )
+            part = automatic_parts[0]
+            actual_rows = json.loads(
+                contexts[0]["messages"][part["message_index"]]["content"][
+                    part["data_start"] : part["data_end"]
+                ]
+            )
+            raw_rows = {row["id"]: row for row in automatic[0]["response"]["results"]}
+            require(
+                actual_rows
+                == [
+                    raw_rows[identity]
+                    for identity in contexts[0]["automatic_memory_ids"]
+                ]
+                and part["source_ids"] == contexts[0]["automatic_memory_ids"],
+                "automatic_recall_projection_mismatch",
             )
             if fresh_probe:
                 require(

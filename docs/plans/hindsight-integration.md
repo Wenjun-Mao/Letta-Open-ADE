@@ -229,6 +229,16 @@ These are scoped increments, not a claim that M0-M6 is complete.
   These are capture mechanics, not the six actual native product probes; the
   live demonstration and M6 remain pending. Current governed hashes now include
   the concrete Hindsight integration modules, without rebinding frozen evidence.
+- The isolated full-product Compose stack and six-slot actor are implemented
+  under [ADR 0076](../adr/0076-isolated-product-actor-and-provenance.md). The actor
+  establishes exact user seeds and actual assistant replies through normal ADE,
+  then probes a fresh same-bank chat. Completed live records require source-linked
+  setup/probe/HTTP/native-readback sidecars on record and reload. Controlled SQL
+  tests cover all three cases, tool continuation, rejected private-reasoning
+  capture and altered readback files. The focused local gate passed 366 tests,
+  including 46 application-role PostgreSQL cases, with no provider requests.
+  These are software mechanics only; actual
+  six-slot native execution, M6 and maintained-test reconciliation remain pending.
 
 Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission

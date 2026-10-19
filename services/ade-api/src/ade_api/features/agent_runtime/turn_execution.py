@@ -78,7 +78,7 @@ class TurnExecution:
             )
             require_hindsight_definition(definition)
             scope = relationship_for(conversation, definition)
-            await MemoryRelationshipRepository(connection).get(
+            relationship = await MemoryRelationshipRepository(connection).get(
                 scope.bank_id, workspace_id=scope.workspace_id
             )
             messages = await conversations.list_messages(str(conversation["id"]))
@@ -101,6 +101,7 @@ class TurnExecution:
             "context.sources",
             {
                 "bank_id": scope.bank_id,
+                "bank_configuration_sha256": relationship["configuration_sha256"],
                 "definition_version_id": str(definition["id"]),
                 "definition_root_id": scope.character_root_id,
                 "current_user_message_id": str(current_user["id"]),

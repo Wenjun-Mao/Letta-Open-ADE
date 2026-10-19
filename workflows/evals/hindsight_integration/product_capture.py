@@ -9,6 +9,13 @@ from .checks import reject_sensitive_fields
 from .records import seal, write_new
 
 
+class CaptureQualificationError(ValueError):
+    def __init__(self, code: str, bundle: dict):
+        super().__init__(code)
+        self.bundle = bundle
+        self.stage = "capture"
+
+
 class PublicReadJournal:
     def __init__(self, root: Path):
         self.root = root
@@ -151,6 +158,7 @@ async def collect_saved_run(
                 else "invalid_capture_structure",
             },
         )
-        raise
+        code = str(exc) if type(exc) is ValueError else "invalid_capture_structure"
+        raise CaptureQualificationError(code, bundle) from exc
     write_new(out / "validation.json", {"complete": True, **result})
     return bundle, result

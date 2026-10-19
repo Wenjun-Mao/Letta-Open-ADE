@@ -86,6 +86,7 @@ class RuntimeBinding(Record):
     character_route: Text
     character_identity_sha256: Digest
     character_settings: dict[str, Any]
+    context_compaction_identity_sha256: Digest | None = None
     memory_implementation: Literal["scripted", "hindsight"]
     memory_config_sha256: Digest
     embedding_identity_sha256: Digest
@@ -142,6 +143,11 @@ class RequestSnapshot(Record):
     body: dict[str, Any]
 
 
+class ProductCaptureProvenance(Record):
+    manifest_file: Text
+    file_sha256: Digest
+
+
 class Observation(Record):
     mode: Mode
     status: Literal["completed", "failed", "cancelled", "blocked"]
@@ -182,6 +188,7 @@ class Observation(Record):
     reply_committed: bool = False
     error: Text | None = None
     limitations: list[Text] = Field(default_factory=list)
+    product_capture: ProductCaptureProvenance | None = None
 
     @model_validator(mode="after")
     def explain_missing_evidence(self) -> Observation:

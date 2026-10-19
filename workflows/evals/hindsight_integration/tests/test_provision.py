@@ -40,6 +40,7 @@ def test_existing_tokens_stay_in_separate_secret_files_and_are_not_printed(
         environment_path=environment,
         existing_credentials=existing,
         database_image="sha256:" + "b" * 64,
+        source_fingerprint="c" * 64,
     )
     values = dotenv_values(environment, interpolate=False)
     assert (
@@ -59,6 +60,7 @@ def test_existing_tokens_stay_in_separate_secret_files_and_are_not_printed(
             environment_path=environment,
             existing_credentials=existing,
             database_image="sha256:" + "b" * 64,
+            source_fingerprint="c" * 64,
         )
 
 
@@ -71,4 +73,5 @@ def test_credential_environment_cannot_be_written_into_the_mounted_activation(tm
             environment_path=root / "candidate.env",
             existing_credentials=tmp_path / "unread",
             database_image="sha256:" + "b" * 64,
+            source_fingerprint="c" * 64,
         )

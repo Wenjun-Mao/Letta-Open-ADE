@@ -44,6 +44,8 @@ def mechanical_issues(
         issues.append("incomplete_generation_input")
     if not observation.source_complete:
         issues.append("incomplete_source_capture")
+    if observation.mode == "live_capture" and observation.product_capture is None:
+        issues.append("missing_validated_product_capture_provenance")
     expected_provenance = {
         "user_dialogue": "product_dialogue",
         "controlled_history": "controlled_history",

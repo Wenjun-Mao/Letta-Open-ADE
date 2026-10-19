@@ -104,3 +104,45 @@ def test_closure_during_startup_stops_owned_new_containers(tmp_path, monkeypatch
     with pytest.raises(ValueError, match="closed during"):
         startup.start_native(root, environment)
     assert stops[0]["reason"] == "startup_failed"
+
+
+def test_product_start_migrates_only_owned_ade_database_before_inference_services(
+    tmp_path, monkeypatch
+):
+    root, environment = candidate(tmp_path, monkeypatch)
+    calls = []
+    monkeypatch.setattr(
+        startup.subprocess, "run", lambda command, **kw: calls.append(command)
+    )
+    startup.start_product(root, environment)
+    assert len(calls) == 3
+    assert calls[0][-1] == "ade-db" and "--wait" in calls[0]
+    assert calls[1][-4:] == ["run", "--rm", "--no-deps", "ade-migrate"]
+    assert calls[2][-7:] == [
+        "db",
+        "model-router",
+        "hindsight",
+        "fault-proxy",
+        "ade-api",
+        "ade-worker",
+        "ade-web",
+    ]
+    assert all("--profile" in command and "product" in command for command in calls)
+
+
+def test_product_migration_failure_closes_owned_stack_without_starting_inference(
+    tmp_path, monkeypatch
+):
+    root, environment = candidate(tmp_path, monkeypatch)
+    calls, stops = [], []
+
+    def run(command, **kw):
+        calls.append(command)
+        if command[-1] == "ade-migrate":
+            raise RuntimeError("controlled migration failure")
+
+    monkeypatch.setattr(startup.subprocess, "run", run)
+    monkeypatch.setattr(startup, "stop_owned", lambda *a, **kw: stops.append(kw))
+    with pytest.raises(RuntimeError, match="migration failure"):
+        startup.start_product(root, environment)
+    assert len(calls) == 2 and stops[0]["reason"] == "startup_failed"
