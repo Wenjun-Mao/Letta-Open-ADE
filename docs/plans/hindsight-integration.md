@@ -1,395 +1,460 @@
-# Hindsight Integration: Three-Stage Plan
+# Hindsight Integration: Implementation Plan
 
-Updated: 2026-10-13. Status: offline assessment kit authorized and implemented;
-the three product-integration stages remain planning scope, not execution authority.
-The kit approval authorizes no provider calls, installation or deployment. Work serially on
-`main` in the primary checkout; scoped verified commits/pushes follow ADR 0048.
-No new chat, worktree, Goal campaign or delegated writer is required.
+Updated: 2026-10-18. The user agreed to the next deliverable: one complete
+Hindsight-backed ADE conversation path, inspectable delivery/recall evidence,
+and verified capture of the actual Character request. This revision makes
+Stage 1 executable in ordered increments and proposes one execution-approval
+package. Planning and the separate manual-only CI change are authorized;
+product implementation, provider use and OCI activation are not yet authorized.
 
-## Outcome And Authority
+## Outcome, Authority And Domain Boundaries
 
-Deliver one usable ADE conversation path backed by self-hosted Hindsight:
-save original messages in ADE, retain them asynchronously, recall within the
-same user/character relationship, inspect progress and memories, and retry a
-failed lookup without resending the message. Hindsight handles ordinary memory
-updates and corrections from conversation; manual removal is deferred.
-Then demonstrate isolation, failure handling and recovery before a fresh start.
+Stage 1 delivers a fresh ADE conversation path: save original messages, retain
+them asynchronously in Hindsight, recall within the same relationship, inspect
+progress/memories, and retry failed recall without resending the user message.
+It also connects the existing assessment kit to real, complete observations.
+Stages 2 and 3 remain later qualification work, not implied by Stage 1 approval.
 
 Authority: [PC-01 through PC-14](../product-contract.md), especially PC-02/03/04/10
-for identity/continuity, PC-05/07/08/09/14 for responsibilities and persistence,
-PC-06 for excluded semantic policy, PC-11/12 for Character, and PC-13 for hosting.
-[ADR 0068](../adr/0068-hindsight-default-memory.md) records the settled decisions;
-this plan selects no new product behavior by treating a technical assumption as
-an agreement. Its proposed engineering choices become execution inputs only
-after approval. Record material contract decisions in ADR 0068 as they settle.
+for ownership/continuity, PC-05/07/08/09/14 for Memory/persistence, PC-11/12 for
+Character, and PC-13 for hosting. [ADR 0068](../adr/0068-hindsight-default-memory.md)
+owns settled product decisions; [ADR 0069](../adr/0069-offline-character-assessment-kit.md)
+owns the offline kit. Record newly settled durable implementation contracts in
+the owning ADR; this plan does not silently amend product intent.
 
-The [assessment](../findings/hindsight-integration-assessment-2026-10-10.md) and
-[revision-5 finding](../findings/hindsight-semantic-follow-up-2026-10-11.md) are
-historical inputs. Do not reuse their cross-character profile sharing, whole-chat
-reprocessing, expired activation clocks or qualification claims. Hindsight
-adoption is settled; another vendor-selection experiment is not a prerequisite.
-
-### Scope Boundaries
-
-- Start with a new workspace/subject and new Hindsight state. Existing ADE/trial
-  data and retained experiment evidence/private files remain untouched. The old
-  test containers, network and DB/cache volumes were separately removed by
-  [explicit user-approved cleanup](../findings/hindsight-semantic-follow-up-2026-10-11.md#subsequent-authorized-teardown);
-  do not depend on them or restore archived test banks into the fresh scope.
-- No historical import/backfill, dual writes, native fallback, compatibility
-  adapters, second fact store/reviewer or generic Memory backend framework.
-- Keep authored personas, immutable definition versions, bounded local dialogue,
-  finite curated-tool execution and one ADE-owned product API/runtime.
-- No new conversational no-save/consent policy, phrase-specific semantic rule,
-  shared profile pool, permanent topic ban or guaranteed historical erasure.
-- No manual memory-removal API/UI, removal-preservation acceptance gate or
-  guaranteed conversational deletion. The separately proposed removal probe was
-  cancelled before startup or provider use; its earlier permission is withdrawn.
-- No broad Character/persona redesign, mandatory Hindsight reflect phase,
-  general memory editor, old-source rebuild, external-tool feature or M2 winner
-  claim. Targeted diagnosis is allowed; changed product intent needs review.
-- No production/trial replacement or release-ledger promotion in this plan.
-  Stage 3 prepares a separately reviewable fresh-start activation package.
-
-## Source-Grounded Design
-
-Initial baseline: `3491bb9`; final planning review rechecked the relevant runtime,
-UI and lifecycle owners at `f0d84df`. No runtime changes or qualification follow
-from that review. Paths below are relative to the repository.
-Under `services/ade-api/src/ade_api/features/agent_runtime/`:
-
-| Boundary | Current coupling | Planned treatment |
+| Responsibility | Question and evidence | What it cannot establish |
 | --- | --- | --- |
-| `run_service.py`, `persistence/conversations.py` | Accepted message and run persist together; native memory generation is captured. | Preserve source/idempotency integrity; add durable delivery intent in the same ADE transaction. |
-| `turn_execution.py`, `turn_context_selection.py`, `turn_memory_snapshot.py` | Recall, Character sizing and execution depend on native reviewer/fact snapshots. | Compose Character context from scoped Hindsight recall and independent local dialogue, without reviewer-capacity dependencies. |
-| `turn_result.py`, `worker_finalization.py`, `worker_events.py` | Success requires native review/embeddings and a memory/reply transaction. | Commit reply, run outcome and reply-delivery intent atomically within ADE; do not fabricate empty review results. |
-| `executor.py`, `turn_compaction.py`, `compaction_executor.py` | Provider continuation and local dialogue compaction are already owned here. | Preserve those responsibilities; replace native fact-specific tool/context contracts. |
-| `definition_service.py`, `deployments.py`, `contracts.py`, bootstrap/session modules | Definitions and requests require native reviewer/retriever roles. | Replace obsolete fields/bindings directly; preserve persona/version and Character model identity. |
-| `memory_contracts.py`, `resource_service.py`, `agent_studio_api.py`, presenters | Inspection is subject-only and assumes native fact revisions/generation. | Require the subject/character relationship for memory, source and delivery-status reads; remove obsolete manual-removal contracts/controls, not existing stored data. |
-| `worker.py` | One loop awaits each claimed turn before claiming another. | Give durable delivery independent scheduling/leases so a retain/poll wait cannot occupy the only reply worker or its conversation lease. |
-| `agent_studio_reset.py`, `evaluation_sessions.py` | Reset/cleanup assumes one ADE SQL transaction owns all memory state. | Retire the SQL-only product reset from the new path; use exact paired disposable-stack cleanup for integration tests, not a new product erasure feature. |
-| `database_boundary.py` | Workspace identity is hard-coded to the default. | Establish a fresh persisted/configured workspace identity consistently; no silent default fallback or unnecessary workspace-management UI. |
+| Memory | Were attributed sources delivered, interpreted, organized and retrieved correctly? Inspect original sources, native facts/observations and raw recall. | A fluent reply is not Memory qualification. |
+| Character | Given its actual inputs, was the response grounded, contextually appropriate and faithful to the persona? Use PC-12's three separate lenses. | A retrieval miss is not automatically a Character defect; good recall is not Character acceptance. |
+| Interface | Are saved messages, delivery state, read-only inspection and Retry shown truthfully? Verify API/UI behavior. | A successful HTTP response is not semantic correctness. |
+| Runtime and assessment support | Did the normal product path execute, and is the record complete and attributable? Inspect source/request/commit joins. | Capture validity and scripted rehearsal results are not domain-quality scores. |
 
-The web's `use-agent-studio.ts:146` refreshes chat, memories, runs and activity
-through one `Promise.all`; a failed memory read currently aborts the whole refresh.
-Split product-state loading from remote-memory inspection so Hindsight failure
-cannot hide saved messages, run state or Retry. This is a PC-08/14 boundary fix,
-not permission to generate a reply without the required recall.
+Keep these conclusions separate in discussion, tests, findings and handoff.
+The [historical assessment](../findings/hindsight-integration-assessment-2026-10-10.md)
+and [revision-5 findings](../findings/hindsight-semantic-follow-up-2026-10-11.md)
+remain bounded evidence. Hindsight adoption is settled; do not restart vendor
+selection or inherit the old cross-character profile exception.
 
-Additional owners: `persistence/metadata.py` and `services/ade-api/migrations/`
-for ADE schema; `platform/settings.py` and `integrations/` for service wiring;
-`apps/ade-web/src/features/agent-studio/` for API types, run monitoring, memory
-views and Retry; Model Router and its configuration for provider identity.
-Follow the [development conventions](../development-conventions.md), including
-splitting oversized touched modules instead of adding unrelated responsibilities.
+## Scope And Exclusions
 
-### Proposed Integration Shape
+- Work serially on `main` in the primary checkout. No new development worktree,
+  chat, Goal campaign, scheduled automation or parallel implementation writer.
+  Scoped commits/pushes follow [ADR 0048](../adr/0048-mainline-development.md).
+- Use a new workspace/subject, new relationship banks and fresh isolated databases.
+  Do not import existing ADE/trial conversations or archived experiment banks.
+  The old OCI experiment stack was separately removed; its retained archives
+  are evidence, not a runtime dependency or a source for backfill.
+- Preserve authored personas, immutable definition versions, bounded current-chat
+  dialogue, compaction provenance, finite tool execution and one ADE product API.
+  No broad Character redesign, persona tuning or mandatory reflect stage.
+- Replace obsolete native reviewer/fact contracts directly. No dual writes,
+  native fallback, generic backend framework, second semantic reviewer or fact store.
+  Preserve existing stored data and historical evidence, not executable compatibility.
+- No manual memory-removal API/UI, removal-preservation probe, guaranteed deletion,
+  conversational no-save policy, cross-character sharing or old-source rebuild.
+  Ordinary corrections remain Hindsight's responsibility, not ADE update commands.
+- No existing-service replacement, public exposure, new provider/account, paid
+  infrastructure upgrade, production cutover or release-ledger promotion.
+- GitHub Actions is manual-only. Do not dispatch, retry or restore automatic CI
+  without an explicit new user request. Local verification and normal pushes remain.
 
-- One Hindsight bank per `(workspace, subject, character root)`, resolved only
-  by ADE from persisted ownership. Conversation and persona version are source
-  metadata, not new banks. No model/browser-supplied arbitrary bank selection.
-  Scope reads, writes and source inspection identically. Initialize and
-  verify a new empty bank before treating an empty first recall as successful;
-  a missing/deleted established bank is an error, not forgotten history.
-  Conversation views derive the pair from their binding; standalone inspection
-  explicitly selects both person and character, never all of a person's banks.
-  Reject mismatched source/operation IDs and stale cross-selection responses.
-- Use a small concrete Hindsight HTTP integration, not the evaluation CLI as a
-  production backend. Reuse verified transport/serialization ideas, not its
-  shared-profile projection or diagnostic-only runtime. Keep Hindsight access
-  behind ADE; banks are not a substitute for authentication/authorization.
-- Persist immutable delivery payload identity, source IDs, sequence and hash
-  before dispatch. Use a durable ADE outbox with leases and bounded retries;
-  preserve order within a relationship while allowing unrelated scopes to
-  progress. Separate message acceptance, delivery acknowledgement and completed
-  processing. No Hindsight network request belongs inside an ADE SQL transaction.
-- Run delivery independently of reply execution with bounded concurrency; no
-  microservice framework is needed. Exhausted/uncertain delivery blocks later
-  deliveries only in that relationship until reconciliation, not other banks or
-  otherwise healthy recall/replies. Expose oldest pending age and the blocked
-  item with an operational recovery path; never skip/reorder it silently or
-  require restarting a Character reply to retry delivery. Test backlog pressure
-  across ADE workers, database pools, Hindsight and the shared model routes.
-- Begin source-unit design with immutable per-message deliveries and bounded,
-  attributed antecedent context for references such as "yes, that one". Verify
-  source attribution, reference resolution, corrections and retry behavior before
-  settling the exact native retain mode. Avoid redundant whole-chat processing;
-  no removal-specific context barrier or native patch is required by this scope.
-  Preserve original message/utterance times on retry; delivery, extraction and
-  consolidation timestamps must not silently become dates when events happened.
-- Leave extraction, factual updates/corrections and consolidation to Hindsight.
-  ADE supplies attributed sources and enforces delivery/ownership integrity, not
-  semantic update commands, a parallel reviewer or keyword lifecycle rules.
-- Perform normal recall for each reply attempt without waiting for retention.
-  Combine bound persona, product instructions, current input, bounded local
-  dialogue and relevant memories. Preserve attribution, dates and uncertainty;
-  retrieved text is information, not privileged instructions. Bound the complete
-  serialized request at every model/tool continuation, not just recall tokens.
-- Preserve discretionary `search_memory` through the same scoped Hindsight path;
-  do not force it with keywords. Any required lookup failure, including a tool
-  lookup, pauses the reply rather than becoming an empty result. No uncommitted
-  candidate reply is stored or retained after that failure.
-- Retry resumes the saved user input through a new, fenced attempt and fresh
-  recall. Define a persistent retryable state, terminal/active distinctions,
-  lease release/reacquisition, cancellation, concurrent Retry and stale-worker
-  behavior. Reject a stale retry after incompatible conversation changes rather
-  than silently moving an old input behind newer messages. Exact API/state names
-  are engineering choices, not a reason to append the input again.
-- Interface distinguishes queued, processing, completed, failed and uncertain
-  delivery states, and recall failure from successful empty recall. Display
-  source-backed memories without pretending native fact revisions still exist.
-  Label derived observations and link supporting facts where available. Inspection
-  is read-only in this scope; do not imply that a user can delete/edit a memory
-  or that an ordinary correction erases the original conversation.
+## Current Source And Owning Boundaries
 
-## Stage 1: Connect The Complete Flow
+Rechecked against `bd7c873`; runtime/router/web sources are unchanged since
+the prior `f0d84df` review. The separate `145cd25` CI-policy change does not
+implement Hindsight. Refresh source status before execution; do not assume
+historical deployment, capacity or provider identities are current.
 
-**Outcome:** a fresh conversation works end to end with durable background
-retention, scoped recall and the actual Agent Studio UI.
+Paths below are under `services/ade-api/src/ade_api/features/agent_runtime/`
+unless a different owner is named. Split oversized touched modules along their
+responsibilities; do not add a generic cross-domain helper collection.
 
-1. Establish the pinned contract and fresh schema. Start from Hindsight 0.10.3
-   source `eb6df499d35300e5b2f3f029b2e6adda04ed90f8`, already used in the campaigns,
-   not a floating latest image. Bind image/source/config identities. Design bank
-   ownership, outbox state, reply Retry and schema/API changes before wiring the
-   full runtime. Use Alembic on a new isolated ADE database; do not run migrations
-   against retained databases or keep unused native code executable for them.
-   Before first retention, version the bank's speaker/character identity, Memory
-   missions and model/embedding bindings without the old shared-profile classifier.
-   Select native consolidation scheduling, including recovery after downtime;
-   do not carry over the experiment's manual-only maintenance by default.
-2. Resolve the source-unit and retry feasibility gate before dependent rollout.
-   Inspect pinned source/API behavior, write fake-transport/SQL tests, then run
-   focused synthetic checks under integration execution approval, not the
-   cancelled removal-probe permission. Prove reference resolution,
-   accepted-user-only retention after a failed reply, committed-reply attribution,
-   lost acknowledgement, unchanged payload replay, partial failure and ordinary
-   corrections across deliveries. Do not manually repair facts to make a
-   correction test pass; capture native retention/consolidation and recall.
-3. Implement source delivery and the replacement runtime contract together.
-   Bind a caller-generated async operation ID to its immutable payload; poll or
-   reconcile that operation after a timeout instead of minting a fresh ID. A
-   failed/partially completed operation needs a proven recovery rule before
-   retry; same-ID deduplication does not itself repair failed work. Fence duplicate
-   workers and stale completion. Define delivery failure visibility and recovery.
-4. Replace native review/fact/embedding obligations in admission, definitions,
-   context, result and finalization. Keep message integrity, conversation-version
-   checks, cancellation, lease fencing and summary provenance. Add committed
-   reply delivery in the same ADE transaction as reply/run success. Remove
-   superseded code/contracts and update maintained callers, not compatibility
-   wrappers. Preserve historical evidence; version historical fixtures explicitly.
-   Include inspection, reset and evaluation-cleanup entrypoints in that audit;
-   no reachable route may erase ADE mappings while Hindsight work is outstanding.
-5. Wire Hindsight recall, Character composition, concrete scoped memory search,
-   API status/readback/Retry and Agent Studio. Update OpenAPI, feature READMEs and
-   affected tests. Create the integration workflow at
-   `workflows/evals/hindsight_integration/` with its fixtures, config, runner,
-   README and ignored outputs together; product code must not import the lab.
-
-**Source-unit gate:** demonstrate all required invariants with captured source,
-native operation state, retained facts/observations and subsequent recall.
-Stable document IDs, append mode or prompt wording alone are insufficient.
-If pinned Hindsight cannot satisfy the contract, preserve the counterexample and
-propose a bounded native change or explicit tradeoff before dependent work;
-do not add a shadow semantic engine or reopen vendor selection. This gate tests
-delivery integrity and normal memory behavior, not deferred manual removal.
-
-**Stage exit:** offline tests and real PostgreSQL readback pass; one authorized
-Chinese UI journey saves user/reply messages, shows retention progress, then
-recalls the learned fact in a second same-character conversation. Generation
-does not wait for deliberately delayed retention. No native reviewer/fact write
-or fallback executes. Partial Stage 1 success does not qualify later stages.
-
-## Stage 2: Verify Boundaries And Failures
-
-**Outcome:** observable tests show that the new path keeps the agreed promises,
-not merely that its HTTP requests succeed. Use synthetic fixtures with explicit
-expected distinctions, not altered historical evidence or answer-specific rules.
-
-Use PC-12's agreed [case/run/review method](../architecture/capability-map/character-assessment.md#repeatable-review-method)
-and the [runnable offline kit](../../workflows/evals/hindsight_integration/README.md),
-the first implementation deliverable (ADR 0069), to freeze exact Chinese cases,
-bind runtime identities and retain all attempts without a composite score.
-Offline mechanics are implemented; Stage 1 must connect verified live capture,
-then human calibration and the live baseline follow. Starter coverage is not release coverage.
-
-| Case | Required evidence / acceptance |
+| Owner | Required work and present coupling |
 | --- | --- |
-| Identity and continuity (PC-02/03/04/10) | Same relationship across new chats, ordinary persona versions and archived chats; different character, subject and workspace cannot read/write/inspect the first relationship's facts, sources or derived observations. Include forged source/operation IDs, standalone inspection, rapid UI character switching and missing metadata. |
-| Source attribution (PC-03/11/14) | User message retained after failed generation; only committed replies retained; jokes/hypotheticals/solo stories are not asserted as shared events. Reference-only replies resolve against attributed context rather than inventing their subject or speaker. |
-| Delivery crashes (PC-05/08/14) | Crash before dispatch, after remote acceptance, before ADE acknowledgement, during polling and after worker lease loss. Restart reconciles the original delivery without loss, duplicate extraction or out-of-order overwrite. Partial extraction remains visible, not completed success. |
-| Background progress (PC-09/14) | Sustained synthetic dialogue and one exhausted/uncertain delivery do not block unrelated delivery or healthy reply execution. Observe queue age, blocked scope and reply/recall latency with retention and consolidation active; include compaction pressure, not just one delayed fake. Recovery neither drops a message nor reorders a correction. |
-| Recall and Retry (PC-01/14) | Timeout, authentication failure, malformed response and lost service pause generation; successful empty recall works; missing bank is not empty. Concurrent/repeated Retry, reload and stale workers produce one accepted input and at most one committed reply. Pending retention alone does not pause. |
-| Natural updates and corrections (PC-01/05/14) | Conversational misspeak correction differs from a genuine later change. Inspect Hindsight facts, observations and recall after retention/consolidation, including delayed/retried delivery; no manual fact repair or ADE semantic override. Preserve original chat and source/time attribution. |
-| Context and lifecycle (PC-04/09/12) | Oversized memories, long Chinese dialogue, compaction, tool continuations, cancellation and version races preserve bounded requests, message ordering and source/summary integrity. No silent truncation of mandatory input. |
-| Interface truth (PC-07/14) | Real browser covers new conversation, status refresh, failed lookup/Retry, archived-chat continuity and read-only relationship inspection. During a Hindsight outage, reload still shows ADE chat, saved input and run/Retry state; remote-memory failure is not an empty-memory display. No manual removal controls, one-store reset or guaranteed deletion claims. No queued receipt is called completed memory. |
-| Model/retention quality (PC-11/12) | Capture actual delivered memories and serialized Character input separately from the reply; assess grounding, judgment and character fidelity separately. Report usage/latency by phase without spending gates or invented billing totals. |
+| `run_service.py`, `persistence/conversations.py` | Add user-delivery intent to the accepted-message transaction; remove native memory-generation admission dependency. |
+| `worker_finalization.py`, `turn_result.py`, `worker_events.py` | Replace required reviewer/fact results; atomically commit reply, outcome and reply-delivery intent within ADE. |
+| `turn_execution.py`, `turn_context_selection.py`, `turn_memory_snapshot.py` | Replace native snapshots with scoped recall; compose independently available local dialogue and bind what was delivered. |
+| `executor.py`, `turn_compaction.py`, `compaction_executor.py` | Preserve bounded continuation/compaction; route discretionary memory search through the same scope and failure contract. |
+| `worker.py`, `persistence/metadata.py`, migrations | Add durable delivery scheduling, leases and mappings without blocking the sole reply-worker loop. |
+| `definition_service.py`, `deployments.py`, `contracts.py`, bootstrap/session modules | Remove obsolete reviewer/retriever role obligations; retain Character/persona/model identity. |
+| `resource_service.py`, `agent_studio_api.py`, presenters | Change subject-only memory/source/status inspection to authorized subject-and-character ownership. |
+| `agent_studio_reset.py`, `evaluation_sessions.py`, `database_boundary.py` | Retire SQL-only reset/purge assumptions and hard-coded workspace identity from the new path. |
+| API `platform/settings.py`, `integrations/` | Own concrete Hindsight configuration and transport; product code must not import the evaluation workflow. |
+| Model Router `app.py`, `forwarding.py`; runtime `provider_tracing.py` | Current traces lack complete bodies; Router changes model/payload/defaults. Capture actual post-normalization outbound requests, not an earlier approximation. |
+| `apps/ade-web/src/features/agent-studio/` | Replace native memory types/controls; separate chat/run loading from fallible remote-memory reads, currently joined by `Promise.all`. |
+| `workflows/evals/hindsight_integration/` | Own live collector, manifests, fixtures, tests, commands and ignored evidence; use public product/observation boundaries. |
 
-Reproduce representative revision-5 risks under the new character-local scope:
-misspeak correction versus genuine preference change, unknown detail versus
-invented recollection, hypothetical versus event, solo versus shared history,
-and consolidation changing factual meaning. Inspect raw facts and derived
-observations before blaming Character. Exercise the Stage-1 versioned Memory
-mission and consolidation schedule, including backlog/failure status and recovery
-without a manual consolidation command. Do not silently disable a capability
-or change inputs after a failure just to claim acceptance.
+## Implementation Contracts To Settle In Stage 1
 
-**Stage exit:** all mechanical/isolation tests pass, real API/UI journeys
-are recorded, and remaining semantic defects have source/request/reply evidence
-and a named owner. Known semantic failures require a durable fix or explicit
-user acceptance of a bounded limitation before fresh-start readiness; a good
-recall result or historical campaign pass cannot certify Character quality.
-No rerolls of unchanged failures solely to fill time.
+These proposals operationalize existing PC agreements. Exact type/module/API names
+are implementation choices. Freeze tested source-unit, operation-recovery, Retry
+and observation contracts before dependent implementation; record rationale and
+rejected alternatives rather than relying on implicit conventions.
 
-## Stage 3: Recovery And Fresh-Start Readiness
+### Memory Ownership And Delivery
 
-**Outcome:** a source-bound package that can start fresh safely and recover both
-stores. Readiness is not permission to replace existing services.
+1. One bank per persisted `(workspace, subject, character root)`, selected by ADE,
+   never by model/browser-supplied bank IDs. Conversations and persona versions
+   remain source metadata. Apply the same scope to recall, search, sources,
+   observations and delivery inspection. Verify an empty new bank; an established
+   bank disappearing is an error, not successful empty recall.
+2. Store immutable message/source IDs, speaker, original time, relationship
+   sequence, payload hash and operation identity before dispatch. Accepted users
+   and committed assistant replies qualify independently; candidates do not.
+   Keep delivery acknowledgement, retention and consolidation status distinct.
+3. Start with per-message deliveries and bounded, attributed antecedent context
+   for references. Earlier excerpts must not become new statements. Prove native
+   append/replacement and partial-failure behavior before settling the source unit.
+   Reject redundant whole-chat reprocessing and timestamp substitution on retry.
+4. An ADE outbox uses independent scheduling, leases and bounded concurrency.
+   Preserve relationship order; uncertain/exhausted delivery blocks only later
+   deliveries in that relationship, not healthy recall or unrelated work.
+   Expose queue age, blocked item, progress and operational reconciliation.
+5. No network request inside an ADE transaction. Reconcile a timed-out native
+   operation using its original identity and immutable payload, rather than
+   blindly submitting again. Same-ID deduplication is not proof of failed-work
+   recovery. Fence duplicate workers and stale completion.
+6. Hindsight owns extraction, correction and consolidation. Version its identity,
+   missions, model/embedding bindings and automatic consolidation schedule before
+   ingestion. Demonstrate progress after downtime; do not inherit manual-only
+   maintenance, the shared-profile classifier or a duplicate ADE reviewer.
 
-1. Back up ADE product state and Hindsight state as a coordinated, documented
-   recovery point. Quiesce new writes and drain or explicitly record in-flight
-   work on the isolated stack; include outbox/operation identities, bank mapping,
-   native learned-memory state, source/config hashes and schema versions. Protect
-   credentials separately. A dump with a readable table of contents is not restore proof.
-2. Test orderly restart and controlled crash recovery of the integration stack.
-   Verify completed and pending deliveries, retryable replies, source identity,
-   corrected facts/observations and same-character continuity through public APIs.
-   Disable provider dispatch until restored identities and pending operations
-   are reconciled; never fall back to bulk replay of original conversations.
-3. Restore into separately owned disposable databases/volumes, start the actual
-   restored ADE and Hindsight APIs, and repeat readback plus a new turn. Prevent
-   restored workers from contacting original banks or running concurrently as
-   a second owner. Compare logical/schema state and user-visible invariants,
-   not volatile timestamps. Preserve failed evidence; remove only explicitly
-   registered disposable resources after proof, never retained volumes.
-4. Prepare a fresh-start manifest/runbook: exact source/images, dependency/model
-   identities, schema/config, new workspace/subject/banks, ports/auth, health,
-   backup/restore, shutdown and rollback. Practice opening an empty workspace
-   and using the three-stage flows with disposable synthetic data. Any eventual
-   real-use workspace must start empty, not inherit qualification fixtures.
-5. Review acceptance and limitations, commit/push scoped work, and publish a
-   concise finding with evidence references and missing gates. Stop/drain the
-   isolated services after checks unless continued operation is explicitly
-   authorized. Preserve data and receipts. Do not edit a release ledger or
-   route existing users to the candidate as a side effect of completing tests.
+### Reply Execution And Interface
 
-**Rollback:** stop only the new stack, preserve both databases and evidence,
-and leave existing services untouched. Within the new stack, roll back only a
-proven image/schema/paired-backup combination. Never point the old native Memory
-runtime at new Hindsight workspace data. Where reversal is unproven, keep the
-candidate stopped and report the recovery requirement rather than guess.
+- Recall normally on each attempt without waiting for pending retention. Combine
+  characterization, product instructions, current input, bounded local dialogue,
+  any current-chat summary and relevant memories. Preserve time/attribution and
+  uncertainty; retrieved content is data, not privileged instructions.
+- Bound the entire serialized request, including tools/continuations. Preserve
+  compaction/source integrity and mandatory-input errors. The user's eight-message
+  example was hypothetical, not approval to introduce a new window-count policy.
+- A required recall or `search_memory` failure pauses the reply and exposes Retry.
+  No Character error apology, empty-memory substitute or native fallback. Successful
+  empty recall is valid; pending retention alone does not pause generation.
+- Retry creates a fenced attempt for the same saved input, performs fresh recall,
+  and acquires/releases the proper lease. Concurrent Retry, cancellation, stale
+  workers and incompatible later conversation changes cannot duplicate or misorder
+  input/replies. Delivery retry is a separate operation, not a new conversation turn.
+- Proposed pause behavior: release the worker lease but retain the conversation's
+  pending-input guard. Require Retry or Cancel before another user turn; cancellation
+  keeps the accepted message and its delivery eligibility. Persona/archive/version
+  changes that invalidate the saved attempt must reject Retry explicitly.
+- Product chat/run state must load even when memory inspection fails. Show queued,
+  processing, completed, failed and uncertain delivery truthfully; remote read
+  failure is not an empty memory list. Require the selected relationship for all
+  source/operation reads and reject stale UI selection responses.
+- Retire one-store reset/manual removal controls in this path. Test cleanup owns
+  paired disposable resources; it does not create a new product erasure feature.
 
-**Stage exit:** fresh source-specific restart, crash and dual-store restore
-evidence passes, baseline services/data remain unchanged, and the activation
-package is reviewable. Revision-4 logical restore and revision-5 dumps are
-historical only. No automatic production cutover is included.
+### Capture And Interpretation
 
-## Environment, Models And Execution Permissions
+- Capture each real setup/probe request and tool continuation at its final
+  provider-facing boundary, with role/phase, attempt, time, served identity,
+  payload hash and outcome. Join ADE, Router and upstream IDs where available;
+  explain missing provider IDs instead of inventing them.
+- Keep setup requests separate from probe requests. The kit's current checks
+  expect one current probe user message and cannot certify arbitrary setup traces.
+  Add source-linked sidecars or a versioned observation contract for phase grouping,
+  completeness and prompt-component provenance; do not weaken checks to import data.
+- Identify persona/instructions, current input, local dialogue, summaries, automatic
+  recall and tool recall separately. Preserve the exact complete request as well
+  as its component manifest; reconstructing an ideal prompt is not capture.
+- Source data belongs in the evidence record, not automatically in the probe
+  prompt. New-conversation tests must verify absence of source dialogue and copied
+  summaries from non-Hindsight input. Original excerpts returned by Hindsight
+  remain legitimate retrieval, with their provenance visible.
+- A same-chat out-of-window test must also check summaries and assistant
+  restatements. If another route still supplies the answer, label that route;
+  do not report Hindsight-dependent recall. Keep normal product context enabled.
+- Collection is opt-in, operator-authorized and limited to the synthetic isolated
+  workspace. Exclude credentials, auth headers and private reasoning at collection;
+  restrict files/exports and do not put full captures in ordinary UI activity.
+  Missing/unsafe capture stays incomplete, not silently repaired into a pass.
+- The collector uses public API/observation surfaces and actual committed records.
+  Corrupt joins, missed continuations, reused scopes and incomplete records must
+  fail qualification. Offline declaration validation alone is insufficient.
 
-The user selected a **new isolated OCI stack** for live integration checks.
-The user completed the 4-core/24-GB-class upgrade. Read-only `lscpu`, `free -b`
-and `df -B1 /mnt/projects` checks on 2026-10-12 confirmed four ARM64 cores,
-23.4 GiB total RAM, 21.8 GiB available RAM and 99.4 GiB available disk. This
-removes the earlier two-core/about-12-GiB planning constraint, not the need to
-measure the full ADE API/worker/web + Hindsight stack at startup and under load.
+## Stage 1: Ordered Implementation Deliverables
 
-Use a new Compose project, isolated networks/credentials, fresh ADE and Hindsight
-databases/volumes, and unused loopback ports reached by a private tunnel. Do not
-reuse the root Compose data binds or closed probe project. Prefer separately
-owned database services initially, preserving each pinned extension/version
-requirement. Confirm the whole allocation before startup, including browser-test
-and serial build peaks. Re-inventory before activation and reserve at least
-4 GiB RAM and one core for the host/baseline services in the proposed allocation;
-measure build pressure separately from runtime container limits. No fit means
-stop and surface the placement/resource choice, not evict baseline services.
-Browser interaction can run on the Mac against the OCI stack without a local
-Hindsight server. Provider/model traffic still originates from the authorized
-isolated runtime.
-Baseline checks inspect service identity/health and storage attachments, not
-existing conversation contents or database exports. Monitor new-stack headroom,
-health and baseline drift; stop owned work on unsafe resource pressure or drift.
+Each deliverable includes focused tests, a source checkpoint and an updated
+workflow runbook. Dependencies are explicit; none requires a fresh permission
+request once the execution package below is approved.
 
-Proposed starting model routes, not new globally selected defaults:
+### M0: Freeze Contracts And Establish A Reproducible Baseline
 
-| Role | Starting configuration and proof needed |
+Inspect current owners, pinned native API/source and existing test failures.
+Specify relationship mapping, outbox/reconciliation and reply-Retry transitions,
+transaction boundaries, capture access and complete-request joins. Record durable
+choices in ADR 0068 or the owning observation ADR, not a second product contract.
+Prepare owned-resource manifests, offline fixtures and exact local/OCI commands.
+Record `ITERATION_BASE` before each increment for changed-file verification.
+
+Exit: contracts and failure tables are source-backed; targeted baseline results
+are recorded; unrelated historical failures are distinguished from new regressions.
+No provider call is needed for this step. Native feasibility remains M1, not assumed.
+
+### M1: Prove The Native Source And Recovery Contract
+
+Pin Hindsight 0.10.3 source `eb6df499d35300e5b2f3f029b2e6adda04ed90f8`.
+Use fake transport/SQL tests first, then the approved fresh OCI stack for bounded
+native checks: reference-only input, original-time attribution, user-only retention
+after failed generation, committed-reply attribution, correction versus change,
+lost acknowledgement, immutable replay and failed/partial operation recovery.
+Verify automatic consolidation, Chinese reranking and actual embedding identity.
+
+Exit: the proposed source/recovery contract has source, operation-state and
+readback evidence. Direct native probes qualify this boundary only, not ADE's
+product flow. Diagnose/fix within the approved contract and repeat affected checks;
+an unresolvable mismatch blocks dependent work, not permission to invent a
+semantic bypass, silently weaken expectations or reopen vendor selection.
+
+### M2: Implement ADE Persistence And Durable Delivery
+
+Build fresh workspace/bank ownership, outbox schema/repositories and independent
+delivery scheduling. Extend the accepted-user transaction and committed-reply
+transaction, with immutable payload identity, order, lease fencing and readbacks.
+Replace native reviewer/fact requirements across maintained runtime callers,
+definitions, finalization, inspection and cleanup; remove superseded executable
+paths rather than return fake empty review objects. Keep historical data intact.
+
+Exit: real disposable PostgreSQL tests prove atomic source/delivery intent,
+idempotent acceptance/finalization, concurrent worker fencing, restart reconciliation,
+failed-generation user eligibility and unrelated-relationship progress. A blocked
+delivery neither occupies the sole reply worker nor silently loses subsequent work.
+
+### M3: Connect Scoped Recall And The Normal Reply Path
+
+Wire scoped automatic/tool recall, complete context sizing, existing Character
+execution, persistent pause/Retry, cancellation and final commit. Bind source,
+persona/model versions and request identities. Do not wait for retention or add
+test-only generation semantics. Keep current-chat compaction and source provenance.
+
+Exit: successful empty recall generates normally; lookup failure produces no
+committed reply; Retry preserves one accepted user message and at most one reply.
+Delayed retention does not block healthy replies. Wrong relationship, missing
+established bank, stale retries and tool-lookup failure are covered.
+
+### M4: Complete Agent Studio And Public Inspection
+
+Update API/OpenAPI contracts, definitions/bootstrap, client types, polling and
+read-only memories/sources/delivery views. Separate ADE state from remote-memory
+loading; show pause/Retry and processing/failure state. Retire obsolete reset and
+manual-removal controls. Preserve established visual design and responsive behavior.
+
+Exit: browser/API checks exercise a Chinese conversation, new same-character chat,
+status updates and outage/reload/Retry. Changing subject/character cannot show a
+stale result or expose another relationship through forged source/operation IDs.
+No UI claim confuses queued delivery, completed processing and semantic correctness.
+
+### M5: Connect Live Capture And Run A Small Real Demonstration
+
+Implement the collector and phase/component manifests under the existing kit,
+using verified public observation boundaries. Test capture completeness with a
+recording fake server and the actual Router's post-normalization path, including
+tool continuation, failed requests and commit correlation. Reject incomplete input.
+
+Freeze the existing `q01-relevant`, `q02-correction` and `q02-change` cases,
+two repeats each, with exact runtime/persona/model/config identities before running.
+Use a fresh relationship per attempt. Send exact user seeds through ADE and retain
+all actual assistant replies; do not inject authored answers into product history.
+Use actor-only exports; evaluator rubrics and calibration replies never enter
+Character or Memory input.
+Observe processing completion as an evaluation step, then start a fresh probe
+conversation without source dialogue/summary carryover. This does not add a
+retention wait to ordinary replies. Record every attempt, not only successes.
+
+Exit: six planned probe slots are accounted for, with real sources, native Memory
+readbacks/recall, actual Character requests and committed replies or explicit
+failures. At least one successful cross-conversation flow must be observed to
+claim it works. Report correction/change counterexamples separately; no claim
+of general Memory reliability or Character acceptance follows from this small set.
+Human reviews may remain unreviewed in the kit; AI advice is not a human verdict.
+
+### M6: Close The Stage-1 Safety And Evidence Gates
+
+Exercise representative owned-stack faults: interrupted delivery/reconciliation,
+recall outage and Retry, failed generation, restart, cancellation and stale-worker
+commit rejection. Include negative subject/character/workspace access and one
+deliberately delayed retention path. Use deterministic fault injection before live
+faults; do not disrupt Spark, provider accounts or baseline OCI services.
+
+Capture a coordinated recovery point for ADE and Hindsight, including in-flight
+operation identities; preserve evidence and document restart/shutdown procedures.
+Restore only if needed for owned-stack repair under the approval package; this
+does not replace Stage 3's deliberate paired-restore qualification. Stop/drain
+new services at closeout, preserve retained evidence/data and verify baseline health.
+Rollback stops only the candidate. Restore only a proven image/schema/paired-backup
+combination; never point the old native runtime at the new Hindsight workspace.
+If reversal is unproven, preserve the candidate stopped rather than guess.
+
+Exit: relevant offline/SQL/API/browser gates pass; stage evidence is source-bound;
+no native fallback or duplicate reviewer executes; remaining semantic findings
+have a named domain and evidence. Mechanical completion, Memory findings,
+Character review status and readiness are reported separately. Unresolved required
+gates remain failed/pending, not quietly waived to finish the milestone.
+
+## Later Stages: Retained Direction, Outside This Execution Package
+
+**Stage 2: broader boundaries and quality.** Expand isolation across archived
+chats/persona versions, inspection/forged IDs and races; delivery crash points,
+sustained backlog and model/DB contention; malformed/auth/timeout failures;
+long Chinese context, compaction and tools; UI truth under outages. Inspect
+native Memory facts/observations/recall for correction, attribution, uncertainty
+and consolidation behavior. Separately calibrate human Character judgments and
+run the full frozen assessment baseline with repeats and unseen variants.
+Controlled-history cases do not prove product establishment of that history.
+
+Stage 2 exit: required mechanical/isolation gates pass; Memory findings and
+Character lens judgments are independently recorded. Known semantic failures
+need a durable fix or explicit bounded acceptance before fresh-start readiness.
+Human absence does not block recording evidence or other engineering work, but
+cannot be replaced with fabricated human calibration/acceptance.
+
+**Stage 3: recovery and fresh-start readiness.** Quiesce/drain or record in-flight
+work; back up both stores, mappings and operation identities. Restore into new
+owned databases with dispatch disabled until reconciliation, prevent simultaneous
+owners, then run the actual restored APIs and a new turn. Do not bulk-replay old
+conversations as recovery. Verify logical/schema state and user-visible invariants,
+not volatile timestamps. Prepare a pinned source/image/config/model manifest,
+auth/ports, backup/restore/shutdown runbook and a clean real-use workspace proposal.
+
+Stage 3 exit: fresh restart/crash/paired-restore proof, unchanged baseline and a
+reviewable activation package. Historical restores/dumps do not qualify it.
+Production cutover, release promotion and continued unattended service operation
+still need separate authority.
+
+## Environment And Model Envelope
+
+Use the previously selected OCI ARM host via `150.136.50.36_OCI_ARM`, not a local
+Mac Hindsight server. The 2026-10-12 read-only check found four ARM64 cores,
+23.4 GiB RAM and 99.4 GiB free under `/mnt/projects`; these are historical figures.
+Before each activation, inventory capacity, ports, baseline container identities,
+health and storage attachments without reading baseline conversations/databases.
+
+Use a new Compose project, isolated network/credentials, owned fresh ADE and
+Hindsight databases/volumes, unused loopback ports and private SSH tunnels.
+Do not use root Compose data binds, shared PostgreSQL or the retired probe stack.
+Reserve at least one core and 4 GiB RAM for the host/baseline; size the full stack,
+serial builds and model downloads, monitor disk/health pressure, and stop owned
+work before harming baseline services. Resource limits and failure thresholds
+must be recorded before startup; inability to fit is not authority to evict work.
+Mac browser automation may use the private tunnel. Keep live provider/model
+traffic in the authorized isolated runtime, not ad hoc laptop experiments.
+
+| Role | Approved-package starting route, to verify at activation |
 | --- | --- |
-| Character | Existing `deepseek::deepseek-flash` profile through Model Router; retain configured thinking behavior and verify the actual served identity/request. |
-| Hindsight extraction/consolidation | Same DeepSeek route, explicit Memory-specific non-thinking/JSON settings as qualified historically; no duplicate ADE reviewer. Requalify serialization and errors on the new path. |
-| Embeddings | Existing Spark `Qwen/Qwen3-Embedding-0.6B` route through Model Router; verify dimensions, input limit, query prefix and fingerprint without restarting/changing Spark. |
-| Reranking | Pinned CPU BGE-v2-m3 configuration from the experiment; prove Chinese full-reranking health and resource fit, not HTTP 200 alone. |
+| Character | Existing `deepseek::deepseek-flash` via isolated Model Router; retain configured thinking behavior and bind actual served identity. |
+| Context compaction | Bind a compaction profile on the same DeepSeek route for the candidate; preserve summarization/provenance behavior and capture its requests separately from Character replies. |
+| Memory extraction/consolidation | Same provider route with explicit Memory-specific non-thinking/JSON settings; requalify serialization/errors, no duplicate ADE reviewer. |
+| Embeddings | Existing Spark `Qwen/Qwen3-Embedding-0.6B` route; verify dimensions, limit, query prefix and fingerprint, without restarting or changing Spark. |
+| Reranking | Pinned CPU BGE-v2-m3 from the experiment; verify complete Chinese reranking and fit, not HTTP health alone. |
 
-Record actual model/image/config fingerprints at execution. Account for startup
-verification calls and upstream retry behavior as well as ordinary requests.
-Do not blindly copy the entire old probe config, shared-profile mission, auth
-material, clock or supervision protocol. Keep credentials out of tracked files,
-URLs, logs and artifacts; safe diagnostic captures exclude private reasoning.
+Use public pinned downloads and existing credential bindings; never print/copy
+secrets into Git, URLs or evidence. Record image/source/config/model hashes,
+all observed requests/retries, token usage and latency by role. Do not invent
+billing totals, add spending gates, substitute a provider or quietly change persona.
 
-### Authorization At Handoff
+## One Execution-Approval Package
 
-Currently authorized: read-only planning, documentation changes, checks and
-scoped commit/push; OCI is the selected future test location, not activated.
-The narrow removal-preservation probe was cancelled before any new resource or
-provider request was created. Do not reuse its revoked permission for other tests.
-Explicit implementation/activation approval must cover the following scope:
+**Not yet granted.** The present request authorizes this concrete plan, not
+implementation. A single explicit approval of M0-M6 and A1-A6 below will cover
+their routine dependencies, diagnosis, repairs, retests and safe closeout.
+No repeated permission at each milestone, service rebuild or fresh fixture.
 
-- Source/API/schema/UI edits on `main`, removing replaced contracts; offline
-  tests and disposable databases; normal verified commits/pushes.
-- Staging clean committed source to OCI, public pinned dependency/image/model
-  downloads, isolated builds/migrations/service starts, synthetic conversations,
-  controlled stops/crashes/restarts and disposable restore/cleanup.
-- Existing DeepSeek provider-account use and Spark embedding requests through
-  the listed routes, including startup, retention, consolidation and recovery
-  tests. No additional provider/account, global model change or historic export.
-- New activation-specific service/process identities, a finite host-side safety
-  expiry, resource monitoring and owned cleanup that survive client disconnect.
-  Choose the operational time window before activation, with shutdown margin;
-  do not inherit or extend an old campaign clock or introduce spending gates.
-- No existing ADE/trial/experiment service, volume or schema change; no public
-  exposure, production cutover, release promotion or perpetual monitor.
+| ID | Permission requested together for Stage 1 |
+| --- | --- |
+| A1: source and local verification | Edit source/API/schema/UI and maintained tests/docs on primary `main`; remove superseded contracts; install locked project dependencies; use owned disposable local PostgreSQL or OCI databases; commit and normally push verified scoped iterations. No GitHub Actions. |
+| A2: isolated operations | SSH inventory/staging of clean committed source, pinned dependency/image/model downloads, isolated builds/migrations/starts, private tunnels and Mac browser interaction. Create only registered candidate resources and narrowly owned safety scripts/timers. No host reboot, firewall/public-DNS change, shared-service edit or new infrastructure purchase. |
+| A3: existing inference | Use the listed DeepSeek account, Spark embedding route and CPU reranker for startup, native feasibility, real product turns, consolidation, diagnostics and recovery checks with synthetic data. Existing credentials only; no new account/provider/global model default. |
+| A4: repair and retest | Diagnose and repair in owning ADE/Router/workflow modules and, if proven necessary, a source-pinned isolated Hindsight patch preserving the contract. Rebuild/redeploy only the candidate, adjust bounded operational settings, and rerun affected checks with preserved failures and new source-bound receipts. No answer-specific patches, manual fact repair or expectation changes to manufacture success. |
+| A5: recovery and cleanup | Controlled stops/crashes/restarts, outbox reconciliation, paired backups and repair restores into new owned resources; remove only manifest-registered synthetic resources after preserving needed evidence and proving no external dependents. Never touch baseline/retained volumes, revoke shared credentials, prune broadly or replay history as recovery. |
+| A6: bounded autonomy | Choose/re-arm finite activation leases and perform covered recovery without renewed user approval. Maintain durable progress/failure checkpoints, stop safely when unattended or unhealthy, and continue independent authorized work while a specific dependency is unavailable. No semantic waivers, new scheduled Codex automation or automatic expansion into Stages 2/3. |
 
-Approval of the plan alone is not execution approval. After the above execution
-scope is explicitly granted, continue its covered stages, routine diagnosis,
-retests and planned rollback without repeated milestone permission requests.
-Escalate only for missing authority, a material scope/risk change, an unsatisfied
-feasibility gate, baseline drift or an explicitly required limitation waiver.
-Prefer serial work; an independent review may later check scope/failure/recovery
-coverage without creating parallel writers or reopening settled product choices.
+### Safety Leases Are Not Repeated Approval Gates
 
-## Verification And Handoff
+Execution authority, once granted, lasts for M0-M6 until completed, cancelled or
+changed by the user; it does not inherit an old campaign clock. Each activation
+has an immutable manifest, owned resource IDs, a host-enforced finite expiry and
+shutdown margin. Proposed maximum lease: 12 hours, with at least one hour reserved
+for drain/evidence capture. Schedule new work only if its deadline fits.
 
-Start with changed modules' tests and explicit real-PostgreSQL integration tests;
-skipped database tests are not a pass. Then run proportional runtime, router,
-frontend and OpenAPI checks using the repository's established tools:
+At expiry/loss of supervision, stop new provider dispatch and owned workers/services,
+preserve both stores and record incomplete operations. The active agent may
+start a fresh activation under the same grant after checking baseline/headroom,
+reconciling pending work and verifying there is no concurrent owner. Do not
+rewrite an expired manifest, silently extend an admitted operation or rely on
+client connectivity as the only shutdown mechanism. Prove the safety stop with
+fakes before any live activation. No perpetual provider loop or rerolls solely
+to fill time; justified diagnostic retests are not an arbitrary request-count gate.
+Already accepted upstream work must be accounted for and reconciled; a local
+shutdown is not proof that a remote inference request was cancelled.
+
+### Decisions Delegated Versus Escalations
+
+Autonomous choices include module/schema/API names, exact unused ports and owned
+paths, bounded retries/concurrency/timeouts, immutable source/config versions,
+test order, synthetic fixtures, safe patch/rebuild cycles and scoped publication.
+For every failure, state cause/evidence/owning layer before fixing it. Capture
+reusable insights, review their boundaries and promote stable decisions.
+
+Seek new authority only for changed product meaning, a contract that cannot be
+met without a tradeoff, new accounts/paid capacity, baseline/retained-data changes,
+public exposure/cutover, semantic limitation acceptance, or a user-requested CI run.
+If credentials, capacity or a service are unavailable, preserve evidence and
+continue independent covered work; do not switch providers or claim completion.
+Human review can stay pending while engineering proceeds. Permission cannot
+override native tool restrictions or guarantee execution while the agent is offline.
+
+Suggested handoff: "Implement M0-M6 under permissions A1-A6. Continue covered
+repairs, retests and safe activation renewal without milestone approvals.
+Keep CI manual-only and do not run it. Stop before Stages 2/3 or product cutover."
+
+## Verification, Publication And Handoff
+
+Run changed-module tests first, then disposable real-PostgreSQL checks with
+`ADE_TEST_DATABASE_URL` bound to an exclusively owned database. Verify test
+execution counts; a skipped database test is not proof. Follow with proportional
+runtime/router/frontend/OpenAPI checks and the workflow-local live/API/browser
+commands supplied by M0-M5. Commands below run locally, not GitHub Actions:
 
 ```sh
+uv run --locked python -m pytest workflows/evals/hindsight_integration -q
 uv run --locked python -m pytest services/ade-api/tests/agent_runtime -q
 uv run --locked python -m pytest services/model-router/tests -q
+uv run --locked ruff check services packages workflows scripts tests
+uv run --locked python scripts/check_python_format.py --base "$ITERATION_BASE"
 npm --prefix apps/ade-web run test
-uv run --locked python scripts/export_openapi.py
+npm --prefix apps/ade-web run lint
+npm --prefix apps/ade-web run build
+uv run --locked python scripts/export_openapi.py --check
 uv run --locked python scripts/generate_openapi_zh_manual.py
-make check
 git diff --check
 ```
 
-The implementation must supply exact workflow-local commands for scoped SQL,
-real Hindsight, browser, fault and restore checks. Bind live results to committed
-source and actual images/config/models; offline fakes cannot replace those gates.
-Known unrelated baseline failures must be diagnosed/reported, not silently
-excluded or fixed by rewriting frozen evidence. Update feature READMEs,
-architecture/runtime status and OpenAPI when implementation changes their truth.
+Use current-source broad pytest discovery excluding generated `*/outputs/*`
+copies; do not mistake tests inside historical source archives for current tests.
+The kit's October 13 checkpoint found pre-existing failures with the kit both
+included and excluded. Refresh the comparison; do not rebind frozen historical
+fingerprints or falsify evidence to turn the suite green. Retire tests of removed
+contracts explicitly while preserving historical records and replay boundaries.
+Generate/review OpenAPI artifacts when contracts change; report all material gaps.
 
-Final handoff includes stage-by-stage pass/fail/pending, invariant coverage,
-source/image/config hashes, safe evidence locations, observed requests/usage,
-remaining semantic limitations, unchanged-baseline proof, paired restore proof
-and a fresh-start runbook. Keep two conclusions separate: mechanical integration
-works versus conversational quality is acceptable. Initial good recall does not
-settle known correction, invented-detail or consolidation defects. Record any
-accepted limitation explicitly instead of quietly relabeling it out of scope.
-Do not label a stage complete while its required
-verification remains missing. This planning revision does not execute runtime,
-database, browser or live gates.
+After each completed increment, commit/push scoped changes and verify upstream.
+Inspect all workflow triggers before publication; they must remain manual-only.
+Do not run, rerun or schedule CI. Staging committed source to OCI need not depend
+on hosted CI. Never force-push or publish credentials/private evidence.
 
-## Pinned API References
+Handoff includes milestone status, exact source/image/config/model bindings,
+tests and missing gates, source/delivery/recall/request/commit evidence references,
+observed usage/latency, unchanged-baseline proof and safe shutdown/recovery records.
+Report Memory findings, Character review state and capture completeness separately.
+A real request/reply capture is not a calibrated quality baseline. Preserve failed
+attempts and unknowns; do not label required verification complete when absent.
 
-- [Banks](https://github.com/vectorize-io/hindsight/blob/eb6df499d35300e5b2f3f029b2e6adda04ed90f8/skills/hindsight-docs/references/developer/api/memory-banks.md): bank isolation and missing-bank behavior; ADE still owns relationship authorization.
-- [Retain](https://github.com/vectorize-io/hindsight/blob/eb6df499d35300e5b2f3f029b2e6adda04ed90f8/skills/hindsight-docs/references/developer/api/retain.md): contextual ingestion, replacement/append and async operation IDs; native semantics still require source/delivery verification.
-- [Memory curation](https://github.com/vectorize-io/hindsight/blob/eb6df499d35300e5b2f3f029b2e6adda04ed90f8/skills/hindsight-docs/references/developer/api/memories.md): facts and derived observations; manual invalidation is a native capability, not a first-integration requirement.
+## Pinned References
+
+- [Bank ownership](https://github.com/vectorize-io/hindsight/blob/eb6df499d35300e5b2f3f029b2e6adda04ed90f8/skills/hindsight-docs/references/developer/api/memory-banks.md).
+- [Retain and operation semantics](https://github.com/vectorize-io/hindsight/blob/eb6df499d35300e5b2f3f029b2e6adda04ed90f8/skills/hindsight-docs/references/developer/api/retain.md).
+- [Native facts and observations](https://github.com/vectorize-io/hindsight/blob/eb6df499d35300e5b2f3f029b2e6adda04ed90f8/skills/hindsight-docs/references/developer/api/memories.md).
+- [Assessment kit procedure and current limitations](../../workflows/evals/hindsight_integration/README.md).
+- [Character review method](../architecture/capability-map/character-assessment.md#repeatable-review-method).
