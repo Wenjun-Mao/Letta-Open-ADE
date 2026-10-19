@@ -291,6 +291,21 @@ These are scoped increments, not a claim that M0-M6 is complete.
   The final combined non-SQL gate passed 743 checks with three evidence-absence
   skips; the final selected SQL-only invocation passed 50 checks. Full-suite
   green remains unestablished because frozen historical replay still rejects drift.
+- The first actual product demonstration then accounted for all six slots on
+  `e4b4ffd449165fee92fff2ca84bb746b6f726be1`: real seed dialogue committed, but
+  all six stopped at processing inspection before a fresh-chat probe. Native
+  operations returned 422 for limit 200 and 200 for 100; ADE limit 100 succeeded.
+  [ADR 0080](../adr/0080-native-processing-pagination.md) fixes the API/collector
+  pagination mismatch without hiding or rebinding those failures. A new full
+  source-bound demonstration remains required for the successful-flow gate.
+  [ADR 0081](../adr/0081-owned-safety-observation-controllers.md) records the first
+  four finite fault controllers, a reproduced proxy-release/disconnect race fix,
+  and the no-writers paired-backup procedure. Controlled SQL/Router source checks
+  and cleanup/partial-backup tests are not actual M6 evidence; outage, restart,
+  stale-worker and live negative-access controls remain pending.
+  The focused pagination/safety gate passed 293 checks, including normal
+  SQL/Router source readbacks and corrupted-source rejection. OpenAPI artifacts,
+  lint/format, source-matched candidate generation and whitespace checks passed.
 
 Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission

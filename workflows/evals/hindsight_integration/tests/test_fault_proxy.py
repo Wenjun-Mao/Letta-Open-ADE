@@ -291,3 +291,46 @@ def test_closed_activation_cannot_release_held_work_into_upstream(tmp_path):
                 assert not sent
 
     asyncio.run(check())
+
+
+def test_disconnected_caller_cannot_be_forwarded_when_hold_is_released(
+    tmp_path, monkeypatch
+):
+    from starlette.requests import Request
+
+    disconnected = False
+
+    async def is_disconnected(_request):
+        return disconnected
+
+    monkeypatch.setattr(Request, "is_disconnected", is_disconnected)
+
+    async def check():
+        nonlocal disconnected
+        sent = []
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(
+                lambda request: sent.append(request) or httpx.Response(200, json={})
+            )
+        ) as provider:
+            app = create_app(config(tmp_path), client=provider)
+            async with httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://proxy"
+            ) as client:
+                conversation = str(uuid4())
+                fault = plan(conversation, "hold_before_send")
+                await client.post("/control/rules", headers=AUTH, json=fault)
+                task = asyncio.create_task(
+                    client.post(
+                        "/router/v1/chat/completions",
+                        json={},
+                        headers={"X-ADE-Conversation-Id": conversation},
+                    )
+                )
+                await matched(client, fault["id"])
+                disconnected = True
+                await client.post(f"/control/rules/{fault['id']}/release", headers=AUTH)
+                assert (await task).status_code == 499
+                assert not sent
+
+    asyncio.run(check())

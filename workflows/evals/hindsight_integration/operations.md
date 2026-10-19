@@ -184,6 +184,30 @@ Never use global prune or delete retained baseline/experiment archives.
 Restarting under a new lease requires fresh checks and operation reconciliation;
 it does not authorize whole-history replay or production cutover.
 
+For a source-bound product run, the host-only standard-library checkpoint helper
+captures current public readbacks, quiesces owned writers and dumps both stores:
+
+```sh
+python3 -m workflows.evals.hindsight_integration.paired_backup \
+  --root "$INTEGRATION_ACTIVATION" --environment "$INTEGRATION_ENV" \
+  --product-run "$INTEGRATION_ACTIVATION/evidence/stage1-product-01" \
+  --out "$INTEGRATION_ACTIVATION/evidence/paired-closeout-01" \
+  --controller-revision "$CONTROLLER_REVISION"
+```
+
+Run from the clean staged directory named by `CONTROLLER_REVISION`. Its product
+lease/image revision may be older and remains separately recorded; never relabel
+that image. Partial failures close only owned resources and preserve artifacts.
+Check both `paired-backup.json` and `closeout.json`; archive readability is not a
+restore test. Stop only the unit names in this activation's `host-units.json`.
+See [ADR 0081](../../../docs/adr/0081-owned-safety-observation-controllers.md).
+
+The first four M6 proxy cases can run from a read-only staged controller mounted
+at `/controller/$CONTROLLER_REVISION`, with that path as `PYTHONPATH`, in the
+owned runner image. Invoke `safety_runner --controller-revision ... --out ...`
+using a new evidence path. The summary explicitly covers only those four cases;
+outage, restart, stale-worker and isolation gates need their separate evidence.
+
 ## ADE Persistence Checks
 
 The delivery libraries and maintained reply path have separate real-PostgreSQL

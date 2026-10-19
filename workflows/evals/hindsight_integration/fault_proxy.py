@@ -167,6 +167,9 @@ def create_app(
                 await asyncio.wait_for(rule.released.wait(), timeout=0.5)
             except TimeoutError:
                 pass
+        config.fence()
+        if await request.is_disconnected():
+            raise HTTPException(499, "Injected hold caller disconnected before release")
 
     @app.api_route("/{service}/{path:path}", methods=["GET", "POST", "PUT", "PATCH"])
     async def forward(service: str, path: str, request: Request):

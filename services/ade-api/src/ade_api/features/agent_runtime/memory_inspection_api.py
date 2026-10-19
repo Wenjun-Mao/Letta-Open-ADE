@@ -24,6 +24,7 @@ router = APIRouter(
     prefix="/memory/subjects/{subject_id}/characters/{character_root_id}"
 )
 PageLimit = Annotated[int, Query(ge=1, le=200)]
+OperationPageLimit = Annotated[int, Query(ge=1, le=100)]
 PageOffset = Annotated[int, Query(ge=0)]
 
 
@@ -116,7 +117,7 @@ async def list_operations(
     subject_id: UUID,
     character_root_id: UUID,
     service: AgentRuntimeServiceDependency,
-    limit: PageLimit = 100,
+    limit: OperationPageLimit = 100,
     offset: PageOffset = 0,
 ):
     return await call_runtime(

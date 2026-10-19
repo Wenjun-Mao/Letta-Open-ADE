@@ -22,10 +22,10 @@
         "runtime_implementation": "DeepSeek hosted API",
         "runtime_version": null,
         "runtime_image_digest": null,
-        "prompt_policy_sha256": "151fce9c46188deab3a40feb5f4149795f8a7ac15a8167f15648ebde7c73828c",
-        "tool_policy_sha256": "81edaab54fa915c8b216b1f84e488502caca8aaee0106642e967a0ac6fa0a0d2",
-        "schema_policy_sha256": "a24452000441473f595105e6bc821a2bb072697d7c6efe3332a6746eae8bb52d",
-        "retrieval_policy_sha256": "fb99ec662d661c90c1544f2f8eb363ba23cb679436f393b275689d1d1fb6abbf",
+        "prompt_policy_sha256": "bc88311894ee612e5f2a109c45b1f926dccff644a841ec9958b6e7af260a9636",
+        "tool_policy_sha256": "b2ca1e2a8644615e6c7db7c328ed75dc1574830605bbd98615f50f4e2d932a5e",
+        "schema_policy_sha256": "8d25bd2b61651e9c517a9cd53eccfb5be4b5bd1088ba526c2a68f1c9abc83539",
+        "retrieval_policy_sha256": "8a851cbfc5668db93fae2a1aea1cb226a1365cfa1d601c12a43a4ad7b40fd9e8",
         "sampling_settings": {
           "thinking": "enabled",
           "reasoning_effort": "high",
@@ -46,7 +46,7 @@
         }
       },
       "qualification": {
-        "fingerprint_sha256": "1624e80737c2fd82972c13a77f8132b760034034c0a7e7e0a801ad823af02519",
+        "fingerprint_sha256": "318759a4b75f4adec64c8681649f3f888ad66e334732799bb06c6da00fbe5da5",
         "qualified": false,
         "stale_round_count": 0,
         "role_results": [

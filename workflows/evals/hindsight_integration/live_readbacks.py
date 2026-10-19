@@ -41,22 +41,25 @@ def validate_session_bindings(
             == scope["character_root_id"],
             "session_scope_mismatch",
         )
-        definition = session["agent_definition"]
-        require(
-            definition["persona_sha256"]
-            == hashlib.sha256(runtime.persona_text.encode()).hexdigest()
-            and definition["prompt_sha256"]
-            == hashlib.sha256(runtime.system_prompt.encode()).hexdigest(),
-            "authored_version_binding_mismatch",
-        )
-        deployments = {row["role"]: row for row in definition["deployments"]}
-        require(
-            deployments["conversation"]["fingerprint"]
-            == runtime.character_identity_sha256
-            and deployments["compaction"]["fingerprint"]
-            == runtime.context_compaction_identity_sha256,
-            "definition_model_binding_mismatch",
-        )
+        validate_authored_binding(session, runtime)
+
+
+def validate_authored_binding(session, runtime):
+    definition = session["agent_definition"]
+    require(
+        definition["persona_sha256"]
+        == hashlib.sha256(runtime.persona_text.encode()).hexdigest()
+        and definition["prompt_sha256"]
+        == hashlib.sha256(runtime.system_prompt.encode()).hexdigest(),
+        "authored_version_binding_mismatch",
+    )
+    deployments = {row["role"]: row for row in definition["deployments"]}
+    require(
+        deployments["conversation"]["fingerprint"] == runtime.character_identity_sha256
+        and deployments["compaction"]["fingerprint"]
+        == runtime.context_compaction_identity_sha256,
+        "definition_model_binding_mismatch",
+    )
 
 
 def validate_sources(readbacks, observation, manifest, case, source):

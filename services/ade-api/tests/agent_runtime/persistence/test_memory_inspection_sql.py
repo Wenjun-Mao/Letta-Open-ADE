@@ -176,6 +176,9 @@ async def _inspection():
             assert operations.status_code == 200, operations.text
             assert "never-public" not in operations.text
             assert (
+                await client.get(base + "/operations", params={"limit": 200})
+            ).status_code == 422
+            assert (
                 await client.get(base + f"/operations/{uuid4()}")
             ).status_code == 404
             assert (

@@ -19,7 +19,7 @@ def memory_path(session):
 
 
 async def page(api, path):
-    value = await get_json(api, path, params={"limit": 200, "offset": 0})
+    value = await get_json(api, path, params={"limit": 100, "offset": 0})
     require(value["total"] == len(value["items"]), "stage1_inspection_page_incomplete")
     return value
 
