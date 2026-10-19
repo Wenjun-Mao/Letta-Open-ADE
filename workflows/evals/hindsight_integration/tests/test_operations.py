@@ -159,7 +159,8 @@ def test_stopped_previous_candidates_are_not_baseline_services(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "error", ["Error: No such container: missing", "permission denied"]
+    "error",
+    ["Error response from daemon: No such container: missing", "permission denied"],
 )
 def test_docker_inspection_race_is_narrow_and_does_not_hide_other_errors(
     monkeypatch, error
@@ -176,7 +177,7 @@ def test_docker_inspection_race_is_narrow_and_does_not_hide_other_errors(
             stderr=error,
         ),
     )
-    if error.startswith("Error: No such container"):
+    if error.startswith("Error response from daemon: No such container"):
         assert DockerOperations().snapshot(["alive", "missing"]) == [{"id": "alive"}]
     else:
         with pytest.raises(RuntimeError, match="inspection_failed"):

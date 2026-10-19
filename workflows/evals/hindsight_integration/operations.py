@@ -82,7 +82,8 @@ class DockerOperations:
         )
         if result.returncode:
             missing = {
-                f"Error: No such container: {identity}" for identity in identities
+                f"Error response from daemon: No such container: {identity}"
+                for identity in identities
             }
             errors = set(result.stderr.strip().splitlines())
             # Containers may finish between `ps` and `inspect`. Expected persistent
