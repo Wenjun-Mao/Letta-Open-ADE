@@ -207,6 +207,24 @@ at `/controller/$CONTROLLER_REVISION`, with that path as `PYTHONPATH`, in the
 owned runner image. Invoke `safety_runner --controller-revision ... --out ...`
 using a new evidence path. The summary explicitly covers only those four cases;
 outage, restart, stale-worker and isolation gates need their separate evidence.
+Set the runner working directory to `/controller/$CONTROLLER_REVISION` as well
+as its `PYTHONPATH`; otherwise `/app` can shadow the mounted workflow package.
+
+For the two declared host faults, run the standard-library coordinator from its
+commit-named staged directory. It launches that read-only controller in the
+recorded runner image and validates request/response identities and control order:
+
+```sh
+python3 -m workflows.evals.hindsight_integration.safety_host \
+  --root "$INTEGRATION_ACTIVATION" --environment "$INTEGRATION_ENV" \
+  --out "$INTEGRATION_ACTIVATION/evidence/host-safety-01" \
+  --controller-revision "$CONTROLLER_REVISION" \
+  --scenario recall-outage --scenario runtime-restart
+```
+
+Only the existing owned Hindsight/API/worker containers may stop/restart. The
+closed/expired lease can never be reopened by cleanup. Preserve every failed
+case and in-flight operation; no history replay or assistant-source injection.
 
 ## ADE Persistence Checks
 

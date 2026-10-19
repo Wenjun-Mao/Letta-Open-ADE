@@ -3,10 +3,14 @@
 import asyncio
 from contextlib import asynccontextmanager
 import json
+import time
+from types import SimpleNamespace
 
 import pytest
 
 from .. import safety_runner
+from ..safety_protocol import SafetyContext
+from ..records import write_new
 
 
 @pytest.mark.parametrize("failure", ["scenario", "capture", None])
@@ -26,6 +30,9 @@ def test_case_keeps_failure_and_releases_rules_even_when_capture_fails(
         async def release(self, identity):
             released.append(identity)
 
+        async def restore_host(self):
+            pass
+
         async def capture(self):
             if failure == "capture":
                 raise ValueError("controlled_capture_failure")
@@ -38,7 +45,7 @@ def test_case_keeps_failure_and_releases_rules_even_when_capture_fails(
 
     monkeypatch.setattr(safety_runner, "client", client)
     monkeypatch.setattr(safety_runner, "SafetyContext", Context)
-    monkeypatch.setitem(safety_runner.PROXIED_SCENARIOS, "controlled", scenario)
+    monkeypatch.setitem(safety_runner.SCENARIOS, "controlled", scenario)
     result = asyncio.run(
         safety_runner.one_case(tmp_path / "case", "controlled", None, {}, {})
     )
@@ -69,3 +76,36 @@ def test_refuse_unplanned_or_duplicate_safety_cases_before_external_actions(
             )
         )
     assert not (tmp_path / "run").exists()
+
+
+@pytest.mark.parametrize("mismatch", [None, "id", "product_revision", "status"])
+def test_host_receipt_requires_request_and_product_identity(tmp_path, mismatch):
+    async def check():
+        context = SafetyContext(
+            api=None,
+            router=None,
+            fault=None,
+            root=tmp_path,
+            deadline=time.monotonic() + 3,
+            runtime=SimpleNamespace(product_revision="a" * 40),
+        )
+        task = asyncio.create_task(context.host("stop-native"))
+        request = tmp_path / "host-requests/0001.json"
+        while not request.exists():
+            await asyncio.sleep(0)
+        value = json.loads(request.read_text())
+        response = {
+            "id": value["id"],
+            "product_revision": value["product_revision"],
+            "status": "ok",
+        }
+        if mismatch:
+            response[mismatch] = "different"
+        write_new(tmp_path / "host-responses/0001.json", response)
+        if mismatch:
+            with pytest.raises(ValueError, match="owned_host_control_failed"):
+                await task
+        else:
+            assert await task == response
+
+    asyncio.run(check())

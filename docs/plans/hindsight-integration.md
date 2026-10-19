@@ -316,6 +316,20 @@ These are scoped increments, not a claim that M0-M6 is complete.
   current policy/diagram/test drift. Smoke import now reads defaults without
   mutating process credentials; auth/Router/dummy tests explicitly bind synthetic
   inputs. Their focused 53 checks pass. This is not a full-suite-green claim.
+- Product revision `325378bd743e85c404cdd80b4d43c4010f72c69c` completed the new
+  six-slot `stage1-product-02` run: six mechanically complete captures, nonempty
+  probe Memory selections and committed fresh-chat replies. A byte-matched Mac
+  export independently passed all six sidecar/report reloads. The earlier six
+  failures remain separate, not replaced. The first four actual M6 proxy cases
+  also passed at that product image with controller `0e64b75e10ce43c18ad45a83d7356328d1f87d12`.
+  See the [scoped finding](../findings/hindsight-product-flow-2026-10-19.md).
+  Character remains UNREVIEWED; broader Memory quality is not qualified. Actual
+  outage/restart, stale-worker, negative-access and successful paired-backup/
+  closeout evidence remain required. New host controllers have controlled tests,
+  including a real SQL/Router outage-pause/saved-input-Retry path; no host fault
+  has yet been run. The unfiltered isolated sweep still reports 66 failed and
+  61 errors alongside 1,750 passed and 134 skipped; preserved historical hashes
+  plus named current diagram/policy/test drift remain, not a green suite.
 
 Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission

@@ -20,6 +20,41 @@ class SafetyContext:
         self.root, self.deadline = root, deadline
         self.sessions, self.runs, self.rules = [], [], []
         self.runtime = runtime
+        self.host_sequence = 0
+
+    async def host(self, action, details=None):
+        self.host_sequence += 1
+        identity = str(uuid4())
+        filename = f"{self.host_sequence:04d}.json"
+        write_new(
+            self.root / "host-requests" / filename,
+            {
+                "id": identity,
+                "action": action,
+                "details": details or {},
+                "product_revision": self.runtime.product_revision,
+                "time": time.time(),
+            },
+        )
+        path = self.root / "host-responses" / filename
+
+        async def read():
+            return json.loads(path.read_bytes()) if path.is_file() else None
+
+        value = await self.until(
+            read, lambda value: value is not None, code="host_control_response_missing"
+        )
+        require(
+            value["id"] == identity
+            and value["product_revision"] == self.runtime.product_revision
+            and value["status"] == "ok",
+            "owned_host_control_failed",
+        )
+        return value
+
+    async def restore_host(self):
+        if self.host_sequence:
+            await self.host("restore-owned")
 
     async def until(self, read, predicate, *, seconds=None, code):
         deadline = (

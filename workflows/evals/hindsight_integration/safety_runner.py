@@ -18,7 +18,11 @@ from .public_http import PublicRecordingTransport
 from .records import seal, write_new
 from .safety_protocol import SafetyContext
 from .safety_scenarios import PROXIED_SCENARIOS
+from .host_scenarios import HOST_SCENARIOS
 from .wire_capture import require
+
+
+SCENARIOS = PROXIED_SCENARIOS | HOST_SCENARIOS
 
 
 async def run_safety(root, *, activation_root, controller_revision, scenarios):
@@ -27,7 +31,7 @@ async def run_safety(root, *, activation_root, controller_revision, scenarios):
     if (
         not scenarios
         or len(set(scenarios)) != len(scenarios)
-        or any(name not in PROXIED_SCENARIOS for name in scenarios)
+        or any(name not in SCENARIOS for name in scenarios)
     ):
         raise ValueError("Use unique predeclared Stage 1 safety scenarios")
     if Path(__file__).resolve().parents[3].name != controller_revision:
@@ -111,7 +115,7 @@ async def run_safety(root, *, activation_root, controller_revision, scenarios):
                     "all_passed": len(outcomes) == len(scenarios)
                     and all(row["status"] == "passed" for row in outcomes),
                     "character_review": "UNREVIEWED",
-                    "coverage": "four_proxied_cases_only_not_all_M6",
+                    "coverage": "declared_scenarios_only_not_all_M6",
                     "limitation": "Safety mechanics only. No general Memory or Character qualification.",
                 },
             ),
@@ -147,12 +151,17 @@ async def one_case(root, name, runtime, urls, keys):
         )
         try:
             async with asyncio.timeout(600):
-                evidence = await PROXIED_SCENARIOS[name](context)
+                evidence = await SCENARIOS[name](context)
             write_new(root / "evidence.json", evidence)
             result["status"] = "passed"
         except Exception as exc:
             result["error"] = safe_failure(exc)
         finally:
+            try:
+                await context.restore_host()
+            except Exception as exc:
+                result["status"] = "failed"
+                result["host_restore_error"] = safe_failure(exc)
             for identity in context.rules:
                 try:
                     await context.release(identity)
@@ -180,7 +189,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--controller-revision", required=True)
-    parser.add_argument("--scenario", action="append", choices=tuple(PROXIED_SCENARIOS))
+    parser.add_argument("--scenario", action="append", choices=tuple(SCENARIOS))
     args = parser.parse_args()
     ok = asyncio.run(
         run_safety(

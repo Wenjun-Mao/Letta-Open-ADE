@@ -1,6 +1,7 @@
 # Hindsight Integration Assessment Kit
 
-Status, 2026-10-13: implemented **offline assessment kit**, the first authorized
+Historical checkpoint, 2026-10-13: implemented **offline assessment kit**, the
+first authorized
 implementation deliverable. Twelve frozen Mandarin cases cover Q01-Q05; fifteen
 authored examples propose reference judgments. These are not observed model
 outputs or human-calibrated consensus. No live adapter, runtime change, provider
@@ -14,11 +15,17 @@ This workflow owns evidence artifacts, not product APIs or semantic policy.
 
 ## Integration Work In Progress
 
-2026-10-18: the user approved M0-M6 and A1-A6 in the implementation plan.
-The concrete Hindsight HTTP client and immutable per-message source contract
-have offline coverage; the normal product runtime and live collector are still
-being implemented. [ADR 0070](../../../docs/adr/0070-hindsight-message-delivery.md)
-records the source/replay decision and its pending native feasibility gate.
+2026-10-19: under the user's M0-M6/A1-A6 approval, the fresh-workspace Hindsight
+reply/delivery/inspection path, Interface and source-bound collector are
+implemented. The real six-slot demonstration completed six mechanical captures
+and four actual proxy safety cases passed. The earlier six processing-inspection
+failures remain retained. [Scoped findings](../../../docs/findings/hindsight-product-flow-2026-10-19.md)
+separate those outcomes from unreviewed Character quality and unqualified broader
+Memory behavior. M6 outage/restart, stale-worker, negative-access and successful
+paired-backup/closeout work remains pending; this is not full Stage 1 completion.
+[ADR 0070](../../../docs/adr/0070-hindsight-message-delivery.md) owns source/replay
+identity and the [native boundary finding](../../../docs/findings/hindsight-native-boundary-2026-10-19.md)
+records direct native checks separately from product dialogue.
 The [isolated operations runbook](operations.md) owns lease, configuration,
 native-source checks and closeout commands. Native feasibility is separate from
 the real ADE/Character capture required by M5.
@@ -78,11 +85,14 @@ not held-out coverage. Add unseen variants under a reviewed suite revision.
 ## Capture And Review Procedure
 
 The CLI can receive local artifacts now. `live_capture` means an explicitly
-labeled import, **not** live execution or authorization. Stage 1 must implement
-and verify the actual product adapter before any live baseline. Its collector
-must use public product/observation boundaries, not native fact APIs or a second
+labeled import, **not** live execution or authorization. The dedicated bounded
+runner verifies the normal
+product path; imports alone do not establish that execution. Its collector
+uses public product/observation boundaries, not native fact APIs or a second
 reviewer. Export schemas with `schema runtime`, `schema observation`, or
-`schema review`; there is intentionally no live-run command.
+`schema review`; the import CLI has no unrestricted live-run command. The bounded
+six-slot
+runner and separately source-bound safety controllers are in [operations](operations.md).
 
 1. Freeze cases, repeats and runtime bindings before execution. Bind product
    revision, exact persona/system prompt and versions, Character route/served
@@ -124,7 +134,7 @@ reviewer. Export schemas with `schema runtime`, `schema observation`, or
    hash is required and both judgments remain visible. Regenerate the report.
 
 The following commands are local artifact operations; `runtime.json` and
-`observation.json` must come from the future verified collector, not guesses:
+`observation.json` must come from the source-bound collector, not guesses:
 
 ```sh
 uv run --locked python -m workflows.evals.hindsight_integration prepare \
@@ -175,9 +185,11 @@ wire shape needs an explicit reviewed evidence-contract change, not silent coerc
 Private evidence stays outside source control. Field rejection is defense in depth,
 not a comprehensive secret scanner; operator review remains required before sharing.
 
-The live adapter, human calibration, unseen variants, baseline, and broader
-isolation/lifecycle/fault/recovery checks remain in the
-[integration plan](../../../docs/plans/hindsight-integration.md). No runtime,
+Human calibration, unseen variants, the full assessment baseline and remaining
+isolation/lifecycle/fault/recovery gates remain in the
+[integration plan](../../../docs/plans/hindsight-integration.md). The six-slot
+engineering demonstration does not replace those later quality/readiness gates.
+No runtime,
 deployment or release status follows from this offline rehearsal.
 
 ## Verification Checkpoint

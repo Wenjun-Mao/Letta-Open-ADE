@@ -14,6 +14,8 @@ import httpx
 from ade_api.features.agent_runtime.api import router as product_router
 from ade_api.features.agent_runtime.application import AgentRuntimeApplication
 from ade_api.features.agent_runtime.dependencies import get_agent_runtime_service
+from ade_api.features.agent_runtime.dependencies import get_agent_runtime_health_service
+from ade_api.features.agent_runtime.worker_health import RuntimeWorkerHealthService
 from ade_api.features.agent_runtime.router_transport import RouterTransport
 from ade_api.features.agent_runtime.worker import AgentRuntimeWorker
 from ade_api.platform.auth import AdePrincipal, AdeRole, authenticate_ade_request
@@ -284,6 +286,7 @@ async def actor_fixture(
     app_settings = AdeApiSettings(
         _env_file=None,
         auth_enabled=True,
+        agent_runtime_enabled=True,
         operator_key="controlled-api",
         agent_runtime_mode="development",
         agent_runtime_workspace_key="actor-sql-" + uuid4().hex,
@@ -302,6 +305,9 @@ async def actor_fixture(
     api = FastAPI()
     api.include_router(product_router)
     api.dependency_overrides[get_agent_runtime_service] = lambda: application
+    api.dependency_overrides[get_agent_runtime_health_service] = lambda: (
+        RuntimeWorkerHealthService(engine=db, settings=app_settings)
+    )
     api.dependency_overrides[authenticate_ade_request] = lambda: AdePrincipal(
         AdeRole.OPERATOR, "controlled"
     )

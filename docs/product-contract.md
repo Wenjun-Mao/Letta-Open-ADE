@@ -21,13 +21,13 @@ retained development branch, not the deployed production revision.
 | ID | Current agreement | Implementation / evidence status | Source |
 | --- | --- | --- | --- |
 | PC-01 | Natural dialogue is the primary interface. Users should not need to say "search memory" or phrase ordinary changes as storage commands. | Phrase-based tool forcing removed; natural tool selection and recall have bounded live observations, not general qualification. | [Design goal](architecture/natural-memory-design.md#1-product-goal-and-revised-recommendation), [ADR 0036](adr/0036-discretionary-curated-tools-and-structured-requirements.md) |
-| PC-02 | All learned conversational memories, including user facts and preferences, belong to `(workspace, subject, character root)`. Reusing the same subject and character preserves continuity across chats and ordinary persona-version updates. A different subject or character does not inherit them. | Amended by user 2026-10-12: no cross-character profile sharing. New ownership is agreed, not implemented/qualified; earlier subject-wide fact behavior is historical. | [ADR 0068](adr/0068-hindsight-default-memory.md#character-local-learned-memory), [superseded ADR 0022 scope](adr/0022-incumbent-memory-first-product-slice.md) |
-| PC-03 | Shared conversational experiences belong to the same user and the same character across chats and ordinary persona-version updates. Definition root identifies that character; a different character needs a distinct root, not a similarity guess. Neither learned facts nor experiences transfer to another character (PC-02). | Character continuity remains agreed; 2026-10-12 clarification removes the former shared-profile exception. General historical-recall behavior is not implemented/qualified. | [ADR 0068](adr/0068-hindsight-default-memory.md#character-local-learned-memory), [historical design section 3](architecture/natural-memory-design.md#3-fact-identity-scope-and-time) |
+| PC-02 | All learned conversational memories, including user facts and preferences, belong to `(workspace, subject, character root)`. Reusing the same subject and character preserves continuity across chats and ordinary persona-version updates. A different subject or character does not inherit them. | Character-local ownership is implemented in the development Hindsight path, with real SQL checks and scoped native captures; full live isolation and broader semantic qualification remain pending. | [ADR 0068](adr/0068-hindsight-default-memory.md#character-local-learned-memory), [superseded ADR 0022 scope](adr/0022-incumbent-memory-first-product-slice.md) |
+| PC-03 | Shared conversational experiences belong to the same user and the same character across chats and ordinary persona-version updates. Definition root identifies that character; a different character needs a distinct root, not a similarity guess. Neither learned facts nor experiences transfer to another character (PC-02). | Same-bank continuity across fresh chats is observed in six scoped captures; ordinary-version/root mechanics have SQL coverage. General historical/semantic recall remains unqualified. | [ADR 0068](adr/0068-hindsight-default-memory.md#character-local-learned-memory), [historical design section 3](architecture/natural-memory-design.md#3-fact-identity-scope-and-time) |
 | PC-04 | Persona edits create immutable versions. New conversations can use the new version; previous conversations retain their original binding. An ordinary version edit does not create a different character. | Version creation and retained bindings have isolated UI/API evidence. | [M3 version journey](findings/m3-prompt-center-immutable-version-journey.md), PC-03 |
-| PC-05 | Memory interprets natural factual meaning, scope, uncertainty, corrections and supported lifecycle operations. ADE enforces source integrity, structural ownership and truthful outcomes. The Hindsight path follows PC-14's separate persistence authorities, not a duplicate ADE reviewer or native fact-version transaction. Valid attribution is not proof of correct interpretation. | Native reviewer remains implemented in the incumbent; Hindsight responsibility and persistence replacement agreed, not implemented/qualified. Earlier semantic failures remain historical evidence. | [ADR 0068](adr/0068-hindsight-default-memory.md#separate-product-records-and-learned-memory), [incumbent ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md), [live findings](findings/natural-memory-factual-followup-2026-09-24.md) |
+| PC-05 | Memory interprets natural factual meaning, scope, uncertainty, corrections and supported lifecycle operations. ADE enforces source integrity, structural ownership and truthful outcomes. The Hindsight path follows PC-14's separate persistence authorities, not a duplicate ADE reviewer or native fact-version transaction. Valid attribution is not proof of correct interpretation. | The incumbent is unchanged. The development Hindsight reply/delivery/inspection replacement is implemented with scoped real-product evidence, not general semantic qualification; no second ADE reviewer executes in that path. | [ADR 0068](adr/0068-hindsight-default-memory.md#separate-product-records-and-learned-memory), [incumbent ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md), [live findings](findings/natural-memory-factual-followup-2026-09-24.md) |
 | PC-06 | Do not implement conversational privacy/no-save/consent policy features or phrase-specific semantic rules, including equivalent keyword tables. This is removal, not dormant configuration. Structural subject/character isolation, credential handling and syntactic validation remain. | Natural and typed memory rules and phrase-based tool routing removed in the development branch. | User direction 2026-09-24, [ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md), [ADR 0036](adr/0036-discretionary-curated-tools-and-structured-requirements.md) |
-| PC-07 | Manual memory removal is deferred for the first Hindsight integration. Hindsight handles ordinary updates/corrections from conversation; neither a deletion control nor guaranteed conversational deletion is required. Preserve original chat and report outcomes truthfully. | Amended by user 2026-10-12; new scope not implemented. Incumbent operator removal and historical lifecycle/atomicity evidence remain unchanged, not requirements for the new path. No erasure or topic-suppression guarantee. | [ADR 0068](adr/0068-hindsight-default-memory.md#defer-manual-removal-use-native-updates), [incumbent ADR 0026](adr/0026-memory-removal-reply-boundary.md) |
-| PC-08 | Keep ADE-owned PostgreSQL product records and one product API/runtime. Hindsight owns learned-memory state under PC-14, with a separate persistence boundary. Model Router separates model/provider identity from product behavior. Embedding identity must not depend on deployment on Spark specifically. | Native foundation implemented; separate Hindsight-state authority agreed, not implemented/qualified. | [ADR 0068](adr/0068-hindsight-default-memory.md#separate-product-records-and-learned-memory), [ADR 0019](adr/0019-ade-steady-state-runtime.md), [ADR 0027](adr/0027-provider-neutral-release-and-embedding-space.md) |
+| PC-07 | Manual memory removal is deferred for the first Hindsight integration. Hindsight handles ordinary updates/corrections from conversation; neither a deletion control nor guaranteed conversational deletion is required. Preserve original chat and report outcomes truthfully. | The development Hindsight path omits manual-removal/reset APIs and controls. Incumbent removal and historical lifecycle/atomicity evidence remain unchanged, not requirements to restore; no erasure or topic-suppression guarantee. | [ADR 0068](adr/0068-hindsight-default-memory.md#defer-manual-removal-use-native-updates), [incumbent ADR 0026](adr/0026-memory-removal-reply-boundary.md) |
+| PC-08 | Keep ADE-owned PostgreSQL product records and one product API/runtime. Hindsight owns learned-memory state under PC-14, with a separate persistence boundary. Model Router separates model/provider identity from product behavior. Embedding identity must not depend on deployment on Spark specifically. | The isolated development candidate uses separate ADE/Hindsight PostgreSQL authorities and one product API/runtime. No production transition or paired-restore qualification is established. | [ADR 0068](adr/0068-hindsight-default-memory.md#separate-product-records-and-learned-memory), [ADR 0019](adr/0019-ade-steady-state-runtime.md), [ADR 0027](adr/0027-provider-neutral-release-and-embedding-space.md) |
 | PC-09 | Prefer minimum code and direct ownership. No speculative memory service, episode store, second reviewer, or generic framework. Count provider requests observationally, without spending gates; retain execution timeouts, explicit retry semantics and finite tool loops. | Spending controls removed; new architectural additions require a demonstrated need and explicit decision. | User direction 2026-09-24, [ADR 0035](adr/0035-compact-natural-review-and-observational-dispatch.md), [conventions](development-conventions.md) |
 
 ## Archived Conversations
@@ -130,8 +130,10 @@ average. Mechanical failures remain visible separately. This selects no numerica
 release threshold, runtime schema or execution authority. See the guide's
 [review method](architecture/capability-map/character-assessment.md#repeatable-review-method)
 and [ADR 0061](adr/0061-capability-responsibility-map.md#repeatable-assessment-clarification-2026-10-13).
-Implementation status: the [offline kit](../workflows/evals/hindsight_integration/README.md)
-is runnable; live capture, human calibration and a measured baseline remain pending.
+Implementation status: the [kit](../workflows/evals/hindsight_integration/README.md)
+now includes six source-bound real-product captures and scoped safety observations.
+Character judgments remain UNREVIEWED; human calibration, the full assessment
+baseline and general Memory reliability remain unqualified.
 
 ## Hindsight Hosting
 
@@ -312,8 +314,11 @@ Status, 2026-10-19: product direction adopted. The user approved Stage 1 M0-M6
 and A1-A6 on 2026-10-18, authorizing scoped implementation, isolated OCI/provider
 checks and repair under the [integration plan](plans/hindsight-integration.md),
 with GitHub Actions excluded. The [native source/recovery boundary](findings/hindsight-native-boundary-2026-10-19.md)
-has scoped evidence; ADE persistence/runtime/UI integration and actual-product
-capture remain in progress. Existing ADE/trial services and retained data remain
+has scoped evidence. The development persistence/runtime/UI and collector are
+implemented; [six actual-product captures and four proxy safety cases](findings/hindsight-product-flow-2026-10-19.md)
+have source-bound observations. Remaining M6 fault/isolation/paired-backup and
+closeout gates are still pending, and Character remains UNREVIEWED. Existing
+ADE/trial services and retained data remain
 untouched. This is not production cutover, release qualification, broader Stage 2/3
 acceptance or authority to remove the incumbent's retained data.
 Known consolidation defects and Character failures remain separate work items;
@@ -321,9 +326,13 @@ adoption does not turn the experiments into an M2 quality-winner claim.
 
 ## Open Decisions, Not Agreements
 
-- Remaining Hindsight integration work under PC-14 includes runtime/UI wiring,
-  qualification of native updates/corrections, coordinated backup/recovery and
-  later fresh-scope readiness. [ADR 0070](adr/0070-hindsight-message-delivery.md)
+Historical-native investigations below are evidence limitations, not authority
+to restore retired reviewer/history-trial behavior in the Hindsight path.
+
+- Remaining Hindsight integration work under PC-14 includes completion of M6
+  fault/isolation/paired-backup gates, broader qualification of native updates/
+  corrections, coordinated recovery and later fresh-scope readiness.
+  [ADR 0070](adr/0070-hindsight-message-delivery.md)
   selects bank/source/recovery identities and [ADR 0072](adr/0072-hindsight-outbox-and-saved-input-retry.md)
   selects outbox and saved-input Retry mechanics; their product verification
   remains in progress. These are integration decisions, not a reopened choice of the

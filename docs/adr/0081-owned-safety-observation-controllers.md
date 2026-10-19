@@ -12,6 +12,15 @@ read-only, commit-named staged source directory, not a dirty checkout or relabel
 product image. Any product/runtime fix still requires affected live retests.
 This is evaluator locality under PC-05/08/09/12/14, not another Memory service.
 
+The next host controller admits only predeclared stop/start-native and
+restart-runtime sequences. It resolves exact owned containers and unchanged
+images/mounts; requests cannot supply arbitrary Docker targets. Native HTTP health
+must recover before restart acknowledgement. Explicit saved-input Retry and
+delivery reconciliation retain IDs/check-count fences, never replay history.
+Failure cleanup restores only services this controller stopped, or closes the
+candidate when the healthy lease no longer permits restoration. These controls
+require their own actual observations; controlled tests are not live evidence.
+
 Predeclared cases cover failed generation, cancellation, deliberately delayed
 retention with unrelated progress, and lost acknowledgement after real native
 acceptance. Fresh relationships and normal accepted turns establish every source.
