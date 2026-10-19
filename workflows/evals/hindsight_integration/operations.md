@@ -202,6 +202,30 @@ Check both `paired-backup.json` and `closeout.json`; archive readability is not 
 restore test. Stop only the unit names in this activation's `host-units.json`.
 See [ADR 0081](../../../docs/adr/0081-owned-safety-observation-controllers.md).
 
+If that point already closed with a failed/partial dump, **do not restart it**.
+After the owning diagnosis, prepare a new two-hour lease with its own supervisor
+and hard-expiry timer, using the corrected committed controller as its source.
+The old parent must remain closed and fully stopped. Run the database-only
+recovery controller from that staged source:
+
+```sh
+python3 -m workflows.evals.hindsight_integration.stopped_checkpoint \
+  --root "$NEW_CHECKPOINT_ACTIVATION" --parent "$CLOSED_PRODUCT_ACTIVATION" \
+  --checkpoint "$CLOSED_PRODUCT_ACTIVATION/evidence/paired-closeout-01" \
+  --out "$NEW_CHECKPOINT_ACTIVATION/evidence/paired-copy-01" \
+  --controller-revision "$CONTROLLER_REVISION"
+```
+
+It validates the closed parent's exact registered stores and writer-free receipts,
+copies only those volumes read-only to fresh labelled volumes, and records equal
+source/target manifests. It starts only the new database copies without network,
+ports, credentials or product/provider services; both logical dumps use the exact
+parent database image. Verify `paired-backup.json`, each `copy.json` and readable
+TOC/hash, and `closeout.json` (including unchanged parent and baseline). Stop only
+the new activation's named units. Preserve both parents, new copies and failed
+attempts. This repairs archive capture, not Stage-3 logical-restore qualification.
+See [ADR 0083](../../../docs/adr/0083-stopped-health-and-checkpoint-recovery.md).
+
 The first four M6 proxy cases can run from a read-only staged controller mounted
 at `/controller/$CONTROLLER_REVISION`, with that path as `PYTHONPATH`, in the
 owned runner image. Invoke `safety_runner --controller-revision ... --out ...`

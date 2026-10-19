@@ -1,7 +1,7 @@
 # ADR 0083: Stopped Health And Checkpoint Recovery
 
-Status: Accepted, 2026-10-19. Guard regression checks are implemented; the new
-stopped-store checkpoint controller and actual paired archives remain pending.
+Status: Accepted, 2026-10-19. Guard and stopped-store controller regression checks
+are implemented; actual paired archives remain pending.
 
 ## Root Cause
 
@@ -28,6 +28,16 @@ copy only their registered volumes read-only into new owned volumes, verify the
 copies before startup, then use exact-image database-only helpers to make both
 logical archives. Do not restart the parent, mutate retained original volumes,
 replay history, run providers or point a product runtime at the copies.
+
+The `stopped_checkpoint` host controller binds the parent's closed lease,
+writer-free/closeout records, exact database images and labelled local volumes.
+Only its newly owned read-only copy helpers may access those stopped originals;
+foreign active dependents, changed parent identities and unsafe filesystem links
+fail admission. Each copy records matching content, owner, mode and modification
+time manifests before any database starts. Helpers use no network, no ports or
+credentials, finite resource limits and the existing supervisor/expiry fences.
+Only new copies start, serially, at the parent database image. Retain partial
+archives and close the new owner on every failure; never reopen the parent.
 
 ## Verification Boundary
 
