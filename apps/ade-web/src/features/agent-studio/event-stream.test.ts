@@ -16,6 +16,6 @@ describe("Agent Studio run event stream", () => {
 
   it("rejects malformed event payloads and recognizes every terminal event", () => {
     expect(() => parseRunEvent(JSON.stringify({ type: "run.started" }))).toThrow("invalid");
-    expect([...TERMINAL_RUN_EVENT_TYPES].sort()).toEqual(["run.cancelled", "run.completed", "run.failed"]);
+    expect([...TERMINAL_RUN_EVENT_TYPES].sort()).toEqual(["run.cancelled", "run.completed", "run.failed", "run.paused"]);
   });
 });

@@ -6,7 +6,7 @@ import type { AgentStudioOptions } from "./types";
 
 const options: AgentStudioOptions = {
   runtime: "ade_native", default_bundle_key: "bundle", bundles: [{ key: "bundle", name: "Bundle",
-    model_key: "model", reviewer_model_key: "reviewer", embedding_model_key: "embedding",
+    model_key: "model", compaction_model_key: "compaction",
     prompt_key: "prompt", persona_key: "persona", tool_names: ["search_memory"],
     memory_policy_version: "v1", qualification_state: "qualified", deployments: [] }],
   default_timeout_seconds: 180, default_retry_count: 0, max_retry_count: 5,

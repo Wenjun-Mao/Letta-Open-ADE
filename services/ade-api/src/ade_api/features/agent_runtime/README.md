@@ -52,6 +52,11 @@ Archived original chats are still readable; archiving is not erasure.
   independent ordered scheduling. No native/provider HTTP runs inside ADE SQL.
 - `memory_progress.py` allows only operational snapshot fields into bookkeeping;
   native error bodies, task payloads and private reasoning are not public activity.
+- `memory_inspection.py`, `memory_inspection_api.py` and their SQL projection own
+  `/api/v3/memory/subjects/{subject}/characters/{root}`. Saved delivery state does
+  not depend on native availability; memories/sources/operations fail explicitly
+  rather than return false empty state. See
+  [ADR 0074](../../../../../../docs/adr/0074-relationship-memory-inspection.md).
 - `worker.py` and `worker_*` own leases, cancellation, attempts and finalization.
   `turn_result.py` carries reply/compaction output, not a fake empty review.
 

@@ -371,16 +371,16 @@
       },
       "AgentStudioBundleResponse": {
         "properties": {
+          "compaction_model_key": {
+            "title": "Compaction Model Key",
+            "type": "string"
+          },
           "deployments": {
             "items": {
               "$ref": "#/components/schemas/DeploymentSnapshotResponse"
             },
             "title": "Deployments",
             "type": "array"
-          },
-          "embedding_model_key": {
-            "title": "Embedding Model Key",
-            "type": "string"
           },
           "key": {
             "title": "Key",
@@ -409,10 +409,6 @@
           "qualification_state": {
             "$ref": "#/components/schemas/QualificationState"
           },
-          "reviewer_model_key": {
-            "title": "Reviewer Model Key",
-            "type": "string"
-          },
           "tool_names": {
             "items": {
               "type": "string"
@@ -425,8 +421,7 @@
           "key",
           "name",
           "model_key",
-          "reviewer_model_key",
-          "embedding_model_key",
+          "compaction_model_key",
           "prompt_key",
           "persona_key",
           "tool_names",
@@ -477,65 +472,6 @@
           "bundles"
         ],
         "title": "AgentStudioOptionsResponse",
-        "type": "object"
-      },
-      "AgentStudioResetRequest": {
-        "additionalProperties": false,
-        "properties": {
-          "confirmation": {
-            "const": "RESET ADE AGENT STUDIO",
-            "title": "Confirmation",
-            "type": "string"
-          },
-          "idempotency_key": {
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Idempotency Key",
-            "type": "string"
-          }
-        },
-        "required": [
-          "idempotency_key",
-          "confirmation"
-        ],
-        "title": "AgentStudioResetRequest",
-        "type": "object"
-      },
-      "AgentStudioResetResponse": {
-        "properties": {
-          "deleted_counts": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "title": "Deleted Counts",
-            "type": "object"
-          },
-          "idempotent_replay": {
-            "default": false,
-            "title": "Idempotent Replay",
-            "type": "boolean"
-          },
-          "receipt_id": {
-            "title": "Receipt Id",
-            "type": "string"
-          },
-          "reset_at": {
-            "format": "date-time",
-            "title": "Reset At",
-            "type": "string"
-          },
-          "reset_generation": {
-            "title": "Reset Generation",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "receipt_id",
-          "reset_generation",
-          "deleted_counts",
-          "reset_at"
-        ],
-        "title": "AgentStudioResetResponse",
         "type": "object"
       },
       "AgentStudioSessionListResponse": {
@@ -2608,17 +2544,17 @@
       "CreateAgentDefinitionRequest": {
         "additionalProperties": false,
         "properties": {
+          "compaction_model_key": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Compaction Model Key",
+            "type": "string"
+          },
           "definition_key": {
             "maxLength": 64,
             "minLength": 2,
             "pattern": "^[a-z][a-z0-9_-]+$",
             "title": "Definition Key",
-            "type": "string"
-          },
-          "embedding_model_key": {
-            "maxLength": 300,
-            "minLength": 1,
-            "title": "Embedding Model Key",
             "type": "string"
           },
           "expected_current_version": {
@@ -2653,16 +2589,10 @@
             "type": "string"
           },
           "prompt_key": {
-            "default": "chat_v20260516",
+            "default": "chat_v20261019",
             "maxLength": 128,
             "minLength": 1,
             "title": "Prompt Key",
-            "type": "string"
-          },
-          "reviewer_model_key": {
-            "maxLength": 300,
-            "minLength": 1,
-            "title": "Reviewer Model Key",
             "type": "string"
           },
           "tool_names": {
@@ -2682,8 +2612,7 @@
           "definition_key",
           "name",
           "model_key",
-          "reviewer_model_key",
-          "embedding_model_key"
+          "compaction_model_key"
         ],
         "title": "CreateAgentDefinitionRequest",
         "type": "object"
@@ -2774,7 +2703,7 @@
             ],
             "title": "Agent Definition Id"
           },
-          "embedding_model_key": {
+          "compaction_model_key": {
             "anyOf": [
               {
                 "maxLength": 300,
@@ -2785,7 +2714,7 @@
                 "type": "null"
               }
             ],
-            "title": "Embedding Model Key"
+            "title": "Compaction Model Key"
           },
           "idempotency_key": {
             "maxLength": 200,
@@ -2827,24 +2756,11 @@
             "type": "string"
           },
           "prompt_key": {
-            "default": "chat_v20260516",
+            "default": "chat_v20261019",
             "maxLength": 128,
             "minLength": 1,
             "title": "Prompt Key",
             "type": "string"
-          },
-          "reviewer_model_key": {
-            "anyOf": [
-              {
-                "maxLength": 300,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reviewer Model Key"
           },
           "subject_display_name": {
             "default": "",
@@ -2942,6 +2858,249 @@
         "title": "CurrentStackSmokeRunRequest",
         "type": "object"
       },
+      "DeliveryListResponse": {
+        "properties": {
+          "blocked_operation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Operation Id"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counts",
+            "type": "object"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/RelationshipResponse"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "relationship",
+          "total",
+          "limit",
+          "offset",
+          "counts",
+          "blocked_operation_id",
+          "items"
+        ],
+        "title": "DeliveryListResponse",
+        "type": "object"
+      },
+      "DeliveryResponse": {
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "attempt_count": {
+            "title": "Attempt Count",
+            "type": "integer"
+          },
+          "blocked_by_operation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked By Operation Id"
+          },
+          "check_count": {
+            "title": "Check Count",
+            "type": "integer"
+          },
+          "conversation_id": {
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "document_id": {
+            "title": "Document Id",
+            "type": "string"
+          },
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Checked At"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Code"
+          },
+          "message_id": {
+            "title": "Message Id",
+            "type": "string"
+          },
+          "message_sequence": {
+            "title": "Message Sequence",
+            "type": "integer"
+          },
+          "native_progress": {
+            "additionalProperties": true,
+            "title": "Native Progress",
+            "type": "object"
+          },
+          "native_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Status"
+          },
+          "operation_id": {
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "queue_age_seconds": {
+            "title": "Queue Age Seconds",
+            "type": "number"
+          },
+          "relationship_sequence": {
+            "title": "Relationship Sequence",
+            "type": "integer"
+          },
+          "retained_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retained At"
+          },
+          "retry_requested": {
+            "title": "Retry Requested",
+            "type": "boolean"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "submitting",
+              "processing",
+              "retained",
+              "failed",
+              "uncertain"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "document_id",
+          "message_id",
+          "conversation_id",
+          "role",
+          "message_sequence",
+          "relationship_sequence",
+          "status",
+          "attempt_count",
+          "check_count",
+          "retry_requested",
+          "last_error_code",
+          "native_status",
+          "native_progress",
+          "accepted_at",
+          "retained_at",
+          "last_checked_at",
+          "created_at",
+          "updated_at",
+          "queue_age_seconds",
+          "blocked_by_operation_id"
+        ],
+        "title": "DeliveryResponse",
+        "type": "object"
+      },
+      "DeliveryRetryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_check_count": {
+            "minimum": 0.0,
+            "title": "Expected Check Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_check_count"
+        ],
+        "title": "DeliveryRetryRequest",
+        "type": "object"
+      },
       "DeploymentSnapshotResponse": {
         "properties": {
           "deployment_id": {
@@ -2967,8 +3126,7 @@
           "role": {
             "enum": [
               "conversation",
-              "reviewer",
-              "retriever"
+              "compaction"
             ],
             "title": "Role",
             "type": "string"
@@ -2987,31 +3145,6 @@
           "qualification_state"
         ],
         "title": "DeploymentSnapshotResponse",
-        "type": "object"
-      },
-      "EvaluationSessionPurgeResponse": {
-        "properties": {
-          "already_purged": {
-            "default": false,
-            "title": "Already Purged",
-            "type": "boolean"
-          },
-          "conversation_id": {
-            "title": "Conversation Id",
-            "type": "string"
-          },
-          "deleted_counts": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "title": "Deleted Counts",
-            "type": "object"
-          }
-        },
-        "required": [
-          "conversation_id"
-        ],
-        "title": "EvaluationSessionPurgeResponse",
         "type": "object"
       },
       "EvaluationSessionResponse": {
@@ -3070,17 +3203,13 @@
               }
             ]
           },
-          "memories": {
-            "$ref": "#/components/schemas/SubjectMemoriesResponse"
-          },
           "memory_subject": {
             "$ref": "#/components/schemas/MemorySubjectResponse"
           }
         },
         "required": [
           "conversation",
-          "memory_subject",
-          "memories"
+          "memory_subject"
         ],
         "title": "EvaluationSessionStateResponse",
         "type": "object"
@@ -3315,94 +3444,72 @@
         "title": "LabelingGenerateRequest",
         "type": "object"
       },
-      "MemoryEvidenceResponse": {
+      "LearnedMemoryResponse": {
         "properties": {
-          "authority_role": {
-            "default": "user_assertion",
-            "enum": [
-              "user_assertion",
-              "user_endorsement",
-              "user_resolution",
-              "user_antecedent",
-              "assistant_referent"
+          "consolidated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Authority Role",
+            "title": "Consolidated At"
+          },
+          "consolidation_failed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consolidation Failed At"
+          },
+          "context": {
+            "default": "",
+            "title": "Context",
             "type": "string"
           },
-          "conversation_id": {
-            "title": "Conversation Id",
+          "date": {
+            "default": "",
+            "title": "Date",
             "type": "string"
           },
-          "end_char": {
-            "title": "End Char",
-            "type": "integer"
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
           },
-          "message_id": {
-            "title": "Message Id",
-            "type": "string"
-          },
-          "message_sequence": {
-            "title": "Message Sequence",
-            "type": "integer"
-          },
-          "message_sha256": {
-            "title": "Message Sha256",
-            "type": "string"
-          },
-          "quote": {
-            "title": "Quote",
-            "type": "string"
-          },
-          "start_char": {
-            "title": "Start Char",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "message_id",
-          "conversation_id",
-          "message_sequence",
-          "start_char",
-          "end_char",
-          "quote",
-          "message_sha256"
-        ],
-        "title": "MemoryEvidenceResponse",
-        "type": "object"
-      },
-      "MemoryFactResponse": {
-        "properties": {
-          "assertion_schema_version": {
-            "default": 1,
-            "minimum": 1.0,
-            "title": "Assertion Schema Version",
-            "type": "integer"
-          },
-          "entity_id": {
-            "title": "Entity Id",
-            "type": "string"
-          },
-          "entity_kind": {
-            "title": "Entity Kind",
-            "type": "string"
-          },
-          "entity_label": {
-            "title": "Entity Label",
+          "entities": {
+            "default": "",
+            "title": "Entities",
             "type": "string"
           },
           "fact_type": {
-            "title": "Fact Type",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fact Type"
           },
           "id": {
             "title": "Id",
             "type": "string"
           },
-          "key": {
-            "title": "Key",
-            "type": "string"
-          },
-          "qualifier": {
+          "mentioned_at": {
             "anyOf": [
               {
                 "type": "string"
@@ -3411,257 +3518,52 @@
                 "type": "null"
               }
             ],
-            "title": "Qualifier"
+            "title": "Mentioned At"
           },
-          "revisions": {
+          "occurred_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred End"
+          },
+          "occurred_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurred Start"
+          },
+          "source_memory_ids": {
             "items": {
-              "$ref": "#/components/schemas/MemoryRevisionResponse"
+              "type": "string"
             },
-            "title": "Revisions",
+            "title": "Source Memory Ids",
             "type": "array"
           },
-          "status": {
-            "enum": [
-              "active",
-              "inactive",
-              "superseded",
-              "forgotten"
-            ],
-            "title": "Status",
+          "state": {
+            "default": "valid",
+            "title": "State",
             "type": "string"
           },
-          "updated_at": {
-            "format": "date-time",
-            "title": "Updated At",
+          "text": {
+            "title": "Text",
             "type": "string"
-          },
-          "value": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Value"
-          },
-          "version": {
-            "title": "Version",
-            "type": "integer"
           }
         },
         "required": [
           "id",
-          "key",
-          "fact_type",
-          "entity_id",
-          "entity_kind",
-          "entity_label",
-          "value",
-          "status",
-          "version",
-          "revisions",
-          "updated_at"
+          "text"
         ],
-        "title": "MemoryFactResponse",
-        "type": "object"
-      },
-      "MemoryOperation": {
-        "enum": [
-          "add",
-          "correct",
-          "forget",
-          "revise",
-          "end",
-          "reassert"
-        ],
-        "title": "MemoryOperation",
-        "type": "string"
-      },
-      "MemoryRemovalRequest": {
-        "additionalProperties": false,
-        "properties": {
-          "expected_memory_generation": {
-            "minimum": 1.0,
-            "title": "Expected Memory Generation",
-            "type": "integer"
-          },
-          "idempotency_key": {
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "Idempotency Key",
-            "type": "string"
-          },
-          "targets": {
-            "items": {
-              "$ref": "#/components/schemas/MemoryRemovalTarget"
-            },
-            "maxItems": 20,
-            "minItems": 1,
-            "title": "Targets",
-            "type": "array"
-          }
-        },
-        "required": [
-          "idempotency_key",
-          "expected_memory_generation",
-          "targets"
-        ],
-        "title": "MemoryRemovalRequest",
-        "type": "object"
-      },
-      "MemoryRemovalResponse": {
-        "properties": {
-          "action_id": {
-            "title": "Action Id",
-            "type": "string"
-          },
-          "committed_at": {
-            "format": "date-time",
-            "title": "Committed At",
-            "type": "string"
-          },
-          "idempotent_replay": {
-            "default": false,
-            "title": "Idempotent Replay",
-            "type": "boolean"
-          },
-          "outcome": {
-            "const": "committed",
-            "title": "Outcome",
-            "type": "string"
-          },
-          "resulting_memory_generation": {
-            "minimum": 2.0,
-            "title": "Resulting Memory Generation",
-            "type": "integer"
-          },
-          "revision_ids": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Revision Ids",
-            "type": "array"
-          }
-        },
-        "required": [
-          "action_id",
-          "outcome",
-          "revision_ids",
-          "resulting_memory_generation",
-          "committed_at"
-        ],
-        "title": "MemoryRemovalResponse",
-        "type": "object"
-      },
-      "MemoryRemovalTarget": {
-        "additionalProperties": false,
-        "properties": {
-          "expected_version": {
-            "minimum": 1.0,
-            "title": "Expected Version",
-            "type": "integer"
-          },
-          "fact_id": {
-            "format": "uuid",
-            "title": "Fact Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "fact_id",
-          "expected_version"
-        ],
-        "title": "MemoryRemovalTarget",
-        "type": "object"
-      },
-      "MemoryRevisionResponse": {
-        "properties": {
-          "action_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Action Id"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "evidence": {
-            "items": {
-              "$ref": "#/components/schemas/MemoryEvidenceResponse"
-            },
-            "title": "Evidence",
-            "type": "array"
-          },
-          "fact_version": {
-            "title": "Fact Version",
-            "type": "integer"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "operation": {
-            "$ref": "#/components/schemas/MemoryOperation"
-          },
-          "predecessor_revision_ids": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Predecessor Revision Ids",
-            "type": "array"
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason"
-          },
-          "run_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Run Id"
-          },
-          "value": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Value"
-          }
-        },
-        "required": [
-          "id",
-          "operation",
-          "fact_version",
-          "value",
-          "evidence",
-          "created_at"
-        ],
-        "title": "MemoryRevisionResponse",
+        "title": "LearnedMemoryResponse",
         "type": "object"
       },
       "MemorySubjectListResponse": {
@@ -3715,12 +3617,6 @@
           "id": {
             "title": "Id",
             "type": "string"
-          },
-          "memory_generation": {
-            "default": 1,
-            "minimum": 1.0,
-            "title": "Memory Generation",
-            "type": "integer"
           },
           "updated_at": {
             "anyOf": [
@@ -4068,6 +3964,98 @@
         "title": "ModelCatalogSourceResponse",
         "type": "object"
       },
+      "NativeOperationResponse": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "native_progress": {
+            "additionalProperties": true,
+            "title": "Native Progress",
+            "type": "object"
+          },
+          "operation_id": {
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "operation_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operation Type"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "operation_id",
+          "status",
+          "native_progress"
+        ],
+        "title": "NativeOperationResponse",
+        "type": "object"
+      },
+      "NativeOperationsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NativeOperationResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/RelationshipResponse"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "relationship",
+          "total",
+          "limit",
+          "offset",
+          "items"
+        ],
+        "title": "NativeOperationsResponse",
+        "type": "object"
+      },
       "PersonaTemplatePatchRequest": {
         "properties": {
           "content": {
@@ -4242,6 +4230,99 @@
         "title": "QualificationState",
         "type": "string"
       },
+      "RelationshipMemoriesResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LearnedMemoryResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/RelationshipResponse"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "relationship",
+          "total",
+          "limit",
+          "offset",
+          "items"
+        ],
+        "title": "RelationshipMemoriesResponse",
+        "type": "object"
+      },
+      "RelationshipResponse": {
+        "properties": {
+          "character_root_id": {
+            "title": "Character Root Id",
+            "type": "string"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error Code"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "subject_id": {
+            "title": "Subject Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_id",
+          "character_root_id",
+          "state",
+          "last_error_code"
+        ],
+        "title": "RelationshipResponse",
+        "type": "object"
+      },
+      "RetryRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_attempt_count": {
+            "minimum": 1.0,
+            "title": "Expected Attempt Count",
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Idempotency Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotency_key",
+          "expected_attempt_count"
+        ],
+        "title": "RetryRunRequest",
+        "type": "object"
+      },
       "RunEventListResponse": {
         "properties": {
           "items": {
@@ -4363,12 +4444,6 @@
       },
       "RunResponse": {
         "properties": {
-          "accepted_memory_generation": {
-            "default": 1,
-            "minimum": 1.0,
-            "title": "Accepted Memory Generation",
-            "type": "integer"
-          },
           "attempt_count": {
             "title": "Attempt Count",
             "type": "integer"
@@ -4432,6 +4507,18 @@
             "title": "Id",
             "type": "string"
           },
+          "paused_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused At"
+          },
           "qualification_state": {
             "$ref": "#/components/schemas/QualificationState"
           },
@@ -4476,6 +4563,7 @@
         "enum": [
           "pending",
           "running",
+          "paused",
           "succeeded",
           "failed",
           "cancelled"
@@ -4584,31 +4672,60 @@
         "title": "RuntimeWorkerHealthResponse",
         "type": "object"
       },
-      "SubjectMemoriesResponse": {
+      "SourceResponse": {
         "properties": {
-          "facts": {
-            "items": {
-              "$ref": "#/components/schemas/MemoryFactResponse"
-            },
-            "title": "Facts",
-            "type": "array"
-          },
-          "memory_generation": {
-            "default": 1,
-            "minimum": 1.0,
-            "title": "Memory Generation",
-            "type": "integer"
-          },
-          "subject_id": {
-            "title": "Subject Id",
+          "content": {
+            "title": "Content",
             "type": "string"
+          },
+          "definition_version_id": {
+            "title": "Definition Version Id",
+            "type": "string"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliveryResponse"
+          },
+          "native_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Context"
+          },
+          "native_original_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Native Original Text"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/RelationshipResponse"
           }
         },
         "required": [
-          "subject_id",
-          "facts"
+          "relationship",
+          "delivery",
+          "content",
+          "occurred_at",
+          "definition_version_id",
+          "native_original_text",
+          "native_context"
         ],
-        "title": "SubjectMemoriesResponse",
+        "title": "SourceResponse",
         "type": "object"
       },
       "TestCenterCatalogOptionsResponse": {
@@ -4975,6 +5092,20 @@
       },
       "TurnContextActivityResponse": {
         "properties": {
+          "automatic_memory_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automatic Memory Ids"
+          },
           "current_chat": {
             "anyOf": [
               {
@@ -4986,7 +5117,7 @@
             ],
             "title": "Current Chat"
           },
-          "history_run_ids": {
+          "tool_memory_ids": {
             "anyOf": [
               {
                 "items": {
@@ -4998,38 +5129,7 @@
                 "type": "null"
               }
             ],
-            "title": "History Run Ids"
-          },
-          "history_sources": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "History Sources"
-          },
-          "profile_fact_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Profile Fact Ids"
+            "title": "Tool Memory Ids"
           }
         },
         "title": "TurnContextActivityResponse",
@@ -7295,52 +7395,6 @@
         ]
       }
     },
-    "/api/v3/agent-studio/reset": {
-      "post": {
-        "operationId": "reset_agent_studio_api_v3_agent_studio_reset_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentStudioResetRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AgentStudioResetResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Reset only fresh-start Agent Studio state",
-        "tags": [
-          "Agent Runtime"
-        ]
-      }
-    },
     "/api/v3/agent-studio/sessions": {
       "get": {
         "operationId": "list_sessions_api_v3_agent_studio_sessions_get",
@@ -7888,110 +7942,6 @@
         ]
       }
     },
-    "/api/v3/agent-studio/subjects/{subject_id}/memories": {
-      "get": {
-        "operationId": "get_subject_memories_api_v3_agent_studio_subjects__subject_id__memories_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "subject_id",
-            "required": true,
-            "schema": {
-              "title": "Subject Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectMemoriesResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Inspect typed Agent Studio memory lineage",
-        "tags": [
-          "Agent Runtime"
-        ]
-      }
-    },
-    "/api/v3/agent-studio/subjects/{subject_id}/memory-removals": {
-      "post": {
-        "operationId": "remove_subject_memories_api_v3_agent_studio_subjects__subject_id__memory_removals_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "subject_id",
-            "required": true,
-            "schema": {
-              "title": "Subject Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MemoryRemovalRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MemoryRemovalResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Remove exact saved assertions through an operator action",
-        "tags": [
-          "Agent Runtime"
-        ]
-      }
-    },
     "/api/v3/agent-studio/subjects/{subject_id}/restore": {
       "post": {
         "operationId": "restore_subject_api_v3_agent_studio_subjects__subject_id__restore_post",
@@ -8259,53 +8209,6 @@
         ]
       }
     },
-    "/api/v3/evaluation-sessions/{conversation_id}": {
-      "delete": {
-        "operationId": "purge_evaluation_session_api_v3_evaluation_sessions__conversation_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "conversation_id",
-            "required": true,
-            "schema": {
-              "title": "Conversation Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EvaluationSessionPurgeResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "Purge an inactive evaluation session",
-        "tags": [
-          "Agent Runtime"
-        ]
-      }
-    },
     "/api/v3/evaluation-sessions/{conversation_id}/state": {
       "get": {
         "operationId": "get_evaluation_session_state_api_v3_evaluation_sessions__conversation_id__state_get",
@@ -8376,7 +8279,463 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Inspect evaluation conversation, typed memories, and latest run",
+        "summary": "Inspect saved evaluation conversation and latest run independently of Memory",
+        "tags": [
+          "Agent Runtime"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/deliveries": {
+      "get": {
+        "operationId": "list_deliveries_api_v3_memory_subjects__subject_id__characters__character_root_id__deliveries_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Subject Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Character Root Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inspect relationship delivery state independently of Memory availability",
+        "tags": [
+          "Agent Runtime"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/deliveries/{operation_id}/retry": {
+      "post": {
+        "operationId": "retry_delivery_api_v3_memory_subjects__subject_id__characters__character_root_id__deliveries__operation_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Subject Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Character Root Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Operation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryRetryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retry an immutable delivery within the selected relationship",
+        "tags": [
+          "Agent Runtime"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/memories": {
+      "get": {
+        "operationId": "list_memories_api_v3_memory_subjects__subject_id__characters__character_root_id__memories_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Subject Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Character Root Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationshipMemoriesResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List learned memories for one person and character",
+        "tags": [
+          "Agent Runtime"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/operations": {
+      "get": {
+        "operationId": "list_operations_api_v3_memory_subjects__subject_id__characters__character_root_id__operations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Subject Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Character Root Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativeOperationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List native processing and consolidation for one relationship",
+        "tags": [
+          "Agent Runtime"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/operations/{operation_id}": {
+      "get": {
+        "operationId": "get_operation_api_v3_memory_subjects__subject_id__characters__character_root_id__operations__operation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Subject Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Character Root Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Operation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativeOperationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inspect a native operation within the selected relationship",
+        "tags": [
+          "Agent Runtime"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/sources/{document_id}": {
+      "get": {
+        "operationId": "get_source_api_v3_memory_subjects__subject_id__characters__character_root_id__sources__document_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Subject Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Character Root Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Inspect an original source within the selected relationship",
         "tags": [
           "Agent Runtime"
         ]
@@ -8597,6 +8956,63 @@
           }
         ],
         "summary": "Stream normalized agent runtime events",
+        "tags": [
+          "Agent Runtime"
+        ]
+      }
+    },
+    "/api/v3/runs/{run_id}/retry": {
+      "post": {
+        "operationId": "retry_run_api_v3_runs__run_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnAcceptedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Retry a paused reply using its saved input and fresh memory lookup",
         "tags": [
           "Agent Runtime"
         ]

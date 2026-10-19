@@ -62,12 +62,6 @@ def test_failed_relationship_blocks_its_successor_not_another_character():
             async with db.begin() as connection:
                 owner = await scope(connection)
                 first, second = await queue(connection, owner)
-                other = await scope(
-                    connection,
-                    workspace_id=owner.relationship.workspace_id,
-                    subject_id=owner.relationship.subject_id,
-                )
-                unrelated, _ = await queue(connection, other)
             token = str(uuid4())
             current = await claim(db, owner, token)
             assert current["operation_id"] == first["operation_id"]
@@ -78,6 +72,13 @@ def test_failed_relationship_blocks_its_successor_not_another_character():
                     error_code="native_failed",
                     permanent=True,
                 )
+                # Cross-relationship timestamps may tie; no global FIFO is promised.
+                other = await scope(
+                    connection,
+                    workspace_id=owner.relationship.workspace_id,
+                    subject_id=owner.relationship.subject_id,
+                )
+                unrelated, _ = await queue(connection, other)
             next_claim = await claim(db, owner, str(uuid4()))
             assert next_claim["operation_id"] == unrelated["operation_id"]
             assert next_claim["operation_id"] != second["operation_id"]

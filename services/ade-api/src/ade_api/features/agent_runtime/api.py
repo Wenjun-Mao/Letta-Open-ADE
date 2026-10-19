@@ -23,6 +23,7 @@ from .contracts import (
     TurnAcceptedResponse,
 )
 from .agent_studio_api import router as agent_studio_router
+from .memory_inspection_api import router as memory_inspection_router
 from .api_boundary import call_runtime
 from .dependencies import (
     AgentRuntimeHealthServiceDependency,
@@ -36,6 +37,7 @@ router = APIRouter(
     tags=[TAG_AGENT_RUNTIME],
 )
 router.include_router(agent_studio_router)
+router.include_router(memory_inspection_router)
 
 
 @router.get(

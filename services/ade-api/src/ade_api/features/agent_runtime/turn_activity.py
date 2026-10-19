@@ -12,9 +12,7 @@ def conversation_activity(
     runs: list[dict[str, Any]],
     events: list[dict[str, Any]],
     attempts: list[dict[str, Any]],
-    source_conversations: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
-    source_conversations = source_conversations or {}
     by_run: dict[str, list[dict[str, Any]]] = defaultdict(list)
     attempts_by_run: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for event in events:
@@ -69,14 +67,12 @@ def conversation_activity(
             if attempt["status"] != "succeeded"
         )
         counts = dispatch_counts(observed, observation_incomplete=not covered)
-        provider = {"generation": 0, "reviewer": 0, "embedding": 0, "other": 0}
+        provider = {"generation": 0, "compaction": 0, "other": 0}
         for group in counts["groups"]:
-            if group["operation"] == "embeddings":
-                category = "embedding"
-            elif group["stage"] == "reviewer":
-                category = "reviewer"
-            elif group["stage"] == "conversation":
+            if group["stage"] == "conversation":
                 category = "generation"
+            elif group["stage"] == "compaction":
+                category = "compaction"
             else:
                 category = "other"
             provider[category] += group["attempted"]
@@ -113,15 +109,6 @@ def conversation_activity(
             ),
             None,
         )
-        successful = next(
-            (
-                attempt.get("provider_outcome") or {}
-                for attempt in outcomes
-                if attempt["status"] == "succeeded"
-            ),
-            {},
-        )
-        history_ids = successful.get("admitted_history_run_ids")
         summaries.append(
             {
                 "run_id": run_id,
@@ -138,30 +125,12 @@ def conversation_activity(
                 and len(outcomes) == 1
                 and all(call["outcome"] != "unresolved" for call in calls.values()),
                 "context": {
-                    "current_chat": (
-                        sum(
-                            (context.get("section_tokens") or {}).get(key, 0)
-                            for key in ("recent_messages", "conversation_summary")
-                        )
-                        > 0
-                    )
+                    "current_chat": context.get("current_chat") if context else None,
+                    "automatic_memory_ids": context.get("automatic_memory_ids")
                     if context
                     else None,
-                    "profile_fact_ids": context.get("retrieved_fact_ids", [])
+                    "tool_memory_ids": context.get("tool_memory_ids")
                     if context
-                    else None,
-                    "history_run_ids": history_ids
-                    if isinstance(history_ids, list)
-                    else None,
-                    "history_sources": [
-                        {
-                            "run_id": source_id,
-                            "conversation_id": source_conversations[source_id],
-                        }
-                        for source_id in history_ids
-                        if source_id in source_conversations
-                    ]
-                    if isinstance(history_ids, list)
                     else None,
                 },
             }

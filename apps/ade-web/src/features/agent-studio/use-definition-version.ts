@@ -65,12 +65,11 @@ export function useDefinitionVersion({ session, definitions, refreshWorkspace, s
     if (!prior?.agent_definition_id || !versionName.trim()) return;
     const current = definitions.filter((item) => item.agent_definition_id === prior.agent_definition_id)
       .sort((left, right) => right.version - left.version)[0] || prior;
-    const route = (role: "conversation" | "reviewer" | "retriever") => current.deployments.find((item) => item.role === role)?.route_alias;
+    const route = (role: "conversation" | "compaction") => current.deployments.find((item) => item.role === role)?.route_alias;
     const model = route("conversation");
-    const reviewer = route("reviewer");
-    const retriever = route("retriever");
-    if (!model || !reviewer || !retriever || !prompts.some((item) => item.key === versionPromptKey) || !personas.some((item) => item.key === versionPersonaKey)) {
-      setError("Choose active prompt and persona templates with a complete qualified deployment snapshot.");
+    const compaction = route("compaction");
+    if (!model || !compaction || !prompts.some((item) => item.key === versionPromptKey) || !personas.some((item) => item.key === versionPersonaKey)) {
+      setError("Choose active prompt and persona templates with conversation and compaction deployments.");
       return;
     }
     setBusy(true);
@@ -91,8 +90,7 @@ export function useDefinitionVersion({ session, definitions, refreshWorkspace, s
         definition_key: prior.definition_key,
         name: versionName.trim(),
         model_key: model,
-        reviewer_model_key: reviewer,
-        embedding_model_key: retriever,
+        compaction_model_key: compaction,
         prompt_key: versionPromptKey,
         persona_key: versionPersonaKey,
         tool_names: current.tool_names.filter((tool): tool is "search_memory" | "get_weather" => tool === "search_memory" || tool === "get_weather"),

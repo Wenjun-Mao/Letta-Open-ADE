@@ -12,6 +12,14 @@ def _canonical_json(payload: dict[str, Any]) -> str:
 
 
 SUMMARY_TRANSLATIONS = {
+    "Inspect relationship delivery state independently of Memory availability": "独立于 Memory 可用性检视关系投递状态",
+    "List learned memories for one person and character": "列出同一人物与角色的已形成记忆",
+    "Inspect an original source within the selected relationship": "检视所选关系中的原始来源",
+    "Retry an immutable delivery within the selected relationship": "重试所选关系中的不可变投递",
+    "List native processing and consolidation for one relationship": "列出同一关系的原生处理与归纳操作",
+    "Inspect a native operation within the selected relationship": "检视所选关系中的原生操作",
+    "Inspect saved evaluation conversation and latest run independently of Memory": "独立于 Memory 检视已保存的评估会话与最新运行",
+    "Retry a paused reply using its saved input and fresh memory lookup": "使用已保存输入和新的记忆查询重试暂停的回复",
     "ADE-owned runtime, evaluation, and authoring APIs": "ADE 自有运行时、评估与创作 API",
     "Accept an asynchronous conversation turn": "接受异步会话轮次",
     "Archive an Agent Studio conversation": "归档 Agent Studio 会话",
@@ -148,6 +156,9 @@ TAG_TRANSLATIONS = {
 }
 
 TITLE_TRANSLATIONS = {
+    "Date": "日期",
+    "Entities": "实体",
+    "Text": "文本",
     "Failed": "失败次数",
     "Succeeded": "成功次数",
     "Unresolved": "未确定次数",
@@ -352,6 +363,28 @@ TITLE_TRANSLATIONS = {
 }
 
 TITLE_TOKEN_TRANSLATIONS = {
+    "automatic": "自动",
+    "age": "时长",
+    "blocked": "阻塞",
+    "character": "角色",
+    "check": "检查",
+    "compaction": "压缩",
+    "consolidated": "已归纳",
+    "consolidation": "归纳",
+    "delivery": "投递",
+    "document": "文档",
+    "failed": "失败",
+    "learned": "已形成",
+    "mentioned": "提及",
+    "operations": "操作",
+    "original": "原始",
+    "paused": "已暂停",
+    "progress": "进度",
+    "queue": "队列",
+    "relationship": "关系",
+    "retained": "已留存",
+    "root": "根",
+    "text": "文本",
     "activity": "活动",
     "complete": "完整",
     "observed": "已观测",

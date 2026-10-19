@@ -126,6 +126,7 @@ class BuiltContext:
     omitted_message_ids: list[str]
     retrieved_fact_ids: list[str]
     estimated_input_tokens: int
+    current_chat: bool | None = None
 
 
 @dataclass(frozen=True)

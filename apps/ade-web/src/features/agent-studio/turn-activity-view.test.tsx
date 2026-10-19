@@ -9,30 +9,31 @@ const translate = (english: string) => english;
 function activity(): TurnActivity {
   return {
     run_id: "run", status: "succeeded",
-    provider: { generation: 1, reviewer: 1, embedding: 3, other: 0 },
+    provider: { generation: 1, compaction: 2, other: 0 },
     provider_complete: true, provider_observed: true,
     tools: [], tools_complete: true,
-    context: { current_chat: false, profile_fact_ids: [], history_run_ids: ["older-run"],
-      history_sources: [{ run_id: "older-run", conversation_id: "older-chat" }] },
+    context: { current_chat: false, automatic_memory_ids: ["memory-A"], tool_memory_ids: [] },
   };
 }
 
-it("shows exact separated counts and links admitted sources", () => {
+it("separates ADE model counts and supplied Hindsight context without a native reviewer", () => {
   const html = renderToStaticMarkup(<TurnActivityView activity={activity()} t={translate} />);
-  expect(html).toContain("Provider requests: 5");
+  expect(html).toContain("Provider requests: 3");
   expect(html).toContain("Generation");
-  expect(html).toContain("Embeddings");
+  expect(html).toContain("Compaction");
   expect(html).toContain("Tools: none");
-  expect(html).toContain("/agent-studio?conversation=older-chat");
+  expect(html).toContain("automatically supplied memory IDs");
+  expect(html).toContain("not Hindsight extraction or consolidation calls");
+  expect(html).not.toContain("Review:");
 });
 
 it("does not render missing historical telemetry as zero", () => {
   const old = activity();
-  old.provider = { generation: 0, reviewer: 0, embedding: 0, other: 0 };
+  old.provider = { generation: 0, compaction: 0, other: 0 };
   old.provider_complete = false;
   old.provider_observed = false;
   old.tools_complete = false;
-  old.context = { current_chat: null, profile_fact_ids: null, history_run_ids: null, history_sources: null };
+  old.context = { current_chat: null, automatic_memory_ids: null, tool_memory_ids: null };
   const html = renderToStaticMarkup(<TurnActivityView activity={old} t={translate} />);
   expect(html).toContain("Provider requests: unavailable");
   expect(html).toContain("Tools: unavailable");

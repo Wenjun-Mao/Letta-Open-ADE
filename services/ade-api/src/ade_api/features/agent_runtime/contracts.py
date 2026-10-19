@@ -413,9 +413,8 @@ class TurnToolActivityResponse(BaseModel):
 
 class TurnContextActivityResponse(BaseModel):
     current_chat: bool | None = None
-    profile_fact_ids: list[str] | None = None
-    history_run_ids: list[str] | None = None
-    history_sources: list[dict[str, str]] | None = None
+    automatic_memory_ids: list[str] | None = None
+    tool_memory_ids: list[str] | None = None
 
 
 class TurnActivityResponse(BaseModel):

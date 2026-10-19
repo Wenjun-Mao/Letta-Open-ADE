@@ -308,10 +308,8 @@ class RunRepository:
 
     async def conversation_activity_rows(
         self, conversation_id: str
-    ) -> tuple[
-        list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], dict[str, str]
-    ]:
-        """Read one conversation's runs, traces, receipts and admitted source links."""
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+        """Read one conversation's product runs, traces and attempt receipts."""
         run_rows = (
             (
                 await self._connection.execute(
@@ -359,32 +357,10 @@ class RunRepository:
             .mappings()
             .all()
         )
-        source_ids = {
-            source_id
-            for attempt in attempt_rows
-            for source_id in (attempt["provider_outcome"] or {}).get(
-                "admitted_history_run_ids", []
-            )
-            if isinstance(source_id, str)
-        }
-        source_rows = (
-            (
-                await self._connection.execute(
-                    select(runs.c.id, runs.c.conversation_id).where(
-                        runs.c.id.in_(source_ids)
-                    )
-                )
-            )
-            .mappings()
-            .all()
-            if source_ids
-            else []
-        )
         return (
             [dict(row) for row in run_rows],
             [dict(row) for row in event_rows],
             [dict(row) for row in attempt_rows],
-            {str(row["id"]): str(row["conversation_id"]) for row in source_rows},
         )
 
     async def list_event_page(

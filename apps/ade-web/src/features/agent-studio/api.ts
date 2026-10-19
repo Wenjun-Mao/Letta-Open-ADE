@@ -8,22 +8,21 @@ import type {
   CreateDefinition,
   CreateSession,
   MemorySubject,
-  MemoryRemovalReceipt,
+  MemoryDelivery,
+  MemoryDeliveries,
+  MemorySource,
+  MemoryOperations,
   Run,
+  TurnAccepted,
   RunEvent,
-  SubjectMemories,
+  RelationshipMemories,
   TurnActivity,
 } from "./types";
 
 type ListResponse<T> = { total: number; items: T[] };
 
-export const HISTORY_TRIAL = process.env.NEXT_PUBLIC_HISTORY_TRIAL === "1";
-
 function requestJson<T>(path: string, options?: RequestOptions): Promise<T> {
-  const scopedPath = HISTORY_TRIAL
-    ? path.replace(/^\/api\/v3\/agent-studio(?=\/|$)/, "/api/v3/history-trial")
-    : path;
-  return baseRequestJson<T>(scopedPath, options);
+  return baseRequestJson<T>(path, options);
 }
 
 function listPath(path: string, includeArchived: boolean): string {
@@ -101,28 +100,36 @@ export function restoreAgentStudioSubject(subjectId: string): Promise<MemorySubj
   return requestJson(`/api/v3/agent-studio/subjects/${encodeURIComponent(subjectId)}/restore`, { method: "POST" });
 }
 
-export function getSubjectMemories(subjectId: string): Promise<SubjectMemories> {
-  return requestJson(`/api/v3/agent-studio/subjects/${encodeURIComponent(subjectId)}/memories`);
+function relationshipPath(subjectId: string, characterRootId: string): string {
+  return `/api/v3/memory/subjects/${encodeURIComponent(subjectId)}/characters/${encodeURIComponent(characterRootId)}`;
 }
 
-export function removeSavedMemory(
-  subjectId: string,
-  payload: {
-    idempotency_key: string;
-    expected_memory_generation: number;
-    targets: Array<{ fact_id: string; expected_version: number }>;
-  },
-): Promise<MemoryRemovalReceipt> {
-  return requestJson(`/api/v3/agent-studio/subjects/${encodeURIComponent(subjectId)}/memory-removals`, {
-    method: "POST",
-    body: payload,
+export function getRelationshipMemories(subjectId: string, characterRootId: string, offset = 0): Promise<RelationshipMemories> {
+  return requestJson(`${relationshipPath(subjectId, characterRootId)}/memories?limit=100&offset=${offset}`);
+}
+
+export function getMemoryDeliveries(subjectId: string, characterRootId: string, offset = 0): Promise<MemoryDeliveries> {
+  return requestJson(`${relationshipPath(subjectId, characterRootId)}/deliveries?limit=100&offset=${offset}`);
+}
+
+export function getMemoryOperations(subjectId: string, characterRootId: string, offset = 0): Promise<MemoryOperations> {
+  return requestJson(`${relationshipPath(subjectId, characterRootId)}/operations?limit=100&offset=${offset}`);
+}
+
+export function getMemorySource(subjectId: string, characterRootId: string, documentId: string): Promise<MemorySource> {
+  return requestJson(`${relationshipPath(subjectId, characterRootId)}/sources/${encodeURIComponent(documentId)}`);
+}
+
+export function retryMemoryDelivery(subjectId: string, characterRootId: string, delivery: MemoryDelivery): Promise<MemoryDelivery> {
+  return requestJson(`${relationshipPath(subjectId, characterRootId)}/deliveries/${encodeURIComponent(delivery.operation_id)}/retry`, {
+    method: "POST", body: { expected_check_count: delivery.check_count },
   });
 }
 
 export function acceptTurn(
   conversationId: string,
   payload: { content: string; idempotency_key: string; timeout_seconds: number; retry_count: number },
-): Promise<{ run_id: string; status: Run["status"]; events_url: string; idempotent_replay: boolean }> {
+): Promise<TurnAccepted> {
   return requestJson(`/api/v3/conversations/${encodeURIComponent(conversationId)}/turns`, { method: "POST", body: payload });
 }
 
@@ -140,6 +147,12 @@ export function listConversationActivity(conversationId: string): Promise<{ item
 
 export function cancelRun(runId: string): Promise<Run> {
   return requestJson(`/api/v3/runs/${encodeURIComponent(runId)}/cancel`, { method: "POST" });
+}
+
+export function retryRun(runId: string, expectedAttemptCount: number, idempotencyKey: string): Promise<TurnAccepted> {
+  return requestJson(`/api/v3/runs/${encodeURIComponent(runId)}/retry`, {
+    method: "POST", body: { expected_attempt_count: expectedAttemptCount, idempotency_key: idempotencyKey },
+  });
 }
 
 export function getRunEventLog(runId: string): Promise<ListResponse<RunEvent>> {

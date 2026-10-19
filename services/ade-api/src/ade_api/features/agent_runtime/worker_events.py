@@ -67,7 +67,16 @@ async def append_success_events(
             "section_tokens": result.context.section_tokens,
             "estimated_input_tokens": result.context.estimated_input_tokens,
             "omitted_message_ids": result.context.omitted_message_ids,
-            "retrieved_fact_ids": result.context.retrieved_fact_ids,
+            "current_chat": result.context.current_chat,
+            "automatic_memory_ids": result.context.retrieved_fact_ids,
+            "tool_memory_ids": list(
+                dict.fromkeys(
+                    identity
+                    for lookup in result.memory_lookups
+                    if lookup["phase"] == "tool"
+                    for identity in lookup["result_ids"]
+                )
+            ),
         },
         attempt=attempt,
         causation_id=None,

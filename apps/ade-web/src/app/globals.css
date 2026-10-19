@@ -380,6 +380,23 @@
   min-width: 0;
 }
 
+.studio-relationship-memory {
+  overflow-wrap: anywhere;
+}
+
+.studio-relationship-memory pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.studio-relationship-memory article {
+  min-width: 0;
+  padding-block: 10px;
+  border-bottom: 1px solid #dbe7ef;
+}
+
 .studio-metadata {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

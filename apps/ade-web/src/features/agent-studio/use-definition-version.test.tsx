@@ -20,7 +20,7 @@ const definition: AgentStudioSession["agent_definition"] = {
   id: "version-1", agent_definition_id: "definition-1", definition_key: "native", version: 1,
   name: "Native", prompt_key: "prompt", prompt_sha256: "a", persona_key: "persona", persona_sha256: "b",
   tool_names: [], memory_policy_version: "v1", qualification_state: "qualified", archived_at: null,
-  created_at: "2026-09-22T00:00:00Z", deployments: (["conversation", "reviewer", "retriever"] as const)
+  created_at: "2026-09-22T00:00:00Z", deployments: (["conversation", "compaction"] as const)
     .map((role) => ({ role, deployment_id: role, route_alias: role, fingerprint: role,
       lifecycle: "active", qualification_state: "qualified", fingerprint_payload: {} })),
 };

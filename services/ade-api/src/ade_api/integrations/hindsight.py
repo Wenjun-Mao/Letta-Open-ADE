@@ -163,12 +163,14 @@ class HindsightClient:
             raise HindsightError("hindsight_submission_invalid")
         return body
 
-    async def operation(self, bank_id: str, operation_id: str) -> dict:
+    async def operation(
+        self, bank_id: str, operation_id: str, *, include_payload: bool = True
+    ) -> dict:
         UUID(operation_id)
         body = await self._request(
             "GET",
             self.bank_path(bank_id) + f"/operations/{operation_id}",
-            params={"include_payload": "true"},
+            params={"include_payload": "true" if include_payload else "false"},
         )
         _identity(
             body.get("operation_id"),

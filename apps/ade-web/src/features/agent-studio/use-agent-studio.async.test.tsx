@@ -3,7 +3,7 @@ import { act, useEffect } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AgentStudioSession, ConversationState, MemoryEvidence, Run, RunEvent, SubjectMemories } from "./types";
+import type { AgentStudioSession, ConversationState, MessageSource, Run, RunEvent } from "./types";
 import { useAgentStudio } from "./use-agent-studio";
 
 const navigation = vi.hoisted(() => {
@@ -12,15 +12,14 @@ const navigation = vi.hoisted(() => {
   return { state, router };
 });
 const api = vi.hoisted(() => ({
-  HISTORY_TRIAL: false,
   getAgentStudioOptions: vi.fn(), listAgentStudioSessions: vi.fn(), listAgentStudioDefinitions: vi.fn(),
   listAgentStudioSubjects: vi.fn(), getAgentStudioSession: vi.fn(), getConversationState: vi.fn(),
-  getSubjectMemories: vi.fn(), listConversationRuns: vi.fn(), listConversationActivity: vi.fn(), getRun: vi.fn(), getRunEventLog: vi.fn(),
+  getRelationshipMemories: vi.fn(), getMemoryDeliveries: vi.fn(), getMemoryOperations: vi.fn(), getMemorySource: vi.fn(), retryMemoryDelivery: vi.fn(), retryRun: vi.fn(),
+  listConversationRuns: vi.fn(), listConversationActivity: vi.fn(), getRun: vi.fn(), getRunEventLog: vi.fn(),
   acceptTurn: vi.fn(), createAgentStudioSession: vi.fn(), archiveAgentStudioDefinition: vi.fn(),
   archiveAgentStudioSession: vi.fn(), archiveAgentStudioSubject: vi.fn(), cancelRun: vi.fn(),
   restoreAgentStudioDefinition: vi.fn(), restoreAgentStudioSession: vi.fn(),
   restoreAgentStudioSubject: vi.fn(), updateAgentStudioSubject: vi.fn(),
-  removeSavedMemory: vi.fn(),
 }));
 const streams = vi.hoisted(() => ({ calls: [] as Array<{ runId: string; handlers: {
   onEvent: (event: RunEvent) => void; onTerminal: (event: RunEvent) => void; onError: () => void;
@@ -46,20 +45,14 @@ vi.mock("./use-definition-version", () => ({
   }),
 }));
 
-const evidence: MemoryEvidence = { message_id: "message-5", conversation_id: "A", message_sequence: 5,
-  start_char: 0, end_char: 3, quote: "tea", message_sha256: "a".repeat(64) };
+const evidence: MessageSource = { message_id: "message-5", conversation_id: "A", message_sequence: 5 };
 const run = (status: Run["status"]): Run => ({ id: "run-A", conversation_id: "A", status,
   qualification_state: "qualified", attempt_count: 1, timeout_seconds: 180, retry_count: 0,
-  cancellation_requested_at: null, error_code: null, error_message: null,
+  cancellation_requested_at: null, error_code: null, error_message: null, paused_at: null,
   created_at: "2026-09-22T00:00:00Z", started_at: null, finished_at: null });
 const terminalEvent: RunEvent = { id: "event-1", schema_version: 1, run_id: "run-A", sequence: 1,
   attempt: 1, type: "run.completed", occurred_at: "2026-09-22T00:00:00Z", correlation_id: "run-A",
   causation_id: null, visibility: "operator", payload: {} };
-const memory = (version: number): SubjectMemories => ({ subject_id: "subject-A", memory_generation: version, facts: [{
-  id: "fact-1", key: "tea", fact_type: "person.preference", entity_id: "subject-A", entity_kind: "subject",
-  entity_label: "User", qualifier: null, value: "tea", status: "active", version,
-  revisions: [], updated_at: "2026-09-22T00:00:00Z",
-}] });
 function session(id: string, latestRun: Run | null = null): AgentStudioSession {
   return { session_id: id, idempotent_replay: false,
     agent_definition: { id: "definition-v1", agent_definition_id: "definition-root", definition_key: "native",
@@ -98,13 +91,12 @@ async function flush() { await act(async () => { await new Promise((done) => set
 
 beforeEach(() => {
   vi.clearAllMocks(); streams.calls.length = 0;
-  api.HISTORY_TRIAL = false;
   navigation.state.query = new URLSearchParams("conversation=A");
   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   container = document.createElement("div"); document.body.append(container); root = createRoot(container);
   api.getAgentStudioOptions.mockResolvedValue({ runtime: "ade_native", default_bundle_key: "bundle", bundles: [{
-    key: "bundle", name: "Bundle", model_key: "model", reviewer_model_key: "reviewer",
-    embedding_model_key: "embedding", prompt_key: "prompt", persona_key: "persona", tool_names: [],
+    key: "bundle", name: "Bundle", model_key: "model", compaction_model_key: "compaction",
+    prompt_key: "prompt", persona_key: "persona", tool_names: [],
     memory_policy_version: "v1", qualification_state: "qualified", deployments: [],
   }], default_timeout_seconds: 180, default_retry_count: 0, max_retry_count: 5 });
   api.listAgentStudioSessions.mockResolvedValue({ items: [session("A"), session("B")], total: 2 });
@@ -112,7 +104,10 @@ beforeEach(() => {
   api.listAgentStudioSubjects.mockResolvedValue({ items: [session("A").memory_subject, session("B").memory_subject], total: 2 });
   api.getAgentStudioSession.mockImplementation(async (id: string) => session(id));
   api.getConversationState.mockImplementation(async (id: string, before?: number) => state(id, before));
-  api.getSubjectMemories.mockImplementation(async (id: string) => id === "subject-A" ? memory(1) : { subject_id: id, facts: [] });
+  const read = async (id: string, root: string) => ({ relationship: { subject_id: id, character_root_id: root }, items: [], total: 0, counts: {} });
+  api.getRelationshipMemories.mockImplementation(read);
+  api.getMemoryDeliveries.mockImplementation(read);
+  api.getMemoryOperations.mockImplementation(read);
   api.listConversationRuns.mockResolvedValue({ items: [], total: 0 });
   api.listConversationActivity.mockResolvedValue({ items: [] });
   api.getRun.mockResolvedValue(run("succeeded"));
@@ -127,14 +122,13 @@ afterEach(async () => {
 });
 
 describe("Agent Studio async ownership", () => {
-  it("keeps an archived chat's character binding when its person is selected in the trial", async () => {
-    api.HISTORY_TRIAL = true;
+  it("does not silently select a character based only on a person", async () => {
     navigation.state.query = new URLSearchParams();
     api.listAgentStudioSessions.mockImplementation(async (includeArchived: boolean) =>
       includeArchived ? { items: [session("archived")], total: 1 } : { items: [], total: 0 });
     await render();
     await act(async () => { controller.selectSubjectForNewConversation("subject-archived"); });
-    expect(controller.definitionChoice).toBe("definition-v1");
+    expect(controller.definitionChoice).toBe("__new__");
   });
 
   it("keeps hidden identities through failed starts, separates same-name people, and reuses selected bindings", async () => {
@@ -180,11 +174,10 @@ describe("Agent Studio async ownership", () => {
     expect(streams.calls).toHaveLength(1);
     await act(async () => { await controller.openEvidence(evidence); });
     expect(controller.evidenceMessageId).toBe("message-5");
-    api.getSubjectMemories.mockResolvedValue(memory(2));
     await act(async () => { streams.calls[0].handlers.onTerminal(terminalEvent); await Promise.resolve(); });
     await flush();
     expect(controller.run?.status).toBe("succeeded");
-    expect(controller.memories?.facts[0].version).toBe(2);
+    expect(controller.conversation?.id).toBe("A");
   });
 
   it("drops late stream and error callbacks after A to B selection", async () => {
@@ -271,7 +264,7 @@ describe("Agent Studio async ownership", () => {
     expect(controller.run?.status).toBe("succeeded");
     expect(controller.streamWarning).toBe("");
     expect(streams.close).toHaveBeenCalledTimes(closed + 1);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(3); // Independent Memory polling remains active.
   });
 
   it("deduplicates terminal fetches and allows a later retry after a fetch failure", async () => {
@@ -323,26 +316,8 @@ describe("Agent Studio async ownership", () => {
     await act(async () => { completionRead.resolve(session("A", run("succeeded"))); });
     await flush();
     expect(controller.session?.conversation.id).toBe("B");
-    expect(controller.memories?.subject_id).toBe("subject-B");
+    expect(controller.memory.scope?.subjectId).toBe("subject-B");
     expect(controller.run).toBeNull();
-    expect(controller.memoryAction).toBeNull();
-  });
-
-  it("does not confirm memory persistence when terminal selected readback returns null", async () => {
-    api.acceptTurn.mockResolvedValue({ run_id: "run-A", status: "pending" });
-    api.getRun.mockResolvedValue(run("running"));
-    await render();
-    await act(async () => { controller.prepareMemoryAction("fact-1", 1, "correct"); });
-    await act(async () => { await controller.sendMessage(); });
-    expect(controller.memoryAction?.runId).toBe("run-A");
-    api.getRun.mockResolvedValue(run("succeeded"));
-    api.getRunEventLog.mockResolvedValue({ items: [{ ...terminalEvent, type: "memory.committed",
-      payload: { fact_id: "fact-1", fact_version: 2, operation: "revise" } }], total: 1 });
-    api.getAgentStudioSession.mockRejectedValueOnce(new Error("selected readback unavailable"));
-    await act(async () => { streams.calls[0].handlers.onTerminal(terminalEvent); });
-    await flush();
-    expect(controller.error).toBe("selected readback unavailable");
-    expect(controller.memoryAction?.outcome).toBe("No matching committed revision was verified. Saved information was not confirmed changed.");
   });
 
   it("keeps cancellation in the controller and disposes polling and streaming on unmount", async () => {
@@ -360,25 +335,6 @@ describe("Agent Studio async ownership", () => {
     expect(vi.getTimerCount()).toBe(0);
     await act(async () => { old.onTerminal(terminalEvent); await vi.advanceTimersByTimeAsync(3000); });
     expect(api.getRun).not.toHaveBeenCalled();
-  });
-
-  it("confirms a memory action only with matching committed events and refreshed revisions", async () => {
-    api.acceptTurn.mockResolvedValue({ run_id: "run-A", status: "pending" });
-    api.getRun.mockResolvedValue(run("running"));
-    await render();
-    await act(async () => { controller.prepareMemoryAction("fact-1", 1, "correct"); });
-    await act(async () => { await controller.sendMessage(); });
-    api.getRun.mockResolvedValue(run("succeeded"));
-    api.getRunEventLog.mockResolvedValue({ items: [{ ...terminalEvent, type: "memory.committed",
-      payload: { fact_id: "fact-1", fact_version: 2, operation: "revise" } }], total: 1 });
-    const refreshed = memory(2);
-    refreshed.facts[0].revisions = [{ id: "revision-2", operation: "revise", fact_version: 2,
-      value: "tea", run_id: "run-A", action_id: null, predecessor_revision_ids: [], evidence: [],
-      created_at: terminalEvent.occurred_at }];
-    api.getSubjectMemories.mockResolvedValue(refreshed);
-    await act(async () => { streams.calls[0].handlers.onTerminal(terminalEvent); });
-    await flush();
-    expect(controller.memoryAction?.outcome).toBe("Matching memory revision committed. Check the refreshed fact history below.");
   });
 
   it("ignores an error from an obsolete same-conversation read", async () => {
@@ -405,47 +361,58 @@ describe("Agent Studio async ownership", () => {
     expect(controller.conversation?.messages.map((item) => item.id)).toEqual(["message-1", "message-100"]);
   });
 
-  it("removes from a subject without selecting or restoring a conversation", async () => {
-    navigation.state.query = new URLSearchParams();
-    vi.stubGlobal("confirm", vi.fn(() => true));
-    api.removeSavedMemory.mockResolvedValue({ action_id: "action-1", outcome: "committed",
-      revision_ids: ["revision-1"], resulting_memory_generation: 2, idempotent_replay: false,
-      committed_at: "2026-09-24T00:00:00Z" });
-    api.getSubjectMemories.mockResolvedValueOnce(memory(1)).mockResolvedValueOnce({
-      subject_id: "subject-A", memory_generation: 2, facts: [{ ...memory(1).facts[0],
-        status: "forgotten", value: null, version: 2,
-        revisions: [{ id: "revision-1", operation: "forget", fact_version: 2, value: null,
-          run_id: null, action_id: "action-1", predecessor_revision_ids: [], evidence: [],
-          created_at: "2026-09-24T00:00:00Z" }] }],
-    });
+  it("loads saved chat and runs even when Memory inspection fails", async () => {
+    api.getRelationshipMemories.mockRejectedValue(new Error("Memory unavailable"));
+    api.getMemoryOperations.mockRejectedValue(new Error("Memory unavailable"));
     await render();
-    await act(async () => { await controller.inspectSubject("subject-A"); });
-    expect(controller.session).toBeNull();
-    await act(async () => { await controller.removeSavedFact("fact-1", 1); });
-    expect(api.removeSavedMemory).toHaveBeenCalledWith("subject-A", expect.objectContaining({
-      expected_memory_generation: 1, targets: [{ fact_id: "fact-1", expected_version: 1 }],
-    }));
-    expect(controller.removal?.receipt?.action_id).toBe("action-1");
-    expect(controller.inspectedMemories?.facts[0].status).toBe("forgotten");
-    expect(api.acceptTurn).not.toHaveBeenCalled();
-    expect(api.restoreAgentStudioSession).not.toHaveBeenCalled();
+    expect(controller.session?.conversation.id).toBe("A");
+    expect(controller.conversation?.id).toBe("A");
+    expect(controller.error).toBe("");
+    expect(controller.memory.memories.data).toBeNull();
+    expect(controller.memory.memories.error).toBe("Memory unavailable");
+    expect(controller.memory.deliveries.data).not.toBeNull();
   });
 
-  it("recovers an ambiguous removal with the original action key", async () => {
-    navigation.state.query = new URLSearchParams();
-    vi.stubGlobal("confirm", vi.fn(() => true));
-    api.removeSavedMemory.mockRejectedValueOnce(new Error("network lost"))
-      .mockResolvedValueOnce({ action_id: "action-1", outcome: "committed", revision_ids: ["revision-1"],
-        resulting_memory_generation: 2, idempotent_replay: true, committed_at: "2026-09-24T00:00:00Z" });
-    api.getSubjectMemories.mockResolvedValue(memory(1));
+  it("keeps paused input guarded and reuses the Retry key after an ambiguous response", async () => {
+    api.getAgentStudioSession.mockImplementation(async (id: string) => session(id, run("paused")));
+    api.retryRun.mockRejectedValueOnce(new Error("response lost")).mockResolvedValueOnce({ run_id: "run-A", status: "pending", events_url: "/events", idempotent_replay: true });
+    api.getRun.mockResolvedValue(run("pending"));
     await render();
-    await act(async () => { await controller.inspectSubject("subject-A"); });
-    await act(async () => { await controller.removeSavedFact("fact-1", 1); });
-    expect(controller.removal?.unconfirmed).toBe(true);
-    await act(async () => { await controller.retryRemoval(); });
-    expect(api.removeSavedMemory).toHaveBeenCalledTimes(2);
-    expect(api.removeSavedMemory.mock.calls[0][1].idempotency_key)
-      .toBe(api.removeSavedMemory.mock.calls[1][1].idempotency_key);
-    expect(controller.removal?.receipt?.idempotent_replay).toBe(true);
+    expect(controller.activeRun).toBe(true);
+    expect(streams.calls).toHaveLength(0);
+    await act(async () => { controller.setMessage("must not send"); });
+    await act(async () => { await controller.sendMessage(); });
+    expect(api.acceptTurn).not.toHaveBeenCalled();
+    await act(async () => { await controller.retryPausedRun(); });
+    expect(controller.error).toBe("response lost");
+    await act(async () => { await controller.retryPausedRun(); });
+    expect(api.retryRun.mock.calls[0]).toEqual(api.retryRun.mock.calls[1]);
+    expect(api.retryRun.mock.calls[1].slice(0, 2)).toEqual(["run-A", 1]);
+    expect(streams.calls).toHaveLength(1);
+    expect(api.getRun).toHaveBeenCalledWith("run-A");
+    expect(api.acceptTurn).not.toHaveBeenCalled();
+  });
+
+  it("rejects a mismatched Retry receipt before opening a monitor", async () => {
+    api.getAgentStudioSession.mockImplementation(async (id: string) => session(id, run("paused")));
+    api.retryRun.mockResolvedValue({ run_id: "other-run", status: "pending" });
+    await render();
+    await act(async () => { await controller.retryPausedRun(); });
+    expect(controller.error).toContain("unexpected saved run identity");
+    expect(api.getRun).not.toHaveBeenCalled();
+    expect(streams.calls).toHaveLength(0);
+  });
+
+  it("reuses one turn key after ambiguous acceptance and does not restore known-saved input", async () => {
+    api.acceptTurn.mockRejectedValueOnce(new Error("accept response lost")).mockResolvedValueOnce({ run_id: "run-A", status: "pending" });
+    await render();
+    await act(async () => { controller.setMessage("one immutable input"); });
+    await act(async () => { await controller.sendMessage(); });
+    expect(controller.message).toBe("one immutable input");
+    api.getRun.mockRejectedValueOnce(new Error("run read failed"));
+    await act(async () => { await controller.sendMessage(); });
+    expect(api.acceptTurn.mock.calls[0]).toEqual(api.acceptTurn.mock.calls[1]);
+    expect(controller.message).toBe("");
+    expect(controller.error).toBe("run read failed");
   });
 });

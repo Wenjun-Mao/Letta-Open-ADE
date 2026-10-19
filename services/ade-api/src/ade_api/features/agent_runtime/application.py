@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncEngine
+from ade_api.integrations.hindsight import HindsightClient
 
 from ade_api.features.prompt_center import (
     PromptTemplateReader,
@@ -28,6 +29,7 @@ from .database_boundary import RuntimeDatabase
 from .definition_service import DefinitionService
 from .evaluation_sessions import EvaluationSessionService
 from .errors import RuntimeNotReady
+from .memory_inspection import MemoryInspectionService
 from .persistence.database import create_persistence_engine
 from .resource_service import ResourceService
 from .router_transport import RouterTransport
@@ -47,6 +49,7 @@ class AgentRuntimeApplication:
         settings: AdeApiSettings,
         prompt_registry: PromptTemplateReader,
         router_transport: RouterTransport,
+        hindsight_client: HindsightClient | None = None,
     ) -> None:
         self.engine = engine
         self.database = RuntimeDatabase(
@@ -59,6 +62,9 @@ class AgentRuntimeApplication:
             router_transport=router_transport,
         )
         self.resources = ResourceService(self.database)
+        self.memory_inspection = MemoryInspectionService(
+            database=self.database, settings=settings, client=hindsight_client
+        )
         self.agent_studio = PurposeSessionService(
             database=self.database,
             definitions=self.definitions,
@@ -79,6 +85,7 @@ class AgentRuntimeApplication:
         )
 
     async def aclose(self) -> None:
+        await self.memory_inspection.aclose()
         await self.engine.dispose()
 
     async def get_agent_studio_options(self) -> dict[str, Any]:

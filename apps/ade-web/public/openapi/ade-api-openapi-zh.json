@@ -371,16 +371,16 @@
       },
       "AgentStudioBundleResponse": {
         "properties": {
+          "compaction_model_key": {
+            "title": "压缩 模型 键",
+            "type": "string"
+          },
           "deployments": {
             "items": {
               "$ref": "#/components/schemas/DeploymentSnapshotResponse"
             },
             "title": "部署列表",
             "type": "array"
-          },
-          "embedding_model_key": {
-            "title": "向量模型 模型 键",
-            "type": "string"
           },
           "key": {
             "title": "键",
@@ -409,10 +409,6 @@
           "qualification_state": {
             "$ref": "#/components/schemas/QualificationState"
           },
-          "reviewer_model_key": {
-            "title": "评审器 模型 键",
-            "type": "string"
-          },
           "tool_names": {
             "items": {
               "type": "string"
@@ -425,8 +421,7 @@
           "key",
           "name",
           "model_key",
-          "reviewer_model_key",
-          "embedding_model_key",
+          "compaction_model_key",
           "prompt_key",
           "persona_key",
           "tool_names",
@@ -477,65 +472,6 @@
           "bundles"
         ],
         "title": "智能体 工作台 选项 响应",
-        "type": "object"
-      },
-      "AgentStudioResetRequest": {
-        "additionalProperties": false,
-        "properties": {
-          "confirmation": {
-            "const": "RESET ADE AGENT STUDIO",
-            "title": "确认",
-            "type": "string"
-          },
-          "idempotency_key": {
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "幂等性 键",
-            "type": "string"
-          }
-        },
-        "required": [
-          "idempotency_key",
-          "confirmation"
-        ],
-        "title": "智能体 工作台 重置 请求",
-        "type": "object"
-      },
-      "AgentStudioResetResponse": {
-        "properties": {
-          "deleted_counts": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "title": "已删除 计数",
-            "type": "object"
-          },
-          "idempotent_replay": {
-            "default": false,
-            "title": "幂等重放",
-            "type": "boolean"
-          },
-          "receipt_id": {
-            "title": "回执 ID",
-            "type": "string"
-          },
-          "reset_at": {
-            "format": "date-time",
-            "title": "重置 时间",
-            "type": "string"
-          },
-          "reset_generation": {
-            "title": "重置世代",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "receipt_id",
-          "reset_generation",
-          "deleted_counts",
-          "reset_at"
-        ],
-        "title": "智能体 工作台 重置 响应",
         "type": "object"
       },
       "AgentStudioSessionListResponse": {
@@ -2608,17 +2544,17 @@
       "CreateAgentDefinitionRequest": {
         "additionalProperties": false,
         "properties": {
+          "compaction_model_key": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "压缩 模型 键",
+            "type": "string"
+          },
           "definition_key": {
             "maxLength": 64,
             "minLength": 2,
             "pattern": "^[a-z][a-z0-9_-]+$",
             "title": "定义 键",
-            "type": "string"
-          },
-          "embedding_model_key": {
-            "maxLength": 300,
-            "minLength": 1,
-            "title": "向量模型 模型 键",
             "type": "string"
           },
           "expected_current_version": {
@@ -2653,16 +2589,10 @@
             "type": "string"
           },
           "prompt_key": {
-            "default": "chat_v20260516",
+            "default": "chat_v20261019",
             "maxLength": 128,
             "minLength": 1,
             "title": "提示词键",
-            "type": "string"
-          },
-          "reviewer_model_key": {
-            "maxLength": 300,
-            "minLength": 1,
-            "title": "评审器 模型 键",
             "type": "string"
           },
           "tool_names": {
@@ -2682,8 +2612,7 @@
           "definition_key",
           "name",
           "model_key",
-          "reviewer_model_key",
-          "embedding_model_key"
+          "compaction_model_key"
         ],
         "title": "创建 智能体 定义 请求",
         "type": "object"
@@ -2774,7 +2703,7 @@
             ],
             "title": "智能体 定义 ID"
           },
-          "embedding_model_key": {
+          "compaction_model_key": {
             "anyOf": [
               {
                 "maxLength": 300,
@@ -2785,7 +2714,7 @@
                 "type": "null"
               }
             ],
-            "title": "向量模型 模型 键"
+            "title": "压缩 模型 键"
           },
           "idempotency_key": {
             "maxLength": 200,
@@ -2827,24 +2756,11 @@
             "type": "string"
           },
           "prompt_key": {
-            "default": "chat_v20260516",
+            "default": "chat_v20261019",
             "maxLength": 128,
             "minLength": 1,
             "title": "提示词键",
             "type": "string"
-          },
-          "reviewer_model_key": {
-            "anyOf": [
-              {
-                "maxLength": 300,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "评审器 模型 键"
           },
           "subject_display_name": {
             "default": "",
@@ -2942,6 +2858,249 @@
         "title": "当前 服务栈 冒烟测试 运行 请求",
         "type": "object"
       },
+      "DeliveryListResponse": {
+        "properties": {
+          "blocked_operation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "阻塞 操作 ID"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "计数",
+            "type": "object"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DeliveryResponse"
+            },
+            "title": "条目",
+            "type": "array"
+          },
+          "limit": {
+            "title": "限制",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "偏移量",
+            "type": "integer"
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/RelationshipResponse"
+          },
+          "total": {
+            "title": "总数",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "relationship",
+          "total",
+          "limit",
+          "offset",
+          "counts",
+          "blocked_operation_id",
+          "items"
+        ],
+        "title": "投递 列表 响应",
+        "type": "object"
+      },
+      "DeliveryResponse": {
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "已接受 时间"
+          },
+          "attempt_count": {
+            "title": "尝试 计数",
+            "type": "integer"
+          },
+          "blocked_by_operation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "阻塞 按 操作 ID"
+          },
+          "check_count": {
+            "title": "检查 计数",
+            "type": "integer"
+          },
+          "conversation_id": {
+            "title": "会话 ID",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "创建时间",
+            "type": "string"
+          },
+          "document_id": {
+            "title": "文档 ID",
+            "type": "string"
+          },
+          "last_checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "最近 已检查 时间"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "最近 错误 源码"
+          },
+          "message_id": {
+            "title": "消息 ID",
+            "type": "string"
+          },
+          "message_sequence": {
+            "title": "消息 序号",
+            "type": "integer"
+          },
+          "native_progress": {
+            "additionalProperties": true,
+            "title": "原生运行时 进度",
+            "type": "object"
+          },
+          "native_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时 状态"
+          },
+          "operation_id": {
+            "title": "操作 ID",
+            "type": "string"
+          },
+          "queue_age_seconds": {
+            "title": "队列 时长 秒",
+            "type": "number"
+          },
+          "relationship_sequence": {
+            "title": "关系 序号",
+            "type": "integer"
+          },
+          "retained_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "已留存 时间"
+          },
+          "retry_requested": {
+            "title": "重试 请求的",
+            "type": "boolean"
+          },
+          "role": {
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "角色",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "submitting",
+              "processing",
+              "retained",
+              "failed",
+              "uncertain"
+            ],
+            "title": "状态",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "更新时间",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operation_id",
+          "document_id",
+          "message_id",
+          "conversation_id",
+          "role",
+          "message_sequence",
+          "relationship_sequence",
+          "status",
+          "attempt_count",
+          "check_count",
+          "retry_requested",
+          "last_error_code",
+          "native_status",
+          "native_progress",
+          "accepted_at",
+          "retained_at",
+          "last_checked_at",
+          "created_at",
+          "updated_at",
+          "queue_age_seconds",
+          "blocked_by_operation_id"
+        ],
+        "title": "投递 响应",
+        "type": "object"
+      },
+      "DeliveryRetryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_check_count": {
+            "minimum": 0.0,
+            "title": "期望 检查 计数",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_check_count"
+        ],
+        "title": "投递 重试 请求",
+        "type": "object"
+      },
       "DeploymentSnapshotResponse": {
         "properties": {
           "deployment_id": {
@@ -2967,8 +3126,7 @@
           "role": {
             "enum": [
               "conversation",
-              "reviewer",
-              "retriever"
+              "compaction"
             ],
             "title": "角色",
             "type": "string"
@@ -2987,31 +3145,6 @@
           "qualification_state"
         ],
         "title": "部署 快照 响应",
-        "type": "object"
-      },
-      "EvaluationSessionPurgeResponse": {
-        "properties": {
-          "already_purged": {
-            "default": false,
-            "title": "已 已清理",
-            "type": "boolean"
-          },
-          "conversation_id": {
-            "title": "会话 ID",
-            "type": "string"
-          },
-          "deleted_counts": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "title": "已删除 计数",
-            "type": "object"
-          }
-        },
-        "required": [
-          "conversation_id"
-        ],
-        "title": "评估 会话 清除 响应",
         "type": "object"
       },
       "EvaluationSessionResponse": {
@@ -3070,17 +3203,13 @@
               }
             ]
           },
-          "memories": {
-            "$ref": "#/components/schemas/SubjectMemoriesResponse"
-          },
           "memory_subject": {
             "$ref": "#/components/schemas/MemorySubjectResponse"
           }
         },
         "required": [
           "conversation",
-          "memory_subject",
-          "memories"
+          "memory_subject"
         ],
         "title": "评估 会话 状态 响应",
         "type": "object"
@@ -3315,94 +3444,57 @@
         "title": "标注 生成 请求",
         "type": "object"
       },
-      "MemoryEvidenceResponse": {
+      "LearnedMemoryResponse": {
         "properties": {
-          "authority_role": {
-            "default": "user_assertion",
-            "enum": [
-              "user_assertion",
-              "user_endorsement",
-              "user_resolution",
-              "user_antecedent",
-              "assistant_referent"
+          "consolidated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "权威来源 角色",
+            "title": "已归纳 时间"
+          },
+          "consolidation_failed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "归纳 失败 时间"
+          },
+          "context": {
+            "default": "",
+            "title": "上下文",
             "type": "string"
           },
-          "conversation_id": {
-            "title": "会话 ID",
+          "date": {
+            "default": "",
+            "title": "日期",
             "type": "string"
           },
-          "end_char": {
-            "title": "结束 字符",
-            "type": "integer"
+          "document_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "文档 ID"
           },
-          "message_id": {
-            "title": "消息 ID",
-            "type": "string"
-          },
-          "message_sequence": {
-            "title": "消息 序号",
-            "type": "integer"
-          },
-          "message_sha256": {
-            "title": "消息 SHA 256",
-            "type": "string"
-          },
-          "quote": {
-            "title": "原文摘录",
-            "type": "string"
-          },
-          "start_char": {
-            "title": "开始 字符",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "message_id",
-          "conversation_id",
-          "message_sequence",
-          "start_char",
-          "end_char",
-          "quote",
-          "message_sha256"
-        ],
-        "title": "记忆 证据 响应",
-        "type": "object"
-      },
-      "MemoryFactResponse": {
-        "properties": {
-          "assertion_schema_version": {
-            "default": 1,
-            "minimum": 1.0,
-            "title": "陈述 Schema 版本",
-            "type": "integer"
-          },
-          "entity_id": {
-            "title": "实体 ID",
-            "type": "string"
-          },
-          "entity_kind": {
-            "title": "实体 类别",
-            "type": "string"
-          },
-          "entity_label": {
-            "title": "实体 标签",
+          "entities": {
+            "default": "",
+            "title": "实体",
             "type": "string"
           },
           "fact_type": {
-            "title": "事实 类型",
-            "type": "string"
-          },
-          "id": {
-            "title": "ID",
-            "type": "string"
-          },
-          "key": {
-            "title": "键",
-            "type": "string"
-          },
-          "qualifier": {
             "anyOf": [
               {
                 "type": "string"
@@ -3411,257 +3503,67 @@
                 "type": "null"
               }
             ],
-            "title": "限定符"
+            "title": "事实 类型"
           },
-          "revisions": {
+          "id": {
+            "title": "ID",
+            "type": "string"
+          },
+          "mentioned_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "提及 时间"
+          },
+          "occurred_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "已发生 结束"
+          },
+          "occurred_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "已发生 开始"
+          },
+          "source_memory_ids": {
             "items": {
-              "$ref": "#/components/schemas/MemoryRevisionResponse"
+              "type": "string"
             },
-            "title": "修订",
+            "title": "来源 记忆 ID",
             "type": "array"
           },
-          "status": {
-            "enum": [
-              "active",
-              "inactive",
-              "superseded",
-              "forgotten"
-            ],
+          "state": {
+            "default": "valid",
             "title": "状态",
             "type": "string"
           },
-          "updated_at": {
-            "format": "date-time",
-            "title": "更新时间",
+          "text": {
+            "title": "文本",
             "type": "string"
-          },
-          "value": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "值"
-          },
-          "version": {
-            "title": "版本",
-            "type": "integer"
           }
         },
         "required": [
           "id",
-          "key",
-          "fact_type",
-          "entity_id",
-          "entity_kind",
-          "entity_label",
-          "value",
-          "status",
-          "version",
-          "revisions",
-          "updated_at"
+          "text"
         ],
-        "title": "记忆 事实 响应",
-        "type": "object"
-      },
-      "MemoryOperation": {
-        "enum": [
-          "add",
-          "correct",
-          "forget",
-          "revise",
-          "end",
-          "reassert"
-        ],
-        "title": "记忆 操作",
-        "type": "string"
-      },
-      "MemoryRemovalRequest": {
-        "additionalProperties": false,
-        "properties": {
-          "expected_memory_generation": {
-            "minimum": 1.0,
-            "title": "期望 记忆 代次",
-            "type": "integer"
-          },
-          "idempotency_key": {
-            "maxLength": 200,
-            "minLength": 1,
-            "title": "幂等性 键",
-            "type": "string"
-          },
-          "targets": {
-            "items": {
-              "$ref": "#/components/schemas/MemoryRemovalTarget"
-            },
-            "maxItems": 20,
-            "minItems": 1,
-            "title": "目标列表",
-            "type": "array"
-          }
-        },
-        "required": [
-          "idempotency_key",
-          "expected_memory_generation",
-          "targets"
-        ],
-        "title": "记忆 移除 请求",
-        "type": "object"
-      },
-      "MemoryRemovalResponse": {
-        "properties": {
-          "action_id": {
-            "title": "动作 ID",
-            "type": "string"
-          },
-          "committed_at": {
-            "format": "date-time",
-            "title": "已提交 时间",
-            "type": "string"
-          },
-          "idempotent_replay": {
-            "default": false,
-            "title": "幂等重放",
-            "type": "boolean"
-          },
-          "outcome": {
-            "const": "committed",
-            "title": "结果",
-            "type": "string"
-          },
-          "resulting_memory_generation": {
-            "minimum": 2.0,
-            "title": "变更后 记忆 代次",
-            "type": "integer"
-          },
-          "revision_ids": {
-            "items": {
-              "type": "string"
-            },
-            "title": "修订 ID",
-            "type": "array"
-          }
-        },
-        "required": [
-          "action_id",
-          "outcome",
-          "revision_ids",
-          "resulting_memory_generation",
-          "committed_at"
-        ],
-        "title": "记忆 移除 响应",
-        "type": "object"
-      },
-      "MemoryRemovalTarget": {
-        "additionalProperties": false,
-        "properties": {
-          "expected_version": {
-            "minimum": 1.0,
-            "title": "期望 版本",
-            "type": "integer"
-          },
-          "fact_id": {
-            "format": "uuid",
-            "title": "事实 ID",
-            "type": "string"
-          }
-        },
-        "required": [
-          "fact_id",
-          "expected_version"
-        ],
-        "title": "记忆 移除 目标",
-        "type": "object"
-      },
-      "MemoryRevisionResponse": {
-        "properties": {
-          "action_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "动作 ID"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "创建时间",
-            "type": "string"
-          },
-          "evidence": {
-            "items": {
-              "$ref": "#/components/schemas/MemoryEvidenceResponse"
-            },
-            "title": "证据",
-            "type": "array"
-          },
-          "fact_version": {
-            "title": "事实 版本",
-            "type": "integer"
-          },
-          "id": {
-            "title": "ID",
-            "type": "string"
-          },
-          "operation": {
-            "$ref": "#/components/schemas/MemoryOperation"
-          },
-          "predecessor_revision_ids": {
-            "items": {
-              "type": "string"
-            },
-            "title": "前驱 修订 ID",
-            "type": "array"
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "原因"
-          },
-          "run_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "运行 ID"
-          },
-          "value": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "值"
-          }
-        },
-        "required": [
-          "id",
-          "operation",
-          "fact_version",
-          "value",
-          "evidence",
-          "created_at"
-        ],
-        "title": "记忆 修订 响应",
+        "title": "已形成 记忆 响应",
         "type": "object"
       },
       "MemorySubjectListResponse": {
@@ -3715,12 +3617,6 @@
           "id": {
             "title": "ID",
             "type": "string"
-          },
-          "memory_generation": {
-            "default": 1,
-            "minimum": 1.0,
-            "title": "记忆 代次",
-            "type": "integer"
           },
           "updated_at": {
             "anyOf": [
@@ -4068,6 +3964,98 @@
         "title": "模型 目录 来源 响应",
         "type": "object"
       },
+      "NativeOperationResponse": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "创建时间"
+          },
+          "native_progress": {
+            "additionalProperties": true,
+            "title": "原生运行时 进度",
+            "type": "object"
+          },
+          "operation_id": {
+            "title": "操作 ID",
+            "type": "string"
+          },
+          "operation_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "操作 类型"
+          },
+          "status": {
+            "title": "状态",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "更新时间"
+          }
+        },
+        "required": [
+          "operation_id",
+          "status",
+          "native_progress"
+        ],
+        "title": "原生运行时 操作 响应",
+        "type": "object"
+      },
+      "NativeOperationsResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NativeOperationResponse"
+            },
+            "title": "条目",
+            "type": "array"
+          },
+          "limit": {
+            "title": "限制",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "偏移量",
+            "type": "integer"
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/RelationshipResponse"
+          },
+          "total": {
+            "title": "总数",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "relationship",
+          "total",
+          "limit",
+          "offset",
+          "items"
+        ],
+        "title": "原生运行时 操作 响应",
+        "type": "object"
+      },
       "PersonaTemplatePatchRequest": {
         "properties": {
           "content": {
@@ -4242,6 +4230,99 @@
         "title": "资格 状态",
         "type": "string"
       },
+      "RelationshipMemoriesResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LearnedMemoryResponse"
+            },
+            "title": "条目",
+            "type": "array"
+          },
+          "limit": {
+            "title": "限制",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "偏移量",
+            "type": "integer"
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/RelationshipResponse"
+          },
+          "total": {
+            "title": "总数",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "relationship",
+          "total",
+          "limit",
+          "offset",
+          "items"
+        ],
+        "title": "关系 记忆 响应",
+        "type": "object"
+      },
+      "RelationshipResponse": {
+        "properties": {
+          "character_root_id": {
+            "title": "角色 根 ID",
+            "type": "string"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "最近 错误 源码"
+          },
+          "state": {
+            "title": "状态",
+            "type": "string"
+          },
+          "subject_id": {
+            "title": "主体 ID",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_id",
+          "character_root_id",
+          "state",
+          "last_error_code"
+        ],
+        "title": "关系 响应",
+        "type": "object"
+      },
+      "RetryRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_attempt_count": {
+            "minimum": 1.0,
+            "title": "期望 尝试 计数",
+            "type": "integer"
+          },
+          "idempotency_key": {
+            "maxLength": 200,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "幂等性 键",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotency_key",
+          "expected_attempt_count"
+        ],
+        "title": "重试 运行 请求",
+        "type": "object"
+      },
       "RunEventListResponse": {
         "properties": {
           "items": {
@@ -4363,12 +4444,6 @@
       },
       "RunResponse": {
         "properties": {
-          "accepted_memory_generation": {
-            "default": 1,
-            "minimum": 1.0,
-            "title": "已接受 记忆 代次",
-            "type": "integer"
-          },
           "attempt_count": {
             "title": "尝试 计数",
             "type": "integer"
@@ -4432,6 +4507,18 @@
             "title": "ID",
             "type": "string"
           },
+          "paused_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "已暂停 时间"
+          },
           "qualification_state": {
             "$ref": "#/components/schemas/QualificationState"
           },
@@ -4476,6 +4563,7 @@
         "enum": [
           "pending",
           "running",
+          "paused",
           "succeeded",
           "failed",
           "cancelled"
@@ -4584,31 +4672,60 @@
         "title": "运行时 工作器 健康状态 响应",
         "type": "object"
       },
-      "SubjectMemoriesResponse": {
+      "SourceResponse": {
         "properties": {
-          "facts": {
-            "items": {
-              "$ref": "#/components/schemas/MemoryFactResponse"
-            },
-            "title": "事实",
-            "type": "array"
-          },
-          "memory_generation": {
-            "default": 1,
-            "minimum": 1.0,
-            "title": "记忆 代次",
-            "type": "integer"
-          },
-          "subject_id": {
-            "title": "主体 ID",
+          "content": {
+            "title": "内容",
             "type": "string"
+          },
+          "definition_version_id": {
+            "title": "定义 版本 ID",
+            "type": "string"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliveryResponse"
+          },
+          "native_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时 上下文"
+          },
+          "native_original_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "原生运行时 原始 文本"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "已发生 时间",
+            "type": "string"
+          },
+          "relationship": {
+            "$ref": "#/components/schemas/RelationshipResponse"
           }
         },
         "required": [
-          "subject_id",
-          "facts"
+          "relationship",
+          "delivery",
+          "content",
+          "occurred_at",
+          "definition_version_id",
+          "native_original_text",
+          "native_context"
         ],
-        "title": "主体 记忆 响应",
+        "title": "来源 响应",
         "type": "object"
       },
       "TestCenterCatalogOptionsResponse": {
@@ -4975,6 +5092,20 @@
       },
       "TurnContextActivityResponse": {
         "properties": {
+          "automatic_memory_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "自动 记忆 ID"
+          },
           "current_chat": {
             "anyOf": [
               {
@@ -4986,7 +5117,7 @@
             ],
             "title": "当前 对话"
           },
-          "history_run_ids": {
+          "tool_memory_ids": {
             "anyOf": [
               {
                 "items": {
@@ -4998,38 +5129,7 @@
                 "type": "null"
               }
             ],
-            "title": "历史 运行 ID"
-          },
-          "history_sources": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "历史 来源"
-          },
-          "profile_fact_ids": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Profile 事实 ID"
+            "title": "工具 记忆 ID"
           }
         },
         "title": "轮次 上下文 活动 响应",
@@ -7295,52 +7395,6 @@
         ]
       }
     },
-    "/api/v3/agent-studio/reset": {
-      "post": {
-        "operationId": "reset_agent_studio_api_v3_agent_studio_reset_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AgentStudioResetRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AgentStudioResetResponse"
-                }
-              }
-            },
-            "description": "成功响应"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "校验错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "仅重置全新启动的 Agent Studio 状态",
-        "tags": [
-          "智能体运行时"
-        ]
-      }
-    },
     "/api/v3/agent-studio/sessions": {
       "get": {
         "operationId": "list_sessions_api_v3_agent_studio_sessions_get",
@@ -7888,110 +7942,6 @@
         ]
       }
     },
-    "/api/v3/agent-studio/subjects/{subject_id}/memories": {
-      "get": {
-        "operationId": "get_subject_memories_api_v3_agent_studio_subjects__subject_id__memories_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "subject_id",
-            "required": true,
-            "schema": {
-              "title": "主体 ID",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SubjectMemoriesResponse"
-                }
-              }
-            },
-            "description": "成功响应"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "校验错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "检查类型化 Agent Studio 记忆谱系",
-        "tags": [
-          "智能体运行时"
-        ]
-      }
-    },
-    "/api/v3/agent-studio/subjects/{subject_id}/memory-removals": {
-      "post": {
-        "operationId": "remove_subject_memories_api_v3_agent_studio_subjects__subject_id__memory_removals_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "subject_id",
-            "required": true,
-            "schema": {
-              "title": "主体 ID",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/MemoryRemovalRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MemoryRemovalResponse"
-                }
-              }
-            },
-            "description": "成功响应"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "校验错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "通过操作员动作移除指定版本的已保存陈述",
-        "tags": [
-          "智能体运行时"
-        ]
-      }
-    },
     "/api/v3/agent-studio/subjects/{subject_id}/restore": {
       "post": {
         "operationId": "restore_subject_api_v3_agent_studio_subjects__subject_id__restore_post",
@@ -8259,53 +8209,6 @@
         ]
       }
     },
-    "/api/v3/evaluation-sessions/{conversation_id}": {
-      "delete": {
-        "operationId": "purge_evaluation_session_api_v3_evaluation_sessions__conversation_id__delete",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "conversation_id",
-            "required": true,
-            "schema": {
-              "title": "会话 ID",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EvaluationSessionPurgeResponse"
-                }
-              }
-            },
-            "description": "成功响应"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "校验错误"
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "summary": "清除非活动评估会话",
-        "tags": [
-          "智能体运行时"
-        ]
-      }
-    },
     "/api/v3/evaluation-sessions/{conversation_id}/state": {
       "get": {
         "operationId": "get_evaluation_session_state_api_v3_evaluation_sessions__conversation_id__state_get",
@@ -8376,7 +8279,463 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "检查评估会话、类型化记忆和最新运行",
+        "summary": "独立于 Memory 检视已保存的评估会话与最新运行",
+        "tags": [
+          "智能体运行时"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/deliveries": {
+      "get": {
+        "operationId": "list_deliveries_api_v3_memory_subjects__subject_id__characters__character_root_id__deliveries_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "主体 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "角色 根 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "限制",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "偏移量",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryListResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "独立于 Memory 可用性检视关系投递状态",
+        "tags": [
+          "智能体运行时"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/deliveries/{operation_id}/retry": {
+      "post": {
+        "operationId": "retry_delivery_api_v3_memory_subjects__subject_id__characters__character_root_id__deliveries__operation_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "主体 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "角色 根 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "操作 ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryRetryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "重试所选关系中的不可变投递",
+        "tags": [
+          "智能体运行时"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/memories": {
+      "get": {
+        "operationId": "list_memories_api_v3_memory_subjects__subject_id__characters__character_root_id__memories_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "主体 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "角色 根 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "限制",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "偏移量",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RelationshipMemoriesResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "列出同一人物与角色的已形成记忆",
+        "tags": [
+          "智能体运行时"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/operations": {
+      "get": {
+        "operationId": "list_operations_api_v3_memory_subjects__subject_id__characters__character_root_id__operations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "主体 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "角色 根 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "限制",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "偏移量",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativeOperationsResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "列出同一关系的原生处理与归纳操作",
+        "tags": [
+          "智能体运行时"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/operations/{operation_id}": {
+      "get": {
+        "operationId": "get_operation_api_v3_memory_subjects__subject_id__characters__character_root_id__operations__operation_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "主体 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "角色 根 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "operation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "操作 ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NativeOperationResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "检视所选关系中的原生操作",
+        "tags": [
+          "智能体运行时"
+        ]
+      }
+    },
+    "/api/v3/memory/subjects/{subject_id}/characters/{character_root_id}/sources/{document_id}": {
+      "get": {
+        "operationId": "get_source_api_v3_memory_subjects__subject_id__characters__character_root_id__sources__document_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "subject_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "主体 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "character_root_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "角色 根 ID",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "title": "文档 ID",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "检视所选关系中的原始来源",
         "tags": [
           "智能体运行时"
         ]
@@ -8597,6 +8956,63 @@
           }
         ],
         "summary": "流式读取规范化智能体运行事件",
+        "tags": [
+          "智能体运行时"
+        ]
+      }
+    },
+    "/api/v3/runs/{run_id}/retry": {
+      "post": {
+        "operationId": "retry_run_api_v3_runs__run_id__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "运行 ID",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TurnAcceptedResponse"
+                }
+              }
+            },
+            "description": "成功响应"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "校验错误"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "使用已保存输入和新的记忆查询重试暂停的回复",
         "tags": [
           "智能体运行时"
         ]

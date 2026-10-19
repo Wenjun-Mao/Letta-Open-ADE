@@ -1,12 +1,11 @@
 export type QualificationState = "qualified" | "unqualified";
-export type RunStatus = "pending" | "running" | "succeeded" | "failed" | "cancelled";
-export type MemoryOperation = "add" | "correct" | "forget" | "revise" | "end" | "reassert";
+export type RunStatus = "pending" | "running" | "paused" | "succeeded" | "failed" | "cancelled";
 
 export type DeploymentSnapshot = {
   deployment_id: string;
   route_alias: string;
   fingerprint: string;
-  role: "conversation" | "reviewer" | "retriever";
+  role: "conversation" | "compaction";
   lifecycle: string;
   qualification_state: QualificationState;
   fingerprint_payload: Record<string, unknown>;
@@ -35,7 +34,6 @@ export type MemorySubject = {
   external_key: string;
   display_name: string;
   version: number;
-  memory_generation?: number;
   archived_at: string | null;
   created_at: string;
   updated_at: string | null;
@@ -56,7 +54,7 @@ export type Run = {
   id: string;
   conversation_id: string;
   status: RunStatus;
-  accepted_memory_generation?: number;
+  paused_at: string | null;
   qualification_state: QualificationState;
   attempt_count: number;
   timeout_seconds: number;
@@ -67,6 +65,10 @@ export type Run = {
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
+};
+
+export type TurnAccepted = {
+  run_id: string; status: RunStatus; events_url: string; idempotent_replay: boolean;
 };
 
 export type AgentStudioSession = {
@@ -82,8 +84,7 @@ export type AgentStudioBundle = {
   key: string;
   name: string;
   model_key: string;
-  reviewer_model_key: string;
-  embedding_model_key: string;
+  compaction_model_key: string;
   prompt_key: string;
   persona_key: string;
   tool_names: string[];
@@ -137,55 +138,68 @@ export type ConversationState = Conversation & {
   summary: Summary | null;
 };
 
-export type MemoryEvidence = {
+export type MessageSource = {
   message_id: string;
   conversation_id: string;
   message_sequence: number;
-  start_char: number;
-  end_char: number;
-  quote: string;
-  message_sha256: string;
-  authority_role?: "user_assertion" | "user_endorsement" | "user_resolution" | "user_antecedent" | "assistant_referent";
 };
 
-export type MemoryRevision = {
+export type Relationship = {
+  subject_id: string;
+  character_root_id: string;
+  state: string;
+  last_error_code: string | null;
+};
+
+export type LearnedMemory = {
   id: string;
-  operation: MemoryOperation;
-  fact_version: number;
-  value: string | null;
-  run_id: string | null;
-  action_id?: string | null;
-  reason?: "enrich" | "supersede" | "correct" | "unspecified" | "ended" | "invalidated" | "reasserted" | "forgotten" | null;
-  predecessor_revision_ids: string[];
-  evidence: MemoryEvidence[];
-  created_at: string;
+  text: string;
+  context: string;
+  fact_type: string | null;
+  document_id: string | null;
+  date: string;
+  occurred_start: string | null;
+  occurred_end: string | null;
+  mentioned_at: string | null;
+  entities: string;
+  state: string;
+  source_memory_ids: string[];
+  consolidated_at: string | null;
+  consolidation_failed_at: string | null;
 };
 
-export type MemoryFact = {
-  id: string;
-  key: string;
-  fact_type: string;
-  entity_id: string;
-  entity_kind: string;
-  entity_label: string;
-  qualifier: string | null;
-  value: string | null;
-  status: "active" | "inactive" | "forgotten";
-  assertion_schema_version?: number;
-  version: number;
-  revisions: MemoryRevision[];
-  updated_at: string;
+export type RelationshipMemories = {
+  relationship: Relationship; total: number; limit: number; offset: number; items: LearnedMemory[];
 };
 
-export type SubjectMemories = { subject_id: string; memory_generation?: number; facts: MemoryFact[] };
+export type MemoryDelivery = MessageSource & {
+  operation_id: string; document_id: string; relationship_sequence: number;
+  role: "user" | "assistant";
+  status: "queued" | "submitting" | "processing" | "retained" | "failed" | "uncertain";
+  attempt_count: number; check_count: number; retry_requested: boolean;
+  last_error_code: string | null; native_status: string | null;
+  native_progress: Record<string, unknown>;
+  accepted_at: string | null; retained_at: string | null; last_checked_at: string | null;
+  created_at: string; updated_at: string; queue_age_seconds: number; blocked_by_operation_id: string | null;
+};
 
-export type MemoryRemovalReceipt = {
-  action_id: string;
-  outcome: "committed";
-  revision_ids: string[];
-  resulting_memory_generation: number;
-  idempotent_replay: boolean;
-  committed_at: string;
+export type MemoryDeliveries = {
+  relationship: Relationship; total: number; limit: number; offset: number;
+  counts: Record<string, number>; blocked_operation_id: string | null; items: MemoryDelivery[];
+};
+
+export type MemorySource = {
+  relationship: Relationship; delivery: MemoryDelivery; content: string; occurred_at: string;
+  definition_version_id: string; native_original_text: string | null; native_context: string | null;
+};
+
+export type MemoryOperation = {
+  operation_id: string; operation_type: string | null; status: string;
+  created_at: string | null; updated_at: string | null; native_progress: Record<string, unknown>;
+};
+
+export type MemoryOperations = {
+  relationship: Relationship; total: number; limit: number; offset: number; items: MemoryOperation[];
 };
 
 export type RunEvent = {
@@ -205,16 +219,15 @@ export type RunEvent = {
 export type TurnActivity = {
   run_id: string;
   status: RunStatus;
-  provider: Record<"generation" | "reviewer" | "embedding" | "other", number>;
+  provider: Record<"generation" | "compaction" | "other", number>;
   provider_complete: boolean;
   provider_observed: boolean;
   tools: Array<{ name: string; succeeded: number; failed: number; unresolved: number }>;
   tools_complete: boolean;
   context: {
     current_chat: boolean | null;
-    profile_fact_ids: string[] | null;
-    history_run_ids: string[] | null;
-    history_sources: Array<{ run_id: string; conversation_id: string }> | null;
+    automatic_memory_ids: string[] | null;
+    tool_memory_ids: string[] | null;
   };
 };
 
@@ -222,8 +235,7 @@ export type CreateDefinition = {
   definition_key: string;
   name: string;
   model_key: string;
-  reviewer_model_key: string;
-  embedding_model_key: string;
+  compaction_model_key: string;
   prompt_key: string;
   persona_key: string;
   tool_names: Array<"search_memory" | "get_weather">;

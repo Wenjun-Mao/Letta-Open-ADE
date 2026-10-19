@@ -7,6 +7,7 @@ import { openRunEventStream } from "./event-stream";
 import type { Run, RunEvent } from "./types";
 
 export const TERMINAL_RUN_STATUSES = new Set(["succeeded", "failed", "cancelled"]);
+export const QUIESCENT_RUN_STATUSES = new Set([...TERMINAL_RUN_STATUSES, "paused"]);
 type OwnershipGuard = () => boolean;
 type RunMonitorCallbacks = {
   bindSelection: (conversationId: string) => OwnershipGuard;
@@ -74,7 +75,7 @@ export function useRunMonitor({ bindSelection, onEvent, onSnapshot, onComplete, 
         .then(([nextRun, eventLog]) => {
           if (!isCurrent() || nextRun.conversation_id !== conversationId) return;
           onSnapshot(nextRun, eventLog.items, isCurrent);
-          if (TERMINAL_RUN_STATUSES.has(nextRun.status)) void finishRun();
+          if (QUIESCENT_RUN_STATUSES.has(nextRun.status)) void finishRun();
         })
         .catch((error) => { if (isCurrent()) onError(error); });
     }, 1500);

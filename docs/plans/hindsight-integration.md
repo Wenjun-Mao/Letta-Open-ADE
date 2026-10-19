@@ -207,8 +207,13 @@ These are scoped increments, not a claim that M0-M6 is complete.
   source mismatches remain visible and were not rebound. This is not a full
   repository pass or a waiver of any new-path gate.
 - Backend source/API/SQL checks cover required recall and saved-input Retry.
-  Remaining maintained-test reconciliation, relationship inspection/browser
-  wiring, complete actual-product capture, the six live probe slots and M6
+  Relationship-scoped inspection and independent browser Memory loading are now
+  implemented under [ADR 0074](../adr/0074-relationship-memory-inspection.md), with
+  182 passing focused backend checks (40 application-role SQL cases), frontend
+  production build and lint. Browser mechanics checks exposed and repaired
+  the Retry-receipt mismatch and intrinsic-width overflow; final source-bound
+  browser replay remains required. Remaining maintained-test reconciliation,
+  complete actual-product capture, the six live probe slots and M6
   native product fault/closeout gates remain pending. Do not count this backend
   checkpoint as full M2/M3 or M0-M6 completion.
 

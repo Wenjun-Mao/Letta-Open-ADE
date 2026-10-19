@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from typing import Any, Protocol
+from .memory_inspection import MemoryInspectionService
 
 from .contracts import (
     AcceptTurnRequest,
@@ -15,6 +16,8 @@ from .contracts import (
 
 
 class AgentRuntimeService(Protocol):
+    memory_inspection: MemoryInspectionService
+
     async def get_agent_studio_options(self) -> dict[str, Any]: ...
 
     async def create_agent_studio_session(

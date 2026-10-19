@@ -23,16 +23,16 @@ def start(run_id, request_id, stage, operation="chat_completion", attempt=1):
     )
 
 
-def test_success_counts_dispatches_tools_and_admitted_sources() -> None:
+def test_success_counts_reply_compaction_tools_and_relationship_memory() -> None:
     run = {"id": "run", "status": "succeeded", "attempt_count": 1}
     events = [
         start("run", "catalog", "catalog", "catalog"),
         start("run", "a", "conversation"),
         event("run", "model.response.completed", {"request_id": "a"}),
-        start("run", "b", "reviewer"),
+        start("run", "b", "compaction"),
         event("run", "model.response.completed", {"request_id": "b"}),
-        start("run", "c", "history_ranking", "embeddings"),
-        start("run", "c", "history_ranking", "embeddings"),
+        start("run", "c", "conversation"),
+        start("run", "c", "conversation"),
         event("run", "model.response.completed", {"request_id": "c"}),
         event(
             "run", "tool.call.requested", {"call_id": "tool", "name": "search_memory"}
@@ -45,7 +45,11 @@ def test_success_counts_dispatches_tools_and_admitted_sources() -> None:
         event(
             "run",
             "context.built",
-            {"section_tokens": {"recent_messages": 0}, "retrieved_fact_ids": ["fact"]},
+            {
+                "current_chat": False,
+                "automatic_memory_ids": ["automatic"],
+                "tool_memory_ids": ["searched"],
+            },
         ),
         event(
             "run",
@@ -63,16 +67,13 @@ def test_success_counts_dispatches_tools_and_admitted_sources() -> None:
             "run_id": "run",
             "attempt_number": 1,
             "status": "succeeded",
-            "provider_outcome": {"admitted_history_run_ids": ["older"]},
+            "provider_outcome": {},
         }
     ]
-    summary = conversation_activity([run], events, attempts, {"older": "source-chat"})[
-        0
-    ]
+    summary = conversation_activity([run], events, attempts)[0]
     assert summary["provider"] == {
-        "generation": 1,
-        "reviewer": 1,
-        "embedding": 1,
+        "generation": 2,
+        "compaction": 1,
         "other": 0,
     }
     assert summary["provider_complete"] is True
@@ -81,9 +82,8 @@ def test_success_counts_dispatches_tools_and_admitted_sources() -> None:
     ]
     assert summary["context"] == {
         "current_chat": False,
-        "profile_fact_ids": ["fact"],
-        "history_run_ids": ["older"],
-        "history_sources": [{"run_id": "older", "conversation_id": "source-chat"}],
+        "automatic_memory_ids": ["automatic"],
+        "tool_memory_ids": ["searched"],
     }
 
 

@@ -1,13 +1,13 @@
 import { runEventsUrl } from "./api";
 import type { RunEvent } from "./types";
 
-export const TERMINAL_RUN_EVENT_TYPES = new Set(["run.completed", "run.failed", "run.cancelled"]);
+export const TERMINAL_RUN_EVENT_TYPES = new Set(["run.completed", "run.failed", "run.cancelled", "run.paused"]);
 
 const RUN_EVENT_TYPES = [
-  "run.accepted", "run.started", "run.recovered", "run.cancel_requested", "run.completed", "run.failed", "run.cancelled",
+  "run.accepted", "run.started", "run.recovered", "run.cancel_requested", "run.completed", "run.failed", "run.cancelled", "run.paused", "run.retry_requested",
   "attempt.started", "retry.scheduled", "context.built", "model.request.started", "model.response.completed",
   "model.request.failed", "model.request.cancelled", "model.protocol_repaired", "tool.call.requested",
-  "tool.call.completed", "memory.proposed", "memory.committed", "message.committed", "summary.committed",
+  "tool.call.completed", "message.committed", "summary.committed",
 ] as const;
 
 export function parseRunEvent(value: string): RunEvent {

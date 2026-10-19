@@ -13,13 +13,13 @@ import {
   restoreAgentStudioSubject,
   updateAgentStudioSubject,
 } from "./api";
-import type { AgentStudioSession, SubjectMemories } from "./types";
+import type { AgentStudioSession } from "./types";
 
 type ResourceActionDependencies = {
   session: AgentStudioSession | null;
   subjectRename: string;
   refreshWorkspace: () => Promise<void>;
-  refreshSelected: (conversationId: string) => Promise<SubjectMemories | null>;
+  refreshSelected: (conversationId: string) => Promise<unknown>;
   setBusy: Dispatch<SetStateAction<boolean>>;
   setError: Dispatch<SetStateAction<string>>;
 };

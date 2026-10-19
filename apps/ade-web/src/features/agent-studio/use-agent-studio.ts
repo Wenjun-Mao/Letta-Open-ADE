@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
-  HISTORY_TRIAL,
   acceptTurn,
   cancelRun,
   createAgentStudioSession,
@@ -13,19 +12,18 @@ import {
   getConversationState,
   getRun,
   getRunEventLog,
-  getSubjectMemories,
+  retryRun,
   listAgentStudioDefinitions,
   listAgentStudioSessions,
   listAgentStudioSubjects,
   listConversationRuns,
   listConversationActivity,
 } from "./api";
-import { memoryActionDraft, memoryActionOutcome, type PendingMemoryAction } from "./memory-action";
 import { sessionDraftPayload } from "./session-draft";
 import { useResourceActions } from "./resource-actions";
 import { useDefinitionVersion } from "./use-definition-version";
-import { useMemoryRemoval, type PendingRemoval } from "./use-memory-removal";
-import { useRunMonitor, TERMINAL_RUN_STATUSES } from "./use-run-monitor";
+import { useRunMonitor, TERMINAL_RUN_STATUSES, QUIESCENT_RUN_STATUSES } from "./use-run-monitor";
+import { useRelationshipMemory } from "./use-relationship-memory";
 import {
   identityKey,
   isArchived,
@@ -40,8 +38,7 @@ import type {
   MemorySubject,
   Run,
   RunEvent,
-  SubjectMemories,
-  MemoryEvidence,
+  MessageSource,
   TurnActivity,
 } from "./types";
 
@@ -61,23 +58,20 @@ export function useAgentStudio() {
   const conversationId = selectedConversationFromQuery(searchParams.get("conversation"));
   const selectedIdRef = useRef(conversationId);
   const selectionEpochRef = useRef(0);
-  const subjectInspectEpochRef = useRef(0);
   const readEpochRef = useRef(0);
   const bindingSelectionRef = useRef<string | null>(null);
   const olderPageRef = useRef<{ conversationId: string; cursor: number } | null>(null);
-  const evidenceTargetRef = useRef<MemoryEvidence | null>(null);
+  const evidenceTargetRef = useRef<MessageSource | null>(null);
   const createAttemptRef = useRef<{ signature: string; idempotencyKey: string } | null>(null);
-  const subjectBindingsRef = useRef<AgentStudioSession[]>([]);
+  const turnAttemptRef = useRef<{ signature: string; idempotencyKey: string } | null>(null);
+  const retryAttemptRef = useRef<{ runId: string; attempt: number; key: string } | null>(null);
 
   const [options, setOptions] = useState<AgentStudioOptions | null>(null);
   const [sessions, setSessions] = useState<AgentStudioSession[]>([]);
   const [definitions, setDefinitions] = useState<AgentDefinition[]>([]);
   const [subjects, setSubjects] = useState<MemorySubject[]>([]);
   const [session, setSession] = useState<AgentStudioSession | null>(null);
-  const [inspectedSubject, setInspectedSubject] = useState<MemorySubject | null>(null);
-  const [inspectedMemories, setInspectedMemories] = useState<SubjectMemories | null>(null);
   const [conversation, setConversation] = useState<ConversationState | null>(null);
-  const [memories, setMemories] = useState<SubjectMemories | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
   const [run, setRun] = useState<Run | null>(null);
   const [events, setEvents] = useState<RunEvent[]>([]);
@@ -92,35 +86,29 @@ export function useAgentStudio() {
   const [retryCount, setRetryCount] = useState(0);
   const [title, setTitle] = useState("New conversation");
   const [definitionChoice, setDefinitionChoice] = useState(NEW_RESOURCE_VALUE);
-  const [definitionName, setDefinitionName] = useState(HISTORY_TRIAL ? "Lin Xiaotang · historical recall trial" : "ADE Native Companion");
+  const [definitionName, setDefinitionName] = useState("ADE Companion");
   const [definitionKey, setDefinitionKey] = useState(() => identityKey("studio-character"));
   const [subjectChoice, setSubjectChoice] = useState(NEW_RESOURCE_VALUE);
-  const [subjectName, setSubjectName] = useState(HISTORY_TRIAL ? "" : "New memory subject");
+  const [subjectName, setSubjectName] = useState("New memory subject");
   const [subjectKey, setSubjectKey] = useState(() => identityKey("studio-person"));
   const [subjectRename, setSubjectRename] = useState("");
   const [evidenceMessageId, setEvidenceMessageId] = useState("");
   const [evidenceError, setEvidenceError] = useState("");
-  const [memoryAction, setMemoryAction] = useState<PendingMemoryAction | null>(null);
-  const [removal, setRemoval] = useState<PendingRemoval | null>(null);
+  const memory = useRelationshipMemory(session);
 
   const refreshWorkspace = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextOptions, nextSessions, nextDefinitions, nextSubjects, allTrialSessions] = await Promise.all([
+      const [nextOptions, nextSessions, nextDefinitions, nextSubjects] = await Promise.all([
         getAgentStudioOptions(),
         listAgentStudioSessions(includeArchived),
         listAgentStudioDefinitions(includeArchived),
         listAgentStudioSubjects(includeArchived),
-        HISTORY_TRIAL && !includeArchived ? listAgentStudioSessions(true) : Promise.resolve(null),
       ]);
-      subjectBindingsRef.current = allTrialSessions?.items || nextSessions.items;
       setOptions(nextOptions);
       setSessions(nextSessions.items);
       setDefinitions(nextDefinitions.items);
       setSubjects(nextSubjects.items);
-      setInspectedSubject((current) => current
-        ? nextSubjects.items.find((item) => item.id === current.id) || current
-        : null);
       setTimeoutSeconds((current) => current || nextOptions.default_timeout_seconds);
       setRetryCount((current) => current || nextOptions.default_retry_count);
       setError("");
@@ -143,9 +131,8 @@ export function useAgentStudio() {
     try {
       const nextSession = await getAgentStudioSession(selectedId);
       const target = evidenceTargetRef.current?.conversation_id === selectedId ? evidenceTargetRef.current : null;
-      const [nextConversation, nextMemories, nextRuns, nextActivity] = await Promise.all([
+      const [nextConversation, nextRuns, nextActivity] = await Promise.all([
         getConversationState(selectedId, target ? target.message_sequence + 1 : undefined),
-        getSubjectMemories(nextSession.memory_subject.id),
         listConversationRuns(selectedId),
         listConversationActivity(selectedId),
       ]);
@@ -158,7 +145,6 @@ export function useAgentStudio() {
       }
       setSession(nextSession);
       setConversation(nextConversation);
-      setMemories(nextMemories);
       setRuns(nextRuns.items);
       setActivity(nextActivity.items);
       setRun((current) => {
@@ -180,7 +166,7 @@ export function useAgentStudio() {
         evidenceTargetRef.current = null;
         window.requestAnimationFrame(() => document.getElementById(`message-${target.message_id}`)?.scrollIntoView({ block: "center" }));
       }
-      return nextMemories;
+      return nextConversation;
     } catch (exc) {
       if (selectionEpoch === selectionEpochRef.current && readEpoch === readEpochRef.current && selectedIdRef.current === selectedId
         && (!ownerIsCurrent || ownerIsCurrent())) setError(messageFrom(exc));
@@ -188,11 +174,6 @@ export function useAgentStudio() {
     }
   }, []);
 
-  const { removeSavedFact, retryRemoval } = useMemoryRemoval({
-    session, inspectedSubject, memories, inspectedMemories, removal, setRemoval,
-    selectedIdRef, selectionEpochRef, subjectInspectEpochRef,
-    refreshSelected, setInspectedMemories, setBusy, setError,
-  });
   const { setSessionArchived, setDefinitionArchived, setSubjectArchived, renameSubject } = useResourceActions({
     session, subjectRename, refreshWorkspace, refreshSelected, setBusy, setError,
   });
@@ -218,12 +199,7 @@ export function useAgentStudio() {
 
   const completeMonitoredRun = useCallback(async (nextRun: Run, nextEvents: RunEvent[], isCurrent: () => boolean) => {
     if (!isCurrent()) return;
-    const refreshedMemories = await refreshSelected(nextRun.conversation_id, isCurrent);
-    if (!isCurrent()) return;
-    setMemoryAction((current) => {
-      if (!current || current.runId !== nextRun.id || current.conversationId !== nextRun.conversation_id) return current;
-      return { ...current, outcome: memoryActionOutcome(current, nextRun, nextEvents, refreshedMemories) };
-    });
+    await refreshSelected(nextRun.conversation_id, isCurrent);
   }, [refreshSelected]);
 
   const reportMonitorError = useCallback((exc: unknown) => setError(messageFrom(exc)), []);
@@ -236,24 +212,18 @@ export function useAgentStudio() {
     if (nextConversationId === selectedIdRef.current) return;
     selectedIdRef.current = nextConversationId;
     selectionEpochRef.current += 1;
-    subjectInspectEpochRef.current += 1;
     readEpochRef.current += 1;
     bindingSelectionRef.current = null;
     olderPageRef.current = null;
     stopMonitoring();
     setSession(null);
-    setInspectedSubject(null);
-    setInspectedMemories(null);
     setConversation(null);
-    setMemories(null);
     setRuns([]);
     setRun(null);
     setEvents([]);
     setActivity([]);
     setEvidenceMessageId("");
     setEvidenceError("");
-    setMemoryAction(null);
-    setRemoval(null);
     if (!evidenceTargetRef.current || evidenceTargetRef.current.conversation_id !== nextConversationId) evidenceTargetRef.current = null;
     const params = new URLSearchParams(searchParams.toString());
     if (nextConversationId) params.set("conversation", nextConversationId);
@@ -262,25 +232,6 @@ export function useAgentStudio() {
     router.replace(query ? `${pathname}?${query}` : pathname);
   }, [pathname, router, searchParams, stopMonitoring]);
 
-  async function inspectSubject(subjectId: string) {
-    const subject = subjects.find((item) => item.id === subjectId);
-    if (!subject) return;
-    selectConversation(null);
-    const epoch = ++subjectInspectEpochRef.current;
-    setRemoval(null);
-    setError("");
-    setInspectedSubject(subject);
-    setInspectedMemories(null);
-    try {
-      const nextMemories = await getSubjectMemories(subjectId);
-      if (subjectInspectEpochRef.current === epoch && selectedIdRef.current === null) {
-        setInspectedMemories(nextMemories);
-      }
-    } catch (exc) {
-      if (subjectInspectEpochRef.current === epoch && selectedIdRef.current === null) setError(messageFrom(exc));
-    }
-  }
-
   useEffect(() => {
     void refreshWorkspace();
   }, [refreshWorkspace]);
@@ -288,21 +239,14 @@ export function useAgentStudio() {
   useEffect(() => {
     selectedIdRef.current = conversationId;
     selectionEpochRef.current += 1;
-    if (conversationId) {
-      subjectInspectEpochRef.current += 1;
-      setInspectedSubject(null);
-      setInspectedMemories(null);
-    }
     readEpochRef.current += 1;
     bindingSelectionRef.current = null;
     olderPageRef.current = null;
     stopMonitoring();
     setEvents([]);
     setRun(null);
-    setMemoryAction(null);
     setSession(null);
     setConversation(null);
-    setMemories(null);
     setRuns([]);
     setActivity([]);
     if (conversationId) void refreshSelected(conversationId);
@@ -311,7 +255,7 @@ export function useAgentStudio() {
   useEffect(() => {
     const latest = session?.latest_run;
     if (conversationId && session?.conversation.id === conversationId && latest
-      && !TERMINAL_RUN_STATUSES.has(latest.status) && !isMonitoring(latest.id)) {
+      && !QUIESCENT_RUN_STATUSES.has(latest.status) && !isMonitoring(latest.id)) {
       monitorRun(latest.id, conversationId);
     }
   }, [conversationId, session?.conversation.id, session?.latest_run, isMonitoring, monitorRun]);
@@ -346,10 +290,6 @@ export function useAgentStudio() {
 
   function selectSubjectForNewConversation(subjectId: string) {
     setSubjectChoice(subjectId);
-    if (HISTORY_TRIAL && subjectId !== NEW_RESOURCE_VALUE) {
-      const prior = subjectBindingsRef.current.find((item) => item.memory_subject.id === subjectId);
-      if (prior) setDefinitionChoice(prior.agent_definition.id);
-    }
   }
 
   async function loadOlderMessages() {
@@ -378,7 +318,7 @@ export function useAgentStudio() {
     }
   }
 
-  async function openEvidence(evidence: MemoryEvidence) {
+  async function openEvidence(evidence: MessageSource) {
     evidenceTargetRef.current = evidence;
     setEvidenceMessageId("");
     setEvidenceError("");
@@ -394,38 +334,31 @@ export function useAgentStudio() {
     await refreshSelected(session.conversation.id);
   }
 
-  function prepareMemoryAction(factId: string, version: number, operation: "correct" | "forget") {
-    const fact = memories?.facts.find((item) => item.id === factId && item.version === version && item.status === "active");
-    if (!fact || !session || isArchived(session.conversation)) return;
-    setMessage(memoryActionDraft(fact, operation));
-    setMemoryAction({ conversationId: session.conversation.id, factId, version, operation, runId: null, outcome: "Prepared. Edit this message and send it to request review; no memory has changed yet." });
-  }
-
-
   async function sendMessage() {
     const content = message.trim();
     const selected = session;
     if (!selected || !content || isArchived(selected.conversation) || (run && !TERMINAL_RUN_STATUSES.has(run.status))) return;
     const selectedId = selected.conversation.id;
     const selectionEpoch = selectionEpochRef.current;
-    const actionAtSend = memoryAction;
     const isCurrent = () => selectedIdRef.current === selectedId && selectionEpochRef.current === selectionEpoch;
+    const payload = { content, timeout_seconds: clampNumber(timeoutSeconds, 5, 600), retry_count: clampNumber(retryCount, 0, options?.max_retry_count || 5) };
+    const signature = JSON.stringify({ conversationId: selectedId, ...payload });
+    if (turnAttemptRef.current?.signature !== signature) {
+      turnAttemptRef.current = { signature, idempotencyKey: identityKey("turn") };
+    }
+    const idempotencyKey = turnAttemptRef.current.idempotencyKey;
+    let acceptedId: string | null = null;
     setBusy(true);
     setError("");
     setEvents([]);
     setMessage("");
     try {
       const accepted = await acceptTurn(selectedId, {
-        content,
-        idempotency_key: identityKey("turn"),
-        timeout_seconds: clampNumber(timeoutSeconds, 5, 600),
-        retry_count: clampNumber(retryCount, 0, options?.max_retry_count || 5),
+        ...payload, idempotency_key: idempotencyKey,
       });
+      acceptedId = accepted.run_id;
+      if (turnAttemptRef.current?.idempotencyKey === idempotencyKey) turnAttemptRef.current = null;
       if (!isCurrent()) return;
-      setMemoryAction((current) => current && actionAtSend && current.conversationId === selectedId
-        && current.factId === actionAtSend.factId && current.version === actionAtSend.version
-        && current.operation === actionAtSend.operation && current.runId === null
-        ? { ...current, runId: accepted.run_id, outcome: "Turn accepted; waiting for review and a committed revision." } : current);
       const [acceptedRun, eventLog] = await Promise.all([getRun(accepted.run_id), getRunEventLog(accepted.run_id)]);
       if (!isCurrent()) return;
       setRun(acceptedRun);
@@ -436,8 +369,9 @@ export function useAgentStudio() {
       if (isCurrent() && !isMonitoring(accepted.run_id)) monitorRun(accepted.run_id, selectedId);
     } catch (exc) {
       if (isCurrent()) {
-        setMessage(content);
+        if (!acceptedId) setMessage(content);
         setError(messageFrom(exc));
+        await refreshSelected(selectedId, isCurrent);
       }
     } finally {
       setBusy(false);
@@ -460,17 +394,42 @@ export function useAgentStudio() {
     }
   }
 
+  async function retryPausedRun() {
+    if (!run || run.status !== "paused") return;
+    const saved = run;
+    const epoch = selectionEpochRef.current;
+    const current = () => selectedIdRef.current === saved.conversation_id && selectionEpochRef.current === epoch;
+    if (retryAttemptRef.current?.runId !== saved.id || retryAttemptRef.current.attempt !== saved.attempt_count) {
+      retryAttemptRef.current = { runId: saved.id, attempt: saved.attempt_count, key: identityKey("saved-input-retry") };
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const accepted = await retryRun(saved.id, saved.attempt_count, retryAttemptRef.current.key);
+      if (!current()) return;
+      if (accepted.run_id !== saved.id) throw new Error("Retry returned an unexpected saved run identity.");
+      const next = await getRun(accepted.run_id);
+      if (!current()) return;
+      if (next.conversation_id !== saved.conversation_id) throw new Error("Retry returned an unexpected conversation identity.");
+      setRun(next);
+      if (!QUIESCENT_RUN_STATUSES.has(next.status)) monitorRun(next.id, next.conversation_id);
+    } catch (exc) {
+      if (current()) setError(messageFrom(exc));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return {
-    options, sessions, definitions, subjects, session, inspectedSubject, inspectedMemories, conversation, memories, runs, run, events, activity,
+    options, sessions, definitions, subjects, session, conversation, memory, runs, run, events, activity,
     loading, busy, error, streamWarning, includeArchived, message, timeoutSeconds, retryCount,
     title, definitionChoice, definitionName, definitionKey, subjectChoice, subjectName, subjectKey, subjectRename,
-    evidenceMessageId, evidenceError, memoryAction, removal, ...definitionVersion,
+    evidenceMessageId, evidenceError, ...definitionVersion,
     activeRun: Boolean(run && !TERMINAL_RUN_STATUSES.has(run.status)),
     setIncludeArchived, setMessage, setTimeoutSeconds: (value: number) => setTimeoutSeconds(clampNumber(value, 5, 600)),
     setRetryCount: (value: number) => setRetryCount(clampNumber(value, 0, options?.max_retry_count || 5)),
     setTitle, setDefinitionChoice, setDefinitionName, setDefinitionKey, setSubjectChoice, selectSubjectForNewConversation, setSubjectName, setSubjectKey, setSubjectRename,
-    selectConversation, inspectSubject, refreshWorkspace, createSession, setSessionArchived, setDefinitionArchived, setSubjectArchived,
-    renameSubject, sendMessage, cancelActiveRun, loadOlderMessages, openEvidence, returnToLatestMessages, prepareMemoryAction,
-    removeSavedFact, retryRemoval,
+    selectConversation, refreshWorkspace, createSession, setSessionArchived, setDefinitionArchived, setSubjectArchived,
+    renameSubject, sendMessage, cancelActiveRun, retryPausedRun, loadOlderMessages, openEvidence, returnToLatestMessages,
   };
 }

@@ -142,4 +142,5 @@ def build_hindsight_context(
         ],
         retrieved_fact_ids=[item["id"] for item in retained_memories],
         estimated_input_tokens=total,
+        current_chat=bool(selected or summary),
     )
