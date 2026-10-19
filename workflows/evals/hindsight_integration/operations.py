@@ -26,7 +26,7 @@ INSPECTION = (
     '{"id":{{json .Id}},"name":{{json .Name}},"image":{{json .Image}},'
     '"state":{{json .State.Status}},"started_at":{{json .State.StartedAt}},'
     '"restarts":{{json .RestartCount}},"oom":{{json .State.OOMKilled}},'
-    '"health":{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}},'
+    '"health":{{with index .State "Health"}}{{json .Status}}{{else}}null{{end}},'
     '"mounts":{{json .Mounts}},"labels":{{json .Config.Labels}},'
     '"networks":{{json .NetworkSettings.Networks}}}'
 )
