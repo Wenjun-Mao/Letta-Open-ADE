@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from .agent_studio_sessions import EVALUATION_PURPOSE, PurposeSessionService
+from .agent_studio_sessions import PurposeSessionService
+from .session_resources import EVALUATION_PURPOSE
 from .contracts import CreateAgentDefinitionRequest, CreateAgentStudioSessionRequest
 from .database_boundary import RuntimeDatabase
 from .definition_service import DefinitionService

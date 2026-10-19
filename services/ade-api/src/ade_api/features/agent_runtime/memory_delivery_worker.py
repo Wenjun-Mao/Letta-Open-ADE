@@ -11,19 +11,12 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from ade_api.integrations.hindsight import HindsightClient, HindsightError
 
 from .memory_banks import MemoryBankAccess, MemoryBankError
+from .memory_progress import native_progress
 from .persistence.base import LeaseUnavailableError
 from .persistence.memory_deliveries import MemoryDeliveryRepository, verified_delivery
 
 
 logger = logging.getLogger(__name__)
-
-
-def native_progress(value: dict) -> dict:
-    return {
-        key: value[key]
-        for key in ("status", "progress", "child_operations")
-        if key in value
-    }
 
 
 class MemoryDeliveryWorker:

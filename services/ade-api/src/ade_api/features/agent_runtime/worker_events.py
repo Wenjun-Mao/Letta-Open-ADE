@@ -53,8 +53,8 @@ async def append_success_events(
     run_id: str,
     attempt: int,
     result: AttemptResult,
-    committed: list[dict[str, Any]],
     assistant_message_id: str,
+    delivery_operation_id: str,
     trace: AttemptTrace | None = None,
     summary: dict[str, Any] | None = None,
 ) -> None:
@@ -81,65 +81,24 @@ async def append_success_events(
         tool_requirement_satisfied=result.executor.tool_requirement_satisfied,
         causation_id=str(context_event["id"]),
     )
-    reviewer_event_id = conversation_event_id
-    if result.reviewer.protocol_repaired:
-        repaired = await append_run_event(
-            runs,
-            run_id=run_id,
-            event_type="model.protocol_repaired",
-            payload={"role": "reviewer", "repair_count": 1},
-            attempt=attempt,
-            causation_id=reviewer_event_id,
-        )
-        reviewer_event_id = str(repaired["id"])
-    proposal_events = []
-    for operation in result.review.operations:
-        proposal_events.append(
-            await append_run_event(
-                runs,
-                run_id=run_id,
-                event_type="memory.proposed",
-                payload={
-                    "operation": str(operation.proposal.operation),
-                    "fact_type": operation.fact_type,
-                    "fact_id": getattr(operation.proposal, "fact_id", None),
-                    "claim_id": getattr(operation.proposal, "claim_id", None),
-                    "target_fact_ids": getattr(
-                        operation.proposal, "target_fact_ids", []
-                    ),
-                },
-                attempt=attempt,
-                causation_id=reviewer_event_id,
-            )
-        )
-    for deferred in getattr(result.review, "deferred_claims", ()):
-        await append_run_event(
-            runs,
-            run_id=run_id,
-            event_type="memory.deferred",
-            payload=deferred,
-            attempt=attempt,
-            causation_id=reviewer_event_id,
-        )
-    for index, memory in enumerate(committed):
-        causation_id = (
-            str(proposal_events[index]["id"]) if index < len(proposal_events) else None
-        )
-        await append_run_event(
-            runs,
-            run_id=run_id,
-            event_type="memory.committed",
-            payload=memory,
-            attempt=attempt,
-            causation_id=causation_id,
-        )
     message_event = await append_run_event(
         runs,
         run_id=run_id,
         event_type="message.committed",
         payload={"message_id": assistant_message_id, "role": "assistant"},
         attempt=attempt,
-        causation_id=reviewer_event_id,
+        causation_id=conversation_event_id,
+    )
+    await append_run_event(
+        runs,
+        run_id=run_id,
+        event_type="memory.delivery.queued",
+        payload={
+            "operation_id": delivery_operation_id,
+            "message_id": assistant_message_id,
+        },
+        attempt=attempt,
+        causation_id=str(message_event["id"]),
     )
     terminal_causation_id = str(message_event["id"])
     if summary is not None:
@@ -167,11 +126,9 @@ async def append_success_events(
         )
         terminal_causation_id = str(summary_event["id"])
     conversation_requests = result.executor.model_request_count
-    reviewer_requests = result.reviewer.model_request_count
     compaction_requests = 1 if compaction is not None else 0
     usage_by_role = {
         "conversation": result.executor.usage,
-        "reviewer": result.reviewer.usage,
         "compaction": compaction.usage if compaction is not None else {},
     }
     await append_run_event(
@@ -180,15 +137,12 @@ async def append_success_events(
         event_type="run.completed",
         payload={
             "attempt_count": attempt,
-            "model_request_count": conversation_requests
-            + reviewer_requests
-            + compaction_requests,
+            "model_request_count": conversation_requests + compaction_requests,
             "model_request_counts": {
                 "conversation": conversation_requests,
-                "reviewer": reviewer_requests,
                 "compaction": compaction_requests,
             },
-            "memory_revision_count": len(committed),
+            "memory_lookups": list(result.memory_lookups),
             "usage": _combined_usage(usage_by_role.values()),
             "usage_by_role": usage_by_role,
             "dispatch_counts": dispatch_counts(

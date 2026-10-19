@@ -1,115 +1,78 @@
 # Agent Runtime
 
-This package owns the current Agent Studio `/api/v3` runtime. It uses ADE
-PostgreSQL for state and Model Router for model and embedding access.
+This package owns Agent Studio and evaluation `/api/v3` product records and reply
+orchestration. ADE PostgreSQL owns original messages, authored character versions,
+conversation bindings, run/attempt state and delivery bookkeeping. Self-hosted
+Hindsight owns learned Memory. Model Router owns provider forwarding.
 
-## Product Model
+The maintained source path is Hindsight-only and development-only. Existing
+deployed ADE/trial images and databases are not changed by this source replacement.
+Stage 1 browser, complete live capture and fault/closeout verification remain in
+progress; this is not release or Character qualification.
 
-### Evaluation Version Creation
+## Product And Execution
 
-The opt-in development-only history-trial API exposes operator-authenticated
-`POST /api/v3/history-trial/definitions/{root_id}/versions` using
-`CreateAgentDefinitionRequest`. Supply the existing root/key and a positive
-`expected_current_version`; only evaluation roots in the active workspace are
-eligible. The response is the new immutable `AgentDefinitionResponse` (201).
-The current version must itself satisfy the trial binding, checked under the
-same workspace/root locks as allocation; unrelated evaluation roots cannot be
-converted into the trial character.
-Select its `id` when creating a subsequent trial session. Previous sessions retain
-their original binding. Trial configuration/capacity/fingerprint guards remain
-unchanged; stale or archived roots conflict (409), invalid requests return 422,
-and inaccessible roots return 404. Session-created definitions remain version 1.
-See ADR 0051; this does not qualify PC-11 behavior or authorize provider calls.
+- A conversation binds one immutable definition version to one subject. Ordinary
+  persona-version updates preserve the character root and its relationship bank.
+- One bank belongs to `(workspace, subject, character root)`. Neither a new chat,
+  persona edit nor archive state silently starts another relationship.
+- Acceptance atomically saves the user message and immutable delivery intent.
+  Success atomically saves the assistant message, outcome, any summary and reply
+  delivery intent. Failed/cancelled replies preserve accepted-user eligibility.
+- Independent delivery consumers preserve per-relationship order and reconcile
+  original native operations. A reply does not wait for retention.
+- Every attempt normally recalls within its persisted relationship. Successful
+  empty recall is valid. Required automatic/tool lookup failure pauses the saved
+  input without a Character apology or an empty-memory substitute.
+- `POST /api/v3/runs/{id}/retry` takes `idempotency_key` and
+  `expected_attempt_count`; it performs fresh recall without another user insert.
+  Retry and Cancel resolve the paused conversation's input guard. Stale workers
+  cannot commit candidates or their delivery intents.
 
-### Persistent Resources
+There is no maintained native reviewer, ADE fact-write step, SQL-only purge,
+subject-wide Memory endpoint or manual reset/removal API in this path. Historical
+tables, migrations, findings and frozen evaluation evidence remain preserved.
+Archived original chats are still readable; archiving is not erasure.
 
-- An immutable **agent definition** snapshots prompt, persona, deployment,
-  curated tools, and runtime policy.
-- A **memory subject** owns typed durable facts and revisions.
-- A **conversation** binds one definition to one subject and retains immutable
-  messages plus replaceable, versioned summaries.
-- A **run** records one asynchronous turn, attempts, cancellation, and normalized
-  events.
+## Owners
 
-The runtime accepts typed, source-bound memory proposals only. Corrections
-supersede prior values; forgetting creates an auditable tombstone. Model-provided
-arguments cannot choose another subject.
+- `definition_service.py`, `agent_studio_sessions.py`, `session_resources.py` and
+  `studio_catalog.py` own scoped authored resources and immutable bindings.
+- `run_service.py`, `run_retry.py` and `persistence/run_lifecycle.py` own admission,
+  conversation-first lifecycle locking and saved-input Retry receipts.
+- `turn_execution.py`, `hindsight_context.py` and `turn_recall.py` own normal scoped
+  lookup and Character context. Retrieved Memory remains contextual data.
+- `executor.py` owns finite curated-tool execution. Required Memory errors escape
+  the tool loop; ordinary non-Memory tool errors retain their explicit result.
+- `compaction.py` and `compaction_executor.py` preserve summary prefix/provenance
+  through the separately bound compaction deployment. Whole serialized initial,
+  continuation and compaction payloads are checked against their input bounds.
+- `turn_sources.py` appends delivery intent in its caller's product transaction.
+  `memory_banks.py` and `memory_delivery_worker.py` own native availability and
+  independent ordered scheduling. No native/provider HTTP runs inside ADE SQL.
+- `memory_progress.py` allows only operational snapshot fields into bookkeeping;
+  native error bodies, task payloads and private reasoning are not public activity.
+- `worker.py` and `worker_*` own leases, cancellation, attempts and finalization.
+  `turn_result.py` carries reply/compaction output, not a fake empty review.
 
-## Module Boundaries
+## Configuration And Verification
 
-- `agent_studio_api.py` exposes Agent Studio sessions and state.
-- `api.py` exposes turns, runs, events, cancellation, and worker health.
-- `GET /api/v3/conversations/{id}/activity` reads retained per-turn dispatch,
-  tool, and context evidence with one conversation-scoped batch. It reports
-  incomplete traces as observed lower bounds and leaves missing history
-  unavailable. It does not estimate billing or prove which source caused a reply.
-- `application.py` and the narrow service modules own runtime behavior.
-- `turn_execution.py` assembles context and coordinates model, retrieval, and
-  memory-review work for one ADE-owned attempt.
-- `turn_result.py` owns the internal `AttemptResult` shared by execution and
-  worker collaborators; consumers import it directly from this module.
-- `executor.py` owns conversation generation and its finite curated-tool loop.
-  `compaction_executor.py` dispatches the existing summary protocol using the
-  conversation's deployment/adapter. Planning and provenance stay in
-  `compaction.py`; eligibility and deadline policy stay in `turn_compaction.py`.
-  `model_response.py` shares only response-envelope and integer-usage mechanics.
-- `worker.py` and `worker_*` own leases, cancellation, events, and finalization.
-- `memory_policy.py` validates proposals; `persistence/` owns SQLAlchemy Core
-  repositories and Alembic remains the only schema creation path.
-- `evaluation_sessions.py` provisions and cleans isolated `purpose=evaluation`
-  resources for maintained workflows.
+Require an explicit non-`default` `ADE_API_AGENT_RUNTIME_WORKSPACE_KEY` and an
+existing/new workspace marked `hindsight`; never convert an incumbent workspace.
+Configure `ADE_API_HINDSIGHT_BASE_URL` and a private
+`ADE_API_HINDSIGHT_API_KEY`. The API and worker must use the same workspace,
+Memory endpoint, migration head and exact source identity.
 
-Browser coordination remains outside this package: Agent Studio's
-`use-agent-studio.ts` owns displayed state and selection/read epochs;
-`use-run-monitor.ts` owns stream/poll lifecycle and guarded completion. Neither
-owns generation or persistence; terminal display reloads ADE's retained state.
+Definitions bind only `model_key` and `compaction_model_key`; Hindsight manages
+its own extraction/embedding bindings. The isolated candidate manifest defaults
+to `workflows/evals/hindsight_integration/config/deployments.json`, overridden by
+`ADE_API_AGENT_RUNTIME_DEPLOYMENT_MANIFEST`. This new candidate has no release
+rounds and cannot inherit the incumbent release ledger.
 
-## Private Evaluation Capture
-
-The isolated Hindsight experiment uses the separate feature-owned
-[`hindsight_evaluation` CLI](HINDSIGHT_EVALUATION.md) for scoped recall and exactly
-one tool-free Character generation per comparison arm. It constructs no native
-runtime persistence or worker and requires durable request/result captures.
-See [ADR 0063](../../../../../../docs/adr/0063-hindsight-character-evaluation-boundary.md).
-
-`ADE_NATURAL_MEMORY_CAPTURE=1` remains restricted to development, evaluation
-purpose and isolated loopback test databases. Capture-v1 fields are unchanged;
-the optional `private_observations` extension has named contract
-`ade-private-evaluation-observations-v1` ([ADR 0053](../../../../../../docs/adr/0053-private-evaluation-observations.md)).
-PC-11 requires it; historical workflows are not silently upgraded or rebound.
-
-`turn_memory_snapshot.py` reads before-state in the accepted-generation RR
-snapshot; `natural_evidence_readback.py` independently reads after-state and
-terminal outcome in a new RR snapshot. `persistence/evaluation_observations.py`
-owns full facts, entities (including orphans), revisions, source links,
-predecessors and generation, run/attempt/scope/hash binding and bounded activity
-checks. `history_observations.py` retains reader and selection omission reasons
-without changing eligibility, ranking or prompts. Empty/not-read, unavailable
-and truncated inventories never claim completeness. No new public history API.
-
-Capture disabled means no extra SQL/provider calls. Observation SQL uses
-savepoints; errors produce unavailable evidence, never a different run outcome.
-Snapshots allow 512 rows per component and 600 KB; the full private artifact
-retains the 2 MB cap. Missing or inconsistent observations stop PC-11 qualification.
-Auth, provider wire bodies, private reasoning and raw exceptions remain excluded.
-Artifacts stay under ignored workflow outputs; tests use temporary directories.
-
-## Tool Boundary
-
-Release Agent Studio exposes curated product tools only, currently including
-subject-bound memory search. Deterministic weather and failure tools live in the
-evaluation-only registry. Arbitrary tool authoring and execution are out of scope.
-
-## Release Boundary
-
-The release ledger binds the exact runtime and worker identities, policies,
-model aliases, agent bundle, qualification, conformance, and approval. A change
-to governed runtime inputs requires new evidence. See
-[ADR 0019](../../../../../../docs/adr/0019-ade-steady-state-runtime.md) and the
-[release evidence guide](../../../../../../docs/operations/agent-studio-release.md).
-
-## Tests
-
-```text
-uv run python -m pytest services/ade-api/tests/agent_runtime -q
-```
+The [integration runbook](../../../../../../workflows/evals/hindsight_integration/operations.md)
+documents local PostgreSQL verification and authorized isolated activation.
+[ADR 0072](../../../../../../docs/adr/0072-hindsight-outbox-and-saved-input-retry.md)
+owns delivery/Retry; [ADR 0073](../../../../../../docs/adr/0073-hindsight-reply-runtime.md)
+owns the replacement reply contract. The separate historical
+[comparison CLI](HINDSIGHT_EVALUATION.md) and native capture findings are not this
+normal product path or a qualification substitute.

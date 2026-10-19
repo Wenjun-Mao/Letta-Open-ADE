@@ -13,7 +13,7 @@ from typing import Any, Mapping
 
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
-_ROLES = frozenset({"conversation", "reviewer", "retriever"})
+_ROLES = frozenset({"conversation", "compaction", "reviewer", "retriever"})
 _LIFECYCLES = frozenset({"discovered", "candidate", "qualified", "deprecated"})
 _FINGERPRINT_TEXT_FIELDS = (
     "provider",

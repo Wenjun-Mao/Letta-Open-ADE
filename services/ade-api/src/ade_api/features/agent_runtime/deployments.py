@@ -9,7 +9,7 @@ from .errors import RuntimeValidationError, UnqualifiedDeployment
 from .release_policy import fingerprint_policy_hashes
 
 
-DeploymentRole = Literal["conversation", "reviewer", "retriever"]
+DeploymentRole = Literal["conversation", "compaction"]
 
 
 @dataclass(frozen=True)
@@ -149,15 +149,14 @@ def validate_definition_execution(
         for snapshot in snapshots
         if isinstance(snapshot, dict)
     }
-    expected_roles = {"conversation", "reviewer", "retriever"}
-    if set(by_role) != expected_roles:
+    expected_roles = {"conversation", "compaction"}
+    if set(by_role) != expected_roles or len(snapshots) != len(expected_roles):
         raise RuntimeValidationError(
-            "Agent definition must bind conversation, reviewer, and retriever deployments"
+            "Agent definition must bind conversation and compaction deployments"
         )
     roles: tuple[DeploymentRole, ...] = (
         "conversation",
-        "reviewer",
-        "retriever",
+        "compaction",
     )
     for role in roles:
         stored = by_role[role]

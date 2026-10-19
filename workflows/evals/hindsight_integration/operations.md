@@ -158,8 +158,9 @@ it does not authorize whole-history replay or production cutover.
 
 ## ADE Persistence Checks
 
-The new delivery repository/worker libraries have separate real-PostgreSQL tests;
-they are not yet evidence that the maintained ADE reply path uses them. Use the
+The delivery libraries and maintained reply path have separate real-PostgreSQL
+tests with controlled native/provider substitutes. These are not live native
+product or Character qualification. Use the
 existing `ade_api.features.agent_runtime.bootstrap` before Alembic: the version
 table lives in `ade`, so a bare empty database is not a bootstrapped database.
 Keep distinct non-login owner and application roles; run data-path tests as the
@@ -176,10 +177,50 @@ uv run --locked pytest \
   services/ade-api/tests/agent_runtime/persistence/test_hindsight_worker_sql.py -q
 ```
 
+The normal product-path tests additionally cover acceptance/finalization atomic
+intent, required automatic/tool lookup failure, concurrent saved-input Retry,
+cancellation, stale candidates, compaction provenance, immutable version/bank
+continuity and public API removal of one-store purge/reset:
+
+```sh
+uv run --locked pytest \
+  services/ade-api/tests/agent_runtime/persistence/test_hindsight_runtime_sql.py \
+  services/ade-api/tests/agent_runtime/persistence/test_hindsight_runtime_fences_sql.py \
+  services/ade-api/tests/agent_runtime/persistence/test_hindsight_claim_races_sql.py \
+  services/ade-api/tests/agent_runtime/persistence/test_hindsight_sessions_sql.py \
+  services/ade-api/tests/agent_runtime/persistence/test_postgres_lock_order.py \
+  services/ade-api/tests/agent_runtime/test_hindsight_execution.py -q
+```
+
 The tests create controlled SQL fixtures, not product-established dialogue.
 The native substitute records calls and checks that another connection can lock
 the bank/outbox during each simulated HTTP call. Tests cover rollback, immutable
 source/hash/scope, ordered dispatch, unrelated progress, lost acknowledgement,
 native Retry, missing established banks and expired-worker fencing. Native live
-feasibility remains separate; actual ADE acceptance/finalization and browser
-verification remain required in subsequent increments.
+feasibility remains separate; actual native product and browser verification
+remain required in subsequent increments. Some maintained native-era tests still
+assert superseded reviewer/role/reset contracts; their reconciliation is explicit
+unfinished implementation work, not a claim that the full suite passes.
+
+## New Runtime Configuration
+
+Use `ADE_API_AGENT_RUNTIME_MODE=development`, an explicit non-`default`
+`ADE_API_AGENT_RUNTIME_WORKSPACE_KEY`, private `ADE_API_HINDSIGHT_API_KEY` and
+the owned `ADE_API_HINDSIGHT_BASE_URL`. API and worker must share those bindings
+and source identity. Never point this runtime at an incumbent workspace or use
+old SQL-only purge/reset as cleanup. Both databases remain paired resources.
+
+The candidate-only manifest is generated after runtime source edits:
+
+```sh
+uv run --locked python -m workflows.evals.hindsight_integration.deployment_config --write
+```
+
+This writes only this workflow's new `config/deployments.json`, using the existing
+approved DeepSeek development identity and current source policy hashes. It does
+not rewrite root provider/model defaults, a release ledger, qualification rounds
+or any staged/active release. Set
+`ADE_API_AGENT_RUNTIME_DEPLOYMENT_MANIFEST` to that same path in the candidate.
+Definitions bind `model_key` and `compaction_model_key`; obsolete reviewer and
+embedding role keys are rejected. Source publication alone does not start this
+stack, authorize an old ADE/trial redeploy or complete the browser/capture gates.

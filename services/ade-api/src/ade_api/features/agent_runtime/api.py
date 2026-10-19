@@ -11,8 +11,8 @@ from ade_api.platform.openapi_metadata import TAG_AGENT_RUNTIME
 
 from .contracts import (
     AcceptTurnRequest,
+    RetryRunRequest,
     CreateEvaluationSessionRequest,
-    EvaluationSessionPurgeResponse,
     EvaluationSessionResponse,
     EvaluationSessionStateResponse,
     RunEventListResponse,
@@ -82,7 +82,7 @@ async def create_evaluation_session(
     "/evaluation-sessions/{conversation_id}/state",
     response_model=EvaluationSessionStateResponse,
     dependencies=[Depends(require_reader)],
-    summary="Inspect evaluation conversation, typed memories, and latest run",
+    summary="Inspect saved evaluation conversation and latest run independently of Memory",
 )
 async def get_evaluation_session_state(
     conversation_id: str,
@@ -97,19 +97,6 @@ async def get_evaluation_session_state(
             before_sequence=before_sequence,
         )
     )
-
-
-@router.delete(
-    "/evaluation-sessions/{conversation_id}",
-    response_model=EvaluationSessionPurgeResponse,
-    dependencies=[Depends(require_operator)],
-    summary="Purge an inactive evaluation session",
-)
-async def purge_evaluation_session(
-    conversation_id: str,
-    service: AgentRuntimeServiceDependency,
-):
-    return await call_runtime(service.purge_evaluation_session(conversation_id))
 
 
 @router.post(
@@ -156,6 +143,25 @@ async def list_runs(
     return await call_runtime(
         service.list_runs(conversation_id, limit=limit, offset=offset)
     )
+
+
+@router.post(
+    "/runs/{run_id}/retry",
+    response_model=TurnAcceptedResponse,
+    status_code=202,
+    dependencies=[Depends(require_operator)],
+    summary="Retry a paused reply using its saved input and fresh memory lookup",
+)
+async def retry_run(
+    run_id: str,
+    request: RetryRunRequest,
+    response: Response,
+    service: AgentRuntimeServiceDependency,
+):
+    result = await call_runtime(service.retry_run(run_id, request))
+    if result.get("idempotent_replay"):
+        response.headers["Idempotent-Replay"] = "true"
+    return result
 
 
 @router.post(

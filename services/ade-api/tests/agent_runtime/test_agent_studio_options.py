@@ -2,16 +2,19 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
+import pytest
 
 import ade_api.features.agent_runtime.definition_service as definition_service
 from ade_api.features.agent_runtime.agent_studio_sessions import PurposeSessionService
 from ade_api.features.agent_runtime.definition_service import DefinitionService
+from ade_api.features.agent_runtime.errors import UnqualifiedDeployment
+from ade_api.platform.settings import AdeApiSettings
 
 
 def _definition_service(*, mode: str) -> DefinitionService:
     return DefinitionService(
         database=None,  # type: ignore[arg-type]
-        settings=SimpleNamespace(agent_runtime_mode=mode),  # type: ignore[arg-type]
+        settings=AdeApiSettings(_env_file=None, agent_runtime_mode=mode),
         prompt_registry=None,  # type: ignore[arg-type]
         router_transport=None,  # type: ignore[arg-type]
     )
@@ -27,7 +30,7 @@ def test_development_default_bundle_uses_active_manifest_routes(monkeypatch) -> 
             ),
             SimpleNamespace(
                 route_aliases=("local::chat",),
-                roles=("conversation", "reviewer"),
+                roles=("conversation", "compaction"),
                 lifecycle="candidate",
             ),
             SimpleNamespace(
@@ -46,39 +49,15 @@ def test_development_default_bundle_uses_active_manifest_routes(monkeypatch) -> 
     request = _definition_service(mode="development").default_agent_studio_request()
 
     assert request.model_key == "local::chat"
-    assert request.reviewer_model_key == "local::chat"
-    assert request.embedding_model_key == "local::embedding"
-    assert request.prompt_key == "chat_v20260516"
+    assert request.compaction_model_key == "local::chat"
+    assert request.prompt_key == "chat_v20261019"
     assert request.persona_key == "chat_linxiaotang"
     assert request.tool_names == ["search_memory"]
 
 
-def test_release_default_bundle_uses_validated_release_evidence(monkeypatch) -> None:
-    release = SimpleNamespace(
-        route_aliases={
-            "conversation": "release::chat",
-            "reviewer": "release::reviewer",
-            "retriever": "release::embedding",
-        },
-        agent_bundle=SimpleNamespace(
-            prompt_key="chat_release",
-            persona_key="persona_release",
-            tool_names=("search_memory",),
-        ),
-    )
-    monkeypatch.setattr(
-        definition_service,
-        "load_validated_agent_studio_release",
-        lambda: release,
-    )
-
-    request = _definition_service(mode="release").default_agent_studio_request()
-
-    assert request.model_key == "release::chat"
-    assert request.reviewer_model_key == "release::reviewer"
-    assert request.embedding_model_key == "release::embedding"
-    assert request.prompt_key == "chat_release"
-    assert request.persona_key == "persona_release"
+def test_hindsight_cannot_inherit_native_release_qualification() -> None:
+    with pytest.raises(UnqualifiedDeployment, match="not release-qualified"):
+        _definition_service(mode="release").default_agent_studio_request()
 
 
 def test_development_configured_bundle_comes_from_manifest_without_provider_io() -> (
@@ -86,11 +65,10 @@ def test_development_configured_bundle_comes_from_manifest_without_provider_io()
 ):
     bundle = _definition_service(mode="development").configured_agent_studio_bundle()
 
-    assert bundle["key"] == "ade_native_default"
+    assert bundle["key"] == "ade_hindsight_default"
     assert {deployment["role"] for deployment in bundle["deployments"]} == {
         "conversation",
-        "reviewer",
-        "retriever",
+        "compaction",
     }
 
 
@@ -100,15 +78,14 @@ class _PreparedDefinitions:
 
     def configured_agent_studio_bundle(self):
         return {
-            "key": "ade_native_default",
-            "name": "ADE Native Default",
+            "key": "ade_hindsight_default",
+            "name": "ADE Hindsight Default",
             "model_key": "local::chat",
-            "reviewer_model_key": "local::chat",
-            "embedding_model_key": "local::embedding",
-            "prompt_key": "chat_v20260516",
+            "compaction_model_key": "local::chat",
+            "prompt_key": "chat_v20261019",
             "persona_key": "chat_linxiaotang",
             "tool_names": ["search_memory"],
-            "memory_policy_version": "typed-user-facts-v1",
+            "memory_policy_version": "hindsight-message-v1",
             "qualification_state": "unqualified",
             "deployments": [],
         }
@@ -122,7 +99,7 @@ def test_development_options_expose_configured_unqualified_bundle() -> None:
 
     result = asyncio.run(service.options())
 
-    assert result["default_bundle_key"] == "ade_native_default"
+    assert result["default_bundle_key"] == "ade_hindsight_default"
     assert result["bundles"][0]["qualification_state"] == "unqualified"
 
 

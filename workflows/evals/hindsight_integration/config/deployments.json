@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "deployments": [
+    {
+      "id": "deepseek-hindsight-stage1-development",
+      "route_aliases": [
+        "deepseek::deepseek-flash"
+      ],
+      "roles": [
+        "conversation",
+        "compaction"
+      ],
+      "lifecycle": "candidate",
+      "fingerprint": {
+        "provider": "deepseek",
+        "endpoint_role": "openai-compatible-chat",
+        "endpoint_identity": "api.deepseek.com",
+        "served_model": "deepseek-flash",
+        "artifact_reference": "DeepSeek-V4.1-Flash",
+        "artifact_revision": null,
+        "artifact_sha256": null,
+        "runtime_implementation": "DeepSeek hosted API",
+        "runtime_version": null,
+        "runtime_image_digest": null,
+        "prompt_policy_sha256": "276af7c638a1f559aade8f89eb4da2c38cd2956aafd7e3f0e1179581effcaee3",
+        "tool_policy_sha256": "02ab3f3b2b42adf6bcfd7e5c4102d599f45a7953e9e17d12f807ea19c10cb155",
+        "schema_policy_sha256": "8fda07a1c559947472fcc31977227403a870af0e988225c4cc4c8cc774e86ee2",
+        "retrieval_policy_sha256": "74f353e1819cc85aa4e5091de3394325ecb6217ba9c6a7ba97a5f85aed98be74",
+        "sampling_settings": {
+          "thinking": "enabled",
+          "reasoning_effort": "high",
+          "stream": false,
+          "required_tool_choice": "auto; discretionary curated tools",
+          "structured_output": "compaction only: json_object; ADE closed validation"
+        },
+        "context_settings": {
+          "total_tokens": 16384,
+          "response_reserve_tokens": 4096,
+          "max_output_tokens": 4096,
+          "max_model_requests": 6,
+          "route_base_url": "https://api.deepseek.com"
+        },
+        "hardware_metadata": {
+          "host_class": "hosted API",
+          "runtime_host": "api.deepseek.com"
+        }
+      },
+      "qualification": {
+        "fingerprint_sha256": "8d9136e4138a1c3cc134984627be57d8ed13ad09bcbf069c4a9cc92603a2b95e",
+        "qualified": false,
+        "stale_round_count": 0,
+        "role_results": [
+          {
+            "role": "conversation",
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
+          },
+          {
+            "role": "compaction",
+            "observed_rounds": 0,
+            "consecutive_passing_rounds": 0,
+            "qualified": false
+          }
+        ]
+      }
+    }
+  ]
+}

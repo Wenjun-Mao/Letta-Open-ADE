@@ -185,17 +185,32 @@ These are scoped increments, not a claim that M0-M6 is complete.
   has actual pinned-runtime receipts, including lost acknowledgement, immutable
   replay, automatic consolidation and failed/partially committed retry. Controlled
   sources do not establish an ADE product conversation or qualify Character.
-- The new persistence/delivery libraries have 23 passing application-role
-  PostgreSQL tests and 61 focused offline checks. They are not yet wired into
-  the maintained acceptance/finalization/reply path; replacing those callers,
-  native obligations and public contracts remains required below.
+- The initial persistence/delivery library checkpoint had 23 passing
+  application-role PostgreSQL tests and 61 focused offline checks. The subsequent
+  reply replacement now wires acceptance/finalization to the outbox, normal
+  required automatic/tool recall, paused saved-input Retry, separately bound
+  compaction and independent delivery consumers. Controlled public-API/SQL
+  verification is not live native product or browser proof. See
+  [ADR 0073](../adr/0073-hindsight-reply-runtime.md).
+- The focused backend gate passed 173 checks, including 39 application-role
+  PostgreSQL tests. Both takeover regressions reproduced before repair. The
+  full Agent Runtime sweep was interrupted after a native-era dummy claim omitted
+  the new retry-group base and waited indefinitely: 466 passed, 111 skipped,
+  80 failed and nine errors were observed, not a complete suite result. Of these,
+  44 failures and nine errors are the unchanged frozen `executor.py` mismatch;
+  36 failures require current-contract test reconciliation. The dummy was repaired
+  without adding a runtime default; frozen evidence was not rebound. Further
+  maintained-test reconciliation remains an explicit gate.
 - The kit/guardrail run passed 115 tests. A broader Agent Runtime offline run
   produced 521 passed, 99 skipped, 44 failed and nine errors; all 53 failing/error
   test identities were already in the pre-change baseline. Frozen historical
   source mismatches remain visible and were not rebound. This is not a full
   repository pass or a waiver of any new-path gate.
-- Scoped recall and saved-input Retry, API/UI behavior, actual-product capture,
-  the six probe slots and M6 fault/closeout gates remain pending.
+- Backend source/API/SQL checks cover required recall and saved-input Retry.
+  Remaining maintained-test reconciliation, relationship inspection/browser
+  wiring, complete actual-product capture, the six live probe slots and M6
+  native product fault/closeout gates remain pending. Do not count this backend
+  checkpoint as full M2/M3 or M0-M6 completion.
 
 Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission

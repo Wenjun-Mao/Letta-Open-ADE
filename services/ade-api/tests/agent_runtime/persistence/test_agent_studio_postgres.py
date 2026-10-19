@@ -12,7 +12,7 @@ from ade_api.features.agent_runtime.agent_studio_reset import (
     AgentStudioResetService,
 )
 from ade_api.features.agent_runtime.agent_studio_sessions import (
-    AgentStudioSessionService,
+    PurposeSessionService,
 )
 from ade_api.features.agent_runtime.contracts import (
     AgentStudioResetRequest,
@@ -107,7 +107,7 @@ def test_agent_studio_session_is_atomic_replayable_and_scoped_reset() -> None:
 async def _exercise_atomic_session_and_reset() -> None:
     engine = create_persistence_engine(DATABASE_URL)
     database = RuntimeDatabase(engine)
-    sessions = AgentStudioSessionService(
+    sessions = PurposeSessionService(
         database=database,
         definitions=_PreparedDefinitions(),  # type: ignore[arg-type]
     )
@@ -189,7 +189,7 @@ def test_operator_removal_is_atomic_scoped_and_replay_is_historical() -> None:
 async def _exercise_operator_removal() -> None:
     engine = create_persistence_engine(DATABASE_URL)
     database = RuntimeDatabase(engine)
-    sessions = AgentStudioSessionService(
+    sessions = PurposeSessionService(
         database=database,
         definitions=_PreparedDefinitions(),  # type: ignore[arg-type]
     )
@@ -401,7 +401,7 @@ async def _exercise_operator_removal() -> None:
 async def _exercise_active_run_refusal() -> None:
     engine = create_persistence_engine(DATABASE_URL)
     database = RuntimeDatabase(engine)
-    sessions = AgentStudioSessionService(
+    sessions = PurposeSessionService(
         database=database,
         definitions=_PreparedDefinitions(),  # type: ignore[arg-type]
     )

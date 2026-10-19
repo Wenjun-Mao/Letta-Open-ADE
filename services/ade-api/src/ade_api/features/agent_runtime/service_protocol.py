@@ -5,12 +5,11 @@ from typing import Any, Protocol
 
 from .contracts import (
     AcceptTurnRequest,
-    AgentStudioResetRequest,
     CreateAgentDefinitionRequest,
     CreateAgentStudioSessionRequest,
     CreateEvaluationSessionRequest,
     CreateMemorySubjectRequest,
-    MemoryRemovalRequest,
+    RetryRunRequest,
     UpdateMemorySubjectRequest,
 )
 
@@ -62,24 +61,12 @@ class AgentRuntimeService(Protocol):
         self, subject_id: str, *, archived: bool
     ) -> dict[str, Any]: ...
 
-    async def get_agent_studio_subject_memories(
-        self, subject_id: str
-    ) -> dict[str, Any]: ...
-
-    async def remove_agent_studio_memories(
-        self, subject_id: str, request: MemoryRemovalRequest, *, actor_label: str
-    ) -> dict[str, Any]: ...
-
     async def get_agent_studio_conversation_state(
         self,
         conversation_id: str,
         *,
         message_limit: int,
         before_sequence: int | None,
-    ) -> dict[str, Any]: ...
-
-    async def reset_agent_studio(
-        self, request: AgentStudioResetRequest
     ) -> dict[str, Any]: ...
 
     async def create_evaluation_session(
@@ -92,10 +79,6 @@ class AgentRuntimeService(Protocol):
         *,
         message_limit: int,
         before_sequence: int | None = None,
-    ) -> dict[str, Any]: ...
-
-    async def purge_evaluation_session(
-        self, conversation_id: str
     ) -> dict[str, Any]: ...
 
     async def accept_turn(
@@ -117,6 +100,10 @@ class AgentRuntimeService(Protocol):
     ) -> dict[str, Any]: ...
 
     async def cancel_run(self, run_id: str) -> dict[str, Any]: ...
+
+    async def retry_run(
+        self, run_id: str, request: RetryRunRequest
+    ) -> dict[str, Any]: ...
 
     async def stream_events(
         self, run_id: str, after_sequence: int

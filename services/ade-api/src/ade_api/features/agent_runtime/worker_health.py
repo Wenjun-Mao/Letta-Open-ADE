@@ -22,7 +22,7 @@ from .persistence.validation import migration_heads
 from .persistence.workers import WorkerInstanceRepository
 
 
-WORKER_CONTRACT_VERSION = "agent-runtime-worker-v1"
+WORKER_CONTRACT_VERSION = "agent-runtime-hindsight-worker-v1"
 RUNTIME_VERSION = os.getenv("ADE_API_VERSION", "0.3.0")
 LOGGER = logging.getLogger(__name__)
 
@@ -32,6 +32,8 @@ def worker_compatibility_fingerprint(
     runtime_mode: str,
     contract_version: str = WORKER_CONTRACT_VERSION,
     migration_heads: tuple[str, ...] | None = None,
+    workspace_key: str = "",
+    memory_endpoint: str = "",
 ) -> str:
     payload = {
         "contract_version": contract_version,
@@ -39,6 +41,8 @@ def worker_compatibility_fingerprint(
             migration_heads if migration_heads is not None else _migration_heads()
         ),
         "runtime_mode": str(runtime_mode),
+        "workspace_key": workspace_key,
+        "memory_endpoint": memory_endpoint,
     }
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -103,7 +107,9 @@ class RuntimeWorkerHealthService:
     def __init__(self, *, engine: AsyncEngine, settings: AdeApiSettings) -> None:
         self.engine = engine
         self.settings = settings
-        self.database = RuntimeDatabase(engine)
+        self.database = RuntimeDatabase(
+            engine, workspace_key=settings.agent_runtime_workspace_key
+        )
 
     async def aclose(self) -> None:
         await self.engine.dispose()
@@ -269,6 +275,13 @@ def build_runtime_worker_health_service(
             settings=settings,
             failure_code="database_not_configured",
         )
+    if (
+        not settings.agent_runtime_workspace_key
+        or settings.agent_runtime_workspace_key == "default"
+    ):
+        return UnavailableRuntimeWorkerHealthService(
+            settings=settings, failure_code="fresh_workspace_not_configured"
+        )
     return RuntimeWorkerHealthService(
         engine=create_persistence_engine(settings.database_url),
         settings=settings,
@@ -278,6 +291,8 @@ def build_runtime_worker_health_service(
 def _settings_fingerprint(settings: AdeApiSettings) -> str:
     return worker_compatibility_fingerprint(
         runtime_mode=settings.agent_runtime_mode,
+        workspace_key=settings.agent_runtime_workspace_key,
+        memory_endpoint=settings.hindsight_base_url.rstrip("/"),
     )
 
 

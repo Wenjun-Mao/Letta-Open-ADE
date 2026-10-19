@@ -87,7 +87,12 @@ def _worker(attempts: _Attempts, finalizer: _Finalizer) -> AgentRuntimeWorker:
 
 def _claim() -> ClaimedRun:
     return ClaimedRun(
-        run={"id": "run-1", "attempt_count": 0, "retry_count": 0},
+        run={
+            "id": "run-1",
+            "attempt_count": 0,
+            "retry_count": 0,
+            "retry_attempt_base": 0,
+        },
         lease_token="lease-1",
         recovered=False,
     )
@@ -101,7 +106,7 @@ def test_drain_allows_one_active_attempt_to_finish() -> None:
         task = asyncio.create_task(
             _worker(attempts, finalizer)._process_claim(_claim(), stop_requested)
         )
-        await attempts.started.wait()
+        await asyncio.wait_for(attempts.started.wait(), timeout=1)
         stop_requested.set()
         attempts.release.set()
         await task

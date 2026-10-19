@@ -31,6 +31,7 @@ class AttemptTrace:
         self._events: list[NormalizedTraceEvent] = []
         self._request_counts: dict[str, int] = defaultdict(int)
         self.observation_incomplete = False
+        self.memory_lookup_active = False
         self.natural_evidence: NaturalAttemptEvidence | None = None
 
     def transport(

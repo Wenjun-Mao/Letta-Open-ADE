@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 import pytest
 
 from ade_api.features.agent_runtime.agent_studio_sessions import (
-    AgentStudioSessionService,
+    PurposeSessionService,
 )
 from ade_api.features.agent_runtime.contracts import (
     CreateAgentDefinitionRequest,
@@ -83,7 +83,7 @@ def test_evaluation_session_binds_existing_cross_fixture_resources() -> None:
 
 
 def test_agent_studio_rejects_evaluation_only_tools() -> None:
-    service = AgentStudioSessionService(database=None, definitions=None)  # type: ignore[arg-type]
+    service = PurposeSessionService(database=None, definitions=None)  # type: ignore[arg-type]
     definition = CreateAgentDefinitionRequest(
         definition_key="weather_fixture",
         name="Weather fixture",
@@ -102,7 +102,7 @@ def test_existing_definition_session_creation_reaches_the_lifecycle_path() -> No
         async def ensure_ready(self) -> None:
             return None
 
-    service = AgentStudioSessionService(
+    service = PurposeSessionService(
         database=_ReadyDatabase(),  # type: ignore[arg-type]
         definitions=None,  # type: ignore[arg-type]
     )

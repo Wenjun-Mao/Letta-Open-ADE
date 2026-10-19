@@ -19,6 +19,8 @@ from .compaction import (
     parse_compaction_response,
 )
 from .model_response import first_choice, merge_usage
+from .context import estimate_tokens
+from .errors import RuntimeValidationError
 from .provider_tracing import safe_provider_request_id
 from .router_transport import RouterTransport
 
@@ -39,6 +41,7 @@ class CompactionExecutor:
         timeout_seconds: float,
         max_output_tokens: int,
         summary_token_budget: int,
+        input_token_limit: int | None = None,
         observe_request: Callable[[dict[str, Any]], None] | None = None,
     ) -> ModelCompaction:
         compaction_system = COMPACTION_SYSTEM
@@ -85,6 +88,17 @@ class CompactionExecutor:
                     },
                     "chat_template_kwargs": {"enable_thinking": False},
                 }
+            )
+        if (
+            input_token_limit is not None
+            and estimate_tokens(
+                json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+            )
+            > input_token_limit
+        ):
+            raise RuntimeValidationError(
+                "Serialized compaction request exceeds its input limit",
+                detail_code="compaction_serialized_overflow",
             )
         if observe_request is not None:
             observe_request(payload)

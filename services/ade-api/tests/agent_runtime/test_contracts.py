@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from ade_api.features.agent_runtime.contracts import (
     AcceptTurnRequest,
-    AgentStudioResetRequest,
+    RetryRunRequest,
     ConversationStateResponse,
     CreateAgentDefinitionRequest,
     CreateAgentStudioSessionRequest,
@@ -46,8 +46,7 @@ def test_agent_studio_session_requires_exactly_one_definition_and_subject_source
         definition_key="companion",
         name="Companion",
         model_key="dgx_vllm::qwen",
-        reviewer_model_key="dgx_vllm::qwen",
-        embedding_model_key="dgx_embedding::qwen",
+        compaction_model_key="dgx_vllm::qwen",
     )
     subject = CreateMemorySubjectRequest(
         external_key="person:zhang-wei",
@@ -84,8 +83,7 @@ def test_evaluation_session_contract_provisions_defaults_or_binds_fixtures() -> 
     request = CreateEvaluationSessionRequest(
         idempotency_key="evaluation-1",
         model_key="dgx_vllm::qwen",
-        reviewer_model_key="dgx_vllm::qwen-reviewer",
-        embedding_model_key="dgx_embedding::qwen",
+        compaction_model_key="dgx_vllm::qwen-compaction",
         tool_names=["search_memory", "get_weather"],
         subject_external_key="fixture:customer-1",
     )
@@ -128,23 +126,25 @@ def test_evaluation_session_contract_provisions_defaults_or_binds_fixtures() -> 
         CreateEvaluationSessionRequest(
             idempotency_key="evaluation-5",
             model_key="dgx_vllm::qwen",
-            reviewer_model_key="dgx_vllm::qwen-reviewer",
-            embedding_model_key="dgx_embedding::qwen",
+            compaction_model_key="dgx_vllm::qwen-compaction",
             tool_names=["get_weather", "get_weather"],
         )
 
 
-def test_agent_studio_reset_requires_the_explicit_confirmation_phrase() -> None:
-    request = AgentStudioResetRequest(
-        idempotency_key="reset-1",
-        confirmation="RESET ADE AGENT STUDIO",
+def test_saved_input_retry_requires_an_observed_attempt_and_no_new_content() -> None:
+    assert (
+        RetryRunRequest(
+            idempotency_key="retry-1", expected_attempt_count=1
+        ).expected_attempt_count
+        == 1
     )
-    assert request.confirmation == "RESET ADE AGENT STUDIO"
-
     with pytest.raises(ValidationError):
-        AgentStudioResetRequest(
-            idempotency_key="reset-2",
-            confirmation="reset",
+        RetryRunRequest(idempotency_key="retry-2", expected_attempt_count=0)
+    with pytest.raises(ValidationError):
+        RetryRunRequest(
+            idempotency_key="retry-3",
+            expected_attempt_count=1,
+            content="Do not resend input",
         )
 
 

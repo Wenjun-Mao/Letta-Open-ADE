@@ -14,6 +14,8 @@ from ade_api.platform.settings import AdeApiSettings
 from .events import append_run_event
 from .persistence.leases import ConversationLeaseRepository
 from .persistence.runs import RunRepository
+from .persistence.run_lifecycle import lock_run
+from .turn_recall import MemoryLookupError
 from .provider_tracing import AttemptTrace
 from .turn_execution import TurnExecution
 from .turn_result import AttemptResult
@@ -57,13 +59,13 @@ class AttemptController:
         attempt_id = str(uuid4())
         async with self.engine.begin() as connection:
             runs = RunRepository(connection)
-            current = await runs.get_for_update(str(claim.run["id"]))
-            if current["cancellation_requested_at"] is not None:
-                raise RunCancelled("run cancellation was requested")
+            _, run = await lock_run(connection, str(claim.run["id"]))
+            if run["status"] != "running" or run["cancellation_requested_at"]:
+                raise RunCancelled("Run is no longer executable")
             if not await ConversationLeaseRepository(connection).owns(
-                claim.lease_token, str(claim.run["id"])
+                claim.lease_token, str(run["id"])
             ):
-                raise LeaseLost("conversation lease is no longer owned")
+                raise LeaseLost("Conversation lease was lost before attempt start")
             await runs.set_attempt_count(str(claim.run["id"]), attempt)
             await runs.create_attempt(
                 {
@@ -116,6 +118,8 @@ class AttemptController:
             if lease_task in done:
                 raise LeaseLost("conversation lease was lost")
             if execution_task not in done:
+                if trace.memory_lookup_active:
+                    raise MemoryLookupError("memory_lookup_timeout")
                 raise TimeoutError("whole runtime attempt timed out")
             return await execution_task
         finally:
@@ -139,6 +143,7 @@ class AttemptController:
             return None
         async with self.engine.begin() as connection:
             runs = RunRepository(connection)
+            await lock_run(connection, str(claim.run["id"]))
             if not await ConversationLeaseRepository(connection).owns(
                 claim.lease_token, str(claim.run["id"])
             ):
@@ -183,7 +188,7 @@ class AttemptController:
         run_id = str(claim.run["id"])
         async with self.engine.begin() as connection:
             runs = RunRepository(connection)
-            current = await runs.get_for_update(run_id)
+            _, current = await lock_run(connection, run_id)
             if current["cancellation_requested_at"] is not None:
                 raise RunCancelled("run cancellation was requested")
             if not await ConversationLeaseRepository(connection).owns(

@@ -1,41 +1,30 @@
+"""Commit product outcomes and delivery intent without cross-service transactions."""
+
 from __future__ import annotations
 
 import hashlib
-from typing import Any
 from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from .database_boundary import DEFAULT_WORKSPACE_ID
 from .events import append_run_event
-from .memory_commit import commit_memory_review
-from .memory_policy import prepare_memory_review
-from .natural_memory_commit import (
-    commit_natural_memory_review,
-    revalidate_bound_natural_review,
-)
-from .natural_memory_policy import PreparedNaturalReview
 from .persistence.base import OptimisticLockError
 from .persistence.conversations import ConversationRepository
+from .persistence.definitions import DefinitionVersionRepository
 from .persistence.leases import ConversationLeaseRepository
 from .persistence.memory import MemoryRepository
-from .persistence.history_guard import validate_history_at_commit
+from .persistence.run_lifecycle import RunLifecycleRepository, lock_run
 from .persistence.runs import RunRepository
 from .provider_tracing import AttemptTrace
+from .turn_recall import MemoryLookupError
 from .turn_result import AttemptResult
+from .turn_sources import enqueue_message
 from .worker_claims import ClaimedRun
-from .worker_control import (
-    LeaseLost,
-    RunCancelled,
-    utc_now,
-    worker_error_payload,
-)
+from .worker_control import LeaseLost, RunCancelled, utc_now, worker_error_payload
 from .worker_events import append_attempt_trace, append_success_events
 
 
 class RunFinalizer:
-    """Commits one terminal run outcome and releases its conversation lease."""
-
     def __init__(self, engine: AsyncEngine) -> None:
         self.engine = engine
 
@@ -47,174 +36,96 @@ class RunFinalizer:
         trace: AttemptTrace | None = None,
     ) -> None:
         run_id = str(claim.run["id"])
-        conversation_id = str(claim.run["conversation_id"])
         async with self.engine.begin() as connection:
-            runs = RunRepository(connection)
-            conversations = ConversationRepository(connection)
-            memory = MemoryRepository(connection)
-            leases = ConversationLeaseRepository(connection)
-            run = await runs.get_for_update(run_id)
-            if run["status"] != "running" or run["cancellation_requested_at"]:
-                raise RunCancelled("cancellation won before final commit")
+            conversation, run = await lock_run(connection, run_id)
+            runs, conversations, leases = (
+                RunRepository(connection),
+                ConversationRepository(connection),
+                ConversationLeaseRepository(connection),
+            )
             if not await leases.owns(claim.lease_token, run_id):
-                raise LeaseLost("conversation lease was lost before final commit")
-            conversation = await conversations.get(conversation_id)
-            subject_id = str(conversation["memory_subject_id"])
-            conversation, subject = await _lock_conversation_and_subject(
-                conversations, memory, conversation_id, subject_id
+                raise LeaseLost("Conversation lease was lost before final commit")
+            if run["status"] != "running" or run["cancellation_requested_at"]:
+                raise RunCancelled("Cancellation won before final commit")
+            subject = await MemoryRepository(connection).lock_subject(
+                str(conversation["memory_subject_id"])
             )
-            accepted_generation = int(run.get("accepted_memory_generation", 1))
-            if int(subject["memory_generation"]) != accepted_generation:
-                raise OptimisticLockError(
-                    "subject memory changed after turn acceptance"
-                )
-            if int(conversation["version"]) != int(
-                run["accepted_conversation_version"]
+            if (
+                conversation["archived_at"]
+                or subject["archived_at"]
+                or int(conversation["version"])
+                != int(run["accepted_conversation_version"])
             ):
-                raise OptimisticLockError(
-                    "conversation changed before the run could commit"
-                )
-            messages = await conversations.list_messages(conversation_id)
-            current_user = _current_user_message(messages, run_id)
-            await validate_history_at_commit(
-                connection,
-                exchanges=result.admitted_history_exchanges,
-                deadline=result.history_deadline,
-                conversation=conversation,
-                subject_id=subject_id,
-                current_run_id=run_id,
+                raise OptimisticLockError("Conversation changed before reply commit")
+            definition = await DefinitionVersionRepository(connection).get(
+                str(conversation["agent_definition_version_id"])
             )
-            if isinstance(result.review, PreparedNaturalReview):
-                revalidate_bound_natural_review(
-                    result.review,
-                    subject_id=subject_id,
-                    run_id=run_id,
-                    messages=messages,
-                    facts=await memory.list_facts(subject_id),
-                    entities=await memory.list_entities(subject_id),
-                )
-                committed = await commit_natural_memory_review(
-                    connection,
-                    workspace_id=DEFAULT_WORKSPACE_ID,
-                    subject_id=subject_id,
-                    run_id=run_id,
-                    review=result.review,
-                    operation_embeddings=result.operation_embeddings,
-                    embedding_fingerprint=result.embedding_fingerprint,
-                    embedding_dimensions=result.embedding_dimensions,
-                    retrieval_policy_version=result.retrieval_policy_version,
-                    expected_memory_generation=accepted_generation,
-                )
-            else:
-                prepared = prepare_memory_review(
-                    decision=result.reviewer.decision,
-                    subject_id=subject_id,
-                    current_user_message=current_user,
-                    active_facts=await memory.list_active_facts(subject_id),
-                    entities=await memory.list_entities(subject_id),
-                )
-                committed = await commit_memory_review(
-                    connection,
-                    workspace_id=DEFAULT_WORKSPACE_ID,
-                    subject_id=subject_id,
-                    run_id=run_id,
-                    review=prepared,
-                    operation_embeddings=result.operation_embeddings,
-                    embedding_fingerprint=result.embedding_fingerprint,
-                    embedding_dimensions=result.embedding_dimensions,
-                    retrieval_policy_version=result.retrieval_policy_version,
-                    expected_memory_generation=accepted_generation,
-                )
             assistant = await conversations.append_message(
                 {
                     "id": str(uuid4()),
-                    "workspace_id": DEFAULT_WORKSPACE_ID,
-                    "conversation_id": conversation_id,
+                    "workspace_id": str(run["workspace_id"]),
+                    "conversation_id": str(conversation["id"]),
                     "role": "assistant",
                     "content": result.assistant_text,
-                    "content_sha256": _sha256(result.assistant_text),
+                    "content_sha256": hashlib.sha256(
+                        result.assistant_text.encode()
+                    ).hexdigest(),
                     "run_id": run_id,
                 }
             )
-            summary = None
-            if result.compaction is not None:
-                compaction = result.compaction
-                summary = await conversations.create_compaction(
-                    payload={
-                        "id": str(uuid4()),
-                        "conversation_id": conversation_id,
-                        "version": compaction.plan.expected_summary_version + 1,
-                        "through_sequence": compaction.plan.through_sequence,
-                        "content": compaction.content,
-                        "run_id": run_id,
-                        "previous_summary_id": compaction.plan.previous_summary_id,
-                        "model_key": compaction.model_key,
-                        "model_fingerprint": compaction.model_fingerprint,
-                        "provider_request_id": compaction.provider_request_id,
-                        "content_sha256": compaction.content_sha256,
-                        "prompt_sha256": compaction.prompt_sha256,
-                        "input_sha256": compaction.input_sha256,
-                        "policy_sha256": compaction.policy_sha256,
-                    },
-                    source_message_ids=compaction.plan.source_message_ids,
-                    expected_summary_version=compaction.plan.expected_summary_version,
-                    expected_previous_summary_id=compaction.plan.previous_summary_id,
-                )
+            delivery = await enqueue_message(
+                connection,
+                message=assistant,
+                conversation=conversation,
+                definition=definition,
+            )
+            summary = await _commit_compaction(
+                conversations,
+                result,
+                conversation_id=str(conversation["id"]),
+                run_id=run_id,
+            )
             await conversations.advance_version(
-                conversation_id, int(run["accepted_conversation_version"])
+                str(conversation["id"]), int(run["accepted_conversation_version"])
             )
             await runs.finish_attempt(
                 attempt_id,
                 status="succeeded",
                 provider_outcome={
                     "conversation_request_ids": result.executor.provider_request_ids,
-                    "reviewer_request_ids": result.reviewer.provider_request_ids,
-                    **(
-                        {
-                            "history_probe_status": result.history_probe_status,
-                            "admitted_history_run_ids": [
-                                str(exchange["run_id"])
-                                for exchange in result.admitted_history_exchanges
-                            ],
-                        }
-                        if result.history_probe_status is not None
-                        else {}
-                    ),
-                    "compaction_request_id": (
-                        result.compaction.provider_request_id
-                        if result.compaction is not None
-                        else None
-                    ),
+                    "memory_lookups": list(result.memory_lookups),
+                    "compaction_request_id": result.compaction.provider_request_id
+                    if result.compaction
+                    else None,
                 },
                 finished_at=utc_now(),
             )
             await runs.finish(
-                run_id,
-                status="succeeded",
-                attempt_count=int(run["attempt_count"]),
+                run_id, status="succeeded", attempt_count=int(run["attempt_count"])
             )
             await append_success_events(
                 runs,
                 run_id=run_id,
                 attempt=int(run["attempt_count"]),
                 result=result,
-                committed=committed,
                 assistant_message_id=str(assistant["id"]),
+                delivery_operation_id=str(delivery["operation_id"]),
                 summary=summary,
                 trace=trace,
             )
             await leases.release(claim.lease_token)
         if trace is not None:
             try:
-                async with self.engine.begin() as observation_connection:
+                async with self.engine.begin() as connection:
                     await append_attempt_trace(
-                        RunRepository(observation_connection),
+                        RunRepository(connection),
                         run_id=run_id,
                         attempt=trace.attempt,
                         trace=trace,
                         causation_id=None,
                     )
             except Exception:
+                # Safe observational failure cannot rewrite a committed reply.
                 pass
 
     async def commit_cancellation(
@@ -226,40 +137,14 @@ class RunFinalizer:
         trace: AttemptTrace | None = None,
         trace_causation_id: str | None = None,
     ) -> None:
-        async with self.engine.begin() as connection:
-            runs = RunRepository(connection)
-            leases = ConversationLeaseRepository(connection)
-            run = await runs.get_for_update(str(claim.run["id"]))
-            if run["status"] not in {"pending", "running"}:
-                return
-            if not await leases.owns(claim.lease_token, str(run["id"])):
-                raise LeaseLost(
-                    "conversation lease was lost before cancellation commit"
-                )
-            if run["status"] in {"pending", "running"}:
-                if attempt_id:
-                    causation_id = await _finish_open_attempt(
-                        runs,
-                        run=run,
-                        attempt_id=attempt_id,
-                        status="cancelled",
-                        error_payload={"error_code": "run_cancelled"},
-                        trace=trace,
-                        trace_causation_id=trace_causation_id or causation_id,
-                    )
-                run = await runs.finish(
-                    str(run["id"]),
-                    status="cancelled",
-                    attempt_count=int(run["attempt_count"]),
-                )
-                await append_run_event(
-                    runs,
-                    run_id=str(run["id"]),
-                    event_type="run.cancelled",
-                    payload={"attempt_count": int(run["attempt_count"])},
-                    causation_id=causation_id,
-                )
-            await leases.release(claim.lease_token)
+        await self._finish_unsuccessful(
+            claim,
+            attempt_id,
+            cancelled=True,
+            causation_id=causation_id,
+            trace=trace,
+            trace_causation_id=trace_causation_id,
+        )
 
     async def commit_failure(
         self,
@@ -271,124 +156,109 @@ class RunFinalizer:
         trace: AttemptTrace | None = None,
         trace_causation_id: str | None = None,
     ) -> None:
+        await self._finish_unsuccessful(
+            claim,
+            attempt_id,
+            exc=exc,
+            causation_id=causation_id,
+            trace=trace,
+            trace_causation_id=trace_causation_id,
+        )
+
+    async def _finish_unsuccessful(
+        self,
+        claim,
+        attempt_id,
+        *,
+        exc=None,
+        cancelled=False,
+        causation_id=None,
+        trace=None,
+        trace_causation_id=None,
+    ):
+        run_id = str(claim.run["id"])
         async with self.engine.begin() as connection:
-            runs = RunRepository(connection)
-            leases = ConversationLeaseRepository(connection)
-            run = await runs.get_for_update(str(claim.run["id"]))
+            _, run = await lock_run(connection, run_id)
+            runs, leases = (
+                RunRepository(connection),
+                ConversationLeaseRepository(connection),
+            )
             if run["status"] not in {"pending", "running"}:
                 return
-            if not await leases.owns(claim.lease_token, str(run["id"])):
-                raise LeaseLost("conversation lease was lost before failure commit")
-            if run["cancellation_requested_at"] is not None:
-                if attempt_id:
-                    causation_id = await _finish_open_attempt(
+            if not await leases.owns(claim.lease_token, run_id):
+                raise LeaseLost("Conversation lease was lost before outcome commit")
+            cancelled = cancelled or run["cancellation_requested_at"] is not None
+            paused = not cancelled and isinstance(exc, MemoryLookupError)
+            status = "cancelled" if cancelled else "paused" if paused else "failed"
+            payload = (
+                {"error_code": "run_cancelled"}
+                if cancelled
+                else worker_error_payload(exc)
+            )
+            if attempt_id:
+                await runs.finish_attempt(
+                    attempt_id,
+                    status="cancelled" if cancelled else "failed",
+                    provider_outcome=payload,
+                    finished_at=utc_now(),
+                )
+                if trace is not None:
+                    causation_id = await append_attempt_trace(
                         runs,
-                        run=run,
-                        attempt_id=attempt_id,
-                        status="cancelled",
-                        error_payload={"error_code": "run_cancelled"},
+                        run_id=run_id,
+                        attempt=int(run["attempt_count"]),
                         trace=trace,
-                        trace_causation_id=trace_causation_id or causation_id,
+                        causation_id=trace_causation_id or causation_id,
                     )
+            if paused:
+                await RunLifecycleRepository(connection).pause(
+                    run_id, detail_code=exc.detail_code
+                )
+            else:
                 await runs.finish(
-                    str(run["id"]),
-                    status="cancelled",
+                    run_id,
+                    status=status,
                     attempt_count=int(run["attempt_count"]),
+                    error_code=None if cancelled else payload["error_code"],
+                    error_message=None
+                    if cancelled
+                    else f"ADE reply failed ({payload['error_code']})",
                 )
-                await append_run_event(
-                    runs,
-                    run_id=str(run["id"]),
-                    event_type="run.cancelled",
-                    payload={"attempt_count": int(run["attempt_count"])},
-                    causation_id=causation_id,
-                )
-            elif run["status"] in {"pending", "running"}:
-                error_payload = worker_error_payload(exc)
-                error_code = error_payload["error_code"]
-                if attempt_id:
-                    causation_id = await _finish_open_attempt(
-                        runs,
-                        run=run,
-                        attempt_id=attempt_id,
-                        status="failed",
-                        error_payload=error_payload,
-                        trace=trace,
-                        trace_causation_id=trace_causation_id or causation_id,
-                    )
-                await runs.finish(
-                    str(run["id"]),
-                    status="failed",
-                    attempt_count=int(run["attempt_count"]),
-                    error_code=error_code,
-                    error_message=f"Agent Runtime v3 run failed ({error_code})",
-                )
-                await append_run_event(
-                    runs,
-                    run_id=str(run["id"]),
-                    event_type="run.failed",
-                    payload={
-                        "attempt_count": int(run["attempt_count"]),
-                        **error_payload,
-                    },
-                    attempt=int(run["attempt_count"]) or None,
-                    causation_id=causation_id,
-                )
+            await append_run_event(
+                runs,
+                run_id=run_id,
+                event_type=f"run.{status}",
+                payload={"attempt_count": int(run["attempt_count"]), **payload},
+                attempt=int(run["attempt_count"]) or None,
+                causation_id=causation_id,
+            )
+            # The paused run's unique active-conversation index remains its input
+            # guard; releasing this lease lets the worker serve unrelated replies.
             await leases.release(claim.lease_token)
 
 
-async def _finish_open_attempt(
-    runs: RunRepository,
-    *,
-    run: dict[str, Any],
-    attempt_id: str,
-    status: str,
-    error_payload: dict[str, str],
-    trace: AttemptTrace | None,
-    trace_causation_id: str | None,
-) -> str | None:
-    await runs.finish_attempt(
-        attempt_id,
-        status=status,
-        provider_outcome=dict(error_payload),
-        finished_at=utc_now(),
+async def _commit_compaction(conversations, result, *, conversation_id, run_id):
+    compaction = result.compaction
+    if compaction is None:
+        return None
+    return await conversations.create_compaction(
+        payload={
+            "id": str(uuid4()),
+            "conversation_id": conversation_id,
+            "version": compaction.plan.expected_summary_version + 1,
+            "through_sequence": compaction.plan.through_sequence,
+            "content": compaction.content,
+            "run_id": run_id,
+            "previous_summary_id": compaction.plan.previous_summary_id,
+            "model_key": compaction.model_key,
+            "model_fingerprint": compaction.model_fingerprint,
+            "provider_request_id": compaction.provider_request_id,
+            "content_sha256": compaction.content_sha256,
+            "prompt_sha256": compaction.prompt_sha256,
+            "input_sha256": compaction.input_sha256,
+            "policy_sha256": compaction.policy_sha256,
+        },
+        source_message_ids=compaction.plan.source_message_ids,
+        expected_summary_version=compaction.plan.expected_summary_version,
+        expected_previous_summary_id=compaction.plan.previous_summary_id,
     )
-    if trace is None:
-        return trace_causation_id
-    return await append_attempt_trace(
-        runs,
-        run_id=str(run["id"]),
-        attempt=int(run["attempt_count"]),
-        trace=trace,
-        causation_id=trace_causation_id,
-    )
-
-
-async def _lock_conversation_and_subject(
-    conversations: ConversationRepository,
-    memory: MemoryRepository,
-    conversation_id: str,
-    subject_id: str,
-) -> tuple[dict[str, Any], dict[str, Any]]:
-    # Turn admission always locks conversation before subject. Preserve that
-    # order here regardless of UUID sorting, or concurrent admission/finalization
-    # can each hold one row and wait for the other.
-    conversation = await conversations.get_for_update(conversation_id)
-    subject = await memory.lock_subject(subject_id)
-    return conversation, subject
-
-
-def _current_user_message(
-    messages: list[dict[str, Any]], run_id: str
-) -> dict[str, Any]:
-    matches = [
-        message
-        for message in messages
-        if message["role"] == "user" and str(message.get("run_id")) == run_id
-    ]
-    if len(matches) != 1:
-        raise RuntimeError("run has no unique immutable user message")
-    return matches[0]
-
-
-def _sha256(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()

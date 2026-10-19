@@ -52,12 +52,14 @@ needed. Claim, heartbeat, cancellation, retry and finalization preserve lease
 fencing; a stale worker cannot finish a newer attempt. A unique run/role message
 binding prevents duplicated accepted users or committed replies.
 
-Use a configured fresh workspace key (default `hindsight`) with an explicit
+Use an explicitly configured fresh workspace key (no implicit default) with an explicit
 Hindsight authority marker. Never silently convert the incumbent workspace or
 resume its conversations. Keep historical native rows/tables and migrations,
 but remove their maintained execution, reviewer and reset/removal paths.
 Hindsight Stage 1 remains development-only; historical native release evidence
 cannot qualify it. No existing service is redeployed by source publication.
+The concrete reply replacement and its separate model roles are recorded in
+[ADR 0073](0073-hindsight-reply-runtime.md).
 
 ## Alternatives And Guardrails
 

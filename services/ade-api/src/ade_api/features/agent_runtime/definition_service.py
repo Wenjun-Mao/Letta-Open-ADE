@@ -12,29 +12,24 @@ from ade_api.platform.settings import AdeApiSettings
 from model_catalog_contracts.deployment_manifest import load_deployment_manifest
 
 from .contracts import CreateAgentDefinitionRequest, QualificationState
-from .database_boundary import (
-    DEFAULT_WORKSPACE_ID,
-    RuntimeDatabase,
-    require_default_workspace,
-)
+from .database_boundary import RuntimeDatabase
 from .deployments import ResolvedDeployment, resolve_deployment
-from .errors import RuntimeConflict, RuntimeNotFound, RuntimeValidationError
-from .memory_policy_binding import TYPED_MEMORY_POLICY_VERSION
+from .errors import (
+    RuntimeConflict,
+    RuntimeNotFound,
+    RuntimeValidationError,
+    UnqualifiedDeployment,
+)
+from .turn_sources import HINDSIGHT_MEMORY_POLICY
 from .persistence.definitions import (
     AgentDefinitionRepository,
     DefinitionVersionRepository,
 )
 from .presenters import definition_response
-from .release_policy import (
-    AGENT_STUDIO_DEPLOYMENT_MANIFEST_PATH,
-    current_production_policy_hashes,
-    load_validated_agent_studio_release,
-    source_tree_is_clean,
-)
 from .router_transport import RouterTransport
 
 
-MEMORY_POLICY_VERSION = TYPED_MEMORY_POLICY_VERSION
+MEMORY_POLICY_VERSION = HINDSIGHT_MEMORY_POLICY
 _ROUTER_SOURCE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
 
@@ -56,14 +51,12 @@ class DefinitionService:
         """Build the configured Agent Studio definition for the active mode."""
 
         if self.settings.agent_runtime_mode == "release":
-            release = load_validated_agent_studio_release()
-            route_aliases = release.route_aliases
-            prompt_key = release.agent_bundle.prompt_key
-            persona_key = release.agent_bundle.persona_key
-            tool_names = list(release.agent_bundle.tool_names)
+            raise UnqualifiedDeployment(
+                "Hindsight conversation path is not release-qualified"
+            )
         else:
             manifest = load_deployment_manifest(
-                PROJECT_ROOT / AGENT_STUDIO_DEPLOYMENT_MANIFEST_PATH,
+                PROJECT_ROOT / self.settings.agent_runtime_deployment_manifest,
                 project_root=PROJECT_ROOT,
             )
             route_aliases = {
@@ -76,7 +69,7 @@ class DefinitionService:
                     ),
                     "",
                 )
-                for role in ("conversation", "reviewer", "retriever")
+                for role in ("conversation", "compaction")
             }
             missing_roles = [role for role, alias in route_aliases.items() if not alias]
             if missing_roles:
@@ -84,16 +77,15 @@ class DefinitionService:
                     "Deployment manifest has no active Agent Studio route for: "
                     + ", ".join(missing_roles)
                 )
-            prompt_key = "chat_v20260516"
+            prompt_key = "chat_v20261019"
             persona_key = "chat_linxiaotang"
             tool_names = ["search_memory"]
 
         return CreateAgentDefinitionRequest(
-            definition_key="ade_native_default",
-            name="ADE Native Companion",
+            definition_key="ade_hindsight_default",
+            name="ADE Hindsight Companion",
             model_key=route_aliases["conversation"],
-            reviewer_model_key=route_aliases["reviewer"],
-            embedding_model_key=route_aliases["retriever"],
+            compaction_model_key=route_aliases["compaction"],
             prompt_key=prompt_key,
             persona_key=persona_key,
             tool_names=tool_names,
@@ -106,7 +98,7 @@ class DefinitionService:
 
         request = request or self.default_agent_studio_request()
         manifest = load_deployment_manifest(
-            PROJECT_ROOT / AGENT_STUDIO_DEPLOYMENT_MANIFEST_PATH,
+            PROJECT_ROOT / self.settings.agent_runtime_deployment_manifest,
             project_root=PROJECT_ROOT,
         )
         catalog = {
@@ -118,7 +110,7 @@ class DefinitionService:
                 for deployment in manifest.deployments
             ]
         }
-        deployments = self._resolve_deployments(request, catalog, release=None)
+        deployments = self._resolve_deployments(request, catalog)
         qualification = (
             QualificationState.QUALIFIED
             if all(
@@ -128,11 +120,10 @@ class DefinitionService:
             else QualificationState.UNQUALIFIED
         )
         return {
-            "key": "ade_native_default",
-            "name": "ADE Native Default",
+            "key": "ade_hindsight_default",
+            "name": "ADE Hindsight Default",
             "model_key": deployments[0].route_alias,
-            "reviewer_model_key": deployments[1].route_alias,
-            "embedding_model_key": deployments[2].route_alias,
+            "compaction_model_key": deployments[1].route_alias,
             "prompt_key": request.prompt_key,
             "persona_key": request.persona_key,
             "tool_names": list(request.tool_names),
@@ -154,7 +145,7 @@ class DefinitionService:
             async with self.database.engine.begin() as connection:
                 await self.database.ensure_workspace(connection)
                 row = await DefinitionVersionRepository(connection).create_next(
-                    DEFAULT_WORKSPACE_ID,
+                    self.database.workspace_id,
                     {
                         "id": version_id or str(uuid4()),
                         **({"agent_definition_id": root_id} if root_id else {}),
@@ -183,11 +174,11 @@ class DefinitionService:
         async with self.database.translated_errors():
             async with self.database.engine.begin() as connection:
                 versions = DefinitionVersionRepository(connection)
-                await versions.lock_workspace(DEFAULT_WORKSPACE_ID)
+                await versions.lock_workspace(self.database.workspace_id)
                 root = await AgentDefinitionRepository(connection).get_for_update(
                     root_id
                 )
-                require_default_workspace(root)
+                self.database.require_workspace(root)
                 if root["purpose"] != purpose:
                     raise RuntimeNotFound(
                         "agent definition does not exist in this purpose"
@@ -203,7 +194,7 @@ class DefinitionService:
                     )
                 validate_current(current)
                 row = await versions.create_next(
-                    DEFAULT_WORKSPACE_ID,
+                    self.database.workspace_id,
                     {**prepared, "id": str(uuid4()), "agent_definition_id": root_id},
                     purpose=purpose,
                     expected_current_version=request.expected_current_version,
@@ -216,27 +207,13 @@ class DefinitionService:
         """Resolve external snapshots without writing a partial definition."""
 
         await self.database.ensure_ready()
+        if self.settings.agent_runtime_mode == "release":
+            raise UnqualifiedDeployment(
+                "Hindsight conversation path is not release-qualified"
+            )
         if "get_weather" in request.tool_names and purpose != "evaluation":
             raise RuntimeValidationError(
                 "get_weather is available only to evaluation sessions"
-            )
-        release = (
-            load_validated_agent_studio_release()
-            if self.settings.agent_runtime_mode == "release"
-            else None
-        )
-        if (
-            purpose == "agent_studio"
-            and release is not None
-            and (
-                request.prompt_key != release.agent_bundle.prompt_key
-                or request.persona_key != release.agent_bundle.persona_key
-                or tuple(request.tool_names) != release.agent_bundle.tool_names
-            )
-        ):
-            raise RuntimeValidationError(
-                "Release Agent Studio definitions must use the exact qualified prompt, "
-                "persona, and tool contract"
             )
         prompt = self.prompt_registry.get_template(
             "prompt", request.prompt_key, scenario="chat"
@@ -255,7 +232,7 @@ class DefinitionService:
         catalog = await self.router_transport.catalog(
             timeout_seconds=self.settings.model_discovery_timeout_seconds
         )
-        deployments = self._resolve_deployments(request, catalog, release=release)
+        deployments = self._resolve_deployments(request, catalog)
         qualification = (
             QualificationState.QUALIFIED
             if all(
@@ -270,8 +247,7 @@ class DefinitionService:
             "definition_key": request.definition_key,
             "name": request.name,
             "model_key": deployments[0].route_alias,
-            "reviewer_model_key": deployments[1].route_alias,
-            "embedding_model_key": deployments[2].route_alias,
+            "compaction_model_key": deployments[1].route_alias,
             "prompt_key": request.prompt_key,
             "prompt_sha256": _sha256(prompt_content),
             "prompt_content": prompt_content,
@@ -289,55 +265,35 @@ class DefinitionService:
         async with self.database.translated_errors():
             async with self.database.engine.connect() as connection:
                 row = await DefinitionVersionRepository(connection).get(definition_id)
-                require_default_workspace(row)
+                self.database.require_workspace(row)
         return definition_response(row)
 
     def _resolve_deployments(
         self,
         request: CreateAgentDefinitionRequest,
         catalog: dict[str, Any],
-        *,
-        release: Any | None,
-    ) -> tuple[ResolvedDeployment, ResolvedDeployment, ResolvedDeployment]:
+    ) -> tuple[ResolvedDeployment, ResolvedDeployment]:
         mode = self.settings.agent_runtime_mode
         requested_routes = {
             "conversation": normalize_route_alias(request.model_key),
-            "reviewer": normalize_route_alias(request.reviewer_model_key),
-            "retriever": normalize_route_alias(request.embedding_model_key),
+            "compaction": normalize_route_alias(request.compaction_model_key),
         }
-        if release is not None and requested_routes != release.route_aliases:
-            raise RuntimeValidationError(
-                "Release Agent Studio sessions must use the exact qualified deployment routes"
+        if mode == "release":
+            raise UnqualifiedDeployment(
+                "Hindsight conversation path is not release-qualified"
             )
-        release_checks = (
-            {
-                "expected_policy_hashes": current_production_policy_hashes(),
-                "source_clean": source_tree_is_clean(),
-            }
-            if mode == "release"
-            else {}
-        )
         return (
             resolve_deployment(
                 catalog,
                 route_alias=requested_routes["conversation"],
                 role="conversation",
                 mode=mode,
-                **release_checks,
             ),
             resolve_deployment(
                 catalog,
-                route_alias=requested_routes["reviewer"],
-                role="reviewer",
+                route_alias=requested_routes["compaction"],
+                role="compaction",
                 mode=mode,
-                **release_checks,
-            ),
-            resolve_deployment(
-                catalog,
-                route_alias=requested_routes["retriever"],
-                role="retriever",
-                mode=mode,
-                **release_checks,
             ),
         )
 

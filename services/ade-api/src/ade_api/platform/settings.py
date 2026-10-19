@@ -6,7 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -52,6 +52,13 @@ class AdeApiSettings(BaseSettings):
     agent_runtime_mode: Literal["release", "development"] = "release"
     history_trial_enabled: bool = False
     database_url: str = ""
+    agent_runtime_workspace_key: str = ""
+    agent_runtime_deployment_manifest: str = (
+        "workflows/evals/hindsight_integration/config/deployments.json"
+    )
+    hindsight_base_url: str = ""
+    hindsight_api_key: str = Field(default="", repr=False)
+    hindsight_timeout_seconds: float = 30.0
     agent_runtime_worker_id: str = "ade-runtime-worker"
     agent_runtime_worker_poll_seconds: float = 0.5
     agent_runtime_lease_seconds: int = 60
@@ -100,6 +107,9 @@ class AdeApiSettings(BaseSettings):
         "model_router_api_key_env",
         "model_router_api_key_secret",
         "database_url",
+        "agent_runtime_workspace_key",
+        "hindsight_base_url",
+        "hindsight_api_key",
         "agent_runtime_worker_id",
     )
     @classmethod

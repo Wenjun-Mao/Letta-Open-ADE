@@ -51,7 +51,9 @@ class Scope:
     conversation: dict
 
 
-async def scope(connection, *, workspace_id=None, subject_id=None, root=None):
+async def scope(
+    connection, *, workspace_id=None, subject_id=None, root=None, deployments=None
+):
     if workspace_id is None:
         workspace_id = str(uuid4())
         await connection.execute(
@@ -79,7 +81,14 @@ async def scope(connection, *, workspace_id=None, subject_id=None, root=None):
             "definition_key": root["definition_key"] if root else "sql_" + uuid4().hex,
             "name": "Controlled character",
             "model_key": "fake::character",
-            "compaction_model_key": "fake::compaction",
+            "compaction_model_key": next(
+                (
+                    item["route_alias"]
+                    for item in deployments or []
+                    if item["role"] == "compaction"
+                ),
+                "fake::compaction",
+            ),
             "prompt_key": "fixture",
             "prompt_content": "original instructions",
             "prompt_sha256": "a" * 64,
@@ -89,7 +98,7 @@ async def scope(connection, *, workspace_id=None, subject_id=None, root=None):
             "tool_names": ["search_memory"],
             "memory_policy_version": "hindsight-message-v1",
             "qualification_state": "unqualified",
-            "deployment_snapshot": [],
+            "deployment_snapshot": deployments or [],
             **({"agent_definition_id": root["agent_definition_id"]} if root else {}),
         },
     )

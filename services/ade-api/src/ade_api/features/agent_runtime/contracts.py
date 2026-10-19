@@ -30,6 +30,7 @@ class QualificationState(StrEnum):
 class RunStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
+    PAUSED = "paused"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -52,9 +53,8 @@ class CreateAgentDefinitionRequest(StrictRequest):
     )
     name: str = Field(min_length=1, max_length=120)
     model_key: str = Field(min_length=1, max_length=300)
-    reviewer_model_key: str = Field(min_length=1, max_length=300)
-    embedding_model_key: str = Field(min_length=1, max_length=300)
-    prompt_key: str = Field(default="chat_v20260516", min_length=1, max_length=128)
+    compaction_model_key: str = Field(min_length=1, max_length=300)
+    prompt_key: str = Field(default="chat_v20261019", min_length=1, max_length=128)
     persona_key: str = Field(default="chat_linxiaotang", min_length=1, max_length=128)
     tool_names: list[Literal["search_memory", "get_weather"]] = Field(
         default_factory=lambda: ["search_memory"], max_length=2
@@ -73,7 +73,7 @@ class DeploymentSnapshotResponse(BaseModel):
     deployment_id: str
     route_alias: str
     fingerprint: str
-    role: Literal["conversation", "reviewer", "retriever"]
+    role: Literal["conversation", "compaction"]
     lifecycle: str
     qualification_state: QualificationState
     fingerprint_payload: dict[str, Any] = Field(default_factory=dict)
@@ -106,8 +106,7 @@ class AgentStudioBundleResponse(BaseModel):
     key: str
     name: str
     model_key: str
-    reviewer_model_key: str
-    embedding_model_key: str
+    compaction_model_key: str
     prompt_key: str
     persona_key: str
     tool_names: list[str]
@@ -135,7 +134,6 @@ class MemorySubjectResponse(BaseModel):
     external_key: str
     display_name: str
     version: int = 1
-    memory_generation: int = Field(default=1, ge=1)
     archived_at: datetime | None = None
     created_at: datetime
     updated_at: datetime | None = None
@@ -211,9 +209,8 @@ class CreateEvaluationSessionRequest(StrictRequest):
     title: str = Field(default="Evaluation conversation", min_length=1, max_length=120)
     agent_definition_id: str | None = Field(default=None, min_length=1, max_length=100)
     model_key: str | None = Field(default=None, min_length=1, max_length=300)
-    reviewer_model_key: str | None = Field(default=None, min_length=1, max_length=300)
-    embedding_model_key: str | None = Field(default=None, min_length=1, max_length=300)
-    prompt_key: str = Field(default="chat_v20260516", min_length=1, max_length=128)
+    compaction_model_key: str | None = Field(default=None, min_length=1, max_length=300)
+    prompt_key: str = Field(default="chat_v20261019", min_length=1, max_length=128)
     persona_key: str = Field(default="chat_linxiaotang", min_length=1, max_length=128)
     tool_names: list[Literal["search_memory", "get_weather"]] = Field(
         default_factory=lambda: ["search_memory"], max_length=2
@@ -242,12 +239,11 @@ class CreateEvaluationSessionRequest(StrictRequest):
     ) -> CreateEvaluationSessionRequest:
         routes = (
             self.model_key,
-            self.reviewer_model_key,
-            self.embedding_model_key,
+            self.compaction_model_key,
         )
         if self.agent_definition_id is None and any(route is None for route in routes):
             raise ValueError(
-                "model_key, reviewer_model_key, and embedding_model_key are required "
+                "model_key and compaction_model_key are required "
                 "when agent_definition_id is not supplied"
             )
         if self.agent_definition_id is not None and any(
@@ -282,14 +278,12 @@ class CreateEvaluationSessionRequest(StrictRequest):
         if self.agent_definition_id is not None:
             raise ValueError("existing definitions do not need a creation request")
         assert self.model_key is not None
-        assert self.reviewer_model_key is not None
-        assert self.embedding_model_key is not None
+        assert self.compaction_model_key is not None
         return CreateAgentDefinitionRequest(
             definition_key=definition_key,
             name=self.title,
             model_key=self.model_key,
-            reviewer_model_key=self.reviewer_model_key,
-            embedding_model_key=self.embedding_model_key,
+            compaction_model_key=self.compaction_model_key,
             prompt_key=self.prompt_key,
             persona_key=self.persona_key,
             tool_names=self.tool_names,
@@ -383,6 +377,11 @@ class TurnAcceptedResponse(BaseModel):
     idempotent_replay: bool = False
 
 
+class RetryRunRequest(StrictRequest):
+    idempotency_key: str = Field(min_length=1, max_length=200, pattern=r"\S")
+    expected_attempt_count: int = Field(ge=1)
+
+
 class RunResponse(BaseModel):
     id: str
     conversation_id: str
@@ -391,7 +390,7 @@ class RunResponse(BaseModel):
     attempt_count: int
     timeout_seconds: float
     retry_count: int
-    accepted_memory_generation: int = Field(default=1, ge=1)
+    paused_at: datetime | None = None
     cancellation_requested_at: datetime | None = None
     error_code: str | None = None
     error_message: str | None = None
@@ -455,7 +454,6 @@ class EvaluationSessionResponse(AgentStudioSessionResponse):
 class EvaluationSessionStateResponse(BaseModel):
     conversation: ConversationStateResponse
     memory_subject: MemorySubjectResponse
-    memories: SubjectMemoriesResponse
     latest_run: RunResponse | None = None
 
 

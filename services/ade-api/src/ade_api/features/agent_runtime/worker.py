@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import signal
 
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -9,13 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from ade_api.platform.settings import AdeApiSettings, get_settings
 
 from .errors import RuntimeNotReady
-from .history_admission import HistoryProbe
-from .history_trial import TRIAL_QWEN_FINGERPRINT
+from ade_api.integrations.hindsight import HindsightClient
 from .flags import ensure_agent_runtime_enabled
 from .persistence.database import create_persistence_engine
 from .persistence.validation import validate_database_at_head
 from .provider_tracing import AttemptTrace
-from .natural_attempt_evidence import retain_attempt_evidence
+from .database_boundary import RuntimeDatabase
+from .memory_delivery_worker import MemoryDeliveryWorker
 from .retry import execute_with_retries
 from .router_transport import RouterTransport
 from .router_transport import build_runtime_router_transport
@@ -32,9 +31,6 @@ from .worker_finalization import RunFinalizer
 from .worker_health import WorkerPresence
 
 
-logger = logging.getLogger(__name__)
-
-
 class AgentRuntimeWorker:
     """Coordinates claimed runs; collaborators own each persistence boundary."""
 
@@ -44,15 +40,23 @@ class AgentRuntimeWorker:
         engine: AsyncEngine,
         settings: AdeApiSettings,
         transport: RouterTransport,
-        history_probe: HistoryProbe | None = None,
+        hindsight_client: HindsightClient | None = None,
     ) -> None:
         self.engine = engine
         self.settings = settings
+        self.database = RuntimeDatabase(
+            engine, workspace_key=settings.agent_runtime_workspace_key
+        )
+        self.hindsight_client = hindsight_client or HindsightClient(
+            base_url=settings.hindsight_base_url,
+            api_key=settings.hindsight_api_key,
+            timeout_seconds=settings.hindsight_timeout_seconds,
+        )
         execution = TurnExecution(
             engine=engine,
             transport=transport,
             settings=settings,
-            history_probe=history_probe,
+            hindsight_client=self.hindsight_client,
         )
         self.claimer = RunClaimer(engine=engine, settings=settings)
         self.attempts = AttemptController(
@@ -60,9 +64,15 @@ class AgentRuntimeWorker:
         )
         self.finalizer = RunFinalizer(engine)
         self.presence = WorkerPresence(engine=engine, settings=settings)
+        self.delivery_worker = MemoryDeliveryWorker(
+            engine=engine,
+            client=self.hindsight_client,
+            workspace_id=self.database.workspace_id,
+        )
         self._ready = False
 
     async def aclose(self) -> None:
+        await self.hindsight_client.aclose()
         await self.engine.dispose()
 
     async def ensure_ready(self) -> None:
@@ -71,6 +81,8 @@ class AgentRuntimeWorker:
         try:
             async with self.engine.connect() as connection:
                 await connection.run_sync(validate_database_at_head)
+            async with self.engine.begin() as connection:
+                await self.database.ensure_workspace(connection)
         except Exception as exc:
             raise RuntimeNotReady(
                 "ADE-native worker database is not at the reviewed migration head"
@@ -95,8 +107,15 @@ class AgentRuntimeWorker:
             mark_draining_when_requested(),
             name="v3-worker-presence-draining",
         )
+        delivery_task = asyncio.create_task(
+            self.delivery_worker.run_forever(stop_requested),
+            name="hindsight-delivery-scheduler",
+        )
         try:
             while not stop_requested.is_set():
+                if delivery_task.done():
+                    await delivery_task
+                    raise RuntimeError("Memory delivery scheduler stopped unexpectedly")
                 if heartbeat_task.done():
                     await heartbeat_task
                 processed = await self.process_once(stop_requested)
@@ -116,6 +135,9 @@ class AgentRuntimeWorker:
                         stop_wait.cancel()
                     await asyncio.gather(stop_wait, return_exceptions=True)
         finally:
+            if not delivery_task.done():
+                delivery_task.cancel()
+            await asyncio.gather(delivery_task, return_exceptions=True)
             if stop_requested.is_set():
                 await self.presence.mark_draining()
             heartbeat_stop.set()
@@ -151,11 +173,12 @@ class AgentRuntimeWorker:
             ),
         )
         prior_attempt_count = int(claim.run["attempt_count"])
-        remaining_retries = int(claim.run["retry_count"]) - prior_attempt_count
+        remaining_retries = int(claim.run["retry_count"]) - (
+            prior_attempt_count - int(claim.run["retry_attempt_base"])
+        )
         last_attempt_id: str | None = None
         last_attempt_started_event_id: str | None = None
         last_attempt_trace: AttemptTrace | None = None
-        attempt_traces: list[AttemptTrace] = []
         last_failure_event_id: str | None = None
 
         async def operation(local_attempt: int) -> AttemptResult:
@@ -167,7 +190,6 @@ class AgentRuntimeWorker:
                 raise WorkerDraining("worker is draining before the next attempt")
             attempt = prior_attempt_count + local_attempt
             last_attempt_trace = AttemptTrace(attempt=attempt)
-            attempt_traces.append(last_attempt_trace)
             started = await self.attempts.start_attempt(claim, attempt)
             last_attempt_id = started.attempt_id
             last_attempt_started_event_id = started.started_event_id
@@ -252,25 +274,6 @@ class AgentRuntimeWorker:
             for monitor in monitors:
                 monitor.cancel()
             await asyncio.gather(*monitors, return_exceptions=True)
-            for attempt_trace in attempt_traces:
-                if attempt_trace.natural_evidence is None:
-                    continue
-                try:
-                    attempt_trace.natural_evidence.capture_provider_events(
-                        attempt_trace.normalized_events(),
-                        observation_incomplete=attempt_trace.observation_incomplete,
-                    )
-                    await retain_attempt_evidence(
-                        self.engine, attempt_trace.natural_evidence
-                    )
-                except Exception:
-                    # Artifact failure cannot rewrite an authoritative run outcome.
-                    # The missing cell is unscorable and stops the evaluation runner.
-                    logger.error(
-                        "natural-memory evidence retention failed for run %s attempt %s",
-                        run_id,
-                        attempt_trace.attempt,
-                    )
 
 
 def build_worker() -> AgentRuntimeWorker:
@@ -283,21 +286,10 @@ def build_worker() -> AgentRuntimeWorker:
         raise RuntimeNotReady(
             "ADE_API_MODEL_ROUTER_BASE_URL is required for the agent runtime"
         )
-    if settings.history_trial_enabled and settings.agent_runtime_mode != "development":
-        raise RuntimeNotReady("History trial worker requires development mode")
     return AgentRuntimeWorker(
         engine=create_persistence_engine(settings.database_url),
         settings=settings,
         transport=build_runtime_router_transport(settings),
-        history_probe=(
-            HistoryProbe(
-                arm="automatic_history",
-                ranking_recipe="probe_local_qwen_cosine_v2",
-                expected_embedding_fingerprint=TRIAL_QWEN_FINGERPRINT,
-            )
-            if settings.history_trial_enabled
-            else None
-        ),
     )
 
 

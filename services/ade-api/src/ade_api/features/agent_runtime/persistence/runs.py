@@ -12,7 +12,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from .base import IdempotencyConflictError, NotFoundError, fetch_one, values
-from .metadata import conversation_leases, outbox, run_attempts, run_events, runs
+from .metadata import outbox, run_attempts, run_events, runs
 
 
 class RunRepository:
@@ -90,7 +90,7 @@ class RunRepository:
             select(runs).where(
                 and_(
                     runs.c.conversation_id == conversation_id,
-                    runs.c.status.in_(("pending", "running")),
+                    runs.c.status.in_(("pending", "running", "paused")),
                 )
             )
         )
@@ -116,53 +116,6 @@ class RunRepository:
             .offset(offset)
         )
         return total, [dict(row) for row in result.mappings().all()]
-
-    async def claim_pending(self, *, runtime_mode: str) -> dict[str, Any] | None:
-        """Claim one pending run without holding the transaction during model I/O."""
-
-        candidate = (
-            select(runs.c.id)
-            .where(
-                and_(
-                    runs.c.status == "pending",
-                    runs.c.accepted_runtime_mode == runtime_mode,
-                )
-            )
-            .order_by(runs.c.created_at, runs.c.id)
-            .with_for_update(skip_locked=True)
-            .limit(1)
-            .scalar_subquery()
-        )
-        result = await self._connection.execute(
-            update(runs)
-            .where(runs.c.id == candidate)
-            .values(status="running", started_at=func.now())
-            .returning(*runs.c)
-        )
-        row = result.mappings().one_or_none()
-        return dict(row) if row is not None else None
-
-    async def claim_abandoned(self, *, runtime_mode: str) -> dict[str, Any] | None:
-        result = await self._connection.execute(
-            select(runs)
-            .join(
-                conversation_leases,
-                conversation_leases.c.run_id == runs.c.id,
-            )
-            .where(
-                and_(
-                    runs.c.status == "running",
-                    runs.c.accepted_runtime_mode == runtime_mode,
-                    conversation_leases.c.released_at.is_(None),
-                    conversation_leases.c.expires_at <= func.now(),
-                )
-            )
-            .order_by(conversation_leases.c.expires_at, runs.c.id)
-            .with_for_update(of=runs, skip_locked=True)
-            .limit(1)
-        )
-        row = result.mappings().one_or_none()
-        return dict(row) if row is not None else None
 
     async def set_attempt_count(self, run_id: str, attempt_count: int) -> None:
         await self._connection.execute(
@@ -219,7 +172,7 @@ class RunRepository:
             .where(
                 and_(
                     runs.c.id == run_id,
-                    runs.c.status.in_(("pending", "running")),
+                    runs.c.status.in_(("pending", "running", "paused")),
                 )
             )
             .values(

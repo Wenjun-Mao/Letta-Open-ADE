@@ -15,24 +15,21 @@ from ade_api.platform.settings import AdeApiSettings, get_settings
 
 from .contracts import (
     AcceptTurnRequest,
-    AgentStudioResetRequest,
+    RetryRunRequest,
     CreateAgentDefinitionRequest,
     CreateAgentStudioSessionRequest,
     CreateEvaluationSessionRequest,
     CreateMemorySubjectRequest,
-    MemoryRemovalRequest,
     UpdateMemorySubjectRequest,
 )
-from .agent_studio_reset import AgentStudioResetService
-from .agent_studio_sessions import AgentStudioSessionService, AGENT_STUDIO_PURPOSE
+from .agent_studio_sessions import PurposeSessionService
+from .session_resources import AGENT_STUDIO_PURPOSE
 from .database_boundary import RuntimeDatabase
 from .definition_service import DefinitionService
 from .evaluation_sessions import EvaluationSessionService
-from .history_trial import HistoryTrialService
 from .errors import RuntimeNotReady
 from .persistence.database import create_persistence_engine
 from .resource_service import ResourceService
-from .memory_removals import MemoryRemovalService
 from .router_transport import RouterTransport
 from .router_transport import build_runtime_router_transport
 from .run_service import RunService
@@ -52,7 +49,9 @@ class AgentRuntimeApplication:
         router_transport: RouterTransport,
     ) -> None:
         self.engine = engine
-        self.database = RuntimeDatabase(engine)
+        self.database = RuntimeDatabase(
+            engine, workspace_key=settings.agent_runtime_workspace_key
+        )
         self.definitions = DefinitionService(
             database=self.database,
             settings=settings,
@@ -60,8 +59,7 @@ class AgentRuntimeApplication:
             router_transport=router_transport,
         )
         self.resources = ResourceService(self.database)
-        self.memory_removals = MemoryRemovalService(self.database)
-        self.agent_studio = AgentStudioSessionService(
+        self.agent_studio = PurposeSessionService(
             database=self.database,
             definitions=self.definitions,
         )
@@ -70,12 +68,6 @@ class AgentRuntimeApplication:
             definitions=self.definitions,
             resources=self.resources,
         )
-        self.history_trial = HistoryTrialService(
-            database=self.database,
-            definitions=self.definitions,
-            resources=self.resources,
-        )
-        self.agent_studio_reset = AgentStudioResetService(self.database)
         self.runs = RunService(
             database=self.database,
             settings=settings,
@@ -121,7 +113,7 @@ class AgentRuntimeApplication:
         self, *, include_archived: bool, limit: int, offset: int
     ) -> dict[str, Any]:
         self._ensure_agent_studio_release_ready()
-        return await self.agent_studio.list_definitions(
+        return await self.agent_studio.catalog.list_definitions(
             include_archived=include_archived, limit=limit, offset=offset
         )
 
@@ -129,13 +121,13 @@ class AgentRuntimeApplication:
         self, request: CreateAgentDefinitionRequest
     ) -> dict[str, Any]:
         self._ensure_agent_studio_release_ready()
-        return await self.agent_studio.create_definition(request)
+        return await self.agent_studio.catalog.create_definition(request)
 
     async def set_agent_studio_definition_archived(
         self, definition_id: str, *, archived: bool
     ) -> dict[str, Any]:
         self._ensure_agent_studio_release_ready()
-        return await self.agent_studio.set_definition_archived(
+        return await self.agent_studio.catalog.set_definition_archived(
             definition_id, archived=archived
         )
 
@@ -143,7 +135,7 @@ class AgentRuntimeApplication:
         self, *, include_archived: bool, limit: int, offset: int
     ) -> dict[str, Any]:
         self._ensure_agent_studio_release_ready()
-        return await self.agent_studio.list_subjects(
+        return await self.agent_studio.catalog.list_subjects(
             include_archived=include_archived, limit=limit, offset=offset
         )
 
@@ -151,36 +143,20 @@ class AgentRuntimeApplication:
         self, request: CreateMemorySubjectRequest
     ) -> dict[str, Any]:
         self._ensure_agent_studio_release_ready()
-        return await self.agent_studio.create_subject(request)
+        return await self.agent_studio.catalog.create_subject(request)
 
     async def update_agent_studio_subject(
         self, subject_id: str, request: UpdateMemorySubjectRequest
     ) -> dict[str, Any]:
         self._ensure_agent_studio_release_ready()
-        return await self.agent_studio.update_subject(subject_id, request)
+        return await self.agent_studio.catalog.update_subject(subject_id, request)
 
     async def set_agent_studio_subject_archived(
         self, subject_id: str, *, archived: bool
     ) -> dict[str, Any]:
         self._ensure_agent_studio_release_ready()
-        return await self.agent_studio.set_subject_archived(
+        return await self.agent_studio.catalog.set_subject_archived(
             subject_id, archived=archived
-        )
-
-    async def get_agent_studio_subject_memories(
-        self, subject_id: str
-    ) -> dict[str, Any]:
-        self._ensure_agent_studio_release_ready()
-        return await self.resources.get_subject_memories(
-            subject_id, required_purpose=AGENT_STUDIO_PURPOSE
-        )
-
-    async def remove_agent_studio_memories(
-        self, subject_id: str, request: MemoryRemovalRequest, *, actor_label: str
-    ) -> dict[str, Any]:
-        self._ensure_agent_studio_release_ready()
-        return await self.memory_removals.remove(
-            subject_id, request, actor_label=actor_label
         )
 
     async def get_agent_studio_conversation_state(
@@ -197,11 +173,6 @@ class AgentRuntimeApplication:
             message_limit=message_limit,
             before_sequence=before_sequence,
         )
-
-    async def reset_agent_studio(
-        self, request: AgentStudioResetRequest
-    ) -> dict[str, Any]:
-        return await self.agent_studio_reset.reset(request)
 
     def _ensure_agent_studio_release_ready(self) -> None:
         ensure_agent_studio_release_ready(self.definitions.settings.agent_runtime_mode)
@@ -223,9 +194,6 @@ class AgentRuntimeApplication:
             message_limit=message_limit,
             before_sequence=before_sequence,
         )
-
-    async def purge_evaluation_session(self, conversation_id: str) -> dict[str, Any]:
-        return await self.evaluations.purge(conversation_id)
 
     async def accept_turn(
         self, conversation_id: str, request: AcceptTurnRequest
@@ -252,6 +220,9 @@ class AgentRuntimeApplication:
 
     async def cancel_run(self, run_id: str) -> dict[str, Any]:
         return await self.runs.cancel_run(run_id)
+
+    async def retry_run(self, run_id: str, request: RetryRunRequest) -> dict:
+        return await self.runs.retry_run(run_id, request)
 
     async def stream_events(
         self, run_id: str, after_sequence: int

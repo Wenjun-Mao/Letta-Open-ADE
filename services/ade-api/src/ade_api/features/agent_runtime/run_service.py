@@ -9,17 +9,9 @@ from uuid import uuid4
 
 from ade_api.platform.settings import AdeApiSettings
 
-from .contracts import AcceptTurnRequest
-from .context import context_budget_from_deployment, validate_current_user_message
-from .history_capacity import checked_history_probe_capacity
-from .memory_policy_binding import require_executable_memory_policy
-from .natural_context import HISTORY_PROBE_POLICY, NATURAL_POLICY_BINDINGS
-from .natural_evaluation_capacity import checked_checkpoint6_capacity
-from .database_boundary import (
-    DEFAULT_WORKSPACE_ID,
-    RuntimeDatabase,
-    require_default_workspace,
-)
+from .contracts import AcceptTurnRequest, RetryRunRequest
+from .context import context_budget_from_deployment
+from .database_boundary import RuntimeDatabase
 from .deployments import definition_deployment, validate_definition_execution
 from .errors import (
     ConversationBusy,
@@ -28,18 +20,19 @@ from .errors import (
     RuntimeValidationError,
 )
 from .events import TERMINAL_RUN_STATUSES, append_run_event, event_response
+from .hindsight_context import validate_input
 from .persistence.conversations import ConversationRepository
 from .persistence.definitions import DefinitionVersionRepository
 from .persistence.leases import ConversationLeaseRepository
 from .persistence.memory import MemoryRepository
+from .persistence.run_lifecycle import lock_run
 from .persistence.runs import RunRepository
 from .presenters import run_response, turn_accepted_response
-from .release_policy import (
-    ensure_agent_studio_release_ready,
-    release_validation_kwargs,
-)
+from .release_policy import release_validation_kwargs
 from .router_transport import RouterTransport
+from .run_retry import retry_saved_input
 from .turn_activity import conversation_activity
+from .turn_sources import enqueue_message, require_hindsight_definition
 from .worker_health import RuntimeWorkerHealthServiceProtocol
 
 
@@ -63,21 +56,21 @@ class RunService:
         await self.database.ensure_ready()
         async with self.database.translated_errors():
             async with self.database.engine.connect() as connection:
-                conversations = ConversationRepository(connection)
-                runs = RunRepository(connection)
-                conversation = await conversations.get(conversation_id)
-                require_default_workspace(conversation)
-                if conversation.get("purpose") == "agent_studio":
-                    ensure_agent_studio_release_ready(self.settings.agent_runtime_mode)
+                conversation = await ConversationRepository(connection).get(
+                    conversation_id
+                )
+                self.database.require_workspace(conversation)
                 _reject_archived_conversation(conversation)
                 subject = await MemoryRepository(connection).get_subject(
                     str(conversation["memory_subject_id"])
                 )
+                self.database.require_workspace(subject)
                 _reject_archived_subject(subject)
                 definition = await DefinitionVersionRepository(connection).get(
                     str(conversation["agent_definition_version_id"])
                 )
-                prior = await runs.get_by_idempotency(
+                require_hindsight_definition(definition)
+                prior = await RunRepository(connection).get_by_idempotency(
                     conversation_id, request.idempotency_key
                 )
                 if prior is not None:
@@ -89,11 +82,6 @@ class RunService:
                         runtime_mode=self.settings.agent_runtime_mode,
                     )
                     return turn_accepted_response(prior, replayed=True)
-                require_executable_memory_policy(
-                    str(definition["memory_policy_version"]),
-                    purpose=str(conversation.get("purpose") or ""),
-                    runtime_mode=self.settings.agent_runtime_mode,
-                )
             catalog = await self.router_transport.catalog(
                 timeout_seconds=self.settings.model_discovery_timeout_seconds
             )
@@ -103,39 +91,21 @@ class RunService:
                 mode=self.settings.agent_runtime_mode,
                 **release_validation_kwargs(self.settings.agent_runtime_mode),
             )
-            conversation_deployment = definition_deployment(definition, "conversation")
-            evaluation_capacity = (
-                checked_history_probe_capacity(
-                    definition, purpose=str(conversation.get("purpose") or "")
-                )
-                if definition["memory_policy_version"] == HISTORY_PROBE_POLICY
-                else checked_checkpoint6_capacity(
-                    definition,
-                    purpose=str(conversation.get("purpose") or ""),
-                    natural_variant=NATURAL_POLICY_BINDINGS.get(
-                        str(definition["memory_policy_version"])
-                    ),
-                )
+            validate_input(
+                definition,
+                request.content,
+                context_budget_from_deployment(
+                    definition_deployment(definition, "conversation")
+                ),
             )
-            try:
-                validate_current_user_message(
-                    system_prompt=str(definition["prompt_content"]),
-                    persona=str(definition["persona_content"]),
-                    content=request.content,
-                    budget=(
-                        evaluation_capacity.conversation
-                        if evaluation_capacity is not None
-                        else context_budget_from_deployment(conversation_deployment)
-                    ),
-                )
-            except ValueError as exc:
-                raise RuntimeValidationError(str(exc)) from exc
             await _ensure_worker_ready(self.worker_health)
             async with self.database.engine.begin() as connection:
-                conversations = ConversationRepository(connection)
-                runs = RunRepository(connection)
+                conversations, runs = (
+                    ConversationRepository(connection),
+                    RunRepository(connection),
+                )
                 conversation = await conversations.get_for_update(conversation_id)
-                require_default_workspace(conversation)
+                self.database.require_workspace(conversation)
                 _reject_archived_conversation(conversation)
                 subject = await MemoryRepository(connection).lock_subject(
                     str(conversation["memory_subject_id"])
@@ -144,7 +114,7 @@ class RunService:
                 definition = await DefinitionVersionRepository(connection).get(
                     str(conversation["agent_definition_version_id"])
                 )
-                request_hash = _turn_request_hash(request, conversation, definition)
+                require_hindsight_definition(definition)
                 prior = await runs.get_by_idempotency(
                     conversation_id, request.idempotency_key
                 )
@@ -157,44 +127,47 @@ class RunService:
                         runtime_mode=self.settings.agent_runtime_mode,
                     )
                     return turn_accepted_response(prior, replayed=True)
-                require_executable_memory_policy(
-                    str(definition["memory_policy_version"]),
-                    purpose=str(conversation.get("purpose") or ""),
-                    runtime_mode=self.settings.agent_runtime_mode,
-                )
                 if await runs.active_for_conversation(conversation_id) is not None:
                     raise ConversationBusy(
-                        "conversation already has a pending or running turn"
+                        "Resolve the pending, running or paused reply before another turn"
                     )
                 run_id = str(uuid4())
                 run, replayed = await runs.accept(
                     {
                         "id": run_id,
-                        "workspace_id": DEFAULT_WORKSPACE_ID,
+                        "workspace_id": self.database.workspace_id,
                         "conversation_id": conversation_id,
                         "idempotency_key": request.idempotency_key,
-                        "request_hash": request_hash,
+                        "request_hash": _turn_request_hash(
+                            request, conversation, definition
+                        ),
                         "status": "pending",
                         "qualification_state": definition["qualification_state"],
                         "accepted_runtime_mode": self.settings.agent_runtime_mode,
                         "timeout_seconds": request.timeout_seconds,
                         "retry_count": request.retry_count,
                         "accepted_conversation_version": conversation["version"],
-                        "accepted_memory_generation": subject["memory_generation"],
+                        "accepted_memory_generation": None,
                     }
                 )
                 if replayed:
                     return turn_accepted_response(run, replayed=True)
-                user_message = await conversations.append_message(
+                message = await conversations.append_message(
                     {
                         "id": str(uuid4()),
-                        "workspace_id": DEFAULT_WORKSPACE_ID,
+                        "workspace_id": self.database.workspace_id,
                         "conversation_id": conversation_id,
                         "role": "user",
                         "content": request.content,
                         "content_sha256": _sha256(request.content),
                         "run_id": run_id,
                     }
+                )
+                delivery = await enqueue_message(
+                    connection,
+                    message=message,
+                    conversation=conversation,
+                    definition=definition,
                 )
                 await ConversationLeaseRepository(connection).create_pending(
                     lease_id=str(uuid4()),
@@ -214,24 +187,36 @@ class RunService:
                         "retry_count": request.retry_count,
                         "qualification_state": definition["qualification_state"],
                         "accepted_runtime_mode": self.settings.agent_runtime_mode,
-                        "accepted_memory_generation": int(subject["memory_generation"]),
                     },
+                )
+                committed = await append_run_event(
+                    runs,
+                    run_id=run_id,
+                    event_type="message.committed",
+                    payload={"message_id": str(message["id"]), "role": "user"},
+                    causation_id=str(accepted["id"]),
                 )
                 await append_run_event(
                     runs,
                     run_id=run_id,
-                    event_type="message.committed",
-                    payload={"message_id": str(user_message["id"]), "role": "user"},
-                    causation_id=str(accepted["id"]),
+                    event_type="memory.delivery.queued",
+                    payload={
+                        "operation_id": str(delivery["operation_id"]),
+                        "message_id": str(message["id"]),
+                    },
+                    causation_id=str(committed["id"]),
                 )
         return turn_accepted_response(run, replayed=False)
+
+    async def retry_run(self, run_id: str, request: RetryRunRequest) -> dict:
+        return await retry_saved_input(self.database, run_id, request)
 
     async def get_run(self, run_id: str) -> dict[str, Any]:
         await self.database.ensure_ready()
         async with self.database.translated_errors():
             async with self.database.engine.connect() as connection:
                 row = await RunRepository(connection).get(run_id)
-                require_default_workspace(row)
+                self.database.require_workspace(row)
         return run_response(row)
 
     async def list_runs(
@@ -243,7 +228,7 @@ class RunService:
                 conversation = await ConversationRepository(connection).get(
                     conversation_id
                 )
-                require_default_workspace(conversation)
+                self.database.require_workspace(conversation)
                 total, rows = await RunRepository(connection).list_for_conversation(
                     conversation_id, limit=limit, offset=offset
                 )
@@ -257,7 +242,7 @@ class RunService:
             async with self.database.engine.connect() as connection:
                 repository = RunRepository(connection)
                 run = await repository.get(run_id)
-                require_default_workspace(run)
+                self.database.require_workspace(run)
                 total, rows = await repository.list_event_page(
                     run_id, limit=limit, after_sequence=after_sequence
                 )
@@ -275,7 +260,7 @@ class RunService:
                 conversation = await ConversationRepository(connection).get(
                     conversation_id
                 )
-                require_default_workspace(conversation)
+                self.database.require_workspace(conversation)
                 rows = await RunRepository(connection).conversation_activity_rows(
                     conversation_id
                 )
@@ -285,10 +270,12 @@ class RunService:
         await self.database.ensure_ready()
         async with self.database.translated_errors():
             async with self.database.engine.begin() as connection:
-                runs = RunRepository(connection)
-                leases = ConversationLeaseRepository(connection)
-                current = await runs.get_for_update(run_id)
-                require_default_workspace(current)
+                runs, leases = (
+                    RunRepository(connection),
+                    ConversationLeaseRepository(connection),
+                )
+                _, current = await lock_run(connection, run_id)
+                self.database.require_workspace(current)
                 if current["status"] in TERMINAL_RUN_STATUSES:
                     return run_response(current)
                 current = await runs.request_cancellation(run_id)
@@ -298,16 +285,17 @@ class RunService:
                     event_type="run.cancel_requested",
                     payload={"status_at_request": current["status"]},
                 )
-                if current["status"] == "pending":
+                if current["status"] in {"pending", "paused"}:
+                    count = int(current["attempt_count"])
                     current = await runs.finish(
-                        run_id, status="cancelled", attempt_count=0
+                        run_id, status="cancelled", attempt_count=count
                     )
                     await leases.release_for_run(run_id)
                     await append_run_event(
                         runs,
                         run_id=run_id,
                         event_type="run.cancelled",
-                        payload={"attempt_count": 0},
+                        payload={"attempt_count": count},
                         causation_id=str(requested["id"]),
                     )
         return run_response(current)
@@ -323,13 +311,13 @@ class RunService:
                 async with self.database.engine.connect() as connection:
                     repository = RunRepository(connection)
                     run = await repository.get(run_id)
-                    require_default_workspace(run)
+                    self.database.require_workspace(run)
                     events = await repository.list_events(run_id, cursor)
             for event in events:
                 cursor = max(cursor, int(event["sequence"]))
                 if event["visibility"] == "operator":
                     yield event_response(event)
-            if run["status"] in TERMINAL_RUN_STATUSES and not events:
+            if run["status"] in TERMINAL_RUN_STATUSES | {"paused"} and not events:
                 return
             now = asyncio.get_running_loop().time()
             if now >= heartbeat_deadline:
@@ -340,18 +328,16 @@ class RunService:
 
 def _turn_request_hash(
     request: AcceptTurnRequest,
-    conversation: dict[str, Any],
-    definition: dict[str, Any],
+    conversation: dict,
+    definition: dict,
     *,
     conversation_version: int | None = None,
 ) -> str:
     payload = {
         "conversation_id": str(conversation["id"]),
-        "conversation_version": (
-            conversation["version"]
-            if conversation_version is None
-            else conversation_version
-        ),
+        "conversation_version": conversation["version"]
+        if conversation_version is None
+        else conversation_version,
         "content": request.content,
         "definition_id": str(definition["id"]),
         "definition_version": definition["version"],
@@ -361,31 +347,29 @@ def _turn_request_hash(
         "timeout_seconds": request.timeout_seconds,
         "retry_count": request.retry_count,
     }
-    encoded = json.dumps(
-        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    return hashlib.sha256(
+        json.dumps(
+            payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+        ).encode()
+    ).hexdigest()
 
 
 def _validate_idempotent_replay(
-    prior: dict[str, Any],
+    prior: dict,
     *,
     request: AcceptTurnRequest,
-    conversation: dict[str, Any],
-    definition: dict[str, Any],
+    conversation: dict,
+    definition: dict,
     runtime_mode: str | None = None,
 ) -> None:
     if runtime_mode is not None and prior.get("accepted_runtime_mode") != runtime_mode:
-        raise IdempotencyConflict(
-            "idempotency key is bound to a turn accepted in another runtime mode"
-        )
-    request_hash = _turn_request_hash(
+        raise IdempotencyConflict("idempotency key is bound to another runtime mode")
+    if prior["request_hash"] != _turn_request_hash(
         request,
         conversation,
         definition,
         conversation_version=int(prior["accepted_conversation_version"]),
-    )
-    if prior["request_hash"] != request_hash:
+    ):
         raise IdempotencyConflict("idempotency key is already bound to another turn")
 
 
@@ -393,24 +377,21 @@ async def _ensure_worker_ready(
     worker_health: RuntimeWorkerHealthServiceProtocol,
 ) -> None:
     health = await worker_health.get_health()
-    if bool(health.get("worker_ready")):
-        return
-    failure_code = str(health.get("failure_code") or "worker_unavailable")
-    raise RuntimeNotReady(f"A matching ADE-native worker is not ready ({failure_code})")
+    if not bool(health.get("worker_ready")):
+        raise RuntimeNotReady(
+            f"A matching ADE worker is not ready ({health.get('failure_code') or 'worker_unavailable'})"
+        )
 
 
 def _sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
-def _reject_archived_conversation(conversation: dict[str, Any]) -> None:
+def _reject_archived_conversation(conversation: dict) -> None:
     if conversation.get("archived_at") is not None:
-        raise RuntimeValidationError("archived conversations cannot accept new turns")
+        raise RuntimeValidationError("Archived conversations cannot accept new turns")
 
 
-def _reject_archived_subject(subject: dict[str, Any]) -> None:
-    require_default_workspace(subject)
+def _reject_archived_subject(subject: dict) -> None:
     if subject.get("archived_at") is not None:
-        raise RuntimeValidationError(
-            "conversations for archived memory subjects cannot accept new turns"
-        )
+        raise RuntimeValidationError("Archived subjects cannot accept new turns")

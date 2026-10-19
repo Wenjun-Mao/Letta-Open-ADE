@@ -7,7 +7,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response
 
 from ade_api.platform.auth import (
-    AdePrincipal,
     require_admin,
     require_operator,
     require_reader,
@@ -18,8 +17,6 @@ from .contracts import (
     AgentDefinitionListResponse,
     AgentDefinitionResponse,
     AgentStudioOptionsResponse,
-    AgentStudioResetRequest,
-    AgentStudioResetResponse,
     AgentStudioSessionListResponse,
     AgentStudioSessionResponse,
     ConversationStateResponse,
@@ -28,9 +25,6 @@ from .contracts import (
     CreateMemorySubjectRequest,
     MemorySubjectListResponse,
     MemorySubjectResponse,
-    MemoryRemovalRequest,
-    MemoryRemovalResponse,
-    SubjectMemoriesResponse,
     UpdateMemorySubjectRequest,
 )
 from .dependencies import AgentRuntimeServiceDependency
@@ -273,52 +267,3 @@ async def restore_subject(subject_id: str, service: AgentRuntimeServiceDependenc
     return await call_runtime(
         service.set_agent_studio_subject_archived(subject_id, archived=False)
     )
-
-
-@router.get(
-    "/subjects/{subject_id}/memories",
-    response_model=SubjectMemoriesResponse,
-    dependencies=[Depends(require_reader)],
-    summary="Inspect typed Agent Studio memory lineage",
-)
-async def get_subject_memories(subject_id: str, service: AgentRuntimeServiceDependency):
-    return await call_runtime(service.get_agent_studio_subject_memories(subject_id))
-
-
-@router.post(
-    "/subjects/{subject_id}/memory-removals",
-    response_model=MemoryRemovalResponse,
-    summary="Remove exact saved assertions through an operator action",
-)
-async def remove_subject_memories(
-    subject_id: str,
-    request: MemoryRemovalRequest,
-    response: Response,
-    service: AgentRuntimeServiceDependency,
-    principal: Annotated[AdePrincipal, Depends(require_operator)],
-):
-    result = await call_runtime(
-        service.remove_agent_studio_memories(
-            subject_id, request, actor_label=principal.key_name
-        )
-    )
-    if result["idempotent_replay"]:
-        response.headers["Idempotent-Replay"] = "true"
-    return result
-
-
-@router.post(
-    "/reset",
-    response_model=AgentStudioResetResponse,
-    dependencies=[Depends(require_admin)],
-    summary="Reset only fresh-start Agent Studio state",
-)
-async def reset_agent_studio(
-    request: AgentStudioResetRequest,
-    response: Response,
-    service: AgentRuntimeServiceDependency,
-):
-    result = await call_runtime(service.reset_agent_studio(request))
-    if bool(result.get("idempotent_replay")):
-        response.headers["Idempotent-Replay"] = "true"
-    return result

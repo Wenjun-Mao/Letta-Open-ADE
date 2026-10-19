@@ -11,6 +11,7 @@ from .model_response import first_choice, merge_usage
 from .provider_tracing import safe_provider_request_id
 from .router_transport import RouterTransport
 from .tool_policy import TOOL_USE_POLICY, ToolRequirement
+from .turn_recall import MemoryLookupError
 
 
 SEARCH_MEMORY_TOOL = {
@@ -18,10 +19,9 @@ SEARCH_MEMORY_TOOL = {
     "function": {
         "name": "search_memory",
         "description": (
-            "Search saved fact descriptors about the current user or account "
-            "bound to this conversation, not historical conversation messages. "
-            "Returned facts never describe the assistant persona. Use the "
-            "returned facts as evidence; do not invent results."
+            "Search relevant memories within this user-character relationship, "
+            "including attributed conversations and character history. Preserve "
+            "speaker, time and uncertainty; do not invent missing details."
         ),
         "parameters": {
             "type": "object",
@@ -322,8 +322,8 @@ def _search_memory_tool(search_memory: SearchMemoryHandler) -> CuratedTool:
             arguments=arguments,
             content={
                 "ok": True,
-                "memory_subject_role": "current_user",
-                "facts": facts,
+                "scope": "current_user_character_relationship",
+                "memories": facts,
             },
             result_count=len(facts),
         )
@@ -345,6 +345,9 @@ async def _execute_tool(tool: CuratedTool, arguments: dict[str, Any]) -> ToolRes
         ) from exc
     try:
         return await tool.handler(validated)
+    except MemoryLookupError:
+        # Required Memory failure pauses the saved input, never a tool apology.
+        raise
     except Exception as exc:
         return ToolResult(
             arguments=validated,

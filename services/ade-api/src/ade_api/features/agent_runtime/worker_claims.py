@@ -13,6 +13,8 @@ from .events import append_run_event
 from .persistence.base import LeaseUnavailableError
 from .persistence.leases import ConversationLeaseRepository
 from .persistence.runs import RunRepository
+from .persistence.run_lifecycle import RunLifecycleRepository
+from .database_boundary import RuntimeDatabase
 
 
 @dataclass(frozen=True)
@@ -28,40 +30,29 @@ class RunClaimer:
     def __init__(self, *, engine: AsyncEngine, settings: AdeApiSettings) -> None:
         self.engine = engine
         self.settings = settings
+        self.database = RuntimeDatabase(
+            engine, workspace_key=settings.agent_runtime_workspace_key
+        )
 
     async def claim(self) -> tuple[ClaimedRun | None, bool]:
         async with self.engine.begin() as connection:
             runs = RunRepository(connection)
             leases = ConversationLeaseRepository(connection)
             runtime_mode = self.settings.agent_runtime_mode
-            run = await runs.claim_pending(runtime_mode=runtime_mode)
+            lifecycle = RunLifecycleRepository(connection)
+            run = await lifecycle.claim(
+                workspace_id=self.database.workspace_id, runtime_mode=runtime_mode
+            )
             recovered = False
             if run is None:
-                run = await runs.claim_abandoned(runtime_mode=runtime_mode)
+                run = await lifecycle.claim(
+                    workspace_id=self.database.workspace_id,
+                    runtime_mode=runtime_mode,
+                    abandoned=True,
+                )
                 recovered = run is not None
             if run is None:
                 return None, False
-            if recovered:
-                await runs.abandon_open_attempts(str(run["id"]))
-                if int(run["attempt_count"]) >= int(run["retry_count"]) + 1:
-                    await runs.finish(
-                        str(run["id"]),
-                        status="failed",
-                        attempt_count=int(run["attempt_count"]),
-                        error_code="worker_lease_expired",
-                        error_message="Worker lease expired after the attempt budget",
-                    )
-                    await leases.release_for_run(str(run["id"]))
-                    await append_run_event(
-                        runs,
-                        run_id=str(run["id"]),
-                        event_type="run.failed",
-                        payload={
-                            "attempt_count": int(run["attempt_count"]),
-                            "error_code": "worker_lease_expired",
-                        },
-                    )
-                    return None, True
             lease_token = str(uuid4())
             try:
                 await leases.acquire(
@@ -76,6 +67,47 @@ class RunClaimer:
             except LeaseUnavailableError:
                 if not recovered:
                     await runs.requeue(str(run["id"]))
+                return None, True
+            # Observed expiry is not ownership: a heartbeat may have renewed it
+            # before the atomic takeover. Mutate original attempts only now.
+            if recovered:
+                await runs.abandon_open_attempts(str(run["id"]))
+            if run["cancellation_requested_at"] is not None:
+                await runs.finish(
+                    str(run["id"]),
+                    status="cancelled",
+                    attempt_count=int(run["attempt_count"]),
+                )
+                await leases.release(lease_token)
+                await append_run_event(
+                    runs,
+                    run_id=str(run["id"]),
+                    event_type="run.cancelled",
+                    payload={"attempt_count": int(run["attempt_count"])},
+                )
+                return None, True
+            if (
+                recovered
+                and int(run["attempt_count"])
+                >= int(run["retry_attempt_base"]) + int(run["retry_count"]) + 1
+            ):
+                await runs.finish(
+                    str(run["id"]),
+                    status="failed",
+                    attempt_count=int(run["attempt_count"]),
+                    error_code="worker_lease_expired",
+                    error_message="Worker lease expired after the attempt budget",
+                )
+                await leases.release(lease_token)
+                await append_run_event(
+                    runs,
+                    run_id=str(run["id"]),
+                    event_type="run.failed",
+                    payload={
+                        "attempt_count": int(run["attempt_count"]),
+                        "error_code": "worker_lease_expired",
+                    },
+                )
                 return None, True
             await append_run_event(
                 runs,
