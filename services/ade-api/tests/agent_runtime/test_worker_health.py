@@ -130,6 +130,8 @@ def test_database_failure_returns_typed_not_ready_health(monkeypatch) -> None:
         engine=SimpleNamespace(),  # type: ignore[arg-type]
         settings=SimpleNamespace(  # type: ignore[arg-type]
             agent_runtime_mode="development",
+            agent_runtime_workspace_key="controlled-worker-health",
+            hindsight_base_url="http://controlled-native",
             agent_runtime_worker_stale_seconds=15.0,
         ),
     )
@@ -159,5 +161,7 @@ def test_worker_presence_rejects_unknown_or_truncated_source_identity(
             engine=SimpleNamespace(),  # type: ignore[arg-type]
             settings=SimpleNamespace(  # type: ignore[arg-type]
                 agent_runtime_mode="development",
+                agent_runtime_workspace_key="controlled-worker-presence",
+                hindsight_base_url="http://controlled-native",
             ),
         )

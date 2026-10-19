@@ -238,7 +238,7 @@ services:
       hindsight:
         condition: service_started
     healthcheck:
-      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8020/health', timeout=2).read()"]
+      test: [CMD, python, -m, workflows.evals.hindsight_integration.health_probe]
       interval: 5s
       timeout: 3s
       retries: 12

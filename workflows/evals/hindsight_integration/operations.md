@@ -298,6 +298,8 @@ The full Compose resource sum reserves at least one of this host's four CPUs.
 
 The runner admits only the predeclared three cases times two repeats. Each slot
 creates a new subject/character relationship and two same-version conversations.
+It validates the actual returned version/prompt/persona/model bindings before
+any Character request; mismatches are failed slots, not alternate inputs.
 Actual user seeds go through normal turn acceptance and actual worker-generated
 assistant replies become source messages. The evaluator waits for source delivery
 and native consolidation, reads original native documents, then sends the exact

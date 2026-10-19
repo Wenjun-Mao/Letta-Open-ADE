@@ -37,6 +37,13 @@ accidental drift, not malicious operator forgery or remote model-weight identity
 Historical records/fingerprints are not rebound. Failed slots retain raw receipts
 and explicit limitations, not a synthesized success or semantic reroll.
 
+Pre-inference guard, 2026-10-19: validate actual public session prompt/persona
+hashes, Character/compaction fingerprints, relationship roots and distinct
+same-version source/probe conversations immediately after provisioning, before
+any seed or Character call. Previously these checks happened only at capture
+validation. Keep that reload validation too. A controlled mismatched-persona
+SQL test must fail with zero Character requests, not consume a wrong-input slot.
+
 The staged archive has no `.git`. Its caller must supply the exact evaluator
 commit explicitly; there is no missing-Git/unknown-identity fallback. Human review
 templates remain outside `review-*.json` and all six Character results initially

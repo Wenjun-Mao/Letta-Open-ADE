@@ -70,7 +70,13 @@ def test_tool_continuation_and_private_reasoning_capture_boundary(
 
 
 async def _slot(
-    monkeypatch, root, case_id, *, tool_on_probe=False, private_reasoning=False
+    monkeypatch,
+    root,
+    case_id,
+    *,
+    tool_on_probe=False,
+    private_reasoning=False,
+    wrong_persona=False,
 ):
     db = engine()
     binding = runtime()
@@ -91,6 +97,7 @@ async def _slot(
         db,
         tool_on_probe=tool_on_probe,
         private_tool_reasoning=private_reasoning,
+        wrong_persona=wrong_persona,
     ) as fixture:
         observation, issues = await run_product_slot(
             path=path,
@@ -105,6 +112,13 @@ async def _slot(
             timeout=60,
             transport_factory=fixture.transport_factory,
         )
+        if wrong_persona:
+            assert observation.status == "failed"
+            assert observation.error == "ValueError:authored_version_binding_mismatch"
+            assert not observation.input_complete and not observation.reply_committed
+            assert not fixture.calls
+            assert issues and load_capture(path)[-1]
+            return
         if private_reasoning:
             assert observation.status == "failed"
             assert observation.stage == "capture"
@@ -134,3 +148,12 @@ async def _slot(
         (path / "readbacks.json").write_bytes(original + b"\n")
         with pytest.raises(ValueError, match="hash_mismatch"):
             load_capture(path)
+
+
+def test_actor_checks_actual_persona_binding_before_any_character_call(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("ADE_SOURCE_REVISION", "f" * 40)
+    monkeypatch.setenv("ADE_SOURCE_FINGERPRINT", "e" * 64)
+    monkeypatch.setenv("ADE_SOURCE_DIRTY", "false")
+    asyncio.run(_slot(monkeypatch, tmp_path, "q01-relevant", wrong_persona=True))

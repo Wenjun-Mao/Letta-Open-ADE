@@ -11,9 +11,28 @@ def validate_readbacks(readbacks, observation, manifest, case, run):
     source = readbacks.source_session
     probe = readbacks.probe_session
     scope = manifest.scope
+    validate_session_bindings(
+        source,
+        probe,
+        scope,
+        source_conversation_id=manifest.source_conversation_id,
+        probe_conversation_id=manifest.probe_conversation_id,
+        runtime=run.runtime,
+    )
+    validate_sources(readbacks, observation, manifest, case, source)
+
+
+def validate_session_bindings(
+    source, probe, scope, *, source_conversation_id, probe_conversation_id, runtime
+):
+    require(
+        source_conversation_id != probe_conversation_id
+        and source["agent_definition"]["id"] == probe["agent_definition"]["id"],
+        "probe_is_not_a_distinct_same_version_conversation",
+    )
     for session, conversation_id in (
-        (source, manifest.source_conversation_id),
-        (probe, manifest.probe_conversation_id),
+        (source, source_conversation_id),
+        (probe, probe_conversation_id),
     ):
         require(
             session["conversation"]["id"] == conversation_id
@@ -25,19 +44,22 @@ def validate_readbacks(readbacks, observation, manifest, case, run):
         definition = session["agent_definition"]
         require(
             definition["persona_sha256"]
-            == hashlib.sha256(run.runtime.persona_text.encode()).hexdigest()
+            == hashlib.sha256(runtime.persona_text.encode()).hexdigest()
             and definition["prompt_sha256"]
-            == hashlib.sha256(run.runtime.system_prompt.encode()).hexdigest(),
+            == hashlib.sha256(runtime.system_prompt.encode()).hexdigest(),
             "authored_version_binding_mismatch",
         )
         deployments = {row["role"]: row for row in definition["deployments"]}
         require(
             deployments["conversation"]["fingerprint"]
-            == run.runtime.character_identity_sha256
+            == runtime.character_identity_sha256
             and deployments["compaction"]["fingerprint"]
-            == run.runtime.context_compaction_identity_sha256,
+            == runtime.context_compaction_identity_sha256,
             "definition_model_binding_mismatch",
         )
+
+
+def validate_sources(readbacks, observation, manifest, case, source):
     for state in (readbacks.source_initial_state, readbacks.probe_initial_state):
         require(
             state["conversation"]["messages"] == []

@@ -44,7 +44,7 @@ CATALOG = {
             "model_key": "source::model",
             "deployment": {
                 "deployment_id": "deployment-1",
-                "roles": ["conversation", "reviewer"],
+                "roles": ["conversation", "compaction"],
                 "lifecycle": "candidate",
                 "fingerprint": _fingerprint("a" * 64),
                 "qualification": {
@@ -58,7 +58,7 @@ CATALOG = {
                             "qualified": False,
                         },
                         {
-                            "role": "reviewer",
+                            "role": "compaction",
                             "observed_rounds": 3,
                             "consecutive_passing_rounds": 3,
                             "qualified": True,
@@ -137,18 +137,11 @@ def _definition(*, qualified: bool = True, tool_names: list[str] | None = None):
                 "fingerprint_payload": _fingerprint("c" * 64),
             },
             {
-                "role": "reviewer",
+                "role": "compaction",
                 "route_alias": "source::chat",
                 "deployment_id": "chat-deployment",
                 "fingerprint": "c" * 64,
                 "fingerprint_payload": _fingerprint("c" * 64),
-            },
-            {
-                "role": "retriever",
-                "route_alias": "source::embedding",
-                "deployment_id": "embedding-deployment",
-                "fingerprint": "e" * 64,
-                "fingerprint_payload": _fingerprint("e" * 64),
             },
         ],
     }
@@ -160,7 +153,7 @@ EXECUTION_CATALOG = {
             "model_key": "source::chat",
             "deployment": {
                 "deployment_id": "chat-deployment",
-                "roles": ["conversation", "reviewer"],
+                "roles": ["conversation", "compaction"],
                 "lifecycle": "qualified",
                 "fingerprint": _fingerprint("c" * 64),
                 "qualification": {
@@ -174,32 +167,11 @@ EXECUTION_CATALOG = {
                             "qualified": True,
                         },
                         {
-                            "role": "reviewer",
+                            "role": "compaction",
                             "observed_rounds": 3,
                             "consecutive_passing_rounds": 3,
                             "qualified": True,
                         },
-                    ],
-                },
-            },
-        },
-        {
-            "model_key": "source::embedding",
-            "deployment": {
-                "deployment_id": "embedding-deployment",
-                "roles": ["retriever"],
-                "lifecycle": "qualified",
-                "fingerprint": _fingerprint("e" * 64),
-                "qualification": {
-                    "qualified": True,
-                    "stale_round_count": 0,
-                    "role_results": [
-                        {
-                            "role": "retriever",
-                            "observed_rounds": 3,
-                            "consecutive_passing_rounds": 3,
-                            "qualified": True,
-                        }
                     ],
                 },
             },
@@ -216,8 +188,7 @@ def test_turn_execution_revalidates_the_immutable_deployment_snapshot() -> None:
         expected_policy_hashes=POLICY_HASHES,
         expected_route_aliases={
             "conversation": "source::chat",
-            "reviewer": "source::chat",
-            "retriever": "source::embedding",
+            "compaction": "source::chat",
         },
         expected_agent_bundle=AGENT_BUNDLE,
         source_clean=True,
@@ -238,8 +209,7 @@ def test_release_execution_rejects_development_definitions_and_tools() -> None:
             expected_policy_hashes=POLICY_HASHES,
             expected_route_aliases={
                 "conversation": "source::chat",
-                "reviewer": "source::chat",
-                "retriever": "source::embedding",
+                "compaction": "source::chat",
             },
             expected_agent_bundle=AGENT_BUNDLE,
             source_clean=True,
@@ -252,8 +222,7 @@ def test_release_execution_rejects_development_definitions_and_tools() -> None:
             expected_policy_hashes=POLICY_HASHES,
             expected_route_aliases={
                 "conversation": "source::chat",
-                "reviewer": "source::chat",
-                "retriever": "source::embedding",
+                "compaction": "source::chat",
             },
             expected_agent_bundle=AGENT_BUNDLE,
             source_clean=True,
@@ -272,8 +241,7 @@ def test_release_execution_rejects_development_definitions_and_tools() -> None:
             {
                 "expected_route_aliases": {
                     "conversation": "other::chat",
-                    "reviewer": "source::chat",
-                    "retriever": "source::embedding",
+                    "compaction": "source::chat",
                 }
             },
             "outside the qualified Agent Studio contract",
@@ -287,8 +255,7 @@ def test_release_execution_fails_closed_on_release_contract_drift(
         "expected_policy_hashes": POLICY_HASHES,
         "expected_route_aliases": {
             "conversation": "source::chat",
-            "reviewer": "source::chat",
-            "retriever": "source::embedding",
+            "compaction": "source::chat",
         },
         "expected_agent_bundle": AGENT_BUNDLE,
         "source_clean": True,
@@ -310,8 +277,7 @@ def test_release_execution_rejects_an_evidence_bundle_mismatch() -> None:
             expected_policy_hashes=POLICY_HASHES,
             expected_route_aliases={
                 "conversation": "source::chat",
-                "reviewer": "source::chat",
-                "retriever": "source::embedding",
+                "compaction": "source::chat",
             },
             expected_agent_bundle={
                 "prompt_key": "reviewed_prompt",
@@ -320,3 +286,13 @@ def test_release_execution_rejects_an_evidence_bundle_mismatch() -> None:
             },
             source_clean=True,
         )
+
+
+@pytest.mark.parametrize("retired_role", ["reviewer", "retriever"])
+def test_product_definition_cannot_restore_retired_memory_model_roles(retired_role):
+    definition = _definition()
+    definition["deployment_snapshot"].append(
+        {**definition["deployment_snapshot"][0], "role": retired_role}
+    )
+    with pytest.raises(RuntimeValidationError, match="conversation and compaction"):
+        validate_definition_execution(definition, EXECUTION_CATALOG, mode="development")

@@ -33,12 +33,16 @@ from .hindsight_runtime_support import CATALOG, CharacterTransport, ReadyWorker
 
 
 class PublishedRegistry:
+    def __init__(self, *, wrong_persona=False):
+        self.wrong_persona = wrong_persona
+
     def get_template(self, kind, key, **kwargs):
         return {
             "key": key,
             "content": PROMPT
             if kind == "prompt"
-            else load_suite()["persona"]["content"],
+            else load_suite()["persona"]["content"]
+            + ("controlled mismatch" if self.wrong_persona else ""),
         }
 
 
@@ -144,7 +148,13 @@ class MirroringNative:
 
 @asynccontextmanager
 async def actor_fixture(
-    monkeypatch, root, db, *, tool_on_probe=False, private_tool_reasoning=False
+    monkeypatch,
+    root,
+    db,
+    *,
+    tool_on_probe=False,
+    private_tool_reasoning=False,
+    wrong_persona=False,
 ):
     original_client = httpx.AsyncClient
     lease_root = root / "activation"
@@ -284,7 +294,7 @@ async def actor_fixture(
     application = AgentRuntimeApplication(
         engine=db,
         settings=app_settings,
-        prompt_registry=PublishedRegistry(),
+        prompt_registry=PublishedRegistry(wrong_persona=wrong_persona),
         router_transport=CharacterTransport(db),
         hindsight_client=native,
     )

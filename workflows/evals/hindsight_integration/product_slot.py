@@ -12,6 +12,7 @@ from .casebook import actor_material
 from .live_artifacts import reference
 from .live_capture_contracts import ProductReadbacks, ProductSlotManifest
 from .live_provenance import write_product_manifest
+from .live_readbacks import validate_session_bindings
 from .models import Observation, RequestSnapshot, Scope
 from .product_turns import send_turn
 from .product_views import (
@@ -119,6 +120,14 @@ async def run_product_slot(
                 character_root_id=source_session["agent_definition"][
                     "agent_definition_id"
                 ],
+            )
+            validate_session_bindings(
+                source_session,
+                probe_session,
+                scope,
+                source_conversation_id=observation.source_conversation_id,
+                probe_conversation_id=observation.probe_conversation_id,
+                runtime=runtime,
             )
             initial = await fresh_readbacks(api, source_session, probe_session)
             observation.fresh_state_receipt = {

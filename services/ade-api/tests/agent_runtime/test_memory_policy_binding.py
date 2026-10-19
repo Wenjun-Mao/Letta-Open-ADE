@@ -1,4 +1,4 @@
-"""Fresh sends use the current binding; historical replay is unchanged."""
+"""Retained native policy helpers do not authorize fresh Hindsight execution."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from types import SimpleNamespace
 import pytest
 
 from ade_api.features.agent_runtime.contracts import AcceptTurnRequest
-from ade_api.features.agent_runtime.database_boundary import DEFAULT_WORKSPACE_ID
 from ade_api.features.agent_runtime.errors import RuntimeValidationError
 from ade_api.features.agent_runtime.memory_policy_binding import (
     TYPED_MEMORY_POLICY_VERSION,
@@ -19,6 +18,10 @@ from ade_api.features.agent_runtime.natural_context import HISTORY_PROBE_POLICY
 from ade_api.features.agent_runtime.run_service import RunService, _turn_request_hash
 from ade_api.features.agent_runtime.turn_execution import TurnExecution
 import ade_api.features.agent_runtime.run_service as run_service_module
+import ade_api.features.agent_runtime.turn_execution as turn_execution_module
+
+
+WORKSPACE_ID = "00000000-0000-0000-0000-000000000099"
 
 
 def test_only_current_typed_and_registered_natural_bindings_execute() -> None:
@@ -50,13 +53,13 @@ def test_history_binding_is_executable_only_in_development_evaluation() -> None:
     "binding", ["typed-user-facts-v1", "natural-user-assertions-v3-b"]
 )
 @pytest.mark.parametrize("replay", [False, True])
-def test_admission_rejects_old_binding_after_historical_replay_check(
+def test_fresh_runtime_rejects_native_binding_even_when_the_key_has_a_prior_run(
     monkeypatch: pytest.MonkeyPatch, replay: bool, binding: str
 ) -> None:
     request = AcceptTurnRequest(content="hello", idempotency_key="turn-1")
     conversation = {
         "id": "conversation-1",
-        "workspace_id": DEFAULT_WORKSPACE_ID,
+        "workspace_id": WORKSPACE_ID,
         "memory_subject_id": "subject-1",
         "agent_definition_version_id": "definition-1",
         "version": 2,
@@ -84,6 +87,11 @@ def test_admission_rejects_old_binding_after_historical_replay_check(
     )
 
     class Database:
+        workspace_id = WORKSPACE_ID
+
+        def require_workspace(self, row):
+            assert row["workspace_id"] == WORKSPACE_ID
+
         @property
         def engine(self):
             return self
@@ -118,7 +126,7 @@ def test_admission_rejects_old_binding_after_historical_replay_check(
             pass
 
         async def get_subject(self, _subject_id):
-            return {"workspace_id": DEFAULT_WORKSPACE_ID}
+            return {"workspace_id": WORKSPACE_ID}
 
     class Definitions:
         def __init__(self, _connection):
@@ -141,14 +149,9 @@ def test_admission_rejects_old_binding_after_historical_replay_check(
         router_transport=Transport(),
         worker_health=object(),
     )
-    if replay:
-        result = asyncio.run(service.accept_turn("conversation-1", request))
-        assert result["run_id"] == "run-1"
-        assert result["idempotent_replay"] is True
-    else:
-        with pytest.raises(RuntimeValidationError) as error:
-            asyncio.run(service.accept_turn("conversation-1", request))
-        assert error.value.detail_code == "obsolete_memory_policy_binding"
+    with pytest.raises(RuntimeValidationError) as error:
+        asyncio.run(service.accept_turn("conversation-1", request))
+    assert error.value.detail_code == "hindsight_definition_required"
 
 
 @pytest.mark.parametrize(
@@ -157,19 +160,59 @@ def test_admission_rejects_old_binding_after_historical_replay_check(
 def test_worker_rejects_old_binding_before_provider_dispatch(
     monkeypatch: pytest.MonkeyPatch, binding: str
 ) -> None:
-    execution = TurnExecution(
-        engine=None,
-        transport=None,
-        settings=SimpleNamespace(agent_runtime_mode="development"),
-    )
+    class Engine:
+        @asynccontextmanager
+        async def connect(self):
+            yield object()
 
-    async def load_state(_run):
+    async def conversation(identity):
         return {
-            "definition": {"memory_policy_version": binding},
-            "conversation": {"purpose": "development"},
+            "workspace_id": WORKSPACE_ID,
+            "memory_subject_id": "subject-1",
+            "agent_definition_version_id": "definition-1",
+            "archived_at": None,
+            "version": 1,
         }
 
-    monkeypatch.setattr(execution, "_load_state", load_state)
+    async def workspace(identity):
+        return {"memory_backend": "hindsight"}
+
+    async def subject(identity):
+        return {"archived_at": None}
+
+    async def definition(identity):
+        return {"memory_policy_version": binding}
+
+    for name, method, read in (
+        ("ConversationRepository", "get", conversation),
+        ("WorkspaceRepository", "get", workspace),
+        ("MemoryRepository", "get_subject", subject),
+        ("DefinitionVersionRepository", "get", definition),
+    ):
+        monkeypatch.setattr(
+            turn_execution_module,
+            name,
+            lambda connection, method=method, read=read: SimpleNamespace(
+                **{method: read}
+            ),
+        )
+    execution = TurnExecution(
+        engine=Engine(),
+        transport=None,
+        settings=SimpleNamespace(agent_runtime_mode="development"),
+        hindsight_client=None,
+    )
     with pytest.raises(RuntimeValidationError) as error:
-        asyncio.run(execution.execute({"id": "run-1"}, deadline=999, trace=object()))
-    assert error.value.detail_code == "obsolete_memory_policy_binding"
+        asyncio.run(
+            execution.execute(
+                {
+                    "id": "run-1",
+                    "conversation_id": "conversation-1",
+                    "workspace_id": WORKSPACE_ID,
+                    "accepted_conversation_version": 1,
+                },
+                deadline=999,
+                trace=object(),
+            )
+        )
+    assert error.value.detail_code == "hindsight_definition_required"

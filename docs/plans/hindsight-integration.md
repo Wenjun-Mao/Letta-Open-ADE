@@ -262,6 +262,17 @@ These are scoped increments, not a claim that M0-M6 is complete.
   six-slot product dialogue began. Both databases remain preserved stopped and
   baseline identity/health verified unchanged. Repaired live startup/M5/M6 remain
   pending, as does the rest of maintained-test reconciliation.
+- The next actual activation confirmed API startup but failed the fault proxy's
+  CPU-bounded health command. [ADR 0079](../adr/0079-cpu-bounded-http-health-probe.md)
+  records the measured import cost and same-timeout HTTP probe replacement.
+  The failed activation is stopped with baseline identity/health unchanged;
+  startup traffic remains retained and no six-slot dialogue began. The final
+  focused gate passed 438 checks, including 51 application-role SQL cases.
+  Actual session bindings are now checked before any Character seed/probe call,
+  with a zero-provider-call mismatched-persona regression. Session, deployment,
+  workspace/claim and native-policy rejection tests were reconciled to current
+  contracts without restoring retired callers. Remaining full-suite debt,
+  repaired live startup, six-slot execution and M6 are still pending.
 
 Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission

@@ -15,6 +15,9 @@ from ade_api.features.agent_runtime.persistence.conversations import (
 )
 from ade_api.features.agent_runtime.persistence.memory import MemoryRepository
 from ade_api.features.agent_runtime.persistence.runs import RunRepository
+from ade_api.features.agent_runtime.persistence.run_lifecycle import (
+    RunLifecycleRepository,
+)
 
 
 class _Result:
@@ -36,6 +39,10 @@ class _RecordingConnection:
     async def execute(self, statement: Any) -> _Result:
         self.statements.append(statement)
         return _Result(self.rows.pop(0))
+
+    async def scalar(self, statement: Any):
+        self.statements.append(statement)
+        return self.rows.pop(0)
 
 
 class _RevisionConnection:
@@ -177,12 +184,22 @@ def test_run_accept_rejects_reused_idempotency_key_for_different_content() -> No
 
 def test_run_claims_are_scoped_to_the_accepting_runtime_mode() -> None:
     pending_connection = _RecordingConnection([None])
-    pending = RunRepository(cast(AsyncConnection, pending_connection))
+    pending = RunLifecycleRepository(cast(AsyncConnection, pending_connection))
     abandoned_connection = _RecordingConnection([None])
-    abandoned = RunRepository(cast(AsyncConnection, abandoned_connection))
+    abandoned = RunLifecycleRepository(cast(AsyncConnection, abandoned_connection))
 
-    assert asyncio.run(pending.claim_pending(runtime_mode="release")) is None
-    assert asyncio.run(abandoned.claim_abandoned(runtime_mode="development")) is None
+    assert (
+        asyncio.run(pending.claim(workspace_id="workspace", runtime_mode="release"))
+        is None
+    )
+    assert (
+        asyncio.run(
+            abandoned.claim(
+                workspace_id="workspace", runtime_mode="development", abandoned=True
+            )
+        )
+        is None
+    )
 
     pending_statement = pending_connection.statements[0].compile(dialect=dialect())
     abandoned_statement = abandoned_connection.statements[0].compile(dialect=dialect())
@@ -190,6 +207,9 @@ def test_run_claims_are_scoped_to_the_accepting_runtime_mode() -> None:
     assert "release" in pending_statement.params.values()
     assert "accepted_runtime_mode" in str(abandoned_statement)
     assert "development" in abandoned_statement.params.values()
+    for statement in (pending_statement, abandoned_statement):
+        assert "workspace" in statement.params.values()
+        assert "FOR UPDATE OF conversations SKIP LOCKED" in str(statement)
 
 
 def test_memory_revision_must_advance_the_fact_version_exactly_once() -> None:
