@@ -13,7 +13,7 @@ Authority: [PC-02/03/11/12/14](../../../docs/product-contract.md), the
 and [ADR 0069](../../../docs/adr/0069-offline-character-assessment-kit.md).
 This workflow owns evidence artifacts, not product APIs or semantic policy.
 
-## Integration Work In Progress
+## Stage-1 Mechanical Delivery
 
 2026-10-19: under the user's M0-M6/A1-A6 approval, the fresh-workspace Hindsight
 reply/delivery/inspection path, Interface and source-bound collector are
@@ -23,8 +23,10 @@ verified paired archives complement those observations. All fourteen isolated
 activations are closed/stopped, with baseline services unchanged. The earlier six processing-inspection
 failures remain retained. [Scoped findings](../../../docs/findings/hindsight-product-flow-2026-10-19.md)
 separate those outcomes from unreviewed Character quality and unqualified broader
-Memory behavior. The final private evidence index is being reconciled; no full
-repository-green, paired logical restore or release claim follows.
+Memory behavior. The final private evidence index is content-bound at
+`outputs/implementation-20261018/stage1-evidence-index.json`; approved M0-M6
+mechanical delivery is complete. No full repository-green, paired logical restore
+or release claim follows. See the plan's completion audit for scoped gate results.
 [ADR 0070](../../../docs/adr/0070-hindsight-message-delivery.md) owns source/replay
 identity and the [native boundary finding](../../../docs/findings/hindsight-native-boundary-2026-10-19.md)
 records direct native checks separately from product dialogue.

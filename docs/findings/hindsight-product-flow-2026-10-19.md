@@ -1,8 +1,9 @@
 # Hindsight Product Flow: Scoped Stage 1 Observations
 
 Status: real six-slot capture, eight representative safety cases and native browser
-mechanics and paired archive capture observed. Final private index/seal is being
-reconciled; the current-contract gates below pass, not the full historical suite.
+mechanics and paired archive capture observed. Approved M0-M6 **mechanical Stage-1
+delivery is complete**, with the content-bound private index below. Current-contract
+gates pass; the full historical suite does not.
 No human Character judgment, general Memory reliability, paired restore,
 production deployment or release qualification follows.
 
@@ -46,6 +47,12 @@ pagination defect and repair are in [ADR 0080](../adr/0080-native-processing-pag
 Both six-slot runs must remain visible; the repaired run does not overwrite or
 erase the first denominator. Correction/change outputs still need contextual
 Memory/Character review; no semantic consensus is inferred from mechanical success.
+
+Unscored response inspection found the two correction replies describing a
+misspeak rather than a real taste change, while both change replies preserved
+former/current preference as distinct. This observation concerns visible response
+content only: it neither assigns the cause to Memory nor submits a human Character
+verdict. Broader meanings, sufficiency and fidelity remain unqualified.
 
 ## Four Actual Safety Cases
 
@@ -181,3 +188,23 @@ image and its `c3a0...` fingerprint above were not relabelled, rebuilt or redepl
 The current source guide now separates Hindsight from the revision-bound native
 architecture archive, per ADR 0085. No release ledger was promoted and no GitHub
 Actions run was dispatched.
+
+## Evidence And Closure
+
+The ignored `outputs/implementation-20261018/stage1-evidence-index.json` is bound
+to publication source `88b6d8b590c904e4e54e94b819ff58002f99b051` and separately
+records the tested product source/fingerprint above. Its content seal is
+`e8962fde0111078e822e5bfe6d1f4ed459d631c9780dcd0f301488265ba92270`.
+All 17,541 files in the full host archive matched independent extracted bytes;
+383 indexed local artifacts include native browser traces/screenshots, both M5
+reports, failed selections/attempts, database copy/TOC receipts and local checks.
+Seals detect drift; they are not signed authenticity or semantic attestations.
+
+Both M5 reports reload: the first six failures and later six complete, unreviewed
+captures remain separate. All eight passing representative safety records verify;
+the failed first stale-worker/isolation cases remain visible. Native browser
+readback still records exactly two users/two assistants and four retained sources.
+The registered disposable SQL fixture is stopped, and the task's browser,
+documentation preview and SSH tunnel are closed. Retained original stores were
+not removed or reopened. Remaining work belongs to later quality, restore and
+transition stages, not an unfinished required Stage-1 gate.

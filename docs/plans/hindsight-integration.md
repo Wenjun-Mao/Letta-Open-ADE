@@ -6,7 +6,8 @@ and verified capture of the actual Character request. This revision makes
 Stage 1 executable in ordered increments and proposes one execution-approval
 package. The user subsequently approved M0-M6 and A1-A6 and started the active
 implementation goal on 2026-10-18, with GitHub Actions explicitly excluded.
-Implementation and its required live verification are now authorized and in progress.
+Approved Stage-1 implementation and its scoped live verification are complete.
+This closure does not authorize later-stage experiments, deployment or transition.
 
 ## Outcome, Authority And Domain Boundaries
 
@@ -359,7 +360,9 @@ then produced both readable logical archives through verified read-only original
 mounts/new copies, with unchanged parent/baseline and all four helpers stopped.
 The full fourteen-activation export matches OCI/Mac bytes at
 `37b20211dc5376cef72822a24aed8b457154268a1ebdf18107411cc0e9aa0a72`;
-all 39 recorded units are inactive. Final private indexing remains.
+all 39 recorded units are inactive. The private content-bound index is sealed at
+`e8962fde0111078e822e5bfe6d1f4ed459d631c9780dcd0f301488265ba92270`,
+with 17,541 archive files independently matched and 383 local artifacts indexed.
 
 Current-contract reconciliation passes its focused gates: the dotenv interaction
 was reproduced with two tests and fixed at the loader/client boundary (ADR 0084),
@@ -373,6 +376,27 @@ frozen story hashes/ledgers remain untouched, not a green-suite claim. The final
 Stage-1 application-role SQL invocation passed 55 checks. An earlier overbroad
 selection's six historical passwordless-owner guard rejections are preserved;
 no guard was weakened. Detailed gate results are in the scoped product finding.
+
+### Completion Audit, 2026-10-19
+
+M0-M6 is complete for its approved Stage-1 deliverable, not general semantic or
+release acceptance. A1-A6 were used only for the isolated implementation/checks
+and repair recorded here; they do not become standing authority for later stages.
+
+| Deliverable | Closure evidence |
+| --- | --- |
+| M0 | Named ownership, delivery, Retry, capture and finite-resource contracts; reproducible baseline and no new unfiltered failing identities. |
+| M1 | Pinned native source/operation/readback checks, genuine failed/partial recovery and preserved failed proof attempts; scoped finding remains separate from product quality. |
+| M2-M3 | Atomic ADE source/outbox and reply finalization, independent delivery, required recall and saved-input Retry; 55-check application-role SQL invocation and actual representative fault receipts. |
+| M4 | Controlled plus native Chinese browser/API journeys, independent fallible Memory views, scope/role negatives, reload/Retry and mobile evidence; frontend tests/lint/build pass. |
+| M5 | Twelve actual slots retained: initial six failed, subsequent six mechanically complete with exact real inputs/commits and source sidecars; all human Character reviews remain UNREVIEWED. |
+| M6 | Eight passing representative safety cases, readable paired logical archives through verified new copies, all fourteen activations closed/stopped, baseline six unchanged, 39 recorded units inactive, local fixture/tunnels/previews closed and private index verified. |
+
+The [scoped finding](../findings/hindsight-product-flow-2026-10-19.md) owns exact
+source/controller/hash/counts and remaining limits. Full repository green is
+not established: preserved frozen story workflows still reject changed inputs.
+Broader Memory quality, human Character calibration, logical paired restore,
+production cutover and release promotion remain the later stages below.
 
 ### M0: Freeze Contracts And Establish A Reproducible Baseline
 

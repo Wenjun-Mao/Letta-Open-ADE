@@ -318,8 +318,8 @@ has scoped evidence. The development persistence/runtime/UI and collector are
 implemented; [six actual-product captures, eight representative safety cases,
 native browser mechanics and paired archives](findings/hindsight-product-flow-2026-10-19.md)
 have source-bound observations. All isolated activations are closed/stopped and
-the baseline services unchanged. Final private indexing is being reconciled;
-Character remains UNREVIEWED. Existing
+the baseline services unchanged. Stage-1 mechanical delivery and private indexing
+are complete; Character remains UNREVIEWED. Existing
 ADE/trial services and retained data remain
 untouched. This is not production cutover, release qualification, broader Stage 2/3
 acceptance or authority to remove the incumbent's retained data.
