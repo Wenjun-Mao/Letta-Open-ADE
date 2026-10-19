@@ -11,10 +11,12 @@ from workflows.evals.comment_persona_eval.artifacts import (
     ArtifactWriter,
     write_artifacts,
 )
-from workflows.evals.comment_persona_eval.workflow import (
+from workflows.evals.comment_persona_eval.config import (
     EvalConfig,
-    fetch_comment_personas,
     load_config,
+)
+from workflows.evals.comment_persona_eval.workflow import (
+    fetch_comment_personas,
     run_attempt,
     validate_comment_options,
 )

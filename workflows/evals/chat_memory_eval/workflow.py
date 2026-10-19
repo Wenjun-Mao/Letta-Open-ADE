@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 from dataclasses import asdict
 from datetime import datetime
@@ -55,7 +54,7 @@ def run_evaluation(
     with AdeApiClient(
         base_url=config.api_base_url,
         timeout_seconds=ade_api_timeout_seconds(config),
-        api_key=os.getenv("ADE_API_ADMIN_KEY", ""),
+        api_key=config.api_key,
     ) as api:
         options = api.options()
         validate_chat_options(options, config)
@@ -462,8 +461,9 @@ def _config_payload(config: ChatMemoryEvalConfig) -> dict[str, Any]:
     for key, value in list(payload.items()):
         if isinstance(value, Path):
             payload[key] = str(value)
-    if payload.get("model_router_api_key"):
-        payload["model_router_api_key"] = "***"
+    for field in ("api_key", "model_router_api_key"):
+        if payload.get(field):
+            payload[field] = "***"
     return payload
 
 

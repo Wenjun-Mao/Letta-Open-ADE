@@ -3,11 +3,11 @@ from __future__ import annotations
 import argparse
 import os
 import tomllib
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 WORKFLOW_ROOT = Path(__file__).resolve().parent
@@ -24,8 +24,9 @@ class ConfigError(ValueError):
 @dataclass(frozen=True)
 class ChatMemoryEvalConfig:
     api_base_url: str = "http://127.0.0.1:8000"
+    api_key: str = field(default="", repr=False)
     model_router_base_url: str = ""
-    model_router_api_key: str = ""
+    model_router_api_key: str = field(default="", repr=False)
     output_dir: Path = Path("workflows/evals/chat_memory_eval/outputs")
     fixtures_dir: Path = Path("workflows/evals/chat_memory_eval/fixtures")
     fixture_key: str = "recent_user_chat_turns"
@@ -52,17 +53,8 @@ def _strip(value: object) -> str:
     return str(value or "").strip()
 
 
-def _env_router_base_url() -> str:
-    return _strip(os.getenv("ADE_API_MODEL_ROUTER_BASE_URL"))
-
-
-def _env_router_api_key() -> str:
-    return _strip(os.getenv("MODEL_ROUTER_API_KEY") or "local-router-dev-key")
-
-
 def load_config(path: Path) -> ChatMemoryEvalConfig:
-    load_dotenv(PROJECT_ROOT / ".env", override=False)
-    env_router_base_url = _env_router_base_url()
+    environment = {**dotenv_values(PROJECT_ROOT / ".env"), **os.environ}
     payload: dict[str, Any] = {}
     if path.exists():
         with path.open("rb") as handle:
@@ -74,10 +66,11 @@ def load_config(path: Path) -> ChatMemoryEvalConfig:
         api_base_url=_strip(
             payload.get("api_base_url", ChatMemoryEvalConfig.api_base_url)
         ).rstrip("/"),
+        api_key=_strip(environment.get("ADE_API_ADMIN_KEY")),
         model_router_base_url=_strip(payload.get("model_router_base_url", ""))
-        or env_router_base_url,
+        or _strip(environment.get("ADE_API_MODEL_ROUTER_BASE_URL")),
         model_router_api_key=_strip(payload.get("model_router_api_key", ""))
-        or _env_router_api_key(),
+        or _strip(environment.get("MODEL_ROUTER_API_KEY") or "local-router-dev-key"),
         output_dir=_project_path(
             payload.get("output_dir", ChatMemoryEvalConfig.output_dir)
         ),
@@ -143,7 +136,7 @@ def apply_cli_overrides(
     config: ChatMemoryEvalConfig, args: argparse.Namespace
 ) -> ChatMemoryEvalConfig:
     updates: dict[str, Any] = {}
-    for field in (
+    for name in (
         "api_base_url",
         "model",
         "prompt_key",
@@ -152,15 +145,15 @@ def apply_cli_overrides(
         "fixture_key",
         "judge_model_key",
     ):
-        value = getattr(args, field, None)
+        value = getattr(args, name, None)
         if value:
-            updates[field] = _strip(value)
+            updates[name] = _strip(value)
     if args.output_dir:
         updates["output_dir"] = _project_path(args.output_dir)
-    for field in ("rounds", "retry_count"):
-        value = getattr(args, field, None)
+    for name in ("rounds", "retry_count"):
+        value = getattr(args, name, None)
         if value is not None:
-            updates[field] = int(value)
+            updates[name] = int(value)
     if args.timeout_seconds is not None:
         updates["timeout_seconds"] = float(args.timeout_seconds)
     if args.judge_enabled is not None:

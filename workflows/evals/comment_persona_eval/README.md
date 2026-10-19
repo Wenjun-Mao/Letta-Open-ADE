@@ -23,6 +23,9 @@ Outputs are streamed to `workflows/evals/comment_persona_eval/outputs/` as times
 ## Config
 
 The default config is `workflows/evals/comment_persona_eval/config.toml`.
+The loader resolves `ADE_API_ADMIN_KEY` from explicit process values, then local
+`.env` defaults, without modifying the caller's environment. The config passes
+that key directly to the API client and omits it from generated run records.
 
 | Field | Default | Meaning |
 | --- | --- | --- |

@@ -1,5 +1,9 @@
 # Chat Memory Eval
 
+Configuration resolves ADE/Router credentials from explicit process values, then
+local `.env` defaults, without modifying the caller's environment. Resolved keys
+are bound to the clients and redacted in exported configuration summaries.
+
 Runs isolated native evaluation sessions through a fixed multi-turn conversation and
 checks whether the selected model stays in persona while updating typed user memory.
 
