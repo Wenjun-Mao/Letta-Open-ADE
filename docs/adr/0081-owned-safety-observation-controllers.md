@@ -45,6 +45,14 @@ close admission and stop only owned resources; separately verify exact baseline
 identity/health and no running candidate containers. Preserve partial dumps and
 failure receipts rather than overwriting them.
 
+Checkpoint correction, 2026-10-19: the first actual attempt stopped all writers
+but failed before dumping because it assumed `ade.alembic_version`. The owning
+`alembic.ini` specifies `ade.ade_alembic_version`. Keep that failed checkpoint
+and stopped stores. Derive and validate schema/table identifiers from the staged
+source configuration before quiescing; do not add a missing-table fallback. The
+actual-config and alternate-config regressions pass. Actual paired archives
+still need a new successful checkpoint.
+
 This is a coordinated backup without live product writers, not a restored or
 release-qualified recovery point. Stage 3 still needs deliberate paired restore,
 role/schema compatibility and product behavior qualification. Do not point the

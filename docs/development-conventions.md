@@ -95,3 +95,8 @@ fixtures in a clean checkout. Private historical replay checks may skip only
 when their evidence is absent; available but invalid evidence must fail. Never
 replace a live evidence gate with a synthetic fallback or rebind historical
 policy fingerprints solely to pass CI. See [ADR 0049](adr/0049-portable-offline-evidence-checks.md).
+
+Workflow configuration imports must not install a private `.env` into the
+caller's process. Read defaults as local data with explicit environment
+precedence. Offline transport/auth/dummy-Compose tests bind synthetic credentials
+or explicit absence; they must not depend on the operator's ambient keys.

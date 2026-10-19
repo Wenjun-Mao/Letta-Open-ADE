@@ -1,6 +1,7 @@
 """Quiesce only the owned candidate and preserve both stores without claiming restore."""
 
 import argparse
+import configparser
 import hashlib
 import json
 import os
@@ -54,6 +55,21 @@ def sql(container, user, database, query):
         check=True,
     )
     return result.stdout.strip()
+
+
+def migration_head_query(source_root):
+    configuration = configparser.ConfigParser(interpolation=None)
+    with (source_root / "services/ade-api/alembic.ini").open() as source:
+        configuration.read_file(source)
+    schema, table = (
+        configuration.get("alembic", key)
+        for key in ("version_table_schema", "version_table")
+    )
+    if not all(
+        re.fullmatch(r"[a-z_][a-z0-9_]{0,62}", name) for name in (schema, table)
+    ):
+        raise ValueError("unsafe_alembic_version_table_identity")
+    return f'SELECT version_num FROM "{schema}"."{table}" ORDER BY version_num;'
 
 
 def dump_database(output, container, user, database):
@@ -119,6 +135,7 @@ def run_backup(
     lease, docker = Lease.load(root), DockerOperations()
     healthy_lease(root, lease, docker)
     require_configuration(root, environment, lease)
+    head_query = migration_head_query(Path(__file__).resolve().parents[3])
     invocation = json.loads((product_run / "invocation.json").read_text())
     if invocation["source"]["source_revision"] != lease.source_revision:
         raise ValueError("paired_product_run_source_mismatch")
@@ -193,7 +210,7 @@ def run_backup(
                     ade["id"],
                     "ade_integration_admin",
                     "ade_integration",
-                    "SELECT version_num FROM ade.alembic_version;",
+                    head_query,
                 ),
             },
         )

@@ -5,18 +5,23 @@ from pathlib import Path
 
 import pytest
 
-from workflows.evals.hindsight_memory_probe.campaign_clock import activation_receipts_root
+from workflows.evals.hindsight_memory_probe.campaign_clock import (
+    activation_receipts_root,
+)
 from workflows.evals.hindsight_memory_probe.validate import ROOT, render, validate
 
 
 @pytest.fixture
-def resolved():
+def resolved(monkeypatch):
+    monkeypatch.setenv("DGX_EMBEDDING_API_KEY", "")
     if not shutil.which("docker"):
         pytest.skip(
             "Docker Compose CLI unavailable; config rendering is an explicit gap"
         )
     private_dir = Path("/tmp/ade-hindsight-probe-dummy")
-    return render(ROOT / "config/dummy.env.example", activation_receipts_root(private_dir))
+    return render(
+        ROOT / "config/dummy.env.example", activation_receipts_root(private_dir)
+    )
 
 
 def test_owned_dummy_compose_and_optional_existing_embedding_key(resolved):

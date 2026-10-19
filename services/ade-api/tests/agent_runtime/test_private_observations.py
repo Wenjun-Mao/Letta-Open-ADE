@@ -116,6 +116,8 @@ def test_capture_requires_authentication_and_an_operator_key(tmp_path):
     settings = AdeApiSettings(
         _env_file=None,
         auth_enabled=True,
+        admin_key="",
+        operator_key="",
         agent_runtime_mode="development",
         agent_runtime_workspace_key="synthetic",
         agent_runtime_observation_root=str(tmp_path),

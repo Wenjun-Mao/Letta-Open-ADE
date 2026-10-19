@@ -306,6 +306,16 @@ These are scoped increments, not a claim that M0-M6 is complete.
   The focused pagination/safety gate passed 293 checks, including normal
   SQL/Router source readbacks and corrupted-source rejection. OpenAPI artifacts,
   lint/format, source-matched candidate generation and whitespace checks passed.
+- The first actual paired checkpoint preserved public readbacks/Router traffic
+  and stopped all writers, then failed its hardcoded Alembic-table lookup before
+  dumping. It closed and stopped the candidate with six baseline identities
+  unchanged. The corrected controller reads the bound `alembic.ini` before
+  quiescing; a new actual paired checkpoint remains pending. The unfiltered
+  repository sweep reported 1,734 passed, 134 skipped, 79 failed and 61 errors.
+  Besides preserved frozen replays, it exposed ambient dotenv pollution and
+  current policy/diagram/test drift. Smoke import now reads defaults without
+  mutating process credentials; auth/Router/dummy tests explicitly bind synthetic
+  inputs. Their focused 53 checks pass. This is not a full-suite-green claim.
 
 Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission

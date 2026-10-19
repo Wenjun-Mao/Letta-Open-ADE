@@ -50,6 +50,7 @@ def lease_files(root: Path, *, expired=False):
 
 
 def configure(monkeypatch, tmp_path, *, activation_root=""):
+    monkeypatch.setenv("MODEL_ROUTER_API_KEY", "router-key")
     monkeypatch.setenv("UPSTREAM_TEST_SECRET", "wire-secret")
     source = RouterSourceConfig(
         id="deepseek",

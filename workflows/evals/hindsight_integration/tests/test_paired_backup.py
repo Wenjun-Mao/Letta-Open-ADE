@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from pathlib import Path
 from types import SimpleNamespace
 import time
 from uuid import uuid4
@@ -84,6 +85,11 @@ def test_two_store_backup_has_no_writers_and_always_closes_owned_resources(
     )
     code.parent.mkdir(parents=True)
     code.write_text("controlled controller source")
+    alembic = code.parents[3] / "services/ade-api/alembic.ini"
+    alembic.parent.mkdir(parents=True)
+    alembic.write_text(
+        "[alembic]\nversion_table_schema=ade\nversion_table=ade_alembic_version\n"
+    )
     monkeypatch.setattr(backup, "__file__", str(code))
     rows = [
         {
@@ -233,3 +239,28 @@ def test_unstaged_controller_cannot_quiesce_a_stack(tmp_path):
             controller_revision="a" * 40,
             product_run=tmp_path / "run",
         )
+
+
+def test_migration_identity_comes_from_bound_source_configuration(tmp_path):
+    config = tmp_path / "services/ade-api/alembic.ini"
+    config.parent.mkdir(parents=True)
+    config.write_text(
+        "[alembic]\nversion_table_schema=owned\nversion_table=custom_revision\n"
+    )
+    assert (
+        backup.migration_head_query(tmp_path)
+        == 'SELECT version_num FROM "owned"."custom_revision" ORDER BY version_num;'
+    )
+    config.write_text(
+        "[alembic]\nversion_table_schema=owned\nversion_table=invalid; DROP SCHEMA ade\n"
+    )
+    with pytest.raises(ValueError, match="unsafe_alembic"):
+        backup.migration_head_query(tmp_path)
+
+
+def test_actual_migration_identity_does_not_assume_alembic_default():
+    source = Path(__file__).resolve().parents[4]
+    assert (
+        backup.migration_head_query(source)
+        == 'SELECT version_num FROM "ade"."ade_alembic_version" ORDER BY version_num;'
+    )
