@@ -19,10 +19,13 @@ from .operations import (
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["prepare", "check", "supervise", "stop"])
+    parser.add_argument(
+        "action", choices=["prepare", "check", "supervise", "start", "stop"]
+    )
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--project", default="ade-hindsight-integration")
     parser.add_argument("--revision")
+    parser.add_argument("--environment", type=Path)
     parser.add_argument("--disk-path", default="/mnt/projects")
     parser.add_argument("--duration", type=int, default=MAX_LEASE_SECONDS)
     args = parser.parse_args()
@@ -51,6 +54,13 @@ def main() -> int:
         return 0
     if args.action == "supervise":
         return supervise(args.root)
+    if args.action == "start":
+        from .startup import start_native
+
+        if args.environment is None:
+            parser.error("--environment is required for start")
+        start_native(args.root, args.environment)
+        return 0
     lease = Lease.load(args.root)
     if args.action == "check":
         issues = check_lease(

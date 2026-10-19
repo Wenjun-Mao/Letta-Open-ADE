@@ -76,11 +76,15 @@ download but cannot accept an unverified or silently substituted model.
 Then recheck lease/headroom and start only the owned native services:
 
 ```sh
-python3 -m workflows.evals.hindsight_integration.operations_cli check \
-  --root "$INTEGRATION_ACTIVATION"
-docker compose --env-file "$INTEGRATION_ENV" \
-  -f workflows/evals/hindsight_integration/compose.yaml up -d db model-router hindsight
+python3 -m workflows.evals.hindsight_integration.operations_cli start \
+  --root "$INTEGRATION_ACTIVATION" --environment "$INTEGRATION_ENV"
 ```
+
+The startup command refuses closed/expired leases, changed configuration or stale
+supervision before invoking Compose, and stops newly created containers if the
+activation closes during startup. Do not bypass it with a direct Compose `up`.
+Use an activation-specific project name when rearming, so retained candidate
+database volumes cannot silently become a fresh activation's database.
 
 Verify native health, installed database extensions, actual image/model identities,
 Chinese reranking and safe request observations. The API binds to OCI loopback

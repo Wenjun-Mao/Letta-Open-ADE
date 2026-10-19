@@ -52,6 +52,13 @@ and restarting the same closed activation cannot reopen it. A fresh activation
 requires reconciliation, capacity/baseline checks and no simultaneous old owner;
 the user's A6 approval already covers this renewal.
 
+Host preparation rejects another running integration project as well as the same
+project. Canonicalize Docker mount enumeration before baseline comparison;
+ordering is not a resource change, while mount identity/options still are.
+Native startup verifies the live heartbeat, unclosed lease and provisioned config
+hash before Compose and checks closure afterward, stopping owned new containers
+on a startup race. Closed activations and their evidence are never reopened.
+
 ## Alternatives And Consequences
 
 Reconstructing requests in the evaluation CLI was rejected because it misses

@@ -1,6 +1,7 @@
 """Create private candidate credentials/configuration without printing their values."""
 
 import argparse
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -8,7 +9,7 @@ import re
 import secrets
 import shlex
 
-from .operations import Lease
+from .operations import Lease, create_record
 
 
 def read_existing_credentials(path: Path) -> dict[str, str]:
@@ -83,6 +84,16 @@ def prepare_environment(
     _private_text(
         environment_path,
         "".join(f"{key}={json.dumps(value)}\n" for key, value in environment.items()),
+    )
+    create_record(
+        activation_root / "provisioned.json",
+        {
+            "activation_id": lease.activation_id,
+            "environment_path": str(environment_path),
+            "environment_sha256": hashlib.sha256(
+                environment_path.read_bytes()
+            ).hexdigest(),
+        },
     )
     return {
         "activation_id": lease.activation_id,

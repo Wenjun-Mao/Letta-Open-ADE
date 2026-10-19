@@ -67,7 +67,8 @@ class DockerOperations:
             return []
         output = self._run(["inspect", "--format", INSPECTION, *identities])
         return sorted(
-            (json.loads(line) for line in output.splitlines()), key=lambda x: x["id"]
+            (canonical_snapshot(json.loads(line)) for line in output.splitlines()),
+            key=lambda x: x["id"],
         )
 
     def owned(self, lease: Lease) -> list[dict]:
@@ -144,6 +145,14 @@ class Lease:
         return cls(**value)
 
 
+def canonical_snapshot(record: dict) -> dict:
+    """Docker's mount enumeration order is not part of container identity."""
+    result = dict(record)
+    if "mounts" in result:
+        result["mounts"] = sorted(result["mounts"], key=encoded)
+    return result
+
+
 def prepare_lease(
     root: Path,
     *,
@@ -156,7 +165,7 @@ def prepare_lease(
 ) -> Lease:
     snapshots = docker.snapshot()
     if any(
-        (record.get("labels") or {}).get(PROJECT_LABEL) == project
+        (record.get("labels") or {}).get(PROJECT_LABEL, "").startswith(PROJECT_PREFIX)
         and record["state"] in {"running", "restarting", "paused"}
         for record in snapshots
     ):
@@ -212,7 +221,9 @@ def check_lease(
     if capacity["free_disk"] < lease.minimum_free_disk:
         issues.append("host_disk_reserve_breached")
     baseline = docker.snapshot([record["id"] for record in lease.baseline])
-    if baseline != list(lease.baseline):
+    if [canonical_snapshot(record) for record in baseline] != [
+        canonical_snapshot(record) for record in lease.baseline
+    ]:
         issues.append("baseline_changed")
     owned = docker.owned(lease)
     if any(

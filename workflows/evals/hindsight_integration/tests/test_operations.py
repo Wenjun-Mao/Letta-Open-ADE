@@ -14,6 +14,7 @@ from workflows.evals.hindsight_integration.operations import (
     check_lease,
     prepare_lease,
     stop_owned,
+    canonical_snapshot,
 )
 
 
@@ -90,6 +91,30 @@ def test_new_activation_does_not_take_over_a_running_previous_owner(tmp_path):
     docker.records.append(owned_record(lease))
     with pytest.raises(ValueError, match="previous activation"):
         prepare(tmp_path / "second", docker)
+
+
+def test_different_project_does_not_bypass_single_activation_owner(tmp_path):
+    docker = DockerFake()
+    lease = prepare(tmp_path / "first", docker)
+    docker.records.append(owned_record(replace(lease, project=lease.project + "-old")))
+    with pytest.raises(ValueError, match="previous activation"):
+        prepare(tmp_path / "second", docker)
+
+
+def test_mount_order_is_not_baseline_drift_but_mount_changes_are(tmp_path):
+    docker = DockerFake()
+    mounts = [{"Destination": "/a", "Source": "one"}, {"Destination": "/b"}]
+    docker.records[0]["mounts"] = mounts
+    lease = prepare(tmp_path, docker)
+    docker.records[0] = {**docker.records[0], "mounts": list(reversed(mounts))}
+    assert check_lease(lease, docker=docker, capacity=CAPACITY, now=101) == []
+    docker.records[0]["mounts"] = [{"Destination": "/a", "Source": "other"}]
+    assert check_lease(lease, docker=docker, capacity=CAPACITY, now=101) == [
+        "baseline_changed"
+    ]
+    assert canonical_snapshot({"mounts": mounts}) == canonical_snapshot(
+        {"mounts": list(reversed(mounts))}
+    )
 
 
 @pytest.mark.parametrize(
