@@ -27,6 +27,18 @@ Memory behavior. The final private evidence index is content-bound at
 `outputs/implementation-20261018/stage1-evidence-index.json`; approved M0-M6
 mechanical delivery is complete. No full repository-green, paired logical restore
 or release claim follows. See the plan's completion audit for scoped gate results.
+
+Post-closeout review repairs follow [ADR 0086](../../../docs/adr/0086-stage1-review-repair-contracts.md).
+The [repair finding](../../../docs/findings/hindsight-stage1-review-repairs-2026-10-19.md)
+records offline results separately from the original live evidence.
+The current collector requires `ade-memory-lookup-v2` metadata for discretionary
+lookup: each serial call must match its causal lifecycle pair, effective query/
+limit, relationship and complete ordered native result. Missing/changed content,
+false empty success and unmatched lookups fail validation. Non-Memory tool results
+are not recall. The six zero-tool historical probes remain unchanged automatic-
+recall observations, not live qualification of the repaired tool path or human
+Character acceptance. New source bindings do not overwrite their captures/seals.
+
 [ADR 0070](../../../docs/adr/0070-hindsight-message-delivery.md) owns source/replay
 identity and the [native boundary finding](../../../docs/findings/hindsight-native-boundary-2026-10-19.md)
 records direct native checks separately from product dialogue.

@@ -4,6 +4,7 @@ import hashlib
 import json
 
 from .wire_capture import require
+from .tool_provenance import validate_tool_provenance
 
 
 def context_components(context: dict, request: dict) -> list[dict]:
@@ -54,14 +55,17 @@ def context_components(context: dict, request: dict) -> list[dict]:
     for index in range(len(base), len(actual)):
         item = actual[index]
         require(item["role"] in {"assistant", "tool"}, "unexpected_continuation_role")
+        memory_tool = item["role"] == "tool" and item.get("name") == "search_memory"
         source_ids = []
-        if item["role"] == "tool":
+        if memory_tool:
             value = json.loads(item["content"])
             source_ids = [row["id"] for row in value.get("memories", [])]
         text = item.get("content") or ""
         parts.append(
             {
                 "kind": "tool_recall"
+                if memory_tool
+                else "external_tool"
                 if item["role"] == "tool"
                 else "model_continuation",
                 "message_index": index,
@@ -75,16 +79,16 @@ def context_components(context: dict, request: dict) -> list[dict]:
     return parts
 
 
-def validate_conversation_chain(chain: list, reply: str, lookups: list[dict]) -> None:
+def validate_conversation_chain(
+    chain: list, reply: str, records: list[dict], *, bank_id: str | None = None
+) -> dict:
     require(bool(chain), "successful_attempt_has_no_conversation_request")
-    memory_ids = {
-        value
-        for row in lookups
-        if row["phase"] == "tool"
-        for value in row["selected_ids"]
-    }
     for index, (start, wire) in enumerate(chain):
-        require(start["request_number"] == index + 1, "continuation_number_gap")
+        require(
+            type(start["request_number"]) is int
+            and start["request_number"] == index + 1,
+            "continuation_number_gap",
+        )
         outcome = wire["outcome"]
         require(
             outcome["http_status"] == 200,
@@ -99,27 +103,4 @@ def validate_conversation_chain(chain: list, reply: str, lookups: list[dict]) ->
             )
             continue
         require(bool(calls), "continuation_without_tool_request")
-        current = wire["request"]["body"]["messages"]
-        following = chain[index + 1][1]["request"]["body"]["messages"]
-        require(
-            following[: len(current)] == current
-            and len(following) == len(current) + 1 + len(calls),
-            "continuation_history_mismatch",
-        )
-        assistant = following[len(current)]
-        require(
-            all(assistant.get(key) == value for key, value in message.items()),
-            "tool_request_response_mismatch",
-        )
-        tools = following[len(current) + 1 :]
-        require(
-            [row.get("tool_call_id") for row in tools]
-            == [call["id"] for call in calls],
-            "tool_call_identity_mismatch",
-        )
-        for row in tools:
-            value = json.loads(row["content"])
-            require(
-                all(item["id"] in memory_ids for item in value.get("memories", [])),
-                "unobserved_tool_memory",
-            )
+    return validate_tool_provenance(chain, records, bank_id, successful=True)

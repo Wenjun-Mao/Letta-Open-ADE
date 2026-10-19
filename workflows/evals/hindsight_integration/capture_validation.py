@@ -6,6 +6,7 @@ import json
 from .checks import reject_sensitive_fields
 from .capture_components import context_components, validate_conversation_chain
 from .wire_capture import require, validate_wire
+from .tool_provenance import validate_tool_provenance
 
 
 def qualify_run_capture(
@@ -199,6 +200,7 @@ def qualify_run_capture(
                     "probe_context_has_non_hindsight_history",
                 )
         conversation_chain = []
+        packed_start = len(packed)
         for request_id, start in starts.items():
             if start["operation"] == "catalog":
                 continue
@@ -280,8 +282,11 @@ def qualify_run_capture(
                 }
             )
         if saved[attempt_id]["status"] == "succeeded":
-            validate_conversation_chain(
-                conversation_chain, reply[0]["content"], lookups
+            bindings = validate_conversation_chain(
+                conversation_chain,
+                reply[0]["content"],
+                records,
+                bank_id=sources[0]["bank_id"],
             )
             completed = [
                 row["payload"]
@@ -295,6 +300,21 @@ def qualify_run_capture(
                 == len(conversation_chain),
                 "committed_request_count_mismatch",
             )
+        else:
+            bindings = validate_tool_provenance(
+                conversation_chain,
+                records,
+                sources[0]["bank_id"] if len(sources) == 1 else None,
+                successful=False,
+            )
+        for request in packed[packed_start:]:
+            for part in request["components"]:
+                if part["kind"] == "tool_recall":
+                    require(
+                        part["message_index"] in bindings,
+                        "tool_component_has_no_verified_lookup",
+                    )
+                    part.update(bindings[part["message_index"]])
     require(used_wire_ids == set(wire_map), "unjoined_wire_request")
     require(
         any(row["stage"] == "conversation" for row in packed), "no_character_request"

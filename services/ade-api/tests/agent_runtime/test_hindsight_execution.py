@@ -200,7 +200,12 @@ def test_context_keeps_persona_input_attribution_and_serialized_bounds():
             "persona_content": "Authored persona",
         },
         messages=[
-            {"id": "older", "sequence": 1, "role": "user", "content": "x" * 1000}
+            {
+                "id": "older",
+                "sequence": 1,
+                "role": "user",
+                "content": "Earlier user statement",
+            }
         ],
         current_user={"id": "current", "sequence": 2, "content": "Exact current input"},
         summary=None,
@@ -221,7 +226,7 @@ def test_context_keeps_persona_input_attribution_and_serialized_bounds():
     assert "Authored persona" in context.messages[0]["content"]
     assert "reviewer" not in context.messages[0]["content"]
     assert "Solo character history" in context.messages[0]["content"]
-    assert context.omitted_message_ids == ["older"]
+    assert context.omitted_message_ids == []
     assert context.estimated_input_tokens <= budget.input_limit
     system = context.messages[0]["content"]
     offset = 0

@@ -7,8 +7,10 @@ Hindsight owns learned Memory. Model Router owns provider forwarding.
 
 The maintained source path is Hindsight-only and development-only. Existing
 deployed ADE/trial images and databases are not changed by this source replacement.
-Stage 1 browser, complete live capture and fault/closeout verification remain in
-progress; this is not release or Character qualification.
+The source-bound Stage 1 mechanical closeout is recorded in the
+[scoped finding](../../../../../../docs/findings/hindsight-product-flow-2026-10-19.md).
+Subsequent review repairs are offline changes, not redeployment, live qualification
+of the repaired runtime, release or Character acceptance.
 
 ## Product And Execution
 
@@ -23,7 +25,8 @@ progress; this is not release or Character qualification.
   original native operations. A reply does not wait for retention.
 - Every attempt normally recalls within its persisted relationship. Successful
   empty recall is valid. Required automatic/tool lookup failure pauses the saved
-  input without a Character apology or an empty-memory substitute.
+  input without a Character apology or an empty-memory substitute. Known database
+  availability errors follow the same path with a safe failure reason.
 - `POST /api/v3/runs/{id}/retry` takes `idempotency_key` and
   `expected_attempt_count`; it performs fresh recall without another user insert.
   Retry and Cancel resolve the paused conversation's input guard. Stale workers
@@ -47,6 +50,8 @@ Archived original chats are still readable; archiving is not erasure.
 - `compaction.py` and `compaction_executor.py` preserve summary prefix/provenance
   through the separately bound compaction deployment. Whole serialized initial,
   continuation and compaction payloads are checked against their input bounds.
+  The planner owns the complete summary-prefix/raw-suffix partition. Composition
+  trims optional recall, never unsummarized dialogue; remaining overflow fails.
 - `turn_sources.py` appends delivery intent in its caller's product transaction.
   `memory_banks.py` and `memory_delivery_worker.py` own native availability and
   independent ordered scheduling. No native/provider HTTP runs inside ADE SQL.
@@ -62,7 +67,9 @@ Archived original chats are still readable; archiving is not erasure.
 - `private_observations.py`, `private_observation_service.py` and its operator-only
   API own explicitly enabled synthetic-workspace snapshots. Safe activity never
   substitutes for these full records. See
-  [ADR 0075](../../../../../../docs/adr/0075-product-memory-and-request-observations.md).
+  [ADR 0075](../../../../../../docs/adr/0075-product-memory-and-request-observations.md)
+  and [ADR 0086](../../../../../../docs/adr/0086-stage1-review-repair-contracts.md)
+  for v2 per-call lookup provenance under the sequential executor.
 
 ## Configuration And Verification
 

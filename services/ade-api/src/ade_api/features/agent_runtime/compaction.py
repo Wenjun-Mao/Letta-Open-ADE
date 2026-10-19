@@ -50,6 +50,11 @@ class ModelCompaction:
     usage: dict[str, int]
 
 
+def recent_message_tokens(message: dict[str, Any]) -> int:
+    """The established raw-dialogue budget, separate from the serialized hard cap."""
+    return estimate_tokens(f"{message['role']}: {message['content']}")
+
+
 def plan_compaction(
     *,
     messages: list[dict[str, Any]],
@@ -71,9 +76,7 @@ def plan_compaction(
         for row in ordered
         if previous_through < int(row["sequence"]) < current_sequence
     ]
-    token_count = sum(
-        estimate_tokens(f"{row['role']}: {row['content']}") for row in eligible
-    )
+    token_count = sum(recent_message_tokens(row) for row in eligible)
     if (
         len(eligible) <= COMPACTION_MAX_UNSUMMARIZED_MESSAGES
         and token_count <= recent_token_budget
@@ -82,7 +85,7 @@ def plan_compaction(
     retained_count = 0
     retained_tokens = 0
     for row in reversed(eligible):
-        cost = estimate_tokens(f"{row['role']}: {row['content']}")
+        cost = recent_message_tokens(row)
         if (
             retained_count >= COMPACTION_RETAIN_RECENT_MESSAGES
             or retained_tokens + cost > recent_token_budget

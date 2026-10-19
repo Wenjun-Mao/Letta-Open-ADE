@@ -3,9 +3,20 @@
 import asyncio
 import time
 
+from sqlalchemy.exc import (
+    DBAPIError,
+    DisconnectionError,
+    InterfaceError,
+    OperationalError,
+    TimeoutError as PoolTimeoutError,
+)
+
 from ade_api.integrations.hindsight import HindsightClient, HindsightError
 
 from .memory_banks import MemoryBankAccess, MemoryBankError
+
+
+LOOKUP_OBSERVATION_CONTRACT = "ade-memory-lookup-v2"
 
 
 class MemoryLookupError(RuntimeError):
@@ -14,6 +25,25 @@ class MemoryLookupError(RuntimeError):
     def __init__(self, detail_code: str):
         super().__init__("Memory lookup failed; retry the saved message")
         self.detail_code = detail_code
+
+
+def lookup_failure_code(exc: Exception) -> str | None:
+    if isinstance(
+        exc,
+        (
+            OperationalError,
+            InterfaceError,
+            DisconnectionError,
+            PoolTimeoutError,
+            ConnectionError,
+        ),
+    ) or (isinstance(exc, DBAPIError) and exc.connection_invalidated):
+        return "memory_lookup_database_unavailable"
+    if isinstance(exc, (HindsightError, MemoryBankError)):
+        return exc.code
+    if isinstance(exc, TimeoutError):
+        return "memory_lookup_timeout"
+    return None
 
 
 class TurnRecall:
@@ -32,21 +62,23 @@ class TurnRecall:
         self.deadline = deadline
         self.trace = trace
         self.observations: list[dict] = []
+        self._lookup_number = 0
 
     async def lookup(
         self, query: str, *, limit: int = 20, phase: str = "automatic"
     ) -> list[dict]:
+        self._lookup_number += 1
+        identity = {
+            "lookup_contract": LOOKUP_OBSERVATION_CONTRACT,
+            "lookup_number": self._lookup_number,
+            "phase": phase,
+            "bank_id": self.bank_id,
+            "query": query,
+            "limit": limit,
+        }
         if self.trace is not None:
             self.trace.memory_lookup_active = True
-            self.trace.record_private(
-                "memory_lookup.started",
-                {
-                    "phase": phase,
-                    "bank_id": self.bank_id,
-                    "query": query,
-                    "limit": limit,
-                },
-            )
+            self.trace.record_private("memory_lookup.started", identity)
         try:
             async with asyncio.timeout(max(0, self.deadline - time.monotonic())):
                 await self.banks.ensure_ready(self.bank_id, deadline=self.deadline)
@@ -57,19 +89,27 @@ class TurnRecall:
                     self.bank_id,
                     payload,
                 )
-        except (HindsightError, MemoryBankError, TimeoutError) as exc:
+        except (
+            HindsightError,
+            MemoryBankError,
+            TimeoutError,
+            DBAPIError,
+            DisconnectionError,
+            PoolTimeoutError,
+            ConnectionError,
+        ) as exc:
+            detail_code = lookup_failure_code(exc)
+            if detail_code is None:
+                raise
             if self.trace is not None:
                 self.trace.record_private(
                     "memory_lookup.failed",
                     {
-                        "phase": phase,
-                        "bank_id": self.bank_id,
-                        "error_code": getattr(exc, "code", "memory_lookup_timeout"),
+                        **identity,
+                        "error_code": detail_code,
                     },
                 )
-            raise MemoryLookupError(
-                getattr(exc, "code", "memory_lookup_timeout")
-            ) from exc
+            raise MemoryLookupError(detail_code) from exc
         finally:
             if self.trace is not None:
                 self.trace.memory_lookup_active = False
@@ -84,8 +124,7 @@ class TurnRecall:
                 self.trace.record_private(
                     "memory_lookup.failed",
                     {
-                        "phase": phase,
-                        "bank_id": self.bank_id,
+                        **identity,
                         "error_code": "hindsight_recall_invalid",
                     },
                 )
@@ -95,8 +134,7 @@ class TurnRecall:
             self.trace.record_private(
                 "memory_lookup.completed",
                 {
-                    "phase": phase,
-                    "bank_id": self.bank_id,
+                    **identity,
                     "response": value,
                     "selected_ids": [item["id"] for item in selected],
                 },

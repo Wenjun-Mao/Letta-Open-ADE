@@ -3,6 +3,7 @@
 import json
 import hashlib
 
+from .compaction import recent_message_tokens
 from .context import (
     BuiltContext,
     ContextBudget,
@@ -62,23 +63,21 @@ def build_hindsight_context(
         current_sequence=int(current_user["sequence"]),
         summary_through_sequence=boundary,
     )
-    recent = [
-        row
-        for row in messages
-        if boundary < int(row["sequence"]) < int(current_user["sequence"])
-    ]
-    selected: list[dict] = []
-    used = 0
-    for row in reversed(recent):
-        cost = estimate_tokens(
-            json.dumps(
-                {"role": row["role"], "content": row["content"]}, ensure_ascii=False
-            )
+    recent = sorted(
+        (
+            row
+            for row in messages
+            if boundary < int(row["sequence"]) < int(current_user["sequence"])
+        ),
+        key=lambda row: int(row["sequence"]),
+    )
+    if sum(recent_message_tokens(row) for row in recent) > budget.recent_tokens:
+        raise RuntimeValidationError(
+            "Unsummarized dialogue exceeds the planned recent-message budget",
+            detail_code="context_history_requires_compaction",
         )
-        if used + cost > budget.recent_tokens:
-            break
-        selected.insert(0, row)
-        used += cost
+    # The planner owns the prefix/suffix partition; no independent raw-history trim.
+    selected = recent
     retained_memories: list[dict] = []
     used = 0
     for item in memories:
@@ -120,15 +119,12 @@ def build_hindsight_context(
         )
 
     sections, packed, total = compose()
-    while total > budget.input_limit and (retained_memories or selected):
-        if retained_memories:
-            retained_memories.pop()
-        else:
-            selected.pop(0)
+    while total > budget.input_limit and retained_memories:
+        retained_memories.pop()
         sections, packed, total = compose()
     if total > budget.input_limit:
         raise RuntimeValidationError(
-            "Mandatory input and committed summary exceed serialized input capacity",
+            "Mandatory input, complete local dialogue and committed summary exceed serialized input capacity",
             detail_code="context_serialized_overflow",
         )
     selected_ids = {str(row["id"]) for row in selected}

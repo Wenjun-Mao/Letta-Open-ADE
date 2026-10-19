@@ -80,6 +80,7 @@ record's status notice before applying its original execution details.
 | [0083](0083-stopped-health-and-checkpoint-recovery.md) | Live health is state-aware; closed-point recovery uses verified read-only originals and new database copies, not a reopened lease or restore qualification. |
 | [0084](0084-workflow-local-configuration.md) | Workflow defaults stay local; explicit bound credentials replace process-global dotenv side effects. |
 | [0085](0085-revision-bound-historical-architecture.md) | Native architecture maps remain visibly historical and validate exact recorded source, separately from today's Hindsight guide. |
+| [0086](0086-stage1-review-repair-contracts.md) | Lookup database outages pause saved input; compaction/composition preserve complete dialogue; versioned serial tool capture binds exact per-call native rows. |
 
 ## Historical, Retired, Or On Hold
 
