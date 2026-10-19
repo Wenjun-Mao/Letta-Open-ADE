@@ -91,6 +91,22 @@ def test_ci_compose_uses_the_same_explicit_environment_file() -> None:
     assert "LETTA_ENV_FILE" not in workflow
 
 
+def test_github_workflows_are_manual_only() -> None:
+    workflow_paths = sorted((PROJECT_ROOT / ".github/workflows").glob("*.y*ml"))
+    assert workflow_paths, "Keep the manually runnable verification workflow"
+    for path in workflow_paths:
+        workflow = path.read_text(encoding="utf-8")
+        # Require the canonical trigger block, not an allowlist of auto events.
+        blocks = re.findall(r"(?m)^on:\n((?:[ \t]+[^\n]*\n|\n)*)", workflow)
+        assert len(blocks) == 1, f"{path.name}: expected one canonical on block"
+        entries = [
+            line.strip()
+            for line in blocks[0].splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+        assert entries == ["workflow_dispatch:"], f"{path.name}: CI must be manual-only"
+
+
 def _python_files(root: Path) -> Iterable[Path]:
     return (
         path

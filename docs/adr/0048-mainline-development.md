@@ -45,6 +45,21 @@ verify the exact anchor and required files at the reviewer's access level.
 This is source-publication authority, not deployment, release qualification,
 live provider experimentation, external-account operation or reviewer dispatch.
 
+### Manual-Only CI Amendment (2026-10-18)
+
+The user explicitly requires GitHub Actions CI only on request and directed
+removal of automatic workflow triggers. Keep `workflow_dispatch` only; normal
+pushes and pull requests must not trigger CI. Do not dispatch or rerun a workflow
+without a new explicit user request. Retaining automatic CI or repeatedly
+withholding ordinary source publication was rejected in favor of manual CI.
+
+Local verification and scoped commits/pushes remain the default. This changes
+when hosted verification runs, not the requirement to verify source changes or
+report gaps. A repository guardrail checks every workflow's manual-only trigger
+block. Future workflows must follow the same rule; restoring automatic triggers
+requires a changed user decision. Existing workflow jobs remain available for
+explicit manual execution. No CI run is authorized by this amendment itself.
+
 ## Alternatives And Guardrails
 
 Keeping a separate review branch would publish evidence without integration,

@@ -22,6 +22,13 @@ divergence. Deployment, live provider experiments and external-account use remai
 separately authorized actions. ADR 0048 records this supersession of the earlier
 local-commit-only approval.
 
+GitHub Actions workflows use only `workflow_dispatch`, by the user's
+2026-10-18 direction. Do not dispatch, rerun, or otherwise trigger CI without a
+new explicit request. Pushes and pull requests must not start CI automatically;
+do not restore automatic triggers as part of implementation or verification.
+Continue proportional local checks and normal scoped publication. See the
+[manual-only CI amendment](adr/0048-mainline-development.md#manual-only-ci-amendment-2026-10-18).
+
 ## Keep One Owner
 
 - `apps/ade-web` owns browser routes, UI, and same-origin proxying.

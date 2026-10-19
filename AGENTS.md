@@ -20,3 +20,7 @@ after each completed, verified iteration. Commit and push the iteration's scoped
 changes without asking again; do not include unrelated work or private evidence.
 This does not authorize force-pushes, deployment, live provider experiments or
 external-account use. See ADR 0048 for the publication guardrails.
+
+GitHub Actions workflows are manual-only. Do not dispatch, rerun, or otherwise
+trigger CI unless the user explicitly requests it. Normal pushes are permitted
+with manual-only workflow triggers; do not reintroduce automatic triggers.
