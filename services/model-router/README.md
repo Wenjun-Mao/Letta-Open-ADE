@@ -44,3 +44,19 @@ uv run ruff check services/model-router
 
 The Compose service is `model-router` and is internal-only. Use
 `docker compose exec model-router` for runtime diagnostics.
+
+## Private Integration Observations
+
+`MODEL_ROUTER_OBSERVATION_ROOT` enables private, create-only request/outcome
+records at the final provider send boundary. Router authentication is required.
+The authenticated `GET /v1/router/observations` metadata index supports `run_id`,
+`offset` and `limit`; `GET /v1/router/observations/{request_id}` exports a record.
+The response header `X-Model-Router-Request-Id` joins provider requests and outcomes.
+Private reasoning and credentials are excluded; incomplete records remain explicit.
+
+`MODEL_ROUTER_ACTIVATION_ROOT` additionally requires a valid finite activation
+lease and private observation root. A closed, expired, missing or changed lease
+rejects inference before upstream dispatch. Discovery/health remain available.
+These controls are opt-in for the approved synthetic integration stack; ordinary
+source configuration and the one-attempt forwarding policy remain unchanged.
+See [ADR 0071](../../docs/adr/0071-private-wire-observations-and-activation-leases.md).

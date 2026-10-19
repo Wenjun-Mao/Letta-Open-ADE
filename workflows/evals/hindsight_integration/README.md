@@ -19,6 +19,9 @@ The concrete Hindsight HTTP client and immutable per-message source contract
 have offline coverage; the normal product runtime and live collector are still
 being implemented. [ADR 0070](../../../docs/adr/0070-hindsight-message-delivery.md)
 records the source/replay decision and its pending native feasibility gate.
+The [isolated operations runbook](operations.md) owns lease, configuration,
+native-source checks and closeout commands. Native feasibility is separate from
+the real ADE/Character capture required by M5.
 
 The pre-change current-source baseline reports 1,568 passed, 81 skipped, 54 failed
 and 61 errors. The failure/error totals match the October 13 checkpoint; the

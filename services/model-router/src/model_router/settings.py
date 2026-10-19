@@ -230,6 +230,8 @@ class ModelRouterSettings(BaseSettings):
     cache_ttl_seconds: int = 30
     discovery_timeout_seconds: float = 5.0
     request_timeout_seconds: float = 600.0
+    observation_root: str = ""
+    activation_root: str = ""
 
     model_config = SettingsConfigDict(
         env_prefix="MODEL_ROUTER_",
@@ -286,6 +288,16 @@ class ModelRouterSettings(BaseSettings):
             RouterSourceConfig.model_validate(item) for item in loaded_items
         ]
         self._validate_sources(self.sources)
+        return self
+
+    @model_validator(mode="after")
+    def _require_private_observation_configuration(self) -> "ModelRouterSettings":
+        if self.activation_root and not self.observation_root:
+            raise ValueError("An activation requires private request observations")
+        if self.observation_root and not self.resolve_api_key():
+            raise ValueError(
+                "Private request observations require Router authentication"
+            )
         return self
 
     @staticmethod

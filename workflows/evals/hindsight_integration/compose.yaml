@@ -1,0 +1,110 @@
+name: ${INTEGRATION_PROJECT:?owned project required}
+x-owner-labels: &owner-labels
+  io.ade.integration.activation: ${INTEGRATION_ACTIVATION_ID:?activation required}
+  io.ade.integration.source: ${INTEGRATION_SOURCE_REVISION:?committed source required}
+services:
+  db:
+    image: ${INTEGRATION_NATIVE_DB_IMAGE:?pinned native database image required}
+    platform: linux/arm64
+    labels: *owner-labels
+    restart: "no"
+    mem_limit: 1g
+    cpus: 0.25
+    environment:
+      POSTGRES_USER: hindsight_integration
+      POSTGRES_DB: hindsight_integration
+      POSTGRES_PASSWORD: ${INTEGRATION_DB_PASSWORD:?private generated credential required}
+    volumes:
+      - hindsight-data:/var/lib/postgresql/data
+      - ./docker/extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U hindsight_integration -d hindsight_integration"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  model-router:
+    image: ade-hindsight-integration-router:${INTEGRATION_SOURCE_REVISION:?committed source required}
+    build:
+      context: ../../..
+      dockerfile: workflows/evals/hindsight_integration/docker/python.Dockerfile
+      target: router
+    platform: linux/arm64
+    labels: *owner-labels
+    restart: "no"
+    user: ${INTEGRATION_UID:?operator UID required}:${INTEGRATION_GID:?operator GID required}
+    mem_limit: 384m
+    cpus: 0.15
+    environment:
+      MODEL_ROUTER_SOURCES_FILE: workflows/evals/hindsight_integration/config/sources.json
+      MODEL_ROUTER_MODEL_PROFILES_FILE: workflows/evals/hindsight_integration/config/model-profiles.json
+      MODEL_ROUTER_DEPLOYMENT_MANIFEST_FILE: workflows/evals/hindsight_integration/config/absent-development-manifest.json
+      MODEL_ROUTER_API_KEY_SECRET: ""
+      MODEL_ROUTER_API_KEY: ${INTEGRATION_ROUTER_KEY:?private generated credential required}
+      MODEL_ROUTER_ACTIVATION_ROOT: /activation
+      MODEL_ROUTER_OBSERVATION_ROOT: /observations
+      MODEL_ROUTER_REQUEST_TIMEOUT_SECONDS: "120"
+    secrets:
+      - deepseek-api-key
+      - spark-embedding-api-key
+    ports:
+      - 127.0.0.1:18019:8010
+    volumes:
+      - ${INTEGRATION_ACTIVATION_ROOT:?owned activation required}:/activation:ro
+      - ${INTEGRATION_OBSERVATION_ROOT:?private observation path required}:/observations
+  hindsight:
+    image: ghcr.io/vectorize-io/hindsight:0.10.3@sha256:acf5e76bd9a5b65f9f7c540a3414007c7f874b34346587dac7e4feab7ae80cba
+    platform: linux/arm64
+    labels: *owner-labels
+    restart: "no"
+    mem_limit: 8g
+    cpus: 1.5
+    env_file: ./config/hindsight.env
+    environment:
+      HINDSIGHT_API_DATABASE_URL: postgresql://hindsight_integration:${INTEGRATION_DB_PASSWORD:?private generated credential required}@db:5432/hindsight_integration
+      HINDSIGHT_API_TENANT_API_KEY: ${INTEGRATION_HINDSIGHT_KEY:?private generated credential required}
+      HINDSIGHT_CP_ACCESS_KEY: ${INTEGRATION_CP_KEY:?separate private credential required}
+      HINDSIGHT_CP_DATAPLANE_API_KEY: ${INTEGRATION_HINDSIGHT_KEY:?private generated credential required}
+      HINDSIGHT_CP_DATAPLANE_API_URL: http://127.0.0.1:8888
+      HINDSIGHT_API_LLM_API_KEY: ${INTEGRATION_ROUTER_KEY:?private generated credential required}
+      HINDSIGHT_API_EMBEDDINGS_OPENAI_API_KEY: ${INTEGRATION_ROUTER_KEY:?private generated credential required}
+    ports:
+      - 127.0.0.1:18889:8888
+    volumes:
+      - model-cache:/models
+    depends_on:
+      db:
+        condition: service_healthy
+      model-router:
+        condition: service_started
+  runner:
+    image: ade-hindsight-integration-runner:${INTEGRATION_SOURCE_REVISION:?committed source required}
+    build:
+      context: ../../..
+      dockerfile: workflows/evals/hindsight_integration/docker/python.Dockerfile
+      target: runner
+    profiles: [tools]
+    platform: linux/arm64
+    labels: *owner-labels
+    restart: "no"
+    user: ${INTEGRATION_UID:?operator UID required}:${INTEGRATION_GID:?operator GID required}
+    mem_limit: 768m
+    cpus: 0.25
+    environment:
+      ADE_INTEGRATION_HINDSIGHT_URL: http://hindsight:8888
+      ADE_INTEGRATION_HINDSIGHT_KEY: ${INTEGRATION_HINDSIGHT_KEY:?private generated credential required}
+      ADE_INTEGRATION_ROUTER_URL: http://model-router:8010
+      ADE_INTEGRATION_ROUTER_KEY: ${INTEGRATION_ROUTER_KEY:?private generated credential required}
+      ADE_INTEGRATION_SOURCE_REVISION: ${INTEGRATION_SOURCE_REVISION:?committed source required}
+    volumes:
+      - ${INTEGRATION_ACTIVATION_ROOT:?owned activation required}:/activation:ro
+      - ${INTEGRATION_EVIDENCE_ROOT:?private evidence root required}:/evidence
+volumes:
+  hindsight-data:
+    labels: *owner-labels
+  model-cache:
+    labels: *owner-labels
+secrets:
+  deepseek-api-key:
+    file: ${INTEGRATION_DEEPSEEK_SECRET_FILE:?existing provider credential binding required}
+  spark-embedding-api-key:
+    file: ${INTEGRATION_EMBEDDING_SECRET_FILE:?existing embedding credential binding required}

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "deepseek", "label": "DeepSeek official API",
+    "base_url": "https://api.deepseek.com", "adapter": "deepseek_openai",
+    "enabled": true, "enabled_for": ["agent_studio"],
+    "model_allowlist": ["deepseek-flash"], "api_key_secret": "deepseek-api-key"
+  },
+  {
+    "id": "dgx_embedding_sidecar", "label": "Spark Qwen embeddings",
+    "base_url": "http://100.64.35.71:8001/v1", "adapter": "vllm_openai",
+    "enabled": true, "enabled_for": ["embedding"],
+    "model_allowlist": ["Qwen/Qwen3-Embedding-0.6B"],
+    "api_key_secret": "spark-embedding-api-key"
+  }
+]

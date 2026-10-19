@@ -195,6 +195,41 @@ class HindsightClient:
             raise HindsightError("hindsight_retry_invalid")
         return body
 
+    async def operations(
+        self,
+        bank_id: str,
+        *,
+        kind: str | None = None,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> dict:
+        params: dict = {"offset": offset, "limit": limit}
+        if kind is not None:
+            params["type"] = kind
+        body = await self._request(
+            "GET", self.bank_path(bank_id) + "/operations", params=params
+        )
+        if (
+            not isinstance(body.get("operations"), list)
+            or type(body.get("total")) is not int
+        ):
+            raise HindsightError("hindsight_operations_invalid")
+        return body
+
+    async def cancel_operation(self, bank_id: str, operation_id: str) -> dict:
+        UUID(operation_id)
+        body = await self._request(
+            "DELETE", self.bank_path(bank_id) + f"/operations/{operation_id}"
+        )
+        _identity(
+            body.get("operation_id"),
+            expected=operation_id,
+            code="hindsight_operation_mismatch",
+        )
+        if body.get("success") is not True:
+            raise HindsightError("hindsight_cancel_invalid")
+        return body
+
     async def recall(self, bank_id: str, payload: dict) -> dict:
         body = await self._request(
             "POST", self.bank_path(bank_id) + "/memories/recall", body=payload

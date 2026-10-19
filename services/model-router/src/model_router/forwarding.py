@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -10,6 +11,12 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from model_router.settings import RouterSourceConfig, get_settings
+from model_router.dispatch_lease import DispatchClosed
+from model_router.request_observations import (
+    ObservationUnavailable,
+    begin_observation,
+)
+from model_router.stream_observations import StreamObservation
 
 
 _UPSTREAM_KEEPALIVE_EXPIRY_SECONDS = 2.0
@@ -111,21 +118,38 @@ async def _post_json_request(
     payload: dict[str, Any],
     url: str,
 ) -> Response:
+    upstream_request = client.build_request(
+        "POST", url, json=payload, headers=_upstream_headers(source)
+    )
+    try:
+        observation = begin_observation(upstream_request, source_id=source.id)
+    except (DispatchClosed, ObservationUnavailable) as exc:
+        return router_error(503, str(exc), "Provider dispatch is unavailable")
     try:
         # httpx has no implicit retry; one call here is the complete retry policy.
-        response = await client.post(
-            url,
-            json=payload,
-            headers=_upstream_headers(source),
-        )
+        response = await client.send(upstream_request)
+    except asyncio.CancelledError as exc:
+        if observation is not None:
+            observation.failed(exc)
+        raise
     except Exception as exc:
-        return router_error(
+        if observation is not None:
+            observation.failed(exc)
+        result = router_error(
             502,
             "upstream_unreachable",
             f"Source '{source.id}' could not be reached: {exc}",
             source_id=source.id,
         )
-    return _response_from_upstream(response, source_id=source.id)
+        if observation is not None:
+            result.headers["X-Model-Router-Request-Id"] = observation.request_id
+        return result
+    result = _response_from_upstream(response, source_id=source.id)
+    if observation is not None:
+        complete = observation.completed(response)
+        result.headers["X-Model-Router-Request-Id"] = observation.request_id
+        result.headers["X-Model-Router-Outcome-Recorded"] = str(complete).lower()
+    return result
 
 
 async def _stream_chat_completion(
@@ -140,25 +164,52 @@ async def _stream_chat_completion(
         headers=_upstream_headers(source),
     )
     try:
+        observation = begin_observation(upstream_request, source_id=source.id)
+    except (DispatchClosed, ObservationUnavailable) as exc:
+        return router_error(503, str(exc), "Provider dispatch is unavailable")
+    try:
         # Streaming also issues one request; downstream cancellation closes it below.
         response = await client.send(upstream_request, stream=True)
+    except asyncio.CancelledError as exc:
+        if observation is not None:
+            observation.failed(exc)
+        raise
     except Exception as exc:
-        return router_error(
+        if observation is not None:
+            observation.failed(exc)
+        result = router_error(
             502,
             "upstream_unreachable",
             f"Source '{source.id}' could not be reached: {exc}",
         )
+        if observation is not None:
+            result.headers["X-Model-Router-Request-Id"] = observation.request_id
+        return result
+
+    stream_observation = StreamObservation(observation)
 
     async def iter_bytes() -> AsyncIterator[bytes]:
+        error_type = None
         try:
             async for chunk in response.aiter_bytes():
+                stream_observation.feed(chunk)
                 yield chunk
+        except BaseException as exc:
+            error_type = type(exc).__name__
+            raise
         finally:
+            stream_observation.finish(response.status_code, error_type=error_type)
             await response.aclose()
 
     media_type = response.headers.get("content-type") or "text/event-stream"
+    headers = (
+        {"X-Model-Router-Request-Id": observation.request_id} if observation else {}
+    )
     return StreamingResponse(
-        iter_bytes(), status_code=response.status_code, media_type=media_type
+        iter_bytes(),
+        status_code=response.status_code,
+        media_type=media_type,
+        headers=headers,
     )
 
 

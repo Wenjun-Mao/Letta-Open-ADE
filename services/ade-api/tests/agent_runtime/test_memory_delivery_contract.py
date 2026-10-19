@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from ade_api.features.agent_runtime.memory_delivery_contract import (
+from ade_api.integrations.hindsight_sources import (
     MemoryRelationship,
     MemorySourceMessage,
     prepare_memory_delivery,
@@ -21,6 +21,7 @@ def source(sequence=1, **overrides):
     values = {
         "message_id": f"message-{sequence}",
         "conversation_id": "conversation-a",
+        "definition_version_id": "definition-v1",
         "relationship": RELATIONSHIP,
         "sequence": sequence,
         "role": "user",
@@ -43,6 +44,7 @@ def test_delivery_preserves_source_and_separates_antecedents():
     assert item["timestamp"] == current.as_dict()["occurred_at"]
     assert item["metadata"]["speaker"] == "user"
     assert item["metadata"]["character_root_id"] == "character-a"
+    assert item["metadata"]["definition_version_id"] == "definition-v1"
     assert item["document_id"] == "ade-message-message-3"
     assert item["update_mode"] == "replace"
 
@@ -115,3 +117,17 @@ def test_corrupted_bytes_or_ownership_cannot_be_reused_as_a_delivery():
         replace(delivery, payload=delivery.payload + b" ").verify()
     with pytest.raises(ValueError, match="ownership"):
         replace(delivery, bank_id="another-bank").verify()
+
+
+def test_definition_updates_preserve_bank_ownership_and_original_source_binding():
+    first = prepare_memory_delivery(source())
+    second = prepare_memory_delivery(source(2, definition_version_id="definition-v2"))
+    assert first.bank_id == second.bank_id
+    assert (
+        first.verify()["items"][0]["metadata"]["definition_version_id"]
+        == "definition-v1"
+    )
+    assert (
+        second.verify()["items"][0]["metadata"]["definition_version_id"]
+        == "definition-v2"
+    )

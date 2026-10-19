@@ -18,6 +18,8 @@ An accepted user message or committed assistant reply creates one immutable
 delivery in the same ADE transaction as its source. A candidate reply is never
 a source. Persist the exact payload bytes/hash, operation UUID, original source
 ID/time/speaker, relationship, conversation and sequence before dispatch.
+Preserve the source conversation's immutable definition-version ID as metadata;
+an ordinary persona update does not create another bank or rebind prior sources.
 Never rebuild an outstanding payload from a newer conversation or configuration.
 
 Use one Hindsight bank for `(workspace, subject, character root)`. The bank key
@@ -47,8 +49,12 @@ other relationships and healthy reply execution continue. Delivery acknowledgeme
 retention completion, consolidation completion and semantic correctness are
 different observations. Hindsight owns interpretation and consolidation.
 
-The concrete integration client performs one HTTP attempt and preserves failures,
-including malformed responses and wrong bank/operation acknowledgements. Successful
+The concrete integration client performs one HTTP attempt. Public source
+envelopes and bank configuration live in `ade_api.integrations`.
+Native feasibility can exercise that contract without importing runtime internals;
+the product service still owns authorization and persisted bank selection.
+The client preserves malformed responses and wrong bank/operation acknowledgements
+as failures. Successful
 empty recall is a valid result; a failed lookup pauses the reply under PC-14.
 
 ## Alternatives And Consequences

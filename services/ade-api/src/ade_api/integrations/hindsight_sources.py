@@ -1,4 +1,4 @@
-"""Immutable, attributed message delivery to a relationship's Hindsight bank."""
+"""Public immutable source envelopes for the concrete Hindsight integration."""
 
 from __future__ import annotations
 
@@ -55,6 +55,7 @@ class MemoryRelationship:
 class MemorySourceMessage:
     message_id: str
     conversation_id: str
+    definition_version_id: str
     relationship: MemoryRelationship
     sequence: int
     role: Literal["user", "assistant"]
@@ -63,6 +64,10 @@ class MemorySourceMessage:
     status: Literal["accepted", "committed"]
 
     def __post_init__(self) -> None:
+        if not self.definition_version_id.strip():
+            raise ValueError(
+                "A memory source requires its immutable definition binding"
+            )
         if not self.message_id.strip() or not self.conversation_id.strip():
             raise ValueError(
                 "A memory source requires original message/conversation IDs"
@@ -96,6 +101,7 @@ class MemorySourceMessage:
         return {
             "message_id": self.message_id,
             "conversation_id": self.conversation_id,
+            "definition_version_id": self.definition_version_id,
             "sequence": self.sequence,
             "speaker": self.role,
             "content": self.content,
@@ -221,6 +227,7 @@ def prepare_memory_delivery(
                         **source.relationship.as_dict(),
                         "message_id": source.message_id,
                         "conversation_id": source.conversation_id,
+                        "definition_version_id": source.definition_version_id,
                         "speaker": source.role,
                         "delivery_contract": DELIVERY_VERSION,
                     },
