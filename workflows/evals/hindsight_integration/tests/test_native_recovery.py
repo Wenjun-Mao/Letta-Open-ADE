@@ -8,6 +8,7 @@ import pytest
 
 from workflows.evals.hindsight_integration import native_recovery as recovery
 from workflows.evals.hindsight_integration.operations import Lease
+from workflows.evals.hindsight_integration.native_checks import has_processing_work
 
 
 class NativeFake:
@@ -15,6 +16,7 @@ class NativeFake:
     partial = False
     corrupt_prefix = False
     early_success = False
+    parent_pending = False
 
     def __init__(self, **kwargs):
         self.polls = 0
@@ -39,7 +41,15 @@ class NativeFake:
             if self.retried or self.early_success
             else ("processing" if self.partial and self.polls == 1 else "failed")
         )
-        return {"status": status, "operation_id": operation}
+        children = []
+        if status == "processing" and self.parent_pending:
+            status = "pending"
+            children = [{"operation_id": "child", "status": "processing"}]
+        return {
+            "status": status,
+            "operation_id": operation,
+            "child_operations": children,
+        }
 
     async def memories(self, bank, *, offset=0):
         if self.retried:
@@ -88,6 +98,7 @@ def native(monkeypatch):
     monkeypatch.setattr(NativeFake, "partial", False)
     monkeypatch.setattr(NativeFake, "corrupt_prefix", False)
     monkeypatch.setattr(NativeFake, "early_success", False)
+    monkeypatch.setattr(NativeFake, "parent_pending", False)
 
     async def restored(*args, **kwargs):
         return {"activation_id": lease.activation_id}
@@ -119,6 +130,26 @@ def test_a_successful_operation_is_not_failure_recovery(tmp_path, monkeypatch, n
     assert result["mechanical_status"] == "failed"
     assert "genuine failed" in result["error"]
     assert NativeFake.instances[0].retried is False
+
+
+def test_pending_parent_with_running_child_can_trigger_partial_interruption(
+    tmp_path, monkeypatch, native
+):
+    monkeypatch.setattr(NativeFake, "partial", True)
+    monkeypatch.setattr(NativeFake, "parent_pending", True)
+    result = asyncio.run(recovery.run_recovery(tmp_path, partial=True, timeout=30))
+    assert result["mechanical_status"] == "passed"
+    assert (tmp_path / "fault-ready.json").is_file()
+
+
+@pytest.mark.parametrize("status", ["completed", "failed", "cancelled"])
+def test_terminal_parent_is_not_running_even_with_stale_child_metadata(status):
+    assert not has_processing_work(
+        {
+            "status": status,
+            "child_operations": [{"status": "processing"}],
+        }
+    )
 
 
 def test_a_partial_retry_cannot_discard_previously_committed_ids(

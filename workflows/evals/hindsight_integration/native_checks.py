@@ -3,6 +3,20 @@
 import math
 
 
+def has_processing_work(operation: dict) -> bool:
+    if operation.get("status") == "processing":
+        return True
+    children = operation.get("child_operations")
+    return (
+        operation.get("status") == "pending"
+        and isinstance(children, list)
+        and any(
+            isinstance(child, dict) and child.get("status") == "processing"
+            for child in children
+        )
+    )
+
+
 def require_document_source(document: dict, item: dict) -> None:
     if document.get("original_text") != item["content"]:
         raise ValueError("Native original source changed")

@@ -48,6 +48,9 @@ exhausted item blocks later delivery in that relationship until reconciliation;
 other relationships and healthy reply execution continue. Delivery acknowledgement,
 retention completion, consolidation completion and semantic correctness are
 different observations. Hindsight owns interpretation and consolidation.
+Native `batch_retain` parents remain pending while their child operation processes;
+inspect child status when reporting running work instead of treating parent pending
+as proof that extraction has not started. Preserve both raw statuses for diagnosis.
 
 The concrete integration client performs one HTTP attempt. Public source
 envelopes and bank configuration live in `ade_api.integrations`.

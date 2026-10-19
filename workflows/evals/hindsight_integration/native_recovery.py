@@ -15,7 +15,7 @@ from ade_api.integrations.hindsight_bank import bank_configuration
 from ade_api.integrations.hindsight_sources import prepare_memory_delivery
 
 from .native_cases import freeze_native_case
-from .native_checks import require_document_source
+from .native_checks import has_processing_work, require_document_source
 from .native_gate import memories, operation_done, require_admission
 from .native_transport import NativeRecordingTransport
 from .operations import Lease
@@ -103,12 +103,7 @@ async def run_recovery(root: Path, *, partial: bool, timeout: int):
             while time.monotonic() < deadline:
                 state = await client.operation(bank, delivery.operation_id)
                 current = await memories(client, bank)
-                if (
-                    partial
-                    and current
-                    and not signalled
-                    and state["status"] == "processing"
-                ):
+                if partial and current and not signalled and has_processing_work(state):
                     write_new(
                         root / "fault-ready.json",
                         {
