@@ -21,6 +21,17 @@ Failure cleanup restores only services this controller stopped, or closes the
 candidate when the healthy lease no longer permits restoration. These controls
 require their own actual observations; controlled tests are not live evidence.
 
+The stale-worker case additionally admits only canonical subject/conversation/run
+IDs within the candidate workspace. After the normal generation request is held,
+an owned PostgreSQL session acquires the subject row without changing data. Once
+the real finalizer is observed waiting on that session, pause only the exact
+owned worker until the database clock proves lease expiry. Roll back the lock
+and resume that worker. Require an abandoned, genuinely produced first candidate,
+a successful second attempt and exactly one saved/retained assistant source.
+Session statement/idle limits and finally-cleanup bound the lock; failed cleanup
+closes the candidate. This tests the final SQL commit fence, not merely cancellation
+before a candidate exists. It adds no product fault hook or special generation.
+
 Predeclared cases cover failed generation, cancellation, deliberately delayed
 retention with unrelated progress, and lost acknowledgement after real native
 acceptance. Fresh relationships and normal accepted turns establish every source.

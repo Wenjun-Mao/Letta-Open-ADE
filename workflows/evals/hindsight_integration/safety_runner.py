@@ -19,10 +19,11 @@ from .records import seal, write_new
 from .safety_protocol import SafetyContext
 from .safety_scenarios import PROXIED_SCENARIOS
 from .host_scenarios import HOST_SCENARIOS
+from .stale_worker_scenario import stale_worker
 from .wire_capture import require
 
 
-SCENARIOS = PROXIED_SCENARIOS | HOST_SCENARIOS
+SCENARIOS = PROXIED_SCENARIOS | HOST_SCENARIOS | {"stale-worker": stale_worker}
 
 
 async def run_safety(root, *, activation_root, controller_revision, scenarios):
@@ -67,7 +68,13 @@ async def run_safety(root, *, activation_root, controller_revision, scenarios):
     root.mkdir(parents=True, mode=0o700, exist_ok=False)
     code = {
         name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
-        for name in ("safety_runner.py", "safety_protocol.py", "safety_scenarios.py")
+        for name in (
+            "safety_runner.py",
+            "safety_protocol.py",
+            "safety_scenarios.py",
+            "host_scenarios.py",
+            "stale_worker_scenario.py",
+        )
     }
     write_new(
         root / "plan.json",

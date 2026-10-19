@@ -15,6 +15,7 @@ def controls(tmp_path):
     value = safety_host.OwnedControls.__new__(safety_host.OwnedControls)
     value.root, value.lease = tmp_path, SimpleNamespace(source_revision="a" * 40)
     value.changed = []
+    value.finalizer = None
     value.events = []
     rows = [
         {

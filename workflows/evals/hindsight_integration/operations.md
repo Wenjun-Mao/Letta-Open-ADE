@@ -377,3 +377,25 @@ uv run --locked pytest \
   services/ade-api/tests/agent_runtime/persistence/test_product_actor_sql.py \
   services/ade-api/tests/agent_runtime/persistence/test_product_capture_sql.py -q
 ```
+
+## Finite Owned Host Faults
+
+From a clean, committed, commit-named staged controller directory, use the
+original product activation and sealed environment. Controller and product source
+are recorded separately; never relabel the running images:
+
+```sh
+python3 -m workflows.evals.hindsight_integration.safety_host \
+  --root "$INTEGRATION_ACTIVATION" --environment "$INTEGRATION_ENV" \
+  --controller-revision "$CONTROLLER_REVISION" \
+  --out "$INTEGRATION_ACTIVATION/evidence/host-safety-01" \
+  --scenario recall-outage --scenario runtime-restart --scenario stale-worker
+```
+
+The host selects unchanged owned containers/stores, supervises a bounded public
+actor and restores only its own changed services. `stale-worker` uses a temporary
+subject-row lock and owned worker pause, not data edits or patched generation.
+It requires actual first-candidate production, lease expiry, abandoned attempt,
+recovery and one committed assistant. Preserve all host/SQL/HTTP receipts even on
+failure. See ADR 0081. These observations do not qualify Memory semantics, human
+Character acceptance or Stage 3 paired restore.

@@ -15,11 +15,13 @@ from .native_faults import healthy_lease
 from .operations import DockerOperations, Lease, create_record, stop_owned
 from .paired_backup import owned_service
 from .startup import require_configuration
+from .stale_finalizer_host import StaleFinalizer, identifiers
 
 
 STEPS = {
     "recall-outage": ("stop-native", "start-native"),
     "runtime-restart": ("restart-runtime",),
+    "stale-worker": ("lock-subject", "expire-finalizer"),
 }
 
 
@@ -38,6 +40,8 @@ class OwnedControls:
             if line and not line.startswith("#")
         )
         self.native_key = values["INTEGRATION_HINDSIGHT_KEY"]
+        self.workspace = values["INTEGRATION_WORKSPACE_KEY"]
+        self.finalizer = None
 
     def fence(self):
         healthy_lease(self.root, self.lease, self.docker)
@@ -102,6 +106,8 @@ class OwnedControls:
         return {name: self.current(name) for name in self.original}
 
     def restore(self):
+        if self.finalizer is not None:
+            self.finalizer.close()
         for name in ("hindsight", "ade-api", "ade-worker"):
             if name in self.changed:
                 self.start(name)
@@ -118,12 +124,17 @@ def respond(path, *, output, controls, scenarios, positions):
     if set(value) != {"id", "action", "details", "product_revision", "time"}:
         raise ValueError("invalid_host_request_fields")
     identity = str(UUID(value["id"]))
-    if (
-        value["product_revision"] != controls.lease.source_revision
-        or value["details"] != {}
-    ):
+    if value["product_revision"] != controls.lease.source_revision:
         raise ValueError("host_request_binding_mismatch")
     action, position = value["action"], positions[scenario]
+    fields = {
+        "lock-subject": ("subject_id", "conversation_id"),
+        "expire-finalizer": ("run_id",),
+    }
+    if action in fields and scenario == "stale-worker":
+        identifiers(value["details"], fields[action])
+    elif value["details"] != {}:
+        raise ValueError("host_request_binding_mismatch")
     if action != "restore-owned" and (
         position >= len(STEPS[scenario]) or action != STEPS[scenario][position]
     ):
@@ -136,7 +147,17 @@ def respond(path, *, output, controls, scenarios, positions):
         "status": "failed",
     }
     try:
-        receipt["owned_after"] = controls.perform(action)
+        if scenario == "stale-worker" and action in fields:
+            if controls.finalizer is None:
+                controls.finalizer = StaleFinalizer(controls, controls.workspace)
+            method = (
+                controls.finalizer.lock
+                if action == "lock-subject"
+                else controls.finalizer.expire
+            )
+            receipt["control_result"] = method(value["details"])
+        else:
+            receipt["owned_after"] = controls.perform(action)
         receipt["status"] = "ok"
         if action != "restore-owned":
             positions[scenario] += 1
@@ -261,6 +282,9 @@ def run_host(root, environment, output, *, controller_revision, scenarios):
             "controller_revision": controller_revision,
             "controller_file_sha256": hashlib.sha256(
                 Path(__file__).read_bytes()
+            ).hexdigest(),
+            "stale_finalizer_host_sha256": hashlib.sha256(
+                Path(__file__).with_name("stale_finalizer_host.py").read_bytes()
             ).hexdigest(),
             "activation_id": controls.lease.activation_id,
             "steps": {key: list(STEPS[key]) for key in scenarios},
