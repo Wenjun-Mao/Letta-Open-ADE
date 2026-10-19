@@ -83,6 +83,16 @@ def dump_database(output, container, user, database):
         )
         target.flush()
         os.fsync(target.fileno())
+    diagnostics = output.with_suffix(".diagnostics.json")
+    create_record(
+        diagnostics,
+        {
+            "container_id": container,
+            "database": database,
+            "returncode": result.returncode,
+            "stderr": result.stderr.decode("utf-8", errors="replace"),
+        },
+    )
     if result.returncode:
         raise RuntimeError("owned_database_dump_failed")
     digest = hashlib.sha256()

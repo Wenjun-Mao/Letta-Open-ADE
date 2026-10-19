@@ -1,8 +1,9 @@
 # Hindsight Product Flow: Scoped Stage 1 Observations
 
-Status: real six-slot capture, four proxy and two host recovery cases observed. M0-M6 is
-**not complete**; remaining safety, negative-access and paired-backup gates are
-pending. No human Character judgment, general Memory reliability, paired restore,
+Status: real six-slot capture, eight representative safety cases and native browser
+mechanics observed. M0-M6 is **not complete**; successful paired-backup, final
+evidence sealing and maintained-test reconciliation remain pending.
+No human Character judgment, general Memory reliability, paired restore,
 production deployment or release qualification follows.
 
 Authority: [integration plan](../plans/hindsight-integration.md), PC-02/03/05/08/
@@ -94,6 +95,40 @@ controller error; the API started and cleanup stopped it with exit 0 and no OOM.
 The corrected readiness test is source-backed; fresh controller attempts receive
 new API names/workspaces without deleting or reopening the earlier resources.
 Actual workspace-boundary qualification still requires the corrected case.
+
+The corrected `isolation-safety-02` case passed at controller
+`bba39ee28daed89a70f382a754a2bb3ba5f8b1aa`: separate subject/character scopes,
+forged known document/operation/retry IDs, reader/unauthenticated roles, and a
+same-image API bound to another workspace, including reverse access denial.
+Its extra API was stopped. All eight representative safety cases now have scoped
+passing receipts; earlier failed attempts remain separate.
+
+## Native Browser And Checkpoint
+
+The actual native browser journey found an operator/admin deployment mismatch;
+[ADR 0082](../adr/0082-candidate-web-authoring-role.md) records the corrected private
+web binding. Only that service was recreated at its original image, with
+configuration controller `40a28038085d080683002a6c28d59a0436fb2610`; API/worker,
+both stores, model identities and sealed environment stayed unchanged.
+
+The Chinese browser conversation completed two replies. A timed native outage
+paused the second input; reload preserved it without a fabricated assistant.
+After same-container restoration, separate reply and delivery Retry succeeded.
+Independent public readback verified exactly two users/two assistants and four
+matching retained original documents, with run attempt counts one/two. A fresh
+same-relationship chat had no copied dialogue but shared the four deliveries;
+another character had empty Memory/delivery state. Original-source inspection and
+390-pixel viewport/document width were observed. The dedicated browser and SSH
+tunnel were closed. These are Interface/mechanical observations, not human
+Character acceptance or general Memory reliability.
+
+The new paired checkpoint reached writer-free stores and created a readable ADE
+archive, but failed its native dump when supervision closed on cached health of
+the exited fault proxy. The partial native file is zero bytes; all candidate
+containers stopped and all six baseline identities/health stayed unchanged.
+[ADR 0083](../adr/0083-stopped-health-and-checkpoint-recovery.md) records the root
+guard correction and required recovery through new owned copies. Product6 stays
+closed; successful paired archives and the final evidence seal are still pending.
 
 The first paired-checkpoint attempt at the previous activation preserved readbacks
 and stopped owned resources, but failed before dumps because of a wrong Alembic

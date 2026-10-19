@@ -158,6 +158,24 @@ def test_stopped_previous_candidates_are_not_baseline_services(tmp_path):
     assert [item["id"] for item in lease.baseline] == ["baseline"]
 
 
+@pytest.mark.parametrize("state", ["running", "restarting", "paused", "exited"])
+def test_cached_stopped_health_is_not_live_failure_but_oom_always_is(tmp_path, state):
+    docker = DockerFake()
+    lease = prepare(tmp_path, docker)
+    row = {**owned_record(lease), "state": state, "health": "unhealthy", "oom": False}
+    docker.records.append(row)
+    expected = [] if state == "exited" else ["candidate_unhealthy"]
+    assert check_lease(lease, docker=docker, capacity=CAPACITY, now=101) == expected
+    row["oom"] = True
+    assert check_lease(lease, docker=docker, capacity=CAPACITY, now=101) == [
+        "candidate_unhealthy"
+    ]
+    row["oom"] = False
+    assert "activation_closed" in check_lease(
+        lease, docker=docker, capacity=CAPACITY, now=101, closed=True
+    )
+
+
 @pytest.mark.parametrize(
     "error",
     ["Error response from daemon: No such container: missing", "permission denied"],

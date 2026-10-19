@@ -344,6 +344,23 @@ Each deliverable includes focused tests, a source checkpoint and an updated
 workflow runbook. Dependencies are explicit; none requires a fresh permission
 request once the execution package below is approved.
 
+Latest checkpoint, 2026-10-19: all eight representative safety cases have passing
+source-bound observations, including the corrected stale-finalizer and full
+negative-access cases. A native Chinese browser journey also verified pause,
+reload, separate reply/delivery Retry, four retained original sources, fresh-chat
+scope and 390-pixel layout. ADR 0082 fixes the discovered private web authoring
+credential mismatch without weakening API roles. The attempted paired checkpoint
+created only the ADE archive: the guard misread cached unhealthy status on an
+exited proxy and stopped both databases before native dumping. Product6 is closed,
+all owned containers stopped and six baseline services unchanged. ADR 0083 fixes
+the Docker-state interpretation and requires recovery through new owned copies,
+not reopening that lease. Final dual archives/sealing and current-test
+reconciliation remain required. The new unfiltered sweep is 1,800 passed,
+135 skipped, 66 failed and 61 errors, not green. The broad-only dummy-Compose
+failure reaches the project-name check; config loaders that mutate `os.environ`
+and the private `COMPOSE_PROJECT_NAME` are a source-backed candidate cause still
+requiring an interaction reproducer. Frozen historical replays remain untouched.
+
 ### M0: Freeze Contracts And Establish A Reproducible Baseline
 
 Inspect current owners, pinned native API/source and existing test failures.

@@ -26,7 +26,7 @@ def test_database_dump_is_create_only_custom_format_with_owners_and_grants(
         else:
             assert kwargs["stdin"].read() == b"controlled-custom-archive"
         return SimpleNamespace(
-            returncode=0, stdout=b"controlled archive table of contents"
+            returncode=0, stdout=b"controlled archive table of contents", stderr=b""
         )
 
     monkeypatch.setattr(backup.subprocess, "run", run)
@@ -51,6 +51,25 @@ def test_database_dump_is_create_only_custom_format_with_owners_and_grants(
     with pytest.raises(FileExistsError):
         backup.dump_database(path, "owned-db", "owned-admin", "owned-database")
     assert len(calls) == 2
+
+
+def test_failed_dump_keeps_partial_archive_and_private_diagnostics(
+    tmp_path, monkeypatch
+):
+    def run(command, **kwargs):
+        kwargs["stdout"].write(b"partial-archive")
+        return SimpleNamespace(returncode=1, stderr=b"controlled-container-stopped")
+
+    monkeypatch.setattr(backup.subprocess, "run", run)
+    path = tmp_path / "native.dump"
+    with pytest.raises(RuntimeError, match="dump_failed"):
+        backup.dump_database(path, "owned-db", "owned-user", "owned-database")
+    assert path.read_bytes() == b"partial-archive"
+    diagnostic = path.with_suffix(".diagnostics.json")
+    assert (
+        json.loads(diagnostic.read_bytes())["stderr"] == "controlled-container-stopped"
+    )
+    assert diagnostic.stat().st_mode & 0o777 == 0o600
 
 
 @pytest.mark.parametrize("fault", [None, "native_dump", "closeout"])

@@ -271,7 +271,12 @@ def check_lease(
     ):
         issues.append("candidate_source_mismatch")
     if any(
-        record.get("oom") or record.get("health") == "unhealthy" for record in owned
+        record.get("oom")
+        or (
+            record["state"] in {"running", "restarting", "paused"}
+            and record.get("health") == "unhealthy"
+        )
+        for record in owned
     ):
         issues.append("candidate_unhealthy")
     return issues
