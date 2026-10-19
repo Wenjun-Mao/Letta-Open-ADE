@@ -5,7 +5,31 @@ import asyncio
 import httpx
 import pytest
 
-from ..isolation_scenario import forged_reads
+from ..isolation_scenario import forged_reads, secondary_ready
+
+
+@pytest.mark.parametrize(
+    "status,body,expected",
+    [
+        (200, {"status": "ok"}, True),
+        (404, {"detail": "Not Found"}, False),
+        (200, {"status": "not_ready"}, False),
+    ],
+)
+def test_secondary_readiness_uses_the_actual_ade_health_contract(
+    status, body, expected
+):
+    def respond(request):
+        assert request.url.path == "/api/v2/health"
+        return httpx.Response(status, json=body)
+
+    async def check():
+        async with httpx.AsyncClient(
+            base_url="http://synthetic.invalid", transport=httpx.MockTransport(respond)
+        ) as api:
+            return await secondary_ready(api)
+
+    assert asyncio.run(check()) is expected
 
 
 @pytest.mark.parametrize("status", [200, 403, 404, 503])

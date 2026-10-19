@@ -81,6 +81,20 @@ and one reply committed on attempt two. The validator incorrectly expected an
 `worker_lease_expired`. The corrected controller additionally reads that reason
 from SQL. A new predeclared case remains required; do not relabel this failed one.
 
+The fresh `final-safety-01` stale-worker case passed at controller
+`f43e0cb5a996194651630eb2b7330a34dd1b3927`. Its independent SQL receipt confirmed
+attempt one `failed`/`worker_lease_expired`, attempt two succeeded and exactly one
+committed assistant. Native source readbacks also retained only the one user and
+one committed assistant. Both actual candidates remain in private capture.
+
+That run's isolation case remains failed: subject/character forged IDs and role
+denials passed, but the temporary API readiness check used native's `/health`
+instead of ADE's `/api/v2/health`. The source and repeated HTTP 404s identify a
+controller error; the API started and cleanup stopped it with exit 0 and no OOM.
+The corrected readiness test is source-backed; fresh controller attempts receive
+new API names/workspaces without deleting or reopening the earlier resources.
+Actual workspace-boundary qualification still requires the corrected case.
+
 The first paired-checkpoint attempt at the previous activation preserved readbacks
 and stopped owned resources, but failed before dumps because of a wrong Alembic
 table assumption. Its failure is retained; six baseline identities/health were

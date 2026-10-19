@@ -42,7 +42,7 @@ def fixture(tmp_path, monkeypatch, *, quota=150_000_000, fail_start=False):
                 rows.append(
                     {
                         "id": "secondary-id",
-                        "name": "/owned-isolation-api",
+                        "name": "/" + command[command.index("--name") + 1],
                         "state": "created",
                     }
                 )
@@ -86,7 +86,7 @@ def test_secondary_uses_exact_image_owned_labels_and_outside_root_secret_file(
     assert "io.ade.integration.activation=activation" in command
     assert "com.docker.compose.project=owned" in command
     assert "secret-test" not in json.dumps(calls)
-    assert receipt["workspace_key"] == "primary-workspace-isolation"
+    assert receipt["workspace_key"] == "primary-workspace-isolation-01-isolation"
     private = next(api.controls.environment.parent.glob("*-api.env"))
     assert not private.is_relative_to(api.controls.root)
     assert private.stat().st_mode & 0o777 == 0o600

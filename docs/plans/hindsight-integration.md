@@ -324,15 +324,19 @@ These are scoped increments, not a claim that M0-M6 is complete.
   also passed at that product image with controller `0e64b75e10ce43c18ad45a83d7356328d1f87d12`.
   See the [scoped finding](../findings/hindsight-product-flow-2026-10-19.md).
   Character remains UNREVIEWED; broader Memory quality is not qualified. Actual
-  stale-worker, negative-access and successful paired-backup/closeout evidence
+  full negative-access and successful paired-backup/closeout evidence
   remain required. `host-safety-01` passed actual outage/saved-input-Retry and
   same-container/store restart at that image with controller `d513fd5`.
   The first stale-worker fault produced both real candidates and recovered one
   reply, but its controller expected a nonexistent `abandoned` attempt status;
   retain that failed case. The corrected validator uses the owning repository's
-  `failed`/`worker_lease_expired` contract with independent SQL readback. Workspace
-  isolation and uninitialized-bank checkpoint inventories now have controlled
-  tests, not actual proof. The unfiltered isolated sweep still reports 66 failed and
+  `failed`/`worker_lease_expired` contract with independent SQL readback. The fresh
+  `final-safety-01` stale-worker case passed all those checks. Its isolation case
+  passed subject/character/role negatives but failed a wrong readiness URL before
+  workspace checks; the temporary API was stopped cleanly. The corrected ADE
+  health probe and new-attempt resource names have regression checks, not a
+  replacement live pass. Uninitialized-bank checkpoint inventories have controlled
+  tests, not actual paired-backup proof. The unfiltered isolated sweep still reports 66 failed and
   61 errors alongside 1,750 passed and 134 skipped; preserved historical hashes
   plus named current diagram/policy/test drift remain, not a green suite.
 

@@ -45,6 +45,9 @@ fresh source-seeded authoring directory. It has no public ports or reply worker,
 at most 0.1 CPU/512 MiB, and cannot exceed the three-CPU candidate aggregate.
 Only this named/labelled owned API is stopped afterward. This fixture validates
 the configured workspace boundary, not a new deployment shape or tenant service.
+Its readiness probe uses ADE's `/api/v2/health`, not native's `/health`; a failed
+probe never authorizes another start. New admitted attempts use new names and
+workspaces while retaining stopped prior resources and failure receipts.
 
 Predeclared cases cover failed generation, cancellation, deliberately delayed
 retention with unrelated progress, and lost acknowledgement after real native

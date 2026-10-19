@@ -55,6 +55,14 @@ async def forged_reads(api, route, delivery):
     ]
 
 
+async def secondary_ready(api):
+    try:
+        response = await api.get("/api/v2/health")
+        return response.status_code == 200 and response.json().get("status") == "ok"
+    except httpx.HTTPError:
+        return False
+
+
 async def isolation(context):
     anchor = await context.session("access anchor")
     accepted = await context.accept(
@@ -144,14 +152,12 @@ async def isolation(context):
         transport=PublicRecordingTransport(context.root / "secondary-http"),
         timeout=30,
     ) as secondary:
-
-        async def ready():
-            try:
-                return (await secondary.get("/health")).status_code == 200
-            except httpx.HTTPError:
-                return False
-
-        await context.until(ready, bool, seconds=60, code="secondary_api_did_not_start")
+        await context.until(
+            lambda: secondary_ready(secondary),
+            bool,
+            seconds=60,
+            code="secondary_api_did_not_start",
+        )
         own = await create(secondary, **configured(context))
         own_state = await saved_state(secondary, own["conversation"]["id"])
         foreign = [

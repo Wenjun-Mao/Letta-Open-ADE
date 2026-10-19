@@ -1,6 +1,7 @@
 """A second, same-image API binds a fresh workspace only for negative access checks."""
 
 import json
+import re
 
 from .operations import OWNER_LABEL, PROJECT_LABEL, SOURCE_LABEL, create_record
 from .provision import _private_text
@@ -10,7 +11,9 @@ from .runtime_assets import seed_runtime_assets
 class IsolationAPI:
     def __init__(self, controls):
         self.controls = controls
-        self.name = controls.lease.project + "-isolation-api"
+        self.name = controls.lease.project + "-" + controls.output.name + "-api"
+        if not re.fullmatch(r"[a-z0-9-]{1,120}", self.name):
+            raise ValueError("isolation_api_name_invalid")
         self.identity = None
 
     def start(self):
@@ -57,7 +60,9 @@ class IsolationAPI:
             )
         )
         values = dict(item.split("=", 1) for item in config["Env"])
-        workspace = control.workspace + "-isolation"
+        workspace = control.workspace + "-" + control.output.name + "-isolation"
+        if not re.fullmatch(r"[a-zA-Z0-9_-]{1,120}", workspace):
+            raise ValueError("isolation_api_workspace_invalid")
         values["ADE_API_AGENT_RUNTIME_WORKSPACE_KEY"] = workspace
         if any(
             "\n" in key + value or "\r" in key + value for key, value in values.items()
