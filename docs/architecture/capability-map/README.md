@@ -1,6 +1,12 @@
 # ADE Capability And Dataflow Map
 
-Reviewed 2026-10-04 against `f98c0ec6c78f1c6b30697fd49fe81a0b1f4a2189`.
+**Historical native-Memory snapshot.** The inventory was reviewed 2026-10-04
+against `f98c0ec6c78f1c6b30697fd49fe81a0b1f4a2189`; the moving tour is bound to
+its October 6 baseline and separately recorded October 8 anchor maintenance.
+Reviewer/fact-store flows are not the current implementation.
+Start with the [current Hindsight source guide](hindsight-message-journey.md).
+The PC-12 [Character assessment guide](character-assessment.md) remains current
+product vocabulary, not part of this archived runtime snapshot.
 This is a source-backed responsibility inventory, not a deployment audit, new
 product contract, implementation authorization or behavioral acceptance result.
 
@@ -18,8 +24,8 @@ product contract, implementation authorization or behavioral acceptance result.
 - [Cleanup plan and execution record](../../plans/capability-boundary-cleanup.md):
   completed A1-A4 ownership clarifications/extractions and their verification;
   Character/Memory replacement remains open, without a new domain protocol.
-- [Moving message journey](message-journey/ade-message-journey.html): playable
-  source-backed draft with six paced chapters, fictional worked examples,
+- [Historical moving message journey](message-journey/ade-message-journey.html): playable
+  revision-bound archive with six paced chapters, fictional worked examples,
   Forward/Back and a detailed ownership/branch view; no runtime change.
 - [Journey source and review guide](message-journey/README.md): interfig-compatible
   layout/edges/steps, rendering sources and branch/status evidence limits.

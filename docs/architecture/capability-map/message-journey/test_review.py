@@ -5,6 +5,7 @@ from pathlib import Path
 import runpy
 import subprocess
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -17,12 +18,36 @@ def specification():
     return review["load"]()
 
 
-def test_current_specification_is_source_backed_and_compatible(specification):
+def test_historical_specification_is_bound_to_recorded_source_and_compatible(
+    specification,
+):
     figure, evidence, inventory = specification
     counts = review["validate"](figure, evidence, inventory)
     assert counts["tours"] == 7
     assert counts["source_files"] >= 20
     assert figure["props"]["autoplay"] is False
+    assert evidence["source_scope"] == "historical"
+    assert "Historical" in figure["title"]
+
+
+def test_historical_revision_cannot_be_rebound_to_current_source(specification):
+    figure, evidence, inventory = specification
+    evidence["ade_source_baseline"] = "0" * 40
+    with pytest.raises(ValueError, match="recorded source revision"):
+        review["validate"](figure, evidence, inventory)
+
+
+def test_missing_historical_objects_cannot_fall_back_to_current_source(
+    specification, monkeypatch
+):
+    figure, evidence, inventory = specification
+    monkeypatch.setattr(
+        review["subprocess"],
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=128, stdout=""),
+    )
+    with pytest.raises(ValueError, match="Historical source unavailable"):
+        review["validate"](figure, evidence, inventory)
 
 
 def test_unknown_renderer_field_is_rejected(specification):

@@ -1,5 +1,11 @@
 # ADE Architecture
 
+The topology below describes the retained incumbent. The development source now
+uses separate ADE product records and Hindsight learned-Memory persistence;
+follow the [current Hindsight journey](capability-map/hindsight-message-journey.md)
+and [system status](system-status.md). This older single-store outline does not
+authorize a deployment, native fallback or a one-store Hindsight recovery.
+
 ADE has one current product path: ADE Web sends same-origin requests to one ADE
 API. That API serves the labs and content centers under `/api/v2` and the native
 Agent Studio runtime under `/api/v3`.

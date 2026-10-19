@@ -1,8 +1,8 @@
 # Hindsight Product Flow: Scoped Stage 1 Observations
 
 Status: real six-slot capture, eight representative safety cases and native browser
-mechanics observed. M0-M6 is **not complete**; successful paired-backup, final
-evidence sealing and maintained-test reconciliation remain pending.
+mechanics and paired archive capture observed. Final private index/seal is being
+reconciled; the current-contract gates below pass, not the full historical suite.
 No human Character judgment, general Memory reliability, paired restore,
 production deployment or release qualification follows.
 
@@ -128,10 +128,56 @@ the exited fault proxy. The partial native file is zero bytes; all candidate
 containers stopped and all six baseline identities/health stayed unchanged.
 [ADR 0083](../adr/0083-stopped-health-and-checkpoint-recovery.md) records the root
 guard correction and required recovery through new owned copies. Product6 stays
-closed; successful paired archives and the final evidence seal are still pending.
+closed; the recovery below does not change its failed checkpoint outcome.
 
 The first paired-checkpoint attempt at the previous activation preserved readbacks
 and stopped owned resources, but failed before dumps because of a wrong Alembic
 table assumption. Its failure is retained; six baseline identities/health were
 unchanged. [ADR 0081](../adr/0081-owned-safety-observation-controllers.md) records
-the configuration-derived correction. Actual dual archives remain pending.
+the configuration-derived correction. That original failed attempt is unchanged.
+
+The fresh `20261019-checkpoint7` lease used controller
+`13a37a241ed02d07525f6988b4291d9264227b2d`, read-only original mounts and new
+labelled volumes. Source/target manifests matched (ADE 1,441 entries, Hindsight
+1,585) before exact-image database copies started without network/ports or any
+product/provider service. Both logical archives have readable TOCs:
+
+| Store | Bytes | SHA-256 |
+| --- | --- | --- |
+| ADE | 241,364 | `8c0f081d5870b3a52d7184c222b6c87d90f0ee709b44d0ede9722bbd09e2fa3b` |
+| Hindsight | 1,002,083 | `5c9ed6643298aeee798f5f162ddef1e60bf5d2403b580756584e72cb3a14720a` |
+
+Both copies stopped; the closed parent and six baseline identities/health were
+unchanged. The separate checkpoint export matched Mac bytes at
+`0f5a7c1329bdd42b0593f7cc732053dc52a327d39215cccd8a585e02d3b5e075`.
+The full closed-activation archive matched at
+`37b20211dc5376cef72822a24aed8b457154268a1ebdf18107411cc0e9aa0a72`.
+Its audit contains 14 closed activations, 39 inactive recorded units and unchanged
+six-service baseline. This is a preserved paired point, not Stage-3 logical
+restore, product recovery qualification or deletion of retained stores.
+
+## Final Local Verification
+
+The latest unfiltered repository sweep is **1,857 passed, 135 skipped, 53 failed
+and 61 errors**. Every remaining failing/error test identity was already present
+in the pre-change baseline (114 remain of 115); no new failing ID was added.
+The frozen story-source/qualification mismatches remain visible and unchanged.
+This is not a full-suite-green claim or a historical hash rebind.
+
+Current gates passed: 236 focused workflow/Router/policy checks (one historical
+evidence-absence skip), 55 checks in the isolated application-role SQL invocation,
+411 configuration/probe workflow checks (one skip), 42 architecture Python and
+38 Node checks, 93 frontend tests, frontend lint/build, repository Ruff and
+OpenAPI drift checks. An initial overbroad SQL selection rejected six historical
+passwordless-owner cases before querying because they do not accept the Stage-1
+application-role fixture; that failed selection is retained. No ownership guard
+was weakened. The documented Stage-1 fixtures, actor and safety checks pass.
+
+Sorting the maintained policy-input declaration changed governed metadata.
+Current source fingerprint is
+`eadbace7a04fccc3617410f57dd1bb48f32d533fec81a5e0d30ada2bcfe61ba6`;
+only the new unqualified candidate manifest was regenerated. The live product
+image and its `c3a0...` fingerprint above were not relabelled, rebuilt or redeployed.
+The current source guide now separates Hindsight from the revision-bound native
+architecture archive, per ADR 0085. No release ledger was promoted and no GitHub
+Actions run was dispatched.

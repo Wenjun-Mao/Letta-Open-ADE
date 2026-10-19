@@ -134,6 +134,7 @@ def render_markdown(data: dict) -> str:
         "",
         "Generated from [inventory.json](inventory.json); edit that source, not this view.",
         f"Reviewed: {data['reviewed_at']}. Source baseline: `{data['source_baseline']}`.",
+        "Historical native-Memory snapshot, not the current Hindsight path. See the [current source guide](hindsight-message-journey.md).",
         "",
         data["scope"],
         "",

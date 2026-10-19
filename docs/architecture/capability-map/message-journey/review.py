@@ -1,14 +1,17 @@
-"""Offline integrity checks and JSON assembly for the proposed ADE figure."""
+"""Offline integrity checks for the archived, revision-bound native ADE figure."""
 
 from __future__ import annotations
 
 import argparse
 import json
 from pathlib import Path
+import subprocess
 
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
+HISTORICAL_BASELINE = "125082447c2c5f5ada7a2c5ed88be41bb8fba4bf"
+HISTORICAL_ANCHORS = "d94913dd22e4208e0f6092d0144cc5acbcb49606"
 GROUP_KEYS = {"id", "label", "logo", "direction", "gap", "align", "children"}
 NODE_KEYS = {"id", "label", "sub", "shape", "lines", "width"}
 EDGE_KEYS = {"id", "from", "to", "label", "around", "quiet"}
@@ -173,8 +176,32 @@ def validate(figure: dict, evidence: dict, inventory: dict) -> dict[str, int]:
         )
         edges[edge["id"]] = edge
 
+    require(
+        evidence.get("source_scope") == "historical"
+        and evidence.get("ade_source_baseline") == HISTORICAL_BASELINE
+        and evidence.get("source_anchor_revision") == HISTORICAL_ANCHORS
+        and "Historical" in figure["title"],
+        "Historical figure must retain its recorded source revision and visible status",
+    )
+    source_text = {}
+
+    def historical_source(path: Path) -> str:
+        if path not in source_text:
+            relative = path.relative_to(ROOT).as_posix()
+            result = subprocess.run(
+                ["git", "-C", str(ROOT), "show", f"{HISTORICAL_ANCHORS}:{relative}"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            require(
+                result.returncode == 0, f"Historical source unavailable: {relative}"
+            )
+            source_text[path] = result.stdout
+        return source_text[path]
+
     edge_modes, sources = {}, set()
-    contract = (ROOT / "docs/product-contract.md").read_text()
+    contract = historical_source(ROOT / "docs/product-contract.md")
     for claim in evidence["claims"]:
         require(claim["mode"] in {"current", "experimental"}, "Invalid claim mode")
         require(claim["condition"] and claim["sources"], "Claim lacks condition/source")
@@ -196,9 +223,9 @@ def validate(figure: dict, evidence: dict, inventory: dict) -> dict[str, int]:
             require(separator and alias in inventory["roots"], "Invalid source alias")
             path = (ROOT / inventory["roots"][alias] / tail).resolve()
             require(path.is_relative_to(ROOT), "Source escapes repository")
-            require(path.is_file(), f"Missing source: {source['path']}")
             require(
-                source["anchor"] in path.read_text(), f"Missing source anchor: {source}"
+                source["anchor"] in historical_source(path),
+                f"Missing source anchor: {source}",
             )
             sources.add(source["path"])
     require(edges.keys() == edge_modes.keys(), "Edge lacks source provenance")

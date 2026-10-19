@@ -1,6 +1,6 @@
 # Hindsight Integration: Implementation Plan
 
-Updated: 2026-10-18. The user agreed to the next deliverable: one complete
+Updated: 2026-10-19. The user agreed to the next deliverable: one complete
 Hindsight-backed ADE conversation path, inspectable delivery/recall evidence,
 and verified capture of the actual Character request. This revision makes
 Stage 1 executable in ordered increments and proposes one execution-approval
@@ -354,12 +354,25 @@ created only the ADE archive: the guard misread cached unhealthy status on an
 exited proxy and stopped both databases before native dumping. Product6 is closed,
 all owned containers stopped and six baseline services unchanged. ADR 0083 fixes
 the Docker-state interpretation and requires recovery through new owned copies,
-not reopening that lease. Final dual archives/sealing and current-test
-reconciliation remain required. The new unfiltered sweep is 1,800 passed,
-135 skipped, 66 failed and 61 errors, not green. The broad-only dummy-Compose
-failure reaches the project-name check; config loaders that mutate `os.environ`
-and the private `COMPOSE_PROJECT_NAME` are a source-backed candidate cause still
-requiring an interaction reproducer. Frozen historical replays remain untouched.
+not reopening that lease. The fresh `20261019-checkpoint7` controller at `13a37a2`
+then produced both readable logical archives through verified read-only original
+mounts/new copies, with unchanged parent/baseline and all four helpers stopped.
+The full fourteen-activation export matches OCI/Mac bytes at
+`37b20211dc5376cef72822a24aed8b457154268a1ebdf18107411cc0e9aa0a72`;
+all 39 recorded units are inactive. Final private indexing remains.
+
+Current-contract reconciliation passes its focused gates: the dotenv interaction
+was reproduced with two tests and fixed at the loader/client boundary (ADR 0084),
+the old diagram is visibly revision-bound/historical (ADR 0085), policy input
+ordering is canonical, and maintained tool tests use relationship Memory rather
+than retired fact output. Only the new unqualified candidate was regenerated;
+the actual product image/source/fingerprint were not relabelled or redeployed.
+The fresh unfiltered sweep is 1,857 passed, 135 skipped, 53 failed and 61 errors.
+All 114 remaining failing/error IDs were already in the 115-ID pre-change baseline;
+frozen story hashes/ledgers remain untouched, not a green-suite claim. The final
+Stage-1 application-role SQL invocation passed 55 checks. An earlier overbroad
+selection's six historical passwordless-owner guard rejections are preserved;
+no guard was weakened. Detailed gate results are in the scoped product finding.
 
 ### M0: Freeze Contracts And Establish A Reproducible Baseline
 

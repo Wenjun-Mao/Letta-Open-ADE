@@ -18,11 +18,13 @@ This workflow owns evidence artifacts, not product APIs or semantic policy.
 2026-10-19: under the user's M0-M6/A1-A6 approval, the fresh-workspace Hindsight
 reply/delivery/inspection path, Interface and source-bound collector are
 implemented. The real six-slot demonstration completed six mechanical captures
-and four actual proxy safety cases passed. The earlier six processing-inspection
+and all eight representative safety cases passed. A native browser journey and
+verified paired archives complement those observations. All fourteen isolated
+activations are closed/stopped, with baseline services unchanged. The earlier six processing-inspection
 failures remain retained. [Scoped findings](../../../docs/findings/hindsight-product-flow-2026-10-19.md)
 separate those outcomes from unreviewed Character quality and unqualified broader
-Memory behavior. M6 outage/restart, stale-worker, negative-access and successful
-paired-backup/closeout work remains pending; this is not full Stage 1 completion.
+Memory behavior. The final private evidence index is being reconciled; no full
+repository-green, paired logical restore or release claim follows.
 [ADR 0070](../../../docs/adr/0070-hindsight-message-delivery.md) owns source/replay
 identity and the [native boundary finding](../../../docs/findings/hindsight-native-boundary-2026-10-19.md)
 records direct native checks separately from product dialogue.

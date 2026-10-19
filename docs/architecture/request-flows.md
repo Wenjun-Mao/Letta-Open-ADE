@@ -1,5 +1,12 @@
 # ADE Request Flows
 
+The web proxy contract remains current; native reviewer/fact-store turn details
+below describe the retained incumbent. For today's fresh Hindsight development
+path, use the [source journey](capability-map/hindsight-message-journey.md): required
+scoped recall, saved-input Retry, atomic ADE source/outbox intent and independent
+native retention replace the old reviewer/one-store semantics. Source integration
+has not redeployed the incumbent.
+
 ## Shared Web Path
 
 ```mermaid

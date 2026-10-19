@@ -1,6 +1,6 @@
 # Architecture Decision Index
 
-Lifecycle review: 2026-09-25. Start with the [product contract](../product-contract.md)
+Stage-1 index reconciliation: 2026-10-19. Start with the [product contract](../product-contract.md)
 for current product intent and [system status](../architecture/system-status.md)
 for the stack. This index locates rationale; it does not create another contract.
 Accepted design is not proof of implementation, behavioral acceptance, or release qualification.
@@ -62,11 +62,24 @@ record's status notice before applying its original execution details.
 | [0065](0065-post-restore-snapshot-failure-recovery.md) | Registered child exit-mm handling and a separate, finite, exact-resource recovery path for the failed P4 post-restore snapshot; captured state remains failed evidence, not restore success. |
 | [0066](0066-canonical-persisted-schema-snapshots.md) | Shared P4 schema capture excludes only numeric PostgreSQL temporary namespaces; durable schema, owner, extension, migration and data drift remain exact mismatches. |
 | [0067](0067-hindsight-revision-five-activation-clock.md) | Revision-5 source-pinned clock and activation-scoped registry/capture paths; old admissions and receipts are never renewed, and tests use a declared synthetic clock. |
-| [0068](0068-hindsight-default-memory.md) | Hindsight default with character-local learned memory, fresh scope, no backward compatibility, asynchronous ingestion and separate data authorities; native updates/corrections, manual removal deferred, historical migration excluded, implementation/deployment pending. |
-| [0069](0069-offline-character-assessment-kit.md) | Offline Mandarin case/run/review kit with immutable evidence, append-only judgments and all-attempt reporting; no live adapter, calibrated baseline or runtime change. |
-| [0070](0070-hindsight-message-delivery.md) | Immutable per-message Hindsight source/operation identities, attributed antecedents and native reconciliation/retry; native gates passed, ADE verification pending. |
-| [0071](0071-private-wire-observations-and-activation-leases.md) | Opt-in authenticated capture at Router's final send boundary and finite owned activation leases with permanent admission closure; live qualification pending. |
-| [0072](0072-hindsight-outbox-and-saved-input-retry.md) | Immutable source/outbox transactions, independently fenced delivery and saved-input pause/Retry; Stage 1 implementation in progress. |
+| [0068](0068-hindsight-default-memory.md) | Hindsight default, character-local ownership, fresh scope and separate data authorities; scoped development flow observed, no production transition or general quality acceptance. |
+| [0069](0069-offline-character-assessment-kit.md) | Immutable Mandarin case/run/review kit; the Stage-1 collector adds six mechanically complete captures, not a human-calibrated quality baseline. |
+| [0070](0070-hindsight-message-delivery.md) | Immutable per-message identities, attributed antecedents and native reconciliation/retry; scoped native and ADE observations, not general semantic qualification. |
+| [0071](0071-private-wire-observations-and-activation-leases.md) | Actual final-send capture and finite owned leases with permanent closure; isolated checks are not deployment authority. |
+| [0072](0072-hindsight-outbox-and-saved-input-retry.md) | Atomic ADE source/outbox intent, independent delivery and saved-input pause/Retry, with application-role SQL and representative product proof. |
+| [0073](0073-hindsight-reply-runtime.md) | Required scoped recall and the normal Character reply path replace native reviewer/fact obligations. |
+| [0074](0074-relationship-memory-inspection.md) | Authorized relationship inspection and fallible Memory reads independent of chat/run loading. |
+| [0075](0075-product-memory-and-request-observations.md) | Exact committed-source, recall, component and actual Character-request joins; private capture is not semantic acceptance. |
+| [0076](0076-isolated-product-actor-and-provenance.md) | Product-established synthetic history and source-bound six-slot actor, isolated from incumbent services. |
+| [0077](0077-database-wall-clock-lease-fences.md) | Wall-clock ownership checks and final release fencing reject expired blocked finalizers. |
+| [0078](0078-candidate-authoring-asset-seed.md) | Candidate-private authored-asset copies preserve source/image ownership without modifying incumbent content. |
+| [0079](0079-cpu-bounded-http-health-probe.md) | Bounded readiness uses a cheap same-timeout HTTP probe instead of expensive imports. |
+| [0080](0080-native-processing-pagination.md) | Native operation pagination respects the pinned API limit and rejects incomplete readbacks. |
+| [0081](0081-owned-safety-observation-controllers.md) | Eight representative owned-stack safety cases and source-bound checkpoint controls; failures remain retained. |
+| [0082](0082-candidate-web-authoring-role.md) | Private trusted authoring web uses the required admin role without exposing credentials or weakening API roles. |
+| [0083](0083-stopped-health-and-checkpoint-recovery.md) | Live health is state-aware; closed-point recovery uses verified read-only originals and new database copies, not a reopened lease or restore qualification. |
+| [0084](0084-workflow-local-configuration.md) | Workflow defaults stay local; explicit bound credentials replace process-global dotenv side effects. |
+| [0085](0085-revision-bound-historical-architecture.md) | Native architecture maps remain visibly historical and validate exact recorded source, separately from today's Hindsight guide. |
 
 ## Historical, Retired, Or On Hold
 

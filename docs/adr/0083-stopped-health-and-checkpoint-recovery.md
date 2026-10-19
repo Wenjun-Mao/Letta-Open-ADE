@@ -1,7 +1,8 @@
 # ADR 0083: Stopped Health And Checkpoint Recovery
 
 Status: Accepted, 2026-10-19. Guard and stopped-store controller regression checks
-are implemented; actual paired archives remain pending.
+are implemented; both actual paired archives and unchanged-parent closeout are
+verified. Logical restore/product recovery qualification remains outside Stage 1.
 
 ## Root Cause
 
@@ -46,3 +47,10 @@ in-flight identities, both archive hashes/readable TOCs and owned shutdown.
 Database-copy startup and dump readability are not Stage-3 paired logical restore
 or product recovery qualification. The actual dual-store checkpoint remains a
 required gate until these receipts exist; the first ADE archive alone is not it.
+
+`20261019-checkpoint7` at controller `13a37a241ed02d07525f6988b4291d9264227b2d`
+captured both archives through new networkless copies of closed product6.
+The 1,441-entry ADE and 1,585-entry Hindsight source/target manifests match;
+both TOCs and archive hashes verify independently after export. The parent stayed
+closed/stopped, all four copy helpers exited and six baseline services stayed
+unchanged. Preserve the failed earlier dump and export-quoting receipt as well.

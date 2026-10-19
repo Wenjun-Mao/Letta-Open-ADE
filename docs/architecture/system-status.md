@@ -1,6 +1,18 @@
 # ADE System Status
 
-## Current System
+## Development And Incumbent
+
+The development source implements the fresh Hindsight-backed Agent Studio path:
+ADE owns product records and one API/runtime; self-hosted Hindsight owns learned
+Memory in a separate store. See the [current source journey](capability-map/hindsight-message-journey.md),
+[PC-14](../product-contract.md#default-memory-implementation) and
+[scoped Stage-1 findings](../findings/hindsight-product-flow-2026-10-19.md).
+Source publication is not redeployment: existing ADE/trial services and retained
+data were not replaced, and the isolated OCI candidates are stopped. General
+Memory quality, human Character acceptance and production transition remain
+separate from the observed mechanical path.
+
+## Retained Product Topology
 
 ADE Web and ADE API are the product entrypoints. PostgreSQL stores native Agent
 Studio state, Model Router owns model identity and provider access, and the
@@ -38,13 +50,23 @@ llama-server provider. Historical schema-v3 evidence does not qualify the curren
 development branch. The release ledger records qualified evidence. Changing a governed
 runtime input requires new evidence and promotion.
 
-Recovery is deployment rollback and PostgreSQL backup/restore. The project name
+Those native release ledgers do not qualify the new Hindsight candidate. Its
+current development manifest remains explicitly unqualified; no old ledger or
+selected-route evidence was rebound. Later transition/restore/release work follows
+the separate [integration plan](../plans/hindsight-integration.md), not automatic
+promotion from a successful capture.
+
+Recovery for the Hindsight path must preserve the paired ADE/Hindsight point and
+in-flight identities. Stage 1 captured readable archives; it did not perform
+Stage-3 logical restore or authorize an old native image against the new workspace.
+The project name
 remains historical; a repository-wide rename is future work and does not affect
 the current runtime boundary.
 
 ## Read Next
 
 - [Architecture overview](overview.md): service and data boundaries.
+- [Hindsight source journey](capability-map/hindsight-message-journey.md): current development flow and dual-store ownership.
 - [Request flows](request-flows.md): how requests execute.
 - [Codebase map](../codebase-map.md): where to change a capability.
 - [ADR 0019](../adr/0019-ade-steady-state-runtime.md): durable steady-state decision.

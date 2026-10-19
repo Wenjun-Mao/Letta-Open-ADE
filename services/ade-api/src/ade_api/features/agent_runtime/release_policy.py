@@ -63,11 +63,11 @@ POLICY_INPUT_FILES: Final[dict[str, tuple[str, ...]]] = {
         "scripts/record_agent_studio_conformance.py",
         "scripts/source_fingerprint.py",
         "services/ade-api/Dockerfile",
+        "services/ade-api/src/ade_api/integrations/hindsight_sources.py",
         "services/ade-api/src/ade_api/platform/app.py",
         "services/ade-api/src/ade_api/platform/auth.py",
         "services/ade-api/src/ade_api/platform/project_paths.py",
         "services/ade-api/src/ade_api/platform/settings.py",
-        "services/ade-api/src/ade_api/integrations/hindsight_sources.py",
     ),
     "retrieval": (
         "services/ade-api/src/ade_api/integrations/hindsight.py",

@@ -1,4 +1,14 @@
-# ADE Message Journey: Interactive Draft
+# Historical ADE Message Journey
+
+Archived native-Memory presentation, not today's Hindsight runtime. Its original
+October 6 baseline remains `125082447c2c5f5ada7a2c5ed88be41bb8fba4bf`.
+Later refactors updated source anchors without updating that header; their last
+owning commit is `d94913dd22e4208e0f6092d0144cc5acbcb49606` (October 8).
+All 26 source files resolve there. Terms such as "current" below describe that
+historical native path. The source review checks local Git objects from the
+separately recorded anchor revision, fails if unavailable and never substitutes
+today's source. The original baseline is not relabelled. No network is required.
+See the [current Hindsight source guide](../hindsight-message-journey.md).
 
 **Playable documentation preview; no ADE runtime change.** The user requested
 the moving chart on 2026-10-06 after the specification was produced. The

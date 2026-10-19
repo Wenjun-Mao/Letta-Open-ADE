@@ -1,7 +1,9 @@
 {
-  "review_status": "Proposed presentation specification; awaiting review, not an architecture adoption",
+  "review_status": "Historical native-Memory presentation; not the current Hindsight path or architecture adoption",
+  "source_scope": "historical",
   "reviewed_at": "2026-10-06",
   "ade_source_baseline": "125082447c2c5f5ada7a2c5ed88be41bb8fba4bf",
+  "source_anchor_revision": "d94913dd22e4208e0f6092d0144cc5acbcb49606",
   "reference": {
     "repository": "https://github.com/vectorize-io/hindsight",
     "revision": "9269b88417ed263e5a8350f2e416ca2b322756b1",
@@ -10,7 +12,7 @@
     "license": "Repository MIT, Copyright 2025 Vectorize AI Inc.; notice included in THIRD_PARTY_NOTICES.md and generated presentations"
   },
   "presentation": {
-    "title": "ADE - Journey of a message (review specification)",
+    "title": "ADE - Historical native-Memory journey (2026-10-06)",
     "source": "docs/architecture/capability-map/message-journey",
     "theme": {"accent": "#0074d9", "fg": "#111418", "muted": "#596575", "bg": "#ffffff", "surface": "#f5f7fa", "border": "#ccd5e1", "font": "'Avenir Next', sans-serif"},
     "speed": 2200,

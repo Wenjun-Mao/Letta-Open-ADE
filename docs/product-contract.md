@@ -315,9 +315,11 @@ and A1-A6 on 2026-10-18, authorizing scoped implementation, isolated OCI/provide
 checks and repair under the [integration plan](plans/hindsight-integration.md),
 with GitHub Actions excluded. The [native source/recovery boundary](findings/hindsight-native-boundary-2026-10-19.md)
 has scoped evidence. The development persistence/runtime/UI and collector are
-implemented; [six actual-product captures and four proxy safety cases](findings/hindsight-product-flow-2026-10-19.md)
-have source-bound observations. Remaining M6 fault/isolation/paired-backup and
-closeout gates are still pending, and Character remains UNREVIEWED. Existing
+implemented; [six actual-product captures, eight representative safety cases,
+native browser mechanics and paired archives](findings/hindsight-product-flow-2026-10-19.md)
+have source-bound observations. All isolated activations are closed/stopped and
+the baseline services unchanged. Final private indexing is being reconciled;
+Character remains UNREVIEWED. Existing
 ADE/trial services and retained data remain
 untouched. This is not production cutover, release qualification, broader Stage 2/3
 acceptance or authority to remove the incumbent's retained data.
@@ -329,13 +331,14 @@ adoption does not turn the experiments into an M2 quality-winner claim.
 Historical-native investigations below are evidence limitations, not authority
 to restore retired reviewer/history-trial behavior in the Hindsight path.
 
-- Remaining Hindsight integration work under PC-14 includes completion of M6
-  fault/isolation/paired-backup gates, broader qualification of native updates/
-  corrections, coordinated recovery and later fresh-scope readiness.
+- Remaining Hindsight integration work under PC-14 includes broader qualification
+  of native updates/corrections, logical paired restore and later fresh-scope
+  readiness. Stage-1 representative fault/isolation and paired-archive mechanics
+  have scoped observations, not general qualification.
   [ADR 0070](adr/0070-hindsight-message-delivery.md)
   selects bank/source/recovery identities and [ADR 0072](adr/0072-hindsight-outbox-and-saved-input-retry.md)
-  selects outbox and saved-input Retry mechanics; their product verification
-  remains in progress. These are integration decisions, not a reopened choice of the
+  selects outbox and saved-input Retry mechanics; their bounded product checks
+  are recorded in the Stage-1 finding. These are integration decisions, not a reopened choice of the
   default Memory implementation. The
   [source-pinned assessment](findings/hindsight-integration-assessment-2026-10-10.md)
   and [consultation synthesis](findings/hindsight-consultation/assessment.md)

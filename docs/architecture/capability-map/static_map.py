@@ -111,11 +111,11 @@ def render_svg(data: dict) -> str:
             x, y, value = label
             text(x, y, value, 16, color, True)
 
-    text(40, 54, "ADE / Capability and dataflow map", 38, bold=True)
+    text(40, 54, "ADE / Historical native-Memory map", 38, bold=True)
     text(
         40,
         92,
-        "Domain -> Subsystem -> Module = L1 / L2 / L3 ownership, not execution depth.",
+        "October 4 snapshot; not current Hindsight behavior. See hindsight-message-journey.md.",
         22,
     )
     text(

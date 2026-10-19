@@ -57,7 +57,7 @@ def standalone(content: str) -> str:
         """<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ADE - Journey of a message</title>
+<title>ADE - Historical native-Memory journey</title>
 <style>
 :root {
   color-scheme: light dark;

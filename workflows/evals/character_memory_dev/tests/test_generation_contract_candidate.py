@@ -1,4 +1,8 @@
-"""Candidate discovery, binding, and native generation packet contracts."""
+"""Historical candidate contexts with the maintained executor's Memory tool contract.
+
+These synthetic packets do not qualify the current Hindsight product path or
+restore the historical native fact/reviewer pipeline.
+"""
 
 from __future__ import annotations
 
@@ -210,7 +214,7 @@ def test_assembled_packets_with_and_without_admitted_history(tmp_path) -> None:
     assert "Historical evidence (read-only)" not in plain["messages"][0]["content"]
     assert "attributed conversation" in plain["messages"][0]["content"]
     assert "materially plausible alternative" in plain["messages"][0]["content"]
-    assert "saved fact descriptors" in plain["tools"][0]["function"]["description"]
+    assert "user-character relationship" in plain["tools"][0]["function"]["description"]
     assert "茉莉花茶" in plain["messages"][0]["content"]  # inactive, not current
 
     admission = admit_history(
@@ -285,7 +289,9 @@ async def _empty_search(_query: str, _limit: int) -> list[dict]:
     return []
 
 
-def test_empty_saved_fact_tool_continuation_keeps_admitted_testimony(tmp_path) -> None:
+def test_empty_memory_tool_continuation_keeps_supplied_historical_context(
+    tmp_path,
+) -> None:
     _, candidate, persona = _templates(tmp_path)
     base, current, facts, entities = _packet(
         candidate, persona, user_text="你还记得我以前提过什么茶吗？"
@@ -350,8 +356,9 @@ def test_empty_saved_fact_tool_continuation_keeps_admitted_testimony(tmp_path) -
         )
     )
     assert result.model_request_count == 2
-    assert result.tool_evidence[0]["content"]["facts"] == []
+    assert result.tool_evidence[0]["content"]["memories"] == []
+    assert "facts" not in result.tool_evidence[0]["content"]
     continuation = transport.requests[1]
     assert "我以前喜欢茉莉花茶" in continuation["messages"][0]["content"]
-    assert json.loads(continuation["messages"][-1]["content"])["facts"] == []
+    assert json.loads(continuation["messages"][-1]["content"])["memories"] == []
     assert result.assistant_text == "你以前提过茉莉花茶。"

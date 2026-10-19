@@ -2,6 +2,7 @@
 
 Generated from [inventory.json](inventory.json); edit that source, not this view.
 Reviewed: 2026-10-04. Source baseline: `f98c0ec6c78f1c6b30697fd49fe81a0b1f4a2189`.
+Historical native-Memory snapshot, not the current Hindsight path. See the [current source guide](hindsight-message-journey.md).
 
 Character-memory capabilities, their interfaces and supporting machinery; independent labs are registered as adjacent features. Not a file-by-file audit or deployed-state certification.
 
