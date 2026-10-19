@@ -113,11 +113,11 @@ def test_full_stack_configuration_is_isolated_private_and_within_recorded_envelo
     )
     assert (
         services["ade-web"]["environment"]["ADE_API_ADMIN_KEY"]
-        == api["environment"]["ADE_API_OPERATOR_KEY"]
+        == api["environment"]["ADE_API_ADMIN_KEY"]
     )
     assert (
         services["ade-web"]["environment"]["ADE_API_ADMIN_KEY"]
-        != api["environment"]["ADE_API_ADMIN_KEY"]
+        != api["environment"]["ADE_API_OPERATOR_KEY"]
     )
     api_capture = next(
         volume

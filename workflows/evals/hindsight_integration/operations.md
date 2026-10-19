@@ -411,3 +411,23 @@ Paired checkpoints preserve every ADE relationship's bank state before stopping
 writers. A recorded non-established/missing bank may retain a native 404 without
 being created as cleanup; unexpected absence of a `ready` bank remains an error.
 These records are not an empty-success or restore-qualified claim.
+
+## Web Authoring Binding Repair
+
+The local authoring web server needs the existing admin role for template reads
+and definition authoring; product actors retain operator/reader keys. Keep the
+admin credential server-side and the port loopback-only (ADR 0082). For an already
+active candidate whose web binding used the wrong role, a clean staged controller
+can recreate only that service at its exact inspected image:
+
+```sh
+python3 -m workflows.evals.hindsight_integration.web_reconfigure \
+  --root "$INTEGRATION_ACTIVATION" --environment "$INTEGRATION_ENV" \
+  --controller-revision "$CONTROLLER_REVISION" \
+  --out "$INTEGRATION_ACTIVATION/evidence/web-authoring-binding-01"
+```
+
+This performs no image build/pull and no API/worker/database restart. The sealed
+environment stays unchanged; the receipt distinguishes the new configuration
+source from the original image source. A failed application closes the candidate.
+Repeat the actual browser journey before calling its configuration verified.

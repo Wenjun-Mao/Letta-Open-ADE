@@ -257,7 +257,7 @@ services:
     cpus: 0.1
     environment:
       ADE_API_BASE_URL: http://ade-api:8000
-      ADE_API_ADMIN_KEY: ${INTEGRATION_ADE_OPERATOR_KEY:?private candidate operator key required}
+      ADE_API_ADMIN_KEY: ${INTEGRATION_ADE_ADMIN_KEY:?private candidate authoring key required}
     ports:
       - 127.0.0.1:18020:3000
     depends_on:
